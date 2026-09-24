@@ -952,6 +952,7 @@ const cateringApp = ({ userProfileData }) => {
             existingId: existing?.id || null,
         });
         setSelectedCateringPlaceId(existing?.placeId || '');
+        setCateringModalIsPriority(false);
         setShowAssignmentTypeModal(false);
         setShowCateringModal(true);
     };
@@ -968,6 +969,7 @@ const cateringApp = ({ userProfileData }) => {
     
         setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
         setPlaceAssignmentSearch('');
+        setCateringModalIsPriority(false);
         setShowAssignmentTypeModal(false);
         setShowPlaceAssignmentModal(true);
     };
