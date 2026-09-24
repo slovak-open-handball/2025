@@ -125,6 +125,8 @@ const loadUserTeams = async (db) => {
                     category: categoryName,
                     playersCount,
                     othersCount: menTeamMembersCount + womenTeamMembersCount + menDriversCount + womenDriversCount,
+                    // 🔥 NOVÉ: názov ubytovne tímu pre farbu
+                    accommodationName: team.accommodation?.name || null,
                 });
             });
         });
@@ -217,6 +219,8 @@ const cateringApp = ({ userProfileData }) => {
     const [cateringTimes, setCateringTimes] = useState({});
     const [unitMinutes, setUnitMinutes] = useState('');
     const [loading, setLoading] = useState(true);
+    // 🔥 NOVÉ: ubytovne s farbami pre vyfarbenie buniek Hráči a RT
+    const [accommodations, setAccommodations] = useState([]);
 
     // Načítanie nastavení turnaja z Firestore
     useEffect(() => {
@@ -306,6 +310,34 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
+    // 🔥 NOVÉ: Načítanie ubytovní (places) s farbami
+    useEffect(() => {
+        if (!window.db) return;
+
+        const unsubscribe = onSnapshot(
+            collection(window.db, 'places'),
+            (snapshot) => {
+                const places = [];
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    if (data.type !== "ubytovanie") return;
+                    places.push({
+                        id: docSnap.id,
+                        name: data.name || '(bez názvu)',
+                        headerColor: data.headerColor || '#1e40af',
+                        headerTextColor: data.headerTextColor || '#000000',
+                    });
+                });
+                setAccommodations(places);
+            },
+            (error) => {
+                console.error('cateringApp: Chyba pri načítaní ubytovní:', error);
+            }
+        );
+
+        return () => unsubscribe();
+    }, []);
+
     if (loading) {
         return React.createElement(
             'div',
@@ -389,6 +421,21 @@ const cateringApp = ({ userProfileData }) => {
         (acc, day) => acc + dayColumnCount(day.key),
         0
     );
+
+    // 🔥 NOVÉ: Získanie farby ubytovne pre tím
+    const getTeamAccommodationColor = (team) => {
+        if (!team.accommodationName) return null;
+        const accommodation = accommodations.find(place => place.name === team.accommodationName);
+        if (!accommodation) return null;
+        return accommodation.headerColor || '#1e40af';
+    };
+
+    const getTeamAccommodationTextColor = (team) => {
+        if (!team.accommodationName) return null;
+        const accommodation = accommodations.find(place => place.name === team.accommodationName);
+        if (!accommodation) return null;
+        return accommodation.headerTextColor || '#000000';
+    };
 
     return React.createElement(
         'div',
@@ -615,21 +662,31 @@ const cateringApp = ({ userProfileData }) => {
                                           },
                                           team.teamName
                                       ),
-                                      // 🔥 NOVÉ: počet hráčov
+                                      // 🔥 UPRAVENÉ: počet hráčov s farbou ubytovne
                                       React.createElement(
                                           'td',
                                           {
                                               className:
-                                                  'border border-gray-300 px-3 py-2 text-center text-gray-700 whitespace-nowrap text-xs font-medium',
+                                                  'border border-gray-300 px-3 py-2 text-center whitespace-nowrap text-xs font-medium',
+                                              style: (() => {
+                                                  const bg = getTeamAccommodationColor(team);
+                                                  const fg = getTeamAccommodationTextColor(team);
+                                                  return bg ? { backgroundColor: bg, color: fg } : {};
+                                              })(),
                                           },
                                           team.playersCount
                                       ),
-                                      // 🔥 NOVÉ: počet ostatných členov
+                                      // 🔥 UPRAVENÉ: počet ostatných členov s farbou ubytovne
                                       React.createElement(
                                           'td',
                                           {
                                               className:
-                                                  'border border-gray-300 px-3 py-2 text-center text-gray-700 whitespace-nowrap text-xs font-medium border-r-4 border-r-gray-500',
+                                                  'border border-gray-300 px-3 py-2 text-center whitespace-nowrap text-xs font-medium border-r-4 border-r-gray-500',
+                                              style: (() => {
+                                                  const bg = getTeamAccommodationColor(team);
+                                                  const fg = getTeamAccommodationTextColor(team);
+                                                  return bg ? { backgroundColor: bg, color: fg } : {};
+                                              })(),
                                           },
                                           team.othersCount
                                       ),
