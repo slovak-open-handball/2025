@@ -1910,7 +1910,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl, mode = 'hall', categoryN
                 matches: matches,
                 selectedCategory: spiderCategoryId,
                 teamNames: {},
-                hallNames: hallNames || {},
+                hallNames: {}, 
                 categoriesData: categoriesData,
                 onHeaderClick: null
             }),
