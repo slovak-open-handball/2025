@@ -508,14 +508,34 @@ const cateringApp = ({ userProfileData }) => {
         return count;
     };
 
-    // Zoznam dostupných kategórií pre filter
+    // Normalizácia názvu kategórie (medzery, NBSP, diakritika)
+    const normalizeCategory = (cat) => {
+        if (!cat) return '';
+        return String(cat)
+            .replace(/\u00A0/g, ' ')        // NBSP → obyčajná medzera
+            .replace(/\s+/g, ' ')           // viac medzier → jedna
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')               // rozlož diakritiku
+            .replace(/[\u0300-\u036f]/g, ''); // odstráň diakritiku
+    };
+
+    // Zoznam dostupných kategórií – v option value bude normalizovaná hodnota,
+    // v option label pôvodný (pekný) text.
     const availableCategories = Array.from(
-        new Set(
+        new Map(
             userTeams
-                .map((t) => (t.category || '').trim())
+                .map((t) => {
+                    const raw = (t.category || '').trim();
+                    if (!raw) return null;
+                    const key = normalizeCategory(raw);
+                    return [key, raw];
+                })
                 .filter(Boolean)
         )
-    ).sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
+    )
+        .map(([value, label]) => ({ value, label }))
+        .sort((a, b) => a.label.localeCompare(b.label, 'sk', { sensitivity: 'base' }));
 
     // 🔥 NAJPRV vypočítame filteredDays (potrebné pre categoryHasVisibleColumns)
     const filteredDays = (filterDayKey
@@ -525,12 +545,11 @@ const cateringApp = ({ userProfileData }) => {
 
     const categoryHasVisibleColumns = () => true;
 
-    // 🔥 AŽ POTOM filteredTeams (používa filteredDays nepriamo cez categoryHasVisibleColumns)
     const filteredTeams = (filterCategory
         ? userTeams.filter(
               (t) =>
-                  (t.category || '').trim().toLowerCase() ===
-                  filterCategory.trim().toLowerCase()
+                  normalizeCategory(t.category) ===
+                  normalizeCategory(filterCategory)
           )
         : userTeams
     ).filter((t) => categoryHasVisibleColumns(t.category));
@@ -759,8 +778,8 @@ const cateringApp = ({ userProfileData }) => {
                             availableCategories.map((cat) =>
                                 React.createElement(
                                     'option',
-                                    { key: cat, value: cat },
-                                    cat
+                                    { key: cat.value, value: cat.value },
+                                    cat.label
                                 )
                             )
                         )
