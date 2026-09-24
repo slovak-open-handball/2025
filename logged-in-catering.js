@@ -601,11 +601,29 @@ const cateringApp = ({ userProfileData }) => {
         return total;
     };
 
-        // Otvorí modálne okno pre priradenie (najprv výber typu)
+    // Otvorí modálne okno pre priradenie (najprv výber typu)
     const openCateringModal = (team, day, mealType, slot) => {
-        // Uložíme si kontext bunky (tím, deň, jedlo, slot)
+        // Skontrolujeme, či pre túto bunku už existuje priradenie
+        const existing = findCateringAssignment(team, day.key, mealType, slot.from);
+
+        // Ak áno → otvoríme ROVNO modálne okno na priradenie pre tím
+        if (existing) {
+            setSelectedCateringCell({
+                team,
+                dayKey: day.key,
+                dayLabel: day.fullLabelNumeric,
+                mealType,
+                slotFrom: slot.from,
+                slotTo: slot.to,
+                existingId: existing.id || null,
+            });
+            setSelectedCateringPlaceId(existing.placeId || '');
+            setShowCateringModal(true);
+            return;
+        }
+
+        // Ak nie → otvoríme modálne okno s výberom typu priradenia
         setPendingAssignmentCell({ team, day, mealType, slot });
-        // Otvoríme modálne okno s výberom typu priradenia
         setShowAssignmentTypeModal(true);
     };
 
