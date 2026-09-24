@@ -2,24 +2,6 @@
 import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-// ===== POMOCNÉ FUNKCIE PRE VEKTOROVÉ PDF =====
-
-const pdfPageWidth = (pdf) => pdf.internal.pageSize.getWidth();
-const pdfPageHeight = (pdf) => pdf.internal.pageSize.getHeight();
-
-const pdfSafeText = (text) => {
-    if (text === null || text === undefined) return '';
-    return String(text);
-};
-
-// Kruhový zápis "X. miesto"
-const ordinal = (n) => {
-    if (n === 1) return '1. miesto';
-    if (n === 2) return '2. miesto';
-    if (n === 3) return '3. miesto';
-    return `${n}. miesto`;
-};
-
 const { useState, useEffect } = React;
 
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
@@ -276,812 +258,223 @@ const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
     }
 };
 
-const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
-    const { jsPDF } = window.jspdf;
-    if (!jsPDF) {
-        window.showGlobalNotification('PDF knižnica nie je načítaná.', 'error');
-        return;
-    }
-
+const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {    
     const element = document.getElementById('pdf-export-target');
+    
     if (!element) {
         window.showGlobalNotification('Tabuľka ešte nie je načítaná.', 'error');
+        try {
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'PDF_EXPORT_COMPLETED',
+                    success: false,
+                    label: `${categoryName} - ${groupName}`,
+                    error: 'Element pdf-export-target sa nenašiel'
+                }, '*');
+            }
+        } catch (e) { }
         return;
     }
 
-    // Získame dáta z DOM (tabuľka CrossTable má stabilnú štruktúru)
-    const table = element.querySelector('table');
-    if (!table) {
-        window.showGlobalNotification('Tabuľka sa nenašla.', 'error');
+    const html2canvasFn = window.html2canvas;
+    const jsPDFClass = window.jspdf?.jsPDF;
+
+    if (typeof html2canvasFn === 'undefined' || !jsPDFClass) {
+        window.showGlobalNotification('PDF knižnice nie sú načítané.', 'error');
+        try {
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'PDF_EXPORT_COMPLETED',
+                    success: false,
+                    label: `${categoryName} - ${groupName}`,
+                    error: 'PDF knižnice nie sú načítané'
+                }, '*');
+            }
+        } catch (e) { }
         return;
     }
-
-    const label = groupName
-        ? `${categoryName} - ${groupName}`
-        : categoryName || 'neznáma kategória';
-    window.showGlobalNotification(`Generujem PDF pre: ${label}`, 'info');
-
-    // Rozmery buniek v px
-    const CELL_W = 200, CELL_H = 200;
-    const SIDE_W = 90, MID_W = 20;
-    const THICK = 3;
-
-    // Rozmery v mm (px * 0.264583)
-    const pxToMm = 0.264583;
-    const cellW_mm = CELL_W * pxToMm;
-    const cellH_mm = CELL_H * pxToMm;
-    const sideW_mm = SIDE_W * pxToMm;
-    const midW_mm = MID_W * pxToMm;
-    const teamColW_mm = sideW_mm * 2 + midW_mm;       // jeden tím = 3 podbunky
-    const scoreColW_mm = sideW_mm * 2 + midW_mm;      // Skóre = 3 podbunky
-    const bodyColW_mm = cellW_mm;
-    const placeColW_mm = cellW_mm;
-    const nameColW_mm = cellW_mm;
-
-    // Zistíme počet tímov z hlavičky (koľko TH má colSpan=3 v prvom riadku)
-    const headerRow = table.querySelector('thead tr');
-    const allTh = Array.from(headerRow.querySelectorAll('th'));
-    // Prvý th = hlavička kategória/skupina, posledné 3 = Skóre, Body, Miesto
-    // Tímy sú tie s colSpan=3 medzi nimi
-    const teamHeaderCells = allTh.filter(th => {
-        const cs = parseInt(th.getAttribute('colspan') || '1', 10);
-        return cs === 3 && !th.textContent.trim().startsWith('Skóre');
-    });
-    const teamCount = teamHeaderCells.length;
-    const teamNames = teamHeaderCells.map(th => th.textContent.trim());
-
-    // Získame dáta z tela tabuľky
-    const bodyRows = Array.from(table.querySelectorAll('tbody tr'));
-
-    // Prvá bunka v každom riadku = názov tímu (th)
-    // Potom pre každý tím: buď 1 td s diagonálou (colSpan=3), alebo 3 td s ":"
-    // Potom 3 td pre Skóre, 1 td Body, 1 td Miesto
-
-    const teams = [];
-    bodyRows.forEach(row => {
-        const cells = Array.from(row.children);
-        const teamName = cells[0]?.textContent.trim() || '';
-        const scores = []; // pole {home, away, isDiagonal}
-        let i = 1;
-        for (let t = 0; t < teamCount; t++) {
-            const cell = cells[i];
-            if (!cell) break;
-            const cs = parseInt(cell.getAttribute('colspan') || '1', 10);
-            if (cs === 3) {
-                // diagonála
-                scores.push({ diagonal: true });
-                i += 1;
-            } else {
-                // 3 bunky: home | : | away
-                const home = cells[i]?.textContent.trim() || '';
-                const colon = cells[i+1]?.textContent.trim() || '';
-                const away = cells[i+2]?.textContent.trim() || '';
-                scores.push({ home, away, diagonal: false });
-                i += 3;
-            }
-        }
-        // Celkové skóre = ďalšie 3 bunky
-        const totalHome = cells[i]?.textContent.trim() || '';
-        const totalColon = cells[i+1]?.textContent.trim() || '';
-        const totalAway = cells[i+2]?.textContent.trim() || '';
-        i += 3;
-        const points = cells[i]?.textContent.trim() || '';
-        i += 1;
-        const position = cells[i]?.textContent.trim() || '';
-        i += 1;
-
-        teams.push({ teamName, scores, totalHome, totalColon, totalAway, points, position });
-    });
-
-    // Vypočítame celkovú šírku a výšku
-    const totalWidth = nameColW_mm + teamCount * teamColW_mm + scoreColW_mm + bodyColW_mm + placeColW_mm;
-    const headerH_mm = cellH_mm; // prvý riadok = 1 bunka na výšku (200px)
-    const totalHeight = headerH_mm + teams.length * cellH_mm;
-
-    // Vytvoríme PDF s vlastným formátom
-    const pdf = new jsPDF({
-        orientation: totalWidth > totalHeight ? 'landscape' : 'portrait',
-        unit: 'mm',
-        format: [totalWidth, totalHeight],
-    });
-
-    const drawCell = (x, y, w, h, text, opts = {}) => {
-        const { bold = false, fontSize = 10, align = 'center', valign = 'middle', border = true } = opts;
-        if (border) {
-            pdf.setLineWidth(0.3);
-            pdf.rect(x, y, w, h);
-        }
-        pdf.setFontSize(fontSize);
-        pdf.setFont(undefined, bold ? 'bold' : 'normal');
-        const tx = align === 'center' ? x + w / 2 : (align === 'right' ? x + w - 2 : x + 2);
-        const ty = y + h / 2 + fontSize * 0.35 / 2;
-        pdf.text(pdfSafeText(text), tx, ty, { align });
-    };
-
-    let x = 0, y = 0;
-
-    // ===== HLAVIČKA =====
-    // 1. bunka: kategória / skupina (dva riadky)
-    pdf.setLineWidth(0.5);
-    pdf.rect(x, y, nameColW_mm, headerH_mm);
-    pdf.setFontSize(16);
-    pdf.setFont(undefined, 'bold');
-    pdf.text(pdfSafeText(categoryName), x + nameColW_mm / 2, y + headerH_mm / 2 - 2, { align: 'center' });
-    pdf.text(pdfSafeText(groupName), x + nameColW_mm / 2, y + headerH_mm / 2 + 6, { align: 'center' });
-    x += nameColW_mm;
-
-    // Tímy
-    for (let t = 0; t < teamCount; t++) {
-        pdf.setLineWidth(0.3);
-        pdf.rect(x, y, teamColW_mm, headerH_mm);
-        pdf.setFontSize(14);
-        pdf.setFont(undefined, 'bold');
-        pdf.text(pdfSafeText(teamNames[t]), x + teamColW_mm / 2, y + headerH_mm / 2 + 2, { align: 'center' });
-        x += teamColW_mm;
-    }
-
-    // Skóre
-    pdf.rect(x, y, scoreColW_mm, headerH_mm);
-    pdf.setFontSize(14);
-    pdf.setFont(undefined, 'bold');
-    pdf.text('Skóre', x + scoreColW_mm / 2, y + headerH_mm / 2 + 2, { align: 'center' });
-    x += scoreColW_mm;
-
-    // Body
-    pdf.rect(x, y, bodyColW_mm, headerH_mm);
-    pdf.text('Body', x + bodyColW_mm / 2, y + headerH_mm / 2 + 2, { align: 'center' });
-    x += bodyColW_mm;
-
-    // Miesto
-    pdf.rect(x, y, placeColW_mm, headerH_mm);
-    pdf.text('Miesto v skupine', x + placeColW_mm / 2, y + headerH_mm / 2 + 2, { align: 'center' });
-
-    // Silná čiara pod hlavičkou
-    pdf.setLineWidth(0.8);
-    pdf.line(0, y + headerH_mm, totalWidth, y + headerH_mm);
-
-    y += headerH_mm;
-
-    // ===== TELO =====
-    teams.forEach(team => {
-        let cx = 0;
-
-        // Názov tímu
-        pdf.setLineWidth(0.3);
-        pdf.rect(cx, y, nameColW_mm, cellH_mm);
-        pdf.setFontSize(14);
-        pdf.setFont(undefined, 'bold');
-        pdf.text(pdfSafeText(team.teamName), cx + 3, y + cellH_mm / 2, { align: 'left', maxWidth: nameColW_mm - 6 });
-        cx += nameColW_mm;
-
-        // Skóre bunky (za každý tím)
-        team.scores.forEach(score => {
-            if (score.diagonal) {
-                // diagonála s X
-                pdf.rect(cx, y, teamColW_mm, cellH_mm);
-                pdf.setLineWidth(0.3);
-                pdf.line(cx, y, cx + teamColW_mm, y + cellH_mm);
-                pdf.line(cx, y + cellH_mm, cx + teamColW_mm, y);
-            } else {
-                // 3 podbunky: home | : | away
-                pdf.rect(cx, y, sideW_mm, cellH_mm);
-                pdf.rect(cx + sideW_mm, y, midW_mm, cellH_mm);
-                pdf.rect(cx + sideW_mm + midW_mm, y, sideW_mm, cellH_mm);
-                pdf.setFontSize(14);
-                pdf.setFont(undefined, 'bold');
-                pdf.text(pdfSafeText(score.home), cx + sideW_mm - 3, y + cellH_mm / 2, { align: 'right' });
-                pdf.text(':', cx + sideW_mm + midW_mm / 2, y + cellH_mm / 2, { align: 'center' });
-                pdf.text(pdfSafeText(score.away), cx + sideW_mm + midW_mm + 3, y + cellH_mm / 2, { align: 'left' });
-            }
-            cx += teamColW_mm;
-        });
-
-        // Celkové skóre (3 podbunky)
-        pdf.rect(cx, y, sideW_mm, cellH_mm);
-        pdf.rect(cx + sideW_mm, y, midW_mm, cellH_mm);
-        pdf.rect(cx + sideW_mm + midW_mm, y, sideW_mm, cellH_mm);
-        pdf.setFontSize(14);
-        pdf.setFont(undefined, 'bold');
-        pdf.text(pdfSafeText(team.totalHome), cx + sideW_mm - 3, y + cellH_mm / 2, { align: 'right' });
-        pdf.text(':', cx + sideW_mm + midW_mm / 2, y + cellH_mm / 2, { align: 'center' });
-        pdf.text(pdfSafeText(team.totalAway), cx + sideW_mm + midW_mm + 3, y + cellH_mm / 2, { align: 'left' });
-        cx += scoreColW_mm;
-
-        // Body
-        pdf.rect(cx, y, bodyColW_mm, cellH_mm);
-        pdf.setFontSize(14);
-        pdf.text(pdfSafeText(team.points), cx + bodyColW_mm / 2, y + cellH_mm / 2, { align: 'center' });
-        cx += bodyColW_mm;
-
-        // Miesto
-        pdf.rect(cx, y, placeColW_mm, cellH_mm);
-        pdf.text(pdfSafeText(team.position), cx + placeColW_mm / 2, y + cellH_mm / 2, { align: 'center' });
-
-        y += cellH_mm;
-    });
-
-    // Silné orámovanie celej tabuľky
-    pdf.setLineWidth(1);
-    pdf.rect(0, 0, totalWidth, totalHeight);
-
-    // Silné zvislé čiary medzi blokmi (hlavička tímu | Skóre | Body | Miesto)
-    pdf.setLineWidth(0.8);
-    let vx = nameColW_mm + teamCount * teamColW_mm;
-    pdf.line(vx, 0, vx, totalHeight);
-    vx += scoreColW_mm;
-    pdf.line(vx, 0, vx, totalHeight);
-    vx += bodyColW_mm;
-    pdf.line(vx, 0, vx, totalHeight);
 
     const safeCategory = (categoryName || 'kategoria').replace(/\s+/g, '-');
     const safeGroup = (groupName || 'skupina').replace(/\s+/g, '-');
     const fileName = `${safeCategory}_${safeGroup}.pdf`;
 
-    pdf.save(fileName);
+    const label = groupName
+        ? `${categoryName} - ${groupName}`
+        : categoryName || 'neznáma kategória';
+
+    window.showGlobalNotification(`Generujem PDF pre: ${label}`, 'info');
+
+    const scaleToUse = (fixedDpr || PDF_DEVICE_PIXEL_RATIO);
 
     try {
-        const currentHash = window.location.hash || '';
-        let completedCount = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
-        completedCount++;
-        sessionStorage.setItem('pdfBatchCompleted', String(completedCount));
-        sessionStorage.setItem('pdfBatchLastLabel', label);
-        const total = parseInt(sessionStorage.getItem('pdfBatchTotal') || '0', 10);
-        const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
-    } catch (e) { }
+        const rect = element.getBoundingClientRect();
 
-    try {
-        const newUrl = window.location.pathname + window.location.hash;
-        window.history.replaceState({}, '', newUrl);
-    } catch (e) { }
+        const cssWidth = rect.width;
+        const cssHeight = rect.height;
 
-    window.showGlobalNotification(`PDF bolo uložené: ${label}`, 'success');
+        const canvas = await html2canvasFn(element, {
+            scale: scaleToUse,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+            width: cssWidth,
+            height: cssHeight,
+            windowWidth: cssWidth,
+            windowHeight: cssHeight,
+            foreignObjectRendering: false,
+            allowTaint: true
+        });
 
-    try {
-        if (window.parent !== window) {
-            window.parent.postMessage({
-                type: 'PDF_EXPORT_COMPLETED',
-                success: true,
-                label: label,
-                fileName: fileName
-            }, '*');
-        }
-    } catch (e) { }
+        const pxToMm = 0.264583;
+        const pdfWidthMm = cssWidth * pxToMm;
+        const pdfHeightMm = cssHeight * pxToMm;
+
+        const pdf = new jsPDFClass({
+            orientation: pdfWidthMm > pdfHeightMm ? 'landscape' : 'portrait',
+            unit: 'mm',
+            format: [pdfWidthMm, pdfHeightMm]
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
+
+        pdf.save(fileName);
+
+        try {
+            const currentHash = window.location.hash || '';
+            let completedCount = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
+            completedCount++;
+            sessionStorage.setItem('pdfBatchCompleted', String(completedCount));
+            sessionStorage.setItem('pdfBatchLastLabel', label);
+
+            const total = parseInt(sessionStorage.getItem('pdfBatchTotal') || '0', 10);
+            const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
+        } catch (e) { }
+
+        try {
+            const newUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, '', newUrl);
+        } catch (e) { }
+
+        window.showGlobalNotification(`PDF bolo uložené: ${label}`, 'success');
+
+        try {
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'PDF_EXPORT_COMPLETED',
+                    success: true,
+                    label: label,
+                    fileName: fileName
+                }, '*');
+            }
+        } catch (e) { }
+    } catch (err) {
+        window.showGlobalNotification(`Nepodarilo sa vytvoriť PDF pre: ${label}`, 'error');
+    
+        try {
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'PDF_EXPORT_COMPLETED',
+                    success: false,
+                    label: label,
+                    error: String(err)
+                }, '*');
+            }
+        } catch (e) { }
+    }
 };
 
 const exportMatchesToPdf = async (title, matchesByDay, formatDateHeaderFn, formatTimeFn, fixedDpr = null) => {
-    const { jsPDF } = window.jspdf;
-    if (!jsPDF) {
-        window.showGlobalNotification('PDF knižnica nie je načítaná.', 'error');
+    const markBatchCompleted = () => {
+        try {
+            const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
+            if (isActive) {
+                let completed = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
+                completed++;
+                sessionStorage.setItem('pdfBatchCompleted', String(completed));
+                sessionStorage.setItem('pdfBatchLastLabel', title || '');
+            }
+        } catch (e) { }
+    };
+
+    const element = document.getElementById('matches-pdf-export-target');
+    if (!element) {
+        window.showGlobalNotification('Zoznam zápasov ešte nie je načítaný.', 'error');
+        markBatchCompleted();
         return;
     }
 
-    window.showGlobalNotification(`Generujem PDF pre: ${title}`, 'info');
+    const html2canvasFn = window.html2canvas;
+    const jsPDFClass = window.jspdf?.jsPDF;
 
-    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const pageW = pdfPageWidth(pdf);
-    const pageH = pdfPageHeight(pdf);
-    const margin = 10;
-
-    // ===== NADPIS =====
-    pdf.setFontSize(18);
-    pdf.setFont(undefined, 'bold');
-    pdf.text(title, pageW / 2, margin + 8, { align: 'center' });
-
-    let y = margin + 16;
-
-    // ===== PAVÚK (vektorovo) =====
-    // Pokúsime sa nájsť PlayoffSpider v DOM a vykresliť ho vektorovo.
-    // Ak existuje, nakreslíme ho.
-    const spiderEl = document.querySelector('#matches-pdf-export-target .mt-8 table');
-    const spiderContainer = document.querySelector('#matches-pdf-export-target .mt-8');
-    if (spiderContainer) {
-        const spiderTitle = spiderContainer.querySelector('h3');
-        if (spiderTitle) {
-            pdf.setFontSize(12);
-            pdf.setFont(undefined, 'bold');
-            pdf.text(spiderTitle.textContent.trim(), margin, y);
-            y += 6;
-        }
-
-        // Načítame zápasy z PlayoffSpider
-        const spiderMatches = matchesByDay.flatMap(d => d.matches).filter(m =>
-            m.matchType && (
-                m.matchType === 'finále' ||
-                m.matchType.startsWith('semifinále') ||
-                m.matchType.startsWith('štvrťfinále') ||
-                m.matchType.startsWith('osemfinále') ||
-                m.matchType.startsWith('šestnásťfinále') ||
-                m.matchType === 'o 3. miesto'
-            )
-        );
-
-        if (spiderMatches.length > 0) {
-            y = drawSpider(pdf, spiderMatches, margin, y, pageW - margin * 2);
-            y += 8;
-        }
+    if (typeof html2canvasFn === 'undefined' || !jsPDFClass) {
+        window.showGlobalNotification('PDF knižnice nie sú načítané.', 'error');
+        markBatchCompleted();
+        return;
     }
-
-    // ===== ZOZNAM ZÁPASOV =====
-    matchesByDay.forEach((dayGroup, dayIndex) => {
-        // Ak sme blízko konca stránky, nová stránka
-        if (y > pageH - 40) {
-            pdf.addPage();
-            y = margin;
-        }
-
-        pdf.setFontSize(12);
-        pdf.setFont(undefined, 'bold');
-        pdf.text(formatDateHeaderFn(dayGroup.date), margin, y);
-        y += 6;
-
-        const rows = dayGroup.matches.map(m => {
-            const homeId = m.homeTeamIdentifier || '';
-            const awayId = m.awayTeamIdentifier || '';
-            const homeTeamName = homeId;
-            const awayTeamName = awayId;
-            const score = (m.homeScore !== undefined && m.homeScore !== null && m.awayScore !== undefined && m.awayScore !== null)
-                ? `${m.homeScore} : ${m.awayScore}`
-                : '';
-            return [
-                formatTimeFn(m.scheduledTime) || '--:--',
-                homeId,
-                homeTeamName,
-                score ? score.split(' : ')[0] : '',
-                score ? ':' : '',
-                score ? score.split(' : ')[1] : '',
-                awayTeamName,
-                awayId,
-                [
-                    m.matchType || '',
-                    m.isPlacementMatch && m.placementRank ? ordinal(m.placementRank) : '',
-                    m.groupName || '',
-                ].filter(Boolean).join(' • '),
-            ];
-        });
-
-        pdf.autoTable({
-            startY: y,
-            head: [['Čas', 'ID', 'Domáci', 'Skóre', '', '', 'Hostia', 'ID', 'Info']],
-            body: rows,
-            styles: { fontSize: 8, cellPadding: 1.2, valign: 'middle', halign: 'center' },
-            headStyles: { fillColor: [230, 235, 245], textColor: 20, fontStyle: 'bold', halign: 'center' },
-            columnStyles: {
-                0: { cellWidth: 14 },
-                1: { cellWidth: 18 },
-                2: { cellWidth: 40, halign: 'right' },
-                3: { cellWidth: 10, halign: 'right' },
-                4: { cellWidth: 5, halign: 'center' },
-                5: { cellWidth: 10, halign: 'left' },
-                6: { cellWidth: 40, halign: 'left' },
-                7: { cellWidth: 18 },
-                8: { cellWidth: 45, halign: 'left' },
-            },
-            margin: { left: margin, right: margin },
-            theme: 'grid',
-        });
-
-        y = pdf.lastAutoTable.finalY + 8;
-    });
 
     const safeTitle = (title || 'zapasy').replace(/\s+/g, '-');
     const fileName = `${safeTitle}.pdf`;
-    pdf.save(fileName);
+
+    window.showGlobalNotification(`Generujem PDF pre: ${title}`, 'info');
+
+    const scaleToUse = (fixedDpr || PDF_DEVICE_PIXEL_RATIO);
 
     try {
-        const newUrl = window.location.pathname + window.location.hash;
-        window.history.replaceState({}, '', newUrl);
-    } catch (e) { }
+        const rect = element.getBoundingClientRect();
 
-    window.showGlobalNotification(`PDF bolo uložené: ${fileName}`, 'success');
+        const cssWidth = rect.width;
+        const cssHeight = rect.height;
 
-    try {
-        const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
-        if (isActive) {
-            let completed = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
-            completed++;
-            sessionStorage.setItem('pdfBatchCompleted', String(completed));
-            sessionStorage.setItem('pdfBatchLastLabel', title || '');
-        }
-    } catch (e) { }
+        const canvas = await html2canvasFn(element, {
+            scale: scaleToUse,
+            width: cssWidth,
+            height: cssHeight,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+            windowWidth: cssWidth,
+            windowHeight: cssHeight,
+            foreignObjectRendering: false,
+            allowTaint: true
+        });
 
-    try {
-        if (window.parent !== window) {
-            window.parent.postMessage({
-                type: 'PDF_EXPORT_COMPLETED',
-                success: true,
-                label: fileName,
-                fileName: fileName
-            }, '*');
-        }
-    } catch (e) { }
-};
+        const pxToMm = 0.264583;
+        const pdfWidthMm = cssWidth * pxToMm;
+        const pdfHeightMm = cssHeight * pxToMm;
 
-// ===== VEKTOROVÝ PAVÚK (podľa štruktúry spider.js) =====
-const drawSpider = (pdf, spiderMatches, x0, y0, width) => {
-    const find = (type) => spiderMatches.find(m => m.matchType === type);
+        const pdf = new jsPDFClass({
+            orientation: pdfWidthMm > pdfHeightMm ? 'landscape' : 'portrait',
+            unit: 'mm',
+            format: [pdfWidthMm, pdfHeightMm]
+        });
 
-    const finalMatch = find('finále');
-    const semi1 = find('semifinále 1');
-    const semi2 = find('semifinále 2');
-    const third = find('o 3. miesto');
-    const qf = [
-        find('štvrťfinále 1'), find('štvrťfinále 2'),
-        find('štvrťfinále 3'), find('štvrťfinále 4')
-    ];
-    const ef = [
-        find('osemfinále 1'), find('osemfinále 2'), find('osemfinále 3'), find('osemfinále 4'),
-        find('osemfinále 5'), find('osemfinále 6'), find('osemfinále 7'), find('osemfinále 8')
-    ];
-    const sf16 = [];
-    for (let i = 1; i <= 16; i++) {
-        sf16.push(find(`šestnásťfinále ${i}`));
+        const imgData = canvas.toDataURL('image/png');
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
+
+        pdf.save(fileName);
+
+        try {
+            const newUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, '', newUrl);
+        } catch (e) { }
+
+        window.showGlobalNotification(`PDF bolo uložené: ${fileName}`, 'success');
+        markBatchCompleted();
+        try {
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'PDF_EXPORT_COMPLETED',
+                    success: true,
+                    label: fileName,
+                    fileName: fileName
+                }, '*');
+            }
+        } catch (e) { }
+    } catch (err) {
+        window.showGlobalNotification('Nepodarilo sa vytvoriť PDF pre zápasy.', 'error');
+        markBatchCompleted();
     }
-
-    const hasQF = qf.some(Boolean);
-    const hasEF = ef.some(Boolean);
-    const has16 = sf16.some(Boolean);
-
-    let level = 1;
-    if (has16) level = 4;
-    else if (hasEF) level = 3;
-    else if (hasQF) level = 2;
-
-    // Rozmery bunky v mm
-    const BOX_W = 40;
-    const BOX_H = 14;
-    const ROW_H = 20;
-    const COL_GAP = 2;
-
-    // Stĺpce podľa úrovne
-    // level 1: 2 stĺpce (semifinále 1 | semifinále 2) + stred pre finále
-    // level 2: 3 stĺpce (QF1 | Finále | QF3) v riadku 1, potom 3 stĺpce (QF2 | O 3. miesto | QF4)
-    // level 3: 5 stĺpcov (EF1 | - | - | - | EF5) v riadku 1 a 5 stĺpcov v riadku 7
-    // level 4: 7 stĺpcov
-
-    let columns = 2;
-    if (level === 2) columns = 3;
-    else if (level === 3) columns = 5;
-    else if (level === 4) columns = 7;
-
-    const totalWidth = width;
-    const colW = (totalWidth - (columns - 1) * COL_GAP) / columns;
-
-    // Pomocná funkcia na vykreslenie boxu zápasu
-    const drawMatchBox = (match, cx, cy, w) => {
-        // Podklad
-        pdf.setDrawColor(80, 80, 120);
-        pdf.setFillColor(245, 245, 250);
-        pdf.setLineWidth(0.3);
-        pdf.rect(cx - w / 2, cy - BOX_H / 2, w, BOX_H, 'FD');
-
-        let home = '---';
-        let away = '---';
-        let type = '';
-        if (match) {
-            home = match.homeTeamIdentifier || '---';
-            away = match.awayTeamIdentifier || '---';
-            type = match.matchType || '';
-        }
-
-        // Typ zápasu (hore)
-        pdf.setFontSize(6);
-        pdf.setTextColor(120, 120, 120);
-        pdf.text(type, cx, cy - BOX_H / 2 + 2.5, { align: 'center' });
-        pdf.setTextColor(0, 0, 0);
-
-        // Domáci (hore)
-        pdf.setFontSize(7);
-        pdf.setFont(undefined, 'normal');
-        pdf.text(pdfSafeText(home), cx - w / 2 + 1, cy - 1, { maxWidth: w - 2 });
-
-        // Hostia (dole)
-        pdf.text(pdfSafeText(away), cx - w / 2 + 1, cy + 4, { maxWidth: w - 2 });
-    };
-
-    // Spojovacia čiara
-    const connect = (x1, y1, x2, y2) => {
-        pdf.setDrawColor(140, 140, 160);
-        pdf.setLineWidth(0.2);
-        pdf.line(x1, y1, x2, y2);
-    };
-
-    // Pomocná funkcia na stred stĺpca
-    const colCenter = (i) => x0 + i * (colW + COL_GAP) + colW / 2;
-
-    let y = y0;
-
-    // =====================
-    // LEVEL 1: len semifinále + finále + o 3. miesto
-    // =====================
-    if (level === 1) {
-        // Riadok 1: Finále (v strede, cez 2 stĺpce)
-        const centerX = x0 + totalWidth / 2;
-        drawMatchBox(finalMatch, centerX, y + BOX_H / 2, colW * 1.5);
-        y += ROW_H;
-
-        // Riadok 2: Semifinále 1 | Semifinále 2
-        const semiY = y + BOX_H / 2;
-        const semi1X = colCenter(0);
-        const semi2X = colCenter(1);
-        drawMatchBox(semi1, semi1X, semiY, colW);
-        drawMatchBox(semi2, semi2X, semiY, colW);
-
-        // Spojenie
-        connect(semi1X, semiY - BOX_H / 2, centerX - colW * 0.375, y - ROW_H + BOX_H / 2 + BOX_H / 2);
-        connect(semi2X, semiY - BOX_H / 2, centerX + colW * 0.375, y - ROW_H + BOX_H / 2 + BOX_H / 2);
-
-        y += ROW_H;
-
-        // Riadok 3: O 3. miesto
-        drawMatchBox(third, centerX, y + BOX_H / 2, colW * 1.5);
-        y += ROW_H;
-
-        return y;
-    }
-
-    // =====================
-    // LEVEL 2: štvrťfinále
-    // =====================
-    if (level === 2) {
-        // Riadok 1: QF1 | Finále | QF3
-        const rowY1 = y + BOX_H / 2;
-        drawMatchBox(qf[0], colCenter(0), rowY1, colW);
-        drawMatchBox(finalMatch, colCenter(1), rowY1, colW);
-        drawMatchBox(qf[2], colCenter(2), rowY1, colW);
-
-        // Spojenie QF1 -> Finále (vodorovne v strede riadku)
-        connect(colCenter(0) + colW / 2, rowY1, colCenter(1) - colW / 2, rowY1);
-        connect(colCenter(2) - colW / 2, rowY1, colCenter(1) + colW / 2, rowY1);
-
-        y += ROW_H;
-
-        // Riadok 2: Semifinále 1 | (prázdne, čiara) | Semifinále 2
-        const rowY2 = y + BOX_H / 2;
-        drawMatchBox(semi1, colCenter(0), rowY2, colW);
-        drawMatchBox(semi2, colCenter(2), rowY2, colW);
-
-        // Zvislé čiary z QF do semifinále
-        connect(colCenter(0), rowY1 + BOX_H / 2, colCenter(0), rowY2 - BOX_H / 2);
-        connect(colCenter(2), rowY1 + BOX_H / 2, colCenter(2), rowY2 - BOX_H / 2);
-
-        // Vodorovné spojenie semifinále do finále (cez stred)
-        const centerX = colCenter(1);
-        connect(colCenter(0) + colW / 2, rowY2, centerX - colW / 4, rowY2);
-        connect(colCenter(2) - colW / 2, rowY2, centerX + colW / 4, rowY2);
-        // Zvislá čiara zo stredu rowY2 do finále
-        connect(centerX, rowY1 + BOX_H / 2, centerX, rowY2);
-        // Vodorovná čiara v strede
-        connect(centerX - colW / 4, rowY2, centerX + colW / 4, rowY2);
-
-        y += ROW_H;
-
-        // Riadok 3: QF2 | O 3. miesto | QF4
-        const rowY3 = y + BOX_H / 2;
-        drawMatchBox(qf[1], colCenter(0), rowY3, colW);
-        drawMatchBox(third, colCenter(1), rowY3, colW);
-        drawMatchBox(qf[3], colCenter(2), rowY3, colW);
-
-        // Zvislé čiary z QF2 -> Semifinále 1 a QF4 -> Semifinále 2
-        connect(colCenter(0), rowY3 - BOX_H / 2, colCenter(0), rowY2 + BOX_H / 2);
-        connect(colCenter(2), rowY3 - BOX_H / 2, colCenter(2), rowY2 + BOX_H / 2);
-
-        y += ROW_H;
-
-        return y;
-    }
-
-    // =====================
-    // LEVEL 3: osemfinále
-    // =====================
-    if (level === 3) {
-        // Riadok 1: EF1 | prázdne | prázdne | prázdne | EF5
-        const rowY1 = y + BOX_H / 2;
-        drawMatchBox(ef[0], colCenter(0), rowY1, colW);
-        drawMatchBox(ef[4], colCenter(4), rowY1, colW);
-        y += ROW_H;
-
-        // Riadok 2: QF1 (colspan 2) | prázdne | QF3 (colspan 2)
-        const rowY2 = y + BOX_H / 2;
-        const qf1X = colCenter(0) + (colW + COL_GAP) / 2;
-        const qf3X = colCenter(3) + (colW + COL_GAP) / 2;
-        drawMatchBox(qf[0], qf1X, rowY2, colW * 2 + COL_GAP);
-        drawMatchBox(qf[2], qf3X, rowY2, colW * 2 + COL_GAP);
-
-        // Zvislé spojenie EF1 -> QF1
-        connect(colCenter(0), rowY1 + BOX_H / 2, colCenter(0), rowY2 - BOX_H / 2);
-        connect(colCenter(4), rowY1 + BOX_H / 2, colCenter(4), rowY2 - BOX_H / 2);
-
-        y += ROW_H;
-
-        // Riadok 3: EF2 | prázdne | Finále | prázdne | EF6
-        const rowY3 = y + BOX_H / 2;
-        drawMatchBox(ef[1], colCenter(0), rowY3, colW);
-        drawMatchBox(finalMatch, colCenter(2), rowY3, colW);
-        drawMatchBox(ef[5], colCenter(4), rowY3, colW);
-
-        // Spojenie EF2 -> QF1
-        connect(colCenter(0), rowY3 - BOX_H / 2, colCenter(0), rowY2 + BOX_H / 2);
-        connect(colCenter(4), rowY3 - BOX_H / 2, colCenter(4), rowY2 + BOX_H / 2);
-
-        y += ROW_H;
-
-        // Riadok 4: prázdne | SF1 | prázdne | SF2 | prázdne
-        const rowY4 = y + BOX_H / 2;
-        drawMatchBox(semi1, colCenter(1), rowY4, colW);
-        drawMatchBox(semi2, colCenter(3), rowY4, colW);
-
-        // Spojenie QF1 -> SF1 (zvisle)
-        connect(colCenter(0) + (colW + COL_GAP) / 2, rowY2 + BOX_H / 2, colCenter(1), rowY4 - BOX_H / 2);
-        connect(colCenter(3) + (colW + COL_GAP) / 2, rowY2 + BOX_H / 2, colCenter(3), rowY4 - BOX_H / 2);
-
-        y += ROW_H;
-
-        // Riadok 5: EF3 | prázdne | O 3. miesto | prázdne | EF7
-        const rowY5 = y + BOX_H / 2;
-        drawMatchBox(ef[2], colCenter(0), rowY5, colW);
-        drawMatchBox(third, colCenter(2), rowY5, colW);
-        drawMatchBox(ef[6], colCenter(4), rowY5, colW);
-
-        // Zvislé spojenie EF3 -> QF2 (bude v riadku 6) - prerežíme neskôr
-        // Zvislé spojenie EF7 -> QF4
-        y += ROW_H;
-
-        // Riadok 6: QF2 (colspan 2) | prázdne | QF4 (colspan 2)
-        const rowY6 = y + BOX_H / 2;
-        drawMatchBox(qf[1], qf1X, rowY6, colW * 2 + COL_GAP);
-        drawMatchBox(qf[3], qf3X, rowY6, colW * 2 + COL_GAP);
-
-        // Spojenie EF3 -> QF2 (zvisle)
-        connect(colCenter(0), rowY5 + BOX_H / 2, colCenter(0), rowY6 - BOX_H / 2);
-        connect(colCenter(4), rowY5 + BOX_H / 2, colCenter(4), rowY6 - BOX_H / 2);
-
-        y += ROW_H;
-
-        // Riadok 7: EF4 | prázdne | prázdne | prázdne | EF8
-        const rowY7 = y + BOX_H / 2;
-        drawMatchBox(ef[3], colCenter(0), rowY7, colW);
-        drawMatchBox(ef[7], colCenter(4), rowY7, colW);
-
-        // Spojenie EF4 -> QF2 (hore)
-        connect(colCenter(0), rowY7 - BOX_H / 2, colCenter(0), rowY6 + BOX_H / 2);
-        connect(colCenter(4), rowY7 - BOX_H / 2, colCenter(4), rowY6 + BOX_H / 2);
-
-        y += ROW_H;
-
-        return y;
-    }
-
-    // =====================
-    // LEVEL 4: šestnásťfinále (16 zápasov)
-    // =====================
-    if (level === 4) {
-        // Zjednodušená verzia - pre 7 stĺpcov
-        // Riadok 1: 16F1 | - | - | - | - | - | 16F9
-        const rowY1 = y + BOX_H / 2;
-        drawMatchBox(sf16[0], colCenter(0), rowY1, colW);
-        drawMatchBox(sf16[8], colCenter(6), rowY1, colW);
-        y += ROW_H;
-
-        // Riadok 2: EF1 (colspan 2) | - | - | - | EF5 (colspan 2)
-        const rowY2 = y + BOX_H / 2;
-        drawMatchBox(ef[0], colCenter(0) + (colW + COL_GAP) / 2, rowY2, colW * 2 + COL_GAP);
-        drawMatchBox(ef[4], colCenter(4) + (colW + COL_GAP) / 2, rowY2, colW * 2 + COL_GAP);
-
-        connect(colCenter(0), rowY1 + BOX_H / 2, colCenter(0), rowY2 - BOX_H / 2);
-        connect(colCenter(6), rowY1 + BOX_H / 2, colCenter(6), rowY2 - BOX_H / 2);
-        y += ROW_H;
-
-        // Riadok 3: 16F2 | - | - | - | - | - | 16F10
-        const rowY3 = y + BOX_H / 2;
-        drawMatchBox(sf16[1], colCenter(0), rowY3, colW);
-        drawMatchBox(sf16[9], colCenter(6), rowY3, colW);
-        connect(colCenter(0), rowY3 - BOX_H / 2, colCenter(0), rowY2 + BOX_H / 2);
-        connect(colCenter(6), rowY3 - BOX_H / 2, colCenter(6), rowY2 + BOX_H / 2);
-        y += ROW_H;
-
-        // Riadok 4: - | QF1 | - | - | - | QF3 | -
-        const rowY4 = y + BOX_H / 2;
-        drawMatchBox(qf[0], colCenter(1), rowY4, colW);
-        drawMatchBox(qf[2], colCenter(5), rowY4, colW);
-        connect(colCenter(0), rowY3 + BOX_H / 2, colCenter(1), rowY4 - BOX_H / 2);
-        connect(colCenter(6), rowY3 + BOX_H / 2, colCenter(5), rowY4 - BOX_H / 2);
-        connect(colCenter(0) + (colW + COL_GAP) / 2, rowY2 + BOX_H / 2, colCenter(0) + (colW + COL_GAP) / 2, rowY3 + BOX_H / 2);
-        y += ROW_H;
-
-        // Riadok 5: 16F3 | - | - | - | - | - | 16F11
-        const rowY5 = y + BOX_H / 2;
-        drawMatchBox(sf16[2], colCenter(0), rowY5, colW);
-        drawMatchBox(sf16[10], colCenter(6), rowY5, colW);
-        y += ROW_H;
-
-        // Riadok 6: EF2 (colspan 2) | - | - | - | EF6 (colspan 2)
-        const rowY6 = y + BOX_H / 2;
-        drawMatchBox(ef[1], colCenter(0) + (colW + COL_GAP) / 2, rowY6, colW * 2 + COL_GAP);
-        drawMatchBox(ef[5], colCenter(4) + (colW + COL_GAP) / 2, rowY6, colW * 2 + COL_GAP);
-        connect(colCenter(0), rowY5 + BOX_H / 2, colCenter(0), rowY6 - BOX_H / 2);
-        connect(colCenter(6), rowY5 + BOX_H / 2, colCenter(6), rowY6 - BOX_H / 2);
-        y += ROW_H;
-
-        // Riadok 7: 16F4 | - | - | Finále | - | - | 16F12
-        const rowY7 = y + BOX_H / 2;
-        drawMatchBox(sf16[3], colCenter(0), rowY7, colW);
-        drawMatchBox(finalMatch, colCenter(3), rowY7, colW);
-        drawMatchBox(sf16[11], colCenter(6), rowY7, colW);
-        connect(colCenter(0), rowY7 - BOX_H / 2, colCenter(0), rowY6 + BOX_H / 2);
-        connect(colCenter(6), rowY7 - BOX_H / 2, colCenter(6), rowY6 + BOX_H / 2);
-        y += ROW_H;
-
-        // Riadok 8: - | SF1 (colspan 2) | - | SF2 (colspan 2) | -
-        const rowY8 = y + BOX_H / 2;
-        drawMatchBox(semi1, colCenter(1) + (colW + COL_GAP) / 2, rowY8, colW * 2 + COL_GAP);
-        drawMatchBox(semi2, colCenter(4) + (colW + COL_GAP) / 2, rowY8, colW * 2 + COL_GAP);
-        connect(colCenter(1), rowY4 + BOX_H / 2, colCenter(1) + (colW + COL_GAP) / 2, rowY8 - BOX_H / 2);
-        connect(colCenter(5), rowY4 + BOX_H / 2, colCenter(4) + (colW + COL_GAP) / 2, rowY8 - BOX_H / 2);
-        // Finále spojenie
-        connect(colCenter(3), rowY8 - BOX_H / 2, colCenter(3), rowY7 + BOX_H / 2);
-        y += ROW_H;
-
-        // Riadok 9: 16F5 | - | - | O 3. miesto | - | - | 16F13
-        const rowY9 = y + BOX_H / 2;
-        drawMatchBox(sf16[4], colCenter(0), rowY9, colW);
-        drawMatchBox(third, colCenter(3), rowY9, colW);
-        drawMatchBox(sf16[12], colCenter(6), rowY9, colW);
-        y += ROW_H;
-
-        // Riadok 10: EF3 (colspan 2) | - | - | - | EF7 (colspan 2)
-        const rowY10 = y + BOX_H / 2;
-        drawMatchBox(ef[2], colCenter(0) + (colW + COL_GAP) / 2, rowY10, colW * 2 + COL_GAP);
-        drawMatchBox(ef[6], colCenter(4) + (colW + COL_GAP) / 2, rowY10, colW * 2 + COL_GAP);
-        connect(colCenter(0), rowY9 + BOX_H / 2, colCenter(0), rowY10 - BOX_H / 2);
-        connect(colCenter(6), rowY9 + BOX_H / 2, colCenter(6), rowY10 - BOX_H / 2);
-        y += ROW_H;
-
-        // Riadok 11: 16F6 | - | - | - | - | - | 16F14
-        const rowY11 = y + BOX_H / 2;
-        drawMatchBox(sf16[5], colCenter(0), rowY11, colW);
-        drawMatchBox(sf16[13], colCenter(6), rowY11, colW);
-        y += ROW_H;
-
-        // Riadok 12: - | QF2 | - | - | - | QF4 | -
-        const rowY12 = y + BOX_H / 2;
-        drawMatchBox(qf[1], colCenter(1), rowY12, colW);
-        drawMatchBox(qf[3], colCenter(5), rowY12, colW);
-        connect(colCenter(0), rowY11 + BOX_H / 2, colCenter(1), rowY12 - BOX_H / 2);
-        connect(colCenter(6), rowY11 + BOX_H / 2, colCenter(5), rowY12 - BOX_H / 2);
-        // Spojenie EF3 -> QF2
-        connect(colCenter(0) + (colW + COL_GAP) / 2, rowY10 + BOX_H / 2, colCenter(1), rowY12 - BOX_H / 2);
-        connect(colCenter(4) + (colW + COL_GAP) / 2, rowY10 + BOX_H / 2, colCenter(5), rowY12 - BOX_H / 2);
-        y += ROW_H;
-
-        // Riadok 13: 16F7 | - | - | - | - | - | 16F15
-        const rowY13 = y + BOX_H / 2;
-        drawMatchBox(sf16[6], colCenter(0), rowY13, colW);
-        drawMatchBox(sf16[14], colCenter(6), rowY13, colW);
-        y += ROW_H;
-
-        // Riadok 14: EF4 (colspan 2) | - | - | - | EF8 (colspan 2)
-        const rowY14 = y + BOX_H / 2;
-        drawMatchBox(ef[3], colCenter(0) + (colW + COL_GAP) / 2, rowY14, colW * 2 + COL_GAP);
-        drawMatchBox(ef[7], colCenter(4) + (colW + COL_GAP) / 2, rowY14, colW * 2 + COL_GAP);
-        connect(colCenter(0), rowY13 + BOX_H / 2, colCenter(0), rowY14 - BOX_H / 2);
-        connect(colCenter(6), rowY13 + BOX_H / 2, colCenter(6), rowY14 - BOX_H / 2);
-        // Spojenie QF2 -> Semifinále
-        connect(colCenter(1), rowY12 + BOX_H / 2, colCenter(1), rowY8 + BOX_H / 2);
-        connect(colCenter(5), rowY12 + BOX_H / 2, colCenter(5), rowY8 + BOX_H / 2);
-        y += ROW_H;
-
-        // Riadok 15: 16F8 | - | - | - | - | - | 16F16
-        const rowY15 = y + BOX_H / 2;
-        drawMatchBox(sf16[7], colCenter(0), rowY15, colW);
-        drawMatchBox(sf16[15], colCenter(6), rowY15, colW);
-        connect(colCenter(0), rowY15 - BOX_H / 2, colCenter(0), rowY14 + BOX_H / 2);
-        connect(colCenter(6), rowY15 - BOX_H / 2, colCenter(6), rowY14 + BOX_H / 2);
-        y += ROW_H;
-
-        return y;
-    }
-
-    return y;
 };
 
 const ExportApp = ({ userProfileData }) => {
