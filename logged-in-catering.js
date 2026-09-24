@@ -1209,23 +1209,24 @@ const cateringApp = ({ userProfileData }) => {
                                     key: `summary-place-${place.id}`,
                                     className: 'border-t-2 border-gray-300',
                                 },
-                                // 1) Názov miesta (prvý stĺpec – "Kategória")
+                                // 1) Názov miesta (zlúčené 2 stĺpce: "Kategória" + "Tím")
                                 React.createElement(
                                     'td',
                                     {
+                                        colSpan: 2,
                                         className: 'border border-gray-300 px-3 py-2 text-left font-semibold whitespace-nowrap',
                                         style: {
                                             backgroundColor: colors.bg,
                                             color: colors.text,
                                         },
                                     },
-                                    `Súčet: ${place.name}`
+                                    `${place.name}`
                                 ),
-                                // 2) Kapacita miesta (zlúčené stĺpce "Tím" + "Hráči" + "RT")
+                                // 2) Kapacita miesta (zlúčené 2 stĺpce: "Hráči" + "RT")
                                 React.createElement(
                                     'td',
                                     {
-                                        colSpan: 3,
+                                        colSpan: 2,
                                         className: 'border border-gray-300 px-3 py-2 text-left font-semibold whitespace-nowrap border-r-4 border-r-gray-500',
                                         style: {
                                             backgroundColor: colors.bg,
