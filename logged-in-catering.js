@@ -975,17 +975,17 @@ const cateringApp = ({ userProfileData }) => {
 
     const handleAssignByPlace = () => {
         if (!pendingAssignmentCell) return;
-    
-        const { team } = pendingAssignmentCell;
 
-        // 🔥 OPRAVA: očistíme kategóriu pred porovnaním
-        const cleanCat = cleanCategory(team.category);
+        const { team } = pendingAssignmentCell;
     
-        // 🔥 ZMENA: použijeme matchTeams namiesto superstructureTeams
+        // 🔥 OPRAVA: filtrujeme podľa categoryName (rovnaká kategória),
+        // NIE podľa teamName – chceme predsa vyberať INÝ tím z tej istej kategórie.
+        const categoryName = cleanCategory(team.category);
+    
         const teamsInCategory = matchTeams.filter(
-            (t) => cleanCategory(t.category) === cleanCat
+            (t) => cleanCategory(t.category) === categoryName
         );
-    
+
         setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
         setPlaceAssignmentSearch('');
         setCateringModalIsPriority(false);
@@ -2340,7 +2340,7 @@ const cateringApp = ({ userProfileData }) => {
                     ),
 
                     (() => {
-                        // 🔥 OPRAVA: očistíme kategóriu pred porovnaním
+                        // 🔥 OPRAVA: filtrujeme podľa categoryName, nie podľa teamName
                         const categoryName = cleanCategory(pendingAssignmentCell.team.category);
                         const dayKey = pendingAssignmentCell.day.key;
                         const mealType = pendingAssignmentCell.mealType;
