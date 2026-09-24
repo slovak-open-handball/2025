@@ -518,7 +518,7 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
             React.createElement(
                 'p',
                 { className: 'font-semibold mb-1' },
-                'Nasledujúce chyby bránia uloženiu:'
+                'Pred uložením je potrebné odstrániť nasledujúce chyby:'
             ),
             ...validationErrors.map((err, i) =>
                 React.createElement(
