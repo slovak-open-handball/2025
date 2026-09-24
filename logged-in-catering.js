@@ -1074,7 +1074,7 @@ const cateringApp = ({ userProfileData }) => {
             const existingAssignment = allInRow[0] || null;
             const existingId = existingAssignment?.id || null;
             const teamIndex = existingAssignment?.teamIndex || null;
-    
+        
             const placeTeam = teamIndex
                 ? (superstructureTeams.find((t) => t.id === teamIndex) || {
                       id: teamIndex,
@@ -1083,21 +1083,22 @@ const cateringApp = ({ userProfileData }) => {
                       groupName: existingAssignment.groupName || null,
                   })
                 : null;
-    
+        
             setSelectedCateringCell({
                 team,
                 dayKey: day.key,
                 dayLabel: day.fullLabelNumeric,
                 mealType,
-                slotFrom: existingAssignment?.slotFrom || slot.from,
-                slotTo: existingAssignment?.slotTo || slot.to,
+                // 🔥 OPRAVA: kliknutý slot, nie slot pôvodného priradenia
+                slotFrom: slot.from,
+                slotTo: slot.to,
                 existingId: existingId,
                 isSuperstructure: true,
                 placeTeam,
                 isPriority: false,
-                showPriorityCheckbox: true,
+                // 🔥 OPRAVA: pri jedinom priradení checkbox nezobrazujeme
+                showPriorityCheckbox: false,
             });
-            // 🔥 Predvyplníme checkbox podľa pôvodnej priority
             setCateringModalIsPriority(existingAssignment?.isPriority === true);
             setSelectedCateringPlaceId(existingAssignment?.placeId || '');
             setShowSuperstructureDecisionModal(false);
@@ -1138,12 +1139,13 @@ const cateringApp = ({ userProfileData }) => {
             dayKey: day.key,
             dayLabel: day.fullLabelNumeric,
             mealType,
-            slotFrom: assignment.slotFrom,
-            slotTo: assignment.slotTo,
+            slotFrom: slot.from,
+            slotTo: slot.to,
             existingId: assignment.id || null,
             isSuperstructure: true,
             placeTeam,
             isPriority: false, // bude sa brať z checkboxu
+            showPriorityCheckbox: true,
         });
         // 🔥 Predvyplníme checkbox podľa pôvodnej priority
         setCateringModalIsPriority(assignment.isPriority === true);
