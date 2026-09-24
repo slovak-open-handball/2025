@@ -542,6 +542,13 @@ const cateringApp = ({ userProfileData }) => {
                                 /* ignore */
                             }
                         }
+
+                        console.log('🔍 addTeam:', {
+                            identifierFromMatch,
+                            categoryName,
+                            resolvedByTeamManager: displayName,
+                            containsCategory: displayName ? displayName.includes(categoryName) : false,
+                        });
                     
                         // 🔥 AK teamManager NEVRÁTIL NÁZOV → tím preskočíme (nedostane sa do zoznamu)
                         if (!displayName) return;
