@@ -520,16 +520,33 @@ const cateringApp = ({ userProfileData }) => {
     
                     const groupName = data.groupName || null;
     
-                    // 🔥 POUŽIJEME IDENTIFIER (nie teamName)
+                    // 🔥 POUŽIJEME IDENTIFIER + namapujeme cez teamManager
                     const addTeam = (identifierFromMatch) => {
                         if (!identifierFromMatch) return;
     
                         const key = `${categoryName}||${identifierFromMatch}`;
                         if (teamsMap.has(key)) return;
     
+                        // 🔥 Získame pekný názov tímu z teamManager
+                        let displayName = identifierFromMatch;
+                        if (
+                            window.teamManager &&
+                            typeof window.teamManager.getTeamNameByDisplayIdSync === 'function'
+                        ) {
+                            try {
+                                const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifierFromMatch);
+                                if (resolved && resolved !== identifierFromMatch) {
+                                    displayName = resolved;
+                                }
+                            } catch (e) {
+                                /* ignore */
+                            }
+                        }
+    
                         teamsMap.set(key, {
-                            id: identifierFromMatch,
-                            teamName: identifierFromMatch,   // 🔥 do teamName ukladáme identifier
+                            id: identifierFromMatch,          // 🔥 id zostáva identifier
+                            teamName: displayName,            // 🔥 teamName je pekný názov z teamManager
+                            identifier: identifierFromMatch,  // 🔥 pre istotu uložíme aj identifier
                             category: categoryName,
                             groupName: groupName,
                         });
