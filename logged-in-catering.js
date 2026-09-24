@@ -604,6 +604,18 @@ const cateringApp = ({ userProfileData }) => {
         return count;
     };
 
+    // 🔥 NOVÉ: Počet denných summary stĺpcov pre daný deň (obed spolu, večera spolu)
+    // Rešpektuje filter typu jedla.
+    const dailySummaryColumnsForDay = (dayKey) => {
+        const slots = daySlots[dayKey] || { lunch: [], dinner: [] };
+        let count = 0;
+        // Obed summary stĺpec len ak existujú obedové sloty a zobrazujeme obed
+        if (shouldShowMealType('lunch') && slots.lunch.length > 0) count += 1;
+        // Večera summary stĺpec len ak existujú večerové sloty a zobrazujeme večeru
+        if (shouldShowMealType('dinner') && slots.dinner.length > 0) count += 1;
+        return count;
+    };
+
     const availableCategories = Array.from(
         new Set(
             userTeams
@@ -815,6 +827,16 @@ const cateringApp = ({ userProfileData }) => {
             total += averagePerTeam;
         });
 
+        return total;
+    };
+
+    // 🔥 NOVÉ: Denný súčet pre dané miesto + deň + typ jedla (spolu za všetky sloty).
+    const getDailyAssignedCountForPlace = (placeId, dayKey, mealType) => {
+        const slots = daySlots[dayKey]?.[mealType] || [];
+        let total = 0;
+        slots.forEach((slot) => {
+            total += getAssignedCountForPlace(placeId, dayKey, mealType, slot.from);
+        });
         return total;
     };
 
@@ -1479,7 +1501,7 @@ const cateringApp = ({ userProfileData }) => {
                                 'Balík'
                             ),
                             filteredDays.map((day, index) => {
-                                const total = visibleColumnCountForDay(day.key);
+                                const total = visibleColumnCountForDay(day.key) + dailySummaryColumnsForDay(day.key);
                                 const isLastDay = index === filteredDays.length - 1;
                                 return React.createElement(
                                     'th',
@@ -1506,17 +1528,21 @@ const cateringApp = ({ userProfileData }) => {
                                 const dinnerCount = shouldShowMealType('dinner')
                                     ? slotCountFor(day.key, 'dinner')
                                     : 0;
+                                const hasLunchSummary = shouldShowMealType('lunch') && lunchCount > 0;
+                                const hasDinnerSummary = shouldShowMealType('dinner') && dinnerCount > 0;
                                 const isLastDay = index === filteredDays.length - 1;
                                 const parts = [];
-
-                                if (lunchCount > 0) {
-                                    const lunchHasThickRight = (dinnerCount > 0) || !isLastDay;
+                            
+                                if (lunchCount > 0 || hasLunchSummary) {
+                                    const lunchColSpan = lunchCount + (hasLunchSummary ? 1 : 0);
+                                    const lunchHasThickRight =
+                                        (dinnerCount > 0 || hasDinnerSummary) || !isLastDay;
                                     parts.push(
                                         React.createElement(
                                             'th',
                                             {
                                                 key: `lunch-header-${index}`,
-                                                colSpan: lunchCount,
+                                                colSpan: lunchColSpan,
                                                 className:
                                                     'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs' +
                                                     (lunchHasThickRight ? ' border-r-4 border-r-gray-500' : ''),
@@ -1525,14 +1551,15 @@ const cateringApp = ({ userProfileData }) => {
                                         )
                                     );
                                 }
-
-                                if (dinnerCount > 0) {
+                            
+                                if (dinnerCount > 0 || hasDinnerSummary) {
+                                    const dinnerColSpan = dinnerCount + (hasDinnerSummary ? 1 : 0);
                                     parts.push(
                                         React.createElement(
                                             'th',
                                             {
                                                 key: `dinner-header-${index}`,
-                                                colSpan: dinnerCount,
+                                                colSpan: dinnerColSpan,
                                                 className:
                                                     'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs' +
                                                     (!isLastDay ? ' border-r-4 border-r-gray-500' : ''),
@@ -1541,7 +1568,7 @@ const cateringApp = ({ userProfileData }) => {
                                         )
                                     );
                                 }
-
+                            
                                 return React.createElement(
                                     React.Fragment,
                                     { key: `meal-header-${index}` },
@@ -1560,14 +1587,19 @@ const cateringApp = ({ userProfileData }) => {
                                 const dinnerSlots = shouldShowMealType('dinner')
                                     ? (daySlots[day.key]?.dinner || [])
                                     : [];
+                                const hasLunchSummary = lunchSlots.length > 0;
+                                const hasDinnerSummary = dinnerSlots.length > 0;
                                 const isLastDay = dayIndex === filteredDays.length - 1;
                                 const parts = [];
-
+                            
+                                // Obedové sloty
                                 lunchSlots.forEach((slot, i) => {
                                     const isLastLunchSlot = i === lunchSlots.length - 1;
+                                    // hrubá čiara len ak nie je lunch summary a (je dinner blok alebo nie je posledný deň)
                                     const hasThickRight =
                                         isLastLunchSlot &&
-                                        ((dinnerSlots.length > 0) || !isLastDay);
+                                        !hasLunchSummary &&
+                                        ((dinnerSlots.length > 0 || hasDinnerSummary) || !isLastDay);
                                     parts.push(
                                         React.createElement(
                                             'th',
@@ -1582,10 +1614,29 @@ const cateringApp = ({ userProfileData }) => {
                                         )
                                     );
                                 });
-
+                            
+                                // 🔥 Nový stĺpec: Obed – denný súčet (za posledným obedovým slotom)
+                                if (hasLunchSummary) {
+                                    const hasThickRight = (dinnerSlots.length > 0 || hasDinnerSummary) || !isLastDay;
+                                    parts.push(
+                                        React.createElement(
+                                            'th',
+                                            {
+                                                key: `lunch-summary-${dayIndex}`,
+                                                className:
+                                                    'border border-gray-300 bg-amber-100 px-2 py-1 text-center text-[11px] font-bold text-amber-800 whitespace-nowrap min-w-[70px]' +
+                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                                title: 'Denný súčet obeda',
+                                            },
+                                            '∑ Obed'
+                                        )
+                                    );
+                                }
+                            
+                                // Večerové sloty
                                 dinnerSlots.forEach((slot, i) => {
                                     const isLastDinnerSlot = i === dinnerSlots.length - 1;
-                                    const hasThickRight = isLastDinnerSlot && !isLastDay;
+                                    const hasThickRight = isLastDinnerSlot && !hasDinnerSummary && !isLastDay;
                                     parts.push(
                                         React.createElement(
                                             'th',
@@ -1600,7 +1651,25 @@ const cateringApp = ({ userProfileData }) => {
                                         )
                                     );
                                 });
-
+                            
+                                // 🔥 Nový stĺpec: Večera – denný súčet (za posledným večerovým slotom)
+                                if (hasDinnerSummary) {
+                                    const hasThickRight = !isLastDay;
+                                    parts.push(
+                                        React.createElement(
+                                            'th',
+                                            {
+                                                key: `dinner-summary-${dayIndex}`,
+                                                className:
+                                                    'border border-gray-300 bg-amber-100 px-2 py-1 text-center text-[11px] font-bold text-amber-800 whitespace-nowrap min-w-[70px]' +
+                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                                title: 'Denný súčet večere',
+                                            },
+                                            '∑ Večera'
+                                        )
+                                    );
+                                }
+                            
                                 return React.createElement(
                                     React.Fragment,
                                     { key: `slot-headers-${dayIndex}` },
@@ -1779,6 +1848,19 @@ const cateringApp = ({ userProfileData }) => {
                                               );
                                           }
 
+                                          if (shouldShowMealType('lunch') && lunchCount > 0) {
+                                              const hasThickRight =
+                                                  (shouldShowMealType('dinner') && dinnerCount > 0) || !isLastDay;
+                                              cells.push(
+                                                  React.createElement('td', {
+                                                      key: `empty-lunch-summary-${rowIndex}-${dayIndex}`,
+                                                      className:
+                                                          'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px]' +
+                                                          (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                                  })
+                                              );
+                                          }
+
                                           for (let i = 0; i < dinnerCount; i++) {
                                               const slot = daySlots[day.key].dinner[i];
                                               const isLastDinnerCell = i === dinnerCount - 1;
@@ -1861,7 +1943,20 @@ const cateringApp = ({ userProfileData }) => {
                                                               : (hasMealInPackage ? '' : '–')
                                                   )
                                               );
-                                          }                                          
+                                          }           
+
+                                          // 🔥 Prázdna bunka pre stĺpec "Večera – denný súčet"
+                                          if (shouldShowMealType('dinner') && dinnerCount > 0) {
+                                              const hasThickRight = !isLastDay;
+                                              cells.push(
+                                                  React.createElement('td', {
+                                                      key: `empty-dinner-summary-${rowIndex}-${dayIndex}`,
+                                                      className:
+                                                          'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px]' +
+                                                          (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                                  })
+                                              );
+                                          }
 
                                           return React.createElement(
                                               React.Fragment,
@@ -1960,6 +2055,32 @@ const cateringApp = ({ userProfileData }) => {
                                         ));
                                     });
 
+                                    if (shouldShowMealType('lunch') && lunchSlots.length > 0) {
+                                        const dailyLunchTotal = getDailyAssignedCountForPlace(place.id, day.key, 'lunch');
+                                        const overCapacity = placeCapacity != null && dailyLunchTotal > placeCapacity;
+                                        const hasThickRight =
+                                            (shouldShowMealType('dinner') && dinnerSlots.length > 0) || !isLastDay;
+
+                                        cells.push(React.createElement(
+                                            'td',
+                                            {
+                                                key: `summary-daily-${place.id}-lunch-${dayIndex}`,
+                                                className:
+                                                    'border border-gray-300 px-2 py-2 text-center text-sm font-bold min-w-[70px]' +
+                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : '') +
+                                                    (overCapacity ? ' text-red-600' : ''),
+                                                style: dailyLunchTotal > 0
+                                                    ? {
+                                                          backgroundColor: colors.bg,
+                                                          color: overCapacity ? '#dc2626' : colors.text,
+                                                      }
+                                                    : {},
+                                                title: `Denný súčet obeda pre ${place.name}: ${dailyLunchTotal}`,
+                                            },
+                                            dailyLunchTotal > 0 ? dailyLunchTotal : ''
+                                        ));
+                                    }
+
                                     dinnerSlots.forEach((slot, i) => {
                                         const isLastDinnerCell = i === dinnerSlots.length - 1;
                                         const hasThickRight = isLastDinnerCell && !isLastDay;
@@ -1987,6 +2108,32 @@ const cateringApp = ({ userProfileData }) => {
                                             count > 0 ? count : ''
                                         ));
                                     });
+
+                                    // 🔥 Denný súčet večere pre toto miesto
+                                    if (shouldShowMealType('dinner') && dinnerSlots.length > 0) {
+                                        const dailyDinnerTotal = getDailyAssignedCountForPlace(place.id, day.key, 'dinner');
+                                        const overCapacity = placeCapacity != null && dailyDinnerTotal > placeCapacity;
+                                        const hasThickRight = !isLastDay;
+                                    
+                                        cells.push(React.createElement(
+                                            'td',
+                                            {
+                                                key: `summary-daily-${place.id}-dinner-${dayIndex}`,
+                                                className:
+                                                    'border border-gray-300 px-2 py-2 text-center text-sm font-bold min-w-[70px]' +
+                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : '') +
+                                                    (overCapacity ? ' text-red-600' : ''),
+                                                style: dailyDinnerTotal > 0
+                                                    ? {
+                                                          backgroundColor: colors.bg,
+                                                          color: overCapacity ? '#dc2626' : colors.text,
+                                                      }
+                                                    : {},
+                                                title: `Denný súčet večere pre ${place.name}: ${dailyDinnerTotal}`,
+                                            },
+                                            dailyDinnerTotal > 0 ? dailyDinnerTotal : ''
+                                        ));
+                                    }
 
                                     return cells;
                                 })
