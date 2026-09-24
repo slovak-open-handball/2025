@@ -617,14 +617,19 @@ const exportMatchesToPdf = async (title, matchesByDay, formatDateHeaderFn, forma
         const rows = dayGroup.matches.map(m => {
             const homeId = m.homeTeamIdentifier || '';
             const awayId = m.awayTeamIdentifier || '';
+            const homeTeamName = homeId;
+            const awayTeamName = awayId;
+            const score = (m.homeScore !== undefined && m.homeScore !== null && m.awayScore !== undefined && m.awayScore !== null)
+                ? `${m.homeScore} : ${m.awayScore}`
+                : '';
             return [
                 formatTimeFn(m.scheduledTime) || '--:--',
                 homeId,
-                '', // domáci názov
-                '', // skóre domáci
-                '', // dvojbodka
-                '', // skóre hostia
-                '', // hostia
+                homeTeamName,
+                score ? score.split(' : ')[0] : '',
+                score ? ':' : '',
+                score ? score.split(' : ')[1] : '',
+                awayTeamName,
                 awayId,
                 [
                     m.matchType || '',
