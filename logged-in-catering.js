@@ -558,22 +558,18 @@ const cateringApp = ({ userProfileData }) => {
     };
 
     // 🔥 Vykoná samotné uloženie (vytvorenie alebo zmenu)
-    const performSaveCateringAssignment = async (payload, isChange, oldId) => {
+    // oldIds = pole ID dokumentov, ktoré treba pred vytvorením nového zmazať
+    const performSaveCateringAssignment = async (payload, isChange, oldIds) => {
         try {
-            if (isChange && oldId) {
-                // 1) vymaž staré
-                await deleteDoc(doc(window.db, 'catering', oldId));
+            if (isChange && Array.isArray(oldIds) && oldIds.length > 0) {
+                // 1) vymaž všetky staré priradenia daného tímu
+                for (const id of oldIds) {
+                    await deleteDoc(doc(window.db, 'catering', id));
+                }
                 // 2) vytvor nové
                 payload.createdAt = Timestamp.now();
                 await addDoc(collection(window.db, 'catering'), payload);
                 window.showGlobalNotification('Priradenie bolo zmenené.', 'success');
-            } else if (selectedCateringCell.existingId) {
-                // bez zmeny miesta – iba update (ak by sa niekedy hodilo)
-                await updateDoc(
-                    doc(window.db, 'catering', selectedCateringCell.existingId),
-                    payload
-                );
-                window.showGlobalNotification('Priradenie bolo aktualizované.', 'success');
             } else {
                 payload.createdAt = Timestamp.now();
                 await addDoc(collection(window.db, 'catering'), payload);
@@ -597,33 +593,42 @@ const cateringApp = ({ userProfileData }) => {
 
         const payload = buildCateringPayload(selectedCateringPlaceId);
 
-        // Ak už existuje priradenie pre túto bunku
-        if (selectedCateringCell.existingId) {
-            // Nájdi staré priradenie a zisti, či sa mení miesto
-            const oldAssignment = cateringAssignments.find(
-                (a) => a.id === selectedCateringCell.existingId
-            );
-            const oldPlaceId = oldAssignment?.placeId || null;
+        // Zisti, či pre tento tím už existuje AKÉKOĽVEK priradenie v kolekcii catering
+        const existingForTeam = cateringAssignments.filter(
+            (a) => a.teamId === selectedCateringCell.team.id
+        );
 
-            // Ak sa placeId nemení → len update (napr. rovnaké miesto)
-            if (oldPlaceId === selectedCateringPlaceId) {
-                setSavingCatering(true);
-                await performSaveCateringAssignment(payload, false, null);
-                return;
-            }
-
-            // Ak sa placeId MENÍ → zobraz potvrdenie
-            setPendingChange({
-                payload,
-                oldId: selectedCateringCell.existingId,
-            });
-            setShowChangeConfirm(true);
+        // Ak pre tím neexistuje žiadne priradenie → rovno ulož
+        if (existingForTeam.length === 0) {
+            setSavingCatering(true);
+            await performSaveCateringAssignment(payload, false, null);
             return;
         }
 
-        // Ak neexistuje → rovno ulož
-        setSavingCatering(true);
-        await performSaveCateringAssignment(payload, false, null);
+        // Existuje aspoň jedno priradenie pre tím.
+        // Skontroluj, či niektoré z nich je presne tá istá bunka a rovnaké miesto
+        // (v takom prípade nie je čo riešiť – je to identické)
+        const identical = existingForTeam.find(
+            (a) =>
+                a.dayKey === selectedCateringCell.dayKey &&
+                a.mealType === selectedCateringCell.mealType &&
+                a.slotFrom === selectedCateringCell.slotFrom &&
+                a.placeId === selectedCateringPlaceId
+        );
+        if (identical) {
+            // Nič sa nemení
+            setShowCateringModal(false);
+            setSelectedCateringCell(null);
+            setSelectedCateringPlaceId('');
+            return;
+        }
+
+        // Inak → zobraz potvrdenie o zmene (vymažú sa VŠETKY existujúce priradenia tímu)
+        setPendingChange({
+            payload,
+            oldIds: existingForTeam.map((a) => a.id),
+        });
+        setShowChangeConfirm(true);
     };
 
     // 🔥 Potvrdenie zmeny – vymaž staré a ulož nové
@@ -635,7 +640,7 @@ const cateringApp = ({ userProfileData }) => {
         await performSaveCateringAssignment(
             pendingChange.payload,
             true,
-            pendingChange.oldId
+            pendingChange.oldIds
         );
 
         setPendingChange(null);
@@ -1146,7 +1151,7 @@ const cateringApp = ({ userProfileData }) => {
                     React.createElement(
                         'p',
                         { className: 'text-gray-700 mb-6' },
-                        'Pre tento tím, deň a čas už existuje priradené stravovacie miesto. Prajete si ho nahradiť novým? Pôvodné priradenie bude odstránené.'
+                        'Tento tím už má priradené stravovanie. Prajete si ho nahradiť novým? Všetky pôvodné priradenia tímu budú odstránené.'
                     ),
                     React.createElement(
                         'div',
