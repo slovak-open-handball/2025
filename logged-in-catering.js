@@ -516,7 +516,7 @@ const cateringApp = ({ userProfileData }) => {
     const availableCategories = Array.from(
         new Set(
             userTeams
-                .map((t) => cleanCategory(t.category))
+                .map((t) => t.category)
                 .filter(Boolean)
         )
     ).sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
@@ -530,11 +530,7 @@ const cateringApp = ({ userProfileData }) => {
     const categoryHasVisibleColumns = () => true;
 
     const filteredTeams = (filterCategory
-        ? userTeams.filter(
-              (t) =>
-                  cleanCategory(t.category) ===
-                  cleanCategory(filterCategory)
-          )
+        ? userTeams.filter((t) => t.category === filterCategory)
         : userTeams
     ).filter((t) => categoryHasVisibleColumns(t.category));
 
