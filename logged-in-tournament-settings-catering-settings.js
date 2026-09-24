@@ -151,7 +151,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
 
     /**
      * Pomocná funkcia: vytvorí zoznam zmien medzi pôvodnými a novými časmi stravovania.
-     * Vracia pole reťazcov, ktoré sa pošlú do sendAdminNotification.
      */
     const buildCateringChanges = (original, updated, days) => {
         const changes = [];
@@ -170,10 +169,8 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                 const oEmpty = !oFrom && !oTo;
                 const nEmpty = !nFrom && !nTo;
 
-                // Ak bolo predtým aj teraz prázdne, nič nemeniť
                 if (oEmpty && nEmpty) return;
 
-                // Ak bolo prázdne a teraz je vyplnené => pridanie
                 if (oEmpty && !nEmpty) {
                     changes.push(
                         `Deň ${day.fullLabel}: pridané ${mealLabel(mealType)} ${nFrom || '?'} – ${nTo || '?'}`
@@ -181,7 +178,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                     return;
                 }
 
-                // Ak bolo vyplnené a teraz je prázdne => odobratie
                 if (!oEmpty && nEmpty) {
                     changes.push(
                         `Deň ${day.fullLabel}: odobrané ${mealLabel(mealType)} (bolo ${oFrom || '?'} – ${oTo || '?'})`
@@ -189,7 +185,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                     return;
                 }
 
-                // Ak sa zmenili hodnoty
                 if (oFrom !== nFrom || oTo !== nTo) {
                     const fromChanged = oFrom !== nFrom ? `"od" z '${oFrom || '-'}' na '${nFrom || '-'}'` : '';
                     const toChanged   = oTo   !== nTo   ? `"do" z '${oTo || '-'}' na '${nTo || '-'}'` : '';
@@ -229,10 +224,8 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
         try {
             setSaving(true);
 
-            // Pôvodné hodnoty (pred uložením) pre výpočet zmien
             const originalTimes = { ...cateringTimes };
 
-            // Uložíme iba to, čo je reálne vyplnené (žiadne defaulty)
             const normalized = {};
             tournamentDays.forEach((day) => {
                 const t = cateringTimes[day.key];
@@ -258,7 +251,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                 updatedBy: userProfileData.email || null,
             }, { merge: true });
 
-            // 🔥 Vytvoríme notifikáciu pre adminov
             try {
                 const changesList = buildCateringChanges(
                     originalTimes,
@@ -335,9 +327,10 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                             colSpan: 2,
                             className: 'border border-gray-300 bg-blue-50 px-3 py-2 text-center font-bold text-blue-700',
                         }, 'Obed'),
+                        // 🔥 ZMENA: Večera – bledomodrá namiesto fialovej
                         React.createElement('th', {
                             colSpan: 2,
-                            className: 'border border-gray-300 bg-purple-50 px-3 py-2 text-center font-bold text-purple-700',
+                            className: 'border border-gray-300 bg-sky-50 px-3 py-2 text-center font-bold text-sky-700',
                         }, 'Večera')
                     ),
                     React.createElement(
@@ -345,8 +338,9 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                         null,
                         React.createElement('th', { className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-xs text-blue-700' }, 'Od'),
                         React.createElement('th', { className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-xs text-blue-700' }, 'Do'),
-                        React.createElement('th', { className: 'border border-gray-300 bg-purple-50 px-2 py-1 text-center text-xs text-purple-700' }, 'Od'),
-                        React.createElement('th', { className: 'border border-gray-300 bg-purple-50 px-2 py-1 text-center text-xs text-purple-700' }, 'Do')
+                        // 🔥 ZMENA: Večera – bledomodrá
+                        React.createElement('th', { className: 'border border-gray-300 bg-sky-50 px-2 py-1 text-center text-xs text-sky-700' }, 'Od'),
+                        React.createElement('th', { className: 'border border-gray-300 bg-sky-50 px-2 py-1 text-center text-xs text-sky-700' }, 'Do')
                     )
                 ),
                 React.createElement(
@@ -382,22 +376,22 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                                     className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500',
                                 })
                             ),
-                            // Večera – od
+                            // Večera – od (bledomodrá)
                             React.createElement('td', { className: 'border border-gray-300 px-2 py-2 text-center' },
                                 React.createElement('input', {
                                     type: 'time',
                                     value: t.dinner?.from || '',
                                     onChange: (e) => handleTimeChange(day.key, 'dinner', 'from', e.target.value),
-                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-purple-500',
+                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-sky-500',
                                 })
                             ),
-                            // Večera – do
+                            // Večera – do (bledomodrá)
                             React.createElement('td', { className: 'border border-gray-300 px-2 py-2 text-center' },
                                 React.createElement('input', {
                                     type: 'time',
                                     value: t.dinner?.to || '',
                                     onChange: (e) => handleTimeChange(day.key, 'dinner', 'to', e.target.value),
-                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-purple-500',
+                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-sky-500',
                                 })
                             )
                         );
