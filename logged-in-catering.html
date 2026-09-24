@@ -21,6 +21,10 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            overflow-x: hidden; /* Poistka proti horizontálnemu scrollu celej stránky */
+        }
+        html {
+            overflow-x: hidden;
         }
     </style>
 </head>
@@ -28,10 +32,11 @@
     <div id="header-placeholder"></div>
     <!-- Tento placeholder bol pridaný pre vloženie obsahu ľavého menu -->
     <div id="menu-placeholder"></div>
-    <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
+    <main id="main-content-area" class="flex-grow flex overflow-x-hidden">
         <!-- Sem sme pridali triedu pre plynulú animáciu -->
-        <div class="flex-shrink-0 w-16 transition-all duration-300"></div> <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
-        <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex-shrink-0 w-16 transition-all duration-300"></div>
+        <!-- Root: žiadne 'container', žiadne 'max-w', aby obsah mohol byť širší a scrolloval sa vnútorný kontajner -->
+        <div id="root" class="flex-grow w-full min-w-0 py-8">
             <!-- Obsah aplikácie bude vykreslený tu -->
             <div class="flex justify-center pt-16">
                 <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
