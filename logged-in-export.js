@@ -173,6 +173,10 @@ const parseExportHash = () => {
         return { type: 'zapasy' };
     }
 
+    if (parts[0] === 'zapasy-playoff') {
+        return { type: 'zapasy-playoff' };
+    }
+
     return null;
 };
 
@@ -376,7 +380,7 @@ const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
     }
 };
 
-const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, formatTimeFn, fixedDpr = null) => {
+const exportMatchesToPdf = async (title, matchesByDay, formatDateHeaderFn, formatTimeFn, fixedDpr = null) => {
     const markBatchCompleted = () => {
         try {
             const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
@@ -384,7 +388,7 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
                 let completed = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
                 completed++;
                 sessionStorage.setItem('pdfBatchCompleted', String(completed));
-                sessionStorage.setItem('pdfBatchLastLabel', hallName || '');
+                sessionStorage.setItem('pdfBatchLastLabel', title || '');
             }
         } catch (e) { }
     };
@@ -405,10 +409,10 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
         return;
     }
 
-    const safeHallName = (hallName || 'sportova-hala').replace(/\s+/g, '-');
-    const fileName = `Zapasy_${safeHallName}.pdf`;
+    const safeTitle = (title || 'zapasy').replace(/\s+/g, '-');
+    const fileName = `${safeTitle}.pdf`;
 
-    window.showGlobalNotification(`Generujem PDF pre zápasy: ${hallName}`, 'info');
+    window.showGlobalNotification(`Generujem PDF pre: ${title}`, 'info');
 
     const scaleToUse = (fixedDpr || PDF_DEVICE_PIXEL_RATIO);
 
@@ -836,6 +840,8 @@ const ExportApp = ({ userProfileData }) => {
             }
         } else if (exportHash && exportHash.type === 'zapasy') {
             document.title = 'SOH 2025 | Zápasy v športovej hale';
+        } else if (exportHash && exportHash.type === 'zapasy-playoff') {
+            document.title = 'SOH 2025 | Playoff a zápasy o umiestnenie';
         } else {
             document.title = 'SOH 2025 - Export';
         }
@@ -879,19 +885,30 @@ const ExportApp = ({ userProfileData }) => {
             try {
                 sessionStorage.removeItem('pdfAutoDownloaded');
             } catch (e) { }
-
+        
             const selectedCategory = categories.find(c => c.id === selectedCategoryId);
             const categoryName = selectedCategory ? selectedCategory.name : selectedCategoryId;
             const categoryNameSafe = spacesToDashes(categoryName);
         
-            // Ak je zvolený typ "playoff-a-zapasy-o-umiestnenie", nespracúvaj skupiny
+            // Playoff a zápasy o umiestnenie
             if (selectedGroupType === 'playoff-a-zapasy-o-umiestnenie') {
-                window.showGlobalNotification('Pre tento typ export zatiaľ nie je implementovaný.', 'info');
+                const hash = `zapasy-playoff`;
+        
+                try {
+                    sessionStorage.removeItem('matchesPdfAutoDownloaded_playoff');
+                    sessionStorage.removeItem('pdfAutoDownloaded');
+                } catch (e) { }
+        
+                if (showPreview) {
+                    window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
+                } else {
+                    downloadMatchesPdfViaHiddenIframe(hash, 'Playoff a zápasy o umiestnenie');
+                }
                 return;
             }
         
             let groupsToProcess = [];
-
+        
             if (selectedGroupName) {
                 groupsToProcess = [selectedGroupName];
             } else {
@@ -1050,8 +1067,15 @@ const ExportApp = ({ userProfileData }) => {
                     )
             )
         );
+    }    
+    
+    if (exportHash && exportHash.type === 'zapasy-playoff') {
+        return React.createElement(MatchesExportView, {
+            hallName: null,
+            mode: 'playoff'
+        });
     }
-
+    
     if (exportHash && exportHash.type === 'zapasy') {
         const hallName = exportHash.hallName || null;
     
@@ -1071,8 +1095,8 @@ const ExportApp = ({ userProfileData }) => {
                 )
             );
         }
-    
-        return React.createElement(MatchesExportView, { hallName });
+
+        return React.createElement(MatchesExportView, { hallName, mode: 'hall' });
     }
 
     return React.createElement(
@@ -1255,7 +1279,7 @@ const ExportApp = ({ userProfileData }) => {
     );
 };
 
-const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
+const MatchesExportView = ({ hallName: hallNameFromUrl, mode = 'hall' }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [hallName, setHallName] = useState(hallNameFromUrl || '');
@@ -1277,7 +1301,6 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         boxSizing: 'border-box'
     };
 
-    const urlParams = new URLSearchParams(window.location.search);
     const fixedZoom = React.useMemo(() => {
         const urlParams = new URLSearchParams(window.location.search);
         return parseFloat(urlParams.get('fixedZoom')) || 1.0;
@@ -1288,7 +1311,15 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         return parseFloat(urlParams.get('fixedDpr')) || 1.5;
     }, []);
 
+    // --- Hľadanie haly (len v 'hall' móde) ---
     useEffect(() => {
+        if (mode === 'playoff') {
+            setHallId(null);
+            setHallName('Playoff a zápasy o umiestnenie');
+            setLoading(true);
+            return;
+        }
+
         if (!window.db || !hallNameFromUrl) return;
 
         const findHallByName = async () => {
@@ -1324,8 +1355,9 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         };
 
         findHallByName();
-    }, [hallNameFromUrl]);
+    }, [hallNameFromUrl, mode]);
 
+    // --- Kategórie a skupiny ---
     useEffect(() => {
         if (!window.db) return;
 
@@ -1359,22 +1391,33 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         };
     }, []);
 
+    // --- Načítanie zápasov (hall vs playoff) ---
     useEffect(() => {
-        if (!window.db || !hallId) return;
+        if (!window.db) return;
+        if (mode === 'hall' && !hallId) return;
 
         setLoading(true);
 
         const matchesRef = collection(window.db, 'matches');
         const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
-            const hallMatches = [];
+            const filteredMatches = [];
             snapshot.forEach((docSnap) => {
                 const match = { id: docSnap.id, ...docSnap.data() };
-                if (match.hallId === hallId) {
-                    hallMatches.push(match);
+
+                if (mode === 'hall') {
+                    if (match.hallId === hallId) {
+                        filteredMatches.push(match);
+                    }
+                } else if (mode === 'playoff') {
+                    const isPlayoff = isEliminationMatch(match);
+                    const isPlacement = match.isPlacementMatch === true;
+                    if (isPlayoff || isPlacement) {
+                        filteredMatches.push(match);
+                    }
                 }
             });
 
-            hallMatches.sort((a, b) => {
+            filteredMatches.sort((a, b) => {
                 if (!a.scheduledTime) return 1;
                 if (!b.scheduledTime) return -1;
                 try {
@@ -1384,7 +1427,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                 }
             });
 
-            setMatches(hallMatches);
+            setMatches(filteredMatches);
             setLoading(false);
         }, (err) => {
             setError('Nepodarilo sa načítať zápasy.');
@@ -1392,30 +1435,30 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         });
 
         return () => unsubscribe();
-    }, [hallId]);
+    }, [hallId, mode]);
 
     const getDisplayTeamNameForMatch = (match, rawTeamName) => {
         if (!rawTeamName) return '';
-    
+
         if (match.isPlacementMatch || isEliminationMatch(match)) {
             return '';
         }
-    
+
         if (!match.groupName) {
             return rawTeamName;
         }
-    
+
         const categoryGroups = groupsData[match.categoryId] || [];
         const foundGroup = categoryGroups.find(g => g.name === match.groupName);
-    
+
         if (!foundGroup) {
             return rawTeamName;
         }
-    
+
         if (foundGroup.type === 'nadstavbová skupina') {
             return '';
         }
-    
+
         if (foundGroup.type === 'základná skupina') {
             if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
                 try {
@@ -1426,7 +1469,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                 } catch (e) { }
             }
             return rawTeamName;
-        }    
+        }
         return rawTeamName;
     };
 
@@ -1553,27 +1596,30 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         });
         return Object.values(groups).sort((a, b) => a.date - b.date);
     }, [matches]);
-        
+
+    // --- Auto download ---
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
-    
+
         if (!shouldAutoDownload) return;
         if (loading) return;
-    
-        const storageKey = `matchesPdfAutoDownloaded_${hallNameFromUrl || 'unknown'}`;
-    
+
+        const storageKey = mode === 'playoff'
+            ? 'matchesPdfAutoDownloaded_playoff'
+            : `matchesPdfAutoDownloaded_${hallNameFromUrl || 'unknown'}`;
+
         let alreadyDownloaded = false;
         try {
             alreadyDownloaded = sessionStorage.getItem(storageKey) === '1';
         } catch (e) { }
-    
+
         if (alreadyDownloaded) return;
-    
+
         try {
             sessionStorage.setItem(storageKey, '1');
         } catch (e) { }
-    
+
         if (matchesByDay.length === 0) {
             try {
                 const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
@@ -1585,13 +1631,17 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
             } catch (e) { }
             return;
         }
-    
+
         const timer = setTimeout(() => {
-            exportMatchesToPdf(hallName || hallNameFromUrl, matchesByDay, formatDateHeader, formatTime, fixedDpr);
+            const title = mode === 'playoff'
+                ? 'Playoff-a-zapasy-o-umiestnenie'
+                : (hallName || hallNameFromUrl);
+
+            exportMatchesToPdf(title, matchesByDay, formatDateHeader, formatTime, fixedDpr);
         }, 800);
-    
+
         return () => clearTimeout(timer);
-    }, [loading, matchesByDay, hallName, hallNameFromUrl, fixedDpr]);
+    }, [loading, matchesByDay, hallName, hallNameFromUrl, fixedDpr, mode]);
 
     if (loading) {
         return React.createElement(
@@ -1628,8 +1678,12 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
             React.createElement(
                 'div',
                 { className: 'mb-6 text-center pt-6' },
-                React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Zápasy v športovej hale'),
                 React.createElement(
+                    'h1',
+                    { className: 'text-2xl font-bold text-gray-800' },
+                    mode === 'playoff' ? 'Playoff a zápasy o umiestnenie' : 'Zápasy v športovej hale'
+                ),
+                mode === 'hall' && React.createElement(
                     'div',
                     { className: 'flex items-center justify-center gap-2 mt-1' },
                     React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-500 text-sm' }),
@@ -1642,7 +1696,13 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                     'div',
                     { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl m-4' },
                     React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-5xl mb-3 opacity-50' }),
-                    React.createElement('p', { className: 'text-lg' }, 'Pre túto halu nie sú naplánované žiadne zápasy.')
+                    React.createElement(
+                        'p',
+                        { className: 'text-lg' },
+                        mode === 'playoff'
+                            ? 'Nie sú naplánované žiadne playoff ani zápasy o umiestnenie.'
+                            : 'Pre túto halu nie sú naplánované žiadne zápasy.'
+                    )
                 ) :
                 React.createElement(
                     'div',
@@ -1656,16 +1716,16 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                             React.createElement(
                                 'tr',
                                 null,
-                                React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'Čas'),                        
-                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'ID'),                        
-                                React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Názov tímu'),                        
+                                React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'Čas'),
+                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'ID'),
+                                React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Názov tímu'),
                                 React.createElement(
                                     'th',
                                     { colSpan: 3, className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider' },
                                     'Skóre'
-                                ),                        
-                                React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Názov tímu'),                        
-                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'ID'),                        
+                                ),
+                                React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Názov tímu'),
+                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'ID'),
                                 React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info')
                             )
                         ),
@@ -1714,7 +1774,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                             }, match.matchType)
                                         );
                                     }
-                                    
+
                                     if (match.isPlacementMatch) {
                                         infoTags.push(
                                             React.createElement('span', {
@@ -1724,7 +1784,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                             }, `o ${match.placementRank}. miesto`)
                                         );
                                     }
-                                    
+
                                     if (match.groupName && !match.isPlacementMatch) {
                                         const isElim = isEliminationMatch(match);
                                         const groupColors = isElim
@@ -1738,7 +1798,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                             }, match.groupName)
                                         );
                                     }
-                                    
+
                                     let categoryDisplayTag = match.categoryName;
                                     if (!categoryDisplayTag && match.categoryId && categoriesData[match.categoryId]) {
                                         categoryDisplayTag = categoriesData[match.categoryId];
@@ -1759,68 +1819,68 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                             'tr',
                                             { key: `match-${dayIndex}-${matchIndex}`, className: 'hover:bg-gray-50 transition-colors' },
 
-                                           React.createElement(
-                                               'td',
-                                               { className: 'px-4 py-3 whitespace-nowrap' },
-                                               React.createElement(
-                                                   'div',
-                                                   { className: 'flex items-center gap-1' },
-                                                   React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
-                                                   React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, formatTime(match.scheduledTime))
-                                               )
-                                           ),
-                                           
-                                           React.createElement(
-                                               'td',
-                                               { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                               React.createElement('span', { className: 'font-mono text-xs text-gray-500' },
-                                                   getDisplayIdForMatch(match, match.homeTeamIdentifier)
-                                               )
-                                           ),
-                                           
-                                           React.createElement(
-                                               'td',
-                                               { className: 'px-4 py-3 whitespace-nowrap text-right' },
-                                               React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, homeTeamDisplay)
-                                           ),
-                                           
-                                           React.createElement(
-                                               'td',
-                                               { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                               React.createElement('span', { className: 'font-bold text-gray-800 text-sm' }, '')
-                                           ),
-                                           
-                                           React.createElement(
-                                               'td',
-                                               { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                               React.createElement('span', { className: 'text-gray-400 font-medium text-sm' }, ':')
-                                           ),
-                                           
-                                           React.createElement(
-                                               'td',
-                                               { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                               React.createElement('span', { className: 'font-bold text-gray-800 text-sm' }, '')
-                                           ),
-                                           
-                                           React.createElement(
-                                               'td',
-                                               { className: 'px-4 py-3 whitespace-nowrap text-left' },
-                                               React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
-                                           ),
-                                           
-                                           React.createElement(
-                                               'td',
-                                               { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                               React.createElement('span', { className: 'font-mono text-xs text-gray-500' },
-                                                   getDisplayIdForMatch(match, match.awayTeamIdentifier)
-                                               )
-                                           ),
-                                           
-                                           React.createElement(
-                                               'td',
-                                               { className: 'px-4 py-3' },
-                                               React.createElement('div', { className: 'flex flex-col gap-1' }, infoTags)
-                                           )
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3 whitespace-nowrap' },
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'flex items-center gap-1' },
+                                                    React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
+                                                    React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, formatTime(match.scheduledTime))
+                                                )
+                                            ),
+
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3 whitespace-nowrap text-center' },
+                                                React.createElement('span', { className: 'font-mono text-xs text-gray-500' },
+                                                    getDisplayIdForMatch(match, match.homeTeamIdentifier)
+                                                )
+                                            ),
+
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3 whitespace-nowrap text-right' },
+                                                React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, homeTeamDisplay)
+                                            ),
+
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3 whitespace-nowrap text-center' },
+                                                React.createElement('span', { className: 'font-bold text-gray-800 text-sm' }, '')
+                                            ),
+
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3 whitespace-nowrap text-center' },
+                                                React.createElement('span', { className: 'text-gray-400 font-medium text-sm' }, ':')
+                                            ),
+
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3 whitespace-nowrap text-center' },
+                                                React.createElement('span', { className: 'font-bold text-gray-800 text-sm' }, '')
+                                            ),
+
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3 whitespace-nowrap text-left' },
+                                                React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
+                                            ),
+
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3 whitespace-nowrap text-center' },
+                                                React.createElement('span', { className: 'font-mono text-xs text-gray-500' },
+                                                    getDisplayIdForMatch(match, match.awayTeamIdentifier)
+                                                )
+                                            ),
+
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3' },
+                                                React.createElement('div', { className: 'flex flex-col gap-1' }, infoTags)
+                                            )
                                         )
                                     );
                                 });
