@@ -1063,7 +1063,7 @@ const cateringApp = ({ userProfileData }) => {
                                   React.createElement(
                                       'td',
                                       {
-                                          colSpan: 4 + filteredDays.reduce(
+                                          colSpan: 5 + filteredDays.reduce(
                                               (acc, d) => acc + visibleColumnCountForDay(d.key),
                                               0
                                           ),
@@ -1254,7 +1254,7 @@ const cateringApp = ({ userProfileData }) => {
                             React.createElement(
                                 'td',
                                 {
-                                    colSpan: 4 + filteredDays.reduce(
+                                    colSpan: 5 + filteredDays.reduce(
                                         (acc, d) => acc + visibleColumnCountForDay(d.key), 0
                                     ),
                                     className: 'border border-gray-300 px-3 py-2 text-left text-sm font-bold text-gray-700'
