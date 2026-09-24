@@ -1910,8 +1910,8 @@ const MatchesExportView = ({ hallName: hallNameFromUrl, mode = 'hall', categoryN
                 matches: matches.map(m => ({
                     ...m,
                     status: 'scheduled',
-                    homeScore: 0,
-                    awayScore: 0
+                    homeScore: null,
+                    awayScore: null
                 })),
                 selectedCategory: spiderCategoryId,
                 teamNames: {},
