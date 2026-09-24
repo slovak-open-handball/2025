@@ -665,10 +665,43 @@ const cateringApp = ({ userProfileData }) => {
         return total;
     };
 
-        // Otvorí modálne okno pre priradenie
+    // Otvorí modálne okno pre priradenie
     const openCateringModal = (team, day, mealType, slot) => {
-        // 1) Ak pre túto bunku už existuje klasické priradenie → otvoríme ROVNO
-        //    modálne okno "Priradiť stravovacie miesto" (existujúce správanie).
+        // 1) 🔥 Ak pre túto bunku existuje SUPERSTRUCTURE priradenie →
+        //    otvoríme ROVNO modálne okno "Priradiť stravovacie miesto"
+        //    s príznakom isSuperstructure a existingId (pre možnosť odstránenia).
+        const superstructureExisting = findSuperstructureAssignmentForCell(
+            team, day.key, mealType, slot.from
+        );
+        if (superstructureExisting) {
+            const placeTeam = superstructureTeams.find(
+                (t) => t.id === superstructureExisting.teamIndex
+            ) || {
+                id: superstructureExisting.teamIndex,
+                teamName: superstructureExisting.teamName,
+                category: superstructureExisting.category,
+                groupName: superstructureExisting.groupName || null,
+            };
+
+            setSelectedCateringCell({
+                team,
+                dayKey: day.key,
+                dayLabel: day.fullLabelNumeric,
+                mealType,
+                slotFrom: slot.from,
+                slotTo: slot.to,
+                existingId: superstructureExisting.id || null,
+                // 🔥 príznak superstructure priradenia
+                isSuperstructure: true,
+                placeTeam,
+            });
+            setSelectedCateringPlaceId(superstructureExisting.placeId || '');
+            setShowCateringModal(true);
+            return;
+        }
+
+        // 2) Ak pre túto bunku existuje KLASICKÉ priradenie →
+        //    otvoríme ROVNO modálne okno "Priradiť stravovacie miesto".
         const existing = findCateringAssignment(team, day.key, mealType, slot.from);
         if (existing) {
             setSelectedCateringCell({
@@ -685,7 +718,7 @@ const cateringApp = ({ userProfileData }) => {
             return;
         }
 
-        // 2) 🔥 Ak tím NEMÁ ŽIADNY balík → otvoríme ROVNO modálne okno
+        // 3) 🔥 Ak tím NEMÁ ŽIADNY balík → otvoríme ROVNO modálne okno
         //    "Priradiť podľa umiestnenia" (superstructure tím).
         if (!teamHasAnyPackage(team)) {
             setPendingAssignmentCell({ team, day, mealType, slot });
@@ -700,8 +733,7 @@ const cateringApp = ({ userProfileData }) => {
             return;
         }
 
-        // 3) 🔥 Tím MÁ balík → VŽDY otvoríme modálne okno s výberom typu
-        //    (bez ohľadu na to, či má v balíku daný typ stravovania).
+        // 4) 🔥 Tím MÁ balík → otvoríme modálne okno s výberom typu.
         setPendingAssignmentCell({ team, day, mealType, slot });
         setShowAssignmentTypeModal(true);
     };
@@ -824,11 +856,27 @@ const cateringApp = ({ userProfileData }) => {
 
         const payload = buildCateringPayload(selectedCateringPlaceId);
 
-        // 🔥 Ak ide o superstructure priradenie, preskočíme kontrolu existujúcich
-        // klasických priradení (má iný typ) a uložíme rovno.
         if (selectedCateringCell.isSuperstructure) {
             setSavingCatering(true);
-            await performSaveCateringAssignment(payload, false, null);
+
+            // Ak kliknuté miesto je rovnaké ako existujúce, nič nerobíme
+            const isSameAsExisting =
+                selectedCateringCell.existingId &&
+                selectedCateringCell._originalPlaceId === selectedCateringPlaceId;
+
+            // (Voliteľné – ak nechceš riešiť „bez zmeny", môžeš túto kontrolu vynechať.)
+
+            if (selectedCateringCell.existingId) {
+                // Upravujeme existujúce superstructure priradenie → replace
+                await performSaveCateringAssignment(
+                    payload,
+                    true,
+                    [selectedCateringCell.existingId]
+                );
+            } else {
+                // Nové superstructure priradenie
+                await performSaveCateringAssignment(payload, false, null);
+            }
             return;
         }
 
@@ -925,7 +973,12 @@ const cateringApp = ({ userProfileData }) => {
         setSavingCatering(true);
         try {
             await deleteDoc(doc(window.db, 'catering', selectedCateringCell.existingId));
-            window.showGlobalNotification('Priradenie bolo odstránené.', 'success');
+
+            const message = selectedCateringCell.isSuperstructure
+                ? 'Superstructure priradenie bolo odstránené.'
+                : 'Priradenie bolo odstránené.';
+            window.showGlobalNotification(message, 'success');
+
             setShowCateringModal(false);
             setSelectedCateringCell(null);
             setSelectedCateringPlaceId('');
@@ -1908,7 +1961,7 @@ const cateringApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: 'flex justify-end gap-3' },
-                        selectedCateringCell.existingId &&
+                                                selectedCateringCell.existingId &&
                             React.createElement(
                                 'button',
                                 {
@@ -1917,7 +1970,9 @@ const cateringApp = ({ userProfileData }) => {
                                     className:
                                         'px-4 py-2.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition font-medium',
                                 },
-                                'Odstrániť'
+                                selectedCateringCell.isSuperstructure
+                                    ? 'Odstrániť superstructure priradenie'
+                                    : 'Odstrániť'
                             ),
                         React.createElement(
                             'button',
