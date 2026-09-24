@@ -1370,12 +1370,9 @@ const cateringApp = ({ userProfileData }) => {
                                 'success'
                             );
                         } else {
-                            // Žiadny iný tím v riadku → nový záznam bude prioritný
-                            await updateDoc(newDocRef, { isPriority: true });
-                            window.showGlobalNotification(
-                                'Priorita bola nastavená novému tímu.',
-                                'success'
-                            );
+                            // 🔥 Žiadny iný tím v riadku → nový záznam NEBUDE prioritný
+                            // (odstránené pôvodné updateDoc s isPriority: true)
+                            window.showGlobalNotification('Priradenie bolo uložené.', 'success');
                         }
                     } else {
                         window.showGlobalNotification('Priradenie bolo uložené.', 'success');
