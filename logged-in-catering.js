@@ -419,7 +419,7 @@ const cateringApp = ({ userProfileData }) => {
                                 {
                                     rowSpan: 3,
                                     className:
-                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 sticky left-0 z-20 min-w-[140px]',
+                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 min-w-[140px]',
                                 },
                                 'Kategória'
                             ),
@@ -428,7 +428,7 @@ const cateringApp = ({ userProfileData }) => {
                                 {
                                     rowSpan: 3,
                                     className:
-                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 sticky left-[140px] z-20 min-w-[180px]',
+                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 min-w-[180px]',
                                 },
                                 'Tím'
                             ),
@@ -568,7 +568,7 @@ const cateringApp = ({ userProfileData }) => {
                                           'td',
                                           {
                                               className:
-                                                  'border border-gray-300 px-3 py-2 text-gray-600 sticky left-0 bg-inherit z-10 whitespace-nowrap text-xs',
+                                                  'border border-gray-300 px-3 py-2 text-gray-600 whitespace-nowrap text-xs',
                                           },
                                           team.category
                                       ),
@@ -576,7 +576,7 @@ const cateringApp = ({ userProfileData }) => {
                                           'td',
                                           {
                                               className:
-                                                  'border border-gray-300 px-3 py-2 font-medium text-gray-800 sticky left-[140px] bg-inherit z-10 whitespace-nowrap',
+                                                  'border border-gray-300 px-3 py-2 font-medium text-gray-800 whitespace-nowrap',
                                           },
                                           team.teamName
                                       ),
