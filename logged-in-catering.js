@@ -64,8 +64,14 @@ const buildTournamentDays = (arrivalDate, tournamentEnd) => {
     const current = new Date(start);
 
     while (current <= end) {
+        const y = current.getFullYear();
+        const m = String(current.getMonth() + 1).padStart(2, '0');
+        const d = String(current.getDate()).padStart(2, '0');
+        const key = `${y}-${m}-${d}`;
+
         days.push({
             date: new Date(current),
+            key,
             label: current.toLocaleDateString('sk-SK', {
                 weekday: 'short',
                 day: 'numeric',
@@ -77,6 +83,7 @@ const buildTournamentDays = (arrivalDate, tournamentEnd) => {
                 month: 'long',
                 year: 'numeric',
             }),
+            fullLabelNumeric: `${d}. ${m}. ${y}`,
         });
         current.setDate(current.getDate() + 1);
     }
@@ -132,9 +139,65 @@ const loadUserTeams = async (db) => {
     return teams;
 };
 
+// ============================================================
+// Pomocné funkcie pre delenie stravovacích slotov
+// ============================================================
+
+/** Prevedie "HH:MM" na minúty od polnoci. Vráti null, ak je vstup neplatný. */
+const timeToMinutes = (t) => {
+    if (!t || typeof t !== 'string') return null;
+    const parts = t.split(':');
+    if (parts.length < 2) return null;
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    if (isNaN(h) || isNaN(m)) return null;
+    return h * 60 + m;
+};
+
+/** Naformátuje minúty od polnoci na "HH:MM". */
+const minutesToTime = (mins) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+
+/**
+ * Rozdelí interval from–to na sloty podľa unitMinutes.
+ * Vráti pole objektov { from, to, label } – label je začiatok slotu.
+ * Ak nie je možné deliť (neplatné vstupy alebo unit <= 0), vráti prázdne pole.
+ */
+const buildMealSlots = (from, to, unitMinutes) => {
+    const fromMin = timeToMinutes(from);
+    const toMin = timeToMinutes(to);
+    const unit = parseInt(unitMinutes, 10);
+
+    if (fromMin == null || toMin == null) return [];
+    if (isNaN(unit) || unit <= 0) return [];
+
+    const total = toMin - fromMin;
+    if (total <= 0) return [];
+
+    const count = Math.floor(total / unit);
+    if (count <= 0) return [];
+
+    const slots = [];
+    for (let i = 0; i < count; i++) {
+        const slotFrom = fromMin + i * unit;
+        const slotTo = slotFrom + unit;
+        slots.push({
+            from: minutesToTime(slotFrom),
+            to: minutesToTime(slotTo),
+            label: minutesToTime(slotFrom),
+        });
+    }
+    return slots;
+};
+
 const cateringApp = ({ userProfileData }) => {
     const [tournamentDays, setTournamentDays] = useState([]);
     const [userTeams, setUserTeams] = useState([]);
+    const [cateringTimes, setCateringTimes] = useState({});
+    const [unitMinutes, setUnitMinutes] = useState('');
     const [loading, setLoading] = useState(true);
 
     // Načítanie nastavení turnaja z Firestore
@@ -167,6 +230,33 @@ const cateringApp = ({ userProfileData }) => {
                 console.error('cateringApp: Chyba pri načítaní nastavení turnaja:', error);
                 window.showGlobalNotification('Nepodarilo sa načítať nastavenia turnaja.', 'error');
                 setLoading(false);
+            }
+        );
+
+        return () => unsubscribe();
+    }, []);
+
+    // 🔥 Načítanie nastavení stravovania (časy + jednotka)
+    useEffect(() => {
+        if (!window.db) return;
+
+        const cateringDocRef = doc(window.db, 'settings', 'catering');
+
+        const unsubscribe = onSnapshot(
+            cateringDocRef,
+            (snap) => {
+                if (snap.exists()) {
+                    const data = snap.data() || {};
+                    setCateringTimes(data.times || {});
+                    setUnitMinutes(data.unitMinutes != null ? String(data.unitMinutes) : '');
+                } else {
+                    setCateringTimes({});
+                    setUnitMinutes('');
+                }
+            },
+            (error) => {
+                console.error('cateringApp: Chyba pri načítaní nastavení stravovania:', error);
+                window.showGlobalNotification('Nepodarilo sa načítať nastavenia stravovania.', 'error');
             }
         );
 
@@ -224,13 +314,37 @@ const cateringApp = ({ userProfileData }) => {
     }
 
     // ============================================================
-    // TABUĽKA STRAVOVANIA
+    // Predpočítame sloty pre každý deň a každé jedlo
     // ============================================================
-    // Štruktúra:
-    //   Prvý stĺpec: Kategória
-    //   Druhý stĺpec: Názov tímu
-    //   Pre každý deň: dva podstĺpce (Obed, Večera)
-    // ============================================================
+    // daySlots[dayKey] = { lunch: [slot, ...], dinner: [slot, ...] }
+    const daySlots = {};
+    tournamentDays.forEach((day) => {
+        const t = cateringTimes[day.key] || {};
+        const lunchFrom = t.lunch?.from || '';
+        const lunchTo = t.lunch?.to || '';
+        const dinnerFrom = t.dinner?.from || '';
+        const dinnerTo = t.dinner?.to || '';
+
+        daySlots[day.key] = {
+            lunch: buildMealSlots(lunchFrom, lunchTo, unitMinutes),
+            dinner: buildMealSlots(dinnerFrom, dinnerTo, unitMinutes),
+        };
+    });
+
+    // Koľko stĺpcov pre dané jedlo (aspoň 1, aby sa hlavička nezrútila)
+    const slotCountFor = (dayKey, mealType) => {
+        const slots = daySlots[dayKey]?.[mealType] || [];
+        return Math.max(slots.length, 1);
+    };
+
+    // Celkový počet stĺpcov vpravo od dvoch fixných (Kategória, Tím)
+    const totalMealColumns = tournamentDays.reduce(
+        (acc, day) =>
+            acc +
+            slotCountFor(day.key, 'lunch') +
+            slotCountFor(day.key, 'dinner'),
+        0
+    );
 
     return React.createElement(
         'div',
@@ -243,69 +357,69 @@ const cateringApp = ({ userProfileData }) => {
                 { className: 'flex flex-col items-center justify-center mb-6' },
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Stravovanie')
             ),
-            // Horizontálne scrollovateľný kontajner pre tabuľku
             React.createElement(
                 'div',
                 { className: 'overflow-x-auto pb-4' },
                 React.createElement(
                     'table',
-                    {
-                        className: 'min-w-max border-collapse text-sm',
-                    },
+                    { className: 'min-w-max border-collapse text-sm' },
                     // HLAVIČKA TABUĽKY
                     React.createElement(
                         'thead',
                         null,
-                        // Prvý riadok hlavičky: názvy dní (colspan=2 pre každý deň)
+                        // Riadok 1: Kategória (rowspan=3), Tím (rowspan=3), Deň (colspan=počet slotov), ...
                         React.createElement(
                             'tr',
                             null,
-                            // 🔥 Prvý fixný stĺpec - Kategória (rowspan=2)
                             React.createElement(
                                 'th',
                                 {
-                                    rowSpan: 2,
+                                    rowSpan: 3,
                                     className:
-                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 sticky left-0 z-10 min-w-[140px]',
+                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 sticky left-0 z-20 min-w-[140px]',
                                 },
                                 'Kategória'
                             ),
-                            // 🔥 Druhý fixný stĺpec - Tím (rowspan=2)
                             React.createElement(
                                 'th',
                                 {
-                                    rowSpan: 2,
+                                    rowSpan: 3,
                                     className:
-                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 sticky left-[140px] z-10 min-w-[180px]',
+                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 sticky left-[140px] z-20 min-w-[180px]',
                                 },
                                 'Tím'
                             ),
-                            // Za každý deň jeden th s colspan=2
-                            tournamentDays.map((day, index) =>
-                                React.createElement(
+                            tournamentDays.map((day, index) => {
+                                const lunchCount = slotCountFor(day.key, 'lunch');
+                                const dinnerCount = slotCountFor(day.key, 'dinner');
+                                const total = lunchCount + dinnerCount;
+                                return React.createElement(
                                     'th',
                                     {
                                         key: `day-header-${index}`,
-                                        colSpan: 2,
+                                        colSpan: total,
                                         className:
                                             'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap',
                                         title: day.fullLabel,
                                     },
                                     day.label
-                                )
-                            )
+                                );
+                            })
                         ),
-                        // Druhý riadok hlavičky: Obed / Večera pre každý deň
+                        // Riadok 2: Obed / Večera s colspan = počet slotov
                         React.createElement(
                             'tr',
                             null,
-                            tournamentDays.map((day, index) =>
-                                React.createElement(
+                            tournamentDays.map((day, index) => {
+                                const lunchCount = slotCountFor(day.key, 'lunch');
+                                const dinnerCount = slotCountFor(day.key, 'dinner');
+                                return React.createElement(
                                     React.Fragment,
-                                    { key: `sub-header-${index}` },
+                                    { key: `meal-header-${index}` },
                                     React.createElement(
                                         'th',
                                         {
+                                            colSpan: lunchCount,
                                             className:
                                                 'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs',
                                         },
@@ -314,16 +428,65 @@ const cateringApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'th',
                                         {
+                                            colSpan: dinnerCount,
                                             className:
                                                 'border border-gray-300 bg-purple-50 px-2 py-1 text-center font-semibold text-purple-700 text-xs',
                                         },
                                         'Večera'
                                     )
-                                )
-                            )
+                                );
+                            })
+                        ),
+                        // 🔥 Riadok 3: Popisky začiatkov jednotlivých slotov
+                        React.createElement(
+                            'tr',
+                            null,
+                            tournamentDays.map((day, dayIndex) => {
+                                const lunchSlots = daySlots[day.key]?.lunch || [];
+                                const dinnerSlots = daySlots[day.key]?.dinner || [];
+
+                                const lunchHeaders = (lunchSlots.length > 0
+                                    ? lunchSlots
+                                    : [{ label: '—' }]
+                                ).map((slot, i) =>
+                                    React.createElement(
+                                        'th',
+                                        {
+                                            key: `lunch-slot-${dayIndex}-${i}`,
+                                            className:
+                                                'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]',
+                                            title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
+                                        },
+                                        slot.label
+                                    )
+                                );
+
+                                const dinnerHeaders = (dinnerSlots.length > 0
+                                    ? dinnerSlots
+                                    : [{ label: '—' }]
+                                ).map((slot, i) =>
+                                    React.createElement(
+                                        'th',
+                                        {
+                                            key: `dinner-slot-${dayIndex}-${i}`,
+                                            className:
+                                                'border border-gray-300 bg-purple-50 px-2 py-1 text-center text-[11px] text-purple-700 whitespace-nowrap min-w-[70px]',
+                                            title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
+                                        },
+                                        slot.label
+                                    )
+                                );
+
+                                return React.createElement(
+                                    React.Fragment,
+                                    { key: `slot-headers-${dayIndex}` },
+                                    ...lunchHeaders,
+                                    ...dinnerHeaders
+                                );
+                            })
                         )
                     ),
-                    // TELO TABUĽKY - jeden riadok pre každý tím
+                    // TELO TABUĽKY
                     React.createElement(
                         'tbody',
                         null,
@@ -334,7 +497,7 @@ const cateringApp = ({ userProfileData }) => {
                                   React.createElement(
                                       'td',
                                       {
-                                          colSpan: 2 + tournamentDays.length * 2,
+                                          colSpan: 2 + totalMealColumns,
                                           className: 'border border-gray-300 px-3 py-4 text-center text-gray-500',
                                       },
                                       'Žiadne tímy neboli nájdené v kolekcii users.'
@@ -347,7 +510,6 @@ const cateringApp = ({ userProfileData }) => {
                                           key: team.id || `${team.uid}-${team.teamName}-${rowIndex}`,
                                           className: rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50',
                                       },
-                                      // 🔥 Prvý stĺpec - Kategória
                                       React.createElement(
                                           'td',
                                           {
@@ -356,7 +518,6 @@ const cateringApp = ({ userProfileData }) => {
                                           },
                                           team.category
                                       ),
-                                      // 🔥 Druhý stĺpec - Názov tímu
                                       React.createElement(
                                           'td',
                                           {
@@ -365,31 +526,41 @@ const cateringApp = ({ userProfileData }) => {
                                           },
                                           team.teamName
                                       ),
-                                      // Pre každý deň dva podstĺpce
-                                      tournamentDays.map((day, dayIndex) =>
-                                          React.createElement(
-                                              React.Fragment,
-                                              { key: `cell-${rowIndex}-${dayIndex}` },
-                                              // Obed
+                                      tournamentDays.map((day, dayIndex) => {
+                                          const lunchCount = slotCountFor(day.key, 'lunch');
+                                          const dinnerCount = slotCountFor(day.key, 'dinner');
+
+                                          const lunchCells = Array.from({ length: lunchCount }).map((_, i) =>
                                               React.createElement(
                                                   'td',
                                                   {
+                                                      key: `cell-lunch-${rowIndex}-${dayIndex}-${i}`,
                                                       className:
-                                                          'border border-gray-300 px-2 py-2 text-center text-gray-400 text-xs min-w-[90px]',
-                                                  },
-                                                  '—'
-                                              ),
-                                              // Večera
-                                              React.createElement(
-                                                  'td',
-                                                  {
-                                                      className:
-                                                          'border border-gray-300 px-2 py-2 text-center text-gray-400 text-xs min-w-[90px]',
+                                                          'border border-gray-300 px-2 py-2 text-center text-gray-400 text-xs min-w-[70px]',
                                                   },
                                                   '—'
                                               )
-                                          )
-                                      )
+                                          );
+
+                                          const dinnerCells = Array.from({ length: dinnerCount }).map((_, i) =>
+                                              React.createElement(
+                                                  'td',
+                                                  {
+                                                      key: `cell-dinner-${rowIndex}-${dayIndex}-${i}`,
+                                                      className:
+                                                          'border border-gray-300 px-2 py-2 text-center text-gray-400 text-xs min-w-[70px]',
+                                                  },
+                                                  '—'
+                                              )
+                                          );
+
+                                          return React.createElement(
+                                              React.Fragment,
+                                              { key: `cells-${rowIndex}-${dayIndex}` },
+                                              ...lunchCells,
+                                              ...dinnerCells
+                                          );
+                                      })
                                   )
                               )
                     )
