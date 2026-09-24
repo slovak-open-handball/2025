@@ -823,9 +823,6 @@ const cateringApp = ({ userProfileData }) => {
         // 1) 🔥 Ak pre túto KONKRÉTNU BUNKU existuje SUPERSTRUCTURE priradenie →
         //    otvoríme ROVNO modálne okno "Priradiť stravovacie miesto"
         //    s príznakom isSuperstructure a existingId (pre možnosť odstránenia).
-        // 1) 🔥 Ak pre túto KONKRÉTNU BUNKU existuje SUPERSTRUCTURE priradenie →
-        //    otvoríme ROZHODOVACIE modálne okno (preplánovať existujúce vs.
-        //    naplánovať prioritnejšie pre iný tím).
         const superstructureExisting = findSuperstructureAssignmentForCell(
             team, day.key, mealType, slot.from
         );
@@ -839,17 +836,22 @@ const cateringApp = ({ userProfileData }) => {
                 groupName: superstructureExisting.groupName || null,
             };
         
-            setPendingSuperstructureDecision({
-                type: 'cell',
+            setSelectedCateringCell({
                 team,
-                day,
+                dayKey: day.key,
+                dayLabel: day.fullLabelNumeric,
                 mealType,
-                slot,
+                slotFrom: superstructureExisting.slotFrom || slot.from,
+                slotTo: superstructureExisting.slotTo || slot.to,
                 existingId: superstructureExisting.id || null,
+                isSuperstructure: true,
                 placeTeam,
-                existingAssignment: superstructureExisting,
+                isPriority: false, // bude sa brať z checkboxu
             });
-            setShowSuperstructureDecisionModal(true);
+            // 🔥 Predvyplníme checkbox podľa pôvodnej priority
+            setCateringModalIsPriority(superstructureExisting.isPriority === true);
+            setSelectedCateringPlaceId(superstructureExisting.placeId || '');
+            setShowCateringModal(true);
             return;
         }
         
