@@ -489,9 +489,10 @@ const cateringApp = ({ userProfileData }) => {
         : userTeams;
 
     // Filtrované dni podľa dňa
-    const filteredDays = filterDayKey
+    const filteredDays = (filterDayKey
         ? visibleDays.filter((d) => d.key === filterDayKey)
-        : visibleDays;
+        : visibleDays
+    ).filter((d) => visibleColumnCountForDay(d.key) > 0);
 
     // Farby ubytovne pre tím
     const getTeamAccommodationColor = (team) => {
