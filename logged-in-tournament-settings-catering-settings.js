@@ -59,7 +59,7 @@ const EMPTY_DAY_TIMES = {
 
 export function CateringSettings({ db, userProfileData, showNotification, sendAdminNotification }) {
     const [tournamentDays, setTournamentDays] = React.useState([]);
-    const [cateringTimes, setCateringTimes] = React.useState({}); // { 'YYYY-MM-DD': { lunch:{from,to}, dinner:{from,to} } }
+    const [cateringTimes, setCateringTimes] = React.useState({});
     const [loading, setLoading] = React.useState(true);
     const [saving, setSaving] = React.useState(false);
 
@@ -323,11 +323,12 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                             rowSpan: 2,
                             className: 'border border-gray-300 bg-gray-100 px-2 py-2 text-left font-bold text-gray-700 min-w-[110px] w-[110px]',
                         }, 'Deň'),
+                        // 🔥 Obed – bledomodrá
                         React.createElement('th', {
                             colSpan: 2,
-                            className: 'border border-gray-300 bg-blue-50 px-3 py-2 text-center font-bold text-blue-700',
+                            className: 'border border-gray-300 bg-sky-50 px-3 py-2 text-center font-bold text-sky-700',
                         }, 'Obed'),
-                        // 🔥 ZMENA: Večera – bledomodrá namiesto fialovej
+                        // 🔥 Večera – bledomodrá (rovnaká ako Obed)
                         React.createElement('th', {
                             colSpan: 2,
                             className: 'border border-gray-300 bg-sky-50 px-3 py-2 text-center font-bold text-sky-700',
@@ -336,9 +337,10 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                     React.createElement(
                         'tr',
                         null,
-                        React.createElement('th', { className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-xs text-blue-700' }, 'Od'),
-                        React.createElement('th', { className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-xs text-blue-700' }, 'Do'),
-                        // 🔥 ZMENA: Večera – bledomodrá
+                        // Obed – Od / Do
+                        React.createElement('th', { className: 'border border-gray-300 bg-sky-50 px-2 py-1 text-center text-xs text-sky-700' }, 'Od'),
+                        React.createElement('th', { className: 'border border-gray-300 bg-sky-50 px-2 py-1 text-center text-xs text-sky-700' }, 'Do'),
+                        // Večera – Od / Do (rovnaká farba)
                         React.createElement('th', { className: 'border border-gray-300 bg-sky-50 px-2 py-1 text-center text-xs text-sky-700' }, 'Od'),
                         React.createElement('th', { className: 'border border-gray-300 bg-sky-50 px-2 py-1 text-center text-xs text-sky-700' }, 'Do')
                     )
@@ -364,7 +366,7 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                                     type: 'time',
                                     value: t.lunch?.from || '',
                                     onChange: (e) => handleTimeChange(day.key, 'lunch', 'from', e.target.value),
-                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500',
+                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-sky-500',
                                 })
                             ),
                             // Obed – do
@@ -373,10 +375,10 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                                     type: 'time',
                                     value: t.lunch?.to || '',
                                     onChange: (e) => handleTimeChange(day.key, 'lunch', 'to', e.target.value),
-                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500',
+                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-sky-500',
                                 })
                             ),
-                            // Večera – od (bledomodrá)
+                            // Večera – od
                             React.createElement('td', { className: 'border border-gray-300 px-2 py-2 text-center' },
                                 React.createElement('input', {
                                     type: 'time',
@@ -385,7 +387,7 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                                     className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-sky-500',
                                 })
                             ),
-                            // Večera – do (bledomodrá)
+                            // Večera – do
                             React.createElement('td', { className: 'border border-gray-300 px-2 py-2 text-center' },
                                 React.createElement('input', {
                                     type: 'time',
