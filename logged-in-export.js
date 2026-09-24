@@ -1648,14 +1648,14 @@ const MatchesExportView = ({ hallName: hallNameFromUrl, mode = 'hall', categoryN
 
         const timer = setTimeout(() => {
             const title = mode === 'playoff'
-                ? `Playoff-a-zapasy-o-umiestnenie${categoryNameFromUrl ? '-' + categoryNameFromUrl.replace(/\s+/g, '-') : ''}`
+                ? `${categoryNameFromUrl ? categoryNameFromUrl.replace(/\s+/g, '-') + '_' : ''}Playoff-a-zapasy-o-umiestnenie`
                 : (hallName || hallNameFromUrl);
 
             exportMatchesToPdf(title, matchesByDay, formatDateHeader, formatTime, fixedDpr);
         }, 800);
 
         return () => clearTimeout(timer);
-    }, [loading, matchesByDay, hallName, hallNameFromUrl, fixedDpr, mode]);
+    }, [loading, matchesByDay, hallName, hallNameFromUrl, fixedDpr, mode, categoryNameFromUrl]);
 
     if (loading) {
         return React.createElement(
