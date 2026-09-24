@@ -1628,7 +1628,7 @@ const cateringApp = ({ userProfileData }) => {
                                                     (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
                                                 title: 'Denný súčet obeda',
                                             },
-                                            '∑ Obed'
+                                            '∑'
                                         )
                                     );
                                 }
@@ -1665,7 +1665,7 @@ const cateringApp = ({ userProfileData }) => {
                                                     (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
                                                 title: 'Denný súčet večere',
                                             },
-                                            '∑ Večera'
+                                            '∑'
                                         )
                                     );
                                 }
