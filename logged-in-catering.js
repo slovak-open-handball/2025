@@ -87,6 +87,10 @@ const buildTournamentDays = (arrivalDate, tournamentEnd) => {
 /**
  * Pomocná funkcia: načíta všetky používateľské tímy z kolekcie 'users'.
  * Vráti zoradené pole objektov { uid, teamName, category, id }.
+ *
+ * ZORADENIE:
+ *   1. abecedne podľa názvu KATEGÓRIE (sk locale)
+ *   2. potom abecedne podľa názvu TÍMU (sk locale)
  */
 const loadUserTeams = async (db) => {
     if (!db) return [];
@@ -118,11 +122,11 @@ const loadUserTeams = async (db) => {
         });
     });
 
-    // Zoradíme podľa kategórie a názvu tímu
+    // 🔥 ZORADENIE: najprv podľa kategórie, potom podľa názvu tímu
     teams.sort((a, b) => {
-        const catCompare = (a.category || '').localeCompare(b.category || '');
+        const catCompare = (a.category || '').localeCompare(b.category || '', 'sk', { sensitivity: 'base' });
         if (catCompare !== 0) return catCompare;
-        return (a.teamName || '').localeCompare(b.teamName || '');
+        return (a.teamName || '').localeCompare(b.teamName || '', 'sk', { sensitivity: 'base' });
     });
 
     return teams;
@@ -223,7 +227,8 @@ const cateringApp = ({ userProfileData }) => {
     // TABUĽKA STRAVOVANIA
     // ============================================================
     // Štruktúra:
-    //   Prvý stĺpec: Názov tímu
+    //   Prvý stĺpec: Kategória
+    //   Druhý stĺpec: Názov tímu
     //   Pre každý deň: dva podstĺpce (Obed, Večera)
     // ============================================================
 
@@ -255,13 +260,23 @@ const cateringApp = ({ userProfileData }) => {
                         React.createElement(
                             'tr',
                             null,
-                            // Prvý stĺpec - prázdny (alebo "Tím") s rowspan=2
+                            // 🔥 Prvý fixný stĺpec - Kategória (rowspan=2)
                             React.createElement(
                                 'th',
                                 {
                                     rowSpan: 2,
                                     className:
-                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 sticky left-0 z-10 min-w-[180px]',
+                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 sticky left-0 z-10 min-w-[140px]',
+                                },
+                                'Kategória'
+                            ),
+                            // 🔥 Druhý fixný stĺpec - Tím (rowspan=2)
+                            React.createElement(
+                                'th',
+                                {
+                                    rowSpan: 2,
+                                    className:
+                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 sticky left-[140px] z-10 min-w-[180px]',
                                 },
                                 'Tím'
                             ),
@@ -285,28 +300,26 @@ const cateringApp = ({ userProfileData }) => {
                             'tr',
                             null,
                             tournamentDays.map((day, index) =>
-                                React.Fragment
-                                    ? React.createElement(
-                                          React.Fragment,
-                                          { key: `sub-header-${index}` },
-                                          React.createElement(
-                                              'th',
-                                              {
-                                                  className:
-                                                      'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs',
-                                              },
-                                              'Obed'
-                                          ),
-                                          React.createElement(
-                                              'th',
-                                              {
-                                                  className:
-                                                      'border border-gray-300 bg-purple-50 px-2 py-1 text-center font-semibold text-purple-700 text-xs',
-                                              },
-                                              'Večera'
-                                          )
-                                      )
-                                    : null
+                                React.createElement(
+                                    React.Fragment,
+                                    { key: `sub-header-${index}` },
+                                    React.createElement(
+                                        'th',
+                                        {
+                                            className:
+                                                'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs',
+                                        },
+                                        'Obed'
+                                    ),
+                                    React.createElement(
+                                        'th',
+                                        {
+                                            className:
+                                                'border border-gray-300 bg-purple-50 px-2 py-1 text-center font-semibold text-purple-700 text-xs',
+                                        },
+                                        'Večera'
+                                    )
+                                )
                             )
                         )
                     ),
@@ -321,7 +334,7 @@ const cateringApp = ({ userProfileData }) => {
                                   React.createElement(
                                       'td',
                                       {
-                                          colSpan: 1 + tournamentDays.length * 2,
+                                          colSpan: 2 + tournamentDays.length * 2,
                                           className: 'border border-gray-300 px-3 py-4 text-center text-gray-500',
                                       },
                                       'Žiadne tímy neboli nájdené v kolekcii users.'
@@ -334,12 +347,21 @@ const cateringApp = ({ userProfileData }) => {
                                           key: team.id || `${team.uid}-${team.teamName}-${rowIndex}`,
                                           className: rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50',
                                       },
-                                      // Prvý stĺpec - názov tímu
+                                      // 🔥 Prvý stĺpec - Kategória
                                       React.createElement(
                                           'td',
                                           {
                                               className:
-                                                  'border border-gray-300 px-3 py-2 font-medium text-gray-800 sticky left-0 bg-inherit z-10 whitespace-nowrap',
+                                                  'border border-gray-300 px-3 py-2 text-gray-600 sticky left-0 bg-inherit z-10 whitespace-nowrap text-xs',
+                                          },
+                                          team.category
+                                      ),
+                                      // 🔥 Druhý stĺpec - Názov tímu
+                                      React.createElement(
+                                          'td',
+                                          {
+                                              className:
+                                                  'border border-gray-300 px-3 py-2 font-medium text-gray-800 sticky left-[140px] bg-inherit z-10 whitespace-nowrap',
                                           },
                                           team.teamName
                                       ),
