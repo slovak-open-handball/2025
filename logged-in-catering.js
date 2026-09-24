@@ -503,15 +503,24 @@ const cateringApp = ({ userProfileData }) => {
     
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data() || {};
-                    const categoryName = cleanCategory(data.categoryName || '');
+    
+                    // 🔥 OPRAVA: fallback categoryId → categoryName (bez tohto by
+                    // sa tímy z playoff zápasov, ktoré majú len categoryId, vôbec nenačítali)
+                    let categoryName = data.categoryName || '';
+                    if (!categoryName && data.categoryId && window.categoriesData) {
+                        categoryName = window.categoriesData[data.categoryId] || '';
+                    }
+                    categoryName = cleanCategory(categoryName);
+    
                     const groupName = data.groupName || null;
     
                     const addTeam = (teamNameFromMatch) => {
+                        // 🔥 ŽIADNE mapovanie – použijeme priamo homeTeamName / awayTeamName
                         if (!teamNameFromMatch) return;
+    
                         const key = `${categoryName}||${teamNameFromMatch}`;
                         if (teamsMap.has(key)) return;
     
-                        // 🔥 id = teamName (aby sa do DB ukladal teamName, nie identifier)
                         teamsMap.set(key, {
                             id: teamNameFromMatch,
                             teamName: teamNameFromMatch,
@@ -520,7 +529,7 @@ const cateringApp = ({ userProfileData }) => {
                         });
                     };
     
-                    // 🔥 Použijeme VÝHRADNE homeTeamName / awayTeamName z dokumentu zápasu
+                    // 🔥 Výhradne homeTeamName / awayTeamName z dokumentu zápasu
                     addTeam(data.homeTeamName);
                     addTeam(data.awayTeamName);
                 });
