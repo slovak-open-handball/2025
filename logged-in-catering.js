@@ -1,3 +1,4 @@
+// logged-in-catering.js
 // Importy pre Firebase funkcie
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -125,6 +126,7 @@ const loadUserTeams = async (db) => {
                     playersCount,
                     othersCount: menTeamMembersCount + womenTeamMembersCount + menDriversCount + womenDriversCount,
                     accommodationName: team.accommodation?.name || null,
+                    packageName: team.packageDetails?.name || null,
                 });
             });
         });
@@ -216,8 +218,7 @@ const cateringApp = ({ userProfileData }) => {
 
     const [showChangeConfirm, setShowChangeConfirm] = useState(false);
     const [pendingChange, setPendingChange] = useState(null);
-
-    // Filtre pre tabuľku stravovania
+    const [packagesList, setPackagesList] = useState([]);
     const [filterCategory, setFilterCategory] = useState('');
     const [filterDayKey, setFilterDayKey] = useState('');
     const [filterMealType, setFilterMealType] = useState('');
@@ -392,6 +393,35 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
+        // 🔥 NOVÉ: Načítanie balíkov (settings/packages/list)
+    useEffect(() => {
+        if (!window.db) return;
+
+        const packagesCollectionRef = collection(window.db, 'settings', 'packages', 'list');
+
+        const unsubscribe = onSnapshot(
+            packagesCollectionRef,
+            (snapshot) => {
+                const items = [];
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data() || {};
+                    items.push({
+                        id: docSnap.id,
+                        name: data.name || '',
+                        meals: data.meals || {},
+                        accommodationTypes: data.accommodationTypes || [],
+                    });
+                });
+                setPackagesList(items);
+            },
+            (error) => {
+                console.error('cateringApp: Chyba pri načítaní balíkov:', error);
+            }
+        );
+
+        return () => unsubscribe();
+    }, []);
+
     if (loading) {
         return React.createElement(
             'div',
@@ -540,6 +570,25 @@ const cateringApp = ({ userProfileData }) => {
             bg: place.headerColor || '#1e40af',
             text: place.headerTextColor || '#000000',
         };
+    };
+
+    // Zistí, či má tím v balíku povolený daný typ stravovania pre daný deň
+    const teamHasMealInPackage = (team, dayKey, mealType) => {
+        if (!team) return false;
+
+        // 1) Ak tím nemá balík, povolíme klik (aby sa dalo priradiť ručne)
+        if (!team.packageName) return true;
+
+        // 2) Nájdeme balík v packagesList
+        const pkg = packagesList.find(p => p.name === team.packageName);
+        if (!pkg) return true;
+
+        // 3) Štruktúra pkg.meals: { 'YYYY-MM-DD': { breakfast: 1|0, lunch: 1|0, dinner: 1|0, refreshment: 1|0 }, ... }
+        const mealsForDay = pkg.meals?.[dayKey];
+        if (!mealsForDay) return false;
+
+        const val = mealsForDay[mealType];
+        return val === 1 || val === true;
     };
 
     // Otvorí modálne okno pre priradenie
@@ -1031,15 +1080,22 @@ const cateringApp = ({ userProfileData }) => {
                                                   : null;
                                               const teamTotal = (team.playersCount || 0) + (team.othersCount || 0);
 
+                                              // NOVÉ: kontrola, či má tím v balíku obed pre daný deň
+                                              const canClick = teamHasMealInPackage(team, day.key, 'lunch');
+
                                               cells.push(
                                                   React.createElement(
                                                       'td',
                                                       {
                                                           key: `cell-lunch-${rowIndex}-${dayIndex}-${i}`,
-                                                          onClick: () => openCateringModal(team, day, 'lunch', slot),
+                                                          onClick: canClick
+                                                              ? () => openCateringModal(team, day, 'lunch', slot)
+                                                              : undefined,
                                                           className:
-                                                              'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] cursor-pointer transition ' +
-                                                              (existing ? 'font-semibold ' : 'text-gray-400 hover:bg-blue-50 ') +
+                                                              'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ' +
+                                                              (canClick
+                                                                  ? 'cursor-pointer ' + (existing ? 'font-semibold ' : 'text-gray-400 hover:bg-blue-50 ')
+                                                                  : 'bg-gray-100 text-gray-300 cursor-not-allowed ') +
                                                               (hasThickRight ? 'border-r-4 border-r-gray-500' : ''),
                                                           style: existing && colors
                                                               ? {
@@ -1047,16 +1103,18 @@ const cateringApp = ({ userProfileData }) => {
                                                                     color: colors.text,
                                                                 }
                                                               : {},
-                                                          title: existing
-                                                              ? `${existing.placeName} (${slot.from} – ${slot.to})`
-                                                              : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
+                                                          title: !canClick
+                                                              ? `Tím nemá v balíku '${team.packageName}' obed pre ${day.fullLabelNumeric}`
+                                                              : existing
+                                                                  ? `${existing.placeName} (${slot.from} – ${slot.to})`
+                                                                  : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
                                                       },
                                                       existing ? teamTotal : '—'
                                                   )
                                               );
                                           }
 
-                                          for (let i = 0; i < dinnerCount; i++) {
+                                                                                    for (let i = 0; i < dinnerCount; i++) {
                                               const slot = daySlots[day.key].dinner[i];
                                               const isLastDinnerCell = i === dinnerCount - 1;
                                               const hasThickRight = isLastDinnerCell && !isLastDay;
@@ -1066,15 +1124,22 @@ const cateringApp = ({ userProfileData }) => {
                                                   : null;
                                               const teamTotal = (team.playersCount || 0) + (team.othersCount || 0);
 
+                                              // NOVÉ: kontrola, či má tím v balíku večeru pre daný deň
+                                              const canClick = teamHasMealInPackage(team, day.key, 'dinner');
+
                                               cells.push(
                                                   React.createElement(
                                                       'td',
                                                       {
                                                           key: `cell-dinner-${rowIndex}-${dayIndex}-${i}`,
-                                                          onClick: () => openCateringModal(team, day, 'dinner', slot),
+                                                          onClick: canClick
+                                                              ? () => openCateringModal(team, day, 'dinner', slot)
+                                                              : undefined,
                                                           className:
-                                                              'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] cursor-pointer transition ' +
-                                                              (existing ? 'font-semibold ' : 'text-gray-400 hover:bg-blue-50 ') +
+                                                              'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ' +
+                                                              (canClick
+                                                                  ? 'cursor-pointer ' + (existing ? 'font-semibold ' : 'text-gray-400 hover:bg-blue-50 ')
+                                                                  : 'bg-gray-100 text-gray-300 cursor-not-allowed ') +
                                                               (hasThickRight ? 'border-r-4 border-r-gray-500' : ''),
                                                           style: existing && colors
                                                               ? {
@@ -1082,9 +1147,11 @@ const cateringApp = ({ userProfileData }) => {
                                                                     color: colors.text,
                                                                 }
                                                               : {},
-                                                          title: existing
-                                                              ? `${existing.placeName} (${slot.from} – ${slot.to})`
-                                                              : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
+                                                          title: !canClick
+                                                              ? `Tím nemá v balíku '${team.packageName}' večeru pre ${day.fullLabelNumeric}`
+                                                              : existing
+                                                                  ? `${existing.placeName} (${slot.from} – ${slot.to})`
+                                                                  : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
                                                       },
                                                       existing ? teamTotal : '—'
                                                   )
