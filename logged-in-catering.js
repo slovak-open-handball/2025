@@ -747,16 +747,49 @@ const cateringApp = ({ userProfileData }) => {
 
     const buildCateringPayload = (placeId) => {
         const place = cateringPlaces.find((p) => p.id === placeId);
+        const cell = selectedCateringCell;
+
+        // 🔥 Ak ide o superstructure priradenie (podľa umiestnenia)
+        if (cell.isSuperstructure && cell.placeTeam) {
+            return {
+                // Kontext kliknutej bunky (používateľský tím)
+                clickedTeamUid: cell.team.uid,
+                clickedTeamIndex: cell.team.teamIndex,
+                clickedTeamCategory: cell.team.category,
+
+                // Priradený superstructure tím
+                teamUid: 'global',
+                teamIndex: cell.placeTeam.id,
+                category: cell.placeTeam.category,
+                categoryName: cell.placeTeam.category,
+                teamName: cell.placeTeam.teamName,
+                groupName: cell.placeTeam.groupName || null,
+                isSuperstructure: true,
+
+                // Časové údaje
+                dayKey: cell.dayKey,
+                dayLabel: cell.dayLabel,
+                mealType: cell.mealType,
+                slotFrom: cell.slotFrom,
+                slotTo: cell.slotTo,
+
+                // Miesto
+                placeId: placeId,
+                placeName: place?.name || '',
+            };
+        }
+
+        // Klasické priradenie pre tím (pôvodné správanie)
         return {
-            teamUid: selectedCateringCell.team.uid,
-            teamIndex: selectedCateringCell.team.teamIndex,
-            category: selectedCateringCell.team.category,
-            categoryName: selectedCateringCell.team.category,
-            dayKey: selectedCateringCell.dayKey,
-            dayLabel: selectedCateringCell.dayLabel,
-            mealType: selectedCateringCell.mealType,
-            slotFrom: selectedCateringCell.slotFrom,
-            slotTo: selectedCateringCell.slotTo,
+            teamUid: cell.team.uid,
+            teamIndex: cell.team.teamIndex,
+            category: cell.team.category,
+            categoryName: cell.team.category,
+            dayKey: cell.dayKey,
+            dayLabel: cell.dayLabel,
+            mealType: cell.mealType,
+            slotFrom: cell.slotFrom,
+            slotTo: cell.slotTo,
             placeId: placeId,
             placeName: place?.name || '',
         };
@@ -791,6 +824,15 @@ const cateringApp = ({ userProfileData }) => {
 
         const payload = buildCateringPayload(selectedCateringPlaceId);
 
+        // 🔥 Ak ide o superstructure priradenie, preskočíme kontrolu existujúcich
+        // klasických priradení (má iný typ) a uložíme rovno.
+        if (selectedCateringCell.isSuperstructure) {
+            setSavingCatering(true);
+            await performSaveCateringAssignment(payload, false, null);
+            return;
+        }
+
+        // Klasická logika pre používateľský tím
         const existingForTeamDayMeal = cateringAssignments.filter(
             (a) =>
                 a.teamUid === selectedCateringCell.team.uid &&
@@ -846,9 +888,9 @@ const cateringApp = ({ userProfileData }) => {
         setSavingCatering(false);
     };
 
-        // 🔥 NOVÉ: Uloží priradenie stravovania podľa umiestnenia
+    // 🔥 NOVÉ: Po výbere superstructure tímu otvorí modálne okno na výber stravovacieho miesta
     const savePlaceAssignment = async () => {
-        if (!pendingAssignmentCell || !selectedPlaceTeamId || !window.db) return;
+        if (!pendingAssignmentCell || !selectedPlaceTeamId) return;
 
         const { team, day, mealType, slot } = pendingAssignmentCell;
 
@@ -858,48 +900,24 @@ const cateringApp = ({ userProfileData }) => {
             return;
         }
 
-        setSavingPlaceAssignment(true);
+        // Pripravíme "selectedCateringCell" pre superstructure priradenie.
+        // Otvoríme existujúce modálne okno na výber stravovacieho miesta.
+        setSelectedCateringCell({
+            team,                       // kliknutý používateľský tím (kvôli kontextu bunky)
+            dayKey: day.key,
+            dayLabel: day.fullLabelNumeric,
+            mealType,
+            slotFrom: slot.from,
+            slotTo: slot.to,
+            existingId: null,           // žiadne existujúce priradenie
+            // 🔥 príznak, že ide o superstructure priradenie
+            isSuperstructure: true,
+            placeTeam,                  // vybraný superstructure tím
+        });
 
-        try {
-            const payload = {
-                clickedTeamUid: team.uid,
-                clickedTeamIndex: team.teamIndex,
-                clickedTeamCategory: team.category,
-
-                teamUid: 'global',
-                teamIndex: placeTeam.id,
-                category: placeTeam.category,
-                categoryName: placeTeam.category,
-                teamName: placeTeam.teamName,
-                groupName: placeTeam.groupName || null,
-                isSuperstructure: true,
-
-                dayKey: day.key,
-                dayLabel: day.fullLabelNumeric,
-                mealType: mealType,
-                slotFrom: slot.from,
-                slotTo: slot.to,
-
-                placeId: '',
-                placeName: '',
-            };
-
-            await addDoc(collection(window.db, 'catering'), payload);
-
-            window.showGlobalNotification(
-                `Priradenie podľa umiestnenia pre tím "${placeTeam.teamName}" bolo uložené.`,
-                'success'
-            );
-
-            setShowPlaceAssignmentModal(false);
-            setPendingAssignmentCell(null);
-            setSelectedPlaceTeamId('');
-        } catch (err) {
-            console.error('Chyba pri ukladaní priradenia podľa umiestnenia:', err);
-            window.showGlobalNotification('Nepodarilo sa uložiť priradenie.', 'error');
-        } finally {
-            setSavingPlaceAssignment(false);
-        }
+        setSelectedCateringPlaceId('');
+        setShowPlaceAssignmentModal(false);
+        setShowCateringModal(true);
     };
 
     const deleteCateringAssignment = async () => {
@@ -1822,7 +1840,7 @@ const cateringApp = ({ userProfileData }) => {
                         { className: 'text-xl font-bold mb-4 text-gray-800' },
                         'Priradiť stravovacie miesto'
                     ),
-                    React.createElement(
+                   React.createElement(
                         'div',
                         { className: 'mb-4 text-sm text-gray-700 space-y-1' },
                         React.createElement(
@@ -1831,11 +1849,16 @@ const cateringApp = ({ userProfileData }) => {
                             React.createElement('strong', null, 'Kategória: '),
                             selectedCateringCell.team.category || '—'
                         ),
+                        // 🔥 Pri superstructure priradení zobrazíme superstructure tím namiesto kliknutého
                         React.createElement(
                             'p',
                             null,
-                            React.createElement('strong', null, 'Tím: '),
-                            selectedCateringCell.team.teamName
+                            React.createElement('strong', null,
+                                selectedCateringCell.isSuperstructure ? 'Superstructure tím: ' : 'Tím: '
+                            ),
+                            selectedCateringCell.isSuperstructure
+                                ? (selectedCateringCell.placeTeam?.teamName || '—')
+                                : selectedCateringCell.team.teamName
                         ),
                         React.createElement(
                             'p',
