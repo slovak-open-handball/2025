@@ -232,9 +232,11 @@ const cateringApp = ({ userProfileData }) => {
     const [filterMealType, setFilterMealType] = useState('');
     const [showAssignmentTypeModal, setShowAssignmentTypeModal] = useState(false);
     const [pendingAssignmentCell, setPendingAssignmentCell] = useState(null);
-
-    // 🔥 NOVÉ: modálne okno pre priradenie podľa umiestnenia (zatiaľ prázdne)
     const [showPlaceAssignmentModal, setShowPlaceAssignmentModal] = useState(false);
+    const [superstructureTeams, setSuperstructureTeams] = useState([]);
+    const [selectedPlaceTeamId, setSelectedPlaceTeamId] = useState('');
+    const [savingPlaceAssignment, setSavingPlaceAssignment] = useState(false);
+    const [placeAssignmentSearch, setPlaceAssignmentSearch] = useState('');    
 
     // Načítanie nastavení turnaja z Firestore
     useEffect(() => {
@@ -395,7 +397,7 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-        // 🔥 NOVÉ: Načítanie balíkov (settings/packages/list)
+    // 🔥 NOVÉ: Načítanie balíkov (settings/packages/list)
     useEffect(() => {
         if (!window.db) return;
 
@@ -417,6 +419,41 @@ const cateringApp = ({ userProfileData }) => {
                 setPackagesList(items);
             },
             (error) => { }
+        );
+
+        return () => unsubscribe();
+    }, []);
+
+    useEffect(() => {
+        if (!window.db) return;
+
+        const superstructureDocRef = doc(window.db, 'settings', 'superstructureGroups');
+
+        const unsubscribe = onSnapshot(
+            superstructureDocRef,
+            (docSnap) => {
+                const teams = [];
+                if (docSnap.exists()) {
+                    const data = docSnap.data() || {};
+                    Object.entries(data).forEach(([categoryName, teamArray]) => {
+                        if (!Array.isArray(teamArray)) return;
+                        teamArray.forEach((team, idx) => {
+                            if (!team?.teamName) return;
+                            teams.push({
+                                id: team.id || `${categoryName}-${idx}`,
+                                teamName: team.teamName,
+                                category: categoryName,
+                                groupName: team.groupName || null,
+                                order: team.order ?? null,
+                            });
+                        });
+                    });
+                }
+                setSuperstructureTeams(teams);
+            },
+            (error) => {
+                console.error('Chyba pri načítaní superstructure tímov:', error);
+            }
         );
 
         return () => unsubscribe();
@@ -649,13 +686,21 @@ const cateringApp = ({ userProfileData }) => {
         setShowCateringModal(true);
     };
 
-    // Používateľ zvolil "Priradiť podľa umiestnenia" → otvorí nové (zatiaľ prázdne) modálne okno
     const handleAssignByPlace = () => {
+        if (!pendingAssignmentCell) return;
+
+        const { team } = pendingAssignmentCell;
+
+        const teamsInCategory = superstructureTeams.filter(
+            (t) => t.category === team.category
+        );
+
+        setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
+        setPlaceAssignmentSearch('');
         setShowAssignmentTypeModal(false);
         setShowPlaceAssignmentModal(true);
     };
 
-    // Zatvoriť modálne okno výberu typu
     const cancelAssignmentType = () => {
         setShowAssignmentTypeModal(false);
         setPendingAssignmentCell(null);
@@ -760,6 +805,67 @@ const cateringApp = ({ userProfileData }) => {
         setShowChangeConfirm(false);
         setPendingChange(null);
         setSavingCatering(false);
+    };
+
+        // 🔥 NOVÉ: Uloží priradenie stravovania podľa umiestnenia
+    const savePlaceAssignment = async () => {
+        if (!pendingAssignmentCell || !selectedPlaceTeamId || !window.db) return;
+
+        const { team, day, mealType, slot } = pendingAssignmentCell;
+
+        const placeTeam = superstructureTeams.find((t) => t.id === selectedPlaceTeamId);
+        if (!placeTeam) {
+            window.showGlobalNotification('Vybraný superstructure tím sa nenašiel.', 'error');
+            return;
+        }
+
+        setSavingPlaceAssignment(true);
+
+        try {
+            const payload = {
+                // Kontext pôvodnej bunky (kto klikol)
+                clickedTeamUid: team.uid,
+                clickedTeamIndex: team.teamIndex,
+                clickedTeamCategory: team.category,
+                clickedTeamName: team.teamName,
+
+                // Priradený superstructure tím (umiestnenie)
+                teamUid: 'global',
+                teamIndex: placeTeam.id,
+                category: placeTeam.category,
+                categoryName: placeTeam.category,
+                teamName: placeTeam.teamName,
+                groupName: placeTeam.groupName || null,
+                isSuperstructure: true,
+
+                // Časové údaje
+                dayKey: day.key,
+                dayLabel: day.fullLabelNumeric,
+                mealType: mealType,
+                slotFrom: slot.from,
+                slotTo: slot.to,
+
+                // Miesto – zatiaľ nevyberáme
+                placeId: '',
+                placeName: '',
+            };
+
+            await addDoc(collection(window.db, 'catering'), payload);
+
+            window.showGlobalNotification(
+                `Priradenie podľa umiestnenia pre tím "${placeTeam.teamName}" bolo uložené.`,
+                'success'
+            );
+
+            setShowPlaceAssignmentModal(false);
+            setPendingAssignmentCell(null);
+            setSelectedPlaceTeamId('');
+        } catch (err) {
+            console.error('Chyba pri ukladaní priradenia podľa umiestnenia:', err);
+            window.showGlobalNotification('Nepodarilo sa uložiť priradenie.', 'error');
+        } finally {
+            setSavingPlaceAssignment(false);
+        }
     };
 
     const deleteCateringAssignment = async () => {
@@ -1433,22 +1539,25 @@ const cateringApp = ({ userProfileData }) => {
                 )
             ),
 
-            // 🔥 NOVÉ: Modálne okno pre priradenie podľa umiestnenia (zatiaľ prázdne)
-            showPlaceAssignmentModal && React.createElement(
+            // 🔥 NOVÉ: Modálne okno pre priradenie podľa umiestnenia
+            showPlaceAssignmentModal && pendingAssignmentCell && React.createElement(
                 'div',
                 {
                     className:
                         'fixed inset-0 z-[3050] flex items-center justify-center bg-black/60 backdrop-blur-sm',
                     onClick: () => {
-                        setShowPlaceAssignmentModal(false);
-                        setPendingAssignmentCell(null);
+                        if (!savingPlaceAssignment) {
+                            setShowPlaceAssignmentModal(false);
+                            setPendingAssignmentCell(null);
+                            setSelectedPlaceTeamId('');
+                        }
                     },
                 },
                 React.createElement(
                     'div',
                     {
                         className:
-                            'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6',
+                            'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 max-h-[85vh] overflow-y-auto',
                         onClick: (e) => e.stopPropagation(),
                     },
                     React.createElement(
@@ -1456,25 +1565,157 @@ const cateringApp = ({ userProfileData }) => {
                         { className: 'text-xl font-bold mb-4 text-gray-800' },
                         'Priradiť stravovanie podľa umiestnenia'
                     ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-600 text-sm mb-6' },
-                        'Toto modálne okno je zatiaľ prázdne. Logika bude doplnená neskôr.'
-                    ),
+
+                    // Info o kliknutej bunke
                     React.createElement(
                         'div',
-                        { className: 'flex justify-end gap-3' },
+                        { className: 'mb-4 text-sm text-gray-700 space-y-1' },
+                        React.createElement(
+                            'p',
+                            null,
+                            React.createElement('strong', null, 'Kategória: '),
+                            pendingAssignmentCell.team.category || '—'
+                        ),
+                        React.createElement(
+                            'p',
+                            null,
+                            React.createElement('strong', null, 'Deň: '),
+                            pendingAssignmentCell.day.fullLabelNumeric
+                        ),
+                        React.createElement(
+                            'p',
+                            null,
+                            React.createElement('strong', null, 'Jedlo: '),
+                            pendingAssignmentCell.mealType === 'lunch' ? 'Obed' : 'Večera'
+                        ),
+                        React.createElement(
+                            'p',
+                            null,
+                            React.createElement('strong', null, 'Čas: '),
+                            `${pendingAssignmentCell.slot.from} – ${pendingAssignmentCell.slot.to}`
+                        )
+                    ),
+
+                    // Vyhľadávanie
+                    React.createElement(
+                        'div',
+                        { className: 'mb-3' },
+                        React.createElement(
+                            'label',
+                            { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
+                            'Vyhľadať superstructure tím'
+                        ),
+                        React.createElement('input', {
+                            type: 'text',
+                            value: placeAssignmentSearch,
+                            onChange: (e) => setPlaceAssignmentSearch(e.target.value),
+                            placeholder: 'Napíšte časť názvu tímu...',
+                            className:
+                                'w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
+                        })
+                    ),
+
+                    // Zoznam superstructure tímov filtrovaný podľa kategórie kliknutej bunky
+                    (() => {
+                        const categoryName = pendingAssignmentCell.team.category;
+                        const filtered = superstructureTeams
+                            .filter((t) => t.category === categoryName)
+                            .filter((t) => {
+                                if (!placeAssignmentSearch.trim()) return true;
+                                return t.teamName
+                                    .toLowerCase()
+                                    .includes(placeAssignmentSearch.trim().toLowerCase());
+                            })
+                            .sort((a, b) => {
+                                const ga = a.groupName || '';
+                                const gb = b.groupName || '';
+                                const gcmp = ga.localeCompare(gb, 'sk', { sensitivity: 'base' });
+                                if (gcmp !== 0) return gcmp;
+                                return (a.order || 0) - (b.order || 0);
+                            });
+
+                        if (filtered.length === 0) {
+                            return React.createElement(
+                                'p',
+                                { className: 'text-sm text-gray-500 italic text-center py-4' },
+                                'Pre túto kategóriu neboli nájdené žiadne superstructure tímy.'
+                            );
+                        }
+
+                        return React.createElement(
+                            'div',
+                            {
+                                className:
+                                    'max-h-64 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100',
+                            },
+                            ...filtered.map((t) =>
+                                React.createElement(
+                                    'label',
+                                    {
+                                        key: t.id,
+                                        className:
+                                            'flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-blue-50 transition' +
+                                            (selectedPlaceTeamId === t.id ? ' bg-blue-100' : ''),
+                                    },
+                                    React.createElement('input', {
+                                        type: 'radio',
+                                        name: 'placeTeam',
+                                        value: t.id,
+                                        checked: selectedPlaceTeamId === t.id,
+                                        onChange: () => setSelectedPlaceTeamId(t.id),
+                                        className:
+                                            'w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300',
+                                    }),
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex flex-col' },
+                                        React.createElement(
+                                            'span',
+                                            { className: 'text-sm font-medium text-gray-800' },
+                                            t.groupName
+                                                ? `${t.groupName} ${t.order != null ? t.order + '. ' : ''}${t.teamName}`
+                                                : t.teamName
+                                        ),
+                                        React.createElement(
+                                            'span',
+                                            { className: 'text-xs text-gray-500' },
+                                            t.category
+                                        )
+                                    )
+                                )
+                            )
+                        );
+                    })(),
+
+                    // Tlačidlá
+                    React.createElement(
+                        'div',
+                        { className: 'flex justify-end gap-3 mt-6' },
                         React.createElement(
                             'button',
                             {
                                 onClick: () => {
-                                    setShowPlaceAssignmentModal(false);
-                                    setPendingAssignmentCell(null);
+                                    if (!savingPlaceAssignment) {
+                                        setShowPlaceAssignmentModal(false);
+                                        setPendingAssignmentCell(null);
+                                        setSelectedPlaceTeamId('');
+                                    }
                                 },
+                                disabled: savingPlaceAssignment,
                                 className:
-                                    'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition',
+                                    'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition',
                             },
-                            'Zatvoriť'
+                            'Zrušiť'
+                        ),
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: savePlaceAssignment,
+                                disabled: savingPlaceAssignment || !selectedPlaceTeamId,
+                                className:
+                                    'px-6 py-2.5 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-white disabled:text-green-600 disabled:border-2 disabled:border-green-600 disabled:cursor-not-allowed transition font-medium',
+                            },
+                            savingPlaceAssignment ? 'Ukladám...' : 'Uložiť priradenie'
                         )
                     )
                 )
