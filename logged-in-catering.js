@@ -1311,6 +1311,7 @@ const cateringApp = ({ userProfileData }) => {
             setShowCateringModal(false);
             setSelectedCateringCell(null);
             setSelectedCateringPlaceId('');
+            setCateringModalIsPriority(false);
         } catch (err) {
             window.showGlobalNotification('Nepodarilo sa odstrániť priradenie.', 'error');
         } finally {
