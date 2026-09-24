@@ -2,6 +2,24 @@
 import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
+// ===== POMOCNÉ FUNKCIE PRE VEKTOROVÉ PDF =====
+
+const pdfPageWidth = (pdf) => pdf.internal.pageSize.getWidth();
+const pdfPageHeight = (pdf) => pdf.internal.pageSize.getHeight();
+
+const pdfSafeText = (text) => {
+    if (text === null || text === undefined) return '';
+    return String(text);
+};
+
+// Kruhový zápis "X. miesto"
+const ordinal = (n) => {
+    if (n === 1) return '1. miesto';
+    if (n === 2) return '2. miesto';
+    if (n === 3) return '3. miesto';
+    return `${n}. miesto`;
+};
+
 const { useState, useEffect } = React;
 
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
@@ -258,183 +276,546 @@ const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
     }
 };
 
-const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {    
+const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
+    const { jsPDF } = window.jspdf;
+    if (!jsPDF) {
+        window.showGlobalNotification('PDF knižnica nie je načítaná.', 'error');
+        return;
+    }
+
     const element = document.getElementById('pdf-export-target');
-    
     if (!element) {
         window.showGlobalNotification('Tabuľka ešte nie je načítaná.', 'error');
-        try {
-            if (window.parent !== window) {
-                window.parent.postMessage({
-                    type: 'PDF_EXPORT_COMPLETED',
-                    success: false,
-                    label: `${categoryName} - ${groupName}`,
-                    error: 'Element pdf-export-target sa nenašiel'
-                }, '*');
-            }
-        } catch (e) { }
         return;
     }
 
-    const html2canvasFn = window.html2canvas;
-    const jsPDFClass = window.jspdf?.jsPDF;
-
-    if (typeof html2canvasFn === 'undefined' || !jsPDFClass) {
-        window.showGlobalNotification('PDF knižnice nie sú načítané.', 'error');
-        try {
-            if (window.parent !== window) {
-                window.parent.postMessage({
-                    type: 'PDF_EXPORT_COMPLETED',
-                    success: false,
-                    label: `${categoryName} - ${groupName}`,
-                    error: 'PDF knižnice nie sú načítané'
-                }, '*');
-            }
-        } catch (e) { }
+    // Získame dáta z DOM (tabuľka CrossTable má stabilnú štruktúru)
+    const table = element.querySelector('table');
+    if (!table) {
+        window.showGlobalNotification('Tabuľka sa nenašla.', 'error');
         return;
     }
+
+    const label = groupName
+        ? `${categoryName} - ${groupName}`
+        : categoryName || 'neznáma kategória';
+    window.showGlobalNotification(`Generujem PDF pre: ${label}`, 'info');
+
+    // Rozmery buniek v px
+    const CELL_W = 200, CELL_H = 200;
+    const SIDE_W = 90, MID_W = 20;
+    const THICK = 3;
+
+    // Rozmery v mm (px * 0.264583)
+    const pxToMm = 0.264583;
+    const cellW_mm = CELL_W * pxToMm;
+    const cellH_mm = CELL_H * pxToMm;
+    const sideW_mm = SIDE_W * pxToMm;
+    const midW_mm = MID_W * pxToMm;
+    const teamColW_mm = sideW_mm * 2 + midW_mm;       // jeden tím = 3 podbunky
+    const scoreColW_mm = sideW_mm * 2 + midW_mm;      // Skóre = 3 podbunky
+    const bodyColW_mm = cellW_mm;
+    const placeColW_mm = cellW_mm;
+    const nameColW_mm = cellW_mm;
+
+    // Zistíme počet tímov z hlavičky (koľko TH má colSpan=3 v prvom riadku)
+    const headerRow = table.querySelector('thead tr');
+    const allTh = Array.from(headerRow.querySelectorAll('th'));
+    // Prvý th = hlavička kategória/skupina, posledné 3 = Skóre, Body, Miesto
+    // Tímy sú tie s colSpan=3 medzi nimi
+    const teamHeaderCells = allTh.filter(th => {
+        const cs = parseInt(th.getAttribute('colspan') || '1', 10);
+        return cs === 3 && !th.textContent.trim().startsWith('Skóre');
+    });
+    const teamCount = teamHeaderCells.length;
+    const teamNames = teamHeaderCells.map(th => th.textContent.trim());
+
+    // Získame dáta z tela tabuľky
+    const bodyRows = Array.from(table.querySelectorAll('tbody tr'));
+
+    // Prvá bunka v každom riadku = názov tímu (th)
+    // Potom pre každý tím: buď 1 td s diagonálou (colSpan=3), alebo 3 td s ":"
+    // Potom 3 td pre Skóre, 1 td Body, 1 td Miesto
+
+    const teams = [];
+    bodyRows.forEach(row => {
+        const cells = Array.from(row.children);
+        const teamName = cells[0]?.textContent.trim() || '';
+        const scores = []; // pole {home, away, isDiagonal}
+        let i = 1;
+        for (let t = 0; t < teamCount; t++) {
+            const cell = cells[i];
+            if (!cell) break;
+            const cs = parseInt(cell.getAttribute('colspan') || '1', 10);
+            if (cs === 3) {
+                // diagonála
+                scores.push({ diagonal: true });
+                i += 1;
+            } else {
+                // 3 bunky: home | : | away
+                const home = cells[i]?.textContent.trim() || '';
+                const colon = cells[i+1]?.textContent.trim() || '';
+                const away = cells[i+2]?.textContent.trim() || '';
+                scores.push({ home, away, diagonal: false });
+                i += 3;
+            }
+        }
+        // Celkové skóre = ďalšie 3 bunky
+        const totalHome = cells[i]?.textContent.trim() || '';
+        const totalColon = cells[i+1]?.textContent.trim() || '';
+        const totalAway = cells[i+2]?.textContent.trim() || '';
+        i += 3;
+        const points = cells[i]?.textContent.trim() || '';
+        i += 1;
+        const position = cells[i]?.textContent.trim() || '';
+        i += 1;
+
+        teams.push({ teamName, scores, totalHome, totalColon, totalAway, points, position });
+    });
+
+    // Vypočítame celkovú šírku a výšku
+    const totalWidth = nameColW_mm + teamCount * teamColW_mm + scoreColW_mm + bodyColW_mm + placeColW_mm;
+    const headerH_mm = cellH_mm; // prvý riadok = 1 bunka na výšku (200px)
+    const totalHeight = headerH_mm + teams.length * cellH_mm;
+
+    // Vytvoríme PDF s vlastným formátom
+    const pdf = new jsPDF({
+        orientation: totalWidth > totalHeight ? 'landscape' : 'portrait',
+        unit: 'mm',
+        format: [totalWidth, totalHeight],
+    });
+
+    const drawCell = (x, y, w, h, text, opts = {}) => {
+        const { bold = false, fontSize = 10, align = 'center', valign = 'middle', border = true } = opts;
+        if (border) {
+            pdf.setLineWidth(0.3);
+            pdf.rect(x, y, w, h);
+        }
+        pdf.setFontSize(fontSize);
+        pdf.setFont(undefined, bold ? 'bold' : 'normal');
+        const tx = align === 'center' ? x + w / 2 : (align === 'right' ? x + w - 2 : x + 2);
+        const ty = y + h / 2 + fontSize * 0.35 / 2;
+        pdf.text(pdfSafeText(text), tx, ty, { align });
+    };
+
+    let x = 0, y = 0;
+
+    // ===== HLAVIČKA =====
+    // 1. bunka: kategória / skupina (dva riadky)
+    pdf.setLineWidth(0.5);
+    pdf.rect(x, y, nameColW_mm, headerH_mm);
+    pdf.setFontSize(16);
+    pdf.setFont(undefined, 'bold');
+    pdf.text(pdfSafeText(categoryName), x + nameColW_mm / 2, y + headerH_mm / 2 - 2, { align: 'center' });
+    pdf.text(pdfSafeText(groupName), x + nameColW_mm / 2, y + headerH_mm / 2 + 6, { align: 'center' });
+    x += nameColW_mm;
+
+    // Tímy
+    for (let t = 0; t < teamCount; t++) {
+        pdf.setLineWidth(0.3);
+        pdf.rect(x, y, teamColW_mm, headerH_mm);
+        pdf.setFontSize(14);
+        pdf.setFont(undefined, 'bold');
+        pdf.text(pdfSafeText(teamNames[t]), x + teamColW_mm / 2, y + headerH_mm / 2 + 2, { align: 'center' });
+        x += teamColW_mm;
+    }
+
+    // Skóre
+    pdf.rect(x, y, scoreColW_mm, headerH_mm);
+    pdf.setFontSize(14);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Skóre', x + scoreColW_mm / 2, y + headerH_mm / 2 + 2, { align: 'center' });
+    x += scoreColW_mm;
+
+    // Body
+    pdf.rect(x, y, bodyColW_mm, headerH_mm);
+    pdf.text('Body', x + bodyColW_mm / 2, y + headerH_mm / 2 + 2, { align: 'center' });
+    x += bodyColW_mm;
+
+    // Miesto
+    pdf.rect(x, y, placeColW_mm, headerH_mm);
+    pdf.text('Miesto v skupine', x + placeColW_mm / 2, y + headerH_mm / 2 + 2, { align: 'center' });
+
+    // Silná čiara pod hlavičkou
+    pdf.setLineWidth(0.8);
+    pdf.line(0, y + headerH_mm, totalWidth, y + headerH_mm);
+
+    y += headerH_mm;
+
+    // ===== TELO =====
+    teams.forEach(team => {
+        let cx = 0;
+
+        // Názov tímu
+        pdf.setLineWidth(0.3);
+        pdf.rect(cx, y, nameColW_mm, cellH_mm);
+        pdf.setFontSize(14);
+        pdf.setFont(undefined, 'bold');
+        pdf.text(pdfSafeText(team.teamName), cx + 3, y + cellH_mm / 2, { align: 'left', maxWidth: nameColW_mm - 6 });
+        cx += nameColW_mm;
+
+        // Skóre bunky (za každý tím)
+        team.scores.forEach(score => {
+            if (score.diagonal) {
+                // diagonála s X
+                pdf.rect(cx, y, teamColW_mm, cellH_mm);
+                pdf.setLineWidth(0.3);
+                pdf.line(cx, y, cx + teamColW_mm, y + cellH_mm);
+                pdf.line(cx, y + cellH_mm, cx + teamColW_mm, y);
+            } else {
+                // 3 podbunky: home | : | away
+                pdf.rect(cx, y, sideW_mm, cellH_mm);
+                pdf.rect(cx + sideW_mm, y, midW_mm, cellH_mm);
+                pdf.rect(cx + sideW_mm + midW_mm, y, sideW_mm, cellH_mm);
+                pdf.setFontSize(14);
+                pdf.setFont(undefined, 'bold');
+                pdf.text(pdfSafeText(score.home), cx + sideW_mm - 3, y + cellH_mm / 2, { align: 'right' });
+                pdf.text(':', cx + sideW_mm + midW_mm / 2, y + cellH_mm / 2, { align: 'center' });
+                pdf.text(pdfSafeText(score.away), cx + sideW_mm + midW_mm + 3, y + cellH_mm / 2, { align: 'left' });
+            }
+            cx += teamColW_mm;
+        });
+
+        // Celkové skóre (3 podbunky)
+        pdf.rect(cx, y, sideW_mm, cellH_mm);
+        pdf.rect(cx + sideW_mm, y, midW_mm, cellH_mm);
+        pdf.rect(cx + sideW_mm + midW_mm, y, sideW_mm, cellH_mm);
+        pdf.setFontSize(14);
+        pdf.setFont(undefined, 'bold');
+        pdf.text(pdfSafeText(team.totalHome), cx + sideW_mm - 3, y + cellH_mm / 2, { align: 'right' });
+        pdf.text(':', cx + sideW_mm + midW_mm / 2, y + cellH_mm / 2, { align: 'center' });
+        pdf.text(pdfSafeText(team.totalAway), cx + sideW_mm + midW_mm + 3, y + cellH_mm / 2, { align: 'left' });
+        cx += scoreColW_mm;
+
+        // Body
+        pdf.rect(cx, y, bodyColW_mm, cellH_mm);
+        pdf.setFontSize(14);
+        pdf.text(pdfSafeText(team.points), cx + bodyColW_mm / 2, y + cellH_mm / 2, { align: 'center' });
+        cx += bodyColW_mm;
+
+        // Miesto
+        pdf.rect(cx, y, placeColW_mm, cellH_mm);
+        pdf.text(pdfSafeText(team.position), cx + placeColW_mm / 2, y + cellH_mm / 2, { align: 'center' });
+
+        y += cellH_mm;
+    });
+
+    // Silné orámovanie celej tabuľky
+    pdf.setLineWidth(1);
+    pdf.rect(0, 0, totalWidth, totalHeight);
+
+    // Silné zvislé čiary medzi blokmi (hlavička tímu | Skóre | Body | Miesto)
+    pdf.setLineWidth(0.8);
+    let vx = nameColW_mm + teamCount * teamColW_mm;
+    pdf.line(vx, 0, vx, totalHeight);
+    vx += scoreColW_mm;
+    pdf.line(vx, 0, vx, totalHeight);
+    vx += bodyColW_mm;
+    pdf.line(vx, 0, vx, totalHeight);
 
     const safeCategory = (categoryName || 'kategoria').replace(/\s+/g, '-');
     const safeGroup = (groupName || 'skupina').replace(/\s+/g, '-');
     const fileName = `${safeCategory}_${safeGroup}.pdf`;
 
-    const label = groupName
-        ? `${categoryName} - ${groupName}`
-        : categoryName || 'neznáma kategória';
-
-    window.showGlobalNotification(`Generujem PDF pre: ${label}`, 'info');
-
-    const scaleToUse = (fixedDpr || PDF_DEVICE_PIXEL_RATIO);
+    pdf.save(fileName);
 
     try {
-        const rect = element.getBoundingClientRect();
+        const currentHash = window.location.hash || '';
+        let completedCount = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
+        completedCount++;
+        sessionStorage.setItem('pdfBatchCompleted', String(completedCount));
+        sessionStorage.setItem('pdfBatchLastLabel', label);
+        const total = parseInt(sessionStorage.getItem('pdfBatchTotal') || '0', 10);
+        const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
+    } catch (e) { }
 
-        const cssWidth = rect.width;
-        const cssHeight = rect.height;
+    try {
+        const newUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, '', newUrl);
+    } catch (e) { }
 
-        const canvas = await html2canvasFn(element, {
-            scale: scaleToUse,
-            useCORS: true,
-            logging: false,
-            backgroundColor: '#ffffff',
-            width: cssWidth,
-            height: cssHeight,
-            windowWidth: cssWidth,
-            windowHeight: cssHeight,
-            foreignObjectRendering: false,
-            allowTaint: true
-        });
+    window.showGlobalNotification(`PDF bolo uložené: ${label}`, 'success');
 
-        const pxToMm = 0.264583;
-        const pdfWidthMm = cssWidth * pxToMm;
-        const pdfHeightMm = cssHeight * pxToMm;
-
-        const pdf = new jsPDFClass({
-            orientation: pdfWidthMm > pdfHeightMm ? 'landscape' : 'portrait',
-            unit: 'mm',
-            format: [pdfWidthMm, pdfHeightMm]
-        });
-
-        const imgData = canvas.toDataURL('image/png');
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
-
-        pdf.save(fileName);
-
-        try {
-            const currentHash = window.location.hash || '';
-            let completedCount = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
-            completedCount++;
-            sessionStorage.setItem('pdfBatchCompleted', String(completedCount));
-            sessionStorage.setItem('pdfBatchLastLabel', label);
-
-            const total = parseInt(sessionStorage.getItem('pdfBatchTotal') || '0', 10);
-            const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
-        } catch (e) { }
-
-        try {
-            const newUrl = window.location.pathname + window.location.hash;
-            window.history.replaceState({}, '', newUrl);
-        } catch (e) { }
-
-        window.showGlobalNotification(`PDF bolo uložené: ${label}`, 'success');
-
-        try {
-            if (window.parent !== window) {
-                window.parent.postMessage({
-                    type: 'PDF_EXPORT_COMPLETED',
-                    success: true,
-                    label: label,
-                    fileName: fileName
-                }, '*');
-            }
-        } catch (e) { }
-    } catch (err) {
-        window.showGlobalNotification(`Nepodarilo sa vytvoriť PDF pre: ${label}`, 'error');
-    
-        try {
-            if (window.parent !== window) {
-                window.parent.postMessage({
-                    type: 'PDF_EXPORT_COMPLETED',
-                    success: false,
-                    label: label,
-                    error: String(err)
-                }, '*');
-            }
-        } catch (e) { }
-    }
+    try {
+        if (window.parent !== window) {
+            window.parent.postMessage({
+                type: 'PDF_EXPORT_COMPLETED',
+                success: true,
+                label: label,
+                fileName: fileName
+            }, '*');
+        }
+    } catch (e) { }
 };
 
 const exportMatchesToPdf = async (title, matchesByDay, formatDateHeaderFn, formatTimeFn, fixedDpr = null) => {
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    if (!jsPDF) {
+        window.showGlobalNotification('PDF knižnica nie je načítaná.', 'error');
+        return;
+    }
 
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
+    window.showGlobalNotification(`Generujem PDF pre: ${title}`, 'info');
+
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = pdfPageWidth(pdf);
+    const pageH = pdfPageHeight(pdf);
     const margin = 10;
 
-    // Nadpis
-    pdf.setFontSize(16);
+    // ===== NADPIS =====
+    pdf.setFontSize(18);
     pdf.setFont(undefined, 'bold');
-    pdf.text(title, pageWidth / 2, margin + 6, { align: 'center' });
+    pdf.text(title, pageW / 2, margin + 8, { align: 'center' });
 
-    let y = margin + 14;
+    let y = margin + 16;
 
+    // ===== PAVÚK (vektorovo) =====
+    // Pokúsime sa nájsť PlayoffSpider v DOM a vykresliť ho vektorovo.
+    // Ak existuje, nakreslíme ho.
+    const spiderEl = document.querySelector('#matches-pdf-export-target .mt-8 table');
+    const spiderContainer = document.querySelector('#matches-pdf-export-target .mt-8');
+    if (spiderContainer) {
+        const spiderTitle = spiderContainer.querySelector('h3');
+        if (spiderTitle) {
+            pdf.setFontSize(12);
+            pdf.setFont(undefined, 'bold');
+            pdf.text(spiderTitle.textContent.trim(), margin, y);
+            y += 6;
+        }
+
+        // Načítame zápasy z PlayoffSpider
+        const spiderMatches = matchesByDay.flatMap(d => d.matches).filter(m =>
+            m.matchType && (
+                m.matchType === 'finále' ||
+                m.matchType.startsWith('semifinále') ||
+                m.matchType.startsWith('štvrťfinále') ||
+                m.matchType.startsWith('osemfinále') ||
+                m.matchType.startsWith('šestnásťfinále') ||
+                m.matchType === 'o 3. miesto'
+            )
+        );
+
+        if (spiderMatches.length > 0) {
+            y = drawSpider(pdf, spiderMatches, margin, y, pageW - margin * 2);
+            y += 8;
+        }
+    }
+
+    // ===== ZOZNAM ZÁPASOV =====
     matchesByDay.forEach((dayGroup, dayIndex) => {
-        // Dátum
+        // Ak sme blízko konca stránky, nová stránka
+        if (y > pageH - 40) {
+            pdf.addPage();
+            y = margin;
+        }
+
         pdf.setFontSize(12);
         pdf.setFont(undefined, 'bold');
         pdf.text(formatDateHeaderFn(dayGroup.date), margin, y);
         y += 6;
 
-        // Riadky zápasov
         const rows = dayGroup.matches.map(m => [
-            formatTimeFn(m.scheduledTime),
-            m.homeTeamIdentifier || '',
-            'vs',
-            m.awayTeamIdentifier || '',
-            m.matchType || '',
+            formatTimeFn(m.scheduledTime) || '--:--',
+            getDisplayIdForMatch ? getDisplayIdForMatch(m, m.homeTeamIdentifier) : (m.homeTeamIdentifier || ''),
+            '', // domáci názov
+            '', // skóre
+            '', // skóre
+            '', // skóre
+            '', // hostia
+            '', // ID hostia
+            [
+                m.matchType || '',
+                m.isPlacementMatch && m.placementRank ? ordinal(m.placementRank) : '',
+                m.groupName || '',
+            ].filter(Boolean).join(' • '),
         ]);
 
         pdf.autoTable({
             startY: y,
-            head: [['Čas', 'Domáci', 'VS', 'Hostia', 'Info']],
+            head: [['Čas', 'ID', 'Domáci', 'Skóre', '', '', 'Hostia', 'ID', 'Info']],
             body: rows,
-            styles: { fontSize: 10, cellPadding: 1.5 },
-            headStyles: { fillColor: [220, 230, 245], textColor: 20, fontStyle: 'bold' },
+            styles: { fontSize: 8, cellPadding: 1.2, valign: 'middle', halign: 'center' },
+            headStyles: { fillColor: [230, 235, 245], textColor: 20, fontStyle: 'bold', halign: 'center' },
+            columnStyles: {
+                0: { cellWidth: 14 },
+                1: { cellWidth: 18 },
+                2: { cellWidth: 40, halign: 'right' },
+                3: { cellWidth: 10, halign: 'right' },
+                4: { cellWidth: 5, halign: 'center' },
+                5: { cellWidth: 10, halign: 'left' },
+                6: { cellWidth: 40, halign: 'left' },
+                7: { cellWidth: 18 },
+                8: { cellWidth: 45, halign: 'left' },
+            },
             margin: { left: margin, right: margin },
             theme: 'grid',
         });
 
         y = pdf.lastAutoTable.finalY + 8;
-
-        // Ak sme na konci strany, pridaj novú
-        if (y > pageHeight - 20) {
-            pdf.addPage();
-            y = margin;
-        }
     });
 
-    pdf.save(`${title}.pdf`);
+    const safeTitle = (title || 'zapasy').replace(/\s+/g, '-');
+    const fileName = `${safeTitle}.pdf`;
+    pdf.save(fileName);
+
+    try {
+        const newUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, '', newUrl);
+    } catch (e) { }
+
+    window.showGlobalNotification(`PDF bolo uložené: ${fileName}`, 'success');
+
+    try {
+        const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
+        if (isActive) {
+            let completed = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
+            completed++;
+            sessionStorage.setItem('pdfBatchCompleted', String(completed));
+            sessionStorage.setItem('pdfBatchLastLabel', title || '');
+        }
+    } catch (e) { }
+
+    try {
+        if (window.parent !== window) {
+            window.parent.postMessage({
+                type: 'PDF_EXPORT_COMPLETED',
+                success: true,
+                label: fileName,
+                fileName: fileName
+            }, '*');
+        }
+    } catch (e) { }
+};
+
+// ===== VEKTOROVÝ PAVÚK =====
+const drawSpider = (pdf, spiderMatches, x0, y0, width) => {
+    const find = (type) => spiderMatches.find(m => m.matchType === type);
+
+    const final = find('finále');
+    const semi1 = find('semifinále 1');
+    const semi2 = find('semifinále 2');
+    const third = find('o 3. miesto');
+    const quarters = [
+        find('štvrťfinále 1'), find('štvrťfinále 2'),
+        find('štvrťfinále 3'), find('štvrťfinále 4')
+    ];
+    const eighths = [
+        find('osemfinále 1'), find('osemfinále 2'), find('osemfinále 3'), find('osemfinále 4'),
+        find('osemfinále 5'), find('osemfinále 6'), find('osemfinále 7'), find('osemfinále 8')
+    ];
+
+    const hasQuarters = quarters.some(Boolean);
+    const hasEighths = eighths.some(Boolean);
+    const hasSemis = !!(semi1 || semi2);
+
+    // Rozhodneme úroveň
+    let level = 1;
+    if (hasEighths) level = 3;
+    else if (hasQuarters) level = 2;
+
+    const boxW = 30;
+    const boxH = 8;
+    const gapX = 12;
+    const gapY = 4;
+
+    // Farby
+    const boxFill = [245, 245, 250];
+    const boxBorder = [80, 80, 120];
+
+    const drawMatch = (cx, cy, match) => {
+        pdf.setDrawColor(boxBorder[0], boxBorder[1], boxBorder[2]);
+        pdf.setFillColor(boxFill[0], boxFill[1], boxFill[2]);
+        pdf.setLineWidth(0.3);
+        pdf.rect(cx - boxW / 2, cy - boxH / 2, boxW, boxH, 'FD');
+
+        let line1 = '?', line2 = '?';
+        let type = '';
+        if (match) {
+            line1 = match.homeTeamIdentifier || '?';
+            line2 = match.awayTeamIdentifier || '?';
+            type = match.matchType || '';
+        }
+        pdf.setFontSize(6);
+        pdf.setFont(undefined, 'normal');
+        pdf.text(pdfSafeText(line1), cx - boxW / 2 + 1, cy - 1);
+        pdf.text(pdfSafeText(line2), cx - boxW / 2 + 1, cy + 3);
+        pdf.setFontSize(5);
+        pdf.setTextColor(120, 120, 120);
+        pdf.text(type, cx, cy - boxH / 2 - 1, { align: 'center' });
+        pdf.setTextColor(0, 0, 0);
+    };
+
+    const connect = (x1, y1, x2, y2) => {
+        pdf.setDrawColor(120, 120, 120);
+        pdf.setLineWidth(0.2);
+        pdf.line(x1, y1, x2, y2);
+    };
+
+    // Rozloženie:
+    // level 1: finále v strede, 2 semifinále vľavo a vpravo
+    // level 2: finále, 2 semifinále, 4 štvrťfinále
+    // level 3: finále, 2 semifinále, 4 štvrťfinále, 8 osemfinále
+
+    const centerX = x0 + width / 2;
+    const centerY = y0 + 20;
+
+    // Finále
+    drawMatch(centerX, centerY, final);
+
+    // Semifinále
+    if (hasSemis) {
+        const semiY = centerY + boxH + gapY + 6;
+        const semiX1 = centerX - boxW - gapX;
+        const semiX2 = centerX + boxW + gapX;
+        drawMatch(semiX1, semiY, semi1);
+        drawMatch(semiX2, semiY, semi2);
+
+        // Spojenie finále so semifinále
+        connect(semiX1, semiY - boxH / 2, centerX - boxW / 4, centerY + boxH / 2);
+        connect(semiX2, semiY - boxH / 2, centerX + boxW / 4, centerY + boxH / 2);
+    }
+
+    if (level >= 2 && hasQuarters) {
+        const qY = centerY + 2 * (boxH + gapY) + 12;
+        const qX = [
+            centerX - 2 * (boxW + gapX),
+            centerX - (boxW + gapX) * 0.4,
+            centerX + (boxW + gapX) * 0.4,
+            centerX + 2 * (boxW + gapX),
+        ];
+        quarters.forEach((m, i) => {
+            drawMatch(qX[i], qY, m);
+        });
+        // Spojenie s semifinále
+        connect(qX[0], qY - boxH / 2, centerX - boxW - gapX, centerY + boxH + gapY + 6 - boxH / 2);
+        connect(qX[1], qY - boxH / 2, centerX - boxW - gapX, centerY + boxH + gapY + 6 - boxH / 2);
+        connect(qX[2], qY - boxH / 2, centerX + boxW + gapX, centerY + boxH + gapY + 6 - boxH / 2);
+        connect(qX[3], qY - boxH / 2, centerX + boxW + gapX, centerY + boxH + gapY + 6 - boxH / 2);
+    }
+
+    if (level >= 3 && hasEighths) {
+        const eY = centerY + 3 * (boxH + gapY) + 18;
+        const eX = [];
+        for (let i = 0; i < 8; i++) {
+            eX.push(centerX - 3.5 * (boxW + gapX) + i * (boxW + gapX));
+        }
+        eighths.forEach((m, i) => {
+            drawMatch(eX[i], eY, m);
+        });
+        // Spojenie s štvrťfinále (zjednodušene)
+        for (let i = 0; i < 4; i++) {
+            connect(eX[2*i], eY - boxH / 2, centerX - 2 * (boxW + gapX) + i * (boxW + gapX) * 1.2, centerY + 2 * (boxH + gapY) + 12 - boxH / 2);
+        }
+    }
+
+    // O 3. miesto – nakreslíme bokom
+    if (third) {
+        drawMatch(centerX, centerY + boxH + gapY + 6, third);
+    }
+
+    // Vrátime y pozíciu pod pavúkom
+    const height = (level === 1 ? 1 : level === 2 ? 2 : 3) * (boxH + gapY + 6) + 20;
+    return y0 + height;
 };
 
 const ExportApp = ({ userProfileData }) => {
