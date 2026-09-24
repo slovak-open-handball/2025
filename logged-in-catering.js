@@ -2197,6 +2197,7 @@ const cateringApp = ({ userProfileData }) => {
                                         setShowPlaceAssignmentModal(false);
                                         setPendingAssignmentCell(null);
                                         setSelectedPlaceTeamId('');
+                                        setCateringModalIsPriority(false);
                                     }
                                 },
                                 disabled: savingPlaceAssignment,
