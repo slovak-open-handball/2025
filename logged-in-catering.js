@@ -422,18 +422,18 @@ const cateringApp = ({ userProfileData }) => {
         0
     );
 
-    // 🔥 NOVÉ: Získanie farby ubytovne pre tím
+    // 🔥 UPRAVENÉ: Získanie farby ubytovne pre tím (bez ubytovne = žltá #FFFF00)
     const getTeamAccommodationColor = (team) => {
-        if (!team.accommodationName) return null;
+        if (!team.accommodationName) return '#FFFF00';
         const accommodation = accommodations.find(place => place.name === team.accommodationName);
-        if (!accommodation) return null;
-        return accommodation.headerColor || '#1e40af';
+        if (!accommodation) return '#FFFF00';
+        return accommodation.headerColor || '#FFFF00';
     };
 
     const getTeamAccommodationTextColor = (team) => {
-        if (!team.accommodationName) return null;
+        if (!team.accommodationName) return '#000000';
         const accommodation = accommodations.find(place => place.name === team.accommodationName);
-        if (!accommodation) return null;
+        if (!accommodation) return '#000000';
         return accommodation.headerTextColor || '#000000';
     };
 
@@ -662,31 +662,29 @@ const cateringApp = ({ userProfileData }) => {
                                           },
                                           team.teamName
                                       ),
-                                      // 🔥 UPRAVENÉ: počet hráčov s farbou ubytovne
+                                      // 🔥 UPRAVENÉ: počet hráčov s farbou ubytovne (bez ubytovne = žltá)
                                       React.createElement(
                                           'td',
                                           {
                                               className:
                                                   'border border-gray-300 px-3 py-2 text-center whitespace-nowrap text-xs font-medium',
-                                              style: (() => {
-                                                  const bg = getTeamAccommodationColor(team);
-                                                  const fg = getTeamAccommodationTextColor(team);
-                                                  return bg ? { backgroundColor: bg, color: fg } : {};
-                                              })(),
+                                              style: {
+                                                  backgroundColor: getTeamAccommodationColor(team),
+                                                  color: getTeamAccommodationTextColor(team),
+                                              },
                                           },
                                           team.playersCount
                                       ),
-                                      // 🔥 UPRAVENÉ: počet ostatných členov s farbou ubytovne
+                                      // 🔥 UPRAVENÉ: počet ostatných členov s farbou ubytovne (bez ubytovne = žltá)
                                       React.createElement(
                                           'td',
                                           {
                                               className:
                                                   'border border-gray-300 px-3 py-2 text-center whitespace-nowrap text-xs font-medium border-r-4 border-r-gray-500',
-                                              style: (() => {
-                                                  const bg = getTeamAccommodationColor(team);
-                                                  const fg = getTeamAccommodationTextColor(team);
-                                                  return bg ? { backgroundColor: bg, color: fg } : {};
-                                              })(),
+                                              style: {
+                                                  backgroundColor: getTeamAccommodationColor(team),
+                                                  color: getTeamAccommodationTextColor(team),
+                                              },
                                           },
                                           team.othersCount
                                       ),
