@@ -962,7 +962,14 @@ const cateringApp = ({ userProfileData }) => {
                 category: superstructureExisting.category,
                 groupName: superstructureExisting.groupName || null,
             };
-    
+        
+            // 🔥 NOVÉ: Zistíme, či v riadku existuje INÉ superstructure priradenie
+            //    (okrem tohto kliknutého). Ak NIE, checkbox pre prioritu sa nezobrazí.
+            const otherSuperstructureInRow = allSuperstructureInRow.filter(
+                (a) => a.id !== superstructureExisting.id
+            );
+            const hasOtherSuperstructureInRow = otherSuperstructureInRow.length > 0;
+        
             setSelectedCateringCell({
                 team,
                 dayKey: day.key,
@@ -974,7 +981,8 @@ const cateringApp = ({ userProfileData }) => {
                 isSuperstructure: true,
                 placeTeam,
                 isPriority: false,
-                showPriorityCheckbox: true,
+                // 🔥 Checkbox zobrazíme LEN ak v riadku existuje iné superstructure priradenie
+                showPriorityCheckbox: hasOtherSuperstructureInRow,
             });
             setCateringModalIsPriority(superstructureExisting.isPriority === true);
             setSelectedCateringPlaceId(superstructureExisting.placeId || '');
