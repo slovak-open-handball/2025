@@ -920,6 +920,28 @@ const cateringApp = ({ userProfileData }) => {
 
     // Otvorí modálne okno pre priradenie
     const openCateringModal = (team, day, mealType, slot) => {
+        // 🔥 NOVÉ: Výpis do konzoly – koľko priradených tímov je v konkrétnom riadku
+        // pre konkrétny typ stravovania zo všetkých dostupných časov stravovania.
+        const allSuperstructureInRow = findAllSuperstructureAssignmentsForRow(
+            team, day.key, mealType
+        );
+        const allClassicInRow = cateringAssignments.filter(
+            (a) =>
+                a.isSuperstructure !== true &&
+                a.teamUid === team.uid &&
+                a.teamIndex === team.teamIndex &&
+                (a.category === team.category || a.categoryName === team.category) &&
+                a.dayKey === day.key &&
+                a.mealType === mealType
+        );
+        const totalAssignedInRow = allSuperstructureInRow.length + allClassicInRow.length;
+    
+        console.log(
+            `[Stravovanie] Riadok – Tím: "${team.teamName}" | Kategória: "${team.category}" | ` +
+            `Deň: ${day.key} | Typ jedla: ${mealType} | ` +
+            `Priradených tímov v riadku (všetky časy): ${totalAssignedInRow} ` +
+            `(superstructure: ${allSuperstructureInRow.length}, klasické: ${allClassicInRow.length})`
+        );
         // 1) 🔥 Ak pre túto KONKRÉTNU BUNKU existuje SUPERSTRUCTURE priradenie →
         //    otvoríme ROVNO modálne okno "Priradiť stravovacie miesto"
         //    s príznakom isSuperstructure a existingId (pre možnosť odstránenia).
