@@ -2637,15 +2637,11 @@ const cateringApp = ({ userProfileData }) => {
                     
                         const filtered = matchTeams
                             .filter((t) => cleanCategory(t.category) === categoryName)
-                            // 🔥 VOLITEĽNÉ: ak chceš filtrovať aj podľa skupiny
-                            // .filter((t) => !pendingAssignmentCell.team.groupName || t.groupName === pendingAssignmentCell.team.groupName)
                             .filter((t) => !isSuperstructureTeamAlreadyAssigned(t.teamName, dayKey, mealType))
-                            // 🔥 NOVÉ: Skryjeme tímy, ktorých ZOBRAZENÝ názov má presne 2 znaky
-                            //    a prvý je písmeno a druhý je číslica (napr. "A1", "B2", ...).
                             .filter((t) => {
                                 const displayName = getPlaceTeamDisplayName(t.teamName, t.category) || '';
-                                // Ak má presne 2 znaky, prvý písmeno, druhý číslica → skryjeme
-                                if (/^[A-Za-z]\d$/.test(displayName)) return false;
+                                // Ak má jedno písmeno a ľubovoľný počet číslic → skryjeme
+                                if (/^[A-Za-z]\d+$/.test(displayName)) return false;
                                 return true;
                             })
                             .filter((t) => {
