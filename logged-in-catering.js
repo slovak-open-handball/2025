@@ -943,62 +943,13 @@ const cateringApp = ({ userProfileData }) => {
             `(superstructure: ${allSuperstructureInRow.length}, klasické: ${allClassicInRow.length})`
         );
     
-        // 🔥 NOVÉ PRAVIDLO: Maximálne 2 priradené tímy v riadku.
-        // - Ak totalAssignedInRow < 2 → modálne okno "Superstructure priradenie" (rozhodovacie).
-        // - Ak totalAssignedInRow >= 2 → automaticky modálne okno "Vyberte tím na preplánovanie".
-        if (totalAssignedInRow >= 2) {
-            // 🔥 Máme 2+ priradenia → otvoríme priamo picker na preplánovanie.
-            // Ak existujú superstructure priradenia, použijeme ich; inak použijeme klasické.
-            const items = [];
+        // ============================================================
+        // 🔥 NAJPRV: Ak kliknem na EXISTUJÚCE priradenie v TEJTO KONKRÉTNEJ BUNKE,
+        //    musí sa PRIAMO otvoriť modálne okno na úpravu/zmazanie.
+        //    Toto má prednosť pred kontrolou počtu priradení v riadku.
+        // ============================================================
     
-            // Najprv superstructure priradenia
-            allSuperstructureInRow.forEach((a) => {
-                const placeTeam = superstructureTeams.find((t) => t.id === a.teamIndex) || {
-                    id: a.teamIndex,
-                    teamName: a.teamName,
-                    category: a.category,
-                    groupName: a.groupName || null,
-                };
-                items.push({ assignment: a, placeTeam, isClassic: false });
-            });
-    
-            // Potom klasické priradenia (aby sa dali tiež preplánovať)
-            allClassicInRow.forEach((a) => {
-                items.push({
-                    assignment: a,
-                    placeTeam: {
-                        id: a.teamUid + '-' + a.teamIndex,
-                        teamName: a.teamName || team.teamName,
-                        category: a.categoryName || a.category,
-                        groupName: null,
-                    },
-                    isClassic: true,
-                });
-            });
-    
-            // Uložíme si kontext pre picker (tím, deň, typ jedla, slot)
-            setPendingSuperstructureDecision({
-                type: 'row',
-                team,
-                day,
-                mealType,
-                slot,
-                existingId: null,
-                placeTeam: null,
-                existingAssignment: null,
-            });
-    
-            setSuperstructureReplanPickerItems(items);
-            setShowSuperstructureReplanPickerModal(true);
-            return;
-        }
-    
-        // 🔥 Ak totalAssignedInRow < 2 → otvoríme rozhodovacie modálne okno
-        // "Superstructure priradenie" (ak existuje aspoň jedno superstructure priradenie),
-        // inak pokračujeme pôvodnou logikou.
-    
-        // 1) Ak pre túto KONKRÉTNU BUNKU existuje SUPERSTRUCTURE priradenie →
-        //    otvoríme ROVNO modálne okno "Priradiť stravovacie miesto".
+        // 1a) Superstructure priradenie pre túto konkrétnu bunku
         const superstructureExisting = findSuperstructureAssignmentForCell(
             team, day.key, mealType, slot.from
         );
@@ -1031,6 +982,78 @@ const cateringApp = ({ userProfileData }) => {
             return;
         }
     
+        // 1b) Klasické priradenie pre túto konkrétnu bunku
+        const existingClassic = findCateringAssignment(team, day.key, mealType, slot.from);
+        if (existingClassic) {
+            setSelectedCateringCell({
+                team,
+                dayKey: day.key,
+                dayLabel: day.fullLabelNumeric,
+                mealType,
+                slotFrom: slot.from,
+                slotTo: slot.to,
+                existingId: existingClassic.id || null,
+                isSuperstructure: false,
+                showPriorityCheckbox: false,
+            });
+            setSelectedCateringPlaceId(existingClassic.placeId || '');
+            setCateringModalIsPriority(false);
+            setShowCateringModal(true);
+            return;
+        }
+    
+        // ============================================================
+        // 🔥 Až teraz: Ak bunka NEMÁ existujúce priradenie, aplikujeme
+        //    pravidlo maximálne 2 priradených tímov v riadku.
+        // ============================================================
+    
+        // Ak totalAssignedInRow >= 2 → automaticky modálne okno "Vyberte tím na preplánovanie".
+        if (totalAssignedInRow >= 2) {
+            const items = [];
+    
+            // Najprv superstructure priradenia
+            allSuperstructureInRow.forEach((a) => {
+                const placeTeam = superstructureTeams.find((t) => t.id === a.teamIndex) || {
+                    id: a.teamIndex,
+                    teamName: a.teamName,
+                    category: a.category,
+                    groupName: a.groupName || null,
+                };
+                items.push({ assignment: a, placeTeam, isClassic: false });
+            });
+    
+            // Potom klasické priradenia
+            allClassicInRow.forEach((a) => {
+                items.push({
+                    assignment: a,
+                    placeTeam: {
+                        id: a.teamUid + '-' + a.teamIndex,
+                        teamName: a.teamName || team.teamName,
+                        category: a.categoryName || a.category,
+                        groupName: null,
+                    },
+                    isClassic: true,
+                });
+            });
+    
+            setPendingSuperstructureDecision({
+                type: 'row',
+                team,
+                day,
+                mealType,
+                slot,
+                existingId: null,
+                placeTeam: null,
+                existingAssignment: null,
+            });
+    
+            setSuperstructureReplanPickerItems(items);
+            setShowSuperstructureReplanPickerModal(true);
+            return;
+        }
+    
+        // 🔥 Ak totalAssignedInRow < 2 → pokračujeme pôvodnou logikou.
+    
         // 2) Ak v TOM ISTOM RIADKU existuje SUPERSTRUCTURE priradenie v INOM SLOTE
         //    → otvoríme ROZHODOVACIE modálne okno "Superstructure priradenie".
         const superstructureInRow = findSuperstructureAssignmentForRow(
@@ -1060,25 +1083,7 @@ const cateringApp = ({ userProfileData }) => {
             return;
         }
     
-        // 3) Ak pre túto bunku existuje KLASICKÉ priradenie →
-        //    otvoríme ROVNO modálne okno "Priradiť stravovacie miesto".
-        const existing = findCateringAssignment(team, day.key, mealType, slot.from);
-        if (existing) {
-            setSelectedCateringCell({
-                team,
-                dayKey: day.key,
-                dayLabel: day.fullLabelNumeric,
-                mealType,
-                slotFrom: slot.from,
-                slotTo: slot.to,
-                existingId: existing.id || null,
-            });
-            setSelectedCateringPlaceId(existing.placeId || '');
-            setShowCateringModal(true);
-            return;
-        }
-    
-        // 4) Ak tím NEMÁ ŽIADNY balík → otvoríme ROVNO modálne okno
+        // 3) Ak tím NEMÁ ŽIADNY balík → otvoríme ROVNO modálne okno
         if (!teamHasAnyPackage(team)) {
             setPendingAssignmentCell({ team, day, mealType, slot });
     
@@ -1093,7 +1098,7 @@ const cateringApp = ({ userProfileData }) => {
             return;
         }
     
-        // 5) Tím MÁ balík, ale NEMÁ daný typ stravovania v balíku
+        // 4) Tím MÁ balík, ale NEMÁ daný typ stravovania v balíku
         if (!teamHasMealInPackage(team, day.key, mealType)) {
             setPendingAssignmentCell({ team, day, mealType, slot });
     
@@ -1108,7 +1113,7 @@ const cateringApp = ({ userProfileData }) => {
             return;
         }
     
-        // 6) Tím MÁ balík AJ daný typ stravovania → otvoríme modálne okno s výberom typu.
+        // 5) Tím MÁ balík AJ daný typ stravovania → otvoríme modálne okno s výberom typu.
         setPendingAssignmentCell({ team, day, mealType, slot });
         setShowAssignmentTypeModal(true);
     };
