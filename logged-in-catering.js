@@ -1661,13 +1661,58 @@ const cateringApp = ({ userProfileData }) => {
         if (!selectedCateringCell?.existingId || !window.db) return;
         setSavingCatering(true);
         try {
+            // 🔥 Zapamätáme si kontext MAZANÉHO záznamu, aby sme po zmazaní
+            //    mohli skontrolovať, či v riadku nezostalo len 1 priradenie.
+            const deletedAssignment = cateringAssignments.find(
+                (a) => a.id === selectedCateringCell.existingId
+            );
+    
+            // 1) Zmažeme záznam
             await deleteDoc(doc(window.db, 'catering', selectedCateringCell.existingId));
-
-            const message = selectedCateringCell.isSuperstructure
-                ? 'Superstructure priradenie bolo odstránené.'
-                : 'Priradenie bolo odstránené.';
-            window.showGlobalNotification(message, 'success');
-
+    
+            // 2) 🔥 NOVÉ: Ak sme mazali SUPERSTRUCTURE priradenie, skontrolujeme,
+            //    či v tom istom riadku (kliknutý tím + deň + typ jedla) nezostalo
+            //    len JEDNO superstructure priradenie. Ak áno a má isPriority: true,
+            //    automaticky mu prioritu odstránime.
+            if (
+                selectedCateringCell.isSuperstructure &&
+                deletedAssignment &&
+                deletedAssignment.isSuperstructure === true
+            ) {
+                const remainingInRow = cateringAssignments.filter(
+                    (a) =>
+                        a.isSuperstructure === true &&
+                        a.id !== selectedCateringCell.existingId &&
+                        a.clickedTeamUid === deletedAssignment.clickedTeamUid &&
+                        a.clickedTeamIndex === deletedAssignment.clickedTeamIndex &&
+                        a.clickedTeamCategory === deletedAssignment.clickedTeamCategory &&
+                        a.dayKey === deletedAssignment.dayKey &&
+                        a.mealType === deletedAssignment.mealType
+                );
+    
+                // Ak zostalo len JEDNO superstructure priradenie v riadku a má prioritu
+                // → odstránime mu prioritu (priorita má zmysel len pri 2+ tímoch).
+                if (remainingInRow.length === 1 && remainingInRow[0].isPriority === true) {
+                    await updateDoc(doc(window.db, 'catering', remainingInRow[0].id), {
+                        isPriority: false,
+                    });
+                    window.showGlobalNotification(
+                        'Superstructure priradenie bolo odstránené. Priorita zvyšného tímu bola automaticky zrušená.',
+                        'success'
+                    );
+                } else {
+                    window.showGlobalNotification(
+                        'Superstructure priradenie bolo odstránené.',
+                        'success'
+                    );
+                }
+            } else {
+                const message = selectedCateringCell.isSuperstructure
+                    ? 'Superstructure priradenie bolo odstránené.'
+                    : 'Priradenie bolo odstránené.';
+                window.showGlobalNotification(message, 'success');
+            }
+    
             setShowCateringModal(false);
             setSelectedCateringCell(null);
             setSelectedCateringPlaceId('');
