@@ -1423,97 +1423,126 @@ const cateringApp = ({ userProfileData }) => {
     // Uloží priradenie stravovacieho miesta do DB (s potvrdením pri zmene)
     const saveCateringAssignment = async () => {
         if (!selectedCateringCell || !selectedCateringPlaceId || !window.db) return;
-
+    
         const payload = buildCateringPayload(selectedCateringPlaceId);
-
+    
         if (selectedCateringCell.isSuperstructure) {
             setSavingCatering(true);
-
-            // Ak kliknuté miesto je rovnaké ako existujúce, nič nerobíme
-            const isSameAsExisting =
-                selectedCateringCell.existingId &&
-                selectedCateringCell._originalPlaceId === selectedCateringPlaceId;
-
-                if (selectedCateringCell.existingId) {
-                    // 🔥 Pri preplánovaní vždy AKTUALIZUJEME existujúci záznam (žiadna duplikácia).
-                    // Priorita:
-                    //  - Ak nový tím má checkbox zaškrtnutý → isPriority: true
-                    //  - Ak nový tím nemá checkbox zaškrtnutý → ponecháme pôvodnú prioritu starého záznamu
-                    const oldAssignment = cateringAssignments.find(
-                        (a) => a.id === selectedCateringCell.existingId
+    
+            if (selectedCateringCell.existingId) {
+                // 🔥 Pri preplánovaní vždy AKTUALIZUJEME existujúci záznam (žiadna duplikácia).
+                const oldAssignment = cateringAssignments.find(
+                    (a) => a.id === selectedCateringCell.existingId
+                );
+                const oldWasPriority = oldAssignment?.isPriority === true;
+    
+                const newIsPriority = !!cateringModalIsPriority;
+    
+                // 🔥 NOVÉ: Ak STARÝ záznam bol prioritný a NOVÝ nemá byť prioritný
+                //    → musíme nájsť iné superstructure priradenie v tom istom riadku
+                //    (tím + deň + typ jedla) a tomu nastaviť isPriority: true.
+                const wasPriorityRemoved = oldWasPriority && !newIsPriority;
+    
+                const updatePayload = { ...payload, isPriority: newIsPriority };
+    
+                // 1) Aktualizujeme tento záznam (priorita sa odstráni alebo pridá)
+                await updateDoc(
+                    doc(window.db, 'catering', selectedCateringCell.existingId),
+                    updatePayload
+                );
+    
+                // 2) Ak sme ODSTRÁNILI prioritu, nájdeme iné superstructure priradenie
+                //    v tom istom riadku a nastavíme mu prioritu.
+                if (wasPriorityRemoved) {
+                    const siblings = cateringAssignments.filter(
+                        (a) =>
+                            a.isSuperstructure === true &&
+                            a.id !== selectedCateringCell.existingId &&
+                            a.clickedTeamUid === payload.clickedTeamUid &&
+                            a.clickedTeamIndex === payload.clickedTeamIndex &&
+                            a.clickedTeamCategory === payload.clickedTeamCategory &&
+                            a.dayKey === payload.dayKey &&
+                            a.mealType === payload.mealType
                     );
-                    const oldWasPriority = oldAssignment?.isPriority === true;
-                
-                    const newIsPriority = !!cateringModalIsPriority;
-                    const finalPriority = newIsPriority || oldWasPriority;
-                
-                    const updatePayload = { ...payload, isPriority: finalPriority };
-                
-                    await updateDoc(doc(window.db, 'catering', selectedCateringCell.existingId), updatePayload);
-                
+    
+                    if (siblings.length > 0) {
+                        // Nastavíme prioritu prvému inému superstructure priradeniu v riadku
+                        await updateDoc(doc(window.db, 'catering', siblings[0].id), {
+                            isPriority: true,
+                        });
+                        window.showGlobalNotification(
+                            'Priorita bola presunutá na iný tím v riadku.',
+                            'success'
+                        );
+                    } else {
+                        // Žiadny iný tím v riadku → priorita sa jednoducho odstránila
+                        window.showGlobalNotification(
+                            'Priorita bola odstránená.',
+                            'success'
+                        );
+                    }
+                } else {
                     window.showGlobalNotification(
                         'Priradenie bolo preplánované.',
                         'success'
                     );
-                
-                    setShowCateringModal(false);
-                    setSelectedCateringCell(null);
-                    setSelectedCateringPlaceId('');
-                    setCateringModalIsPriority(false);
-                    setSavingCatering(false);
-                    return;
-                } else {
-                    // 🔥 NOVÉ: Nové superstructure priradenie (bez existingId).
-                    // Ak je to nový tím do riadku, kde už existuje iný superstructure tím,
-                    // a nový NEMÁ prioritu → prioritu dostane existujúci (pôvodný) tím.
-                    const newIsPriority = !!cateringModalIsPriority;
-                
-                    // Pridáme nový záznam (s prioritou, ak ju má)
-                    const newDocRef = await addDoc(collection(window.db, 'catering'), {
-                        ...payload,
-                        isPriority: newIsPriority,
-                    });
-                
-                    // Ak nový NEMÁ prioritu, skontrolujeme, či v riadku existuje iný superstructure tím.
-                    if (!newIsPriority) {
-                        const siblings = cateringAssignments.filter(
-                            (a) =>
-                                a.isSuperstructure === true &&
-                                a.clickedTeamUid === payload.clickedTeamUid &&
-                                a.clickedTeamIndex === payload.clickedTeamIndex &&
-                                a.clickedTeamCategory === payload.clickedTeamCategory &&
-                                a.dayKey === payload.dayKey &&
-                                a.mealType === payload.mealType
+                }
+    
+                setShowCateringModal(false);
+                setSelectedCateringCell(null);
+                setSelectedCateringPlaceId('');
+                setCateringModalIsPriority(false);
+                setSavingCatering(false);
+                return;
+            } else {
+                // 🔥 NOVÉ: Nové superstructure priradenie (bez existingId).
+                // Ak je to nový tím do riadku, kde už existuje iný superstructure tím,
+                // a nový NEMÁ prioritu → prioritu dostane existujúci (pôvodný) tím.
+                const newIsPriority = !!cateringModalIsPriority;
+    
+                // Pridáme nový záznam (s prioritou, ak ju má)
+                await addDoc(collection(window.db, 'catering'), {
+                    ...payload,
+                    isPriority: newIsPriority,
+                });
+    
+                // Ak nový NEMÁ prioritu, skontrolujeme, či v riadku existuje iný superstructure tím.
+                if (!newIsPriority) {
+                    const siblings = cateringAssignments.filter(
+                        (a) =>
+                            a.isSuperstructure === true &&
+                            a.clickedTeamUid === payload.clickedTeamUid &&
+                            a.clickedTeamIndex === payload.clickedTeamIndex &&
+                            a.clickedTeamCategory === payload.clickedTeamCategory &&
+                            a.dayKey === payload.dayKey &&
+                            a.mealType === payload.mealType
+                    );
+    
+                    if (siblings.length > 0) {
+                        // Existuje pôvodný tím v riadku → nastavíme mu prioritu
+                        await updateDoc(doc(window.db, 'catering', siblings[0].id), {
+                            isPriority: true,
+                        });
+                        window.showGlobalNotification(
+                            'Priorita bola nastavená pôvodnému tímu v riadku.',
+                            'success'
                         );
-                
-                        if (siblings.length > 0) {
-                            // Existuje pôvodný tím v riadku → nastavíme mu prioritu
-                            await updateDoc(doc(window.db, 'catering', siblings[0].id), {
-                                isPriority: true,
-                            });
-                            window.showGlobalNotification(
-                                'Priorita bola nastavená pôvodnému tímu v riadku.',
-                                'success'
-                            );
-                        } else {
-                            // 🔥 Žiadny iný tím v riadku → nový záznam NEBUDE prioritný
-                            // (odstránené pôvodné updateDoc s isPriority: true)
-                            window.showGlobalNotification('Priradenie bolo uložené.', 'success');
-                        }
                     } else {
                         window.showGlobalNotification('Priradenie bolo uložené.', 'success');
                     }
-                
-                    setShowCateringModal(false);
-                    setSelectedCateringCell(null);
-                    setSelectedCateringPlaceId('');
-                    setCateringModalIsPriority(false);
-                    setSavingCatering(false);
-                    return;
+                } else {
+                    window.showGlobalNotification('Priradenie bolo uložené.', 'success');
                 }
-            return;
+    
+                setShowCateringModal(false);
+                setSelectedCateringCell(null);
+                setSelectedCateringPlaceId('');
+                setCateringModalIsPriority(false);
+                setSavingCatering(false);
+                return;
+            }
         }
-
+    
         // Klasická logika pre používateľský tím
         const existingForTeamDayMeal = cateringAssignments.filter(
             (a) =>
@@ -1524,13 +1553,13 @@ const cateringApp = ({ userProfileData }) => {
                 a.dayKey === selectedCateringCell.dayKey &&
                 a.mealType === selectedCateringCell.mealType
         );
-
+    
         if (existingForTeamDayMeal.length === 0) {
             setSavingCatering(true);
             await performSaveCateringAssignment(payload, false, null);
             return;
         }
-
+    
         const identical = existingForTeamDayMeal.find(
             (a) =>
                 a.slotFrom === selectedCateringCell.slotFrom &&
@@ -1543,7 +1572,7 @@ const cateringApp = ({ userProfileData }) => {
             setCateringModalIsPriority(false);
             return;
         }
-
+    
         setPendingChange({
             payload,
             oldIds: existingForTeamDayMeal.map((a) => a.id),
