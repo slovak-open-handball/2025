@@ -1333,14 +1333,35 @@ const cateringApp = ({ userProfileData }) => {
         setShowSuperstructureReplanPickerModal(true);
     };
 
-    // 🔥 NOVÉ: Používateľ vybral konkrétne superstructure priradenie na preplánovanie
+    // 🔥 NOVÉ: Používateľ vybral konkrétne priradenie na preplánovanie
     const handlePickSuperstructureReplan = (item) => {
         if (!pendingSuperstructureDecision || !item) return;
-
-        // 🔥 OPRAVA: doplnený slot z pendingSuperstructureDecision
-        const { team, day, mealType, slot } = pendingSuperstructureDecision;
-        const { assignment, placeTeam } = item;
     
+        const { team, day, mealType, slot } = pendingSuperstructureDecision;
+        const { assignment, placeTeam, isClassic } = item;
+    
+        if (isClassic) {
+            // 🔥 Klasické priradenie → otvoríme klasické modálne okno
+            setSelectedCateringCell({
+                team,
+                dayKey: day.key,
+                dayLabel: day.fullLabelNumeric,
+                mealType,
+                slotFrom: assignment.slotFrom || slot.from,
+                slotTo: assignment.slotTo || slot.to,
+                existingId: assignment.id || null,
+                // NIE je superstructure
+            });
+            setSelectedCateringPlaceId(assignment.placeId || '');
+            setCateringModalIsPriority(false);
+            setShowSuperstructureReplanPickerModal(false);
+            setSuperstructureReplanPickerItems([]);
+            setPendingSuperstructureDecision(null);
+            setShowCateringModal(true);
+            return;
+        }
+    
+        // 🔥 Superstructure priradenie
         setSelectedCateringCell({
             team,
             dayKey: day.key,
@@ -1351,10 +1372,9 @@ const cateringApp = ({ userProfileData }) => {
             existingId: assignment.id || null,
             isSuperstructure: true,
             placeTeam,
-            isPriority: false, // bude sa brať z checkboxu
+            isPriority: false,
             showPriorityCheckbox: true,
         });
-        // 🔥 Predvyplníme checkbox podľa pôvodnej priority
         setCateringModalIsPriority(assignment.isPriority === true);
         setSelectedCateringPlaceId(assignment.placeId || '');
         setShowSuperstructureReplanPickerModal(false);
