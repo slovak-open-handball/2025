@@ -1435,36 +1435,48 @@ const cateringApp = ({ userProfileData }) => {
                     (a) => a.id === selectedCateringCell.existingId
                 );
                 const oldWasPriority = oldAssignment?.isPriority === true;
-    
+            
                 const newIsPriority = !!cateringModalIsPriority;
-    
-                // 🔥 NOVÉ: Ak STARÝ záznam bol prioritný a NOVÝ nemá byť prioritný
-                //    → musíme nájsť iné superstructure priradenie v tom istom riadku
-                //    (tím + deň + typ jedla) a tomu nastaviť isPriority: true.
-                const wasPriorityRemoved = oldWasPriority && !newIsPriority;
-    
+            
                 const updatePayload = { ...payload, isPriority: newIsPriority };
-    
-                // 1) Aktualizujeme tento záznam (priorita sa odstráni alebo pridá)
+            
+                // 1) Aktualizujeme tento záznam (priorita sa pridá alebo odstráni)
                 await updateDoc(
                     doc(window.db, 'catering', selectedCateringCell.existingId),
                     updatePayload
                 );
-    
-                // 2) Ak sme ODSTRÁNILI prioritu, nájdeme iné superstructure priradenie
-                //    v tom istom riadku a nastavíme mu prioritu.
-                if (wasPriorityRemoved) {
-                    const siblings = cateringAssignments.filter(
-                        (a) =>
-                            a.isSuperstructure === true &&
-                            a.id !== selectedCateringCell.existingId &&
-                            a.clickedTeamUid === payload.clickedTeamUid &&
-                            a.clickedTeamIndex === payload.clickedTeamIndex &&
-                            a.clickedTeamCategory === payload.clickedTeamCategory &&
-                            a.dayKey === payload.dayKey &&
-                            a.mealType === payload.mealType
+            
+                // 2) 🔥 Zistíme VŠETKY ostatné superstructure priradenia v tom istom riadku
+                //    (tím + deň + typ jedla), okrem tohto aktuálneho.
+                const siblings = cateringAssignments.filter(
+                    (a) =>
+                        a.isSuperstructure === true &&
+                        a.id !== selectedCateringCell.existingId &&
+                        a.clickedTeamUid === payload.clickedTeamUid &&
+                        a.clickedTeamIndex === payload.clickedTeamIndex &&
+                        a.clickedTeamCategory === payload.clickedTeamCategory &&
+                        a.dayKey === payload.dayKey &&
+                        a.mealType === payload.mealType
+                );
+            
+                if (newIsPriority) {
+                    // 🔥 NOVÉ: Ak NOVÝ záznam má byť prioritný → ostatným v riadku
+                    //    MUSÍME odstrániť prioritu (aby bola len jedna).
+                    for (const sib of siblings) {
+                        if (sib.isPriority === true) {
+                            await updateDoc(doc(window.db, 'catering', sib.id), {
+                                isPriority: false,
+                            });
+                        }
+                    }
+                    window.showGlobalNotification(
+                        'Priorita bola presunutá na tento tím.',
+                        'success'
                     );
-    
+                } else if (oldWasPriority && !newIsPriority) {
+                    // 🔥 Ak STARÝ záznam bol prioritný a NOVÝ nemá byť prioritný
+                    //    → musíme nájsť iné superstructure priradenie v tom istom riadku
+                    //    a tomu nastaviť isPriority: true.
                     if (siblings.length > 0) {
                         // Nastavíme prioritu prvému inému superstructure priradeniu v riadku
                         await updateDoc(doc(window.db, 'catering', siblings[0].id), {
@@ -1482,12 +1494,13 @@ const cateringApp = ({ userProfileData }) => {
                         );
                     }
                 } else {
+                    // Nič sa nezmenilo v priorite – len update miesta/času
                     window.showGlobalNotification(
                         'Priradenie bolo preplánované.',
                         'success'
                     );
                 }
-    
+            
                 setShowCateringModal(false);
                 setSelectedCateringCell(null);
                 setSelectedCateringPlaceId('');
