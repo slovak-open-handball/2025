@@ -2375,14 +2375,15 @@ const cateringApp = ({ userProfileData }) => {
                                     const lunchSlots = shouldShowMealType('lunch') ? (daySlots[day.key]?.lunch || []) : [];
                                     const dinnerSlots = shouldShowMealType('dinner') ? (daySlots[day.key]?.dinner || []) : [];
                                     const cells = [];
-
+                                
                                     lunchSlots.forEach((slot, i) => {
                                         const isLastLunchCell = i === lunchSlots.length - 1;
                                         // 🔥 Hrubá čiara za posledným obedovým slotom v summary VŽDY
                                         const hasThickRight = isLastLunchCell;
                                         const count = getAssignedCountForPlace(place.id, day.key, 'lunch', slot.from);
+                                        // 🔥 Kontrola kapacity LEN pre konkrétny časový slot
                                         const overCapacity = placeCapacity != null && count > placeCapacity;
-
+                                
                                         cells.push(React.createElement(
                                             'td',
                                             {
@@ -2401,22 +2402,22 @@ const cateringApp = ({ userProfileData }) => {
                                             count > 0 ? count : ''
                                         ));
                                     });
-
+                                
                                     if (shouldShowMealType('lunch') && lunchSlots.length > 0) {
                                         const dailyLunchTotal = getDailyAssignedCountForPlace(place.id, day.key, 'lunch');
-                                        const overCapacity = placeCapacity != null && dailyLunchTotal > placeCapacity;
+                                        // 🔥 NOVÉ: Pre denný súčet sa kapacita NEKONTROLUJE
+                                        //    (kapacita sa kontroluje iba pre konkrétny čas)
                                         // 🔥 Hrubá čiara za „∑ Obed" VŽDY
                                         cells.push(React.createElement(
                                             'td',
                                             {
                                                 key: `summary-daily-${place.id}-lunch-${dayIndex}`,
                                                 className:
-                                                    'border border-gray-300 px-2 py-2 text-center text-sm font-bold min-w-[70px] border-r-4 border-r-gray-500' +
-                                                    (overCapacity ? ' text-red-600' : ''),
+                                                    'border border-gray-300 px-2 py-2 text-center text-sm font-bold min-w-[70px] border-r-4 border-r-gray-500',
                                                 style: dailyLunchTotal > 0
                                                     ? {
                                                           backgroundColor: colors.bg,
-                                                          color: overCapacity ? '#dc2626' : colors.text,
+                                                          color: colors.text,
                                                       }
                                                     : {},
                                                 title: `Denný súčet obeda pre ${place.name}: ${dailyLunchTotal}`,
@@ -2424,14 +2425,15 @@ const cateringApp = ({ userProfileData }) => {
                                             dailyLunchTotal > 0 ? dailyLunchTotal : ''
                                         ));
                                     }
-
+                                
                                     dinnerSlots.forEach((slot, i) => {
                                         const isLastDinnerCell = i === dinnerSlots.length - 1;
                                         // 🔥 Hrubá čiara za posledným večerovým slotom VŽDY
                                         const hasThickRight = isLastDinnerCell;
                                         const count = getAssignedCountForPlace(place.id, day.key, 'dinner', slot.from);
+                                        // 🔥 Kontrola kapacity LEN pre konkrétny časový slot
                                         const overCapacity = placeCapacity != null && count > placeCapacity;
-
+                                
                                         cells.push(React.createElement(
                                             'td',
                                             {
@@ -2450,22 +2452,22 @@ const cateringApp = ({ userProfileData }) => {
                                             count > 0 ? count : ''
                                         ));
                                     });
-
+                                
                                     if (shouldShowMealType('dinner') && dinnerSlots.length > 0) {
                                         const dailyDinnerTotal = getDailyAssignedCountForPlace(place.id, day.key, 'dinner');
-                                        const overCapacity = placeCapacity != null && dailyDinnerTotal > placeCapacity;
-
+                                        // 🔥 NOVÉ: Pre denný súčet sa kapacita NEKONTROLUJE
+                                        //    (kapacita sa kontroluje iba pre konkrétny čas)
+                                
                                         cells.push(React.createElement(
                                             'td',
                                             {
                                                 key: `summary-daily-${place.id}-dinner-${dayIndex}`,
                                                 className:
-                                                    'border border-gray-300 px-2 py-2 text-center text-sm font-bold min-w-[70px] border-r-4 border-r-gray-500' +
-                                                    (overCapacity ? ' text-red-600' : ''),
+                                                    'border border-gray-300 px-2 py-2 text-center text-sm font-bold min-w-[70px] border-r-4 border-r-gray-500',
                                                 style: dailyDinnerTotal > 0
                                                     ? {
                                                           backgroundColor: colors.bg,
-                                                          color: overCapacity ? '#dc2626' : colors.text,
+                                                          color: colors.text,
                                                       }
                                                     : {},
                                                 title: `Denný súčet večere pre ${place.name}: ${dailyDinnerTotal}`,
@@ -2473,7 +2475,7 @@ const cateringApp = ({ userProfileData }) => {
                                             dailyDinnerTotal > 0 ? dailyDinnerTotal : ''
                                         ));
                                     }
-
+                                
                                     return cells;
                                 })
                             )];
