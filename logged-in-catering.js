@@ -773,7 +773,7 @@ const cateringApp = ({ userProfileData }) => {
         );
 
         return () => unsubscribe();
-    }, []);
+    }, [categories]);
 
     if (loading) {
         return React.createElement(
