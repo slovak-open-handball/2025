@@ -878,6 +878,57 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
         return () => unsubscribe();
     }, [categories, cateringTimes, unitMinutes, tournamentDays]);
 
+    // 🔥 Načíta filtre z URL
+    const loadFiltersFromURL = () => {
+        const params = new URLSearchParams(window.location.search);
+        const categoryName = params.get('category') || '';
+        const dayKey = params.get('day') || '';
+        const mealType = params.get('mealType') || '';
+        return { category: categoryName, day: dayKey, mealType };
+    };
+
+    // 🔥 Uloží filtre do URL
+    const updateURLWithFilters = (filters) => {
+        const params = new URLSearchParams();
+        if (filters.category) params.set('category', filters.category);
+        if (filters.day) params.set('day', filters.day);
+        if (filters.mealType) params.set('mealType', filters.mealType);
+        const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}${window.location.hash}`;
+        window.history.replaceState({}, '', newUrl);
+    };
+
+    // 🔥 Pri načítaní stránky aplikuj filter z URL
+    useEffect(() => {
+        if (availableCategories.length === 0 && visibleDays.length === 0) return;
+
+        const filters = loadFiltersFromURL();
+
+        if (filters.category && availableCategories.includes(filters.category)) {
+            setFilterCategory(filters.category);
+        }
+        if (filters.day && visibleDays.some((d) => d.key === filters.day)) {
+            setFilterDayKey(filters.day);
+        }
+        if (filters.mealType === 'lunch' || filters.mealType === 'dinner') {
+            setFilterMealType(filters.mealType);
+        }
+    }, [availableCategories, visibleDays]);
+
+    // 🔥 Pri každej zmene filtra aktualizuj URL
+    useEffect(() => {
+        if (availableCategories.length === 0 && visibleDays.length === 0) return;
+
+        const timeoutId = setTimeout(() => {
+            updateURLWithFilters({
+                category: filterCategory,
+                day: filterDayKey,
+                mealType: filterMealType,
+            });
+        }, 300);
+
+        return () => clearTimeout(timeoutId);
+    }, [filterCategory, filterDayKey, filterMealType, availableCategories, visibleDays]); 
+
     if (loading) {
         return React.createElement(
             'div',
