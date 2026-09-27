@@ -2668,15 +2668,24 @@ const cateringApp = ({ userProfileData }) => {
                                           
                                               const isPlaying = teamPlaysDuringSlot(team, day.key, slot.from, slot.to);
                                           
+                                              // 🔥 OPRAVA: pridaj tieto dva riadky
                                               const existing = findCateringAssignment(team, day.key, 'lunch', slot.from);
                                               const superstructureAssignment = findSuperstructureAssignmentForCell(team, day.key, 'lunch', slot.from);
                                           
-                                              // 🔥 NOVÉ: Ak tím hrá a zároveň má V TOMTO RIADKU nejaké priradenie,
-                                              // zobrazíme "−" (rovnako ako keď hrá a nemá priradenie).
-                                              const hasAnyAssignmentInRow = teamHasAnyAssignmentInRow(team, day.key, 'lunch');
-                                              const forceDash = isPlaying && hasAnyAssignmentInRow;
+                                              // 🔥 NOVÉ: Zisti, či superstructure tím (ak je v bunke) hrá v tomto slote
+                                              const superstructureIsPlayingForForceDash = superstructureAssignment
+                                                  ? superstructureTeamPlaysDuringSlot(
+                                                        superstructureAssignment.teamName || superstructureAssignment.teamIdentifier,
+                                                        superstructureAssignment.category,
+                                                        day.key,
+                                                        slot.from,
+                                                        slot.to
+                                                    )
+                                                  : false;
                                           
-                                              // Ak forceDash, ignorujeme existujúce priradenia pre zobrazenie
+                                              const hasAnyAssignmentInRow = teamHasAnyAssignmentInRow(team, day.key, 'lunch');
+                                              const forceDash = (isPlaying && hasAnyAssignmentInRow) || superstructureIsPlayingForForceDash;
+                                          
                                               const effectiveExisting = forceDash ? null : existing;
                                               const effectiveSuperstructure = forceDash ? null : superstructureAssignment;
                                               const hasAnyAssignment = !!effectiveExisting || !!effectiveSuperstructure;
@@ -2827,8 +2836,22 @@ const cateringApp = ({ userProfileData }) => {
                                               const existing = findCateringAssignment(team, day.key, 'dinner', slot.from);
                                               const superstructureAssignment = findSuperstructureAssignmentForCell(team, day.key, 'dinner', slot.from);
                                           
+                                              // 🔥 NOVÉ: Zisti, či superstructure tím (ak je v bunke) hrá v tomto slote
+                                              const superstructureIsPlayingForForceDash = superstructureAssignment
+                                                  ? superstructureTeamPlaysDuringSlot(
+                                                        superstructureAssignment.teamName || superstructureAssignment.teamIdentifier,
+                                                        superstructureAssignment.category,
+                                                        day.key,
+                                                        slot.from,
+                                                        slot.to
+                                                    )
+                                                  : false;
+                                          
                                               const hasAnyAssignmentInRow = teamHasAnyAssignmentInRow(team, day.key, 'dinner');
-                                              const forceDash = isPlaying && hasAnyAssignmentInRow;
+                                          
+                                              // 🔥 NOVÉ: forceDash ak kliknutý tím hrá a má priradenie v riadku,
+                                              // ALEBO ak superstructure tím hrá
+                                              const forceDash = (isPlaying && hasAnyAssignmentInRow) || superstructureIsPlayingForForceDash;
                                           
                                               const effectiveExisting = forceDash ? null : existing;
                                               const effectiveSuperstructure = forceDash ? null : superstructureAssignment;
