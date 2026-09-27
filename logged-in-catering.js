@@ -596,7 +596,7 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, [categoriesReady]);
 
-        // 🔥 NOVÉ: Načítanie všetkých NAPLÁNOVANÝCH zápasov (scheduledTime + hallId)
+    // 🔥 NOVÉ: Načítanie všetkých NAPLÁNOVANÝCH zápasov (scheduledTime + hallId)
     // Pri každej zmene v kolekcii 'matches' sa zoznam znovu načíta a vypíše do konzoly.
     useEffect(() => {
         if (!window.db) return;
@@ -657,9 +657,92 @@ const cateringApp = ({ userProfileData }) => {
                 });
 
                 console.log(
-                    `[Stravovanie] Načítaných ${scheduledMatches.length} naplánovaných zápasov:`,
-                    scheduledMatches
+                    `[Stravovanie] Načítaných ${scheduledMatches.length} naplánovaných zápasov:`
                 );
+
+                scheduledMatches.forEach((match) => {
+                    // 🔥 Vypíšeme JSON zápasu v požadovanom tvare
+                    const outputMatch = {
+                        id: match.id,
+                        homeTeamIdentifier: match.homeTeamIdentifier,
+                        awayTeamIdentifier: match.awayTeamIdentifier,
+                        homeTeamName: match.homeTeamName,
+                        awayTeamName: match.awayTeamName,
+                        categoryId: match.categoryId,
+                        categoryName: match.categoryName,
+                        groupName: match.groupName,
+                        hallId: match.hallId,
+                        scheduledTime: match.scheduledTime
+                            ? {
+                                  seconds: match.scheduledTime.seconds,
+                                  nanoseconds: match.scheduledTime.nanoseconds,
+                              }
+                            : null,
+                        scheduledEndTime: match.scheduledEndTime,
+                        duration: match.duration,
+                        status: match.status,
+                        isPlacementMatch: match.isPlacementMatch,
+                        placementRank: match.placementRank,
+                        matchType: match.matchType,
+                    };
+
+                    console.log(JSON.stringify(outputMatch, null, 2));
+
+                    // 🔥 Pre každý tím zvlášť vypíšeme, odkedy dokedy trvá zápas
+                    try {
+                        if (match.scheduledTime) {
+                            const matchDate = match.scheduledTime.toDate
+                                ? match.scheduledTime.toDate()
+                                : new Date(match.scheduledTime.seconds * 1000);
+
+                            // Dĺžka zápasu – použijeme duration, ak existuje,
+                            // inak dopočítame z kategórie (rovnako ako inde v projekte).
+                            let matchDurationMinutes = match.duration;
+
+                            if (matchDurationMinutes == null) {
+                                const category = categories.find(
+                                    (c) => c.name === match.categoryName
+                                );
+                                if (category) {
+                                    const periods = category.periods || 2;
+                                    const periodDuration = category.periodDuration || 20;
+                                    const breakDuration = category.breakDuration || 2;
+                                    matchDurationMinutes =
+                                        (periodDuration + breakDuration) * periods - breakDuration;
+                                } else {
+                                    matchDurationMinutes = 0;
+                                }
+                            }
+
+                            const startHours = String(matchDate.getHours()).padStart(2, '0');
+                            const startMinutes = String(matchDate.getMinutes()).padStart(2, '0');
+                            const startTimeStr = `${startHours}:${startMinutes}`;
+
+                            const endDate = new Date(
+                                matchDate.getTime() + matchDurationMinutes * 60000
+                            );
+                            const endHours = String(endDate.getHours()).padStart(2, '0');
+                            const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+                            const endTimeStr = `${endHours}:${endMinutes}`;
+
+                            if (match.homeTeamIdentifier) {
+                                console.log(
+                                    `Tím "${match.homeTeamIdentifier}" hrá od ${startTimeStr} do ${endTimeStr}`
+                                );
+                            }
+                            if (match.awayTeamIdentifier) {
+                                console.log(
+                                    `Tím "${match.awayTeamIdentifier}" hrá od ${startTimeStr} do ${endTimeStr}`
+                                );
+                            }
+                        }
+                    } catch (e) {
+                        console.error(
+                            '[Stravovanie] Chyba pri výpise času zápasu:',
+                            e
+                        );
+                    }
+                });
             },
             (error) => {
                 console.error(
