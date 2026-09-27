@@ -1629,12 +1629,7 @@ const cateringApp = ({ userProfileData }) => {
         // 3) Ak tím NEMÁ ŽIADNY balík → otvoríme ROVNO modálne okno
         if (!teamHasAnyPackage(team)) {
             setPendingAssignmentCell({ team, day, mealType, slot });
-    
-            const cleanCat = cleanCategory(team.category);
-            const teamsInCategory = matchTeams.filter(
-                (t) => cleanCategory(t.category) === cleanCat
-            );
-            setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
+            setSelectedPlaceTeamId(''); 
             setPlaceAssignmentSearch('');
             setShowAssignmentTypeModal(false);
             setShowPlaceAssignmentModal(true);
@@ -1644,12 +1639,7 @@ const cateringApp = ({ userProfileData }) => {
         // 4) Tím MÁ balík, ale NEMÁ daný typ stravovania v balíku
         if (!teamHasMealInPackage(team, day.key, mealType)) {
             setPendingAssignmentCell({ team, day, mealType, slot });
-    
-            const cleanCat = cleanCategory(team.category);
-            const teamsInCategory = matchTeams.filter(
-                (t) => cleanCategory(t.category) === cleanCat
-            );
-            setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
+            setSelectedPlaceTeamId('');
             setPlaceAssignmentSearch('');
             setShowAssignmentTypeModal(false);
             setShowPlaceAssignmentModal(true);
@@ -1684,18 +1674,9 @@ const cateringApp = ({ userProfileData }) => {
 
     const handleAssignByPlace = () => {
         if (!pendingAssignmentCell) return;
-
-        const { team } = pendingAssignmentCell;
     
-        // 🔥 OPRAVA: filtrujeme podľa categoryName (rovnaká kategória),
-        // NIE podľa teamName – chceme predsa vyberať INÝ tím z tej istej kategórie.
-        const categoryName = cleanCategory(team.category);
-    
-        const teamsInCategory = matchTeams.filter(
-            (t) => cleanCategory(t.category) === categoryName
-        );
-
-        setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
+        // 🔥 Vždy otvor modálne okno bez predvyplneného tímu
+        setSelectedPlaceTeamId('');
         setPlaceAssignmentSearch('');
         setCateringModalIsPriority(false);
         setShowAssignmentTypeModal(false);
@@ -1910,20 +1891,12 @@ const cateringApp = ({ userProfileData }) => {
         setPendingSuperstructureDecision(null);
     };
     
-    // 🔥 NOVÉ: Používateľ zvolil "Naplánovať prioritnejšie miesto a čas pre iný tím"
     const handleSuperstructurePriority = () => {
         if (!pendingSuperstructureDecision) return;
         const { team, day, mealType, slot } = pendingSuperstructureDecision;
-    
+
         setPendingAssignmentCell({ team, day, mealType, slot });
-    
-        // 🔥 OPRAVA: očistíme kategóriu pred porovnaním
-        const cleanCat = cleanCategory(team.category);
-    
-        const teamsInCategory = matchTeams.filter(
-            (t) => cleanCategory(t.category) === cleanCat
-        );
-        setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
+        setSelectedPlaceTeamId('');
         setPlaceAssignmentSearch('');
         setShowSuperstructureDecisionModal(false);
         setPendingSuperstructureDecision(null);
@@ -3389,7 +3362,12 @@ const cateringApp = ({ userProfileData }) => {
                                 onClick: savePlaceAssignment,
                                 disabled: savingPlaceAssignment || !selectedPlaceTeamId,
                                 className:
-                                    'px-6 py-2.5 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-white disabled:text-green-600 disabled:border-2 disabled:border-green-600 disabled:cursor-not-allowed transition font-medium',
+                                    'px-6 py-2.5 rounded-lg transition font-medium ' +
+                                    (
+                                        savingPlaceAssignment || !selectedPlaceTeamId
+                                            ? 'bg-white text-green-600 border-2 border-green-600 cursor-not-allowed'
+                                            : 'bg-green-600 text-white hover:bg-green-700 border-2 border-green-600'
+                                    ),
                             },
                             savingPlaceAssignment ? 'Ukladám...' : 'Uložiť priradenie'
                         )
