@@ -3013,7 +3013,7 @@ const cateringApp = ({ userProfileData }) => {
                         { className: 'mb-4 text-sm text-gray-700 space-y-1' },
                         React.createElement('p', null, React.createElement('strong', null, 'Kategória: '), selectedCateringCell.team.category || '—'),
                         React.createElement('p', null,
-                            React.createElement('strong', null, selectedCateringCell.isSuperstructure ? 'Superstructure tím: ' : 'Tím: '),
+                            React.createElement('strong', null, 'Tím: '),
                             selectedCateringCell.isSuperstructure
                                 ? getPlaceTeamDisplayName(selectedCateringCell.placeTeam?.teamName, selectedCateringCell.placeTeam?.category) || '—'
                                 : selectedCateringCell.team.teamName
