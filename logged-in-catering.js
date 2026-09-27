@@ -596,6 +596,82 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, [categoriesReady]);
 
+        // 🔥 NOVÉ: Načítanie všetkých NAPLÁNOVANÝCH zápasov (scheduledTime + hallId)
+    // Pri každej zmene v kolekcii 'matches' sa zoznam znovu načíta a vypíše do konzoly.
+    useEffect(() => {
+        if (!window.db) return;
+
+        const unsubscribe = onSnapshot(
+            collection(window.db, 'matches'),
+            (snapshot) => {
+                const scheduledMatches = [];
+
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data() || {};
+
+                    // 🔥 Berieme len zápasy, ktoré sú skutočne naplánované
+                    // (majú priradenú halu a čas začiatku).
+                    if (!data.hallId) return;
+                    if (!data.scheduledTime) return;
+
+                    // Fallback categoryId → categoryName
+                    let categoryName = data.categoryName || '';
+                    if (!categoryName && data.categoryId && window.categoriesData) {
+                        categoryName = window.categoriesData[data.categoryId] || '';
+                    }
+
+                    scheduledMatches.push({
+                        id: docSnap.id,
+                        homeTeamIdentifier: data.homeTeamIdentifier || null,
+                        awayTeamIdentifier: data.awayTeamIdentifier || null,
+                        homeTeamName: data.homeTeamName || null,
+                        awayTeamName: data.awayTeamName || null,
+                        categoryId: data.categoryId || null,
+                        categoryName: cleanCategory(categoryName),
+                        groupName: data.groupName || null,
+                        hallId: data.hallId,
+                        scheduledTime: data.scheduledTime,
+                        scheduledEndTime: data.scheduledEndTime || null,
+                        duration: data.duration ?? null,
+                        status: data.status || null,
+                        isPlacementMatch: data.isPlacementMatch === true,
+                        placementRank: data.placementRank ?? null,
+                        matchType: data.matchType || null,
+                    });
+                });
+
+                // Zoradíme podľa času začiatku (ak existuje), inak podľa ID
+                scheduledMatches.sort((a, b) => {
+                    try {
+                        const ta = a.scheduledTime?.toDate
+                            ? a.scheduledTime.toDate().getTime()
+                            : 0;
+                        const tb = b.scheduledTime?.toDate
+                            ? b.scheduledTime.toDate().getTime()
+                            : 0;
+                        if (ta !== tb) return ta - tb;
+                    } catch (e) {
+                        /* ignore */
+                    }
+                    return String(a.id).localeCompare(String(b.id));
+                });
+
+                console.log(
+                    `[Stravovanie] Načítaných ${scheduledMatches.length} naplánovaných zápasov:`,
+                    scheduledMatches
+                );
+            },
+            (error) => {
+                console.error(
+                    '[Stravovanie] Chyba pri načítavaní naplánovaných zápasov:',
+                    error
+                );
+            }
+        );
+
+        return () => unsubscribe();
+    }, []);
+
     if (loading) {
         return React.createElement(
             'div',
