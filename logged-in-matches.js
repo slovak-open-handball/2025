@@ -1699,7 +1699,6 @@ const AssignMatchToBreakModal = ({
     };
     
     const backToBackTeamMatchKeys = getBackToBackTeamMatchKeys();
-    const carryOverTeamMatchKeys = getCarryOverTeamMatchKeys();
 
     return React.createElement(
         'div',
