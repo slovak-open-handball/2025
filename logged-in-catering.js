@@ -244,6 +244,7 @@ const cateringApp = ({ userProfileData }) => {
     const [superstructureReplanPickerItems, setSuperstructureReplanPickerItems] = useState([]);
     const [cateringModalIsPriority, setCateringModalIsPriority] = useState(false);
     const [categoriesReady, setCategoriesReady] = useState(false);
+    const [categories, setCategories] = useState([]);
 
     // Načítanie nastavení turnaja z Firestore
     useEffect(() => {
@@ -464,9 +465,6 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // 🔥 NOVÉ: Načítanie kategórií (pre fallback categoryId → categoryName)
-    // 🔥 DÔLEŽITÉ: Používame getDoc (nie onSnapshot), aby boli kategórie
-    // načítané PRED spracovaním matches. A nastavíme categoriesReady = true.
     useEffect(() => {
         if (!window.db) return;
     
@@ -477,14 +475,36 @@ const cateringApp = ({ userProfileData }) => {
                 if (snap.exists()) {
                     const data = snap.data() || {};
                     const categoriesMap = {};
+                    const categoriesList = [];
+
                     Object.entries(data).forEach(([catId, catData]) => {
                         if (catData?.name) {
                             categoriesMap[catId] = catData.name;
+
+                            // 🔥 NOVÉ: uložíme aj plný objekt kategórie
+                            categoriesList.push({
+                                id: catId,
+                                name: catData.name,
+                                maxTeams: catData.maxTeams ?? 12,
+                                periods: catData.periods ?? 2,
+                                periodDuration: catData.periodDuration ?? 20,
+                                breakDuration: catData.breakDuration ?? 2,
+                                matchBreak: catData.matchBreak ?? 5,
+                                drawColor: catData.drawColor ?? '#3B82F6',
+                                transportColor: catData.transportColor ?? '#10B981',
+                                timeoutCount: catData.timeoutCount ?? 2,
+                                timeoutDuration: catData.timeoutDuration ?? 1,
+                                exclusionTime: catData.exclusionTime ?? 2,
+                                carryOverPoints: catData.carryOverPoints ?? false,
+                            });
                         }
                     });
+
                     window.categoriesData = categoriesMap;
+                    setCategories(categoriesList);
                 }
             } catch (err) {
+                console.error('[Stravovanie] Chyba pri načítaní kategórií:', err);
             } finally {
                 setCategoriesReady(true);
             }
