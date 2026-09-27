@@ -755,16 +755,21 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
                                 return identifier;
                             };
 
+                            // 🔥 NOVÉ: Názov kategórie pre výpis (z match.categoryName)
+                            const categoryLabel = match.categoryName
+                                ? `[${match.categoryName}] `
+                                : '';
+
                             if (match.homeTeamIdentifier) {
                                 const homeDisplayName = resolveTeamDisplayName(match.homeTeamIdentifier);
                                 console.log(
-                                    `Tím "${homeDisplayName}" hrá dňa ${matchDateStr} od ${startTimeStr} do ${endTimeStr}`
+                                    `${categoryLabel}Tím "${homeDisplayName}" hrá dňa ${matchDateStr} od ${startTimeStr} do ${endTimeStr}`
                                 );
                             }
                             if (match.awayTeamIdentifier) {
                                 const awayDisplayName = resolveTeamDisplayName(match.awayTeamIdentifier);
                                 console.log(
-                                    `Tím "${awayDisplayName}" hrá dňa ${matchDateStr} od ${startTimeStr} do ${endTimeStr}`
+                                    `${categoryLabel}Tím "${awayDisplayName}" hrá dňa ${matchDateStr} od ${startTimeStr} do ${endTimeStr}`
                                 );
                             }
                         }
