@@ -2771,7 +2771,7 @@ const cateringApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: 'mb-3' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Vyhľadať superstructure tím'),
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Vyhľadať tím'),
                         React.createElement('input', {
                             type: 'text',
                             value: placeAssignmentSearch,
@@ -2905,7 +2905,7 @@ const cateringApp = ({ userProfileData }) => {
                         'p',
                         { className: 'text-gray-600 text-sm mb-6 text-center' },
                         pendingSuperstructureDecision.modalDescription ||
-                            'Pre túto bunku už existuje superstructure priradenie.'
+                            'Pre túto bunku už existuje priradenie.'
                     ),
                     React.createElement(
                         'div',
@@ -2953,7 +2953,7 @@ const cateringApp = ({ userProfileData }) => {
                         onClick: (e) => e.stopPropagation(),
                     },
                     React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800 text-center' }, 'Vyberte tím na preplánovanie'),
-                    React.createElement('p', { className: 'text-gray-600 text-sm mb-4 text-center' }, 'V tomto riadku (tím, deň a typ jedla) existuje viac superstructure priradení. Ktoré chcete preplánovať?'),
+                    React.createElement('p', { className: 'text-gray-600 text-sm mb-4 text-center' }, 'V tomto riadku (tím, deň a typ jedla) existuje viac priradení. Ktoré chcete preplánovať?'),
                     React.createElement(
                         'div',
                         { className: 'flex flex-col gap-2' },
