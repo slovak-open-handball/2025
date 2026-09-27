@@ -1412,17 +1412,18 @@ const cateringApp = ({ userProfileData }) => {
 
     const getAssignedCountForPlace = (placeId, dayKey, mealType, slotFrom) => {
         const key = `${placeId}|${dayKey}|${mealType}|${slotFrom}`;
-        return placeCountsBySlot.get(key) || 0;
+        const raw = placeCountsBySlot.get(key) || 0;
+        return Number.isInteger(raw) ? raw : Math.ceil(raw);
     };
 
-    // 🔥 NOVÉ: Denný súčet pre dané miesto + deň + typ jedla (spolu za všetky sloty).
     const getDailyAssignedCountForPlace = (placeId, dayKey, mealType) => {
         const slots = daySlots[dayKey]?.[mealType] || [];
         let total = 0;
         slots.forEach((slot) => {
-            total += getAssignedCountForPlace(placeId, dayKey, mealType, slot.from);
+            const key = `${placeId}|${dayKey}|${mealType}|${slot.from}`;
+            total += placeCountsBySlot.get(key) || 0;  // presné hodnoty
         });
-        return total;
+        return Number.isInteger(total) ? total : Math.ceil(total);
     };
 
     // Otvorí modálne okno pre priradenie
