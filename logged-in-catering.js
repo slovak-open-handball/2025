@@ -812,6 +812,47 @@ const cateringApp = ({ userProfileData }) => {
         return map;
     }, [cateringAssignments]);
 
+    const daySlots = React.useMemo(() => {
+        const result = {};
+        (tournamentDays || []).forEach((day) => {
+            const t = cateringTimes[day.key] || {};
+            const lunchTimes = t.lunch || null;
+            const dinnerTimes = t.dinner || null;
+            result[day.key] = {
+                lunch: hasValidMealRange(lunchTimes, unitMinutes)
+                    ? buildMealSlots(lunchTimes.from, lunchTimes.to, unitMinutes)
+                    : [],
+                dinner: hasValidMealRange(dinnerTimes, unitMinutes)
+                    ? buildMealSlots(dinnerTimes.from, dinnerTimes.to, unitMinutes)
+                    : [],
+            };
+        });
+        return result;
+    }, [tournamentDays, cateringTimes, unitMinutes]);
+
+    const superstructureAvgByCategory = React.useMemo(() => {
+        const map = new Map();
+        const teamsByCategory = new Map();
+    
+        (userTeams || []).forEach((t) => {
+            const cat = cleanCategory(t.category);
+            if (!cat) return;
+            if (!teamsByCategory.has(cat)) teamsByCategory.set(cat, []);
+            teamsByCategory.get(cat).push(t);
+        });
+    
+        teamsByCategory.forEach((teams, cat) => {
+            if (teams.length === 0) return;
+            const total = teams.reduce(
+                (acc, t) => acc + (t.playersCount || 0) + (t.othersCount || 0),
+                0
+            );
+            map.set(cat, total / teams.length);
+        });
+    
+        return map;
+    }, [userTeams]);
+
     const placeCountsBySlot = React.useMemo(() => {
         const counts = new Map();
     
@@ -876,25 +917,6 @@ const cateringApp = ({ userProfileData }) => {
             )
         );
     }
-
-    // ============================================================
-    // 7) Zvyšok komponentu – render logika (už BEZ hookov!)
-    //    daySlots, slotCountFor, shouldShowMealType, atď.
-    // ============================================================
-    const daySlots = {};
-    tournamentDays.forEach((day) => {
-        const t = cateringTimes[day.key] || {};
-        const lunchTimes = t.lunch || null;
-        const dinnerTimes = t.dinner || null;
-        daySlots[day.key] = {
-            lunch: hasValidMealRange(lunchTimes, unitMinutes)
-                ? buildMealSlots(lunchTimes.from, lunchTimes.to, unitMinutes)
-                : [],
-            dinner: hasValidMealRange(dinnerTimes, unitMinutes)
-                ? buildMealSlots(dinnerTimes.from, dinnerTimes.to, unitMinutes)
-                : [],
-        };
-    });
 
     const slotCountFor = (dayKey, mealType) => {
         const slots = daySlots[dayKey]?.[mealType] || [];
