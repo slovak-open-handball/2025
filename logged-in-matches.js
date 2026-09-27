@@ -3179,16 +3179,15 @@ const AddMatchesApp = ({ userProfileData }) => {
             return letter;
         };
     
-        // Zistí typ skupiny (základná/nadstavbová) pre daný zápas
+        // Typ skupiny (základná/nadstavbová)
         const getGroupType = (m) => {
             const groupMeta = (groupsByCategory[m.categoryId] || []).find(g => g.name === m.groupName);
             return groupMeta?.type || '';
         };
-    
         const isBasicMatch = (m) => getGroupType(m) === 'základná skupina';
         const isExtraMatch = (m) => getGroupType(m) === 'nadstavbová skupina';
     
-        // Pomocná: dátum zápasu v tvare "YYYY-MM-DD" (lokálny)
+        // Dátum zápasu v tvare "YYYY-MM-DD" (lokálny)
         const getMatchDateStr = (m) => {
             if (!m.scheduledTime || !m.scheduledTime.toDate) return null;
             try {
@@ -3200,7 +3199,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             } catch (e) { return null; }
         };
     
-        // Pomocná: čas zápasu v minútach od polnoci
+        // Čas zápasu v minútach od polnoci
         const getMatchMinutes = (m) => {
             if (!m.scheduledTime || !m.scheduledTime.toDate) return null;
             try {
@@ -3209,30 +3208,34 @@ const AddMatchesApp = ({ userProfileData }) => {
             } catch (e) { return null; }
         };
     
-        // Zoskupíme zápasy podľa (hala + dátum). Tie, ktoré nemajú scheduledTime, vynecháme.
-        const matchesByHallAndDay = {}; // key = "hallId|YYYY-MM-DD"
+        // Zoskupíme zápasy podľa DŇA (bez ohľadu na halu)
+        const matchesByDay = {}; // key = "YYYY-MM-DD"
         matches.forEach(m => {
-            if (!m.hallId) return;
             const dateStr = getMatchDateStr(m);
             if (!dateStr) return;
-            const key = `${m.hallId}|${dateStr}`;
-            if (!matchesByHallAndDay[key]) matchesByHallAndDay[key] = [];
-            matchesByHallAndDay[key].push(m);
+            if (!matchesByDay[dateStr]) matchesByDay[dateStr] = [];
+            matchesByDay[dateStr].push(m);
         });
     
-        // Pre každú halu a deň zoradíme zápasy podľa času
-        Object.keys(matchesByHallAndDay).forEach(key => {
-            const dayMatches = matchesByHallAndDay[key]
+        // Pre každý deň zoradíme všetky zápasy (naprieč halami) podľa času
+        Object.keys(matchesByDay).forEach(dateStr => {
+            const dayMatches = matchesByDay[dateStr]
                 .filter(m => getMatchMinutes(m) !== null)
-                .sort((a, b) => getMatchMinutes(a) - getMatchMinutes(b));
+                .sort((a, b) => {
+                    const aM = getMatchMinutes(a);
+                    const bM = getMatchMinutes(b);
+                    if (aM !== bM) return aM - bM;
+                    // sekundárne podľa hallId, aby bolo poradie deterministické
+                    return (a.hallId || '').localeCompare(b.hallId || '');
+                });
     
-            // Prechádzame zoradené zápasy v rámci dňa a haly
+            // Prechádzame zoradené zápasy v rámci dňa
             for (let i = 0; i < dayMatches.length; i++) {
                 const current = dayMatches[i];
                 if (!isExtraMatch(current)) continue;
     
-                // Bezprostredne predchádzajúci zápas v tej istej hale a dni
-                if (i === 0) continue; // nič pred ním
+                // Bezprostredne predchádzajúci zápas v rámci dňa (v akejkoľvek hale)
+                if (i === 0) continue;
                 const previous = dayMatches[i - 1];
                 if (!previous) continue;
     
