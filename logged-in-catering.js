@@ -1543,7 +1543,6 @@ const cateringApp = ({ userProfileData }) => {
                 existingId: superstructureInRow.id || null,
                 placeTeam,
                 existingAssignment: superstructureInRow,
-                modalTitle: 'Priradenie stravovania',
             });
             setShowSuperstructureDecisionModal(true);
             return;
@@ -2771,7 +2770,7 @@ const cateringApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: 'mb-3' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Vyhľadať tím'),
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Vyhľadať superstructure tím'),
                         React.createElement('input', {
                             type: 'text',
                             value: placeAssignmentSearch,
@@ -2896,17 +2895,8 @@ const cateringApp = ({ userProfileData }) => {
                         className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6',
                         onClick: (e) => e.stopPropagation(),
                     },
-                    React.createElement(
-                        'h3',
-                        { className: 'text-xl font-bold mb-4 text-gray-800 text-center' },
-                        pendingSuperstructureDecision.modalTitle || 'Superstructure priradenie'
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-600 text-sm mb-6 text-center' },
-                        pendingSuperstructureDecision.modalDescription ||
-                            'Pre túto bunku už existuje priradenie.'
-                    ),
+                    React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800 text-center' }, 'Superstructure priradenie'),
+                    React.createElement('p', { className: 'text-gray-600 text-sm mb-6 text-center' }, 'Pre túto bunku už existuje superstructure priradenie. Čo chcete urobiť?'),
                     React.createElement(
                         'div',
                         { className: 'flex flex-col gap-3' },
@@ -2953,7 +2943,7 @@ const cateringApp = ({ userProfileData }) => {
                         onClick: (e) => e.stopPropagation(),
                     },
                     React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800 text-center' }, 'Vyberte tím na preplánovanie'),
-                    React.createElement('p', { className: 'text-gray-600 text-sm mb-4 text-center' }, 'V tomto riadku (tím, deň a typ jedla) existuje viac priradení. Ktoré chcete preplánovať?'),
+                    React.createElement('p', { className: 'text-gray-600 text-sm mb-4 text-center' }, 'V tomto riadku (tím, deň a typ jedla) existuje viac superstructure priradení. Ktoré chcete preplánovať?'),
                     React.createElement(
                         'div',
                         { className: 'flex flex-col gap-2' },
@@ -3023,7 +3013,7 @@ const cateringApp = ({ userProfileData }) => {
                         { className: 'mb-4 text-sm text-gray-700 space-y-1' },
                         React.createElement('p', null, React.createElement('strong', null, 'Kategória: '), selectedCateringCell.team.category || '—'),
                         React.createElement('p', null,
-                            React.createElement('strong', null, 'Tím: '),
+                            React.createElement('strong', null, selectedCateringCell.isSuperstructure ? 'Superstructure tím: ' : 'Tím: '),
                             selectedCateringCell.isSuperstructure
                                 ? getPlaceTeamDisplayName(selectedCateringCell.placeTeam?.teamName, selectedCateringCell.placeTeam?.category) || '—'
                                 : selectedCateringCell.team.teamName
