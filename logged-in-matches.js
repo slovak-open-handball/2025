@@ -3119,53 +3119,21 @@ const AddMatchesApp = ({ userProfileData }) => {
         const carryOverKeys = new Set(); // "matchId|teamIdentifier"
         if (!matches || matches.length === 0) return carryOverKeys;
     
-        // Pomocná funkcia: nájde reálny teamName tímu podľa identifikátora
-        // (napr. "U12 CH C4" → "U12 CH C4" z allTeams)
-        const getRealTeamName = (teamIdentifier, matchCategoryName) => {
+        // Pomocná: získa zobrazený názov tímu (teamName) podľa identifikátora
+        // Presne to, čo sa zobrazuje v riadku (cez getTeamNameByIdentifier)
+        const getDisplayedTeamName = (teamIdentifier) => {
             if (!teamIdentifier) return '';
-            // 1) Skús window.__teamManagerData.allTeams
-            const teamsToUse = (window.__teamManagerData?.allTeams) || [];
-            // Parsovanie identifikátora: "Kategória C4" → category="Kategória", group="C", order="4"
-            const parts = teamIdentifier.split(' ');
-            if (parts.length < 2) return teamIdentifier;
-            const groupAndOrder = parts.pop();
-            const category = parts.join(' ');
-            let groupName = '', order = '';
-            for (let i = 0; i < groupAndOrder.length; i++) {
-                const ch = groupAndOrder[i];
-                if (ch >= '0' && ch <= '9') {
-                    order = groupAndOrder.substring(i);
-                    groupName = groupAndOrder.substring(0, i);
-                    break;
-                }
-            }
-            if (!order) { order = '?'; groupName = groupAndOrder; }
-    
-            const groupNameWithPrefix = `skupina ${groupName}`;
-            const team = teamsToUse.find(t =>
-                t.category === category &&
-                (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
-                t.order?.toString() === order
-            );
-            if (team?.teamName) return team.teamName;
-    
-            // 2) Fallback – skús window.teamManager
-            if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                try {
-                    const name = window.teamManager.getTeamNameByDisplayIdSync(teamIdentifier);
-                    if (name) return name;
-                } catch (e) {}
-            }
-            return teamIdentifier; // posledná záchrana
+            const name = getTeamNameByIdentifier(teamIdentifier);
+            return name || teamIdentifier;
         };
     
-        // Posledný znak reálneho teamName (napr. "U12 CH C4" → "4")
-        const getTeamLastChar = (teamIdentifier, matchCategoryName) => {
-            const realName = getRealTeamName(teamIdentifier, matchCategoryName);
-            return realName ? realName.trim().slice(-1) : '';
+        // Posledný znak zobrazeného názvu tímu
+        const getTeamLastChar = (teamIdentifier) => {
+            const name = getDisplayedTeamName(teamIdentifier);
+            return name ? name.trim().slice(-1) : '';
         };
     
-        // Písmeno skupiny z identifikátora (napr. "U12 CH C4" → "C")
+        // Písmeno skupiny z identifikátora (posledný stĺpec)
         const getGroupLetterFromIdentifier = (identifier) => {
             if (!identifier) return '';
             const parts = identifier.split(' ');
@@ -3191,7 +3159,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         });
     
         Object.values(matchesByCategory).forEach(categoryMatches => {
-            // Rozdelíme na základné a nadstavbové zápasy podľa typu skupiny
+            // Rozdelíme na základné a nadstavbové zápasy
             const basicMatches = categoryMatches.filter(m => {
                 const groupMeta = (groupsByCategory[m.categoryId] || []).find(g => g.name === m.groupName);
                 return groupMeta?.type === 'základná skupina';
@@ -3201,37 +3169,45 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return groupMeta?.type === 'nadstavbová skupina';
             });
     
-            // Pre každý nadstavbový zápas hľadáme zodpovedajúci základný zápas
+            // Pre každý nadstavbový zápas hľadáme predchádzajúci základný zápas
             extraMatches.forEach(extraMatch => {
+                // Písmená skupín z identifikátorov nadstavbového zápasu (posledný stĺpec)
                 const extraHomeLetter = getGroupLetterFromIdentifier(extraMatch.homeTeamIdentifier);
                 const extraAwayLetter = getGroupLetterFromIdentifier(extraMatch.awayTeamIdentifier);
     
+                // Posledné znaky zobrazených názvov tímov nadstavbového zápasu
+                const extraHomeLastChar = getTeamLastChar(extraMatch.homeTeamIdentifier);
+                const extraAwayLastChar = getTeamLastChar(extraMatch.awayTeamIdentifier);
+    
                 basicMatches.forEach(basicMatch => {
+                    // Písmená skupín z identifikátorov základného zápasu
                     const basicHomeLetter = getGroupLetterFromIdentifier(basicMatch.homeTeamIdentifier);
                     const basicAwayLetter = getGroupLetterFromIdentifier(basicMatch.awayTeamIdentifier);
     
-                    // Kontrola pre domáci tím nadstavbového zápasu
-                    if (extraHomeLetter && basicHomeLetter && extraHomeLetter === basicHomeLetter) {
-                        const a = getTeamLastChar(extraMatch.homeTeamIdentifier, extraMatch.categoryName);
-                        const b = getTeamLastChar(basicMatch.homeTeamIdentifier, basicMatch.categoryName);
-                        if (a && b && a === b) carryOverKeys.add(`${extraMatch.id}|${extraMatch.homeTeamIdentifier}`);
+                    // Posledné znaky zobrazených názvov tímov základného zápasu
+                    const basicHomeLastChar = getTeamLastChar(basicMatch.homeTeamIdentifier);
+                    const basicAwayLastChar = getTeamLastChar(basicMatch.awayTeamIdentifier);
+    
+                    // === DOMÁCI TÍM NADSTAVBOVÉHO ZÁPASU ===
+                    // Ak písmeno skupiny nadstavbového domáceho tímu sa rovná písmenu skupiny
+                    // niektorého tímu v základnom zápase a zároveň posledné znaky názvov sedia
+                    if (extraHomeLetter && basicHomeLetter && extraHomeLetter === basicHomeLetter
+                        && extraHomeLastChar && basicHomeLastChar && extraHomeLastChar === basicHomeLastChar) {
+                        carryOverKeys.add(`${extraMatch.id}|${extraMatch.homeTeamIdentifier}`);
                     }
-                    if (extraHomeLetter && basicAwayLetter && extraHomeLetter === basicAwayLetter) {
-                        const a = getTeamLastChar(extraMatch.homeTeamIdentifier, extraMatch.categoryName);
-                        const b = getTeamLastChar(basicMatch.awayTeamIdentifier, basicMatch.categoryName);
-                        if (a && b && a === b) carryOverKeys.add(`${extraMatch.id}|${extraMatch.homeTeamIdentifier}`);
+                    if (extraHomeLetter && basicAwayLetter && extraHomeLetter === basicAwayLetter
+                        && extraHomeLastChar && basicAwayLastChar && extraHomeLastChar === basicAwayLastChar) {
+                        carryOverKeys.add(`${extraMatch.id}|${extraMatch.homeTeamIdentifier}`);
                     }
     
-                    // Kontrola pre hosťujúci tím nadstavbového zápasu
-                    if (extraAwayLetter && basicHomeLetter && extraAwayLetter === basicHomeLetter) {
-                        const a = getTeamLastChar(extraMatch.awayTeamIdentifier, extraMatch.categoryName);
-                        const b = getTeamLastChar(basicMatch.homeTeamIdentifier, basicMatch.categoryName);
-                        if (a && b && a === b) carryOverKeys.add(`${extraMatch.id}|${extraMatch.awayTeamIdentifier}`);
+                    // === HOSŤUJÚCI TÍM NADSTAVBOVÉHO ZÁPASU ===
+                    if (extraAwayLetter && basicHomeLetter && extraAwayLetter === basicHomeLetter
+                        && extraAwayLastChar && basicHomeLastChar && extraAwayLastChar === basicHomeLastChar) {
+                        carryOverKeys.add(`${extraMatch.id}|${extraMatch.awayTeamIdentifier}`);
                     }
-                    if (extraAwayLetter && basicAwayLetter && extraAwayLetter === basicAwayLetter) {
-                        const a = getTeamLastChar(extraMatch.awayTeamIdentifier, extraMatch.categoryName);
-                        const b = getTeamLastChar(basicMatch.awayTeamIdentifier, basicMatch.categoryName);
-                        if (a && b && a === b) carryOverKeys.add(`${extraMatch.id}|${extraMatch.awayTeamIdentifier}`);
+                    if (extraAwayLetter && basicAwayLetter && extraAwayLetter === basicAwayLetter
+                        && extraAwayLastChar && basicAwayLastChar && extraAwayLastChar === basicAwayLastChar) {
+                        carryOverKeys.add(`${extraMatch.id}|${extraMatch.awayTeamIdentifier}`);
                     }
                 });
             });
