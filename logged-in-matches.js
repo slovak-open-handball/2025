@@ -3156,13 +3156,11 @@ const AddMatchesApp = ({ userProfileData }) => {
             return teamIdentifier;
         };
     
-        // Posledný znak zobrazeného názvu tímu (napr. "U12 CH C4" → "4")
         const getTeamLastChar = (teamIdentifier) => {
             const name = getDisplayedTeamName(teamIdentifier);
             return name ? name.trim().slice(-1) : '';
         };
     
-        // Písmeno skupiny z identifikátora (posledný stĺpec, napr. "U12 CH C4" → "C")
         const getGroupLetterFromIdentifier = (identifier) => {
             if (!identifier) return '';
             const parts = identifier.split(' ');
@@ -3179,7 +3177,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             return letter;
         };
     
-        // Typ skupiny (základná/nadstavbová)
         const getGroupType = (m) => {
             const groupMeta = (groupsByCategory[m.categoryId] || []).find(g => g.name === m.groupName);
             return groupMeta?.type || '';
@@ -3187,7 +3184,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         const isBasicMatch = (m) => getGroupType(m) === 'základná skupina';
         const isExtraMatch = (m) => getGroupType(m) === 'nadstavbová skupina';
     
-        // Dátum zápasu v tvare "YYYY-MM-DD" (lokálny)
         const getMatchDateStr = (m) => {
             if (!m.scheduledTime || !m.scheduledTime.toDate) return null;
             try {
@@ -3199,6 +3195,31 @@ const AddMatchesApp = ({ userProfileData }) => {
             } catch (e) { return null; }
         };
     
+        // Vráti čas zápasu v minútach od polnoci (začiatok)
+        const getMatchStartMinutes = (m) => {
+            if (!m.scheduledTime || !m.scheduledTime.toDate) return null;
+            try {
+                const d = m.scheduledTime.toDate();
+                return d.getHours() * 60 + d.getMinutes();
+            } catch (e) { return null; }
+        };
+    
+        // Vráti čas konca zápasu v minútach od polnoci (začiatok + dĺžka zápasu)
+        // Dĺžka zápasu = (periodDuration + breakDuration) * periods - breakDuration
+        const getMatchEndMinutes = (m) => {
+            const start = getMatchStartMinutes(m);
+            if (start === null) return null;
+            const category = categories.find(c => c.name === m.categoryName);
+            let matchDuration = 0;
+            if (category) {
+                const periods = category.periods || 2;
+                const periodDuration = category.periodDuration || 20;
+                const breakDuration = category.breakDuration || 2;
+                matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+            }
+            return start + matchDuration;
+        };
+    
         // Zoskupíme zápasy podľa DŇA (bez ohľadu na halu)
         const matchesByDay = {};
         matches.forEach(m => {
@@ -3208,41 +3229,56 @@ const AddMatchesApp = ({ userProfileData }) => {
             matchesByDay[dateStr].push(m);
         });
     
-        // Pre každý deň:
-        // - vezmeme všetky základné zápasy daného dňa v rovnakej kategórii (naprieč halami)
-        // - vezmeme všetky nadstavbové zápasy daného dňa
-        // - pre každý nadstavbový zápas porovnáme posledný znak názvu jeho tímov
-        //   s písmenom skupiny (posledný stĺpec) ktoréhokoľvek základného zápasu v tej istej kategórii
         Object.keys(matchesByDay).forEach(dateStr => {
             const dayMatches = matchesByDay[dateStr];
     
             // Nadstavbové zápasy daného dňa
             const extraMatchesOfDay = dayMatches.filter(isExtraMatch);
     
-            // Základné zápasy daného dňa (zoskupené podľa kategórie)
-            const basicMatchesByCategory = {};
-            dayMatches.filter(isBasicMatch).forEach(m => {
-                if (!basicMatchesByCategory[m.categoryId]) basicMatchesByCategory[m.categoryId] = [];
-                basicMatchesByCategory[m.categoryId].push(m);
-            });
+            // Základné zápasy daného dňa
+            const basicMatchesOfDay = dayMatches.filter(isBasicMatch);
     
-            // Pre každý nadstavbový zápas
             extraMatchesOfDay.forEach(extraMatch => {
-                const basicMatches = basicMatchesByCategory[extraMatch.categoryId] || [];
-                if (basicMatches.length === 0) return;
+                const extraStart = getMatchStartMinutes(extraMatch);
+                if (extraStart === null) return;
     
-                // Posledné znaky zobrazených názvov tímov nadstavbového zápasu
-                const currHomeLastChar = getTeamLastChar(extraMatch.homeTeamIdentifier);
-                const currAwayLastChar = getTeamLastChar(extraMatch.awayTeamIdentifier);
+                // Nájdeme základné zápasy v tej istej kategórii, ktoré skončili
+                // v maximálnom čase, ktorý je <= extraStart.
+                const relevantBasicMatches = basicMatchesOfDay.filter(bm => {
+                    if (bm.categoryId !== extraMatch.categoryId) return false;
+                    const end = getMatchEndMinutes(bm);
+                    if (end === null) return false;
+                    return end <= extraStart;
+                });
     
-                // Zbierka písmen skupín (posledný stĺpec) základných zápasov v tej istej kategórii a dni
+                if (relevantBasicMatches.length === 0) return;
+    
+                // Zistíme maximálny čas konca spomedzi relevantných základných zápasov.
+                let maxEnd = -1;
+                relevantBasicMatches.forEach(bm => {
+                    const end = getMatchEndMinutes(bm);
+                    if (end > maxEnd) maxEnd = end;
+                });
+    
+                // Vezmeme všetky základné zápasy, ktoré končia presne v tomto maxEnd
+                // (môže ich byť viac, ak hrali v rôznych halách súčasne).
+                const basicMatchesAtMaxEnd = relevantBasicMatches.filter(bm => {
+                    const end = getMatchEndMinutes(bm);
+                    return end === maxEnd;
+                });
+    
+                // Zbierka písmen skupín (posledný stĺpec) z týchto základných zápasov
                 const basicLetters = new Set();
-                basicMatches.forEach(bm => {
+                basicMatchesAtMaxEnd.forEach(bm => {
                     const l1 = getGroupLetterFromIdentifier(bm.homeTeamIdentifier);
                     const l2 = getGroupLetterFromIdentifier(bm.awayTeamIdentifier);
                     if (l1) basicLetters.add(l1);
                     if (l2) basicLetters.add(l2);
                 });
+    
+                // Posledné znaky zobrazených názvov tímov nadstavbového zápasu
+                const currHomeLastChar = getTeamLastChar(extraMatch.homeTeamIdentifier);
+                const currAwayLastChar = getTeamLastChar(extraMatch.awayTeamIdentifier);
     
                 // === DOMÁCI TÍM NADSTAVBOVÉHO ZÁPASU ===
                 if (currHomeLastChar && basicLetters.has(currHomeLastChar)) {
