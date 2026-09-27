@@ -3243,10 +3243,10 @@ const AddMatchesApp = ({ userProfileData }) => {
         Object.keys(matchesByDay).forEach(dateStr => {
             const dayMatches = matchesByDay[dateStr];
     
-            // Nadstavbové zápasy daného dňa (všetky haly)
+            // Všetky nadstavbové zápasy daného dňa (všetky haly)
             const extraMatchesOfDay = dayMatches.filter(isExtraMatch);
     
-            // Základné zápasy daného dňa (všetky haly)
+            // Všetky základné zápasy daného dňa (všetky haly)
             const basicMatchesOfDay = dayMatches.filter(isBasicMatch);
     
             // Pre KAŽDÝ nadstavbový zápas aplikujeme carry-over logiku
@@ -3254,40 +3254,41 @@ const AddMatchesApp = ({ userProfileData }) => {
                 const extraStart = getMatchStartMinutes(extraMatch);
                 if (extraStart === null) return;
     
-                // Nájdeme základné zápasy v tej istej kategórii, ktoré skončili
-                // (vrátane prestávky) pred alebo presne v čase začiatku nadstavbového zápasu.
-                const relevantBasicMatches = basicMatchesOfDay.filter(bm => {
-                    if (bm.categoryId !== extraMatch.categoryId) return false;
-                    const endWithBreak = getMatchEndWithBreakMinutes(bm);
+                // === ROZŠÍRENIE: Ako predchádzajúce zápasy berieme do úvahy
+                // AJ základné AJ nadstavbové zápasy (okrem seba samého) ===
+                const previousMatches = dayMatches.filter(m => {
+                    if (m.id === extraMatch.id) return false;
+                    if (m.categoryId !== extraMatch.categoryId) return false;
+                    const endWithBreak = getMatchEndWithBreakMinutes(m);
                     if (endWithBreak === null) return false;
                     return endWithBreak <= extraStart;
                 });
     
-                if (relevantBasicMatches.length === 0) return;
+                if (previousMatches.length === 0) return;
     
-                // Nájdeme maximálny čas konca (vrátane prestávky) spomedzi relevantných základných zápasov.
+                // Nájdeme maximálny čas konca (vrátane prestávky) spomedzi predchádzajúcich zápasov.
                 let maxEndWithBreak = -1;
-                relevantBasicMatches.forEach(bm => {
-                    const endWithBreak = getMatchEndWithBreakMinutes(bm);
+                previousMatches.forEach(m => {
+                    const endWithBreak = getMatchEndWithBreakMinutes(m);
                     if (endWithBreak > maxEndWithBreak) maxEndWithBreak = endWithBreak;
                 });
     
                 // === KĽÚČOVÁ KONTROLA: carry-over len ak nadstavbový zápas
-                // začína BEZPROSTREDNE po skončení základných zápasov VRÁTANE prestávky ===
+                // začína BEZPROSTREDNE po skončení predchádzajúcich zápasov VRÁTANE prestávky ===
                 if (extraStart !== maxEndWithBreak) return;
     
-                // Vezmeme VŠETKY základné zápasy, ktoré končia (vrátane prestávky)
+                // Vezmeme VŠETKY predchádzajúce zápasy, ktoré končia (vrátane prestávky)
                 // presne v tomto maxEndWithBreak (môže ich byť viac, aj v rôznych halách).
-                const basicMatchesAtMaxEnd = relevantBasicMatches.filter(bm => {
-                    const endWithBreak = getMatchEndWithBreakMinutes(bm);
+                const matchesAtMaxEnd = previousMatches.filter(m => {
+                    const endWithBreak = getMatchEndWithBreakMinutes(m);
                     return endWithBreak === maxEndWithBreak;
                 });
     
-                // Zbierka písmen skupín (posledný stĺpec) z týchto základných zápasov
+                // Zbierka písmen skupín (posledný stĺpec) z týchto predchádzajúcich zápasov
                 const basicLetters = new Set();
-                basicMatchesAtMaxEnd.forEach(bm => {
-                    const l1 = getGroupLetterFromIdentifier(bm.homeTeamIdentifier);
-                    const l2 = getGroupLetterFromIdentifier(bm.awayTeamIdentifier);
+                matchesAtMaxEnd.forEach(m => {
+                    const l1 = getGroupLetterFromIdentifier(m.homeTeamIdentifier);
+                    const l2 = getGroupLetterFromIdentifier(m.awayTeamIdentifier);
                     if (l1) basicLetters.add(l1);
                     if (l2) basicLetters.add(l2);
                 });
