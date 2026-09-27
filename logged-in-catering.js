@@ -681,33 +681,6 @@ const cateringApp = ({ userProfileData }) => {
                 );
 
                 scheduledMatches.forEach((match) => {
-                    // 🔥 Vypíšeme JSON zápasu v požadovanom tvare
-                    const outputMatch = {
-                        id: match.id,
-                        homeTeamIdentifier: match.homeTeamIdentifier,
-                        awayTeamIdentifier: match.awayTeamIdentifier,
-                        homeTeamName: match.homeTeamName,
-                        awayTeamName: match.awayTeamName,
-                        categoryId: match.categoryId,
-                        categoryName: match.categoryName,
-                        groupName: match.groupName,
-                        hallId: match.hallId,
-                        scheduledTime: match.scheduledTime
-                            ? {
-                                  seconds: match.scheduledTime.seconds,
-                                  nanoseconds: match.scheduledTime.nanoseconds,
-                              }
-                            : null,
-                        scheduledEndTime: match.scheduledEndTime,
-                        duration: match.duration,
-                        status: match.status,
-                        isPlacementMatch: match.isPlacementMatch,
-                        placementRank: match.placementRank,
-                        matchType: match.matchType,
-                    };
-
-                    console.log(JSON.stringify(outputMatch, null, 2));
-
                     // 🔥 Pre každý tím zvlášť vypíšeme, odkedy dokedy trvá zápas
                     try {
                         if (match.scheduledTime) {
