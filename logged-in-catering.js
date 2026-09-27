@@ -720,17 +720,31 @@ const cateringApp = ({ userProfileData }) => {
                             let matchDurationMinutes = match.duration;
 
                             if (matchDurationMinutes == null) {
-                                const category = categories.find(
+                                // 1) Skúsime podľa názvu kategórie
+                                let category = categories.find(
                                     (c) => c.name === match.categoryName
                                 );
+                            
+                                // 2) Ak sa nenájde, skúsime podľa categoryId
+                                if (!category && match.categoryId) {
+                                    category = categories.find(
+                                        (c) => c.id === match.categoryId
+                                    );
+                                }
+                            
                                 if (category) {
-                                    const periods = category.periods || 2;
-                                    const periodDuration = category.periodDuration || 20;
-                                    const breakDuration = category.breakDuration || 2;
+                                    const periods = category.periods;
+                                    const periodDuration = category.periodDuration;
+                                    const breakDuration = category.breakDuration;
                                     matchDurationMinutes =
                                         (periodDuration + breakDuration) * periods - breakDuration;
                                 } else {
+                                    // fallback – neznáma kategória
                                     matchDurationMinutes = 0;
+                                    console.warn(
+                                        `[Stravovanie] Pre zápas ${match.id} sa nenašla kategória ` +
+                                        `"${match.categoryName}" (ID: ${match.categoryId}). Trvanie nebude možné dopočítať.`
+                                    );
                                 }
                             }
 
