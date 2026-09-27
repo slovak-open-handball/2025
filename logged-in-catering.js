@@ -878,7 +878,56 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
         return () => unsubscribe();
     }, [categories, cateringTimes, unitMinutes, tournamentDays]);
 
-    // 🔥 Načíta filtre z URL
+    if (loading) {
+        return React.createElement(
+            'div',
+            { className: 'flex justify-center items-center h-full pt-16' },
+            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+        );
+    }
+
+    if (tournamentDays.length === 0) {
+        return React.createElement(
+            'div',
+            { className: 'flex-grow flex justify-center items-start p-6' },
+            React.createElement(
+                'div',
+                { className: 'w-full max-w-7xl bg-white rounded-xl shadow-xl p-8' },
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-6' }, 'Stravovanie'),
+                React.createElement(
+                    'p',
+                    { className: 'text-center text-gray-500' },
+                    'Nie sú dostupné žiadne dátumy turnaja. Nastavte prosím dátum príchodu a koniec turnaja.'
+                )
+            )
+        );
+    }
+
+    // Predpočítame sloty pre každý deň a každé jedlo.
+    const daySlots = {};
+    tournamentDays.forEach((day) => {
+        const t = cateringTimes[day.key] || {};
+        const lunchTimes = t.lunch || null;
+        const dinnerTimes = t.dinner || null;
+
+        daySlots[day.key] = {
+            lunch: hasValidMealRange(lunchTimes, unitMinutes)
+                ? buildMealSlots(lunchTimes.from, lunchTimes.to, unitMinutes)
+                : [],
+            dinner: hasValidMealRange(dinnerTimes, unitMinutes)
+                ? buildMealSlots(dinnerTimes.from, dinnerTimes.to, unitMinutes)
+                : [],
+        };
+    });
+
+    const dayColumnCount = (dayKey) => {
+        const slots = daySlots[dayKey] || { lunch: [], dinner: [] };
+        return slots.lunch.length + slots.dinner.length;
+    };
+
+    const visibleDays = tournamentDays.filter((day) => dayColumnCount(day.key) > 0);
+
+        // 🔥 Načíta filtre z URL
     const loadFiltersFromURL = () => {
         const params = new URLSearchParams(window.location.search);
 
@@ -939,55 +988,6 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
 
         return () => clearTimeout(timeoutId);
     }, [filterCategory, filterDayKey, filterMealType, availableCategories, visibleDays]); 
-
-    if (loading) {
-        return React.createElement(
-            'div',
-            { className: 'flex justify-center items-center h-full pt-16' },
-            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-        );
-    }
-
-    if (tournamentDays.length === 0) {
-        return React.createElement(
-            'div',
-            { className: 'flex-grow flex justify-center items-start p-6' },
-            React.createElement(
-                'div',
-                { className: 'w-full max-w-7xl bg-white rounded-xl shadow-xl p-8' },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-6' }, 'Stravovanie'),
-                React.createElement(
-                    'p',
-                    { className: 'text-center text-gray-500' },
-                    'Nie sú dostupné žiadne dátumy turnaja. Nastavte prosím dátum príchodu a koniec turnaja.'
-                )
-            )
-        );
-    }
-
-    // Predpočítame sloty pre každý deň a každé jedlo.
-    const daySlots = {};
-    tournamentDays.forEach((day) => {
-        const t = cateringTimes[day.key] || {};
-        const lunchTimes = t.lunch || null;
-        const dinnerTimes = t.dinner || null;
-
-        daySlots[day.key] = {
-            lunch: hasValidMealRange(lunchTimes, unitMinutes)
-                ? buildMealSlots(lunchTimes.from, lunchTimes.to, unitMinutes)
-                : [],
-            dinner: hasValidMealRange(dinnerTimes, unitMinutes)
-                ? buildMealSlots(dinnerTimes.from, dinnerTimes.to, unitMinutes)
-                : [],
-        };
-    });
-
-    const dayColumnCount = (dayKey) => {
-        const slots = daySlots[dayKey] || { lunch: [], dinner: [] };
-        return slots.lunch.length + slots.dinner.length;
-    };
-
-    const visibleDays = tournamentDays.filter((day) => dayColumnCount(day.key) > 0);
 
     if (visibleDays.length === 0) {
         return React.createElement(
