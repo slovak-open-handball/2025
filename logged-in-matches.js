@@ -3113,7 +3113,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     
         return conflictKeys;
     };
-
+    
     const getCarryOverTeamMatchKeys = () => {
         const carryOverKeys = new Set(); // "matchId|teamIdentifier"
         if (!matches || matches.length === 0) return carryOverKeys;
@@ -3203,6 +3203,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             } catch (e) { return null; }
         };
     
+        // Vráti čas konca zápasu (bez prestávky)
         const getMatchEndMinutes = (m) => {
             const start = getMatchStartMinutes(m);
             if (start === null) return null;
@@ -3215,6 +3216,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                 matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
             }
             return start + matchDuration;
+        };
+    
+        // Vráti matchBreak kategórie zápasu
+        const getMatchBreak = (m) => {
+            const category = categories.find(c => c.name === m.categoryName);
+            return category?.matchBreak ?? 5;
+        };
+    
+        // Vráti čas konca zápasu VRÁTANE prestávky (matchBreak)
+        const getMatchEndWithBreakMinutes = (m) => {
+            const end = getMatchEndMinutes(m);
+            if (end === null) return null;
+            return end + getMatchBreak(m);
         };
     
         // Zoskupíme zápasy len podľa DŇA (všetky haly dokopy)
@@ -3241,34 +3255,32 @@ const AddMatchesApp = ({ userProfileData }) => {
                 if (extraStart === null) return;
     
                 // Nájdeme základné zápasy v tej istej kategórii, ktoré skončili
-                // pred alebo presne v čase začiatku nadstavbového zápasu.
+                // (vrátane prestávky) pred alebo presne v čase začiatku nadstavbového zápasu.
                 const relevantBasicMatches = basicMatchesOfDay.filter(bm => {
                     if (bm.categoryId !== extraMatch.categoryId) return false;
-                    const end = getMatchEndMinutes(bm);
-                    if (end === null) return false;
-                    return end <= extraStart;
+                    const endWithBreak = getMatchEndWithBreakMinutes(bm);
+                    if (endWithBreak === null) return false;
+                    return endWithBreak <= extraStart;
                 });
     
                 if (relevantBasicMatches.length === 0) return;
     
-                // Nájdeme maximálny čas konca spomedzi relevantných základných zápasov.
-                let maxEnd = -1;
+                // Nájdeme maximálny čas konca (vrátane prestávky) spomedzi relevantných základných zápasov.
+                let maxEndWithBreak = -1;
                 relevantBasicMatches.forEach(bm => {
-                    const end = getMatchEndMinutes(bm);
-                    if (end > maxEnd) maxEnd = end;
+                    const endWithBreak = getMatchEndWithBreakMinutes(bm);
+                    if (endWithBreak > maxEndWithBreak) maxEndWithBreak = endWithBreak;
                 });
     
                 // === KĽÚČOVÁ KONTROLA: carry-over len ak nadstavbový zápas
-                // začína BEZPROSTREDNE po skončení základných zápasov ===
-                // T.j. čas začiatku nadstavbového zápasu sa musí rovnať maxEnd
-                // (alebo byť v rámci tolerancie 0 minút).
-                if (extraStart !== maxEnd) return;
+                // začína BEZPROSTREDNE po skončení základných zápasov VRÁTANE prestávky ===
+                if (extraStart !== maxEndWithBreak) return;
     
-                // Vezmeme VŠETKY základné zápasy, ktoré končia presne v tomto maxEnd
-                // (môže ich byť viac, aj v rôznych halách).
+                // Vezmeme VŠETKY základné zápasy, ktoré končia (vrátane prestávky)
+                // presne v tomto maxEndWithBreak (môže ich byť viac, aj v rôznych halách).
                 const basicMatchesAtMaxEnd = relevantBasicMatches.filter(bm => {
-                    const end = getMatchEndMinutes(bm);
-                    return end === maxEnd;
+                    const endWithBreak = getMatchEndWithBreakMinutes(bm);
+                    return endWithBreak === maxEndWithBreak;
                 });
     
                 // Zbierka písmen skupín (posledný stĺpec) z týchto základných zápasov
