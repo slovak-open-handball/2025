@@ -809,11 +809,6 @@ const cateringApp = ({ userProfileData }) => {
                 map.set(key, a);
             }
         });
-        console.log('[DEBUG] cateringAssignments total:', cateringAssignments.length);
-        console.log('[DEBUG] superstructure count:', cateringAssignments.filter(a => a.isSuperstructure === true).length);
-        console.log('[DEBUG] classic count:', cateringAssignments.filter(a => a.isSuperstructure !== true).length);
-        console.log('[DEBUG] assignmentsBySlot map size:', map.size);
-        console.log('[DEBUG] first 5 assignments raw:', cateringAssignments.slice(0, 5));
         return map;
     }, [cateringAssignments]);
 
