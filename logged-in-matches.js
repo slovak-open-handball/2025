@@ -3119,21 +3119,20 @@ const AddMatchesApp = ({ userProfileData }) => {
         const carryOverKeys = new Set(); // "matchId|teamIdentifier"
         if (!matches || matches.length === 0) return carryOverKeys;
     
-        // Pomocná: získa zobrazený názov tímu (teamName) podľa identifikátora
-        // Presne to, čo sa zobrazuje v riadku (cez getTeamNameByIdentifier)
+        // Zobrazený názov tímu (napr. "U12 CH C4")
         const getDisplayedTeamName = (teamIdentifier) => {
             if (!teamIdentifier) return '';
             const name = getTeamNameByIdentifier(teamIdentifier);
             return name || teamIdentifier;
         };
     
-        // Posledný znak zobrazeného názvu tímu
+        // Posledný znak zobrazeného názvu tímu (napr. "U12 CH C4" → "4")
         const getTeamLastChar = (teamIdentifier) => {
             const name = getDisplayedTeamName(teamIdentifier);
             return name ? name.trim().slice(-1) : '';
         };
     
-        // Písmeno skupiny z identifikátora (posledný stĺpec)
+        // Písmeno skupiny z identifikátora (posledný stĺpec, napr. "U12 CH C4" → "C")
         const getGroupLetterFromIdentifier = (identifier) => {
             if (!identifier) return '';
             const parts = identifier.split(' ');
@@ -3171,42 +3170,30 @@ const AddMatchesApp = ({ userProfileData }) => {
     
             // Pre každý nadstavbový zápas hľadáme predchádzajúci základný zápas
             extraMatches.forEach(extraMatch => {
-                // Písmená skupín z identifikátorov nadstavbového zápasu (posledný stĺpec)
-                const extraHomeLetter = getGroupLetterFromIdentifier(extraMatch.homeTeamIdentifier);
-                const extraAwayLetter = getGroupLetterFromIdentifier(extraMatch.awayTeamIdentifier);
-    
-                // Posledné znaky zobrazených názvov tímov nadstavbového zápasu
+                // Posledné znaky zobrazených názvov tímov NADSTAVBOVÉHO zápasu
                 const extraHomeLastChar = getTeamLastChar(extraMatch.homeTeamIdentifier);
                 const extraAwayLastChar = getTeamLastChar(extraMatch.awayTeamIdentifier);
     
                 basicMatches.forEach(basicMatch => {
-                    // Písmená skupín z identifikátorov základného zápasu
+                    // Písmená skupín z identifikátorov ZÁKLADNÉHO zápasu (posledný stĺpec)
                     const basicHomeLetter = getGroupLetterFromIdentifier(basicMatch.homeTeamIdentifier);
                     const basicAwayLetter = getGroupLetterFromIdentifier(basicMatch.awayTeamIdentifier);
     
-                    // Posledné znaky zobrazených názvov tímov základného zápasu
-                    const basicHomeLastChar = getTeamLastChar(basicMatch.homeTeamIdentifier);
-                    const basicAwayLastChar = getTeamLastChar(basicMatch.awayTeamIdentifier);
-    
                     // === DOMÁCI TÍM NADSTAVBOVÉHO ZÁPASU ===
-                    // Ak písmeno skupiny nadstavbového domáceho tímu sa rovná písmenu skupiny
-                    // niektorého tímu v základnom zápase a zároveň posledné znaky názvov sedia
-                    if (extraHomeLetter && basicHomeLetter && extraHomeLetter === basicHomeLetter
-                        && extraHomeLastChar && basicHomeLastChar && extraHomeLastChar === basicHomeLastChar) {
+                    // Ak sa posledný znak domáceho tímu v nadstavbovom zápase rovná
+                    // písmenu skupiny (posledný stĺpec) niektorého tímu v základnom zápase → podfarbiť
+                    if (extraHomeLastChar && basicHomeLetter && extraHomeLastChar === basicHomeLetter) {
                         carryOverKeys.add(`${extraMatch.id}|${extraMatch.homeTeamIdentifier}`);
                     }
-                    if (extraHomeLetter && basicAwayLetter && extraHomeLetter === basicAwayLetter
-                        && extraHomeLastChar && basicAwayLastChar && extraHomeLastChar === basicAwayLastChar) {
+                    if (extraHomeLastChar && basicAwayLetter && extraHomeLastChar === basicAwayLetter) {
                         carryOverKeys.add(`${extraMatch.id}|${extraMatch.homeTeamIdentifier}`);
                     }
     
                     // === HOSŤUJÚCI TÍM NADSTAVBOVÉHO ZÁPASU ===
-                    if (extraAwayLetter && basicHomeLetter && extraAwayLetter === basicHomeLetter
-                        && extraAwayLastChar && basicHomeLastChar && extraAwayLastChar === basicHomeLastChar) {
+                    if (extraAwayLastChar && basicHomeLetter && extraAwayLastChar === basicHomeLetter) {
                         carryOverKeys.add(`${extraMatch.id}|${extraMatch.awayTeamIdentifier}`);
                     }
-                    if (extraAwayLetter && basicAwayLetter && extraAwayLetter === basicAwayLetter
-                        && extraAwayLastChar && basicAwayLastChar && extraAwayLastChar === basicAwayLastChar) {
+                    if (extraAwayLastChar && basicAwayLetter && extraAwayLastChar === basicAwayLetter) {
                         carryOverKeys.add(`${extraMatch.id}|${extraMatch.awayTeamIdentifier}`);
                     }
                 });
