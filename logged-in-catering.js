@@ -862,6 +862,17 @@ const cateringApp = ({ userProfileData }) => {
     const placeCountsBySlot = React.useMemo(() => {
         const counts = new Map();
     
+        // 🔥 Pomocná funkcia – zisti, či dané superstructure priradenie v danom slote hrá zápas
+        const superstructurePlaysInSlot = (ss, dayKey, slotFrom, slotTo) => {
+            return superstructureTeamPlaysDuringSlot(
+                ss.teamName || ss.teamIdentifier,
+                ss.category,
+                dayKey,
+                slotFrom,
+                slotTo
+            );
+        };
+    
         const findSS = (team, dayKey, mealType, slotFrom) => {
             return cateringAssignments.find(
                 (a) =>
@@ -884,7 +895,31 @@ const cateringApp = ({ userProfileData }) => {
         (userTeams || []).forEach((team) => {
             Object.entries(daySlots).forEach(([dayKey, meals]) => {
                 ['lunch', 'dinner'].forEach((mealType) => {
+                    // 🔥 Predpočítame pre CELÝ RIADOK (tím + deň + jedlo):
+                    //    - či tím hrá v tomto slote
+                    //    - či má v riadku vôbec nejaké priradenie
+                    //    - či nejaké superstructure priradenie v riadku hrá v tomto slote
+                    const hasAnyAssignmentInRow = teamHasAnyAssignmentInRow(team, dayKey, mealType);
+    
+                    const allSuperstructureInRow = findAllSuperstructureAssignmentsForRow(
+                        team, dayKey, mealType
+                    );
+    
                     (meals[mealType] || []).forEach((slot) => {
+                        const isPlaying = teamPlaysDuringSlot(team, dayKey, slot.from, slot.to);
+    
+                        const superstructureIsPlayingForForceDash = allSuperstructureInRow.some(
+                            (ss) => superstructurePlaysInSlot(ss, dayKey, slot.from, slot.to)
+                        );
+    
+                        const forceDash =
+                            (isPlaying && hasAnyAssignmentInRow) ||
+                            superstructureIsPlayingForForceDash;
+    
+                        // 🔥 Ak je v riadku forceDash, bunka sa v tabuľke zobrazí ako "−",
+                        //    takže priradenie sa NESMIE započítať do súčtu pre miesto.
+                        if (forceDash) return;
+    
                         const ss = findSS(team, dayKey, mealType, slot.from);
                         if (ss) {
                             const ssCategory = cleanCategory(ss.categoryName || ss.category);
@@ -894,6 +929,7 @@ const cateringApp = ({ userProfileData }) => {
                             counts.set(key, (counts.get(key) || 0) + avg);
                             return;
                         }
+    
                         const cl = findCL(team, dayKey, mealType, slot.from);
                         if (cl) {
                             const members = (team.playersCount || 0) + (team.othersCount || 0);
@@ -913,6 +949,9 @@ const cateringApp = ({ userProfileData }) => {
         daySlots,
         assignmentsBySlot,
         superstructureAvgByCategory,
+        // 🔥 Nové závislosti – bez nich by sa sumy neprepočítali pri zmene zápasov
+        scheduledMatches,
+        categories,
     ]);
 
     // ============================================================
