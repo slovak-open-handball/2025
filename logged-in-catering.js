@@ -1122,6 +1122,10 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
         const slotToMin = timeToMinutes(slotTo);
         if (slotFromMin == null || slotToMin == null) return false;
 
+        // 🔥 Stred slotu (v minútach). Použijeme ho na pravidlo
+        // "koniec zápasu v prvej polovici slotu = slot odblokovaný".
+        const slotMidMin = slotFromMin + (slotToMin - slotFromMin) / 2;
+
         for (const match of scheduledMatches) {
             if (!match.scheduledTime) continue;
 
@@ -1141,8 +1145,7 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
 
             if (matchDayKey !== dayKey) continue;
 
-            // 🔥 OPRAVA: Porovnávame zobrazovaný názov tímu z userTeams
-            // s tým, čo vráti teamManager pre identifier zápasu.
+            // 🔥 Porovnanie tímu (rovnaké ako predtým)
             const matchTeamIdentifiers = [
                 match.homeTeamIdentifier,
                 match.awayTeamIdentifier,
@@ -1151,10 +1154,8 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
             const teamDisplayName = String(team.teamName || '').trim();
 
             const isTeamInMatch = matchTeamIdentifiers.some((identifier) => {
-                // 1) Priame porovnanie identifier vs teamName (ak by sa zhodou okolností rovnali)
                 if (String(identifier).trim() === teamDisplayName) return true;
 
-                // 2) Cez teamManager: identifier → zobrazovaný názov
                 if (
                     window.teamManager &&
                     typeof window.teamManager.getTeamNameByDisplayIdSync === 'function'
@@ -1195,6 +1196,31 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
 
             const matchEndMin = matchStartMin + matchDurationMin;
 
+            // 🔥 NOVÉ PRAVIDLO:
+            // Ak zápas končí vnútri slotu (matchEndMin > slotFromMin && matchEndMin < slotToMin)
+            // a jeho koniec je v PRVEJ POLOVICI slotu (matchEndMin <= slotMidMin)
+            // → tím môže ísť na stravovanie v tomto slote. Preskočíme tento zápas.
+            if (
+                matchEndMin > slotFromMin &&
+                matchEndMin < slotToMin &&
+                matchEndMin <= slotMidMin
+            ) {
+                continue;
+            }
+
+            // 🔥 Symetrické pravidlo: ak zápas začína vnútri slotu
+            // a jeho začiatok je v DRUHEJ POLOVICI slotu
+            // (matchStartMin >= slotMidMin && matchStartMin < slotToMin)
+            // → tím môže ísť na stravovanie v tomto slote. Preskočíme.
+            if (
+                matchStartMin >= slotMidMin &&
+                matchStartMin < slotToMin &&
+                matchEndMin > slotToMin
+            ) {
+                continue;
+            }
+
+            // 🔥 Inak použiť pôvodné pravidlo prekrytia intervalov.
             const overlaps = matchStartMin < slotToMin && matchEndMin > slotFromMin;
             if (overlaps) return true;
         }
