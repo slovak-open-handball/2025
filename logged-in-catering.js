@@ -847,12 +847,15 @@ const cateringApp = ({ userProfileData }) => {
                 (acc, t) => acc + (t.playersCount || 0) + (t.othersCount || 0),
                 0
             );
-            map.set(cat, total / teams.length);
+            const avg = total / teams.length;
+            // 🔥 NOVÉ: zaokrúhli priemer nahor na celé číslo
+            // a TÚTO hodnotu použi pre každý superstructure tím v kategórii
+            map.set(cat, Math.ceil(avg));
         });
     
         return map;
     }, [userTeams]);
-
+    
     const placeCountsBySlot = React.useMemo(() => {
         const counts = new Map();
     
