@@ -914,11 +914,8 @@ const cateringApp = ({ userProfileData }) => {
 
     const findCateringAssignment = (team, dayKey, mealType, slotFrom) => {
         const key = `${team.uid}|${team.teamIndex}|${dayKey}|${mealType}|${slotFrom}`;
-        const result = assignmentsBySlot.get(key);
-        if (!result) {
-            console.log('[DEBUG] MISS:', key);
-        }
-        return result || null;
+        return assignmentsBySlot.get(key) || null;
+        // ❌ ŽIADNY console.log
     };
 
     // 🔥 NOVÉ: Nájde superstructure priradenie pre konkrétnu bunku (kliknutý tím + deň + jedlo + slot)
