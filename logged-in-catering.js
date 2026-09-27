@@ -881,18 +881,29 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
     // 🔥 Načíta filtre z URL
     const loadFiltersFromURL = () => {
         const params = new URLSearchParams(window.location.search);
-        const categoryName = params.get('category') || '';
+
+        // Kategória: v URL sú medzery nahradené pomlčkami, takže ich vrátime späť
+        // (nahradíme pomlčky medzerami).
+        const categoryRaw = params.get('category') || '';
+        const categoryName = categoryRaw ? categoryRaw.replace(/-/g, ' ') : '';
+
         const dayKey = params.get('day') || '';
         const mealType = params.get('mealType') || '';
+
         return { category: categoryName, day: dayKey, mealType };
     };
 
     // 🔥 Uloží filtre do URL
     const updateURLWithFilters = (filters) => {
         const params = new URLSearchParams();
-        if (filters.category) params.set('category', filters.category);
+
+        // Kategória: medzery nahradíme pomlčkami, aby URL bola bezpečná.
+        if (filters.category) {
+            params.set('category', filters.category.replace(/\s+/g, '-'));
+        }
         if (filters.day) params.set('day', filters.day);
         if (filters.mealType) params.set('mealType', filters.mealType);
+
         const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}${window.location.hash}`;
         window.history.replaceState({}, '', newUrl);
     };
