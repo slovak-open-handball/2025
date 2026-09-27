@@ -1003,6 +1003,21 @@ const cateringApp = ({ userProfileData }) => {
         return assignmentsBySlot.get(key) || null;
     };
 
+    // 🔥 Nájde superstructure priradenie pre konkrétnu bunku (kliknutý tím + deň + jedlo + slot)
+    const findSuperstructureAssignmentForCell = (team, dayKey, mealType, slotFrom) => {
+        const teamCat = cleanCategory(team.category);
+        return cateringAssignments.find(
+            (a) =>
+                a.isSuperstructure === true &&
+                a.clickedTeamUid === team.uid &&
+                a.clickedTeamIndex === team.teamIndex &&
+                cleanCategory(a.clickedTeamCategory) === teamCat &&
+                a.dayKey === dayKey &&
+                a.mealType === mealType &&
+                a.slotFrom === slotFrom
+        );
+    };
+
     // 🔥 NOVÉ: Nájde superstructure priradenie pre CELÝ RIADOK (tím + deň + typ jedla),
     // bez ohľadu na slot. Použije sa, ak klikneme na inú bunku v tom istom riadku.
     const findSuperstructureAssignmentForRow = (team, dayKey, mealType) => {
@@ -1011,6 +1026,7 @@ const cateringApp = ({ userProfileData }) => {
                 a.isSuperstructure === true &&
                 a.clickedTeamUid === team.uid &&
                 a.clickedTeamIndex === team.teamIndex &&
+                cleanCategory(a.clickedTeamCategory) === teamCat &&
                 a.clickedTeamCategory === team.category &&
                 a.dayKey === dayKey &&
                 a.mealType === mealType
