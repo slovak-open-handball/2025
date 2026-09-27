@@ -812,40 +812,42 @@ const cateringApp = ({ userProfileData }) => {
         return map;
     }, [cateringAssignments]);
 
-    // 🔥 NOVÉ: Predpočítané súčty pre stravovacie miesta
     const placeCountsBySlot = React.useMemo(() => {
         const counts = new Map();
-
-        // Klasické
-        (cateringAssignments || []).forEach((a) => {
-            if (a.isSuperstructure === true) return;
-            const team = userTeams.find(t => t.uid === a.teamUid && t.teamIndex === a.teamIndex);
-            if (!team) return;
-            const key = `${a.placeId}|${a.dayKey}|${a.mealType}|${a.slotFrom}`;
-            const members = (team.playersCount || 0) + (team.othersCount || 0);
-            counts.set(key, (counts.get(key) || 0) + members);
+    
+        (userTeams || []).forEach((team) => {
+            const teamCategory = cleanCategory(team.category);
+    
+            Object.entries(daySlots).forEach(([dayKey, meals]) => {
+                ['lunch', 'dinner'].forEach((mealType) => {
+                    (meals[mealType] || []).forEach((slot) => {
+                        // 1) Superstructure má prednosť (rovnako ako v renderi)
+                        const ss = findSuperstructureAssignmentForCell(
+                            team, dayKey, mealType, slot.from
+                        );
+                        if (ss) {
+                            const ssCategory = cleanCategory(ss.categoryName || ss.category);
+                            const avg = superstructureAvgByCategory.get(ssCategory);
+                            if (avg == null) return; // nemáme z čoho počítať priemer
+                            const key = `${ss.placeId}|${dayKey}|${mealType}|${slot.from}`;
+                            counts.set(key, (counts.get(key) || 0) + avg);
+                            return;
+                        }
+    
+                        // 2) Klasické priradenie
+                        const cl = findCateringAssignment(team, dayKey, mealType, slot.from);
+                        if (cl) {
+                            const members = (team.playersCount || 0) + (team.othersCount || 0);
+                            const key = `${cl.placeId}|${dayKey}|${mealType}|${slot.from}`;
+                            counts.set(key, (counts.get(key) || 0) + members);
+                        }
+                    });
+                });
+            });
         });
-
-        // Superstructure
-        const teamsByCategory = new Map();
-        userTeams.forEach(t => {
-            if (!teamsByCategory.has(t.category)) teamsByCategory.set(t.category, []);
-            teamsByCategory.get(t.category).push(t);
-        });
-
-        (cateringAssignments || []).forEach((a) => {
-            if (a.isSuperstructure !== true) return;
-            const key = `${a.placeId}|${a.dayKey}|${a.mealType}|${a.slotFrom}`;
-            const catTeams = teamsByCategory.get(a.categoryName || a.category) || [];
-            if (catTeams.length === 0) return;
-            const totalMembers = catTeams.reduce((acc, t) => acc + (t.playersCount || 0) + (t.othersCount || 0), 0);
-            const avg = Math.ceil(totalMembers / catTeams.length);
-            counts.set(key, (counts.get(key) || 0) + avg);
-        });
-
-        console.log('[placeCountsBySlot] debug', debug);
+    
         return counts;
-    }, [cateringAssignments, userTeams, superstructureTeams, matchTeams, daySlots, packagesList]);
+    }, [cateringAssignments, userTeams, superstructureTeams, daySlots, superstructureAvgByCategory]);
 
     // ============================================================
     // 6) Až TERAZ môžu prísť skoré return-y
