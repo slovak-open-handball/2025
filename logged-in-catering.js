@@ -856,27 +856,38 @@ const cateringApp = ({ userProfileData }) => {
     const placeCountsBySlot = React.useMemo(() => {
         const counts = new Map();
     
-        (userTeams || []).forEach((team) => {
-            const teamCategory = cleanCategory(team.category);
+        const findSS = (team, dayKey, mealType, slotFrom) => {
+            return cateringAssignments.find(
+                (a) =>
+                    a.isSuperstructure === true &&
+                    a.clickedTeamUid === team.uid &&
+                    a.clickedTeamIndex === team.teamIndex &&
+                    a.clickedTeamCategory === team.category &&
+                    a.dayKey === dayKey &&
+                    a.mealType === mealType &&
+                    a.slotFrom === slotFrom
+            );
+        };
     
+        const findCL = (team, dayKey, mealType, slotFrom) => {
+            const key = `${team.uid}|${team.teamIndex}|${dayKey}|${mealType}|${slotFrom}`;
+            return assignmentsBySlot.get(key) || null;
+        };
+    
+        (userTeams || []).forEach((team) => {
             Object.entries(daySlots).forEach(([dayKey, meals]) => {
                 ['lunch', 'dinner'].forEach((mealType) => {
                     (meals[mealType] || []).forEach((slot) => {
-                        // 1) Superstructure má prednosť (rovnako ako v renderi)
-                        const ss = findSuperstructureAssignmentForCell(
-                            team, dayKey, mealType, slot.from
-                        );
+                        const ss = findSS(team, dayKey, mealType, slot.from);
                         if (ss) {
                             const ssCategory = cleanCategory(ss.categoryName || ss.category);
                             const avg = superstructureAvgByCategory.get(ssCategory);
-                            if (avg == null) return; // nemáme z čoho počítať priemer
+                            if (avg == null) return;
                             const key = `${ss.placeId}|${dayKey}|${mealType}|${slot.from}`;
                             counts.set(key, (counts.get(key) || 0) + avg);
                             return;
                         }
-    
-                        // 2) Klasické priradenie
-                        const cl = findCateringAssignment(team, dayKey, mealType, slot.from);
+                        const cl = findCL(team, dayKey, mealType, slot.from);
                         if (cl) {
                             const members = (team.playersCount || 0) + (team.othersCount || 0);
                             const key = `${cl.placeId}|${dayKey}|${mealType}|${slot.from}`;
@@ -888,7 +899,14 @@ const cateringApp = ({ userProfileData }) => {
         });
     
         return counts;
-    }, [cateringAssignments, userTeams, superstructureTeams, daySlots, superstructureAvgByCategory]);
+    }, [
+        cateringAssignments,
+        userTeams,
+        superstructureTeams,
+        daySlots,
+        assignmentsBySlot,
+        superstructureAvgByCategory,
+    ]);
 
     // ============================================================
     // 6) Až TERAZ môžu prísť skoré return-y
