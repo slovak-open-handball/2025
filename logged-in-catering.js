@@ -2543,21 +2543,27 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
                                               const slot = daySlots[day.key].lunch[i];
                                               const isLastLunchCell = i === lunchCount - 1;
                                               const hasThickRight = isLastLunchCell;
-
-                                              // 🔥 NOVÉ: Zistíme, či tím hrá v tomto čase
+                                          
                                               const isPlaying = teamPlaysDuringSlot(team, day.key, slot.from, slot.to);
-
+                                          
                                               const existing = findCateringAssignment(team, day.key, 'lunch', slot.from);
                                               const superstructureAssignment = findSuperstructureAssignmentForCell(team, day.key, 'lunch', slot.from);
+                                          
+                                              // 🔥 NOVÉ: Ak existuje akékoľvek priradenie (klasické alebo superstructure),
+                                              // zobrazíme ho VŽDY, aj keď tím hrá zápas.
+                                              const hasAnyAssignment = !!existing || !!superstructureAssignment;
+                                          
                                               const colors = existing
                                                   ? getCateringPlaceColors(existing.placeId)
                                                   : null;
                                               const teamTotal = (team.playersCount || 0) + (team.othersCount || 0);
-
+                                          
                                               const hasMealInPackage = teamHasMealInPackage(team, day.key, 'lunch');
-                                              // 🔥 Ak tím hrá, bunka nesmie byť klikateľná
-                                              const canClick = !isPlaying;
-
+                                          
+                                              // 🔥 Ak má bunka priradenie, klikateľná je VŽDY (aby sa dalo upraviť/odstrániť).
+                                              // Ak nemá priradenie a tím hrá, klikateľná nie je.
+                                              const canClick = hasAnyAssignment ? true : !isPlaying;
+                                          
                                               const displaySuperstructureName = superstructureAssignment
                                                   ? getPlaceTeamDisplayName(
                                                         superstructureAssignment.teamName,
@@ -2567,26 +2573,31 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
                                               const superstructureColors = superstructureAssignment
                                                   ? getCateringPlaceColors(superstructureAssignment.placeId)
                                                   : null;
-
+                                          
                                               let cellClass =
                                                   'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ';
-                                              if (isPlaying) {
-                                                  // 🔥 Tím hrá – neklikateľná bunka, výrazne sivá
-                                                  cellClass += 'bg-gray-200 text-gray-500 cursor-not-allowed ';
-                                              } else {
+                                          
+                                              // 🔥 Ak má bunka priradenie → zobrazíme ho (aj keď tím hrá).
+                                              if (hasAnyAssignment) {
                                                   cellClass += 'cursor-pointer ';
                                                   if (existing && colors) {
                                                       // klasické priradenie
                                                   } else if (superstructureAssignment && superstructureAssignment.isPriority) {
                                                       cellClass += 'font-bold ';
-                                                  } else if (hasMealInPackage) {
+                                                  }
+                                              } else if (isPlaying) {
+                                                  // 🔥 Žiadne priradenie + tím hrá → zablokovaná bunka
+                                                  cellClass += 'bg-gray-200 text-gray-500 cursor-not-allowed ';
+                                              } else {
+                                                  cellClass += 'cursor-pointer ';
+                                                  if (hasMealInPackage) {
                                                       cellClass += 'text-gray-400 hover:bg-blue-50 ';
                                                   } else {
                                                       cellClass += 'bg-gray-100 text-gray-500 hover:bg-green-50 ';
                                                   }
                                               }
                                               cellClass += (hasThickRight ? 'border-r-4 border-r-gray-500' : '');
-
+                                          
                                               cells.push(
                                                   React.createElement(
                                                       'td',
@@ -2596,41 +2607,39 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
                                                               ? () => openCateringModal(team, day, 'lunch', slot)
                                                               : undefined,
                                                           className: cellClass,
-                                                          style: isPlaying
-                                                              ? {}
-                                                              : existing && colors
+                                                          style: existing && colors
+                                                              ? {
+                                                                    backgroundColor: colors.bg,
+                                                                    color: colors.text,
+                                                                }
+                                                              : superstructureAssignment && superstructureColors
                                                                   ? {
-                                                                        backgroundColor: colors.bg,
-                                                                        color: colors.text,
+                                                                        backgroundColor: superstructureColors.bg,
+                                                                        color: superstructureColors.text,
+                                                                        ...(superstructureAssignment.isPriority
+                                                                            ? {
+                                                                                  border: '4px solid #000000',
+                                                                                  fontWeight: 'bold',
+                                                                              }
+                                                                            : {}),
                                                                     }
-                                                                  : superstructureAssignment && superstructureColors
-                                                                      ? {
-                                                                            backgroundColor: superstructureColors.bg,
-                                                                            color: superstructureColors.text,
-                                                                            ...(superstructureAssignment.isPriority
-                                                                                ? {
-                                                                                      border: '4px solid #000000',
-                                                                                      fontWeight: 'bold',
-                                                                                  }
-                                                                                : {}),
-                                                                        }
-                                                                      : {},
-                                                          title: isPlaying
-                                                              ? `Tím hrá zápas v čase ${slot.from} – ${slot.to}`
-                                                              : existing
-                                                                  ? `${existing.placeName} (${slot.from} – ${slot.to})`
-                                                                  : superstructureAssignment
-                                                                      ? `${superstructureAssignment.teamName} (${slot.from} – ${slot.to})`
+                                                                  : {},
+                                                          title: existing
+                                                              ? `${existing.placeName} (${slot.from} – ${slot.to})`
+                                                              : superstructureAssignment
+                                                                  ? `${superstructureAssignment.teamName} (${slot.from} – ${slot.to})`
+                                                                  : isPlaying
+                                                                      ? `Tím hrá zápas v čase ${slot.from} – ${slot.to}`
                                                                       : hasMealInPackage
                                                                           ? `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`
                                                                           : `Tím nemá v balíku '${team.packageName}' obed pre ${day.fullLabelNumeric}. Kliknutím priradíte podľa umiestnenia.`,
                                                       },
-                                                      isPlaying
-                                                          ? '-'
-                                                          : existing
-                                                              ? teamTotal
-                                                              : displaySuperstructureName
-                                                                  ? displaySuperstructureName
+                                                      existing
+                                                          ? teamTotal
+                                                          : displaySuperstructureName
+                                                              ? displaySuperstructureName
+                                                              : isPlaying
+                                                                  ? '-'
                                                                   : (hasMealInPackage ? '' : '–')
                                                   )
                                               );
@@ -2652,21 +2661,23 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
                                               const slot = daySlots[day.key].dinner[i];
                                               const isLastDinnerCell = i === dinnerCount - 1;
                                               const hasThickRight = isLastDinnerCell;
-
-                                              // 🔥 NOVÉ: Zistíme, či tím hrá v tomto čase
+                                          
                                               const isPlaying = teamPlaysDuringSlot(team, day.key, slot.from, slot.to);
-
+                                          
                                               const existing = findCateringAssignment(team, day.key, 'dinner', slot.from);
                                               const superstructureAssignment = findSuperstructureAssignmentForCell(team, day.key, 'dinner', slot.from);
+                                          
+                                              // 🔥 NOVÉ: Ak existuje akékoľvek priradenie, zobrazíme ho VŽDY.
+                                              const hasAnyAssignment = !!existing || !!superstructureAssignment;
+                                          
                                               const colors = existing
                                                   ? getCateringPlaceColors(existing.placeId)
                                                   : null;
                                               const teamTotal = (team.playersCount || 0) + (team.othersCount || 0);
-
+                                          
                                               const hasMealInPackage = teamHasMealInPackage(team, day.key, 'dinner');
-                                              // 🔥 Ak tím hrá, bunka nesmie byť klikateľná
-                                              const canClick = !isPlaying;
-
+                                              const canClick = hasAnyAssignment ? true : !isPlaying;
+                                          
                                               const displaySuperstructureName = superstructureAssignment
                                                   ? getPlaceTeamDisplayName(
                                                         superstructureAssignment.teamName,
@@ -2676,25 +2687,29 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
                                               const superstructureColors = superstructureAssignment
                                                   ? getCateringPlaceColors(superstructureAssignment.placeId)
                                                   : null;
-
+                                          
                                               let cellClass =
                                                   'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ';
-                                              if (isPlaying) {
-                                                  cellClass += 'bg-gray-200 text-gray-500 cursor-not-allowed ';
-                                              } else {
+                                          
+                                              if (hasAnyAssignment) {
                                                   cellClass += 'cursor-pointer ';
                                                   if (existing && colors) {
                                                       // klasické priradenie
                                                   } else if (superstructureAssignment && superstructureAssignment.isPriority) {
                                                       cellClass += 'font-bold ';
-                                                  } else if (hasMealInPackage) {
+                                                  }
+                                              } else if (isPlaying) {
+                                                  cellClass += 'bg-gray-200 text-gray-500 cursor-not-allowed ';
+                                              } else {
+                                                  cellClass += 'cursor-pointer ';
+                                                  if (hasMealInPackage) {
                                                       cellClass += 'text-gray-400 hover:bg-blue-50 ';
                                                   } else {
                                                       cellClass += 'bg-gray-100 text-gray-500 hover:bg-green-50 ';
                                                   }
                                               }
                                               cellClass += (hasThickRight ? 'border-r-4 border-r-gray-500' : '');
-
+                                          
                                               cells.push(
                                                   React.createElement(
                                                       'td',
@@ -2704,41 +2719,39 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
                                                               ? () => openCateringModal(team, day, 'dinner', slot)
                                                               : undefined,
                                                           className: cellClass,
-                                                          style: isPlaying
-                                                              ? {}
-                                                              : existing && colors
+                                                          style: existing && colors
+                                                              ? {
+                                                                    backgroundColor: colors.bg,
+                                                                    color: colors.text,
+                                                                }
+                                                              : superstructureAssignment && superstructureColors
                                                                   ? {
-                                                                        backgroundColor: colors.bg,
-                                                                        color: colors.text,
+                                                                        backgroundColor: superstructureColors.bg,
+                                                                        color: superstructureColors.text,
+                                                                        ...(superstructureAssignment.isPriority
+                                                                            ? {
+                                                                                  border: '4px solid #000000',
+                                                                                  fontWeight: 'bold',
+                                                                              }
+                                                                            : {}),
                                                                     }
-                                                                  : superstructureAssignment && superstructureColors
-                                                                      ? {
-                                                                            backgroundColor: superstructureColors.bg,
-                                                                            color: superstructureColors.text,
-                                                                            ...(superstructureAssignment.isPriority
-                                                                                ? {
-                                                                                      border: '4px solid #000000',
-                                                                                      fontWeight: 'bold',
-                                                                                  }
-                                                                                : {}),
-                                                                        }
-                                                                      : {},
-                                                          title: isPlaying
-                                                              ? `Tím hrá zápas v čase ${slot.from} – ${slot.to}`
-                                                              : existing
-                                                                  ? `${existing.placeName} (${slot.from} – ${slot.to})`
-                                                                  : superstructureAssignment
-                                                                      ? `${superstructureAssignment.teamName} (${slot.from} – ${slot.to})`
+                                                                  : {},
+                                                          title: existing
+                                                              ? `${existing.placeName} (${slot.from} – ${slot.to})`
+                                                              : superstructureAssignment
+                                                                  ? `${superstructureAssignment.teamName} (${slot.from} – ${slot.to})`
+                                                                  : isPlaying
+                                                                      ? `Tím hrá zápas v čase ${slot.from} – ${slot.to}`
                                                                       : hasMealInPackage
                                                                           ? `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`
                                                                           : `Tím nemá v balíku '${team.packageName}' večeru pre ${day.fullLabelNumeric}. Kliknutím priradíte podľa umiestnenia.`,
                                                       },
-                                                      isPlaying
-                                                          ? '-'
-                                                          : existing
-                                                              ? teamTotal
-                                                              : displaySuperstructureName
-                                                                  ? displaySuperstructureName
+                                                      existing
+                                                          ? teamTotal
+                                                          : displaySuperstructureName
+                                                              ? displaySuperstructureName
+                                                              : isPlaying
+                                                                  ? '-'
                                                                   : (hasMealInPackage ? '' : '–')
                                                   )
                                               );
