@@ -1021,17 +1021,17 @@ const cateringApp = ({ userProfileData }) => {
     // 🔥 NOVÉ: Nájde superstructure priradenie pre CELÝ RIADOK (tím + deň + typ jedla),
     // bez ohľadu na slot. Použije sa, ak klikneme na inú bunku v tom istom riadku.
     const findSuperstructureAssignmentForRow = (team, dayKey, mealType) => {
+        const teamCat = cleanCategory(team.category);
         return cateringAssignments.find(
             (a) =>
                 a.isSuperstructure === true &&
                 a.clickedTeamUid === team.uid &&
                 a.clickedTeamIndex === team.teamIndex &&
                 cleanCategory(a.clickedTeamCategory) === teamCat &&
-                a.clickedTeamCategory === team.category &&
                 a.dayKey === dayKey &&
                 a.mealType === mealType
         );
-    };    
+    };  
 
     const findAllSuperstructureAssignmentsForRow = (team, dayKey, mealType) => {
         const teamCat = cleanCategory(team.category);
@@ -1767,43 +1767,13 @@ const cateringApp = ({ userProfileData }) => {
                 for (const id of oldIds) {
                     await deleteDoc(doc(window.db, 'catering', id));
                 }
-    
-                // Nový záznam – najprv pridáme s pôvodnou prioritou
-                let newPayload = { ...payload };
-    
-                // Ak nový NEMÁ prioritu, zistíme, či existuje sibling v riadku.
-                if (!newPayload.isPriority) {
-                    const payloadClickedCat = cleanCategory(payload.clickedTeamCategory);
-                    const siblings = cateringAssignments.filter(
-                        (a) =>
-                            a.isSuperstructure === true &&
-                            a.id !== selectedCateringCell.existingId &&
-                            a.clickedTeamUid === payload.clickedTeamUid &&
-                            a.clickedTeamIndex === payload.clickedTeamIndex &&
-                            cleanCategory(a.clickedTeamCategory) === payloadClickedCat &&
-                            a.dayKey === payload.dayKey &&
-                            a.mealType === payload.mealType
-                    );
-    
-                    if (siblings.length > 0) {
-                        // Existuje iný tím v riadku → nastavíme mu prioritu
-                        await updateDoc(doc(window.db, 'catering', siblings[0].id), {
-                            isPriority: true,
-                        });
-                        // Nový záznam zostane bez priority
-                    } else {
-                        // Žiadny iný tím v riadku → nový záznam bude prioritný
-                        newPayload.isPriority = true;
-                    }
-                }
-    
-                await addDoc(collection(window.db, 'catering'), newPayload);
+                await addDoc(collection(window.db, 'catering'), payload);
                 window.showGlobalNotification('Priradenie bolo zmenené.', 'success');
             } else {
                 await addDoc(collection(window.db, 'catering'), payload);
                 window.showGlobalNotification('Priradenie bolo uložené.', 'success');
             }
-    
+
             setShowCateringModal(false);
             setSelectedCateringCell(null);
             setSelectedCateringPlaceId('');
@@ -1998,12 +1968,12 @@ const cateringApp = ({ userProfileData }) => {
                 const siblings = cateringAssignments.filter(
                     (a) =>
                         a.isSuperstructure === true &&
+                        a.id !== selectedCateringCell.existingId &&
                         a.clickedTeamUid === payload.clickedTeamUid &&
                         a.clickedTeamIndex === payload.clickedTeamIndex &&
                         cleanCategory(a.clickedTeamCategory) === payloadClickedCat &&
                         a.dayKey === payload.dayKey &&
-                        a.mealType === payload.mealType &&
-                        !oldIds.includes(a.id)
+                        a.mealType === payload.mealType
                 );
             
                 if (newIsPriority) {
