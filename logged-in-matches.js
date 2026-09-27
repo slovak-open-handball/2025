@@ -3235,23 +3235,13 @@ const AddMatchesApp = ({ userProfileData }) => {
             // Základné zápasy daného dňa (všetky haly)
             const basicMatchesOfDay = dayMatches.filter(isBasicMatch);
     
-            // Pre každý nadstavbový zápas zistíme, či pred ním v ten istý deň
-            // (v akejkoľvek hale) nešiel iný nadstavbový zápas.
-            // Ak áno, carry-over sa neaplikuje.
+            // Pre KAŽDÝ nadstavbový zápas aplikujeme carry-over logiku
             extraMatchesOfDay.forEach(extraMatch => {
                 const extraStart = getMatchStartMinutes(extraMatch);
                 if (extraStart === null) return;
     
-                const hasEarlierExtraMatch = extraMatchesOfDay.some(other =>
-                    other.id !== extraMatch.id &&
-                    getMatchStartMinutes(other) !== null &&
-                    getMatchStartMinutes(other) < extraStart
-                );
-    
-                if (hasEarlierExtraMatch) return; // carry-over sa neaplikuje
-    
                 // Nájdeme základné zápasy v tej istej kategórii, ktoré skončili
-                // v maximálnom čase, ktorý je <= extraStart.
+                // pred alebo presne v čase začiatku nadstavbového zápasu.
                 const relevantBasicMatches = basicMatchesOfDay.filter(bm => {
                     if (bm.categoryId !== extraMatch.categoryId) return false;
                     const end = getMatchEndMinutes(bm);
@@ -3261,17 +3251,21 @@ const AddMatchesApp = ({ userProfileData }) => {
     
                 if (relevantBasicMatches.length === 0) return;
     
+                // Nájdeme maximálny čas konca spomedzi relevantných základných zápasov.
                 let maxEnd = -1;
                 relevantBasicMatches.forEach(bm => {
                     const end = getMatchEndMinutes(bm);
                     if (end > maxEnd) maxEnd = end;
                 });
     
+                // Vezmeme VŠETKY základné zápasy, ktoré končia presne v tomto maxEnd
+                // (môže ich byť viac, aj v rôznych halách).
                 const basicMatchesAtMaxEnd = relevantBasicMatches.filter(bm => {
                     const end = getMatchEndMinutes(bm);
                     return end === maxEnd;
                 });
     
+                // Zbierka písmen skupín (posledný stĺpec) z týchto základných zápasov
                 const basicLetters = new Set();
                 basicMatchesAtMaxEnd.forEach(bm => {
                     const l1 = getGroupLetterFromIdentifier(bm.homeTeamIdentifier);
@@ -3280,12 +3274,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                     if (l2) basicLetters.add(l2);
                 });
     
+                // Posledné znaky zobrazených názvov tímov nadstavbového zápasu
                 const currHomeLastChar = getTeamLastChar(extraMatch.homeTeamIdentifier);
                 const currAwayLastChar = getTeamLastChar(extraMatch.awayTeamIdentifier);
     
+                // === DOMÁCI TÍM NADSTAVBOVÉHO ZÁPASU ===
                 if (currHomeLastChar && basicLetters.has(currHomeLastChar)) {
                     carryOverKeys.add(`${extraMatch.id}|${extraMatch.homeTeamIdentifier}`);
                 }
+    
+                // === HOSŤUJÚCI TÍM NADSTAVBOVÉHO ZÁPASU ===
                 if (currAwayLastChar && basicLetters.has(currAwayLastChar)) {
                     carryOverKeys.add(`${extraMatch.id}|${extraMatch.awayTeamIdentifier}`);
                 }
