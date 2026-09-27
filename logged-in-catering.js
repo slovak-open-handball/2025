@@ -677,6 +677,99 @@ const cateringApp = ({ userProfileData }) => {
                     return String(a.id).localeCompare(String(b.id));
                 });
 
+                // 🔥 NOVÉ: Vyfiltrujeme len zápasy, ktoré sa prekrývajú
+                // s niektorým stravovacím slotom (obed alebo večera).
+                // Slotmi sú definované v cateringTimes[dayKey].lunch/dinner
+                // a dĺžkou unitMinutes.
+
+                // 1) Zostavíme zoznam všetkých stravovacích slotov (v minútach)
+                // pre všetky dni turnaja.
+                const cateringSlotsByDay = {}; // { 'YYYY-MM-DD': [{fromMin, toMin}, ...] }
+
+                (tournamentDays || []).forEach((day) => {
+                    const t = cateringTimes[day.key] || {};
+                    const daySlots = [];
+
+                    // Obed
+                    if (hasValidMealRange(t.lunch, unitMinutes)) {
+                        const built = buildMealSlots(t.lunch.from, t.lunch.to, unitMinutes);
+                        built.forEach((s) => {
+                            const fromMin = timeToMinutes(s.from);
+                            const toMin = timeToMinutes(s.to);
+                            if (fromMin != null && toMin != null) {
+                                daySlots.push({ fromMin, toMin });
+                            }
+                        });
+                    }
+
+                    // Večera
+                    if (hasValidMealRange(t.dinner, unitMinutes)) {
+                        const built = buildMealSlots(t.dinner.from, t.dinner.to, unitMinutes);
+                        built.forEach((s) => {
+                            const fromMin = timeToMinutes(s.from);
+                            const toMin = timeToMinutes(s.to);
+                            if (fromMin != null && toMin != null) {
+                                daySlots.push({ fromMin, toMin });
+                            }
+                        });
+                    }
+
+                    cateringSlotsByDay[day.key] = daySlots;
+                });
+
+                // 2) Vyfiltrujeme zápasy – ponecháme len tie, ktoré sa prekrývajú
+                // s aspoň jedným slotom v danom dni.
+                const filteredScheduledMatches = scheduledMatches.filter((match) => {
+                    if (!match.scheduledTime) return false;
+
+                    let matchDate;
+                    try {
+                        matchDate = match.scheduledTime.toDate
+                            ? match.scheduledTime.toDate()
+                            : new Date(match.scheduledTime.seconds * 1000);
+                    } catch (e) {
+                        return false;
+                    }
+
+                    const matchDay = String(matchDate.getDate()).padStart(2, '0');
+                    const matchMonth = String(matchDate.getMonth() + 1).padStart(2, '0');
+                    const matchYear = matchDate.getFullYear();
+                    const matchDayKey = `${matchYear}-${matchMonth}-${matchDay}`;
+
+                    const slotsForDay = cateringSlotsByDay[matchDayKey];
+                    if (!slotsForDay || slotsForDay.length === 0) return false;
+
+                    // Trvanie zápasu
+                    let matchDurationMin = match.duration;
+                    if (matchDurationMin == null) {
+                        const category = categories.find(
+                            (c) => c.name === match.categoryName
+                        ) || categories.find((c) => c.id === match.categoryId);
+                        if (category) {
+                            const periods = category.periods || 2;
+                            const periodDuration = category.periodDuration || 20;
+                            const breakDuration = category.breakDuration || 2;
+                            matchDurationMin =
+                                (periodDuration + breakDuration) * periods - breakDuration;
+                        } else {
+                            matchDurationMin = 0;
+                        }
+                    }
+
+                    const matchStartMin =
+                        matchDate.getHours() * 60 + matchDate.getMinutes();
+                    const matchEndMin = matchStartMin + matchDurationMin;
+
+                    // Skontrolujeme prekrytie s hociktorým slotom
+                    return slotsForDay.some(
+                        (slot) => matchStartMin < slot.toMin && matchEndMin > slot.fromMin
+                    );
+                });
+
+                // 🔥 Nahradíme pôvodný zoznam vyfiltrovaným
+                scheduledMatches.length = 0;
+                filteredScheduledMatches.forEach((m) => scheduledMatches.push(m));                
+
                 setScheduledMatches(scheduledMatches);
 
                 console.log(
