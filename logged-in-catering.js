@@ -1543,6 +1543,7 @@ const cateringApp = ({ userProfileData }) => {
                 existingId: superstructureInRow.id || null,
                 placeTeam,
                 existingAssignment: superstructureInRow,
+                modalTitle: 'Priradenie stravovania',
             });
             setShowSuperstructureDecisionModal(true);
             return;
@@ -2895,8 +2896,17 @@ const cateringApp = ({ userProfileData }) => {
                         className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6',
                         onClick: (e) => e.stopPropagation(),
                     },
-                    React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800 text-center' }, 'Superstructure priradenie'),
-                    React.createElement('p', { className: 'text-gray-600 text-sm mb-6 text-center' }, 'Pre túto bunku už existuje superstructure priradenie. Čo chcete urobiť?'),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-xl font-bold mb-4 text-gray-800 text-center' },
+                        pendingSuperstructureDecision.modalTitle || 'Superstructure priradenie'
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-gray-600 text-sm mb-6 text-center' },
+                        pendingSuperstructureDecision.modalDescription ||
+                            'Pre túto bunku už existuje superstructure priradenie.'
+                    ),
                     React.createElement(
                         'div',
                         { className: 'flex flex-col gap-3' },
