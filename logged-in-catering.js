@@ -812,6 +812,40 @@ const cateringApp = ({ userProfileData }) => {
         return map;
     }, [cateringAssignments]);
 
+    // 🔥 NOVÉ: Predpočítané súčty pre stravovacie miesta
+    const placeCountsBySlot = React.useMemo(() => {
+        const counts = new Map();
+
+        // Klasické
+        (cateringAssignments || []).forEach((a) => {
+            if (a.isSuperstructure === true) return;
+            const team = userTeams.find(t => t.uid === a.teamUid && t.teamIndex === a.teamIndex);
+            if (!team) return;
+            const key = `${a.placeId}|${a.dayKey}|${a.mealType}|${a.slotFrom}`;
+            const members = (team.playersCount || 0) + (team.othersCount || 0);
+            counts.set(key, (counts.get(key) || 0) + members);
+        });
+
+        // Superstructure
+        const teamsByCategory = new Map();
+        userTeams.forEach(t => {
+            if (!teamsByCategory.has(t.category)) teamsByCategory.set(t.category, []);
+            teamsByCategory.get(t.category).push(t);
+        });
+
+        (cateringAssignments || []).forEach((a) => {
+            if (a.isSuperstructure !== true) return;
+            const key = `${a.placeId}|${a.dayKey}|${a.mealType}|${a.slotFrom}`;
+            const catTeams = teamsByCategory.get(a.categoryName || a.category) || [];
+            if (catTeams.length === 0) return;
+            const totalMembers = catTeams.reduce((acc, t) => acc + (t.playersCount || 0) + (t.othersCount || 0), 0);
+            const avg = Math.ceil(totalMembers / catTeams.length);
+            counts.set(key, (counts.get(key) || 0) + avg);
+        });
+
+        return counts;
+    }, [cateringAssignments, userTeams]);
+
     // ============================================================
     // 6) Až TERAZ môžu prísť skoré return-y
     // ============================================================
@@ -1246,60 +1280,9 @@ const cateringApp = ({ userProfileData }) => {
         return !!pkg;
     };
 
-    // 🔥 UPRAVENÉ: Spočíta hodnotu pre dané miesto + deň + jedlo + slot.
-    // - Pre klasické priradenia sa započíta počet členov (hráči + RT).
-    // - Pre superstructure priradenia sa započíta PRIEMER členov na jeden tím
-    //   v príslušnej kategórii (počet členov superstructure tímu / počet tímov v kategórii).
     const getAssignedCountForPlace = (placeId, dayKey, mealType, slotFrom) => {
-        let total = 0;
-
-        // 1) Klasické priradenia – započítame počet členov tímu
-        userTeams.forEach((team) => {
-            const assignment = findCateringAssignment(team, dayKey, mealType, slotFrom);
-            if (assignment && assignment.placeId === placeId) {
-                total += (team.playersCount || 0) + (team.othersCount || 0);
-            }
-        });
-
-        // 2) Superstructure priradenia – započítame priemer členov na jeden tím v kategórii
-        const superstructureOnPlace = cateringAssignments.filter(
-            (a) =>
-                a.isSuperstructure === true &&
-                a.placeId === placeId &&
-                a.dayKey === dayKey &&
-                a.mealType === mealType &&
-                a.slotFrom === slotFrom
-        );
-
-        superstructureOnPlace.forEach((assignment) => {
-            // Nájdeme používateľský tím, ktorý klikol (clickedTeam*) a spočítame
-            // jeho členov. Ak by existovalo viac superstructure priradení z tej istej
-            // kategórie, priemer sa počíta z priemeru členov všetkých tímov v kategórii.
-            const categoryName = assignment.categoryName || assignment.category;
-            const teamsInCategory = userTeams.filter(
-                (t) => t.category === categoryName
-            );
-
-            if (teamsInCategory.length === 0) {
-                // fallback – započítame 0
-                return;
-            }
-
-            // Spočítame počet členov VŠETKÝCH tímov v kategórii
-            const totalMembersInCategory = teamsInCategory.reduce(
-                (acc, t) => acc + (t.playersCount || 0) + (t.othersCount || 0),
-                0
-            );
-
-            // Priemer na jeden tím v kategórii
-            const averagePerTeam = Math.ceil(
-                totalMembersInCategory / teamsInCategory.length
-            );
-
-            total += averagePerTeam;
-        });
-
-        return total;
+        const key = `${placeId}|${dayKey}|${mealType}|${slotFrom}`;
+        return placeCountsBySlot.get(key) || 0;
     };
 
     // 🔥 NOVÉ: Denný súčet pre dané miesto + deň + typ jedla (spolu za všetky sloty).
