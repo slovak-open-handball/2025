@@ -1411,12 +1411,41 @@ const cateringApp = ({ userProfileData }) => {
         // Skontrolujeme, či balík existuje v packagesList
         const pkg = packagesList.find(p => p.name === team.packageName);
         return !!pkg;
-    };
+    };    
 
     const getAssignedCountForPlace = (placeId, dayKey, mealType, slotFrom) => {
         const key = `${placeId}|${dayKey}|${mealType}|${slotFrom}`;
         const raw = placeCountsBySlot.get(key) || 0;
         return Number.isInteger(raw) ? raw : Math.ceil(raw);
+    };
+
+    // 🔥 NOVÉ: Zistí, či má tím v danom riadku (tím + deň + meal) AKÉKOĽVEK priradenie
+    // (klasické alebo superstructure), bez ohľadu na slot.
+    const teamHasAnyAssignmentInRow = (team, dayKey, mealType) => {
+        if (!team) return false;
+    
+        // 1) Klasické priradenie
+        const hasClassic = (cateringAssignments || []).some(
+            (a) =>
+                a.isSuperstructure !== true &&
+                a.teamUid === team.uid &&
+                a.teamIndex === team.teamIndex &&
+                a.dayKey === dayKey &&
+                a.mealType === mealType
+        );
+        if (hasClassic) return true;
+    
+        // 2) Superstructure priradenie (kliknuté týmto tímom)
+        const hasSS = (cateringAssignments || []).some(
+            (a) =>
+                a.isSuperstructure === true &&
+                a.clickedTeamUid === team.uid &&
+                a.clickedTeamIndex === team.teamIndex &&
+                a.clickedTeamCategory === team.category &&
+                a.dayKey === dayKey &&
+                a.mealType === mealType
+        );
+        return hasSS;
     };
 
     const getDailyAssignedCountForPlace = (placeId, dayKey, mealType) => {
