@@ -1106,6 +1106,111 @@ const cateringApp = ({ userProfileData }) => {
         return false;
     };
 
+    // 🔥 NOVÉ: Zistí, či superstructure tím (podľa teamName/teamIdentifier)
+    // hrá zápas v danom časovom slote. Používa rovnakú logiku ako teamPlaysDuringSlot.
+    const superstructureTeamPlaysDuringSlot = (placeTeamName, dayKey, slotFrom, slotTo) => {
+        if (!placeTeamName || !dayKey || !slotFrom || !slotTo) return false;
+    
+        const slotFromMin = timeToMinutes(slotFrom);
+        const slotToMin = timeToMinutes(slotTo);
+        if (slotFromMin == null || slotToMin == null) return false;
+    
+        const slotMidMin = slotFromMin + (slotToMin - slotFromMin) / 2;
+    
+        for (const match of scheduledMatches) {
+            if (!match.scheduledTime) continue;
+    
+            let matchDate;
+            try {
+                matchDate = match.scheduledTime.toDate
+                    ? match.scheduledTime.toDate()
+                    : new Date(match.scheduledTime.seconds * 1000);
+            } catch (e) {
+                continue;
+            }
+    
+            const matchDay = String(matchDate.getDate()).padStart(2, '0');
+            const matchMonth = String(matchDate.getMonth() + 1).padStart(2, '0');
+            const matchYear = matchDate.getFullYear();
+            const matchDayKey = `${matchYear}-${matchMonth}-${matchDay}`;
+    
+            if (matchDayKey !== dayKey) continue;
+    
+            const matchTeamIdentifiers = [
+                match.homeTeamIdentifier,
+                match.awayTeamIdentifier,
+                match.homeTeamName,
+                match.awayTeamName,
+            ].filter(Boolean);
+    
+            const targetName = String(placeTeamName || '').trim();
+    
+            const isTeamInMatch = matchTeamIdentifiers.some((identifier) => {
+                if (String(identifier).trim() === targetName) return true;
+    
+                if (
+                    window.teamManager &&
+                    typeof window.teamManager.getTeamNameByDisplayIdSync === 'function'
+                ) {
+                    try {
+                        const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifier);
+                        if (resolved && String(resolved).trim() === targetName) {
+                            return true;
+                        }
+                    } catch (e) {
+                        /* ignore */
+                    }
+                }
+    
+                return false;
+            });
+    
+            if (!isTeamInMatch) continue;
+    
+            const matchStartMin = matchDate.getHours() * 60 + matchDate.getMinutes();
+    
+            let matchDurationMin = match.duration;
+            if (matchDurationMin == null) {
+                const category = categories.find(
+                    (c) => c.name === match.categoryName
+                );
+                if (category) {
+                    const periods = category.periods || 2;
+                    const periodDuration = category.periodDuration || 20;
+                    const breakDuration = category.breakDuration || 2;
+                    matchDurationMin =
+                        (periodDuration + breakDuration) * periods - breakDuration;
+                } else {
+                    matchDurationMin = 0;
+                }
+            }
+    
+            const matchEndMin = matchStartMin + matchDurationMin;
+    
+            // Rovnaké pravidlá ako pri klasickom tíme
+            if (
+                matchEndMin > slotFromMin &&
+                matchEndMin < slotToMin &&
+                matchEndMin <= slotMidMin
+            ) {
+                continue;
+            }
+    
+            if (
+                matchStartMin >= slotMidMin &&
+                matchStartMin < slotToMin &&
+                matchEndMin > slotToMin
+            ) {
+                continue;
+            }
+    
+            const overlaps = matchStartMin < slotToMin && matchEndMin > slotFromMin;
+            if (overlaps) return true;
+        }
+    
+        return false;
+    };
+
     // Zistí, či má tím v balíku povolený daný typ stravovania pre daný deň
     const teamHasMealInPackage = (team, dayKey, mealType) => {
         if (!team) return false;
@@ -2438,17 +2543,32 @@ const cateringApp = ({ userProfileData }) => {
                                               const superstructureColors = superstructureAssignment
                                                   ? getCateringPlaceColors(superstructureAssignment.placeId)
                                                   : null;
-                                          
+                                              
+                                              // 🔥 NOVÉ: Zistíme, či superstructure tím hrá v tomto slote
+                                              const superstructureIsPlaying = superstructureAssignment
+                                                  ? superstructureTeamPlaysDuringSlot(
+                                                        superstructureAssignment.teamName ||
+                                                            superstructureAssignment.teamIdentifier,
+                                                        day.key,
+                                                        slot.from,
+                                                        slot.to
+                                                    )
+                                                  : false;
+                                              
                                               let cellClass =
                                                   'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ';
-                                          
-                                              // 🔥 Ak má bunka priradenie → zobrazíme ho (aj keď tím hrá).
+                                              
                                               if (hasAnyAssignment) {
                                                   cellClass += 'cursor-pointer ';
                                                   if (existing && colors) {
                                                       // klasické priradenie
-                                                  } else if (superstructureAssignment && superstructureAssignment.isPriority) {
-                                                      cellClass += 'font-bold ';
+                                                  } else if (superstructureAssignment) {
+                                                      // 🔥 Ak superstructure tím hrá → bold + červená
+                                                      if (superstructureIsPlaying) {
+                                                          cellClass += 'font-bold text-red-600 ';
+                                                      } else if (superstructureAssignment.isPriority) {
+                                                          cellClass += 'font-bold ';
+                                                      }
                                                   }
                                               } else if (isPlaying) {
                                                   // 🔥 Žiadne priradenie + tím hrá → zablokovaná bunka
@@ -2480,13 +2600,20 @@ const cateringApp = ({ userProfileData }) => {
                                                               : superstructureAssignment && superstructureColors
                                                                   ? {
                                                                         backgroundColor: superstructureColors.bg,
-                                                                        color: superstructureColors.text,
-                                                                        ...(superstructureAssignment.isPriority
+                                                                        // 🔥 Ak superstructure tím hrá → červená farba textu
+                                                                        color: superstructureIsPlaying
+                                                                            ? '#dc2626'
+                                                                            : superstructureColors.text,
+                                                                        ...(superstructureIsPlaying
                                                                             ? {
-                                                                                  border: '4px solid #000000',
                                                                                   fontWeight: 'bold',
                                                                               }
-                                                                            : {}),
+                                                                            : superstructureAssignment.isPriority
+                                                                                ? {
+                                                                                      border: '4px solid #000000',
+                                                                                      fontWeight: 'bold',
+                                                                                  }
+                                                                                : {}),
                                                                     }
                                                                   : {},
                                                           title: existing
@@ -2552,16 +2679,32 @@ const cateringApp = ({ userProfileData }) => {
                                               const superstructureColors = superstructureAssignment
                                                   ? getCateringPlaceColors(superstructureAssignment.placeId)
                                                   : null;
-                                          
+                                              
+                                              // 🔥 NOVÉ: Zistíme, či superstructure tím hrá v tomto slote
+                                              const superstructureIsPlaying = superstructureAssignment
+                                                  ? superstructureTeamPlaysDuringSlot(
+                                                        superstructureAssignment.teamName ||
+                                                            superstructureAssignment.teamIdentifier,
+                                                        day.key,
+                                                        slot.from,
+                                                        slot.to
+                                                    )
+                                                  : false;
+                                              
                                               let cellClass =
                                                   'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ';
-                                          
+                                              
                                               if (hasAnyAssignment) {
                                                   cellClass += 'cursor-pointer ';
                                                   if (existing && colors) {
                                                       // klasické priradenie
-                                                  } else if (superstructureAssignment && superstructureAssignment.isPriority) {
-                                                      cellClass += 'font-bold ';
+                                                  } else if (superstructureAssignment) {
+                                                      // 🔥 Ak superstructure tím hrá → bold + červená
+                                                      if (superstructureIsPlaying) {
+                                                          cellClass += 'font-bold text-red-600 ';
+                                                      } else if (superstructureAssignment.isPriority) {
+                                                          cellClass += 'font-bold ';
+                                                      }
                                                   }
                                               } else if (isPlaying) {
                                                   cellClass += 'bg-gray-100 text-gray-500 cursor-not-allowed ';
@@ -2592,13 +2735,15 @@ const cateringApp = ({ userProfileData }) => {
                                                               : superstructureAssignment && superstructureColors
                                                                   ? {
                                                                         backgroundColor: superstructureColors.bg,
-                                                                        color: superstructureColors.text,
-                                                                        ...(superstructureAssignment.isPriority
-                                                                            ? {
-                                                                                  border: '4px solid #000000',
-                                                                                  fontWeight: 'bold',
-                                                                              }
-                                                                            : {}),
+                                                                        // 🔥 Ak superstructure tím hrá → červená farba textu
+                                                                        color: superstructureIsPlaying
+                                                                            ? '#dc2626'
+                                                                            : superstructureColors.text,
+                                                                        ...(superstructureIsPlaying
+                                                                            ? { fontWeight: 'bold' }
+                                                                            : superstructureAssignment.isPriority
+                                                                                ? { border: '4px solid #000000', fontWeight: 'bold' }
+                                                                                : {}),
                                                                     }
                                                                   : {},
                                                           title: existing
@@ -2949,14 +3094,20 @@ const cateringApp = ({ userProfileData }) => {
                         const dayKey = pendingAssignmentCell.day.key;
                         const mealType = pendingAssignmentCell.mealType;
                     
+                        const slot = pendingAssignmentCell.slot;
+
                         const filtered = matchTeams
                             .filter((t) => cleanCategory(t.category) === categoryName)
                             .filter((t) => !isSuperstructureTeamAlreadyAssigned(t.teamName, dayKey, mealType))
                             .filter((t) => {
                                 const displayName = getPlaceTeamDisplayName(t.teamName, t.category) || '';
-                                // Ak má jedno písmeno a ľubovoľný počet číslic → skryjeme
                                 if (/^[A-Za-z]\d+$/.test(displayName)) return false;
                                 return true;
+                            })
+                            // 🔥 NOVÉ: Vyhodí tímy, ktoré v danom čase hrajú zápas
+                            .filter((t) => {
+                                const resolvedName = t.teamName || t.identifier;
+                                return !superstructureTeamPlaysDuringSlot(resolvedName, dayKey, slot.from, slot.to);
                             })
                             .filter((t) => {
                                 if (!placeAssignmentSearch.trim()) return true;
