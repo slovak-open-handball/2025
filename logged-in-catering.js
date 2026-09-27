@@ -721,7 +721,7 @@ const cateringApp = ({ userProfileData }) => {
                                 }
                             }
 
-                            const startHours = String(matchDate.getHours()).padStart(2, '0');
+const startHours = String(matchDate.getHours()).padStart(2, '0');
                             const startMinutes = String(matchDate.getMinutes()).padStart(2, '0');
                             const startTimeStr = `${startHours}:${startMinutes}`;
 
@@ -731,6 +731,12 @@ const cateringApp = ({ userProfileData }) => {
                             const endHours = String(endDate.getHours()).padStart(2, '0');
                             const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
                             const endTimeStr = `${endHours}:${endMinutes}`;
+
+                            // 🔥 NOVÉ: Dátum zápasu vo formáte DD.MM.YYYY
+                            const matchDay = String(matchDate.getDate()).padStart(2, '0');
+                            const matchMonth = String(matchDate.getMonth() + 1).padStart(2, '0');
+                            const matchYear = matchDate.getFullYear();
+                            const matchDateStr = `${matchDay}.${matchMonth}.${matchYear}`;
 
                             // 🔥 Pomocná funkcia: prevedie identifier na zobrazovaný názov tímu
                             const resolveTeamDisplayName = (identifier) => {
@@ -752,13 +758,13 @@ const cateringApp = ({ userProfileData }) => {
                             if (match.homeTeamIdentifier) {
                                 const homeDisplayName = resolveTeamDisplayName(match.homeTeamIdentifier);
                                 console.log(
-                                    `Tím "${homeDisplayName}" hrá od ${startTimeStr} do ${endTimeStr}`
+                                    `Tím "${homeDisplayName}" hrá dňa ${matchDateStr} od ${startTimeStr} do ${endTimeStr}`
                                 );
                             }
                             if (match.awayTeamIdentifier) {
                                 const awayDisplayName = resolveTeamDisplayName(match.awayTeamIdentifier);
                                 console.log(
-                                    `Tím "${awayDisplayName}" hrá od ${startTimeStr} do ${endTimeStr}`
+                                    `Tím "${awayDisplayName}" hrá dňa ${matchDateStr} od ${startTimeStr} do ${endTimeStr}`
                                 );
                             }
                         }
