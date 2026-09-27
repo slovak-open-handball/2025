@@ -804,7 +804,10 @@ const cateringApp = ({ userProfileData }) => {
         const map = new Map();
         (cateringAssignments || []).forEach((a) => {
             if (a.isSuperstructure === true) return;
-            const key = `${a.teamUid}|${a.teamIndex}|${a.dayKey}|${a.mealType}|${a.slotFrom}`;
+            // 🔥 KĽÚČ OBSAHUJE AJ KATEGÓRIU, aby sa tímy s rovnakým uid/teamIndex
+            //    v rôznych kategóriách navzájom neprepisovali.
+            const cat = cleanCategory(a.category || a.categoryName || '');
+            const key = `${a.teamUid}|${a.teamIndex}|${cat}|${a.dayKey}|${a.mealType}|${a.slotFrom}`;
             if (!map.has(key)) {
                 map.set(key, a);
             }
@@ -873,7 +876,8 @@ const cateringApp = ({ userProfileData }) => {
         };
     
         const findCL = (team, dayKey, mealType, slotFrom) => {
-            const key = `${team.uid}|${team.teamIndex}|${dayKey}|${mealType}|${slotFrom}`;
+            const cat = cleanCategory(team.category);
+            const key = `${team.uid}|${team.teamIndex}|${cat}|${dayKey}|${mealType}|${slotFrom}`;
             return assignmentsBySlot.get(key) || null;
         };
     
@@ -993,22 +997,23 @@ const cateringApp = ({ userProfileData }) => {
     };
 
     const findCateringAssignment = (team, dayKey, mealType, slotFrom) => {
-        const key = `${team.uid}|${team.teamIndex}|${dayKey}|${mealType}|${slotFrom}`;
+        // 🔥 Kategória je súčasťou kľúča – tím sa hľadá v tej kategórii, v ktorej je.
+        const cat = cleanCategory(team.category);
+        const key = `${team.uid}|${team.teamIndex}|${cat}|${dayKey}|${mealType}|${slotFrom}`;
         return assignmentsBySlot.get(key) || null;
-        // ❌ ŽIADNY console.log
     };
 
     // 🔥 NOVÉ: Nájde superstructure priradenie pre konkrétnu bunku (kliknutý tím + deň + jedlo + slot)
-    const findSuperstructureAssignmentForCell = (team, dayKey, mealType, slotFrom) => {
+    const findSuperstructureAssignmentForRow = (team, dayKey, mealType) => {
+        const teamCat = cleanCategory(team.category);
         return cateringAssignments.find(
             (a) =>
                 a.isSuperstructure === true &&
                 a.clickedTeamUid === team.uid &&
                 a.clickedTeamIndex === team.teamIndex &&
-                a.clickedTeamCategory === team.category &&
+                cleanCategory(a.clickedTeamCategory) === teamCat &&
                 a.dayKey === dayKey &&
-                a.mealType === mealType &&
-                a.slotFrom === slotFrom
+                a.mealType === mealType
         );
     };
 
@@ -1026,15 +1031,14 @@ const cateringApp = ({ userProfileData }) => {
         );
     };    
 
-    // 🔥 NOVÉ: Nájde VŠETKY superstructure priradenia pre daný riadok
-    // (kliknutý tím + deň + typ jedla), bez ohľadu na slot.
     const findAllSuperstructureAssignmentsForRow = (team, dayKey, mealType) => {
+        const teamCat = cleanCategory(team.category);
         return cateringAssignments.filter(
             (a) =>
                 a.isSuperstructure === true &&
                 a.clickedTeamUid === team.uid &&
                 a.clickedTeamIndex === team.teamIndex &&
-                a.clickedTeamCategory === team.category &&
+                cleanCategory(a.clickedTeamCategory) === teamCat &&
                 a.dayKey === dayKey &&
                 a.mealType === mealType
         );
@@ -1050,13 +1054,13 @@ const cateringApp = ({ userProfileData }) => {
         return teamName;
     };
 
-    // 🔥 NOVÉ: Zistí, či superstructure tím už má priradené stravovanie
-    // pre daný deň + typ jedla (v hociktorom slote a hociktorou bunkou).
-    const isSuperstructureTeamAlreadyAssigned = (placeTeamName, dayKey, mealType) => {
+    const isSuperstructureTeamAlreadyAssigned = (placeTeamName, dayKey, mealType, category) => {
+        const cat = category ? cleanCategory(category) : null;
         return cateringAssignments.some(
             (a) =>
                 a.isSuperstructure === true &&
                 (a.teamName === placeTeamName || a.teamIdentifier === placeTeamName) &&
+                (cat == null || cleanCategory(a.category || a.categoryName) === cat) &&
                 a.dayKey === dayKey &&
                 a.mealType === mealType
         );
@@ -1419,29 +1423,30 @@ const cateringApp = ({ userProfileData }) => {
         return Number.isInteger(raw) ? raw : Math.ceil(raw);
     };
 
-    // 🔥 NOVÉ: Zistí, či má tím v danom riadku (tím + deň + meal) AKÉKOĽVEK priradenie
-    // (klasické alebo superstructure), bez ohľadu na slot.
     const teamHasAnyAssignmentInRow = (team, dayKey, mealType) => {
         if (!team) return false;
-    
-        // 1) Klasické priradenie
+
+        const teamCat = cleanCategory(team.category);
+
+        // 1) Klasické priradenie – musí sedieť aj kategória
         const hasClassic = (cateringAssignments || []).some(
             (a) =>
                 a.isSuperstructure !== true &&
                 a.teamUid === team.uid &&
                 a.teamIndex === team.teamIndex &&
+                cleanCategory(a.category || a.categoryName) === teamCat &&
                 a.dayKey === dayKey &&
                 a.mealType === mealType
         );
         if (hasClassic) return true;
-    
-        // 2) Superstructure priradenie (kliknuté týmto tímom)
+
+        // 2) Superstructure priradenie (kliknuté týmto tímom) – musí sedieť aj kategória
         const hasSS = (cateringAssignments || []).some(
             (a) =>
                 a.isSuperstructure === true &&
                 a.clickedTeamUid === team.uid &&
                 a.clickedTeamIndex === team.teamIndex &&
-                a.clickedTeamCategory === team.category &&
+                cleanCategory(a.clickedTeamCategory) === teamCat &&
                 a.dayKey === dayKey &&
                 a.mealType === mealType
         );
@@ -1465,12 +1470,13 @@ const cateringApp = ({ userProfileData }) => {
         const allSuperstructureInRow = findAllSuperstructureAssignmentsForRow(
             team, day.key, mealType
         );
+        const teamCat = cleanCategory(team.category);
         const allClassicInRow = cateringAssignments.filter(
             (a) =>
                 a.isSuperstructure !== true &&
                 a.teamUid === team.uid &&
                 a.teamIndex === team.teamIndex &&
-                (a.category === team.category || a.categoryName === team.category) &&
+                cleanCategory(a.category || a.categoryName) === teamCat &&
                 a.dayKey === day.key &&
                 a.mealType === mealType
         );
@@ -1736,11 +1742,13 @@ const cateringApp = ({ userProfileData }) => {
         }
 
         // Klasické priradenie pre tím (pôvodné správanie)
+        // Klasické priradenie pre tím (pôvodné správanie)
+        const teamCat = cleanCategory(cell.team.category);
         return {
             teamUid: cell.team.uid,
             teamIndex: cell.team.teamIndex,
-            category: cell.team.category,
-            categoryName: cell.team.category,
+            category: teamCat,
+            categoryName: teamCat,
             dayKey: cell.dayKey,
             dayLabel: cell.dayLabel,
             mealType: cell.mealType,
@@ -1763,15 +1771,16 @@ const cateringApp = ({ userProfileData }) => {
     
                 // Ak nový NEMÁ prioritu, zistíme, či existuje sibling v riadku.
                 if (!newPayload.isPriority) {
+                    const payloadClickedCat = cleanCategory(payload.clickedTeamCategory);
                     const siblings = cateringAssignments.filter(
                         (a) =>
                             a.isSuperstructure === true &&
+                            a.id !== selectedCateringCell.existingId &&
                             a.clickedTeamUid === payload.clickedTeamUid &&
                             a.clickedTeamIndex === payload.clickedTeamIndex &&
-                            a.clickedTeamCategory === payload.clickedTeamCategory &&
+                            cleanCategory(a.clickedTeamCategory) === payloadClickedCat &&
                             a.dayKey === payload.dayKey &&
-                            a.mealType === payload.mealType &&
-                            !oldIds.includes(a.id)
+                            a.mealType === payload.mealType
                     );
     
                     if (siblings.length > 0) {
@@ -1983,15 +1992,16 @@ const cateringApp = ({ userProfileData }) => {
             
                 // 2) 🔥 Zistíme VŠETKY ostatné superstructure priradenia v tom istom riadku
                 //    (tím + deň + typ jedla), okrem tohto aktuálneho.
+                const payloadClickedCat = cleanCategory(payload.clickedTeamCategory);
                 const siblings = cateringAssignments.filter(
                     (a) =>
                         a.isSuperstructure === true &&
-                        a.id !== selectedCateringCell.existingId &&
                         a.clickedTeamUid === payload.clickedTeamUid &&
                         a.clickedTeamIndex === payload.clickedTeamIndex &&
-                        a.clickedTeamCategory === payload.clickedTeamCategory &&
+                        cleanCategory(a.clickedTeamCategory) === payloadClickedCat &&
                         a.dayKey === payload.dayKey &&
-                        a.mealType === payload.mealType
+                        a.mealType === payload.mealType &&
+                        !oldIds.includes(a.id)
                 );
             
                 if (newIsPriority) {
@@ -2056,12 +2066,14 @@ const cateringApp = ({ userProfileData }) => {
     
                 // Ak nový NEMÁ prioritu, skontrolujeme, či v riadku existuje iný superstructure tím.
                 if (!newIsPriority) {
+                    const payloadClickedCat = cleanCategory(payload.clickedTeamCategory);
                     const siblings = cateringAssignments.filter(
                         (a) =>
                             a.isSuperstructure === true &&
+                            a.id !== selectedCateringCell.existingId &&
                             a.clickedTeamUid === payload.clickedTeamUid &&
                             a.clickedTeamIndex === payload.clickedTeamIndex &&
-                            a.clickedTeamCategory === payload.clickedTeamCategory &&
+                            cleanCategory(a.clickedTeamCategory) === payloadClickedCat &&
                             a.dayKey === payload.dayKey &&
                             a.mealType === payload.mealType
                     );
@@ -2091,13 +2103,15 @@ const cateringApp = ({ userProfileData }) => {
             }
         }
     
-        // Klasická logika pre používateľský tím
+        // 🔥 Kategória sa porovnáva cez cleanCategory, aby zhoda fungovala
+        //    aj pri NBSP / viacnásobných medzerách v DB.
+        const currentCat = cleanCategory(selectedCateringCell.team.category);
         const existingForTeamDayMeal = cateringAssignments.filter(
             (a) =>
+                a.isSuperstructure !== true &&
                 a.teamUid === selectedCateringCell.team.uid &&
                 a.teamIndex === selectedCateringCell.team.teamIndex &&
-                (a.category === selectedCateringCell.team.category ||
-                 a.categoryName === selectedCateringCell.team.category) &&
+                cleanCategory(a.category || a.categoryName) === currentCat &&
                 a.dayKey === selectedCateringCell.dayKey &&
                 a.mealType === selectedCateringCell.mealType
         );
@@ -2214,13 +2228,14 @@ const cateringApp = ({ userProfileData }) => {
                 deletedAssignment &&
                 deletedAssignment.isSuperstructure === true
             ) {
+                const deletedCat = cleanCategory(deletedAssignment.clickedTeamCategory);
                 const remainingInRow = cateringAssignments.filter(
                     (a) =>
                         a.isSuperstructure === true &&
                         a.id !== selectedCateringCell.existingId &&
                         a.clickedTeamUid === deletedAssignment.clickedTeamUid &&
                         a.clickedTeamIndex === deletedAssignment.clickedTeamIndex &&
-                        a.clickedTeamCategory === deletedAssignment.clickedTeamCategory &&
+                        cleanCategory(a.clickedTeamCategory) === deletedCat &&
                         a.dayKey === deletedAssignment.dayKey &&
                         a.mealType === deletedAssignment.mealType
                 );
@@ -3305,7 +3320,7 @@ const cateringApp = ({ userProfileData }) => {
 
                         const filtered = matchTeams
                             .filter((t) => cleanCategory(t.category) === categoryName)
-                            .filter((t) => !isSuperstructureTeamAlreadyAssigned(t.teamName, dayKey, mealType))
+                            .filter((t) => !isSuperstructureTeamAlreadyAssigned(t.teamName, dayKey, mealType, t.category))
                             .filter((t) => {
                                 const displayName = getPlaceTeamDisplayName(t.teamName, t.category) || '';
                                 if (/^[A-Za-z]\d+$/.test(displayName)) return false;
