@@ -1035,18 +1035,33 @@ const cateringApp = ({ userProfileData }) => {
 
     const teamPlaysDuringSlot = (team, dayKey, slotFrom, slotTo) => {
         if (!team || !dayKey || !slotFrom || !slotTo) return false;
-
+    
         const slotFromMin = timeToMinutes(slotFrom);
         const slotToMin = timeToMinutes(slotTo);
         if (slotFromMin == null || slotToMin == null) return false;
-
-        // 🔥 Stred slotu (v minútach). Použijeme ho na pravidlo
-        // "koniec zápasu v prvej polovici slotu = slot odblokovaný".
+    
         const slotMidMin = slotFromMin + (slotToMin - slotFromMin) / 2;
-
+    
+        // 🔥 NOVÉ: Predpočítame si VŠETKY varianty názvu tímu, ktoré môžu byť v zápase
+        const teamNameRaw = String(team.teamName || '').trim();
+        const teamCategoryRaw = String(team.category || '').trim();
+        
+        const teamNameVariants = new Set();
+        if (teamNameRaw) teamNameVariants.add(teamNameRaw);
+        if (teamCategoryRaw && teamNameRaw) {
+            teamNameVariants.add(`${teamCategoryRaw} ${teamNameRaw}`);
+        }
+        if (teamCategoryRaw && teamNameRaw && !teamNameRaw.startsWith(teamCategoryRaw)) {
+            teamNameVariants.add(`${teamCategoryRaw}${teamNameRaw}`);
+        }
+        // Ak teamName už obsahuje kategóriu, pridáme aj verziu bez nej
+        if (teamNameRaw && teamCategoryRaw && teamNameRaw.startsWith(teamCategoryRaw + ' ')) {
+            teamNameVariants.add(teamNameRaw.substring(teamCategoryRaw.length + 1).trim());
+        }
+    
         for (const match of scheduledMatches) {
             if (!match.scheduledTime) continue;
-
+    
             let matchDate;
             try {
                 matchDate = match.scheduledTime.toDate
@@ -1055,47 +1070,60 @@ const cateringApp = ({ userProfileData }) => {
             } catch (e) {
                 continue;
             }
-
+    
             const matchDay = String(matchDate.getDate()).padStart(2, '0');
             const matchMonth = String(matchDate.getMonth() + 1).padStart(2, '0');
             const matchYear = matchDate.getFullYear();
             const matchDayKey = `${matchYear}-${matchMonth}-${matchDay}`;
-
+    
             if (matchDayKey !== dayKey) continue;
-
-            // 🔥 Porovnanie tímu (rovnaké ako predtým)
+    
+            // 🔥 NOVÉ: Pridáme aj homeTeamName / awayTeamName do porovnania
             const matchTeamIdentifiers = [
                 match.homeTeamIdentifier,
                 match.awayTeamIdentifier,
+                match.homeTeamName,
+                match.awayTeamName,
             ].filter(Boolean);
-
-            const teamDisplayName = String(team.teamName || '').trim();
-
+    
             const isTeamInMatch = matchTeamIdentifiers.some((identifier) => {
-                if (String(identifier).trim() === teamDisplayName) return true;
-
+                const idStr = String(identifier).trim();
+    
+                // 1) Priama zhoda s hociktorým variantom
+                if (teamNameVariants.has(idStr)) return true;
+    
+                // 2) Skúsime vyriešiť cez teamManager
                 if (
                     window.teamManager &&
                     typeof window.teamManager.getTeamNameByDisplayIdSync === 'function'
                 ) {
                     try {
                         const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifier);
-                        if (resolved && String(resolved).trim() === teamDisplayName) {
-                            return true;
+                        if (resolved) {
+                            const resolvedStr = String(resolved).trim();
+                            if (teamNameVariants.has(resolvedStr)) return true;
+                            // Skúsime aj resolved + kategória
+                            if (teamCategoryRaw) {
+                                if (teamNameVariants.has(`${teamCategoryRaw} ${resolvedStr}`)) return true;
+                            }
                         }
                     } catch (e) {
                         /* ignore */
                     }
                 }
-
+    
+                // 3) Fallback: skúsime, či identifier obsahuje teamName ako podreťazec
+                //    (napr. "U12 CH 1A" obsahuje "1A")
+                if (teamNameRaw && idStr.endsWith(teamNameRaw)) return true;
+                if (teamNameRaw && idStr.includes(` ${teamNameRaw}`)) return true;
+    
                 return false;
             });
-
+    
             if (!isTeamInMatch) continue;
-
-            const matchStartMin =
-                matchDate.getHours() * 60 + matchDate.getMinutes();
-
+    
+            const matchStartMin = matchDate.getHours() * 60 + matchDate.getMinutes();
+    
             let matchDurationMin = match.duration;
             if (matchDurationMin == null) {
                 const category = categories.find(
@@ -1111,13 +1139,9 @@ const cateringApp = ({ userProfileData }) => {
                     matchDurationMin = 0;
                 }
             }
-
+    
             const matchEndMin = matchStartMin + matchDurationMin;
-
-            // 🔥 NOVÉ PRAVIDLO:
-            // Ak zápas končí vnútri slotu (matchEndMin > slotFromMin && matchEndMin < slotToMin)
-            // a jeho koniec je v PRVEJ POLOVICI slotu (matchEndMin <= slotMidMin)
-            // → tím môže ísť na stravovanie v tomto slote. Preskočíme tento zápas.
+    
             if (
                 matchEndMin > slotFromMin &&
                 matchEndMin < slotToMin &&
@@ -1125,11 +1149,7 @@ const cateringApp = ({ userProfileData }) => {
             ) {
                 continue;
             }
-
-            // 🔥 Symetrické pravidlo: ak zápas začína vnútri slotu
-            // a jeho začiatok je v DRUHEJ POLOVICI slotu
-            // (matchStartMin >= slotMidMin && matchStartMin < slotToMin)
-            // → tím môže ísť na stravovanie v tomto slote. Preskočíme.
+    
             if (
                 matchStartMin >= slotMidMin &&
                 matchStartMin < slotToMin &&
@@ -1137,17 +1157,14 @@ const cateringApp = ({ userProfileData }) => {
             ) {
                 continue;
             }
-
-            // 🔥 Inak použiť pôvodné pravidlo prekrytia intervalov.
+    
             const overlaps = matchStartMin < slotToMin && matchEndMin > slotFromMin;
             if (overlaps) return true;
         }
-
+    
         return false;
     };
 
-    // 🔥 NOVÉ: Zistí, či superstructure tím (podľa teamName/teamIdentifier)
-    // hrá zápas v danom časovom slote. Používa rovnakú logiku ako teamPlaysDuringSlot.
     const superstructureTeamPlaysDuringSlot = (placeTeamName, dayKey, slotFrom, slotTo) => {
         if (!placeTeamName || !dayKey || !slotFrom || !slotTo) return false;
     
@@ -1156,6 +1173,10 @@ const cateringApp = ({ userProfileData }) => {
         if (slotFromMin == null || slotToMin == null) return false;
     
         const slotMidMin = slotFromMin + (slotToMin - slotFromMin) / 2;
+    
+        const targetName = String(placeTeamName || '').trim();
+        // 🔥 Extrahujeme "krátky" názov tímu (posledný token), napr. "U12 CH 1A" → "1A"
+        const targetShortName = targetName.split(/\s+/).pop();
     
         for (const match of scheduledMatches) {
             if (!match.scheduledTime) continue;
@@ -1183,24 +1204,29 @@ const cateringApp = ({ userProfileData }) => {
                 match.awayTeamName,
             ].filter(Boolean);
     
-            const targetName = String(placeTeamName || '').trim();
-    
             const isTeamInMatch = matchTeamIdentifiers.some((identifier) => {
-                if (String(identifier).trim() === targetName) return true;
+                const idStr = String(identifier).trim();
     
+                // 1) Priama zhoda
+                if (idStr === targetName) return true;
+    
+                // 2) Skúsime vyriešiť cez teamManager
                 if (
                     window.teamManager &&
                     typeof window.teamManager.getTeamNameByDisplayIdSync === 'function'
                 ) {
                     try {
                         const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifier);
-                        if (resolved && String(resolved).trim() === targetName) {
-                            return true;
-                        }
+                        if (resolved && String(resolved).trim() === targetName) return true;
                     } catch (e) {
                         /* ignore */
                     }
                 }
+    
+                // 🔥 3) Fallback: porovnanie podľa krátkeho názvu (posledný token)
+                //    "U12 CH 1A" vs "1A" → zhoda
+                if (targetShortName && idStr.endsWith(targetShortName)) return true;
+                if (targetShortName && idStr.includes(` ${targetShortName}`)) return true;
     
                 return false;
             });
@@ -1227,7 +1253,6 @@ const cateringApp = ({ userProfileData }) => {
     
             const matchEndMin = matchStartMin + matchDurationMin;
     
-            // Rovnaké pravidlá ako pri klasickom tíme
             if (
                 matchEndMin > slotFromMin &&
                 matchEndMin < slotToMin &&
