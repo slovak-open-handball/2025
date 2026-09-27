@@ -843,6 +843,7 @@ const cateringApp = ({ userProfileData }) => {
             counts.set(key, (counts.get(key) || 0) + avg);
         });
 
+        console.log('[placeCountsBySlot] debug', debug);
         return counts;
     }, [cateringAssignments, userTeams, superstructureTeams, matchTeams, daySlots, packagesList]);
 
