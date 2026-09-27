@@ -732,14 +732,33 @@ const cateringApp = ({ userProfileData }) => {
                             const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
                             const endTimeStr = `${endHours}:${endMinutes}`;
 
+                            // 🔥 Pomocná funkcia: prevedie identifier na zobrazovaný názov tímu
+                            const resolveTeamDisplayName = (identifier) => {
+                                if (!identifier) return '';
+                                try {
+                                    if (
+                                        window.teamManager &&
+                                        typeof window.teamManager.getTeamNameByDisplayIdSync === 'function'
+                                    ) {
+                                        const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifier);
+                                        if (resolved) return resolved;
+                                    }
+                                } catch (e) {
+                                    /* ignore */
+                                }
+                                return identifier;
+                            };
+
                             if (match.homeTeamIdentifier) {
+                                const homeDisplayName = resolveTeamDisplayName(match.homeTeamIdentifier);
                                 console.log(
-                                    `Tím "${match.homeTeamIdentifier}" hrá od ${startTimeStr} do ${endTimeStr}`
+                                    `Tím "${homeDisplayName}" hrá od ${startTimeStr} do ${endTimeStr}`
                                 );
                             }
                             if (match.awayTeamIdentifier) {
+                                const awayDisplayName = resolveTeamDisplayName(match.awayTeamIdentifier);
                                 console.log(
-                                    `Tím "${match.awayTeamIdentifier}" hrá od ${startTimeStr} do ${endTimeStr}`
+                                    `Tím "${awayDisplayName}" hrá od ${startTimeStr} do ${endTimeStr}`
                                 );
                             }
                         }
