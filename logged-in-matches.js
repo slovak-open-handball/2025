@@ -3179,17 +3179,14 @@ const AddMatchesApp = ({ userProfileData }) => {
             return letter;
         };
     
-        // Zistí, či je daný zápas v základnej skupine
-        const isBasicMatch = (m) => {
+        // Zistí typ skupiny (základná/nadstavbová) pre daný zápas
+        const getGroupType = (m) => {
             const groupMeta = (groupsByCategory[m.categoryId] || []).find(g => g.name === m.groupName);
-            return groupMeta?.type === 'základná skupina';
+            return groupMeta?.type || '';
         };
     
-        // Zistí, či je daný zápas v nadstavbovej skupine
-        const isExtraMatch = (m) => {
-            const groupMeta = (groupsByCategory[m.categoryId] || []).find(g => g.name === m.groupName);
-            return groupMeta?.type === 'nadstavbová skupina';
-        };
+        const isBasicMatch = (m) => getGroupType(m) === 'základná skupina';
+        const isExtraMatch = (m) => getGroupType(m) === 'nadstavbová skupina';
     
         // Zoskupíme zápasy podľa kategórie
         const matchesByCategory = {};
@@ -3200,11 +3197,9 @@ const AddMatchesApp = ({ userProfileData }) => {
         });
     
         Object.values(matchesByCategory).forEach(categoryMatches => {
-            // Zoradíme zápasy v rámci kategórie tak, ako idú za sebou.
-            // Priorita zoradenia:
-            // 1) scheduledTime (ak existuje)
-            // 2) createdAt (Timestamp)
-            // 3) fallback – pôvodné poradie v poli
+            // Zoradíme zápasy v rámci kategórie:
+            // 1) podľa scheduledTime (ak existuje)
+            // 2) podľa createdAt (Timestamp)
             const sortedCategoryMatches = [...categoryMatches].sort((a, b) => {
                 const aTime = a.scheduledTime?.toDate ? a.scheduledTime.toDate().getTime() : null;
                 const bTime = b.scheduledTime?.toDate ? b.scheduledTime.toDate().getTime() : null;
@@ -3216,18 +3211,23 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return aCreated - bCreated;
             });
     
-            // Prechádzame zoradené zápasy a pre každý nadstavbový zápas
-            // skontrolujeme jeho BEZPROSTREDNE PREDCHÁDZAJÚCI zápas.
+            // Pre každý nadstavbový zápas hľadáme najbližší predchádzajúci
+            // zápas v ZÁKLADNEJ skupine v TEJ ISTEJ KATEGÓRII.
             for (let i = 0; i < sortedCategoryMatches.length; i++) {
                 const current = sortedCategoryMatches[i];
                 if (!isExtraMatch(current)) continue;
     
-                // Nájdeme bezprostredne predchádzajúci zápas
-                const previous = i > 0 ? sortedCategoryMatches[i - 1] : null;
+                // Hľadáme dozadu (i-1, i-2, ...) prvý základný zápas v tej istej kategórii
+                let previous = null;
+                for (let j = i - 1; j >= 0; j--) {
+                    const candidate = sortedCategoryMatches[j];
+                    if (candidate.categoryId !== current.categoryId) continue; // pre istotu
+                    if (isBasicMatch(candidate)) {
+                        previous = candidate;
+                        break;
+                    }
+                }
                 if (!previous) continue;
-    
-                // Predchádzajúci zápas musí byť zo základnej skupiny
-                if (!isBasicMatch(previous)) continue;
     
                 // Písmená skupín z identifikátorov predchádzajúceho (základného) zápasu
                 const prevHomeLetter = getGroupLetterFromIdentifier(previous.homeTeamIdentifier);
@@ -3256,7 +3256,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         });
     
         return carryOverKeys;
-};
+    };
     
     const backToBackTeamMatchKeys = getBackToBackTeamMatchKeys();
     const carryOverTeamMatchKeys = getCarryOverTeamMatchKeys();
