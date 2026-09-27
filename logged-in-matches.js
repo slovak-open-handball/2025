@@ -3217,34 +3217,31 @@ const AddMatchesApp = ({ userProfileData }) => {
             return start + matchDuration;
         };
     
-        // Zoskupíme zápasy podľa DŇA a HALY
-        const matchesByDayAndHall = {};
+        // Zoskupíme zápasy len podľa DŇA (všetky haly dokopy)
+        const matchesByDay = {};
         matches.forEach(m => {
             const dateStr = getMatchDateStr(m);
             if (!dateStr) return;
-            const hallId = m.hallId || 'no-hall';
-            const key = `${dateStr}|${hallId}`;
-            if (!matchesByDayAndHall[key]) matchesByDayAndHall[key] = [];
-            matchesByDayAndHall[key].push(m);
+            if (!matchesByDay[dateStr]) matchesByDay[dateStr] = [];
+            matchesByDay[dateStr].push(m);
         });
     
-        Object.keys(matchesByDayAndHall).forEach(key => {
-            const dayHallMatches = matchesByDayAndHall[key];
+        Object.keys(matchesByDay).forEach(dateStr => {
+            const dayMatches = matchesByDay[dateStr];
     
-            // Nadstavbové zápasy daného dňa a haly
-            const extraMatchesOfDay = dayHallMatches.filter(isExtraMatch);
+            // Nadstavbové zápasy daného dňa (všetky haly)
+            const extraMatchesOfDay = dayMatches.filter(isExtraMatch);
     
-            // Základné zápasy daného dňa a haly
-            const basicMatchesOfDay = dayHallMatches.filter(isBasicMatch);
+            // Základné zápasy daného dňa (všetky haly)
+            const basicMatchesOfDay = dayMatches.filter(isBasicMatch);
     
-            // Pre každý nadstavbový zápas zistíme, či pred ním v tej istej hale a deň
-            // nešiel iný nadstavbový zápas. Ak áno, carry-over sa neaplikuje.
+            // Pre každý nadstavbový zápas zistíme, či pred ním v ten istý deň
+            // (v akejkoľvek hale) nešiel iný nadstavbový zápas.
+            // Ak áno, carry-over sa neaplikuje.
             extraMatchesOfDay.forEach(extraMatch => {
                 const extraStart = getMatchStartMinutes(extraMatch);
                 if (extraStart === null) return;
     
-                // Existuje nejaký iný nadstavbový zápas v tej istej hale a deň,
-                // ktorý začína skôr ako tento?
                 const hasEarlierExtraMatch = extraMatchesOfDay.some(other =>
                     other.id !== extraMatch.id &&
                     getMatchStartMinutes(other) !== null &&
