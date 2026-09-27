@@ -3119,11 +3119,45 @@ const AddMatchesApp = ({ userProfileData }) => {
         const carryOverKeys = new Set(); // "matchId|teamIdentifier"
         if (!matches || matches.length === 0) return carryOverKeys;
     
-        // Zobrazený názov tímu (napr. "U12 CH C4")
+        // Lokálna kópia – nezávislá na getTeamNameByIdentifier (aby nevznikla TDZ chyba)
         const getDisplayedTeamName = (teamIdentifier) => {
             if (!teamIdentifier) return '';
-            const name = getTeamNameByIdentifier(teamIdentifier);
-            return name || teamIdentifier;
+            const parts = teamIdentifier.split(' ');
+            if (parts.length < 2) return teamIdentifier;
+            const groupAndOrder = parts.pop();
+            const category = parts.join(' ');
+            let groupName = '', order = '';
+            for (let i = 0; i < groupAndOrder.length; i++) {
+                const ch = groupAndOrder[i];
+                if (ch >= '0' && ch <= '9') {
+                    order = groupAndOrder.substring(i);
+                    groupName = groupAndOrder.substring(0, i);
+                    break;
+                }
+            }
+            if (!order) { order = '?'; groupName = groupAndOrder; }
+    
+            // 1) teamData.allTeams
+            const teamsFromState = (teamData && teamData.allTeams) ? teamData.allTeams : [];
+            const groupNameWithPrefix = `skupina ${groupName}`;
+            let team = teamsFromState.find(t =>
+                t.category === category &&
+                (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
+                t.order?.toString() === order
+            );
+            if (team?.teamName) return team.teamName;
+    
+            // 2) window.__teamManagerData.allTeams
+            const teamsFromGlobal = (window.__teamManagerData && window.__teamManagerData.allTeams) ? window.__teamManagerData.allTeams : [];
+            team = teamsFromGlobal.find(t =>
+                t.category === category &&
+                (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
+                t.order?.toString() === order
+            );
+            if (team?.teamName) return team.teamName;
+    
+            // 3) fallback – vráti pôvodný identifikátor
+            return teamIdentifier;
         };
     
         // Posledný znak zobrazeného názvu tímu (napr. "U12 CH C4" → "4")
@@ -3180,8 +3214,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                     const basicAwayLetter = getGroupLetterFromIdentifier(basicMatch.awayTeamIdentifier);
     
                     // === DOMÁCI TÍM NADSTAVBOVÉHO ZÁPASU ===
-                    // Ak sa posledný znak domáceho tímu v nadstavbovom zápase rovná
-                    // písmenu skupiny (posledný stĺpec) niektorého tímu v základnom zápase → podfarbiť
                     if (extraHomeLastChar && basicHomeLetter && extraHomeLastChar === basicHomeLetter) {
                         carryOverKeys.add(`${extraMatch.id}|${extraMatch.homeTeamIdentifier}`);
                     }
