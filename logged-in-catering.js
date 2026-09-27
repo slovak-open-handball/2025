@@ -772,10 +772,6 @@ const cateringApp = ({ userProfileData }) => {
 
                 setScheduledMatches(scheduledMatches);
 
-                console.log(
-                    `[Stravovanie] Načítaných ${scheduledMatches.length} naplánovaných zápasov:`
-                );
-
                 scheduledMatches.forEach((match) => {
                     // 🔥 Pre každý tím zvlášť vypíšeme, odkedy dokedy trvá zápas
                     try {
@@ -858,15 +854,9 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
 
                             if (match.homeTeamIdentifier) {
                                 const homeDisplayName = resolveTeamDisplayName(match.homeTeamIdentifier);
-                                console.log(
-                                    `${categoryLabel}Tím "${homeDisplayName}" hrá dňa ${matchDateStr} od ${startTimeStr} do ${endTimeStr}`
-                                );
                             }
                             if (match.awayTeamIdentifier) {
                                 const awayDisplayName = resolveTeamDisplayName(match.awayTeamIdentifier);
-                                console.log(
-                                    `${categoryLabel}Tím "${awayDisplayName}" hrá dňa ${matchDateStr} od ${startTimeStr} do ${endTimeStr}`
-                                );
                             }
                         }
                     } catch (e) {
@@ -1340,19 +1330,6 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
                 a.mealType === mealType
         );
         const totalAssignedInRow = allSuperstructureInRow.length + allClassicInRow.length;
-    
-        console.log(
-            `[Stravovanie] Riadok – Tím: "${team.teamName}" | Kategória: "${team.category}" | ` +
-            `Deň: ${day.key} | Typ jedla: ${mealType} | ` +
-            `Priradených tímov v riadku (všetky časy): ${totalAssignedInRow} ` +
-            `(superstructure: ${allSuperstructureInRow.length}, klasické: ${allClassicInRow.length})`
-        );
-    
-        // ============================================================
-        // 🔥 NAJPRV: Ak kliknem na EXISTUJÚCE priradenie v TEJTO KONKRÉTNEJ BUNKE,
-        //    musí sa PRIAMO otvoriť modálne okno na úpravu/zmazanie.
-        //    Toto má prednosť pred kontrolou počtu priradení v riadku.
-        // ============================================================
     
         // 1a) Superstructure priradenie pre túto konkrétnu bunku
         const superstructureExisting = findSuperstructureAssignmentForCell(
