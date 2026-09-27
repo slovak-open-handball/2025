@@ -3188,46 +3188,59 @@ const AddMatchesApp = ({ userProfileData }) => {
         const isBasicMatch = (m) => getGroupType(m) === 'základná skupina';
         const isExtraMatch = (m) => getGroupType(m) === 'nadstavbová skupina';
     
-        // Zoskupíme zápasy podľa kategórie
-        const matchesByCategory = {};
+        // Pomocná: dátum zápasu v tvare "YYYY-MM-DD" (lokálny)
+        const getMatchDateStr = (m) => {
+            if (!m.scheduledTime || !m.scheduledTime.toDate) return null;
+            try {
+                const d = m.scheduledTime.toDate();
+                const y = d.getFullYear();
+                const mo = (d.getMonth() + 1).toString().padStart(2, '0');
+                const da = d.getDate().toString().padStart(2, '0');
+                return `${y}-${mo}-${da}`;
+            } catch (e) { return null; }
+        };
+    
+        // Pomocná: čas zápasu v minútach od polnoci
+        const getMatchMinutes = (m) => {
+            if (!m.scheduledTime || !m.scheduledTime.toDate) return null;
+            try {
+                const d = m.scheduledTime.toDate();
+                return d.getHours() * 60 + d.getMinutes();
+            } catch (e) { return null; }
+        };
+    
+        // Zoskupíme zápasy podľa (hala + dátum). Tie, ktoré nemajú scheduledTime, vynecháme.
+        const matchesByHallAndDay = {}; // key = "hallId|YYYY-MM-DD"
         matches.forEach(m => {
-            if (!m.categoryId) return;
-            if (!matchesByCategory[m.categoryId]) matchesByCategory[m.categoryId] = [];
-            matchesByCategory[m.categoryId].push(m);
+            if (!m.hallId) return;
+            const dateStr = getMatchDateStr(m);
+            if (!dateStr) return;
+            const key = `${m.hallId}|${dateStr}`;
+            if (!matchesByHallAndDay[key]) matchesByHallAndDay[key] = [];
+            matchesByHallAndDay[key].push(m);
         });
     
-        Object.values(matchesByCategory).forEach(categoryMatches => {
-            // Zoradíme zápasy v rámci kategórie:
-            // 1) podľa scheduledTime (ak existuje)
-            // 2) podľa createdAt (Timestamp)
-            const sortedCategoryMatches = [...categoryMatches].sort((a, b) => {
-                const aTime = a.scheduledTime?.toDate ? a.scheduledTime.toDate().getTime() : null;
-                const bTime = b.scheduledTime?.toDate ? b.scheduledTime.toDate().getTime() : null;
-                if (aTime !== null && bTime !== null) return aTime - bTime;
-                if (aTime !== null) return -1;
-                if (bTime !== null) return 1;
-                const aCreated = a.createdAt?.seconds || 0;
-                const bCreated = b.createdAt?.seconds || 0;
-                return aCreated - bCreated;
-            });
+        // Pre každú halu a deň zoradíme zápasy podľa času
+        Object.keys(matchesByHallAndDay).forEach(key => {
+            const dayMatches = matchesByHallAndDay[key]
+                .filter(m => getMatchMinutes(m) !== null)
+                .sort((a, b) => getMatchMinutes(a) - getMatchMinutes(b));
     
-            // Pre každý nadstavbový zápas hľadáme najbližší predchádzajúci
-            // zápas v ZÁKLADNEJ skupine v TEJ ISTEJ KATEGÓRII.
-            for (let i = 0; i < sortedCategoryMatches.length; i++) {
-                const current = sortedCategoryMatches[i];
+            // Prechádzame zoradené zápasy v rámci dňa a haly
+            for (let i = 0; i < dayMatches.length; i++) {
+                const current = dayMatches[i];
                 if (!isExtraMatch(current)) continue;
     
-                // Hľadáme dozadu (i-1, i-2, ...) prvý základný zápas v tej istej kategórii
-                let previous = null;
-                for (let j = i - 1; j >= 0; j--) {
-                    const candidate = sortedCategoryMatches[j];
-                    if (candidate.categoryId !== current.categoryId) continue; // pre istotu
-                    if (isBasicMatch(candidate)) {
-                        previous = candidate;
-                        break;
-                    }
-                }
+                // Bezprostredne predchádzajúci zápas v tej istej hale a dni
+                if (i === 0) continue; // nič pred ním
+                const previous = dayMatches[i - 1];
                 if (!previous) continue;
+    
+                // Predchádzajúci zápas musí byť zo základnej skupiny
+                if (!isBasicMatch(previous)) continue;
+    
+                // A musí byť v rovnakej kategórii
+                if (previous.categoryId !== current.categoryId) continue;
     
                 // Písmená skupín z identifikátorov predchádzajúceho (základného) zápasu
                 const prevHomeLetter = getGroupLetterFromIdentifier(previous.homeTeamIdentifier);
