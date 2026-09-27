@@ -844,7 +844,7 @@ const cateringApp = ({ userProfileData }) => {
         });
 
         return counts;
-    }, [cateringAssignments, userTeams]);
+    }, [cateringAssignments, userTeams, superstructureTeams, matchTeams, daySlots, packagesList]);
 
     // ============================================================
     // 6) Až TERAZ môžu prísť skoré return-y
