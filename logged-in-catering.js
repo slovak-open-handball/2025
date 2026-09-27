@@ -210,6 +210,9 @@ const buildMealSlots = (from, to, unitMinutes) => {
 };
 
 const cateringApp = ({ userProfileData }) => {
+    // ============================================================
+    // 1) VŠETKY useState – na začiatku, bez výnimky
+    // ============================================================
     const [tournamentDays, setTournamentDays] = useState([]);
     const [userTeams, setUserTeams] = useState([]);
     const [cateringTimes, setCateringTimes] = useState({});
@@ -236,10 +239,10 @@ const cateringApp = ({ userProfileData }) => {
     const [showSuperstructureDecisionModal, setShowSuperstructureDecisionModal] = useState(false);
     const [pendingSuperstructureDecision, setPendingSuperstructureDecision] = useState(null);
     const [superstructureTeams, setSuperstructureTeams] = useState([]);
-    const [matchTeams, setMatchTeams] = useState([]);    
+    const [matchTeams, setMatchTeams] = useState([]);
     const [selectedPlaceTeamId, setSelectedPlaceTeamId] = useState('');
     const [savingPlaceAssignment, setSavingPlaceAssignment] = useState(false);
-    const [placeAssignmentSearch, setPlaceAssignmentSearch] = useState('');    
+    const [placeAssignmentSearch, setPlaceAssignmentSearch] = useState('');
     const [showSuperstructureReplanPickerModal, setShowSuperstructureReplanPickerModal] = useState(false);
     const [superstructureReplanPickerItems, setSuperstructureReplanPickerItems] = useState([]);
     const [cateringModalIsPriority, setCateringModalIsPriority] = useState(false);
@@ -247,8 +250,9 @@ const cateringApp = ({ userProfileData }) => {
     const [categories, setCategories] = useState([]);
     const [scheduledMatches, setScheduledMatches] = useState([]);
 
-    // 🔥 availableCategories a visibleDays musia byť pred skorými returnmi
-    // a musia byť stabilné (useMemo), aby ich mohli useEffect hooky používať.
+    // ============================================================
+    // 2) useMemo – odvodené hodnoty, ktoré potrebujú useEffect-y
+    // ============================================================
     const availableCategories = React.useMemo(() => {
         return Array.from(
             new Set(
@@ -273,6 +277,67 @@ const cateringApp = ({ userProfileData }) => {
         });
     }, [tournamentDays, cateringTimes, unitMinutes]);
 
+    // ============================================================
+    // 3) Pomocné funkcie pre URL filtre (nie sú hooky, ale patria sem)
+    // ============================================================
+    const loadFiltersFromURL = () => {
+        const params = new URLSearchParams(window.location.search);
+        const categoryRaw = params.get('category') || '';
+        const categoryName = categoryRaw ? categoryRaw.replace(/-/g, ' ') : '';
+        const dayKey = params.get('day') || '';
+        const mealType = params.get('mealType') || '';
+        return { category: categoryName, day: dayKey, mealType };
+    };
+
+    const updateURLWithFilters = (filters) => {
+        const params = new URLSearchParams();
+        if (filters.category) {
+            params.set('category', filters.category.replace(/\s+/g, '-'));
+        }
+        if (filters.day) params.set('day', filters.day);
+        if (filters.mealType) params.set('mealType', filters.mealType);
+        const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}${window.location.hash}`;
+        window.history.replaceState({}, '', newUrl);
+    };
+
+    // ============================================================
+    // 4) URL useEffect-y – MUSIA byť pred skorými returnmi!
+    // ============================================================
+    useEffect(() => {
+        if (availableCategories.length === 0 && visibleDays.length === 0) return;
+
+        const filters = loadFiltersFromURL();
+
+        if (filters.category && availableCategories.includes(filters.category)) {
+            setFilterCategory(filters.category);
+        }
+        if (filters.day && visibleDays.some((d) => d.key === filters.day)) {
+            setFilterDayKey(filters.day);
+        }
+        if (filters.mealType === 'lunch' || filters.mealType === 'dinner') {
+            setFilterMealType(filters.mealType);
+        }
+    }, [availableCategories, visibleDays]);
+
+    useEffect(() => {
+        if (availableCategories.length === 0 && visibleDays.length === 0) return;
+
+        const timeoutId = setTimeout(() => {
+            updateURLWithFilters({
+                category: filterCategory,
+                day: filterDayKey,
+                mealType: filterMealType,
+            });
+        }, 300);
+
+        return () => clearTimeout(timeoutId);
+    }, [filterCategory, filterDayKey, filterMealType, availableCategories, visibleDays]);
+
+    // ============================================================
+    // 5) Ostatné useEffect-y – načítanie dát z Firestore
+    //    (tie, ktoré si mal pôvodne, len presunuté sem)
+    // ============================================================
+
     // Načítanie nastavení turnaja z Firestore
     useEffect(() => {
         if (!window.db) {
@@ -287,10 +352,8 @@ const cateringApp = ({ userProfileData }) => {
             (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
-
                     const arrivalDate = data.arrivalDate ? data.arrivalDate.toDate() : null;
                     const tournamentEnd = data.tournamentEnd ? data.tournamentEnd.toDate() : null;
-
                     const days = buildTournamentDays(arrivalDate, tournamentEnd);
                     setTournamentDays(days);
                 } else {
@@ -432,7 +495,7 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // 🔥 NOVÉ: Načítanie balíkov (settings/packages/list)
+    // Načítanie balíkov (settings/packages/list)
     useEffect(() => {
         if (!window.db) return;
 
@@ -459,6 +522,7 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
+    // Načítanie superstructure tímov
     useEffect(() => {
         if (!window.db) return;
 
@@ -492,9 +556,10 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
+    // Načítanie kategórií (pre fallback categoryId → categoryName)
     useEffect(() => {
         if (!window.db) return;
-    
+
         const loadCategories = async () => {
             try {
                 const categoriesDocRef = doc(window.db, 'settings', 'categories');
@@ -507,8 +572,6 @@ const cateringApp = ({ userProfileData }) => {
                     Object.entries(data).forEach(([catId, catData]) => {
                         if (catData?.name) {
                             categoriesMap[catId] = catData.name;
-
-                            // 🔥 NOVÉ: uložíme aj plný objekt kategórie
                             categoriesList.push({
                                 id: catId,
                                 name: catData.name,
@@ -536,43 +599,36 @@ const cateringApp = ({ userProfileData }) => {
                 setCategoriesReady(true);
             }
         };
-    
+
         loadCategories();
     }, []);
 
+    // Načítanie matchTeams
     useEffect(() => {
-        // 🔥 DÔLEŽITÉ: Čakáme, kým sú kategórie načítané (categoriesReady)
         if (!window.db || !categoriesReady) return;
-    
+
         const unsubscribe = onSnapshot(
             collection(window.db, 'matches'),
             (snapshot) => {
-                const teamsMap = new Map(); // kľúč = `${category}||${identifier}`
-    
+                const teamsMap = new Map();
+
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data() || {};
-    
-                    // 🔥 Fallback categoryId → categoryName
+
                     let categoryName = data.categoryName || '';
                     if (!categoryName && data.categoryId && window.categoriesData) {
                         categoryName = window.categoriesData[data.categoryId] || '';
                     }
                     categoryName = cleanCategory(categoryName);
-    
-                    // 🔥 Ak nemáme kategóriu, tím preskočíme
                     if (!categoryName) return;
-    
+
                     const groupName = data.groupName || null;
-    
-                    // 🔥 POUŽIJEME IDENTIFIER + namapujeme cez teamManager.
-                    // Ak teamManager vráti null, použijeme samotný identifier.
+
                     const addTeam = (identifierFromMatch, teamNameFromMatch) => {
                         if (!identifierFromMatch) return;
-                    
                         const key = `${categoryName}||${identifierFromMatch}`;
                         if (teamsMap.has(key)) return;
-                    
-                        // 🔥 1) Skúsime teamManager
+
                         let displayName = null;
                         if (
                             window.teamManager &&
@@ -580,46 +636,25 @@ const cateringApp = ({ userProfileData }) => {
                         ) {
                             try {
                                 const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifierFromMatch);
-                                if (resolved) {
-                                    displayName = resolved;
-                                }
-                            } catch (e) {
-                                /* ignore */
-                            }
+                                if (resolved) displayName = resolved;
+                            } catch (e) { /* ignore */ }
                         }
-                    
-                        // 🔥 2) Ak teamManager vrátil null → skúsime homeTeamName / awayTeamName z dokumentu
-                        if (!displayName && teamNameFromMatch) {
-                            displayName = teamNameFromMatch;
-                        }
-                    
-                        // 🔥 3) Ak stále nemáme nič → použijeme samotný identifier (parameter,
-                        //     ktorý sme poslali do teamManager)
-                        if (!displayName) {
-                            displayName = identifierFromMatch;
-                        }
-                    
-                        // 🔥 Očistíme od medzier
+                        if (!displayName && teamNameFromMatch) displayName = teamNameFromMatch;
+                        if (!displayName) displayName = identifierFromMatch;
+
                         displayName = String(displayName).trim();
                         if (!displayName) return;
-                    
-                        // 🔥 Ak je to 'null' / 'undefined' ako string → použijeme identifier
                         if (displayName === 'null' || displayName === 'undefined') {
                             displayName = identifierFromMatch;
                         }
-                    
-                        // 🔥 Názov tímu MUSÍ obsahovať názov kategórie.
-                        // Ak neobsahuje, skúsime pridať kategóriu na začiatok (fallback).
                         if (!displayName.includes(categoryName)) {
-                            // Skúsime, či aspoň identifier obsahuje kategóriu
                             if (identifierFromMatch.includes(categoryName)) {
                                 displayName = identifierFromMatch;
                             } else {
-                                // Pridáme kategóriu pred identifier, aby sa tím zobrazil
                                 displayName = `${categoryName} ${identifierFromMatch}`;
                             }
                         }
-                    
+
                         teamsMap.set(key, {
                             id: identifierFromMatch,
                             teamName: displayName,
@@ -628,46 +663,39 @@ const cateringApp = ({ userProfileData }) => {
                             groupName: groupName,
                         });
                     };
-                    
-                    // 🔥 Posielame AJ homeTeamName / awayTeamName pre fallback
+
                     addTeam(data.homeTeamIdentifier, data.homeTeamName);
                     addTeam(data.awayTeamIdentifier, data.awayTeamName);
                 });
-    
+
                 setMatchTeams(Array.from(teamsMap.values()));
             },
-            (error) => {
-            }
+            (error) => { }
         );
-    
+
         return () => unsubscribe();
     }, [categoriesReady]);
 
-    // 🔥 NOVÉ: Načítanie všetkých NAPLÁNOVANÝCH zápasov (scheduledTime + hallId)
-    // Pri každej zmene v kolekcii 'matches' sa zoznam znovu načíta a vypíše do konzoly.
+    // Načítanie naplánovaných zápasov (scheduledTime + hallId)
     useEffect(() => {
         if (!window.db) return;
 
         const unsubscribe = onSnapshot(
             collection(window.db, 'matches'),
             (snapshot) => {
-                const scheduledMatches = [];
+                const scheduledMatchesLocal = [];
 
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data() || {};
-
-                    // 🔥 Berieme len zápasy, ktoré sú skutočne naplánované
-                    // (majú priradenú halu a čas začiatku).
                     if (!data.hallId) return;
                     if (!data.scheduledTime) return;
 
-                    // Fallback categoryId → categoryName
                     let categoryName = data.categoryName || '';
                     if (!categoryName && data.categoryId && window.categoriesData) {
                         categoryName = window.categoriesData[data.categoryId] || '';
                     }
 
-                    scheduledMatches.push({
+                    scheduledMatchesLocal.push({
                         id: docSnap.id,
                         homeTeamIdentifier: data.homeTeamIdentifier || null,
                         awayTeamIdentifier: data.awayTeamIdentifier || null,
@@ -687,75 +715,50 @@ const cateringApp = ({ userProfileData }) => {
                     });
                 });
 
-                // Zoradíme podľa času začiatku (ak existuje), inak podľa ID
-                scheduledMatches.sort((a, b) => {
+                scheduledMatchesLocal.sort((a, b) => {
                     try {
-                        const ta = a.scheduledTime?.toDate
-                            ? a.scheduledTime.toDate().getTime()
-                            : 0;
-                        const tb = b.scheduledTime?.toDate
-                            ? b.scheduledTime.toDate().getTime()
-                            : 0;
+                        const ta = a.scheduledTime?.toDate ? a.scheduledTime.toDate().getTime() : 0;
+                        const tb = b.scheduledTime?.toDate ? b.scheduledTime.toDate().getTime() : 0;
                         if (ta !== tb) return ta - tb;
-                    } catch (e) {
-                        /* ignore */
-                    }
+                    } catch (e) { /* ignore */ }
                     return String(a.id).localeCompare(String(b.id));
                 });
 
-                // 🔥 NOVÉ: Vyfiltrujeme len zápasy, ktoré sa prekrývajú
-                // s niektorým stravovacím slotom (obed alebo večera).
-                // Slotmi sú definované v cateringTimes[dayKey].lunch/dinner
-                // a dĺžkou unitMinutes.
-
-                // 1) Zostavíme zoznam všetkých stravovacích slotov (v minútach)
-                // pre všetky dni turnaja.
-                const cateringSlotsByDay = {}; // { 'YYYY-MM-DD': [{fromMin, toMin}, ...] }
-
+                // Filtrovanie len zápasov prekrývajúcich sa so stravovacími slotmi
+                const cateringSlotsByDay = {};
                 (tournamentDays || []).forEach((day) => {
                     const t = cateringTimes[day.key] || {};
                     const daySlots = [];
 
-                    // Obed
                     if (hasValidMealRange(t.lunch, unitMinutes)) {
                         const built = buildMealSlots(t.lunch.from, t.lunch.to, unitMinutes);
                         built.forEach((s) => {
                             const fromMin = timeToMinutes(s.from);
                             const toMin = timeToMinutes(s.to);
-                            if (fromMin != null && toMin != null) {
-                                daySlots.push({ fromMin, toMin });
-                            }
+                            if (fromMin != null && toMin != null) daySlots.push({ fromMin, toMin });
                         });
                     }
 
-                    // Večera
                     if (hasValidMealRange(t.dinner, unitMinutes)) {
                         const built = buildMealSlots(t.dinner.from, t.dinner.to, unitMinutes);
                         built.forEach((s) => {
                             const fromMin = timeToMinutes(s.from);
                             const toMin = timeToMinutes(s.to);
-                            if (fromMin != null && toMin != null) {
-                                daySlots.push({ fromMin, toMin });
-                            }
+                            if (fromMin != null && toMin != null) daySlots.push({ fromMin, toMin });
                         });
                     }
 
                     cateringSlotsByDay[day.key] = daySlots;
                 });
 
-                // 2) Vyfiltrujeme zápasy – ponecháme len tie, ktoré sa prekrývajú
-                // s aspoň jedným slotom v danom dni.
-                const filteredScheduledMatches = scheduledMatches.filter((match) => {
+                const filteredScheduledMatches = scheduledMatchesLocal.filter((match) => {
                     if (!match.scheduledTime) return false;
-
                     let matchDate;
                     try {
                         matchDate = match.scheduledTime.toDate
                             ? match.scheduledTime.toDate()
                             : new Date(match.scheduledTime.seconds * 1000);
-                    } catch (e) {
-                        return false;
-                    }
+                    } catch (e) { return false; }
 
                     const matchDay = String(matchDate.getDate()).padStart(2, '0');
                     const matchMonth = String(matchDate.getMonth() + 1).padStart(2, '0');
@@ -765,145 +768,41 @@ const cateringApp = ({ userProfileData }) => {
                     const slotsForDay = cateringSlotsByDay[matchDayKey];
                     if (!slotsForDay || slotsForDay.length === 0) return false;
 
-                    // Trvanie zápasu
                     let matchDurationMin = match.duration;
                     if (matchDurationMin == null) {
-                        const category = categories.find(
-                            (c) => c.name === match.categoryName
-                        ) || categories.find((c) => c.id === match.categoryId);
+                        const category = categories.find((c) => c.name === match.categoryName)
+                            || categories.find((c) => c.id === match.categoryId);
                         if (category) {
                             const periods = category.periods || 2;
                             const periodDuration = category.periodDuration || 20;
                             const breakDuration = category.breakDuration || 2;
-                            matchDurationMin =
-                                (periodDuration + breakDuration) * periods - breakDuration;
+                            matchDurationMin = (periodDuration + breakDuration) * periods - breakDuration;
                         } else {
                             matchDurationMin = 0;
                         }
                     }
 
-                    const matchStartMin =
-                        matchDate.getHours() * 60 + matchDate.getMinutes();
+                    const matchStartMin = matchDate.getHours() * 60 + matchDate.getMinutes();
                     const matchEndMin = matchStartMin + matchDurationMin;
 
-                    // Skontrolujeme prekrytie s hociktorým slotom
                     return slotsForDay.some(
                         (slot) => matchStartMin < slot.toMin && matchEndMin > slot.fromMin
                     );
                 });
 
-                // 🔥 Nahradíme pôvodný zoznam vyfiltrovaným
-                scheduledMatches.length = 0;
-                filteredScheduledMatches.forEach((m) => scheduledMatches.push(m));                
-
-                setScheduledMatches(scheduledMatches);
-
-                scheduledMatches.forEach((match) => {
-                    // 🔥 Pre každý tím zvlášť vypíšeme, odkedy dokedy trvá zápas
-                    try {
-                        if (match.scheduledTime) {
-                            const matchDate = match.scheduledTime.toDate
-                                ? match.scheduledTime.toDate()
-                                : new Date(match.scheduledTime.seconds * 1000);
-
-                            // Dĺžka zápasu – použijeme duration, ak existuje,
-                            // inak dopočítame z kategórie (rovnako ako inde v projekte).
-                            let matchDurationMinutes = match.duration;
-
-                            if (matchDurationMinutes == null) {
-                                // 1) Skúsime podľa názvu kategórie
-                                let category = categories.find(
-                                    (c) => c.name === match.categoryName
-                                );
-                            
-                                // 2) Ak sa nenájde, skúsime podľa categoryId
-                                if (!category && match.categoryId) {
-                                    category = categories.find(
-                                        (c) => c.id === match.categoryId
-                                    );
-                                }
-                            
-                                if (category) {
-                                    const periods = category.periods;
-                                    const periodDuration = category.periodDuration;
-                                    const breakDuration = category.breakDuration;
-                                    matchDurationMinutes =
-                                        (periodDuration + breakDuration) * periods - breakDuration;
-                                } else {
-                                    // fallback – neznáma kategória
-                                    matchDurationMinutes = 0;
-                                    console.warn(
-                                        `[Stravovanie] Pre zápas ${match.id} sa nenašla kategória ` +
-                                        `"${match.categoryName}" (ID: ${match.categoryId}). Trvanie nebude možné dopočítať.`
-                                    );
-                                }
-                            }
-
-const startHours = String(matchDate.getHours()).padStart(2, '0');
-                            const startMinutes = String(matchDate.getMinutes()).padStart(2, '0');
-                            const startTimeStr = `${startHours}:${startMinutes}`;
-
-                            const endDate = new Date(
-                                matchDate.getTime() + matchDurationMinutes * 60000
-                            );
-                            const endHours = String(endDate.getHours()).padStart(2, '0');
-                            const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
-                            const endTimeStr = `${endHours}:${endMinutes}`;
-
-                            // 🔥 NOVÉ: Dátum zápasu vo formáte DD.MM.YYYY
-                            const matchDay = String(matchDate.getDate()).padStart(2, '0');
-                            const matchMonth = String(matchDate.getMonth() + 1).padStart(2, '0');
-                            const matchYear = matchDate.getFullYear();
-                            const matchDateStr = `${matchDay}.${matchMonth}.${matchYear}`;
-
-                            // 🔥 Pomocná funkcia: prevedie identifier na zobrazovaný názov tímu
-                            const resolveTeamDisplayName = (identifier) => {
-                                if (!identifier) return '';
-                                try {
-                                    if (
-                                        window.teamManager &&
-                                        typeof window.teamManager.getTeamNameByDisplayIdSync === 'function'
-                                    ) {
-                                        const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifier);
-                                        if (resolved) return resolved;
-                                    }
-                                } catch (e) {
-                                    /* ignore */
-                                }
-                                return identifier;
-                            };
-
-                            // 🔥 NOVÉ: Názov kategórie pre výpis (z match.categoryName)
-                            const categoryLabel = match.categoryName
-                                ? `[${match.categoryName}] `
-                                : '';
-
-                            if (match.homeTeamIdentifier) {
-                                const homeDisplayName = resolveTeamDisplayName(match.homeTeamIdentifier);
-                            }
-                            if (match.awayTeamIdentifier) {
-                                const awayDisplayName = resolveTeamDisplayName(match.awayTeamIdentifier);
-                            }
-                        }
-                    } catch (e) {
-                        console.error(
-                            '[Stravovanie] Chyba pri výpise času zápasu:',
-                            e
-                        );
-                    }
-                });
+                setScheduledMatches(filteredScheduledMatches);
             },
             (error) => {
-                console.error(
-                    '[Stravovanie] Chyba pri načítavaní naplánovaných zápasov:',
-                    error
-                );
+                console.error('[Stravovanie] Chyba pri načítavaní naplánovaných zápasov:', error);
             }
         );
 
         return () => unsubscribe();
     }, [categories, cateringTimes, unitMinutes, tournamentDays]);
 
+    // ============================================================
+    // 6) Až TERAZ môžu prísť skoré return-y
+    // ============================================================
     if (loading) {
         return React.createElement(
             'div',
@@ -929,13 +828,15 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
         );
     }
 
-    // Predpočítame sloty pre každý deň a každé jedlo.
+    // ============================================================
+    // 7) Zvyšok komponentu – render logika (už BEZ hookov!)
+    //    daySlots, slotCountFor, shouldShowMealType, atď.
+    // ============================================================
     const daySlots = {};
     tournamentDays.forEach((day) => {
         const t = cateringTimes[day.key] || {};
         const lunchTimes = t.lunch || null;
         const dinnerTimes = t.dinner || null;
-
         daySlots[day.key] = {
             lunch: hasValidMealRange(lunchTimes, unitMinutes)
                 ? buildMealSlots(lunchTimes.from, lunchTimes.to, unitMinutes)
@@ -951,13 +852,11 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
         return slots.length;
     };
 
-    // Pomocná funkcia: má sa daný typ jedla zobraziť?
     const shouldShowMealType = (mealType) => {
         if (!filterMealType) return true;
         return filterMealType === mealType;
     };
 
-    // Počet zobrazených stĺpcov pre daný deň (rešpektuje filter typu jedla)
     const visibleColumnCountForDay = (dayKey) => {
         const slots = daySlots[dayKey] || { lunch: [], dinner: [] };
         let count = 0;
@@ -966,81 +865,14 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
         return count;
     };
 
-    // 🔥 NOVÉ: Počet denných summary stĺpcov pre daný deň (obed spolu, večera spolu)
-    // Rešpektuje filter typu jedla.
     const dailySummaryColumnsForDay = (dayKey) => {
         const slots = daySlots[dayKey] || { lunch: [], dinner: [] };
         let count = 0;
-        // Obed summary stĺpec len ak existujú obedové sloty a zobrazujeme obed
         if (shouldShowMealType('lunch') && slots.lunch.length > 0) count += 1;
-        // Večera summary stĺpec len ak existujú večerové sloty a zobrazujeme večeru
         if (shouldShowMealType('dinner') && slots.dinner.length > 0) count += 1;
         return count;
     };
 
-    // 🔥 Načíta filtre z URL
-    const loadFiltersFromURL = () => {
-        const params = new URLSearchParams(window.location.search);
-
-        // Kategória: v URL sú medzery nahradené pomlčkami, takže ich vrátime späť
-        // (nahradíme pomlčky medzerami).
-        const categoryRaw = params.get('category') || '';
-        const categoryName = categoryRaw ? categoryRaw.replace(/-/g, ' ') : '';
-
-        const dayKey = params.get('day') || '';
-        const mealType = params.get('mealType') || '';
-
-        return { category: categoryName, day: dayKey, mealType };
-    };
-
-    // 🔥 Uloží filtre do URL
-    const updateURLWithFilters = (filters) => {
-        const params = new URLSearchParams();
-
-        // Kategória: medzery nahradíme pomlčkami, aby URL bola bezpečná.
-        if (filters.category) {
-            params.set('category', filters.category.replace(/\s+/g, '-'));
-        }
-        if (filters.day) params.set('day', filters.day);
-        if (filters.mealType) params.set('mealType', filters.mealType);
-
-        const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}${window.location.hash}`;
-        window.history.replaceState({}, '', newUrl);
-    };
-
-    // 🔥 Pri načítaní stránky aplikuj filter z URL
-    useEffect(() => {
-        if (availableCategories.length === 0 && visibleDays.length === 0) return;
-
-        const filters = loadFiltersFromURL();
-
-        if (filters.category && availableCategories.includes(filters.category)) {
-            setFilterCategory(filters.category);
-        }
-        if (filters.day && visibleDays.some((d) => d.key === filters.day)) {
-            setFilterDayKey(filters.day);
-        }
-        if (filters.mealType === 'lunch' || filters.mealType === 'dinner') {
-            setFilterMealType(filters.mealType);
-        }
-    }, [availableCategories, visibleDays]);
-
-    // 🔥 Pri každej zmene filtra aktualizuj URL
-    useEffect(() => {
-        if (availableCategories.length === 0 && visibleDays.length === 0) return;
-
-        const timeoutId = setTimeout(() => {
-            updateURLWithFilters({
-                category: filterCategory,
-                day: filterDayKey,
-                mealType: filterMealType,
-            });
-        }, 300);
-
-        return () => clearTimeout(timeoutId);
-    }, [filterCategory, filterDayKey, filterMealType, availableCategories, visibleDays]); 
-
-    // 🔥 NAJPRV vypočítame filteredDays (potrebné pre categoryHasVisibleColumns)
     const filteredDays = (filterDayKey
         ? visibleDays.filter((d) => d.key === filterDayKey)
         : visibleDays
