@@ -1115,19 +1115,14 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
         return place.capacity != null ? Number(place.capacity) : null;
     };
 
-    // 🔥 NOVÉ: Zistí, či tím hrá v danom čase (slotFrom – slotTo).
-    // Vráti true, ak má tím v tomto intervale naplánovaný zápas.
     const teamPlaysDuringSlot = (team, dayKey, slotFrom, slotTo) => {
         if (!team || !dayKey || !slotFrom || !slotTo) return false;
 
-        // Prevedieme slot na minúty
         const slotFromMin = timeToMinutes(slotFrom);
         const slotToMin = timeToMinutes(slotTo);
         if (slotFromMin == null || slotToMin == null) return false;
 
-        // Prejdeme všetky naplánované zápasy
         for (const match of scheduledMatches) {
-            // Musí ísť o rovnaký deň
             if (!match.scheduledTime) continue;
 
             let matchDate;
@@ -1146,46 +1141,39 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
 
             if (matchDayKey !== dayKey) continue;
 
-            // 🔥 Zistíme, či je tím súčasťou tohto zápasu.
-            // Použijeme identifier aj zobrazovaný názov (kvôli zhode s team.teamName).
-            const identifiers = [
+            // 🔥 OPRAVA: Porovnávame zobrazovaný názov tímu z userTeams
+            // s tým, čo vráti teamManager pre identifier zápasu.
+            const matchTeamIdentifiers = [
                 match.homeTeamIdentifier,
                 match.awayTeamIdentifier,
             ].filter(Boolean);
 
-            const teamIdentifiers = [
-                team.teamName,
-                team.identifier,
-            ].filter(Boolean);
+            const teamDisplayName = String(team.teamName || '').trim();
 
-            const isTeamInMatch = identifiers.some((id) =>
-                teamIdentifiers.some((tid) =>
-                    String(id).trim() === String(tid).trim()
-                )
-            );
-            // Fallback: porovnanie aj cez resolveTeamDisplayName
-            let isTeamInMatchFallback = false;
-            if (!isTeamInMatch && window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                try {
-                    const teamDisplay = window.teamManager.getTeamNameByDisplayIdSync(team.identifier || team.teamName);
-                    if (teamDisplay) {
-                        isTeamInMatchFallback = identifiers.some((id) => {
-                            try {
-                                const resolved = window.teamManager.getTeamNameByDisplayIdSync(id);
-                                return resolved && String(resolved).trim() === String(teamDisplay).trim();
-                            } catch (e) {
-                                return false;
-                            }
-                        });
+            const isTeamInMatch = matchTeamIdentifiers.some((identifier) => {
+                // 1) Priame porovnanie identifier vs teamName (ak by sa zhodou okolností rovnali)
+                if (String(identifier).trim() === teamDisplayName) return true;
+
+                // 2) Cez teamManager: identifier → zobrazovaný názov
+                if (
+                    window.teamManager &&
+                    typeof window.teamManager.getTeamNameByDisplayIdSync === 'function'
+                ) {
+                    try {
+                        const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifier);
+                        if (resolved && String(resolved).trim() === teamDisplayName) {
+                            return true;
+                        }
+                    } catch (e) {
+                        /* ignore */
                     }
-                } catch (e) {
-                    /* ignore */
                 }
-            }
-            if (!isTeamInMatch && !isTeamInMatchFallback) continue;
 
-            // 🔥 Zápas musí trvať aspoň čiastočne v slote.
-            // Použijeme trvanie zápasu (duration alebo dopočítané z kategórie).
+                return false;
+            });
+
+            if (!isTeamInMatch) continue;
+
             const matchStartMin =
                 matchDate.getHours() * 60 + matchDate.getMinutes();
 
@@ -1207,7 +1195,6 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
 
             const matchEndMin = matchStartMin + matchDurationMin;
 
-            // 🔥 Prekrytie intervalov: [matchStartMin, matchEndMin] a [slotFromMin, slotToMin]
             const overlaps = matchStartMin < slotToMin && matchEndMin > slotFromMin;
             if (overlaps) return true;
         }
