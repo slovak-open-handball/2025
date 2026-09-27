@@ -809,6 +809,8 @@ const cateringApp = ({ userProfileData }) => {
                 map.set(key, a);
             }
         });
+        console.log('[DEBUG] cateringAssignments total:', cateringAssignments.length);
+        console.log('[DEBUG] assignmentsBySlot map size:', map.size);
         console.log('[DEBUG] assignmentsBySlot keys:', Array.from(map.keys()));
         return map;
     }, [cateringAssignments]);
