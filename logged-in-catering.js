@@ -809,6 +809,7 @@ const cateringApp = ({ userProfileData }) => {
                 map.set(key, a);
             }
         });
+        console.log('[DEBUG] assignmentsBySlot keys:', Array.from(map.keys()));
         return map;
     }, [cateringAssignments]);
 
@@ -914,7 +915,11 @@ const cateringApp = ({ userProfileData }) => {
 
     const findCateringAssignment = (team, dayKey, mealType, slotFrom) => {
         const key = `${team.uid}|${team.teamIndex}|${dayKey}|${mealType}|${slotFrom}`;
-        return assignmentsBySlot.get(key) || null;
+        const result = assignmentsBySlot.get(key);
+        if (!result) {
+            console.log('[DEBUG] MISS:', key);
+        }
+        return result || null;
     };
 
     // 🔥 NOVÉ: Nájde superstructure priradenie pre konkrétnu bunku (kliknutý tím + deň + jedlo + slot)
