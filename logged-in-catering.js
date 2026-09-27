@@ -927,7 +927,64 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
 
     const visibleDays = tournamentDays.filter((day) => dayColumnCount(day.key) > 0);
 
-        // 🔥 Načíta filtre z URL
+    if (visibleDays.length === 0) {
+        return React.createElement(
+            'div',
+            { className: 'flex-grow flex justify-center items-start p-6' },
+            React.createElement(
+                'div',
+                { className: 'w-full max-w-7xl bg-white rounded-xl shadow-xl p-8' },
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-6' }, 'Stravovanie'),
+                React.createElement(
+                    'p',
+                    { className: 'text-center text-gray-500' },
+                    'Nie sú nastavené žiadne platné časové rozptyly pre stravovanie. Nastavte prosím časy obeda/večere a jednotku delenia.'
+                )
+            )
+        );
+    }
+
+    const slotCountFor = (dayKey, mealType) => {
+        const slots = daySlots[dayKey]?.[mealType] || [];
+        return slots.length;
+    };
+
+    // Pomocná funkcia: má sa daný typ jedla zobraziť?
+    const shouldShowMealType = (mealType) => {
+        if (!filterMealType) return true;
+        return filterMealType === mealType;
+    };
+
+    // Počet zobrazených stĺpcov pre daný deň (rešpektuje filter typu jedla)
+    const visibleColumnCountForDay = (dayKey) => {
+        const slots = daySlots[dayKey] || { lunch: [], dinner: [] };
+        let count = 0;
+        if (shouldShowMealType('lunch')) count += slots.lunch.length;
+        if (shouldShowMealType('dinner')) count += slots.dinner.length;
+        return count;
+    };
+
+    // 🔥 NOVÉ: Počet denných summary stĺpcov pre daný deň (obed spolu, večera spolu)
+    // Rešpektuje filter typu jedla.
+    const dailySummaryColumnsForDay = (dayKey) => {
+        const slots = daySlots[dayKey] || { lunch: [], dinner: [] };
+        let count = 0;
+        // Obed summary stĺpec len ak existujú obedové sloty a zobrazujeme obed
+        if (shouldShowMealType('lunch') && slots.lunch.length > 0) count += 1;
+        // Večera summary stĺpec len ak existujú večerové sloty a zobrazujeme večeru
+        if (shouldShowMealType('dinner') && slots.dinner.length > 0) count += 1;
+        return count;
+    };
+
+    const availableCategories = Array.from(
+        new Set(
+            userTeams
+                .map((t) => t.category)
+                .filter(Boolean)
+        )
+    ).sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
+
+    // 🔥 Načíta filtre z URL
     const loadFiltersFromURL = () => {
         const params = new URLSearchParams(window.location.search);
 
@@ -988,63 +1045,6 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
 
         return () => clearTimeout(timeoutId);
     }, [filterCategory, filterDayKey, filterMealType, availableCategories, visibleDays]); 
-
-    if (visibleDays.length === 0) {
-        return React.createElement(
-            'div',
-            { className: 'flex-grow flex justify-center items-start p-6' },
-            React.createElement(
-                'div',
-                { className: 'w-full max-w-7xl bg-white rounded-xl shadow-xl p-8' },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-6' }, 'Stravovanie'),
-                React.createElement(
-                    'p',
-                    { className: 'text-center text-gray-500' },
-                    'Nie sú nastavené žiadne platné časové rozptyly pre stravovanie. Nastavte prosím časy obeda/večere a jednotku delenia.'
-                )
-            )
-        );
-    }
-
-    const slotCountFor = (dayKey, mealType) => {
-        const slots = daySlots[dayKey]?.[mealType] || [];
-        return slots.length;
-    };
-
-    // Pomocná funkcia: má sa daný typ jedla zobraziť?
-    const shouldShowMealType = (mealType) => {
-        if (!filterMealType) return true;
-        return filterMealType === mealType;
-    };
-
-    // Počet zobrazených stĺpcov pre daný deň (rešpektuje filter typu jedla)
-    const visibleColumnCountForDay = (dayKey) => {
-        const slots = daySlots[dayKey] || { lunch: [], dinner: [] };
-        let count = 0;
-        if (shouldShowMealType('lunch')) count += slots.lunch.length;
-        if (shouldShowMealType('dinner')) count += slots.dinner.length;
-        return count;
-    };
-
-    // 🔥 NOVÉ: Počet denných summary stĺpcov pre daný deň (obed spolu, večera spolu)
-    // Rešpektuje filter typu jedla.
-    const dailySummaryColumnsForDay = (dayKey) => {
-        const slots = daySlots[dayKey] || { lunch: [], dinner: [] };
-        let count = 0;
-        // Obed summary stĺpec len ak existujú obedové sloty a zobrazujeme obed
-        if (shouldShowMealType('lunch') && slots.lunch.length > 0) count += 1;
-        // Večera summary stĺpec len ak existujú večerové sloty a zobrazujeme večeru
-        if (shouldShowMealType('dinner') && slots.dinner.length > 0) count += 1;
-        return count;
-    };
-
-    const availableCategories = Array.from(
-        new Set(
-            userTeams
-                .map((t) => t.category)
-                .filter(Boolean)
-        )
-    ).sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
 
     // 🔥 NAJPRV vypočítame filteredDays (potrebné pre categoryHasVisibleColumns)
     const filteredDays = (filterDayKey
