@@ -800,6 +800,18 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, [categories, cateringTimes, unitMinutes, tournamentDays]);
 
+    const assignmentsBySlot = React.useMemo(() => {
+        const map = new Map();
+        (cateringAssignments || []).forEach((a) => {
+            if (a.isSuperstructure === true) return;
+            const key = `${a.teamUid}|${a.teamIndex}|${a.dayKey}|${a.mealType}|${a.slotFrom}`;
+            if (!map.has(key)) {
+                map.set(key, a);
+            }
+        });
+        return map;
+    }, [cateringAssignments]);
+
     // ============================================================
     // 6) Až TERAZ môžu prísť skoré return-y
     // ============================================================
@@ -901,15 +913,8 @@ const cateringApp = ({ userProfileData }) => {
     };
 
     const findCateringAssignment = (team, dayKey, mealType, slotFrom) => {
-        return cateringAssignments.find(
-            (a) =>
-                a.teamUid === team.uid &&
-                a.teamIndex === team.teamIndex &&
-                (a.category === team.category || a.categoryName === team.category) &&
-                a.dayKey === dayKey &&
-                a.mealType === mealType &&
-                a.slotFrom === slotFrom
-        );
+        const key = `${team.uid}|${team.teamIndex}|${dayKey}|${mealType}|${slotFrom}`;
+        return assignmentsBySlot.get(key) || null;
     };
 
     // 🔥 NOVÉ: Nájde superstructure priradenie pre konkrétnu bunku (kliknutý tím + deň + jedlo + slot)
