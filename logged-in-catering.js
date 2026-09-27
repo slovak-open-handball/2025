@@ -793,7 +793,7 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
         );
 
         return () => unsubscribe();
-    }, [categories]);
+    }, [categories, cateringTimes, unitMinutes, tournamentDays]);
 
     if (loading) {
         return React.createElement(
