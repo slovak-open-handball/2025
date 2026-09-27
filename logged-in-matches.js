@@ -3258,6 +3258,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                     if (end > maxEnd) maxEnd = end;
                 });
     
+                // === KĽÚČOVÁ KONTROLA: carry-over len ak nadstavbový zápas
+                // začína BEZPROSTREDNE po skončení základných zápasov ===
+                // T.j. čas začiatku nadstavbového zápasu sa musí rovnať maxEnd
+                // (alebo byť v rámci tolerancie 0 minút).
+                if (extraStart !== maxEnd) return;
+    
                 // Vezmeme VŠETKY základné zápasy, ktoré končia presne v tomto maxEnd
                 // (môže ich byť viac, aj v rôznych halách).
                 const basicMatchesAtMaxEnd = relevantBasicMatches.filter(bm => {
