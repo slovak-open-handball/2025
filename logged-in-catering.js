@@ -2452,11 +2452,11 @@ const cateringApp = ({ userProfileData }) => {
                                                   }
                                               } else if (isPlaying) {
                                                   // 🔥 Žiadne priradenie + tím hrá → zablokovaná bunka
-                                                  cellClass += 'bg-gray-200 text-gray-500 cursor-not-allowed ';
+                                                  cellClass += 'bg-gray-100 text-gray-500 cursor-not-allowed ';
                                               } else {
                                                   cellClass += 'cursor-pointer ';
                                                   if (hasMealInPackage) {
-                                                      cellClass += 'text-gray-400 hover:bg-blue-50 ';
+                                                      cellClass += 'text-gray-500 hover:bg-blue-50 ';
                                                   } else {
                                                       cellClass += 'bg-gray-100 text-gray-500 hover:bg-green-50 ';
                                                   }
@@ -2564,11 +2564,11 @@ const cateringApp = ({ userProfileData }) => {
                                                       cellClass += 'font-bold ';
                                                   }
                                               } else if (isPlaying) {
-                                                  cellClass += 'bg-gray-200 text-gray-500 cursor-not-allowed ';
+                                                  cellClass += 'bg-gray-100 text-gray-500 cursor-not-allowed ';
                                               } else {
                                                   cellClass += 'cursor-pointer ';
                                                   if (hasMealInPackage) {
-                                                      cellClass += 'text-gray-400 hover:bg-blue-50 ';
+                                                      cellClass += 'text-gray-500 hover:bg-blue-50 ';
                                                   } else {
                                                       cellClass += 'bg-gray-100 text-gray-500 hover:bg-green-50 ';
                                                   }
