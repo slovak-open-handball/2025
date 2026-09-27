@@ -2667,22 +2667,22 @@ const cateringApp = ({ userProfileData }) => {
                                               const hasThickRight = isLastLunchCell;
                                           
                                               const isPlaying = teamPlaysDuringSlot(team, day.key, slot.from, slot.to);
-                                          
-                                              // 🔥 OPRAVA: pridaj tieto dva riadky
+
                                               const existing = findCateringAssignment(team, day.key, 'lunch', slot.from);
                                               const superstructureAssignment = findSuperstructureAssignmentForCell(team, day.key, 'lunch', slot.from);
-                                          
-                                              // 🔥 NOVÉ: Zisti, či superstructure tím (ak je v bunke) hrá v tomto slote
-                                              const superstructureIsPlayingForForceDash = superstructureAssignment
-                                                  ? superstructureTeamPlaysDuringSlot(
-                                                        superstructureAssignment.teamName || superstructureAssignment.teamIdentifier,
-                                                        superstructureAssignment.category,
-                                                        day.key,
-                                                        slot.from,
-                                                        slot.to
-                                                    )
-                                                  : false;
-                                          
+
+                                              // 🔥 NOVÉ: Zisti, či NIEKTORÉ superstructure priradenie v tomto RIADKU hrá v tomto slote
+                                              const allSuperstructureInRow = findAllSuperstructureAssignmentsForRow(team, day.key, 'lunch');
+                                              const superstructureIsPlayingForForceDash = allSuperstructureInRow.some((ss) =>
+                                                  superstructureTeamPlaysDuringSlot(
+                                                      ss.teamName || ss.teamIdentifier,
+                                                      ss.category,
+                                                      day.key,
+                                                      slot.from,
+                                                      slot.to
+                                                  )
+                                              );
+
                                               const hasAnyAssignmentInRow = teamHasAnyAssignmentInRow(team, day.key, 'lunch');
                                               const forceDash = (isPlaying && hasAnyAssignmentInRow) || superstructureIsPlayingForForceDash;
                                           
@@ -2832,25 +2832,23 @@ const cateringApp = ({ userProfileData }) => {
                                               const hasThickRight = isLastDinnerCell;
                                           
                                               const isPlaying = teamPlaysDuringSlot(team, day.key, slot.from, slot.to);
-                                          
+
                                               const existing = findCateringAssignment(team, day.key, 'dinner', slot.from);
                                               const superstructureAssignment = findSuperstructureAssignmentForCell(team, day.key, 'dinner', slot.from);
-                                          
-                                              // 🔥 NOVÉ: Zisti, či superstructure tím (ak je v bunke) hrá v tomto slote
-                                              const superstructureIsPlayingForForceDash = superstructureAssignment
-                                                  ? superstructureTeamPlaysDuringSlot(
-                                                        superstructureAssignment.teamName || superstructureAssignment.teamIdentifier,
-                                                        superstructureAssignment.category,
-                                                        day.key,
-                                                        slot.from,
-                                                        slot.to
-                                                    )
-                                                  : false;
-                                          
+
+                                              // 🔥 NOVÉ: Zisti, či NIEKTORÉ superstructure priradenie v tomto RIADKU hrá v tomto slote
+                                              const allSuperstructureInRow = findAllSuperstructureAssignmentsForRow(team, day.key, 'dinner');
+                                              const superstructureIsPlayingForForceDash = allSuperstructureInRow.some((ss) =>
+                                                  superstructureTeamPlaysDuringSlot(
+                                                      ss.teamName || ss.teamIdentifier,
+                                                      ss.category,
+                                                      day.key,
+                                                      slot.from,
+                                                      slot.to
+                                                  )
+                                              );
+
                                               const hasAnyAssignmentInRow = teamHasAnyAssignmentInRow(team, day.key, 'dinner');
-                                          
-                                              // 🔥 NOVÉ: forceDash ak kliknutý tím hrá a má priradenie v riadku,
-                                              // ALEBO ak superstructure tím hrá
                                               const forceDash = (isPlaying && hasAnyAssignmentInRow) || superstructureIsPlayingForForceDash;
                                           
                                               const effectiveExisting = forceDash ? null : existing;
