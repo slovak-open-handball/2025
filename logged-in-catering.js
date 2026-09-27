@@ -247,6 +247,32 @@ const cateringApp = ({ userProfileData }) => {
     const [categories, setCategories] = useState([]);
     const [scheduledMatches, setScheduledMatches] = useState([]);
 
+    // 🔥 availableCategories a visibleDays musia byť pred skorými returnmi
+    // a musia byť stabilné (useMemo), aby ich mohli useEffect hooky používať.
+    const availableCategories = React.useMemo(() => {
+        return Array.from(
+            new Set(
+                userTeams.map((t) => t.category).filter(Boolean)
+            )
+        ).sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
+    }, [userTeams]);
+
+    const visibleDays = React.useMemo(() => {
+        if (!tournamentDays || tournamentDays.length === 0) return [];
+        return tournamentDays.filter((day) => {
+            const t = cateringTimes[day.key] || {};
+            const lunchTimes = t.lunch || null;
+            const dinnerTimes = t.dinner || null;
+            const lunchSlots = hasValidMealRange(lunchTimes, unitMinutes)
+                ? buildMealSlots(lunchTimes.from, lunchTimes.to, unitMinutes)
+                : [];
+            const dinnerSlots = hasValidMealRange(dinnerTimes, unitMinutes)
+                ? buildMealSlots(dinnerTimes.from, dinnerTimes.to, unitMinutes)
+                : [];
+            return lunchSlots.length + dinnerSlots.length > 0;
+        });
+    }, [tournamentDays, cateringTimes, unitMinutes]);
+
     // Načítanie nastavení turnaja z Firestore
     useEffect(() => {
         if (!window.db) {
@@ -920,30 +946,6 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
         };
     });
 
-    const dayColumnCount = (dayKey) => {
-        const slots = daySlots[dayKey] || { lunch: [], dinner: [] };
-        return slots.lunch.length + slots.dinner.length;
-    };
-
-    const visibleDays = tournamentDays.filter((day) => dayColumnCount(day.key) > 0);
-
-    if (visibleDays.length === 0) {
-        return React.createElement(
-            'div',
-            { className: 'flex-grow flex justify-center items-start p-6' },
-            React.createElement(
-                'div',
-                { className: 'w-full max-w-7xl bg-white rounded-xl shadow-xl p-8' },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-6' }, 'Stravovanie'),
-                React.createElement(
-                    'p',
-                    { className: 'text-center text-gray-500' },
-                    'Nie sú nastavené žiadne platné časové rozptyly pre stravovanie. Nastavte prosím časy obeda/večere a jednotku delenia.'
-                )
-            )
-        );
-    }
-
     const slotCountFor = (dayKey, mealType) => {
         const slots = daySlots[dayKey]?.[mealType] || [];
         return slots.length;
@@ -975,14 +977,6 @@ const startHours = String(matchDate.getHours()).padStart(2, '0');
         if (shouldShowMealType('dinner') && slots.dinner.length > 0) count += 1;
         return count;
     };
-
-    const availableCategories = Array.from(
-        new Set(
-            userTeams
-                .map((t) => t.category)
-                .filter(Boolean)
-        )
-    ).sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
 
     // 🔥 Načíta filtre z URL
     const loadFiltersFromURL = () => {
