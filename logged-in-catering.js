@@ -304,23 +304,30 @@ const cateringApp = ({ userProfileData }) => {
     // 4) URL useEffect-y
     // ============================================================
     useEffect(() => {
-        if (availableCategories.length === 0 && visibleDays.length === 0) return;
+        // Počkáme, kým sú načítané všetky potrebné dáta
+        if (availableCategories.length === 0 && tournamentDays.length === 0) return;
+        if (!unitMinutes && Object.keys(cateringTimes).length === 0) return;
 
         const filters = loadFiltersFromURL();
 
         if (filters.category && availableCategories.includes(filters.category)) {
             setFilterCategory(filters.category);
         }
-        if (filters.day && visibleDays.some((d) => d.key === filters.day)) {
+
+        // Pre deň kontrolujeme priamo tournamentDays (nie visibleDays),
+        // pretože visibleDays závisí od cateringTimes a unitMinutes,
+        // ktoré sa môžu načítať neskôr.
+        if (filters.day && tournamentDays.some((d) => d.key === filters.day)) {
             setFilterDayKey(filters.day);
         }
+
         if (filters.mealType === 'lunch' || filters.mealType === 'dinner') {
             setFilterMealType(filters.mealType);
         }
-    }, [availableCategories, visibleDays]);
+    }, [availableCategories, tournamentDays, cateringTimes, unitMinutes]);
 
     useEffect(() => {
-        if (availableCategories.length === 0 && visibleDays.length === 0) return;
+        if (availableCategories.length === 0 && tournamentDays.length === 0) return;
 
         const timeoutId = setTimeout(() => {
             updateURLWithFilters({
@@ -331,7 +338,7 @@ const cateringApp = ({ userProfileData }) => {
         }, 300);
 
         return () => clearTimeout(timeoutId);
-    }, [filterCategory, filterDayKey, filterMealType, availableCategories, visibleDays]);
+    }, [filterCategory, filterDayKey, filterMealType, availableCategories, tournamentDays]);
 
     // ============================================================
     // 5) Data useEffect-y – Firestore
