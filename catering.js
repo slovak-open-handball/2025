@@ -241,6 +241,8 @@ const buildMealSlots = (from, to, unitMinutes) => {
 
 // ============================================================
 // KĽÚČOVÁ FUNKCIA: Získa namapovaný názov tímu
+// Vráti buď namapovaný názov, alebo PÔVODNÝ názov (ak mapovanie zlyhalo).
+// Nikdy nevráti null/undefined/"null".
 // ============================================================
 const getMappedNameForTeam = async (categoryName, teamName) => {
     if (!teamName) return teamName;
@@ -251,11 +253,21 @@ const getMappedNameForTeam = async (categoryName, teamName) => {
     }
     candidates.push(teamName);
 
+    // Pomocná funkcia: skontroluj, či je hodnota "platná"
+    const isValidMappedValue = (val, input) => {
+        if (val === null || val === undefined) return false;
+        const s = String(val).trim();
+        if (!s) return false;
+        if (s === 'null' || s === 'undefined') return false;
+        if (s === String(input)) return false; // rovnaké ako vstup → nemapované
+        return true;
+    };
+
     // 1) Skús window.teamNames
     if (window.teamNames && typeof window.teamNames === 'object') {
         for (const key of candidates) {
             const val = window.teamNames[key];
-            if (val && val !== key && val !== 'null' && val !== 'undefined') {
+            if (isValidMappedValue(val, key)) {
                 return val;
             }
         }
@@ -269,7 +281,7 @@ const getMappedNameForTeam = async (categoryName, teamName) => {
         for (const key of candidates) {
             try {
                 const mapped = await window.matchTracker.getTeamNameByDisplayId(key);
-                if (mapped && mapped !== key && mapped !== 'null' && mapped !== 'undefined') {
+                if (isValidMappedValue(mapped, key)) {
                     return mapped;
                 }
             } catch (e) {
@@ -278,6 +290,7 @@ const getMappedNameForTeam = async (categoryName, teamName) => {
         }
     }
 
+    // Mapovanie zlyhalo → vráť pôvodný názov
     return teamName;
 };
 
@@ -293,9 +306,7 @@ const cateringApp = ({ userProfileData }) => {
     const [filterDayKey, setFilterDayKey] = useState('');
     const [filterMealType, setFilterMealType] = useState('');
     const [sortMode, setSortMode] = useState('chronological');
-
     const [packagesList, setPackagesList] = useState([]);
-
     const [teamNameMap, setTeamNameMap] = useState({});
 
     const cateringAssignmentsRef = useRef([]);
@@ -304,11 +315,8 @@ const cateringApp = ({ userProfileData }) => {
     }, [cateringAssignments]);
 
     const availableCategories = React.useMemo(() => {
-        return Array.from(
-            new Set(
-                userTeams.map((t) => t.category).filter(Boolean)
-            )
-        ).sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
+        return Array.from(new Set(userTeams.map((t) => t.category).filter(Boolean)))
+            .sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
     }, [userTeams]);
 
     const visibleDays = React.useMemo(() => {
@@ -317,12 +325,8 @@ const cateringApp = ({ userProfileData }) => {
             const t = cateringTimes[day.key] || {};
             const lunchTimes = t.lunch || null;
             const dinnerTimes = t.dinner || null;
-            const lunchSlots = hasValidMealRange(lunchTimes, unitMinutes)
-                ? buildMealSlots(lunchTimes.from, lunchTimes.to, unitMinutes)
-                : [];
-            const dinnerSlots = hasValidMealRange(dinnerTimes, unitMinutes)
-                ? buildMealSlots(dinnerTimes.from, dinnerTimes.to, unitMinutes)
-                : [];
+            const lunchSlots = hasValidMealRange(lunchTimes, unitMinutes) ? buildMealSlots(lunchTimes.from, lunchTimes.to, unitMinutes) : [];
+            const dinnerSlots = hasValidMealRange(dinnerTimes, unitMinutes) ? buildMealSlots(dinnerTimes.from, dinnerTimes.to, unitMinutes) : [];
             return lunchSlots.length + dinnerSlots.length > 0;
         });
     }, [tournamentDays, cateringTimes, unitMinutes]);
@@ -339,14 +343,10 @@ const cateringApp = ({ userProfileData }) => {
 
     const updateURLWithFilters = (filters) => {
         const params = new URLSearchParams();
-        if (filters.category) {
-            params.set('category', filters.category.replace(/\s+/g, '-'));
-        }
+        if (filters.category) params.set('category', filters.category.replace(/\s+/g, '-'));
         if (filters.day) params.set('day', filters.day);
         if (filters.mealType) params.set('mealType', filters.mealType);
-        if (filters.sort && filters.sort !== 'chronological') {
-            params.set('sort', filters.sort);
-        }
+        if (filters.sort && filters.sort !== 'chronological') params.set('sort', filters.sort);
         const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}${window.location.hash}`;
         window.history.replaceState({}, '', newUrl);
     };
@@ -354,38 +354,18 @@ const cateringApp = ({ userProfileData }) => {
     useEffect(() => {
         if (availableCategories.length === 0 && tournamentDays.length === 0) return;
         if (!unitMinutes && Object.keys(cateringTimes).length === 0) return;
-
         const filters = loadFiltersFromURL();
-
-        if (filters.category && availableCategories.includes(filters.category)) {
-            setFilterCategory(filters.category);
-        }
-
-        if (filters.day && tournamentDays.some((d) => d.key === filters.day)) {
-            setFilterDayKey(filters.day);
-        }
-
-        if (filters.mealType === 'lunch' || filters.mealType === 'dinner') {
-            setFilterMealType(filters.mealType);
-        }
-
-        if (filters.sort === 'team' || filters.sort === 'chronological') {
-            setSortMode(filters.sort);
-        }
+        if (filters.category && availableCategories.includes(filters.category)) setFilterCategory(filters.category);
+        if (filters.day && tournamentDays.some((d) => d.key === filters.day)) setFilterDayKey(filters.day);
+        if (filters.mealType === 'lunch' || filters.mealType === 'dinner') setFilterMealType(filters.mealType);
+        if (filters.sort === 'team' || filters.sort === 'chronological') setSortMode(filters.sort);
     }, [availableCategories, tournamentDays, cateringTimes, unitMinutes]);
 
     useEffect(() => {
         if (availableCategories.length === 0 && tournamentDays.length === 0) return;
-
         const timeoutId = setTimeout(() => {
-            updateURLWithFilters({
-                category: filterCategory,
-                day: filterDayKey,
-                mealType: filterMealType,
-                sort: sortMode,
-            });
+            updateURLWithFilters({ category: filterCategory, day: filterDayKey, mealType: filterMealType, sort: sortMode });
         }, 300);
-
         return () => clearTimeout(timeoutId);
     }, [filterCategory, filterDayKey, filterMealType, sortMode, availableCategories, tournamentDays]);
 
@@ -393,155 +373,108 @@ const cateringApp = ({ userProfileData }) => {
     // Data useEffect-y – Firestore
     // ============================================================
     useEffect(() => {
-        if (!window.db) {
-            setLoading(false);
-            return;
-        }
-
+        if (!window.db) { setLoading(false); return; }
         const settingsDocRef = doc(window.db, 'settings', 'registration');
-
-        const unsubscribe = onSnapshot(
-            settingsDocRef,
-            (docSnapshot) => {
-                if (docSnapshot.exists()) {
-                    const data = docSnapshot.data();
-                    const arrivalDate = data.arrivalDate ? data.arrivalDate.toDate() : null;
-                    const tournamentEnd = data.tournamentEnd ? data.tournamentEnd.toDate() : null;
-                    const days = buildTournamentDays(arrivalDate, tournamentEnd);
-                    setTournamentDays(days);
-                } else {
-                    setTournamentDays([]);
-                }
-                setLoading(false);
-            },
-            (error) => {
-                window.showGlobalNotification('Nepodarilo sa načítať nastavenia turnaja.', 'error');
-                setLoading(false);
+        const unsubscribe = onSnapshot(settingsDocRef, (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                const data = docSnapshot.data();
+                const arrivalDate = data.arrivalDate ? data.arrivalDate.toDate() : null;
+                const tournamentEnd = data.tournamentEnd ? data.tournamentEnd.toDate() : null;
+                setTournamentDays(buildTournamentDays(arrivalDate, tournamentEnd));
+            } else {
+                setTournamentDays([]);
             }
-        );
-
+            setLoading(false);
+        }, (error) => {
+            window.showGlobalNotification('Nepodarilo sa načítať nastavenia turnaja.', 'error');
+            setLoading(false);
+        });
         return () => unsubscribe();
     }, []);
 
     useEffect(() => {
         if (!window.db) return;
-
         const cateringDocRef = doc(window.db, 'settings', 'catering');
-
-        const unsubscribe = onSnapshot(
-            cateringDocRef,
-            (snap) => {
-                if (snap.exists()) {
-                    const data = snap.data() || {};
-                    setCateringTimes(data.times || {});
-                    setUnitMinutes(data.unitMinutes != null ? String(data.unitMinutes) : '');
-                } else {
-                    setCateringTimes({});
-                    setUnitMinutes('');
-                }
-            },
-            (error) => {
-                window.showGlobalNotification('Nepodarilo sa načítať nastavenia stravovania.', 'error');
+        const unsubscribe = onSnapshot(cateringDocRef, (snap) => {
+            if (snap.exists()) {
+                const data = snap.data() || {};
+                setCateringTimes(data.times || {});
+                setUnitMinutes(data.unitMinutes != null ? String(data.unitMinutes) : '');
+            } else {
+                setCateringTimes({});
+                setUnitMinutes('');
             }
-        );
-
+        }, (error) => {
+            window.showGlobalNotification('Nepodarilo sa načítať nastavenia stravovania.', 'error');
+        });
         return () => unsubscribe();
     }, []);
 
     useEffect(() => {
         if (!window.db) return;
-
         const usersRef = collection(window.db, 'users');
-
-        const unsubscribe = onSnapshot(
-            usersRef,
-            async () => {
-                try {
-                    const teams = await loadUserTeams(window.db);
-                    setUserTeams(teams);
-                } catch (err) {
-                    window.showGlobalNotification('Nepodarilo sa načítať tímy.', 'error');
-                }
-            },
-            (error) => { }
-        );
-
+        const unsubscribe = onSnapshot(usersRef, async () => {
+            try {
+                const teams = await loadUserTeams(window.db);
+                setUserTeams(teams);
+            } catch (err) {
+                window.showGlobalNotification('Nepodarilo sa načítať tímy.', 'error');
+            }
+        }, (error) => { });
         return () => unsubscribe();
     }, []);
 
     useEffect(() => {
         if (!window.db) return;
-
-        const unsubscribe = onSnapshot(
-            collection(window.db, 'places'),
-            (snapshot) => {
-                const places = [];
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    if (data.type !== 'stravovanie') return;
-                    places.push({
-                        id: docSnap.id,
-                        name: data.name || '(bez názvu)',
-                        headerColor: data.headerColor || '#1e40af',
-                        headerTextColor: data.headerTextColor || '#000000',
-                        capacity: data.capacity != null ? Number(data.capacity) : null,
-                    });
+        const unsubscribe = onSnapshot(collection(window.db, 'places'), (snapshot) => {
+            const places = [];
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                if (data.type !== 'stravovanie') return;
+                places.push({
+                    id: docSnap.id,
+                    name: data.name || '(bez názvu)',
+                    headerColor: data.headerColor || '#1e40af',
+                    headerTextColor: data.headerTextColor || '#000000',
+                    capacity: data.capacity != null ? Number(data.capacity) : null,
                 });
-                places.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
-                setCateringPlaces(places);
-            },
-            (error) => { }
-        );
-
+            });
+            places.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
+            setCateringPlaces(places);
+        }, (error) => { });
         return () => unsubscribe();
     }, []);
 
     useEffect(() => {
         if (!window.db) return;
-
         const packagesCollectionRef = collection(window.db, 'settings', 'packages', 'list');
-
-        const unsubscribe = onSnapshot(
-            packagesCollectionRef,
-            (snapshot) => {
-                const items = [];
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data() || {};
-                    items.push({
-                        id: docSnap.id,
-                        name: data.name || '',
-                        price: data.price || 0,
-                        meals: data.meals || {},
-                        accommodationTypes: data.accommodationTypes || [],
-                    });
+        const unsubscribe = onSnapshot(packagesCollectionRef, (snapshot) => {
+            const items = [];
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data() || {};
+                items.push({
+                    id: docSnap.id,
+                    name: data.name || '',
+                    price: data.price || 0,
+                    meals: data.meals || {},
+                    accommodationTypes: data.accommodationTypes || [],
                 });
-                setPackagesList(items);
-            },
-            (error) => { }
-        );
-
+            });
+            setPackagesList(items);
+        }, (error) => { });
         return () => unsubscribe();
     }, []);
 
     useEffect(() => {
         if (!window.db) return;
-
-        const unsubscribe = onSnapshot(
-            collection(window.db, 'catering'),
-            (snapshot) => {
-                const items = [];
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    items.push({
-                        id: docSnap.id,
-                        ...data,
-                    });
-                });
-                setCateringAssignments(items);
-            },
-            (error) => { }
-        );
-
+        const unsubscribe = onSnapshot(collection(window.db, 'catering'), (snapshot) => {
+            const items = [];
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                items.push({ id: docSnap.id, ...data });
+            });
+            setCateringAssignments(items);
+        }, (error) => { });
         return () => unsubscribe();
     }, []);
 
@@ -550,43 +483,28 @@ const cateringApp = ({ userProfileData }) => {
     // ============================================================
     const triggerTeamNameRemap = async () => {
         const assignments = cateringAssignmentsRef.current || [];
-
         const pairsMap = new Map();
-
         assignments.forEach((a) => {
             if (a.isSuperstructure !== true) return;
             const cat = cleanCategory(a.category || a.categoryName || '');
             const tn = String(a.teamName || '').trim();
             if (!cat || !tn) return;
             const key = `${cat}||${tn}`;
-            if (!pairsMap.has(key)) {
-                pairsMap.set(key, { category: cat, teamName: tn });
-            }
+            if (!pairsMap.has(key)) pairsMap.set(key, { category: cat, teamName: tn });
         });
-
         if (pairsMap.size === 0) return;
-
         const newMap = {};
-
         for (const [key, pair] of pairsMap.entries()) {
             try {
                 const mapped = await getMappedNameForTeam(pair.category, pair.teamName);
-                if (mapped && mapped !== pair.teamName) {
-                    newMap[key] = mapped;
-                }
-            } catch (e) {
-                // ignore
-            }
+                if (mapped && mapped !== pair.teamName) newMap[key] = mapped;
+            } catch (e) { }
         }
-
         if (Object.keys(newMap).length > 0) {
             setTeamNameMap((prev) => {
                 let changed = false;
                 for (const k of Object.keys(newMap)) {
-                    if (prev[k] !== newMap[k]) {
-                        changed = true;
-                        break;
-                    }
+                    if (prev[k] !== newMap[k]) { changed = true; break; }
                 }
                 if (!changed) return prev;
                 return { ...prev, ...newMap };
@@ -594,58 +512,37 @@ const cateringApp = ({ userProfileData }) => {
         }
     };
 
-    // Polling každých 800 ms
     useEffect(() => {
-        const runRemap = () => {
-            triggerTeamNameRemap();
-        };
-
+        const runRemap = () => { triggerTeamNameRemap(); };
         runRemap();
         const intervalId = setInterval(runRemap, 800);
         return () => clearInterval(intervalId);
     }, []);
 
-    // Listener na matches – pri zmene na completed
     const prevMatchStatusesRef = useRef({});
 
     useEffect(() => {
         if (!window.db) return;
-
         const matchesRef = collection(window.db, 'matches');
-
         const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
             let shouldRemap = false;
-
             snapshot.docChanges().forEach((change) => {
                 const matchId = change.doc.id;
                 const data = change.doc.data() || {};
                 const newStatus = data.status || 'scheduled';
                 const oldStatus = prevMatchStatusesRef.current[matchId];
-
-                if (newStatus === 'completed' && oldStatus !== 'completed') {
-                    shouldRemap = true;
-                }
-
+                if (newStatus === 'completed' && oldStatus !== 'completed') shouldRemap = true;
                 prevMatchStatusesRef.current[matchId] = newStatus;
             });
-
-            if (shouldRemap) {
-                triggerTeamNameRemap();
-            }
+            if (shouldRemap) triggerTeamNameRemap();
         }, (error) => { });
-
         return () => unsubscribe();
     }, []);
 
-    // Globálne eventy matchTrackera
     useEffect(() => {
-        const handleMappingReady = () => {
-            triggerTeamNameRemap();
-        };
-
+        const handleMappingReady = () => { triggerTeamNameRemap(); };
         window.addEventListener('teamNameMappingReady', handleMappingReady);
         window.addEventListener('teamNamesReplaced', handleMappingReady);
-
         return () => {
             window.removeEventListener('teamNameMappingReady', handleMappingReady);
             window.removeEventListener('teamNamesReplaced', handleMappingReady);
@@ -661,9 +558,7 @@ const cateringApp = ({ userProfileData }) => {
             if (a.isSuperstructure === true) return;
             const cat = cleanCategory(a.category || a.categoryName || '');
             const key = `${a.teamUid}|${a.teamIndex}|${cat}|${a.dayKey}|${a.mealType}|${a.slotFrom}`;
-            if (!map.has(key)) {
-                map.set(key, a);
-            }
+            if (!map.has(key)) map.set(key, a);
         });
         return map;
     }, [cateringAssignments]);
@@ -675,12 +570,8 @@ const cateringApp = ({ userProfileData }) => {
             const lunchTimes = t.lunch || null;
             const dinnerTimes = t.dinner || null;
             result[day.key] = {
-                lunch: hasValidMealRange(lunchTimes, unitMinutes)
-                    ? buildMealSlots(lunchTimes.from, lunchTimes.to, unitMinutes)
-                    : [],
-                dinner: hasValidMealRange(dinnerTimes, unitMinutes)
-                    ? buildMealSlots(dinnerTimes.from, dinnerTimes.to, unitMinutes)
-                    : [],
+                lunch: hasValidMealRange(lunchTimes, unitMinutes) ? buildMealSlots(lunchTimes.from, lunchTimes.to, unitMinutes) : [],
+                dinner: hasValidMealRange(dinnerTimes, unitMinutes) ? buildMealSlots(dinnerTimes.from, dinnerTimes.to, unitMinutes) : [],
             };
         });
         return result;
@@ -710,7 +601,12 @@ const cateringApp = ({ userProfileData }) => {
     const getMappedTeamName = (category, teamName) => {
         if (!teamName) return teamName;
         const key = `${category}||${teamName}`;
-        return teamNameMap[key] || teamName;
+        const val = teamNameMap[key];
+        // Ak je v mape platná hodnota, vráť ju
+        if (val === null || val === undefined) return teamName;
+        const s = String(val).trim();
+        if (!s || s === 'null' || s === 'undefined') return teamName;
+        return val;
     };
 
     const shouldShowMealType = (mealType) => {
@@ -736,7 +632,6 @@ const cateringApp = ({ userProfileData }) => {
             }
         }
 
-        // 1) Skús podľa kategórie + kandidáta
         for (const cand of candidates) {
             if (!cand) continue;
             const found = userTeams.find(t =>
@@ -746,7 +641,6 @@ const cateringApp = ({ userProfileData }) => {
             if (found) return { team: found, wasFound: true };
         }
 
-        // 2) Fallback – skús bez ohľadu na kategóriu
         for (const cand of candidates) {
             if (!cand) continue;
             const found = userTeams.find(t => String(t.teamName).trim() === cand);
@@ -756,7 +650,6 @@ const cateringApp = ({ userProfileData }) => {
         return { team: null, wasFound: false };
     };
 
-    // 🔥 Pomocná funkcia: Má tím v balíčku daný typ stravovania v danom dni?
     const teamHasMealInPackage = (team, dayKey, mealType) => {
         if (!team) return false;
         if (!team.packageName) return true;
@@ -773,10 +666,7 @@ const cateringApp = ({ userProfileData }) => {
     // ============================================================
     const assignmentRows = React.useMemo(() => {
         const rows = [];
-
-        const daysToUse = filterDayKey
-            ? visibleDays.filter((d) => d.key === filterDayKey)
-            : visibleDays;
+        const daysToUse = filterDayKey ? visibleDays.filter((d) => d.key === filterDayKey) : visibleDays;
 
         filteredTeams.forEach((team) => {
             daysToUse.forEach((day) => {
@@ -789,7 +679,6 @@ const cateringApp = ({ userProfileData }) => {
                         const ss = findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
 
                         if (existing) {
-                            // Klasické priradenie – kontrolujeme balíček kliknutého tímu
                             if (!teamHasMealInPackage(team, day.key, mealType)) return;
 
                             rows.push({
@@ -811,15 +700,24 @@ const cateringApp = ({ userProfileData }) => {
                         }
 
                         if (ss) {
-                            // Superstructure – najprv namapujeme názov
                             const ssCategory = cleanCategory(ss.category || ss.categoryName || '');
                             const ssOriginalTeamName = String(ss.teamName || '').trim();
-                            const ssMappedName = getMappedTeamName(ssCategory, ssOriginalTeamName);
+                            let ssMappedName = getMappedTeamName(ssCategory, ssOriginalTeamName);
 
-                            // 🔥 Zistíme, či sa mapovanie reálne podarilo
-                            const wasMapped = ssMappedName !== ssOriginalTeamName;
+                            // 🔥 Ak je ssMappedName null/undefined/"null" alebo prázdny, použi pôvodný názov
+                            if (
+                                ssMappedName === null ||
+                                ssMappedName === undefined ||
+                                String(ssMappedName).trim() === '' ||
+                                String(ssMappedName).trim() === 'null' ||
+                                String(ssMappedName).trim() === 'undefined'
+                            ) {
+                                ssMappedName = ssOriginalTeamName;
+                            }
 
-                            // Hľadáme superstructure tím v userTeams
+                            // 🔥 wasMapped = true len ak sa názov REÁLNE zmenil
+                            const wasMapped = String(ssMappedName).trim() !== ssOriginalTeamName;
+
                             const { team: ssTeam, wasFound: ssTeamFound } = findSsTeamInUserTeams(
                                 ssCategory,
                                 ssOriginalTeamName,
@@ -829,16 +727,15 @@ const cateringApp = ({ userProfileData }) => {
                             if (ssTeamFound && ssTeam) {
                                 // Tím sme našli → skontrolujeme balíček
                                 if (!teamHasMealInPackage(ssTeam, day.key, mealType)) {
-                                    return; // nemá dané stravovanie v balíčku → nezobrazujeme
+                                    return;
                                 }
                             } else {
                                 // Tím sme nenašli
-                                // Ak mapovanie ZLYHALO (názov je pôvodný), riadok ZOBRAZÍME
-                                // Ak mapovanie PREBEHLO, ale tím nie je v userTeams, riadok NEZOBRAZÍME
+                                // Ak mapovanie PREBEHLO, ale tím nie je v userTeams → nezobrazujeme
                                 if (wasMapped) {
                                     return;
                                 }
-                                // wasMapped === false → zobrazíme s pôvodným názvom
+                                // Ak mapovanie ZLYHALO (názov je pôvodný) → zobrazíme
                             }
 
                             rows.push({
@@ -867,73 +764,44 @@ const cateringApp = ({ userProfileData }) => {
             rows.sort((a, b) => {
                 const catCmp = (a.category || '').localeCompare(b.category || '', 'sk', { sensitivity: 'base' });
                 if (catCmp !== 0) return catCmp;
-
                 const teamCmp = (a.teamName || '').localeCompare(b.teamName || '', 'sk', { sensitivity: 'base' });
                 if (teamCmp !== 0) return teamCmp;
-
                 if (a.daySort !== b.daySort) return a.daySort - b.daySort;
-
                 const am = timeToMinutes(a.slotFrom);
                 const bm = timeToMinutes(b.slotFrom);
                 if (am != null && bm != null && am !== bm) return am - bm;
-
-                if (a.mealType !== b.mealType) {
-                    return a.mealType === 'lunch' ? -1 : 1;
-                }
+                if (a.mealType !== b.mealType) return a.mealType === 'lunch' ? -1 : 1;
                 return 0;
             });
         } else {
             rows.sort((a, b) => {
                 if (a.daySort !== b.daySort) return a.daySort - b.daySort;
-
                 const am = timeToMinutes(a.slotFrom);
                 const bm = timeToMinutes(b.slotFrom);
                 if (am != null && bm != null && am !== bm) return am - bm;
-
                 const catCmp = (a.category || '').localeCompare(b.category || '', 'sk', { sensitivity: 'base' });
                 if (catCmp !== 0) return catCmp;
-
                 return (a.teamName || '').localeCompare(b.teamName || '', 'sk', { sensitivity: 'base' });
             });
         }
 
         return rows;
     }, [
-        filteredTeams,
-        filterDayKey,
-        visibleDays,
-        daySlots,
-        filterMealType,
-        cateringAssignments,
-        sortMode,
-        teamNameMap,
-        packagesList,
-        userTeams,
+        filteredTeams, filterDayKey, visibleDays, daySlots, filterMealType,
+        cateringAssignments, sortMode, teamNameMap, packagesList, userTeams,
     ]);
 
     if (loading) {
-        return React.createElement(
-            'div',
-            { className: 'flex justify-center items-center h-full pt-16' },
-            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-        );
+        return React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
+            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' }));
     }
 
     if (tournamentDays.length === 0) {
-        return React.createElement(
-            'div',
-            { className: 'flex-grow flex justify-center items-start p-6' },
-            React.createElement(
-                'div',
-                { className: 'w-full max-w-7xl bg-white rounded-xl shadow-xl p-8' },
+        return React.createElement('div', { className: 'flex-grow flex justify-center items-start p-6' },
+            React.createElement('div', { className: 'w-full max-w-7xl bg-white rounded-xl shadow-xl p-8' },
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-6' }, 'Stravovanie'),
-                React.createElement(
-                    'p',
-                    { className: 'text-center text-gray-500' },
-                    'Nie sú dostupné žiadne dátumy turnaja. Nastavte prosím dátum príchodu a koniec turnaja.'
-                )
-            )
-        );
+                React.createElement('p', { className: 'text-center text-gray-500' },
+                    'Nie sú dostupné žiadne dátumy turnaja. Nastavte prosím dátum príchodu a koniec turnaja.')));
     }
 
     // RENDER
@@ -947,157 +815,70 @@ const cateringApp = ({ userProfileData }) => {
                 'div',
                 { className: 'flex flex-col items-center justify-center mb-6' },
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-4' }, 'Stravovanie'),
-
-                React.createElement(
-                    'div',
-                    { className: 'flex flex-wrap items-center justify-center gap-4 w-full' },
-
-                    React.createElement(
-                        'div',
-                        { className: 'flex items-center gap-2' },
+                React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-4 w-full' },
+                    React.createElement('div', { className: 'flex items-center gap-2' },
                         React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, 'Kategória:'),
-                        React.createElement(
-                            'select',
-                            {
-                                value: filterCategory,
-                                onChange: (e) => setFilterCategory(e.target.value),
-                                className: 'px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
-                            },
+                        React.createElement('select', {
+                            value: filterCategory,
+                            onChange: (e) => setFilterCategory(e.target.value),
+                            className: 'px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
+                        },
                             React.createElement('option', { value: '' }, 'Všetky'),
-                            availableCategories.map((cat) =>
-                                React.createElement('option', { key: cat, value: cat }, cat)
-                            )
-                        )
-                    ),
-
-                    React.createElement(
-                        'div',
-                        { className: 'flex items-center gap-2' },
+                            availableCategories.map((cat) => React.createElement('option', { key: cat, value: cat }, cat)))),
+                    React.createElement('div', { className: 'flex items-center gap-2' },
                         React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, 'Dátum:'),
-                        React.createElement(
-                            'select',
-                            {
-                                value: filterDayKey,
-                                onChange: (e) => setFilterDayKey(e.target.value),
-                                className: 'px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
-                            },
+                        React.createElement('select', {
+                            value: filterDayKey,
+                            onChange: (e) => setFilterDayKey(e.target.value),
+                            className: 'px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
+                        },
                             React.createElement('option', { value: '' }, 'Všetky'),
-                            visibleDays.map((day) =>
-                                React.createElement('option', { key: day.key, value: day.key }, day.label)
-                            )
-                        )
-                    ),
-
-                    React.createElement(
-                        'div',
-                        { className: 'flex items-center gap-2' },
+                            visibleDays.map((day) => React.createElement('option', { key: day.key, value: day.key }, day.label)))),
+                    React.createElement('div', { className: 'flex items-center gap-2' },
                         React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, 'Typ jedla:'),
-                        React.createElement(
-                            'select',
-                            {
-                                value: filterMealType,
-                                onChange: (e) => setFilterMealType(e.target.value),
-                                className: 'px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
-                            },
+                        React.createElement('select', {
+                            value: filterMealType,
+                            onChange: (e) => setFilterMealType(e.target.value),
+                            className: 'px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
+                        },
                             React.createElement('option', { value: '' }, 'Všetky'),
                             React.createElement('option', { value: 'lunch' }, 'Obed'),
-                            React.createElement('option', { value: 'dinner' }, 'Večera')
-                        )
-                    )
-                ),
-
-                React.createElement(
-                    'div',
-                    { className: 'flex items-center justify-center gap-1 mt-4 bg-gray-100 rounded-lg p-1 w-fit mx-auto' },
-                    React.createElement(
-                        'button',
-                        {
-                            type: 'button',
-                            onClick: () => setSortMode('chronological'),
-                            className:
-                                'px-4 py-2 rounded-md text-sm font-medium transition ' +
-                                (sortMode === 'chronological'
-                                    ? 'bg-white text-gray-900 shadow'
-                                    : 'text-gray-600 hover:text-gray-900'),
-                        },
-                        '📅 Chronologicky'
-                    ),
-                    React.createElement(
-                        'button',
-                        {
-                            type: 'button',
-                            onClick: () => setSortMode('team'),
-                            className:
-                                'px-4 py-2 rounded-md text-sm font-medium transition ' +
-                                (sortMode === 'team'
-                                    ? 'bg-white text-gray-900 shadow'
-                                    : 'text-gray-600 hover:text-gray-900'),
-                        },
-                        '🔤 Podľa tímu'
-                    )
-                )
-            ),
-
+                            React.createElement('option', { value: 'dinner' }, 'Večera')))),
+                React.createElement('div', { className: 'flex items-center justify-center gap-1 mt-4 bg-gray-100 rounded-lg p-1 w-fit mx-auto' },
+                    React.createElement('button', {
+                        type: 'button',
+                        onClick: () => setSortMode('chronological'),
+                        className: 'px-4 py-2 rounded-md text-sm font-medium transition ' +
+                            (sortMode === 'chronological' ? 'bg-white text-gray-900 shadow' : 'text-gray-600 hover:text-gray-900'),
+                    }, '📅 Chronologicky'),
+                    React.createElement('button', {
+                        type: 'button',
+                        onClick: () => setSortMode('team'),
+                        className: 'px-4 py-2 rounded-md text-sm font-medium transition ' +
+                            (sortMode === 'team' ? 'bg-white text-gray-900 shadow' : 'text-gray-600 hover:text-gray-900'),
+                    }, '🔤 Podľa tímu'))),
             assignmentRows.length === 0
-                ? React.createElement(
-                      'p',
-                      { className: 'text-center text-gray-500 py-8' },
-                      'Žiadne priradenia stravovania pre zvolené filtre.'
-                  )
-                : React.createElement(
-                      'div',
-                      { className: 'overflow-x-auto pb-4 w-full min-w-0' },
-                      React.createElement(
-                          'table',
-                          { className: 'min-w-full border-collapse text-sm' },
-                          React.createElement(
-                              'thead',
-                              null,
-                              React.createElement(
-                                  'tr',
-                                  { className: 'bg-gray-100' },
-                                  React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Kategória'),
-                                  React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Tím'),
-                                  React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Dátum'),
-                                  React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Typ jedla'),
-                                  React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Čas'),
-                                  React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Miesto')
-                              )
-                          ),
-                          React.createElement(
-                              'tbody',
-                              null,
-                              assignmentRows.map((row) => {
-                                  return React.createElement(
-                                      'tr',
-                                      {
-                                          key: row.key,
-                                          className: 'border-b border-gray-200 bg-white',
-                                      },
-                                      React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.category),
-                                      React.createElement(
-                                          'td',
-                                          { className: 'border border-gray-300 px-3 py-2 font-medium text-gray-800 whitespace-nowrap' },
-                                          row.teamName
-                                      ),
-                                      React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.dayLabel),
-                                      React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.mealTypeLabel),
-                                      React.createElement(
-                                          'td',
-                                          { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' },
-                                          `${row.slotFrom} – ${row.slotTo}`
-                                      ),
-                                      React.createElement(
-                                          'td',
-                                          { className: 'border border-gray-300 px-3 py-2 text-xs whitespace-nowrap' },
-                                          row.placeName || '–'
-                                      )
-                                  );
-                              })
-                          )
-                      )
-                  )
-        )
+                ? React.createElement('p', { className: 'text-center text-gray-500 py-8' }, 'Žiadne priradenia stravovania pre zvolené filtre.')
+                : React.createElement('div', { className: 'overflow-x-auto pb-4 w-full min-w-0' },
+                    React.createElement('table', { className: 'min-w-full border-collapse text-sm' },
+                        React.createElement('thead', null,
+                            React.createElement('tr', { className: 'bg-gray-100' },
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Kategória'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Tím'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Dátum'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Typ jedla'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Čas'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Miesto'))),
+                        React.createElement('tbody', null,
+                            assignmentRows.map((row) => {
+                                return React.createElement('tr', { key: row.key, className: 'border-b border-gray-200 bg-white' },
+                                    React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.category),
+                                    React.createElement('td', { className: 'border border-gray-300 px-3 py-2 font-medium text-gray-800 whitespace-nowrap' }, row.teamName),
+                                    React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.dayLabel),
+                                    React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.mealTypeLabel),
+                                    React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, `${row.slotFrom} – ${row.slotTo}`),
+                                    React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-xs whitespace-nowrap' }, row.placeName || '–'));
+                            })))))
     );
 };
 
@@ -1108,12 +889,10 @@ const renderCateringApp = () => {
     const rootElement = document.getElementById('root');
     if (!rootElement) return;
     if (typeof ReactDOM === 'undefined' || typeof React === 'undefined') return;
-
     const userProfileData = window.globalUserProfileData || null;
     const root = ReactDOM.createRoot(rootElement);
     root.render(React.createElement(cateringApp, { userProfileData }));
 };
 
 window.addEventListener('globalDataUpdated', renderCateringApp);
-
 renderCateringApp();
