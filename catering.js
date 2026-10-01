@@ -976,15 +976,11 @@ const cateringApp = ({ userProfileData }) => {
                               'tbody',
                               null,
                               assignmentRows.map((row) => {
-                                  const colors = row.placeId ? getCateringPlaceColors(row.placeId) : null;
-
                                   return React.createElement(
                                       'tr',
                                       {
                                           key: row.key,
-                                          className:
-                                              'border-b border-gray-200 ' +
-                                              (row.type === 'superstructure' ? 'bg-blue-50/40' : 'bg-white'),
+                                          className: 'border-b border-gray-200 bg-white',
                                       },
                                       React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.category),
                                       React.createElement(
@@ -1001,21 +997,7 @@ const cateringApp = ({ userProfileData }) => {
                                       ),
                                       React.createElement(
                                           'td',
-                                          {
-                                              className: 'border border-gray-300 px-3 py-2 text-xs whitespace-nowrap',
-                                              style:
-                                                  row.type === 'superstructure' && colors
-                                                      ? {
-                                                            backgroundColor: colors.bg,
-                                                            color: colors.text,
-                                                            ...(row.isPriority
-                                                                ? { border: '3px solid #000000', fontWeight: 'bold' }
-                                                                : {}),
-                                                        }
-                                                      : row.type === 'classic' && colors
-                                                          ? { backgroundColor: colors.bg, color: colors.text }
-                                                          : {},
-                                          },
+                                          { className: 'border border-gray-300 px-3 py-2 text-xs whitespace-nowrap' },
                                           row.placeName || '–'
                                       )
                                   );
