@@ -4,9 +4,6 @@ import { doc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/fi
 
 const { useState, useEffect, useRef } = React;
 
-/**
- * Globálna funkcia pre zobrazenie notifikácií
- */
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
     if (!notificationElement) {
@@ -15,149 +12,90 @@ window.showGlobalNotification = (message, type = 'success') => {
         notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] opacity-0 transition-opacity duration-300';
         document.body.appendChild(notificationElement);
     }
-
     const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
     let typeClasses = '';
     switch (type) {
-        case 'success':
-            typeClasses = 'bg-green-500 text-white';
-            break;
-        case 'error':
-            typeClasses = 'bg-red-500 text-white';
-            break;
-        case 'info':
-            typeClasses = 'bg-blue-500 text-white';
-            break;
-        default:
-            typeClasses = 'bg-gray-700 text-white';
+        case 'success': typeClasses = 'bg-green-500 text-white'; break;
+        case 'error': typeClasses = 'bg-red-500 text-white'; break;
+        case 'info': typeClasses = 'bg-blue-500 text-white'; break;
+        default: typeClasses = 'bg-gray-700 text-white';
     }
-
     notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     notificationElement.textContent = message;
-
-    setTimeout(() => {
-        notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
-    }, 10);
-
-    setTimeout(() => {
-        notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
-    }, 5000);
+    setTimeout(() => { notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`; }, 10);
+    setTimeout(() => { notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`; }, 5000);
 };
 
-/**
- * Pomocná funkcia: vráti zoznam všetkých dní medzi arrivalDate a tournamentEnd.
- */
 const buildTournamentDays = (arrivalDate, tournamentEnd) => {
     if (!arrivalDate || !tournamentEnd) return [];
-
     const start = new Date(arrivalDate);
     const end = new Date(tournamentEnd);
-
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return [];
-
     start.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
-
     if (start > end) return [];
-
     const days = [];
     const current = new Date(start);
-
     while (current <= end) {
         const y = current.getFullYear();
         const m = String(current.getMonth() + 1).padStart(2, '0');
         const d = String(current.getDate()).padStart(2, '0');
         const key = `${y}-${m}-${d}`;
-
         days.push({
-            date: new Date(current),
-            key,
-            label: current.toLocaleDateString('sk-SK', {
-                weekday: 'short',
-                day: 'numeric',
-                month: 'numeric',
-            }),
-            fullLabel: current.toLocaleDateString('sk-SK', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-            }),
+            date: new Date(current), key,
+            label: current.toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' }),
+            fullLabel: current.toLocaleDateString('sk-SK', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
             fullLabelNumeric: `${d}. ${m}. ${y}`,
         });
         current.setDate(current.getDate() + 1);
     }
-
     return days;
 };
 
-const cleanCategory = (cat) => String(cat || '')
-    .replace(/\u00A0/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+const cleanCategory = (cat) => String(cat || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
 
 const memberHasMeal = (member, dayKey, mealType, teamPackageDetails) => {
     const memberMealSetting = member?.packageDetails?.meals?.[dayKey]?.[mealType];
-    if (memberMealSetting !== undefined) {
-        return memberMealSetting === 1 || memberMealSetting === true;
-    }
+    if (memberMealSetting !== undefined) return memberMealSetting === 1 || memberMealSetting === true;
     const teamMealSetting = teamPackageDetails?.meals?.[dayKey]?.[mealType];
-    if (teamMealSetting !== undefined) {
-        return teamMealSetting === 1 || teamMealSetting === true;
-    }
+    if (teamMealSetting !== undefined) return teamMealSetting === 1 || teamMealSetting === true;
     return true;
 };
 
 const countMembersWithMeal = (teamData, dayKey, mealType) => {
     if (!teamData) return { players: 0, others: 0 };
-
     const teamPackageDetails = teamData.packageDetails || null;
-
     const countInArray = (arr) => {
         if (!Array.isArray(arr)) return 0;
         return arr.filter((member) => memberHasMeal(member, dayKey, mealType, teamPackageDetails)).length;
     };
-
     const players = countInArray(teamData.playerDetails);
     const menTeamMembers = countInArray(teamData.menTeamMemberDetails);
     const womenTeamMembers = countInArray(teamData.womenTeamMemberDetails);
     const menDrivers = countInArray(teamData.driverDetailsMale);
     const womenDrivers = countInArray(teamData.driverDetailsFemale);
-
-    return {
-        players,
-        others: menTeamMembers + womenTeamMembers + menDrivers + womenDrivers,
-    };
+    return { players, others: menTeamMembers + womenTeamMembers + menDrivers + womenDrivers };
 };
 
 const loadUserTeams = async (db) => {
     if (!db) return [];
-
     const usersRef = collection(db, 'users');
     const snapshot = await getDocs(usersRef);
-
     const teams = [];
-
     snapshot.forEach((userDoc) => {
         const userData = userDoc.data() || {};
         const userTeams = userData.teams;
-
         if (!userTeams || typeof userTeams !== 'object') return;
-
         Object.entries(userTeams).forEach(([categoryName, teamArray]) => {
             if (!Array.isArray(teamArray)) return;
-
             teamArray.forEach((team, teamIndex) => {
                 if (!team?.teamName) return;
-
                 const playersCount = Array.isArray(team.playerDetails) ? team.playerDetails.length : 0;
                 const menTeamMembersCount = Array.isArray(team.menTeamMemberDetails) ? team.menTeamMemberDetails.length : 0;
                 const womenTeamMembersCount = Array.isArray(team.womenTeamMemberDetails) ? team.womenTeamMemberDetails.length : 0;
                 const menDriversCount = Array.isArray(team.driverDetailsMale) ? team.driverDetailsMale.length : 0;
                 const womenDriversCount = Array.isArray(team.driverDetailsFemale) ? team.driverDetailsFemale.length : 0;
-
                 const cleanCat = cleanCategory(categoryName);
-
                 teams.push({
                     uid: userDoc.id,
                     teamIndex: teamIndex,
@@ -173,13 +111,11 @@ const loadUserTeams = async (db) => {
             });
         });
     });
-
     teams.sort((a, b) => {
         const catCompare = (a.category || '').localeCompare(b.category || '', 'sk', { sensitivity: 'base' });
         if (catCompare !== 0) return catCompare;
         return (a.teamName || '').localeCompare(b.teamName || '', 'sk', { sensitivity: 'base' });
     });
-
     return teams;
 };
 
@@ -204,11 +140,9 @@ const hasValidMealRange = (mealTimes, unitMinutes) => {
     const fromMin = timeToMinutes(mealTimes.from);
     const toMin = timeToMinutes(mealTimes.to);
     const unit = parseInt(unitMinutes, 10);
-
     if (fromMin == null || toMin == null) return false;
     if (isNaN(unit) || unit <= 0) return false;
     if (toMin - fromMin < unit) return false;
-
     return true;
 };
 
@@ -216,81 +150,54 @@ const buildMealSlots = (from, to, unitMinutes) => {
     const fromMin = timeToMinutes(from);
     const toMin = timeToMinutes(to);
     const unit = parseInt(unitMinutes, 10);
-
     if (fromMin == null || toMin == null) return [];
     if (isNaN(unit) || unit <= 0) return [];
-
     const total = toMin - fromMin;
     if (total <= 0) return [];
-
     const count = Math.floor(total / unit);
     if (count <= 0) return [];
-
     const slots = [];
     for (let i = 0; i < count; i++) {
         const slotFrom = fromMin + i * unit;
         const slotTo = slotFrom + unit;
-        slots.push({
-            from: minutesToTime(slotFrom),
-            to: minutesToTime(slotTo),
-            label: minutesToTime(slotFrom),
-        });
+        slots.push({ from: minutesToTime(slotFrom), to: minutesToTime(slotTo), label: minutesToTime(slotFrom) });
     }
     return slots;
 };
 
-// ============================================================
-// KĽÚČOVÁ FUNKCIA: Získa namapovaný názov tímu
-// Vráti buď namapovaný názov, alebo PÔVODNÝ názov (ak mapovanie zlyhalo).
-// Nikdy nevráti null/undefined/"null".
-// ============================================================
 const getMappedNameForTeam = async (categoryName, teamName) => {
     if (!teamName) return teamName;
-
     const candidates = [];
     if (categoryName && !teamName.includes(categoryName)) {
         candidates.push(`${categoryName} ${teamName}`);
     }
     candidates.push(teamName);
 
-    // Pomocná funkcia: skontroluj, či je hodnota "platná"
     const isValidMappedValue = (val, input) => {
         if (val === null || val === undefined) return false;
         const s = String(val).trim();
         if (!s) return false;
         if (s === 'null' || s === 'undefined') return false;
-        if (s === String(input)) return false; // rovnaké ako vstup → nemapované
+        if (s === String(input)) return false;
         return true;
     };
 
-    // 1) Skús window.teamNames
     if (window.teamNames && typeof window.teamNames === 'object') {
         for (const key of candidates) {
             const val = window.teamNames[key];
-            if (isValidMappedValue(val, key)) {
-                return val;
-            }
+            if (isValidMappedValue(val, key)) return val;
         }
     }
 
-    // 2) Fallback: matchTracker.getTeamNameByDisplayId
-    if (
-        window.matchTracker &&
-        typeof window.matchTracker.getTeamNameByDisplayId === 'function'
-    ) {
+    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
         for (const key of candidates) {
             try {
                 const mapped = await window.matchTracker.getTeamNameByDisplayId(key);
-                if (isValidMappedValue(mapped, key)) {
-                    return mapped;
-                }
-            } catch (e) {
-                // ignore
-            }
+                if (isValidMappedValue(mapped, key)) return mapped;
+            } catch (e) { }
         }
     }
 
-    // Mapovanie zlyhalo → vráť pôvodný názov
     return teamName;
 };
 
@@ -310,9 +217,7 @@ const cateringApp = ({ userProfileData }) => {
     const [teamNameMap, setTeamNameMap] = useState({});
 
     const cateringAssignmentsRef = useRef([]);
-    useEffect(() => {
-        cateringAssignmentsRef.current = cateringAssignments;
-    }, [cateringAssignments]);
+    useEffect(() => { cateringAssignmentsRef.current = cateringAssignments; }, [cateringAssignments]);
 
     const availableCategories = React.useMemo(() => {
         return Array.from(new Set(userTeams.map((t) => t.category).filter(Boolean)))
@@ -369,9 +274,6 @@ const cateringApp = ({ userProfileData }) => {
         return () => clearTimeout(timeoutId);
     }, [filterCategory, filterDayKey, filterMealType, sortMode, availableCategories, tournamentDays]);
 
-    // ============================================================
-    // Data useEffect-y – Firestore
-    // ============================================================
     useEffect(() => {
         if (!window.db) { setLoading(false); return; }
         const settingsDocRef = doc(window.db, 'settings', 'registration');
@@ -478,9 +380,6 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // ============================================================
-    // 5b) Remapovanie názvov tímov – LEN SUPERSTRUCTURE TÍMY
-    // ============================================================
     const triggerTeamNameRemap = async () => {
         const assignments = cateringAssignmentsRef.current || [];
         const pairsMap = new Map();
@@ -549,9 +448,6 @@ const cateringApp = ({ userProfileData }) => {
         };
     }, []);
 
-    // ============================================================
-    // useMemo
-    // ============================================================
     const assignmentsBySlot = React.useMemo(() => {
         const map = new Map();
         (cateringAssignments || []).forEach((a) => {
@@ -577,7 +473,6 @@ const cateringApp = ({ userProfileData }) => {
         return result;
     }, [tournamentDays, cateringTimes, unitMinutes]);
 
-    // Pomocné funkcie
     const findCateringAssignment = (team, dayKey, mealType, slotFrom) => {
         const cat = cleanCategory(team.category);
         const key = `${team.uid}|${team.teamIndex}|${cat}|${dayKey}|${mealType}|${slotFrom}`;
@@ -602,7 +497,6 @@ const cateringApp = ({ userProfileData }) => {
         if (!teamName) return teamName;
         const key = `${category}||${teamName}`;
         const val = teamNameMap[key];
-        // Ak je v mape platná hodnota, vráť ju
         if (val === null || val === undefined) return teamName;
         const s = String(val).trim();
         if (!s || s === 'null' || s === 'undefined') return teamName;
@@ -618,36 +512,35 @@ const cateringApp = ({ userProfileData }) => {
         ? userTeams.filter((t) => t.category === filterCategory)
         : userTeams;
 
-    const findSsTeamInUserTeams = (ssCategory, ssOriginalTeamName, ssMappedTeamName) => {
-        if (!ssCategory) return { team: null, wasFound: false };
+    // 🔥 Nájde superstructure tím v userTeams – LEN podľa daného "searchName".
+    // Ak hľadáme podľa namapovaného názvu, NESMIEME hľadať aj podľa pôvodného.
+    const findSsTeamInUserTeamsByName = (ssCategory, searchName) => {
+        if (!ssCategory || !searchName) return null;
         const catClean = cleanCategory(ssCategory);
+        const searchClean = String(searchName).trim();
 
-        const candidates = [];
-        if (ssMappedTeamName) candidates.push(String(ssMappedTeamName).trim());
-        if (ssOriginalTeamName) {
-            const tnClean = String(ssOriginalTeamName).trim();
-            candidates.push(tnClean);
-            if (tnClean.startsWith(catClean + ' ')) {
-                candidates.push(tnClean.substring(catClean.length + 1).trim());
-            }
-        }
+        // 1) Podľa kategórie + presný názov
+        let found = userTeams.find(t =>
+            cleanCategory(t.category) === catClean &&
+            String(t.teamName).trim() === searchClean
+        );
+        if (found) return found;
 
-        for (const cand of candidates) {
-            if (!cand) continue;
-            const found = userTeams.find(t =>
+        // 2) Ak searchName obsahuje kategóriu, skús bez nej
+        if (searchClean.startsWith(catClean + ' ')) {
+            const stripped = searchClean.substring(catClean.length + 1).trim();
+            found = userTeams.find(t =>
                 cleanCategory(t.category) === catClean &&
-                String(t.teamName).trim() === cand
+                String(t.teamName).trim() === stripped
             );
-            if (found) return { team: found, wasFound: true };
+            if (found) return found;
         }
 
-        for (const cand of candidates) {
-            if (!cand) continue;
-            const found = userTeams.find(t => String(t.teamName).trim() === cand);
-            if (found) return { team: found, wasFound: true };
-        }
+        // 3) Fallback – bez kategórie (niekedy sa kategória mierne líši)
+        found = userTeams.find(t => String(t.teamName).trim() === searchClean);
+        if (found) return found;
 
-        return { team: null, wasFound: false };
+        return null;
     };
 
     const teamHasMealInPackage = (team, dayKey, mealType) => {
@@ -661,9 +554,6 @@ const cateringApp = ({ userProfileData }) => {
         return val === 1 || val === true;
     };
 
-    // ============================================================
-    // assignmentRows
-    // ============================================================
     const assignmentRows = React.useMemo(() => {
         const rows = [];
         const daysToUse = filterDayKey ? visibleDays.filter((d) => d.key === filterDayKey) : visibleDays;
@@ -704,7 +594,7 @@ const cateringApp = ({ userProfileData }) => {
                             const ssOriginalTeamName = String(ss.teamName || '').trim();
                             let ssMappedName = getMappedTeamName(ssCategory, ssOriginalTeamName);
 
-                            // 🔥 Ak je ssMappedName null/undefined/"null" alebo prázdny, použi pôvodný názov
+                            // Ak je ssMappedName neplatný, použi pôvodný
                             if (
                                 ssMappedName === null ||
                                 ssMappedName === undefined ||
@@ -715,27 +605,34 @@ const cateringApp = ({ userProfileData }) => {
                                 ssMappedName = ssOriginalTeamName;
                             }
 
-                            // 🔥 wasMapped = true len ak sa názov REÁLNE zmenil
+                            // wasMapped = true len ak sa názov REÁLNE zmenil
                             const wasMapped = String(ssMappedName).trim() !== ssOriginalTeamName;
 
-                            const { team: ssTeam, wasFound: ssTeamFound } = findSsTeamInUserTeams(
-                                ssCategory,
-                                ssOriginalTeamName,
-                                ssMappedName
-                            );
+                            if (wasMapped) {
+                                // 🔥 Namapovaný názov existuje – hľadáme VÝHRADNE podľa neho
+                                const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssMappedName);
 
-                            if (ssTeamFound && ssTeam) {
-                                // Tím sme našli → skontrolujeme balíček
+                                if (!ssTeam) {
+                                    // Namapovaný tím neexistuje v userTeams → nemáme balíček → NEZOBRAZUJEME
+                                    return;
+                                }
+
                                 if (!teamHasMealInPackage(ssTeam, day.key, mealType)) {
+                                    // Namapovaný tím nemá dané stravovanie podľa balíčka → NEZOBRAZUJEME
                                     return;
                                 }
                             } else {
-                                // Tím sme nenašli
-                                // Ak mapovanie PREBEHLO, ale tím nie je v userTeams → nezobrazujeme
-                                if (wasMapped) {
-                                    return;
+                                // Mapovanie zlyhalo (názov je pôvodný)
+                                // Skúsime nájsť tím podľa pôvodného názvu
+                                const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssOriginalTeamName);
+
+                                if (ssTeam) {
+                                    // Tím existuje v userTeams → skontroluj balíček
+                                    if (!teamHasMealInPackage(ssTeam, day.key, mealType)) {
+                                        return;
+                                    }
                                 }
-                                // Ak mapovanie ZLYHALO (názov je pôvodný) → zobrazíme
+                                // Ak tím neexistuje v userTeams → zobrazíme (nemáme ako overiť balíček)
                             }
 
                             rows.push({
@@ -804,7 +701,6 @@ const cateringApp = ({ userProfileData }) => {
                     'Nie sú dostupné žiadne dátumy turnaja. Nastavte prosím dátum príchodu a koniec turnaja.')));
     }
 
-    // RENDER
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-start p-6 w-full min-w-0' },
