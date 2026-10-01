@@ -215,6 +215,7 @@ const cateringApp = ({ userProfileData }) => {
     const [sortMode, setSortMode] = useState('chronological');
     const [packagesList, setPackagesList] = useState([]);
     const [teamNameMap, setTeamNameMap] = useState({});
+    const [categoryDrawColors, setCategoryDrawColors] = useState({});
 
     const cateringAssignmentsRef = useRef([]);
     useEffect(() => { cateringAssignmentsRef.current = cateringAssignments; }, [cateringAssignments]);
@@ -255,6 +256,25 @@ const cateringApp = ({ userProfileData }) => {
         const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}${window.location.hash}`;
         window.history.replaceState({}, '', newUrl);
     };
+
+    useEffect(() => {
+        if (!window.db) return;
+        const settingsRef = doc(window.db, 'settings', 'categories');
+        const unsubscribe = onSnapshot(settingsRef, (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+                const colors = {};
+                Object.entries(data).forEach(([catId, catData]) => {
+                    if (catData.drawColor) {
+                        colors[catId] = catData.drawColor;
+                    }
+                });
+                setCategoryDrawColors(colors);
+                window.categoryDrawColors = colors;
+            }
+        }, () => {});
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         if (availableCategories.length === 0 && tournamentDays.length === 0) return;
@@ -379,6 +399,24 @@ const cateringApp = ({ userProfileData }) => {
         }, (error) => { });
         return () => unsubscribe();
     }, []);
+
+    const getCategoryDrawColor = (categoryId) => {
+        if (!window.categoryDrawColors || !categoryId) return '#3B82F6';
+        const color = window.categoryDrawColors[categoryId];
+        if (color && color !== '#3B82F6') return color;
+        return '#3B82F6';
+    };
+
+    const getLighterColor = (color) => {
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        const lighterR = Math.min(255, Math.floor(r + (255 - r) * 0.8));
+        const lighterG = Math.min(255, Math.floor(g + (255 - g) * 0.8));
+        const lighterB = Math.min(255, Math.floor(b + (255 - b) * 0.8));
+        return `#${lighterR.toString(16).padStart(2, '0')}${lighterG.toString(16).padStart(2, '0')}${lighterB.toString(16).padStart(2, '0')}`;
+    };
 
     const triggerTeamNameRemap = async () => {
         const assignments = cateringAssignmentsRef.current || [];
@@ -856,15 +894,21 @@ const cateringApp = ({ userProfileData }) => {
                             dayGroup.rows.forEach((row, rowIndex) => {
                                 const infoTags = [];
 
-                                // Tag kategórie
+                                // Tag kategórie – dynamická farba podľa kategórie
                                 if (row.category) {
+                                    const categoryId = Object.keys(window.categoriesData || {}).find(
+                                        id => window.categoriesData[id] === row.category
+                                    );
+                                    const categoryColor = getCategoryDrawColor(categoryId);
+                                    const lighterCategoryColor = getLighterColor(categoryColor);
+                                    
                                     infoTags.push(
                                         React.createElement('span', {
                                             key: 'category',
                                             className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
                                             style: {
-                                                backgroundColor: '#DBEAFE',
-                                                color: '#1E40AF',
+                                                backgroundColor: lighterCategoryColor,
+                                                color: categoryColor,
                                                 fontWeight: '500'
                                             }
                                         }, row.category)
