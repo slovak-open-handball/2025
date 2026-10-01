@@ -775,27 +775,28 @@ const TeamCateringList = ({ teamName, categoryName }) => {
         return val === 1 || val === true;
     };
 
-    // --- Výpočet riadkov (presne ako v catering.js, ale len pre jeden tím) ---
     const assignmentRows = React.useMemo(() => {
         if (!teamName || !categoryName) return [];
         if (userTeams.length === 0) return [];
-
+    
         const cleanCat = cleanCategory(categoryName);
         const cleanTeam = String(teamName).trim();
-
-        // 🔥 Presne ako v catering.js: nájdeme VŠETKY tímy v userTeams,
-        // ktoré zodpovedajú tomuto teamName + categoryName.
-        // Ale POZOR – v catering.js sa používa presná zhoda
-        // `t.category === team.category && t.teamName === team.teamName`.
-        // Tu musíme nájsť ten správny tím z userTeams.
-
-        // Skúsime presnú zhodu (bez akéhokoľvek fallbacku)
+    
+        // 🔥 KĽÚČOVÁ ZMENA: Nájdeme PRESNE TEN ISTÝ záznam, ktorý by použil catering.js.
+        // V catering.js sa filtruje podľa `t.category === filterCategory`.
+        // Tu musíme nájsť tím, ktorý má:
+        //   - `t.category` presne rovné `cleanCat` (alebo `t.category` je to, čo je v userTeams)
+        //   - `t.teamName` presne rovné `cleanTeam` (alebo `t.teamName` je to, čo je v userTeams)
+        
+        // Presná zhoda (bez fallbacku) – presne ako v catering.js
         let matchingTeams = userTeams.filter(t =>
             cleanCategory(t.category) === cleanCat &&
             String(t.teamName).trim() === cleanTeam
         );
-
+    
         // Ak sa nenašiel, skúsime aj tím, ktorého názov začína kategóriou
+        // (toto je jediný "fallback", ktorý je bezpečný – rovnaký ako v catering.js
+        //  pri `findSsTeamInUserTeamsByName`)
         if (matchingTeams.length === 0 && cleanTeam.startsWith(cleanCat + ' ')) {
             const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
             matchingTeams = userTeams.filter(t =>
@@ -803,27 +804,27 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                 String(t.teamName).trim() === stripped
             );
         }
-
+    
         // 🔥 AK SA NENAŠIEL ŽIADNY TÍM, SKONČÍME.
         // ŽIADNY FALLBACK BEZ KATEGÓRIE!
         if (matchingTeams.length === 0) return [];
-
+    
         const rows = [];
-
+    
         matchingTeams.forEach((team) => {
             (tournamentDays || []).forEach((day) => {
                 ['lunch', 'dinner'].forEach((mealType) => {
                     const slots = daySlots[day.key]?.[mealType] || [];
                     if (slots.length === 0) return;
-
+    
                     slots.forEach((slot) => {
                         const existing = findCateringAssignment(team, day.key, mealType, slot.from);
                         const ss = findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
-
+    
                         // 1) Klasické priradenie má prednosť
                         if (existing) {
                             if (!teamHasMealInPackage(team, day.key, mealType)) return;
-
+    
                             rows.push({
                                 key: `${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
                                 dayKey: day.key,
@@ -839,13 +840,13 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                             });
                             return;
                         }
-
+    
                         // 2) Superstructure priradenie
                         if (ss) {
                             const ssCategory = cleanCategory(ss.category || ss.categoryName || '');
                             const ssOriginalTeamName = String(ss.teamName || '').trim();
                             let ssMappedName = getMappedTeamName(ssCategory, ssOriginalTeamName);
-
+    
                             if (
                                 ssMappedName === null ||
                                 ssMappedName === undefined ||
@@ -855,29 +856,29 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                             ) {
                                 ssMappedName = ssOriginalTeamName;
                             }
-
+    
                             const wasMapped = String(ssMappedName).trim() !== ssOriginalTeamName;
-
+    
                             if (wasMapped) {
                                 const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssMappedName);
-
+    
                                 if (!ssTeam) {
                                     return;
                                 }
-
+    
                                 if (!teamHasMealInPackage(ssTeam, day.key, mealType)) {
                                     return;
                                 }
                             } else {
                                 const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssOriginalTeamName);
-
+    
                                 if (ssTeam) {
                                     if (!teamHasMealInPackage(ssTeam, day.key, mealType)) {
                                         return;
                                     }
                                 }
                             }
-
+    
                             rows.push({
                                 key: `${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
                                 dayKey: day.key,
@@ -885,7 +886,7 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                                 daySort: day.date.getTime(),
                                 mealType,
                                 mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
-                                slotFrom: slot.from,
+                                slotFrom: ss.slotFrom,
                                 slotTo: slot.to,
                                 placeName: ss.placeName || '',
                                 type: 'superstructure',
@@ -896,11 +897,11 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                 });
             });
         });
-
+    
         // Deduplikácia (presne ako v catering.js)
         const dedupMap = new Map();
         rows.forEach((row) => {
-            const key = `${row.dayKey}||${row.mealType}||${String(row.teamName || '').trim()}`;
+            const key = `${cleanCat}||${cleanTeam}||${row.dayKey}||${row.mealType}`;
             const existing = dedupMap.get(key);
             if (!existing) {
                 dedupMap.set(key, row);
@@ -913,8 +914,8 @@ const TeamCateringList = ({ teamName, categoryName }) => {
             }
         });
         const dedupedRows = Array.from(dedupMap.values());
-
-        // Zoradenie
+    
+        // Zoradenie (presne ako v catering.js)
         dedupedRows.sort((a, b) => {
             if (a.daySort !== b.daySort) return a.daySort - b.daySort;
             const am = timeToMinutes(a.slotFrom);
@@ -923,7 +924,7 @@ const TeamCateringList = ({ teamName, categoryName }) => {
             if (a.mealType !== b.mealType) return a.mealType === 'lunch' ? -1 : 1;
             return 0;
         });
-
+    
         return dedupedRows;
     }, [teamName, categoryName, tournamentDays, cateringTimes, unitMinutes, cateringAssignments, packagesList, userTeams, teamNameMap, assignmentsBySlot, daySlots]);
 
