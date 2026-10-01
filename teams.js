@@ -1732,8 +1732,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
     const [packagesList, setPackagesList] = useState([]);
     const [userTeams, setUserTeams] = useState([]);
     const [teamNameMap, setTeamNameMap] = useState({});
-    const [cateringLoading, setCateringLoading] = useState(true);
-
+  
     const cateringAssignmentsRef = useRef([]);
     useEffect(() => { cateringAssignmentsRef.current = cateringAssignments; }, [cateringAssignments]);
 
@@ -2603,7 +2602,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
         return Object.values(groups).sort((a, b) => a.date - b.date);
     }, [mergedRows]);
 
-    const loading = matchesLoading || cateringLoading;
+    const loading = matchesLoading;
 
     if (loading) {
         return React.createElement(
