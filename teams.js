@@ -2628,11 +2628,13 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
             });
         }
 
-        // Zoraď chronologicky
+        // Zoraď chronologicky – NAJPRV podľa DŇA (bez času), POTOM podľa časovej zložky
         rows.sort((a, b) => {
-            const da = a.dateObj ? a.dateObj.getTime() : 0;
-            const db = b.dateObj ? b.dateObj.getTime() : 0;
+            // Porovnaj len dátum (rok, mesiac, deň) bez času
+            const da = a.dateObj ? new Date(a.dateObj.getFullYear(), a.dateObj.getMonth(), a.dateObj.getDate()).getTime() : 0;
+            const db = b.dateObj ? new Date(b.dateObj.getFullYear(), b.dateObj.getMonth(), b.dateObj.getDate()).getTime() : 0;
             if (da !== db) return da - db;
+            // V rámci rovnakého dňa porovnaj časovú zložku
             return a.timeMinutes - b.timeMinutes;
         });
 
