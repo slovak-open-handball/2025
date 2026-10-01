@@ -816,6 +816,12 @@ const updateNavigationLinks = () => {
             isVisible = rostersConfig && rostersConfig.visible === true;
         }
         
+        // ŠPECIÁLNE PRAVIDLO: Stravovanie - viditeľnosť riadená priamo dokumentom 'catering' v DB.
+        // Ak dokument v DB neexistuje, predvolene SKRYTÉ (rovnako ako defaultVisible: false v administrácii).
+        if (pageId === 'catering') {
+            isVisible = pageConfig && pageConfig.visible === true;
+        }
+        
         if (isVisible) {
             link.classList.remove('hidden');
             link.style.display = '';
