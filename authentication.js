@@ -100,7 +100,8 @@ const publicPages = [
     'map.html', 
     'tables.html',
     'teams.html',
-    'statistics.html'
+    'statistics.html',
+    'catering.html'
 ];
 
 const guestOnlyPages = [
@@ -225,6 +226,7 @@ const loadPageVisibilitySettings = async () => {
         let matchesVisible = true; // predvolene viditeľné
         let teamsInGroupsVisible = true; // predvolene viditeľné
         let rostersVisible = true; // predvolene viditeľné
+        let cateringVisible = false; // predvolene skryté (rovnako ako defaultVisible: false v PAGE_DEFINITIONS)
         
         pagesSnapshot.forEach(doc => {
             const data = doc.data();
@@ -239,6 +241,9 @@ const loadPageVisibilitySettings = async () => {
                 if (doc.id === 'rosters') {
                     rostersVisible = false;
                 }
+                if (doc.id === 'catering') {
+                    cateringVisible = false;
+                }
             } else if (data.visible === true) {
                 visibilitySettings[doc.id] = true;
                 if (doc.id === 'matches') {
@@ -249,6 +254,9 @@ const loadPageVisibilitySettings = async () => {
                 }
                 if (doc.id === 'rosters') {
                     rostersVisible = true;
+                }
+                if (doc.id === 'catering') {
+                    cateringVisible = true;
                 }
             }
         });
@@ -261,6 +269,9 @@ const loadPageVisibilitySettings = async () => {
         
         // Nastavíme statistics na rovnakú viditeľnosť ako rosters
         visibilitySettings['statistics'] = rostersVisible;
+        
+        // catering je priamo riadený vlastným nastavením
+        visibilitySettings['catering'] = cateringVisible;
         
         pageVisibilityCache = visibilitySettings;
         pageVisibilityCacheTime = now;
@@ -290,6 +301,7 @@ const setupPageVisibilityListener = () => {
         let matchesVisible = true;
         let teamsInGroupsVisible = true;
         let rostersVisible = true;
+        let cateringVisible = false;
         
         snapshot.forEach(doc => {
             const data = doc.data();
@@ -304,6 +316,9 @@ const setupPageVisibilityListener = () => {
                 if (doc.id === 'rosters') {
                     rostersVisible = false;
                 }
+                if (doc.id === 'catering') {
+                    cateringVisible = false;
+                }
             } else if (data.visible === true) {
                 visibilitySettings[doc.id] = true;
                 if (doc.id === 'matches') {
@@ -314,6 +329,9 @@ const setupPageVisibilityListener = () => {
                 }
                 if (doc.id === 'rosters') {
                     rostersVisible = true;
+                }
+                if (doc.id === 'catering') {
+                    cateringVisible = true;
                 }
             }
         });
@@ -326,6 +344,9 @@ const setupPageVisibilityListener = () => {
         
         // Nastavíme statistics na rovnakú viditeľnosť ako rosters
         visibilitySettings['statistics'] = rostersVisible;
+        
+        // catering je priamo riadený vlastným nastavením
+        visibilitySettings['catering'] = cateringVisible;
         
         pageVisibilityCache = visibilitySettings;
         pageVisibilityCacheTime = Date.now();
@@ -351,7 +372,8 @@ const checkCurrentPageVisibility = async () => {
     }
     
     // Povolené stránky pre prihlásených používateľov (bez kontroly viditeľnosti)
-    const allowedForLoggedIn = ['map.html', 'matches.html', 'teams-in-groups.html', 'tables.html', 'teams.html', 'statistics.html'];
+    // POZNÁMKA: catering.html je tu pridaný, aby sa aj pre prihlásených kontrolovala viditeľnosť
+    const allowedForLoggedIn = ['map.html', 'matches.html', 'teams-in-groups.html', 'tables.html', 'teams.html', 'statistics.html', 'catering.html'];
     if (allowedForLoggedIn.includes(fileName)) {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
@@ -524,6 +546,17 @@ const isPageAccessibleForGuest = async () => {
         }
         // Pre neprihlásených používateľov skontrolujeme viditeľnosť podľa matches
         const isVisible = await isPageVisibleInSettings('tables');
+        return isVisible;
+    }
+    
+    // Pre catering.html - viditeľnosť sa riadi priamo dokumentom 'catering' v DB
+    if (fileName === 'catering.html') {
+        const isLoggedIn = isReallyLoggedIn();
+        if (isLoggedIn) {
+            return true;
+        }
+        // Pre neprihlásených používateľov skontrolujeme viditeľnosť podľa catering
+        const isVisible = await isPageVisibleInSettings('catering');
         return isVisible;
     }
     
