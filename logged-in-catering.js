@@ -868,63 +868,36 @@ const cateringApp = ({ userProfileData }) => {
         return result;
     }, [tournamentDays, cateringTimes, unitMinutes]);
 
-    const superstructureAvgByCategory = React.useMemo(() => {
-        const map = new Map();
-        const teamsByCategory = new Map();
+    // ============================================================
+    // Pomocná funkcia: priemer členov kategórie pre konkrétny deň a typ jedla
+    // ============================================================
+    const getSuperstructureAvg = (category, dayKey, mealType) => {
+        const cat = cleanCategory(category);
+        if (!cat) return null;
 
-        (userTeams || []).forEach((t) => {
-            const cat = cleanCategory(t.category);
-            if (!cat) return;
-            if (!teamsByCategory.has(cat)) teamsByCategory.set(cat, []);
-            teamsByCategory.get(cat).push(t);
-        });
+        const teamsInCategory = (userTeams || []).filter(
+            (t) => cleanCategory(t.category) === cat
+        );
+        if (teamsInCategory.length === 0) return null;
 
-        teamsByCategory.forEach((teams, cat) => {
-            if (teams.length === 0) return;
+        // Ak nemáme daySlots pre tento deň/typ, použijeme celkové počty
+        const slots = daySlots?.[dayKey]?.[mealType] || [];
+        if (slots.length === 0) {
+            const total = teamsInCategory.reduce(
+                (acc, t) => acc + (t.playersCount || 0) + (t.othersCount || 0),
+                0
+            );
+            return Math.ceil(total / teamsInCategory.length);
+        }
 
-            // Ak nemáme daySlots, použijeme celkové počty
-            if (!daySlots || Object.keys(daySlots).length === 0) {
-                const total = teams.reduce(
-                    (acc, t) => acc + (t.playersCount || 0) + (t.othersCount || 0),
-                    0
-                );
-                map.set(cat, Math.ceil(total / teams.length));
-                return;
-            }
+        // 🔥 Vypočítame priemer z efektívnych počtov pre konkrétny deň a typ jedla
+        const total = teamsInCategory.reduce((acc, t) => {
+            const effective = countMembersWithMeal(t.rawTeamData, dayKey, mealType);
+            return acc + effective.players + effective.others;
+        }, 0);
 
-            // 🔥 Vypočítame priemer z efektívnych počtov cez všetky dni a typy jedál
-            let sumOfAverages = 0;
-            let countOfAverages = 0;
-
-            Object.keys(daySlots).forEach((dayKey) => {
-                ['lunch', 'dinner'].forEach((mealType) => {
-                    const slots = daySlots[dayKey]?.[mealType] || [];
-                    if (slots.length === 0) return;
-
-                    const total = teams.reduce((acc, t) => {
-                        const effective = countMembersWithMeal(t.rawTeamData, dayKey, mealType);
-                        return acc + effective.players + effective.others;
-                    }, 0);
-
-                    const avg = total / teams.length;
-                    sumOfAverages += avg;
-                    countOfAverages += 1;
-                });
-            });
-
-            if (countOfAverages > 0) {
-                map.set(cat, Math.ceil(sumOfAverages / countOfAverages));
-            } else {
-                const total = teams.reduce(
-                    (acc, t) => acc + (t.playersCount || 0) + (t.othersCount || 0),
-                    0
-                );
-                map.set(cat, Math.ceil(total / teams.length));
-            }
-        });
-
-        return map;
-    }, [userTeams, daySlots]);
+        return Math.ceil(total / teamsInCategory.length);
+    };
 
     // ============================================================
     // 7) POMOCNÉ FUNKCIE – musia byť PRED skorými return-mi,
@@ -1377,7 +1350,8 @@ const cateringApp = ({ userProfileData }) => {
                         const ss = findSS(team, dayKey, mealType, slot.from);
                         if (ss) {
                             const ssCategory = cleanCategory(ss.categoryName || ss.category);
-                            const avg = superstructureAvgByCategory.get(ssCategory);
+                            // 🔥 Priemer sa počíta pre konkrétny deň a typ jedla
+                            const avg = getSuperstructureAvg(ssCategory, dayKey, mealType);
                             if (avg == null) return;
                             const key = `${ss.placeId}|${dayKey}|${mealType}|${slot.from}`;
                             counts.set(key, (counts.get(key) || 0) + avg);
@@ -1403,7 +1377,6 @@ const cateringApp = ({ userProfileData }) => {
         superstructureTeams,
         daySlots,
         assignmentsBySlot,
-        superstructureAvgByCategory,
         scheduledMatches,
         categories,
     ]);
