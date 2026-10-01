@@ -553,6 +553,23 @@ const TeamCateringList = ({ teamName, categoryName }) => {
         return teamName;
     };
 
+    // --- Načítanie nastavení turnaja (dni turnaja) ---
+    useEffect(() => {
+        if (!window.db) return;
+        const settingsDocRef = doc(window.db, 'settings', 'registration');
+        const unsub = onSnapshot(settingsDocRef, (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+                const arrivalDate = data.arrivalDate ? data.arrivalDate.toDate() : null;
+                const tournamentEnd = data.tournamentEnd ? data.tournamentEnd.toDate() : null;
+                setTournamentDays(buildTournamentDays(arrivalDate, tournamentEnd));
+            } else {
+                setTournamentDays([]);
+            }
+        }, () => {});
+        return () => unsub();
+    }, []);
+
     useEffect(() => {
         if (!window.db) return;
         const unsub = onSnapshot(doc(window.db, 'settings', 'catering'), (snap) => {
@@ -1764,7 +1781,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
     const [packagesList, setPackagesList] = useState([]);
     const [userTeams, setUserTeams] = useState([]);
     const [teamNameMap, setTeamNameMap] = useState({});
-  
+
     const cateringAssignmentsRef = useRef([]);
     useEffect(() => { cateringAssignmentsRef.current = cateringAssignments; }, [cateringAssignments]);
 
@@ -2202,6 +2219,26 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
 
         return () => unsubscribe();
     }, [allMatchesList]);
+
+    // ============ 🔥 NOVÝ BLOK – NAČÍTANIE DNI TURNAJA 🔥 ============
+    // Toto je KĽÚČOVÝ useEffect, ktorý Vám chýbal.
+    // Bez neho je tournamentDays prázdne pole a stravovanie sa nezobrazí.
+    useEffect(() => {
+        if (!window.db) return;
+        const settingsDocRef = doc(window.db, 'settings', 'registration');
+        const unsub = onSnapshot(settingsDocRef, (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+                const arrivalDate = data.arrivalDate ? data.arrivalDate.toDate() : null;
+                const tournamentEnd = data.tournamentEnd ? data.tournamentEnd.toDate() : null;
+                setTournamentDays(buildTournamentDays(arrivalDate, tournamentEnd));
+            } else {
+                setTournamentDays([]);
+            }
+        }, () => {});
+        return () => unsub();
+    }, []);
+    // ============ 🔥 KONIEC NOVÉHO BLOKU 🔥 ============
 
     useEffect(() => {
         if (!window.db) return;
@@ -2785,13 +2822,11 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
         return React.createElement(
             'tr',
             { key: entry.key, className: 'hover:bg-gray-50 transition-colors' },
-            // Čas – pre stravovanie je to čas začiatku slotu
             React.createElement(
                 'td',
                 { className: 'px-4 py-3 whitespace-nowrap' },
                 React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, row.slotFrom)
             ),
-            // Stĺpec Domáci / VS / Hostia je nahradený jediným stĺpcom s colspan=3
             React.createElement(
                 'td',
                 { colSpan: 3, className: 'px-4 py-3 whitespace-nowrap text-center' },
@@ -2808,7 +2843,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
                     row.mealTypeLabel
                 )
             ),
-            // Miesto – pre stravovanie je to názov jedálne
             React.createElement(
                 'td',
                 { className: 'px-4 py-3 whitespace-nowrap text-left' },
@@ -2819,9 +2853,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
                     React.createElement('span', { className: 'text-gray-600 text-sm max-w-32' }, row.placeName || '–')
                 )
             ),
-            // Info – prázdne pre stravovanie
             React.createElement('td', { className: 'px-4 py-3' }, null),
-            // Detail – prázdne pre stravovanie
             React.createElement('td', { className: 'px-4 py-3 whitespace-nowrap text-center' }, null)
         );
     };
