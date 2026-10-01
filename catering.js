@@ -240,8 +240,7 @@ const buildMealSlots = (from, to, unitMinutes) => {
 };
 
 // ============================================================
-// KĽÚČOVÁ FUNKCIA: Získa namapovaný názov tímu z window.teamNames
-// alebo cez matchTracker.getTeamNameByDisplayId (fallback).
+// KĽÚČOVÁ FUNKCIA: Získa namapovaný názov tímu
 // ============================================================
 const getMappedNameForTeam = async (categoryName, teamName) => {
     if (!teamName) return teamName;
@@ -295,12 +294,10 @@ const cateringApp = ({ userProfileData }) => {
     const [filterMealType, setFilterMealType] = useState('');
     const [sortMode, setSortMode] = useState('chronological');
 
-    // 🔥 Balíčky zo settings/packages/list
     const [packagesList, setPackagesList] = useState([]);
 
     const [teamNameMap, setTeamNameMap] = useState({});
 
-    // Ref na cateringAssignments pre remap
     const cateringAssignmentsRef = useRef([]);
     useEffect(() => {
         cateringAssignmentsRef.current = cateringAssignments;
@@ -499,7 +496,6 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // 🔥 Načítanie balíčkov
     useEffect(() => {
         if (!window.db) return;
 
@@ -555,7 +551,6 @@ const cateringApp = ({ userProfileData }) => {
     const triggerTeamNameRemap = async () => {
         const assignments = cateringAssignmentsRef.current || [];
 
-        // Zoznam unikátnych dvojíc (category, teamName) LEN zo superstructure záznamov
         const pairsMap = new Map();
 
         assignments.forEach((a) => {
@@ -692,15 +687,6 @@ const cateringApp = ({ userProfileData }) => {
     }, [tournamentDays, cateringTimes, unitMinutes]);
 
     // Pomocné funkcie
-    const getCateringPlaceColors = (placeId) => {
-        const place = cateringPlaces.find((p) => p.id === placeId);
-        if (!place) return { bg: '#1e40af', text: '#000000' };
-        return {
-            bg: place.headerColor || '#1e40af',
-            text: place.headerTextColor || '#000000',
-        };
-    };
-
     const findCateringAssignment = (team, dayKey, mealType, slotFrom) => {
         const cat = cleanCategory(team.category);
         const key = `${team.uid}|${team.teamIndex}|${cat}|${dayKey}|${mealType}|${slotFrom}`;
@@ -736,47 +722,50 @@ const cateringApp = ({ userProfileData }) => {
         ? userTeams.filter((t) => t.category === filterCategory)
         : userTeams;
 
-    // 🔥 Pomocná funkcia: nájde superstructure tím v userTeams podľa ss.category a ss.teamName
-    //    (aby sme vedeli skontrolovať jeho balíček)
-    const findSsTeamInUserTeams = (ssCategory, ssTeamName) => {
-        if (!ssCategory || !ssTeamName) return null;
+    // 🔥 Pomocná funkcia: nájde superstructure tím v userTeams
+    //    Hľadá prioritne podľa NAMAPOVANÉHO názvu, potom podľa pôvodného.
+    const findSsTeamInUserTeams = (ssCategory, ssOriginalTeamName, ssMappedTeamName) => {
+        if (!ssCategory) return null;
         const catClean = cleanCategory(ssCategory);
-        const tnClean = String(ssTeamName).trim();
 
-        // Skúsime priamu zhodu
-        let found = userTeams.find(t =>
-            cleanCategory(t.category) === catClean &&
-            String(t.teamName).trim() === tnClean
-        );
-        if (found) return found;
+        const candidates = [];
+        if (ssMappedTeamName) candidates.push(String(ssMappedTeamName).trim());
+        if (ssOriginalTeamName) {
+            const tnClean = String(ssOriginalTeamName).trim();
+            candidates.push(tnClean);
+            if (tnClean.startsWith(catClean + ' ')) {
+                candidates.push(tnClean.substring(catClean.length + 1).trim());
+            }
+        }
 
-        // Skúsime aj keď ss.teamName obsahuje kategóriu (napr. "U12 CH G1")
-        const stripped = tnClean.startsWith(catClean + ' ')
-            ? tnClean.substring(catClean.length + 1).trim()
-            : tnClean;
+        // 1) Skús podľa kategórie + kandidáta
+        for (const cand of candidates) {
+            if (!cand) continue;
+            const found = userTeams.find(t =>
+                cleanCategory(t.category) === catClean &&
+                String(t.teamName).trim() === cand
+            );
+            if (found) return found;
+        }
 
-        found = userTeams.find(t =>
-            cleanCategory(t.category) === catClean &&
-            String(t.teamName).trim() === stripped
-        );
-        return found || null;
+        // 2) Fallback – skús bez ohľadu na kategóriu
+        for (const cand of candidates) {
+            if (!cand) continue;
+            const found = userTeams.find(t => String(t.teamName).trim() === cand);
+            if (found) return found;
+        }
+
+        return null;
     };
 
     // 🔥 Pomocná funkcia: Má tím v balíčku daný typ stravovania v danom dni?
-    //    - Ak tím nemá packageName → povolíme (neobmedzujeme).
-    //    - Ak balíček neexistuje v packagesList → povolíme (fallback).
-    //    - Ak balíček existuje, ale pre daný deň nemá záznam → NEPOVOLÍME.
-    //    - Ak má záznam, povolíme len ak meals[dayKey][mealType] === 1.
     const teamHasMealInPackage = (team, dayKey, mealType) => {
         if (!team) return false;
-        if (!team.packageName) return true; // nemá balíček → neobmedzujeme
-
+        if (!team.packageName) return true;
         const pkg = packagesList.find(p => p.name === team.packageName);
-        if (!pkg) return true; // balíček neexistuje → neobmedzujeme
-
+        if (!pkg) return true;
         const mealsForDay = pkg.meals?.[dayKey];
-        if (!mealsForDay) return false; // balíček nemá pre daný deň nič → NEPOVOLÍME
-
+        if (!mealsForDay) return false;
         const val = mealsForDay[mealType];
         return val === 1 || val === true;
     };
@@ -802,13 +791,13 @@ const cateringApp = ({ userProfileData }) => {
                         const ss = findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
 
                         if (existing) {
-                            // 🔥 Pre klasické priradenie kontrolujeme balíček kliknutého tímu
+                            // Klasické priradenie – kontrolujeme balíček kliknutého tímu
                             if (!teamHasMealInPackage(team, day.key, mealType)) return;
 
                             rows.push({
                                 key: `${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
                                 category: team.category,
-                                teamName: team.teamName, // bez mapovania
+                                teamName: team.teamName,
                                 dayKey: day.key,
                                 dayLabel: day.fullLabelNumeric,
                                 daySort: day.date.getTime(),
@@ -824,18 +813,26 @@ const cateringApp = ({ userProfileData }) => {
                         }
 
                         if (ss) {
-                            // 🔥 Pre superstructure kontrolujeme balíček SUPERSTRUCTURE tímu
+                            // Superstructure – najprv namapujeme názov
                             const ssCategory = cleanCategory(ss.category || ss.categoryName || '');
-                            const ssTeamName = String(ss.teamName || '').trim();
-                            const ssMappedName = getMappedTeamName(ssCategory, ssTeamName);
+                            const ssOriginalTeamName = String(ss.teamName || '').trim();
+                            const ssMappedName = getMappedTeamName(ssCategory, ssOriginalTeamName);
 
-                            const ssTeam = findSsTeamInUserTeams(ssCategory, ssTeamName);
+                            // 🔥 Hľadáme superstructure tím v userTeams podľa NAMAPOVANÉHO názvu
+                            const ssTeam = findSsTeamInUserTeams(
+                                ssCategory,
+                                ssOriginalTeamName,
+                                ssMappedName
+                            );
+
                             if (!ssTeam) {
-                                // superstructure tím nevieme dohľadať → nezobrazujeme
+                                // Nenašli sme tím v userTeams → nemá balíček → nezobrazujeme
                                 return;
                             }
+
+                            // Skontrolujeme balíček superstructure tímu
                             if (!teamHasMealInPackage(ssTeam, day.key, mealType)) {
-                                return; // superstructure tím nemá dané stravovanie v balíčku
+                                return;
                             }
 
                             rows.push({
@@ -904,7 +901,8 @@ const cateringApp = ({ userProfileData }) => {
         cateringAssignments,
         sortMode,
         teamNameMap,
-        packagesList, // 🔥 závislosť na balíčkoch
+        packagesList,
+        userTeams,
     ]);
 
     if (loading) {
