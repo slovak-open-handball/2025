@@ -3384,12 +3384,14 @@ const TeamsOverviewApp = (props) => {
             ),
     
             // --- BOX S PREPÍNAČOM ZÁPASY / STRAVOVANIE ---
+            // Zobrazí sa len ak je viditeľná aspoň jedna z verejných stránok (matches alebo catering)
             (isCateringVisible || isMatchesVisible) ? React.createElement(
                 'div',
                 { className: 'bg-white rounded-xl shadow-xl p-4 mt-4' },
                 React.createElement(
                     'div',
                     { className: 'flex flex-wrap gap-3' },
+                    // Tlačidlo "Zápasy" sa zobrazí len ak je verejná stránka matches
                     isMatchesVisible ? React.createElement(
                         'button',
                         {
@@ -3404,6 +3406,7 @@ const TeamsOverviewApp = (props) => {
                         },
                         'Zápasy'
                     ) : null,
+                    // Tlačidlo "Stravovanie" sa zobrazí len ak je verejná stránka catering
                     isCateringVisible ? React.createElement(
                         'button',
                         {
@@ -3419,6 +3422,7 @@ const TeamsOverviewApp = (props) => {
                         'Stravovanie'
                     ) : null
                 ),
+                // Textový popis pod tlačidlami – zobrazí sa len ak je aspoň jedno tlačidlo viditeľné
                 React.createElement(
                     'div',
                     { className: 'mt-3 text-xs text-gray-500' },
