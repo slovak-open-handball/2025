@@ -899,7 +899,7 @@ const cateringApp = ({ userProfileData }) => {
                                                 'div',
                                                 { className: 'flex items-center gap-1' },
                                                 React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
-                                                React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, `${row.slotFrom} – ${row.slotTo}`)
+                                                React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, `${row.slotFrom}`)
                                             )
                                         ),
 
