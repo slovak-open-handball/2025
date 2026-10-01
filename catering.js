@@ -627,14 +627,31 @@ const cateringApp = ({ userProfileData }) => {
             });
         });
 
+        // Zoradenie: najprv kategória (abecedne), potom tím (abecedne),
+        // potom dátum (chronologicky) a čas od (chronologicky).
         rows.sort((a, b) => {
+            // 1) Kategória abecedne
+            const catCmp = (a.category || '').localeCompare(b.category || '', 'sk', { sensitivity: 'base' });
+            if (catCmp !== 0) return catCmp;
+
+            // 2) Tím abecedne
+            const teamCmp = (a.teamName || '').localeCompare(b.teamName || '', 'sk', { sensitivity: 'base' });
+            if (teamCmp !== 0) return teamCmp;
+
+            // 3) Dátum chronologicky
             if (a.daySort !== b.daySort) return a.daySort - b.daySort;
+
+            // 4) Čas od chronologicky
             const am = timeToMinutes(a.slotFrom);
             const bm = timeToMinutes(b.slotFrom);
             if (am != null && bm != null && am !== bm) return am - bm;
-            const catCmp = (a.category || '').localeCompare(b.category || '', 'sk', { sensitivity: 'base' });
-            if (catCmp !== 0) return catCmp;
-            return (a.teamName || '').localeCompare(b.teamName || '', 'sk', { sensitivity: 'base' });
+
+            // 5) Fallback – typ jedla (Obed pred Večerou)
+            if (a.mealType !== b.mealType) {
+                return a.mealType === 'lunch' ? -1 : 1;
+            }
+
+            return 0;
         });
 
         return rows;
