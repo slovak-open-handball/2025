@@ -1065,8 +1065,8 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                                             {
                                                 className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
                                                 style: {
-                                                    backgroundColor: row.mealType === 'lunch' ? '#DCFCE7' : '#DBEAFE',
-                                                    color: row.mealType === 'lunch' ? '#166534' : '#1E40AF',
+                                                    backgroundColor: '#E5E7EB',
+                                                    color: '#374151',
                                                     fontWeight: '500'
                                                 }
                                             },
