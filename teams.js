@@ -3238,8 +3238,8 @@ const TeamsOverviewApp = (props) => {
                     `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
                 )
             ),
-            // --- STRAVOVANIE TÍMU (vždy zobrazené ak je vybrané tlačidlo) ---
-            (isAnyButtonSelected) ? (() => {
+            // --- STRAVOVANIE TÍMU (zobrazí sa iba ak je stránka 'catering' verejná) ---
+            (isCateringVisible && isAnyButtonSelected) ? (() => {
                 // Nájdeme presný záznam z userTeams pre tento tím a kategóriu
                 const cleanCat = String(selectedTeamDetails.category || categoryFromUrl || '')
                     .replace(/\u00A0/g, ' ')
