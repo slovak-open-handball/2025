@@ -865,22 +865,50 @@ const TeamCateringList = ({ teamName, categoryName }) => {
             });
         });
 
-        // Deduplikácia
+        // Deduplikácia s prioritizáciou
+        // Pravidlá:
+        // 1) Ak existuje superstructure s isPriority === true, má prednosť pred všetkým.
+        // 2) Ak existuje klasické priradenie (type === 'classic'), má prednosť pred
+        //    superstructure bez priority (rovnaké ako v catering.js).
+        // 3) Ak existujú dve superstructure, prioritná vyhráva.
         const dedupMap = new Map();
         rows.forEach((row) => {
             const key = `${row.dayKey}||${row.mealType}||${row.slotFrom}`;
             const existing = dedupMap.get(key);
+        
             if (!existing) {
                 dedupMap.set(key, row);
                 return;
             }
-            if (existing.isPriority === true && row.isPriority !== true) return;
-            if (row.isPriority === true && existing.isPriority !== true) {
+        
+            const existingIsPriority = existing.isPriority === true;
+            const rowIsPriority = row.isPriority === true;
+        
+            // 1) Prioritná superstructure vždy vyhráva
+            if (rowIsPriority && !existingIsPriority) {
                 dedupMap.set(key, row);
                 return;
             }
+            if (existingIsPriority && !rowIsPriority) {
+                return;
+            }
+        
+            // 2) Ak sú obe prioritné alebo obe neprioritné:
+            //    - klasické priradenie má prednosť pred superstructure
+            const existingIsClassic = existing.type === 'classic';
+            const rowIsClassic = row.type === 'classic';
+        
+            if (rowIsClassic && !existingIsClassic) {
+                dedupMap.set(key, row);
+                return;
+            }
+            if (existingIsClassic && !rowIsClassic) {
+                return;
+            }
+        
+            // 3) Inak ponechaj existujúci (prvý vyhráva)
         });
-
+        
         const result = Array.from(dedupMap.values());
         result.sort((a, b) => {
             if (a.daySort !== b.daySort) return a.daySort - b.daySort;
