@@ -1,6 +1,6 @@
 // logged-in-catering.js
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect } = React;
 
@@ -258,15 +258,11 @@ const cateringApp = ({ userProfileData }) => {
     const [cateringTimes, setCateringTimes] = useState({});
     const [unitMinutes, setUnitMinutes] = useState('');
     const [loading, setLoading] = useState(true);
-    const [accommodations, setAccommodations] = useState([]);
     const [cateringPlaces, setCateringPlaces] = useState([]);
     const [cateringAssignments, setCateringAssignments] = useState([]);
     const [filterCategory, setFilterCategory] = useState('');
     const [filterDayKey, setFilterDayKey] = useState('');
     const [filterMealType, setFilterMealType] = useState('');
-    const [categoriesReady, setCategoriesReady] = useState(false);
-    const [categories, setCategories] = useState([]);
-    const [scheduledMatches, setScheduledMatches] = useState([]);
 
     // ============================================================
     // 2) useMemo – odvodené hodnoty
@@ -443,31 +439,6 @@ const cateringApp = ({ userProfileData }) => {
                 const places = [];
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data();
-                    if (data.type !== "ubytovanie") return;
-                    places.push({
-                        id: docSnap.id,
-                        name: data.name || '(bez názvu)',
-                        headerColor: data.headerColor || '#1e40af',
-                        headerTextColor: data.headerTextColor || '#000000',
-                    });
-                });
-                setAccommodations(places);
-            },
-            (error) => { }
-        );
-
-        return () => unsubscribe();
-    }, []);
-
-    useEffect(() => {
-        if (!window.db) return;
-
-        const unsubscribe = onSnapshot(
-            collection(window.db, 'places'),
-            (snapshot) => {
-                const places = [];
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
                     if (data.type !== 'stravovanie') return;
                     places.push({
                         id: docSnap.id,
@@ -507,151 +478,6 @@ const cateringApp = ({ userProfileData }) => {
 
         return () => unsubscribe();
     }, []);
-
-    useEffect(() => {
-        if (!window.db) return;
-
-        const loadCategories = async () => {
-            try {
-                const categoriesDocRef = doc(window.db, 'settings', 'categories');
-                const snap = await getDoc(categoriesDocRef);
-                if (snap.exists()) {
-                    const data = snap.data() || {};
-                    const categoriesMap = {};
-                    const categoriesList = [];
-
-                    Object.entries(data).forEach(([catId, catData]) => {
-                        if (catData?.name) {
-                            categoriesMap[catId] = catData.name;
-                            categoriesList.push({
-                                id: catId,
-                                name: catData.name,
-                                periods: catData.periods ?? 2,
-                                periodDuration: catData.periodDuration ?? 20,
-                                breakDuration: catData.breakDuration ?? 2,
-                            });
-                        }
-                    });
-
-                    window.categoriesData = categoriesMap;
-                    setCategories(categoriesList);
-                }
-            } catch (err) {
-                console.error('[Stravovanie] Chyba pri načítaní kategórií:', err);
-            } finally {
-                setCategoriesReady(true);
-            }
-        };
-
-        loadCategories();
-    }, []);
-
-    useEffect(() => {
-        if (!window.db) return;
-
-        const unsubscribe = onSnapshot(
-            collection(window.db, 'matches'),
-            (snapshot) => {
-                const scheduledMatchesLocal = [];
-
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data() || {};
-                    if (!data.hallId) return;
-                    if (!data.scheduledTime) return;
-
-                    let categoryName = data.categoryName || '';
-                    if (!categoryName && data.categoryId && window.categoriesData) {
-                        categoryName = window.categoriesData[data.categoryId] || '';
-                    }
-
-                    scheduledMatchesLocal.push({
-                        id: docSnap.id,
-                        homeTeamIdentifier: data.homeTeamIdentifier || null,
-                        awayTeamIdentifier: data.awayTeamIdentifier || null,
-                        homeTeamName: data.homeTeamName || null,
-                        awayTeamName: data.awayTeamName || null,
-                        categoryId: data.categoryId || null,
-                        categoryName: cleanCategory(categoryName),
-                        hallId: data.hallId,
-                        scheduledTime: data.scheduledTime,
-                        duration: data.duration ?? null,
-                    });
-                });
-
-                const cateringSlotsByDay = {};
-                (tournamentDays || []).forEach((day) => {
-                    const t = cateringTimes[day.key] || {};
-                    const daySlotsLocal = [];
-
-                    if (hasValidMealRange(t.lunch, unitMinutes)) {
-                        const built = buildMealSlots(t.lunch.from, t.lunch.to, unitMinutes);
-                        built.forEach((s) => {
-                            const fromMin = timeToMinutes(s.from);
-                            const toMin = timeToMinutes(s.to);
-                            if (fromMin != null && toMin != null) daySlotsLocal.push({ fromMin, toMin });
-                        });
-                    }
-
-                    if (hasValidMealRange(t.dinner, unitMinutes)) {
-                        const built = buildMealSlots(t.dinner.from, t.dinner.to, unitMinutes);
-                        built.forEach((s) => {
-                            const fromMin = timeToMinutes(s.from);
-                            const toMin = timeToMinutes(s.to);
-                            if (fromMin != null && toMin != null) daySlotsLocal.push({ fromMin, toMin });
-                        });
-                    }
-
-                    cateringSlotsByDay[day.key] = daySlotsLocal;
-                });
-
-                const filteredScheduledMatches = scheduledMatchesLocal.filter((match) => {
-                    if (!match.scheduledTime) return false;
-                    let matchDate;
-                    try {
-                        matchDate = match.scheduledTime.toDate
-                            ? match.scheduledTime.toDate()
-                            : new Date(match.scheduledTime.seconds * 1000);
-                    } catch (e) { return false; }
-
-                    const matchDay = String(matchDate.getDate()).padStart(2, '0');
-                    const matchMonth = String(matchDate.getMonth() + 1).padStart(2, '0');
-                    const matchYear = matchDate.getFullYear();
-                    const matchDayKey = `${matchYear}-${matchMonth}-${matchDay}`;
-
-                    const slotsForDay = cateringSlotsByDay[matchDayKey];
-                    if (!slotsForDay || slotsForDay.length === 0) return false;
-
-                    let matchDurationMin = match.duration;
-                    if (matchDurationMin == null) {
-                        const category = categories.find((c) => c.name === match.categoryName)
-                            || categories.find((c) => c.id === match.categoryId);
-                        if (category) {
-                            const periods = category.periods || 2;
-                            const periodDuration = category.periodDuration || 20;
-                            const breakDuration = category.breakDuration || 2;
-                            matchDurationMin = (periodDuration + breakDuration) * periods - breakDuration;
-                        } else {
-                            matchDurationMin = 0;
-                        }
-                    }
-
-                    const matchStartMin = matchDate.getHours() * 60 + matchDate.getMinutes();
-                    const matchEndMin = matchStartMin + matchDurationMin;
-
-                    return slotsForDay.some(
-                        (slot) => matchStartMin < slot.toMin && matchEndMin > slot.fromMin
-                    );
-                });
-
-                setScheduledMatches(filteredScheduledMatches);
-            },
-            (error) => {
-                console.error('[Stravovanie] Chyba pri načítavaní naplánovaných zápasov:', error);
-            }
-        );
-
-        return () => unsubscribe();
-    }, [categories, cateringTimes, unitMinutes, tournamentDays]);
 
     // ============================================================
     // 6) useMemo – assignmentsBySlot, daySlots
@@ -727,208 +553,6 @@ const cateringApp = ({ userProfileData }) => {
         return teamName;
     };
 
-    const teamPlaysDuringSlot = (team, dayKey, slotFrom, slotTo) => {
-        if (!team || !dayKey || !slotFrom || !slotTo) return false;
-
-        const slotFromMin = timeToMinutes(slotFrom);
-        const slotToMin = timeToMinutes(slotTo);
-        if (slotFromMin == null || slotToMin == null) return false;
-
-        const slotMidMin = slotFromMin + (slotToMin - slotFromMin) / 2;
-
-        const teamCategory = cleanCategory(team.category);
-        const teamShortName = String(team.teamName || '').trim();
-        const teamFullName = teamCategory && teamShortName
-            ? `${teamCategory} ${teamShortName}`
-            : teamShortName;
-
-        const teamNameVariants = new Set();
-        if (teamShortName) teamNameVariants.add(teamShortName);
-        if (teamFullName) teamNameVariants.add(teamFullName);
-        if (teamCategory && teamShortName.startsWith(teamCategory + ' ')) {
-            teamNameVariants.add(teamShortName.substring(teamCategory.length + 1).trim());
-        }
-
-        for (const match of scheduledMatches) {
-            if (!match.scheduledTime) continue;
-
-            let matchDate;
-            try {
-                matchDate = match.scheduledTime.toDate
-                    ? match.scheduledTime.toDate()
-                    : new Date(match.scheduledTime.seconds * 1000);
-            } catch (e) { continue; }
-
-            const matchDay = String(matchDate.getDate()).padStart(2, '0');
-            const matchMonth = String(matchDate.getMonth() + 1).padStart(2, '0');
-            const matchYear = matchDate.getFullYear();
-            const matchDayKey = `${matchYear}-${matchMonth}-${matchDay}`;
-
-            if (matchDayKey !== dayKey) continue;
-
-            const matchCategory = cleanCategory(
-                match.categoryName ||
-                (match.categoryId && window.categoriesData
-                    ? window.categoriesData[match.categoryId]
-                    : '')
-            );
-
-            if (matchCategory && teamCategory && matchCategory !== teamCategory) continue;
-
-            const matchTeamIdentifiers = [
-                match.homeTeamIdentifier,
-                match.awayTeamIdentifier,
-                match.homeTeamName,
-                match.awayTeamName,
-            ].filter(Boolean);
-
-            const isTeamInMatch = matchTeamIdentifiers.some((identifier) => {
-                const idStr = String(identifier).trim();
-                if (!idStr) return false;
-                if (teamNameVariants.has(idStr)) return true;
-
-                if (teamShortName && teamCategory) {
-                    const idStartsWithCategory = idStr.startsWith(teamCategory + ' ') || idStr === teamCategory;
-                    const idEndsWithShort = idStr.endsWith(teamShortName) || idStr.includes(` ${teamShortName}`);
-                    if (idStartsWithCategory && idEndsWithShort) return true;
-                }
-                return false;
-            });
-
-            if (!isTeamInMatch) continue;
-
-            const matchStartMin = matchDate.getHours() * 60 + matchDate.getMinutes();
-
-            let matchDurationMin = match.duration;
-            if (matchDurationMin == null) {
-                const category = categories.find((c) => c.name === matchCategory);
-                if (category) {
-                    const periods = category.periods || 2;
-                    const periodDuration = category.periodDuration || 20;
-                    const breakDuration = category.breakDuration || 2;
-                    matchDurationMin = (periodDuration + breakDuration) * periods - breakDuration;
-                } else {
-                    matchDurationMin = 0;
-                }
-            }
-
-            const matchEndMin = matchStartMin + matchDurationMin;
-
-            if (matchEndMin > slotFromMin && matchEndMin < slotToMin && matchEndMin <= slotMidMin) continue;
-            if (matchStartMin >= slotMidMin && matchStartMin < slotToMin && matchEndMin > slotToMin) continue;
-
-            const overlaps = matchStartMin < slotToMin && matchEndMin > slotFromMin;
-            if (overlaps) return true;
-        }
-
-        return false;
-    };
-
-    const superstructureTeamPlaysDuringSlot = (
-        placeTeamName,
-        placeTeamCategory,
-        dayKey,
-        slotFrom,
-        slotTo
-    ) => {
-        if (!placeTeamName || !dayKey || !slotFrom || !slotTo) return false;
-
-        const slotFromMin = timeToMinutes(slotFrom);
-        const slotToMin = timeToMinutes(slotTo);
-        if (slotFromMin == null || slotToMin == null) return false;
-
-        const slotMidMin = slotFromMin + (slotToMin - slotFromMin) / 2;
-
-        const targetCategory = cleanCategory(placeTeamCategory);
-        const targetNameRaw = String(placeTeamName || '').trim();
-        const targetShortName = targetNameRaw.split(/\s+/).pop();
-
-        const targetFullName = targetCategory && targetShortName
-            ? `${targetCategory} ${targetShortName}`
-            : targetNameRaw;
-
-        const targetVariants = new Set();
-        if (targetNameRaw) targetVariants.add(targetNameRaw);
-        if (targetFullName) targetVariants.add(targetFullName);
-        if (targetCategory && targetNameRaw.startsWith(targetCategory + ' ')) {
-            targetVariants.add(targetNameRaw.substring(targetCategory.length + 1).trim());
-        }
-
-        for (const match of scheduledMatches) {
-            if (!match.scheduledTime) continue;
-
-            let matchDate;
-            try {
-                matchDate = match.scheduledTime.toDate
-                    ? match.scheduledTime.toDate()
-                    : new Date(match.scheduledTime.seconds * 1000);
-            } catch (e) { continue; }
-
-            const matchDay = String(matchDate.getDate()).padStart(2, '0');
-            const matchMonth = String(matchDate.getMonth() + 1).padStart(2, '0');
-            const matchYear = matchDate.getFullYear();
-            const matchDayKey = `${matchYear}-${matchMonth}-${matchDay}`;
-
-            if (matchDayKey !== dayKey) continue;
-
-            const matchCategory = cleanCategory(
-                match.categoryName ||
-                (match.categoryId && window.categoriesData
-                    ? window.categoriesData[match.categoryId]
-                    : '')
-            );
-
-            if (matchCategory && targetCategory && matchCategory !== targetCategory) continue;
-
-            const matchTeamIdentifiers = [
-                match.homeTeamIdentifier,
-                match.awayTeamIdentifier,
-                match.homeTeamName,
-                match.awayTeamName,
-            ].filter(Boolean);
-
-            const isTeamInMatch = matchTeamIdentifiers.some((identifier) => {
-                const idStr = String(identifier).trim();
-                if (!idStr) return false;
-                if (targetVariants.has(idStr)) return true;
-
-                if (targetShortName && targetCategory) {
-                    const idStartsWithCategory = idStr.startsWith(targetCategory + ' ') || idStr === targetCategory;
-                    const idEndsWithShort = idStr.endsWith(targetShortName) || idStr.includes(` ${targetShortName}`);
-                    if (idStartsWithCategory && idEndsWithShort) return true;
-                }
-                return false;
-            });
-
-            if (!isTeamInMatch) continue;
-
-            const matchStartMin = matchDate.getHours() * 60 + matchDate.getMinutes();
-
-            let matchDurationMin = match.duration;
-            if (matchDurationMin == null) {
-                const category = categories.find((c) => c.name === matchCategory);
-                if (category) {
-                    const periods = category.periods || 2;
-                    const periodDuration = category.periodDuration || 20;
-                    const breakDuration = category.breakDuration || 2;
-                    matchDurationMin = (periodDuration + breakDuration) * periods - breakDuration;
-                } else {
-                    matchDurationMin = 0;
-                }
-            }
-
-            const matchEndMin = matchStartMin + matchDurationMin;
-
-            if (matchEndMin > slotFromMin && matchEndMin < slotToMin && matchEndMin <= slotMidMin) continue;
-            if (matchStartMin >= slotMidMin && matchStartMin < slotToMin && matchEndMin > slotToMin) continue;
-
-            const overlaps = matchStartMin < slotToMin && matchEndMin > slotFromMin;
-            if (overlaps) return true;
-        }
-
-        return false;
-    };
-
     // ============================================================
     // 8) Pomocné funkcie pre render (PRED return-mi!)
     // ============================================================
@@ -960,8 +584,6 @@ const cateringApp = ({ userProfileData }) => {
                     slots.forEach((slot) => {
                         const existing = findCateringAssignment(team, day.key, mealType, slot.from);
                         const ss = findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
-
-                        const isPlaying = teamPlaysDuringSlot(team, day.key, slot.from, slot.to);
 
                         if (existing) {
                             rows.push({
@@ -998,32 +620,6 @@ const cateringApp = ({ userProfileData }) => {
                                 placeName: ss.placeName || '',
                                 type: 'superstructure',
                                 isPriority: ss.isPriority === true,
-                                isPlaying: superstructureTeamPlaysDuringSlot(
-                                    ss.teamName || ss.teamIdentifier,
-                                    ss.category,
-                                    day.key,
-                                    slot.from,
-                                    slot.to
-                                ),
-                            });
-                            return;
-                        }
-
-                        if (isPlaying) {
-                            rows.push({
-                                key: `${team.id}-${day.key}-${mealType}-${slot.from}-play`,
-                                category: team.category,
-                                teamName: team.teamName,
-                                dayKey: day.key,
-                                dayLabel: day.fullLabelNumeric,
-                                daySort: day.date.getTime(),
-                                mealType,
-                                mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
-                                slotFrom: slot.from,
-                                slotTo: slot.to,
-                                placeId: null,
-                                placeName: '',
-                                type: 'playing',
                             });
                         }
                     });
@@ -1049,8 +645,6 @@ const cateringApp = ({ userProfileData }) => {
         daySlots,
         filterMealType,
         cateringAssignments,
-        scheduledMatches,
-        categories,
     ]);
 
     // ============================================================
@@ -1192,11 +786,7 @@ const cateringApp = ({ userProfileData }) => {
                                           key: row.key,
                                           className:
                                               'border-b border-gray-200 ' +
-                                              (row.type === 'playing'
-                                                  ? 'bg-gray-50 text-gray-500'
-                                                  : row.type === 'superstructure'
-                                                      ? 'bg-blue-50/40'
-                                                      : 'bg-white'),
+                                              (row.type === 'superstructure' ? 'bg-blue-50/40' : 'bg-white'),
                                       },
                                       React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.category),
                                       React.createElement(
@@ -1219,19 +809,16 @@ const cateringApp = ({ userProfileData }) => {
                                                   row.type === 'superstructure' && colors
                                                       ? {
                                                             backgroundColor: colors.bg,
-                                                            color: row.isPlaying ? '#dc2626' : colors.text,
-                                                            ...(row.isPriority && !row.isPlaying
+                                                            color: colors.text,
+                                                            ...(row.isPriority
                                                                 ? { border: '3px solid #000000', fontWeight: 'bold' }
                                                                 : {}),
-                                                            ...(row.isPlaying ? { fontWeight: 'bold' } : {}),
                                                         }
                                                       : row.type === 'classic' && colors
                                                           ? { backgroundColor: colors.bg, color: colors.text }
                                                           : {},
                                           },
-                                          row.type === 'playing'
-                                              ? 'Hrá zápas'
-                                              : row.placeName || '–'
+                                          row.placeName || '–'
                                       )
                                   );
                               })
