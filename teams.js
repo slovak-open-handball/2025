@@ -425,8 +425,25 @@ const TeamCateringList = ({ teamName, categoryName }) => {
     const cateringAssignmentsRef = useRef([]);
     useEffect(() => { cateringAssignmentsRef.current = cateringAssignments; }, [cateringAssignments]);
 
-    // --- Pomocné funkcie (presne ako v catering.js) ---
     const cleanCategory = (cat) => String(cat || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+
+    // 🔥 Pomocná funkcia pre odstránenie suffixu (A, B, C) z názvu tímu
+    const removeSuffixLocal = (teamName) => {
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÄČĎÉÍĽĹŇÓÔŘŠŤÚÝŽ';
+        const lettersLower = letters.toLowerCase();
+        const allLetters = letters + lettersLower;
+        
+        if (teamName.length >= 2) {
+            const lastChar = teamName[teamName.length - 1];
+            const secondLastChar = teamName[teamName.length - 2];
+            
+            if (secondLastChar === ' ' && allLetters.includes(lastChar)) {
+                return teamName.slice(0, -2).trim();
+            }
+        }
+        
+        return teamName;
+    };
 
     const timeToMinutes = (t) => {
         if (!t || typeof t !== 'string') return null;
@@ -782,36 +799,15 @@ const TeamCateringList = ({ teamName, categoryName }) => {
         const cleanCat = cleanCategory(categoryName);
         const cleanTeam = String(teamName).trim();
     
-        // 🔥 KĽÚČOVÁ ZMENA: Nájdeme PRESNE TEN ISTÝ záznam, ktorý by použil catering.js.
-        // V catering.js sa filtruje podľa `t.category === filterCategory`.
-        // Tu musíme nájsť tím, ktorý má:
-        //   - `t.category` presne rovné `cleanCat` (alebo `t.category` je to, čo je v userTeams)
-        //   - `t.teamName` presne rovné `cleanTeam` (alebo `t.teamName` je to, čo je v userTeams)
-        
-        // Presná zhoda (bez fallbacku) – presne ako v catering.js
-        let matchingTeams = userTeams.filter(t =>
-            cleanCategory(t.category) === cleanCat &&
-            String(t.teamName).trim() === cleanTeam
-        );
-    
-        // Ak sa nenašiel, skúsime aj tím, ktorého názov začína kategóriou
-        // (toto je jediný "fallback", ktorý je bezpečný – rovnaký ako v catering.js
-        //  pri `findSsTeamInUserTeamsByName`)
-        if (matchingTeams.length === 0 && cleanTeam.startsWith(cleanCat + ' ')) {
-            const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
-            matchingTeams = userTeams.filter(t =>
-                cleanCategory(t.category) === cleanCat &&
-                String(t.teamName).trim() === stripped
-            );
-        }
-    
-        // 🔥 AK SA NENAŠIEL ŽIADNY TÍM, SKONČÍME.
-        // ŽIADNY FALLBACK BEZ KATEGÓRIE!
-        if (matchingTeams.length === 0) return [];
+        // 🔥 PRESNE AKO V catering.js: použijeme VŠETKY tímy v danej kategórii
+        // (alebo všetky tímy, ak kategória nie je zadaná)
+        const filteredTeams = cleanCat
+            ? userTeams.filter((t) => cleanCategory(t.category) === cleanCat)
+            : userTeams;
     
         const rows = [];
     
-        matchingTeams.forEach((team) => {
+        filteredTeams.forEach((team) => {
             (tournamentDays || []).forEach((day) => {
                 ['lunch', 'dinner'].forEach((mealType) => {
                     const slots = daySlots[day.key]?.[mealType] || [];
@@ -827,6 +823,8 @@ const TeamCateringList = ({ teamName, categoryName }) => {
     
                             rows.push({
                                 key: `${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
+                                category: team.category,
+                                teamName: team.teamName,
                                 dayKey: day.key,
                                 dayLabel: day.fullLabelNumeric,
                                 daySort: day.date.getTime(),
@@ -881,6 +879,8 @@ const TeamCateringList = ({ teamName, categoryName }) => {
     
                             rows.push({
                                 key: `${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
+                                category: team.category,
+                                teamName: ssMappedName,  // 🔥 POZOR: teamName je ssMappedName!
                                 dayKey: day.key,
                                 dayLabel: day.fullLabelNumeric,
                                 daySort: day.date.getTime(),
@@ -898,10 +898,10 @@ const TeamCateringList = ({ teamName, categoryName }) => {
             });
         });
     
-        // Deduplikácia (presne ako v catering.js)
+        // 🔥 DEDUPLIKÁCIA – presne ako v catering.js
         const dedupMap = new Map();
         rows.forEach((row) => {
-            const key = `${cleanCat}||${cleanTeam}||${row.dayKey}||${row.mealType}`;
+            const key = `${cleanCategory(row.category)}||${String(row.teamName).trim()}||${row.dayKey}||${row.mealType}`;
             const existing = dedupMap.get(key);
             if (!existing) {
                 dedupMap.set(key, row);
@@ -913,9 +913,35 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                 return;
             }
         });
-        const dedupedRows = Array.from(dedupMap.values());
+        let dedupedRows = Array.from(dedupMap.values());
     
-        // Zoradenie (presne ako v catering.js)
+        // 🔥 KĹÚČOVÝ KROK: vyfiltrujeme len riadky pre hľadaný tím.
+        // V catering.js sa zobrazujú všetky tímy, ale my chceme len tento jeden.
+        // Musíme ale zobrať do úvahy, že superstructure riadok má teamName = ssMappedName.
+        dedupedRows = dedupedRows.filter((row) => {
+            const rowTeam = String(row.teamName || '').trim();
+            const rowCat = cleanCategory(row.category);
+    
+            // Presná zhoda
+            if (rowTeam === cleanTeam && rowCat === cleanCat) return true;
+    
+            // Ak hľadaný tím začína kategóriou
+            if (cleanTeam.startsWith(cleanCat + ' ')) {
+                const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
+                if (rowTeam === stripped && rowCat === cleanCat) return true;
+            }
+    
+            // Fallback: ak sa tím líši len suffixom (A, B, C)
+            if (rowCat === cleanCat) {
+                const rowBase = removeSuffixLocal(rowTeam);
+                const cleanBase = removeSuffixLocal(cleanTeam);
+                if (rowBase === cleanBase) return true;
+            }
+    
+            return false;
+        });
+    
+        // Zoradenie – presne ako v catering.js (chronological)
         dedupedRows.sort((a, b) => {
             if (a.daySort !== b.daySort) return a.daySort - b.daySort;
             const am = timeToMinutes(a.slotFrom);
