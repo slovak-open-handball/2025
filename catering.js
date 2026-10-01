@@ -577,8 +577,7 @@ const cateringApp = ({ userProfileData }) => {
 
     // ============================================================
     // 9) assignmentRows (useMemo) – MUSÍ BYŤ PRED RETURN-MI
-    //    Zobrazujú sa VŠETKY tímy × deň × typ jedla × slot,
-    //    aj tie bez priradenia (miesto bude '–').
+    //    Zobrazujú sa LEN tímy s reálnym priradením.
     // ============================================================
     const assignmentRows = React.useMemo(() => {
         const rows = [];
@@ -633,25 +632,9 @@ const cateringApp = ({ userProfileData }) => {
                                 type: 'superstructure',
                                 isPriority: ss.isPriority === true,
                             });
-                            return;
                         }
 
-                        // Bez priradenia – zobrazíme tiež (miesto = '–')
-                        rows.push({
-                            key: `${team.id}-${day.key}-${mealType}-${slot.from}-none`,
-                            category: team.category,
-                            teamName: team.teamName,
-                            dayKey: day.key,
-                            dayLabel: day.fullLabelNumeric,
-                            daySort: day.date.getTime(),
-                            mealType,
-                            mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
-                            slotFrom: slot.from,
-                            slotTo: slot.to,
-                            placeId: null,
-                            placeName: '',
-                            type: 'unassigned',
-                        });
+                        // Bez priradenia – NEZOBRAZUJEME
                     });
                 });
             });
@@ -876,11 +859,7 @@ const cateringApp = ({ userProfileData }) => {
                                           key: row.key,
                                           className:
                                               'border-b border-gray-200 ' +
-                                              (row.type === 'superstructure'
-                                                  ? 'bg-blue-50/40'
-                                                  : row.type === 'unassigned'
-                                                      ? 'bg-white'
-                                                      : 'bg-white'),
+                                              (row.type === 'superstructure' ? 'bg-blue-50/40' : 'bg-white'),
                                       },
                                       React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.category),
                                       React.createElement(
