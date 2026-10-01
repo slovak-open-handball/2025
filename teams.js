@@ -776,11 +776,14 @@ const TeamCateringList = ({ teamName, categoryName }) => {
 
         const rows = [];
 
+        // Pre každý deň a typ jedla nájdeme VŠETKY priradenia (klasické aj SS) pre tento tím
         (tournamentDays || []).forEach((day) => {
             ['lunch', 'dinner'].forEach((mealType) => {
                 const slots = daySlots[day.key]?.[mealType] || [];
+                if (slots.length === 0) return;
+        
+                // 1) Klasické priradenia pre tento tím v tento deň/typ (podľa slotov)
                 slots.forEach((slot) => {
-                    // 1) Klasické priradenie pre tento tím
                     const existing = cateringAssignments.find((a) =>
                         a.isSuperstructure !== true &&
                         a.teamUid === myTeam.uid &&
@@ -790,7 +793,7 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                         a.mealType === mealType &&
                         a.slotFrom === slot.from
                     );
-
+        
                     if (existing) {
                         if (!teamHasMealInPackage(myTeam, day.key, mealType)) return;
                         rows.push({
@@ -806,62 +809,65 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                             type: 'classic',
                             isPriority: false,
                         });
-                        return;
                     }
-
-                    // 2) Superstructure priradenie pre tento tím
-                    const ss = cateringAssignments.find((a) =>
-                        a.isSuperstructure === true &&
-                        a.clickedTeamUid === myTeam.uid &&
-                        a.clickedTeamIndex === myTeam.teamIndex &&
-                        cleanCategory(a.clickedTeamCategory) === cleanCat &&
-                        a.dayKey === day.key &&
-                        a.mealType === mealType &&
-                        a.slotFrom === slot.from
-                    );
-
-                    if (ss) {
-                        const ssCategory = cleanCategory(ss.category || ss.categoryName || '');
-                        const ssOriginalTeamName = String(ss.teamName || '').trim();
-                        let ssMappedName = getMappedTeamName(ssCategory, ssOriginalTeamName);
-
-                        if (
-                            ssMappedName === null ||
-                            ssMappedName === undefined ||
-                            String(ssMappedName).trim() === '' ||
-                            String(ssMappedName).trim() === 'null' ||
-                            String(ssMappedName).trim() === 'undefined'
-                        ) {
-                            ssMappedName = ssOriginalTeamName;
-                        }
-
-                        const wasMapped = String(ssMappedName).trim() !== ssOriginalTeamName;
-
-                        if (wasMapped) {
-                            const ssTeam = findTeamInUserTeamsByName(ssCategory, ssMappedName);
-                            if (!ssTeam) return;
+                });
+        
+                // 2) Superstructure priradenia pre tento tím v tento deň/typ
+                //    (hľadáme VŠETKY SS pre tento tím/deň/typ, bez ohľadu na slot)
+                const ssAssignments = cateringAssignments.filter((a) =>
+                    a.isSuperstructure === true &&
+                    a.clickedTeamUid === myTeam.uid &&
+                    a.clickedTeamIndex === myTeam.teamIndex &&
+                    cleanCategory(a.clickedTeamCategory) === cleanCat &&
+                    a.dayKey === day.key &&
+                    a.mealType === mealType
+                );
+        
+                ssAssignments.forEach((ss) => {
+                    const ssCategory = cleanCategory(ss.category || ss.categoryName || '');
+                    const ssOriginalTeamName = String(ss.teamName || '').trim();
+                    let ssMappedName = getMappedTeamName(ssCategory, ssOriginalTeamName);
+        
+                    if (
+                        ssMappedName === null ||
+                        ssMappedName === undefined ||
+                        String(ssMappedName).trim() === '' ||
+                        String(ssMappedName).trim() === 'null' ||
+                        String(ssMappedName).trim() === 'undefined'
+                    ) {
+                        ssMappedName = ssOriginalTeamName;
+                    }
+        
+                    const wasMapped = String(ssMappedName).trim() !== ssOriginalTeamName;
+        
+                    if (wasMapped) {
+                        const ssTeam = findTeamInUserTeamsByName(ssCategory, ssMappedName);
+                        if (!ssTeam) return;
+                        if (!teamHasMealInPackage(ssTeam, day.key, mealType)) return;
+                    } else {
+                        const ssTeam = findTeamInUserTeamsByName(ssCategory, ssOriginalTeamName);
+                        if (ssTeam) {
                             if (!teamHasMealInPackage(ssTeam, day.key, mealType)) return;
-                        } else {
-                            const ssTeam = findTeamInUserTeamsByName(ssCategory, ssOriginalTeamName);
-                            if (ssTeam) {
-                                if (!teamHasMealInPackage(ssTeam, day.key, mealType)) return;
-                            }
                         }
-
-                        rows.push({
-                            key: `${myTeam.id}-${day.key}-${mealType}-${slot.from}-ss`,
-                            dayKey: day.key,
-                            dayLabel: day.fullLabelNumeric,
-                            daySort: day.date.getTime(),
-                            mealType,
-                            mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
-                            slotFrom: slot.from,
-                            slotTo: slot.to,
-                            placeName: ss.placeName || '',
-                            type: 'superstructure',
-                            isPriority: ss.isPriority === true,
-                        });
                     }
+        
+                    // slotTo dopočítame zo slotu, ktorý zodpovedá slotFrom
+                    const matchingSlot = slots.find(s => s.from === ss.slotFrom);
+                    const slotTo = matchingSlot ? matchingSlot.to : '';
+        
+                    rows.push({
+                        key: `${myTeam.id}-${day.key}-${mealType}-${ss.slotFrom}-ss-${ss.id}`,
+                        dayKey: day.key,
+                        dayLabel: day.fullLabelNumeric,
+                        daySort: day.date.getTime(),
+                        mealType,
+                        mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
+                        slotFrom: ss.slotFrom,
+                        slotTo: slotTo,
+                        placeName: ss.placeName || '',
+                        type: 'superstructure',
+                        isPriority: ss.isPriority === true,
+                    });
                 });
             });
         });
