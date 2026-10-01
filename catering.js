@@ -263,6 +263,7 @@ const cateringApp = ({ userProfileData }) => {
     const [filterCategory, setFilterCategory] = useState('');
     const [filterDayKey, setFilterDayKey] = useState('');
     const [filterMealType, setFilterMealType] = useState('');
+    const [sortMode, setSortMode] = useState('chronological'); // 'chronological' | 'team'
 
     // ============================================================
     // 2) useMemo – odvodené hodnoty
@@ -300,7 +301,8 @@ const cateringApp = ({ userProfileData }) => {
         const categoryName = categoryRaw ? categoryRaw.replace(/-/g, ' ') : '';
         const dayKey = params.get('day') || '';
         const mealType = params.get('mealType') || '';
-        return { category: categoryName, day: dayKey, mealType };
+        const sort = params.get('sort') || 'chronological';
+        return { category: categoryName, day: dayKey, mealType, sort };
     };
 
     const updateURLWithFilters = (filters) => {
@@ -310,6 +312,9 @@ const cateringApp = ({ userProfileData }) => {
         }
         if (filters.day) params.set('day', filters.day);
         if (filters.mealType) params.set('mealType', filters.mealType);
+        if (filters.sort && filters.sort !== 'chronological') {
+            params.set('sort', filters.sort);
+        }
         const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}${window.location.hash}`;
         window.history.replaceState({}, '', newUrl);
     };
@@ -334,6 +339,10 @@ const cateringApp = ({ userProfileData }) => {
         if (filters.mealType === 'lunch' || filters.mealType === 'dinner') {
             setFilterMealType(filters.mealType);
         }
+
+        if (filters.sort === 'team' || filters.sort === 'chronological') {
+            setSortMode(filters.sort);
+        }
     }, [availableCategories, tournamentDays, cateringTimes, unitMinutes]);
 
     useEffect(() => {
@@ -344,11 +353,12 @@ const cateringApp = ({ userProfileData }) => {
                 category: filterCategory,
                 day: filterDayKey,
                 mealType: filterMealType,
+                sort: sortMode,
             });
         }, 300);
 
         return () => clearTimeout(timeoutId);
-    }, [filterCategory, filterDayKey, filterMealType, availableCategories, tournamentDays]);
+    }, [filterCategory, filterDayKey, filterMealType, sortMode, availableCategories, tournamentDays]);
 
     // ============================================================
     // 5) Data useEffect-y – Firestore
@@ -627,32 +637,42 @@ const cateringApp = ({ userProfileData }) => {
             });
         });
 
-        // Zoradenie: najprv kategória (abecedne), potom tím (abecedne),
-        // potom dátum (chronologicky) a čas od (chronologicky).
-        rows.sort((a, b) => {
-            // 1) Kategória abecedne
-            const catCmp = (a.category || '').localeCompare(b.category || '', 'sk', { sensitivity: 'base' });
-            if (catCmp !== 0) return catCmp;
+        // Zoradenie podľa zvoleného režimu
+        if (sortMode === 'team') {
+            // Abecedne podľa kategórie a názvu tímu
+            rows.sort((a, b) => {
+                const catCmp = (a.category || '').localeCompare(b.category || '', 'sk', { sensitivity: 'base' });
+                if (catCmp !== 0) return catCmp;
 
-            // 2) Tím abecedne
-            const teamCmp = (a.teamName || '').localeCompare(b.teamName || '', 'sk', { sensitivity: 'base' });
-            if (teamCmp !== 0) return teamCmp;
+                const teamCmp = (a.teamName || '').localeCompare(b.teamName || '', 'sk', { sensitivity: 'base' });
+                if (teamCmp !== 0) return teamCmp;
 
-            // 3) Dátum chronologicky
-            if (a.daySort !== b.daySort) return a.daySort - b.daySort;
+                if (a.daySort !== b.daySort) return a.daySort - b.daySort;
 
-            // 4) Čas od chronologicky
-            const am = timeToMinutes(a.slotFrom);
-            const bm = timeToMinutes(b.slotFrom);
-            if (am != null && bm != null && am !== bm) return am - bm;
+                const am = timeToMinutes(a.slotFrom);
+                const bm = timeToMinutes(b.slotFrom);
+                if (am != null && bm != null && am !== bm) return am - bm;
 
-            // 5) Fallback – typ jedla (Obed pred Večerou)
-            if (a.mealType !== b.mealType) {
-                return a.mealType === 'lunch' ? -1 : 1;
-            }
+                if (a.mealType !== b.mealType) {
+                    return a.mealType === 'lunch' ? -1 : 1;
+                }
+                return 0;
+            });
+        } else {
+            // Chronologicky podľa dátumu a času
+            rows.sort((a, b) => {
+                if (a.daySort !== b.daySort) return a.daySort - b.daySort;
 
-            return 0;
-        });
+                const am = timeToMinutes(a.slotFrom);
+                const bm = timeToMinutes(b.slotFrom);
+                if (am != null && bm != null && am !== bm) return am - bm;
+
+                const catCmp = (a.category || '').localeCompare(b.category || '', 'sk', { sensitivity: 'base' });
+                if (catCmp !== 0) return catCmp;
+
+                return (a.teamName || '').localeCompare(b.teamName || '', 'sk', { sensitivity: 'base' });
+            });
+        }
 
         return rows;
     }, [
@@ -662,6 +682,7 @@ const cateringApp = ({ userProfileData }) => {
         daySlots,
         filterMealType,
         cateringAssignments,
+        sortMode,
     ]);
 
     // ============================================================
@@ -761,6 +782,38 @@ const cateringApp = ({ userProfileData }) => {
                             React.createElement('option', { value: 'lunch' }, 'Obed'),
                             React.createElement('option', { value: 'dinner' }, 'Večera')
                         )
+                    )
+                ),
+
+                // Prepínač zobrazenia
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-center gap-1 mt-4 bg-gray-100 rounded-lg p-1 w-fit mx-auto' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setSortMode('chronological'),
+                            className:
+                                'px-4 py-2 rounded-md text-sm font-medium transition ' +
+                                (sortMode === 'chronological'
+                                    ? 'bg-white text-gray-900 shadow'
+                                    : 'text-gray-600 hover:text-gray-900'),
+                        },
+                        '📅 Chronologicky'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setSortMode('team'),
+                            className:
+                                'px-4 py-2 rounded-md text-sm font-medium transition ' +
+                                (sortMode === 'team'
+                                    ? 'bg-white text-gray-900 shadow'
+                                    : 'text-gray-600 hover:text-gray-900'),
+                        },
+                        '🔤 Podľa tímu'
                     )
                 )
             ),
