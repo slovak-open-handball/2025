@@ -804,6 +804,7 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                             slotTo: slot.to,
                             placeName: existing.placeName || '',
                             type: 'classic',
+                            isPriority: false,
                         });
                         return;
                     }
