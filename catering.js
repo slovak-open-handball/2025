@@ -246,22 +246,33 @@ const buildMealSlots = (from, to, unitMinutes) => {
 const getMappedNameForTeam = async (categoryName, teamName) => {
     if (!teamName) return teamName;
 
-    // Kandidátske kľúče, ktoré môže mať window.teamNames:
-    // 1) "{kategória} {tím}" (napr. "U12 CH G1")
-    // 2) samotný tím (napr. "G1")
-    // 3) "{tím}" bez kategórie
     const candidates = [];
-
     if (categoryName && !teamName.includes(categoryName)) {
         candidates.push(`${categoryName} ${teamName}`);
     }
     candidates.push(teamName);
 
-    // 1) Skús window.teamNames (mapa, ktorú plní matchTracker)
+    // DIAGNOSTIKA
+    const diag = {
+        categoryName,
+        teamName,
+        candidates,
+        windowTeamNamesExists: !!window.teamNames && typeof window.teamNames === 'object',
+        windowTeamNamesKeysCount: window.teamNames ? Object.keys(window.teamNames).length : 0,
+        windowTeamNamesSampleKeys: window.teamNames ? Object.keys(window.teamNames).slice(0, 10) : [],
+        matchTrackerExists: !!window.matchTracker,
+        matchTrackerHasFn: !!(window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function'),
+        windowTeamNamesDirectHits: {},
+        matchTrackerResults: {},
+    };
+
+    // 1) Skús window.teamNames
     if (window.teamNames && typeof window.teamNames === 'object') {
         for (const key of candidates) {
             const val = window.teamNames[key];
+            diag.windowTeamNamesDirectHits[key] = val;
             if (val && val !== key && val !== 'null' && val !== 'undefined') {
+                console.log('[catering] MAPPED cez window.teamNames', diag, '=>', val);
                 return val;
             }
         }
@@ -275,13 +286,22 @@ const getMappedNameForTeam = async (categoryName, teamName) => {
         for (const key of candidates) {
             try {
                 const mapped = await window.matchTracker.getTeamNameByDisplayId(key);
+                diag.matchTrackerResults[key] = mapped;
                 if (mapped && mapped !== key && mapped !== 'null' && mapped !== 'undefined') {
+                    console.log('[catering] MAPPED cez matchTracker', diag, '=>', mapped);
                     return mapped;
                 }
             } catch (e) {
-                // ignore
+                diag.matchTrackerResults[key] = `ERROR: ${e.message}`;
             }
         }
+    }
+
+    // Ak nič nezaberá, zaloguj diag (aby sme videli, čo sa deje)
+    // POZOR: toto logujeme len raz za určitý čas – pozri logiku nižšie.
+    if (window.__cateringLastDiagLog !== JSON.stringify(diag)) {
+        window.__cateringLastDiagLog = JSON.stringify(diag);
+        console.log('[catering] NEMAPOVANÉ:', diag);
     }
 
     return teamName;
@@ -300,7 +320,6 @@ const cateringApp = ({ userProfileData }) => {
     const [filterMealType, setFilterMealType] = useState('');
     const [sortMode, setSortMode] = useState('chronological');
 
-    // Mapa namapovaných názvov tímov: kľúč = "kategória||pôvodnýNázov", hodnota = nový názov
     const [teamNameMap, setTeamNameMap] = useState({});
 
     const userTeamsRef = useRef([]);
@@ -308,14 +327,6 @@ const cateringApp = ({ userProfileData }) => {
         userTeamsRef.current = userTeams;
     }, [userTeams]);
 
-    const teamNameMapRef = useRef({});
-    useEffect(() => {
-        teamNameMapRef.current = teamNameMap;
-    }, [teamNameMap]);
-
-    // ============================================================
-    // useMemo – odvodené hodnoty
-    // ============================================================
     const availableCategories = React.useMemo(() => {
         return Array.from(
             new Set(
@@ -340,9 +351,6 @@ const cateringApp = ({ userProfileData }) => {
         });
     }, [tournamentDays, cateringTimes, unitMinutes]);
 
-    // ============================================================
-    // URL filtre
-    // ============================================================
     const loadFiltersFromURL = () => {
         const params = new URLSearchParams(window.location.search);
         const categoryRaw = params.get('category') || '';
@@ -535,7 +543,7 @@ const cateringApp = ({ userProfileData }) => {
     }, []);
 
     // ============================================================
-    // 5b) KĽÚČOVÉ: Remapovanie názvov tímov
+    // 5b) Remapovanie názvov tímov
     // ============================================================
     const triggerTeamNameRemap = async () => {
         const teams = userTeamsRef.current || [];
@@ -550,7 +558,6 @@ const cateringApp = ({ userProfileData }) => {
 
             try {
                 const mapped = await getMappedNameForTeam(team.category, team.teamName);
-                // Uložíme len ak sa namapovaný názov LÍŠI od pôvodného
                 if (mapped && mapped !== team.teamName) {
                     newMap[key] = mapped;
                 }
@@ -560,6 +567,8 @@ const cateringApp = ({ userProfileData }) => {
         }
 
         if (Object.keys(newMap).length > 0) {
+            console.log('[catering] triggerTeamNameRemap – newMap má', Object.keys(newMap).length, 'kľúčov:', newMap);
+
             setTeamNameMap((prev) => {
                 let changed = false;
                 for (const k of Object.keys(newMap)) {
@@ -568,35 +577,30 @@ const cateringApp = ({ userProfileData }) => {
                         break;
                     }
                 }
-                if (!changed) return prev;
+                if (!changed) {
+                    console.log('[catering] Mapa sa nezmenila, nerenderujem.');
+                    return prev;
+                }
+                console.log('[catering] Mapa sa ZMENILA, renderujem.');
                 return { ...prev, ...newMap };
             });
+        } else {
+            console.log('[catering] triggerTeamNameRemap – nič sa nenamapovalo (newMap prázdne).');
         }
     };
 
-    // ============================================================
-    // 5c) POLLING: Nezávisle od udalostí, každých 800 ms kontrolujeme,
-    //     či sa nezmenil window.teamNames alebo výsledok matchTrackera.
-    //     Toto je najspoľahlivejšie riešenie, lebo matchTracker
-    //     nemusí dispatchnúť event vždy, keď zmení cache.
-    // ============================================================
+    // Polling každých 800 ms
     useEffect(() => {
-        // Spustíme prvý remap hneď
         const runRemap = () => {
             triggerTeamNameRemap();
         };
 
         runRemap();
-
-        // Polling každých 800 ms
         const intervalId = setInterval(runRemap, 800);
-
         return () => clearInterval(intervalId);
     }, []);
 
-    // ============================================================
-    // 5d) Listener na matches – pri zmene na completed spustíme remap
-    // ============================================================
+    // Listener na matches – pri zmene na completed
     const prevMatchStatusesRef = useRef({});
 
     useEffect(() => {
@@ -615,13 +619,13 @@ const cateringApp = ({ userProfileData }) => {
 
                 if (newStatus === 'completed' && oldStatus !== 'completed') {
                     shouldRemap = true;
+                    console.log('[catering] Zápas', matchId, 'sa zmenil na completed – spúšťam remap.');
                 }
 
                 prevMatchStatusesRef.current[matchId] = newStatus;
             });
 
             if (shouldRemap) {
-                // Spustíme remap okamžite, aj keď polling beží
                 triggerTeamNameRemap();
             }
         }, (error) => { });
@@ -629,11 +633,10 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // ============================================================
-    // 5e) Listener na globálne eventy matchTrackera
-    // ============================================================
+    // Globálne eventy matchTrackera
     useEffect(() => {
         const handleMappingReady = () => {
+            console.log('[catering] Event teamNameMappingReady/teamNamesReplaced – spúšťam remap.');
             triggerTeamNameRemap();
         };
 
@@ -647,7 +650,7 @@ const cateringApp = ({ userProfileData }) => {
     }, []);
 
     // ============================================================
-    // 6) useMemo – assignmentsBySlot, daySlots
+    // useMemo
     // ============================================================
     const assignmentsBySlot = React.useMemo(() => {
         const map = new Map();
@@ -680,9 +683,7 @@ const cateringApp = ({ userProfileData }) => {
         return result;
     }, [tournamentDays, cateringTimes, unitMinutes]);
 
-    // ============================================================
-    // 7) Pomocné funkcie
-    // ============================================================
+    // Pomocné funkcie
     const getCateringPlaceColors = (placeId) => {
         const place = cateringPlaces.find((p) => p.id === placeId);
         if (!place) return { bg: '#1e40af', text: '#000000' };
@@ -736,7 +737,7 @@ const cateringApp = ({ userProfileData }) => {
         : userTeams;
 
     // ============================================================
-    // 9) assignmentRows
+    // assignmentRows
     // ============================================================
     const assignmentRows = React.useMemo(() => {
         const rows = [];
@@ -848,9 +849,6 @@ const cateringApp = ({ userProfileData }) => {
         teamNameMap,
     ]);
 
-    // ============================================================
-    // 10) Skoré return-y
-    // ============================================================
     if (loading) {
         return React.createElement(
             'div',
@@ -876,9 +874,7 @@ const cateringApp = ({ userProfileData }) => {
         );
     }
 
-    // ============================================================
-    // 11) RENDER
-    // ============================================================
+    // RENDER
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-start p-6 w-full min-w-0' },
