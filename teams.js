@@ -806,6 +806,7 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                             type: 'classic',
                             isPriority: false,
                         });
+                        return;
                     }
 
                     // 2) Superstructure priradenie pre tento tím
