@@ -2203,7 +2203,7 @@ const MapApp = ({ userProfileData }) => {
         return type ? type.type : selectedAccommodationTypeFilter;
     };
     
-    // RENDER
+        // RENDER
     return React.createElement('div', { className: 'flex-grow flex justify-center items-center p-0 sm:p-2 relative' },
       React.createElement('div', { className: 'w-full max-w-[1920px] mx-auto bg-white rounded-xl shadow-2xl p-2 sm:p-4 lg:p-6' },
         // NADPIS A ŠTATISTIKY PREHĽADU
@@ -2653,22 +2653,6 @@ const MapApp = ({ userProfileData }) => {
                          }),
                          'Odstrániť miesto'
                        )
-                     ),
-                      ((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
-                       (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned))
-                      ? React.createElement(React.Fragment, null,
-                          React.createElement('i', { 
-                            className: 'fa-solid fa-trash-alt mr-2',
-                            style: { color: 'inherit' }
-                          }),
-                          'Odstrániť miesto'
-                        )
-                      : React.createElement(React.Fragment, null,
-                          React.createElement('i', { 
-                            className: 'fa-solid fa-trash-alt mr-2' 
-                          }),
-                          'Odstrániť miesto'
-                        )
                   ),
                 )
               ),
@@ -2847,7 +2831,7 @@ const MapApp = ({ userProfileData }) => {
                 onChange: e => setEditAccommodationType(e.target.value),
                 disabled: isPlaceAssigned,
                 className: `w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition bg-white ${
-                    isPlaceAssigned ? 'cursor-not-allowed bg-gray-100 opacity-70' : ''  // ← PRIDAJTE TÚTO PODMIENKU
+                    isPlaceAssigned ? 'cursor-not-allowed bg-gray-100 opacity-70' : ''
                 }`
               },
                 React.createElement('option', { value: '' }, 'Vyberte typ ubytovania'),
@@ -3458,6 +3442,7 @@ const MapApp = ({ userProfileData }) => {
           React.createElement('i', { className: isAddingPlace ? 'fa-solid fa-xmark' : 'fa-solid fa-plus' })
         )
     )
+  );
 };
 
 const createPlaceChangeNotification = async (actionType, changesArray, placeData) => {
