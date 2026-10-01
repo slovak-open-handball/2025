@@ -4612,58 +4612,63 @@ const TeamsOverviewApp = (props) => {
                 )
             ),
             // --- BOX S PREPÍNAČOM ZÁPASY / STRAVOVANIE ---
-            (isCateringVisible || isMatchesVisible) ? React.createElement(
+        // Zobrazí sa len ak je viditeľná aspoň jedna z verejných stránok (matches alebo catering)
+        (isCateringVisible || isMatchesVisible) ? React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-xl p-4 mt-4' },
+            React.createElement(
                 'div',
-                { className: 'bg-white rounded-xl shadow-xl p-4 mt-4' },
-                React.createElement(
-                    'div',
-                    { className: 'flex flex-wrap gap-3' },
-                    isMatchesVisible ? React.createElement(
-                        'button',
-                        {
-                            onClick: () => {
-                                setTeamEventsFilter((prev) => prev === 'matches' ? null : 'matches');
-                            },
-                            className: `px-5 py-2 rounded-lg transition-colors text-sm font-medium ${
-                                teamEventsFilter === 'matches'
-                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`
+                { className: 'flex flex-wrap gap-3' },
+                // Tlačidlo "Zápasy" sa zobrazí len ak je verejná stránka matches
+                isMatchesVisible ? React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            setTeamEventsFilter((prev) => prev === 'matches' ? null : 'matches');
                         },
-                        'Zápasy'
-                    ) : null,
-                    isCateringVisible ? React.createElement(
-                        'button',
-                        {
-                            onClick: () => {
-                                setTeamEventsFilter((prev) => prev === 'catering' ? null : 'catering');
-                            },
-                            className: `px-5 py-2 rounded-lg transition-colors text-sm font-medium ${
-                                teamEventsFilter === 'catering'
-                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`
+                        className: `px-5 py-2 rounded-lg transition-colors text-sm font-medium ${
+                            teamEventsFilter === 'matches'
+                                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`
+                    },
+                    'Zápasy'
+                ) : null,
+                // Tlačidlo "Stravovanie" sa zobrazí len ak je verejná stránka catering
+                isCateringVisible ? React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            setTeamEventsFilter((prev) => prev === 'catering' ? null : 'catering');
                         },
-                        'Stravovanie'
-                    ) : null
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'mt-3 text-xs text-gray-500' },
-                    teamEventsFilter === 'matches'
-                        ? 'Zobrazené: iba zápasy'
-                        : teamEventsFilter === 'catering'
-                            ? 'Zobrazené: iba stravovanie'
-                            : 'Zobrazené: všetky udalosti (chronologicky)'
-                )
-            ) : null,
+                        className: `px-5 py-2 rounded-lg transition-colors text-sm font-medium ${
+                            teamEventsFilter === 'catering'
+                                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`
+                    },
+                    'Stravovanie'
+                ) : null
+            ),
+            // Textový popis pod tlačidlami – zobrazí sa len ak je aspoň jedno tlačidlo viditeľné
+            React.createElement(
+                'div',
+                { className: 'mt-3 text-xs text-gray-500' },
+                teamEventsFilter === 'matches'
+                    ? 'Zobrazené: iba zápasy'
+                    : teamEventsFilter === 'catering'
+                        ? 'Zobrazené: iba stravovanie'
+                        : 'Zobrazené: všetky udalosti (chronologicky)'
+            )
+        ) : null,
             // --- UDALOSTI TÍMU (zlúčené zápasy + stravovanie) ---
+            // Zobrazí sa len ak je vybraný tím a aspoň jedna z verejných stránok je viditeľná
             (isAnyButtonSelected && (isCateringVisible || isMatchesVisible)) ? React.createElement(TeamEventsList, {
                 teamName: selectedTeamDetails.teamName,
                 categoryName: selectedTeamDetails.category || categoryFromUrl || '',
                 categoryId: categoryId,
                 filter: teamEventsFilter,
-                refreshKey: matchesRefreshKey  // 🔥 PRIDANÉ
+                refreshKey: matchesRefreshKey  // 🔥 PRIDANÉ – refresh po dokončení zápasu
             }) : null,
             renderTeamRoster()
         );
