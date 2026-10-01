@@ -719,80 +719,261 @@ const cateringApp = ({ userProfileData }) => {
                     'Nie sú dostupné žiadne dátumy turnaja. Nastavte prosím dátum príchodu a koniec turnaja.')));
     }
 
+    // Pomocná funkcia na zoskupenie riadkov podľa dňa
+    const groupRowsByDay = (rows) => {
+        const groups = {};
+        rows.forEach((row) => {
+            if (!groups[row.dayKey]) {
+                groups[row.dayKey] = {
+                    dayKey: row.dayKey,
+                    dayLabel: row.dayLabel,
+                    daySort: row.daySort,
+                    rows: []
+                };
+            }
+            groups[row.dayKey].rows.push(row);
+        });
+        return Object.values(groups).sort((a, b) => a.daySort - b.daySort);
+    };
+
+    const groupedRows = groupRowsByDay(assignmentRows);
+
     return React.createElement(
         'div',
-        { className: 'flex-grow flex justify-center items-start p-6 w-full min-w-0' },
+        { className: 'max-w-7xl mx-auto px-4 py-6' },
+
         React.createElement(
             'div',
-            { className: 'w-full min-w-0 bg-white rounded-xl shadow-xl p-8' },
-            React.createElement(
+            { className: 'mb-8 text-center' },
+            React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Stravovanie')
+        ),
+
+        // Filtre
+        React.createElement(
+            'div',
+            { className: 'mb-3 flex flex-wrap gap-2 justify-center' },
+            React.createElement('div', { className: 'flex items-center gap-2' },
+                React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, 'Kategória:'),
+                React.createElement('select', {
+                    value: filterCategory,
+                    onChange: (e) => setFilterCategory(e.target.value),
+                    className: 'px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
+                },
+                    React.createElement('option', { value: '' }, 'Všetky'),
+                    availableCategories.map((cat) => React.createElement('option', { key: cat, value: cat }, cat)))),
+            React.createElement('div', { className: 'flex items-center gap-2' },
+                React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, 'Dátum:'),
+                React.createElement('select', {
+                    value: filterDayKey,
+                    onChange: (e) => setFilterDayKey(e.target.value),
+                    className: 'px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
+                },
+                    React.createElement('option', { value: '' }, 'Všetky'),
+                    visibleDays.map((day) => React.createElement('option', { key: day.key, value: day.key }, day.label)))),
+            React.createElement('div', { className: 'flex items-center gap-2' },
+                React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, 'Typ jedla:'),
+                React.createElement('select', {
+                    value: filterMealType,
+                    onChange: (e) => setFilterMealType(e.target.value),
+                    className: 'px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
+                },
+                    React.createElement('option', { value: '' }, 'Všetky'),
+                    React.createElement('option', { value: 'lunch' }, 'Obed'),
+                    React.createElement('option', { value: 'dinner' }, 'Večera')))
+        ),
+
+        React.createElement(
+            'div',
+            { className: 'mb-3 flex flex-wrap gap-2 justify-center border-t border-gray-200 pt-3' },
+            React.createElement('div', { className: 'flex items-center justify-center gap-1 bg-gray-100 rounded-lg p-1 w-fit mx-auto' },
+                React.createElement('button', {
+                    type: 'button',
+                    onClick: () => setSortMode('chronological'),
+                    className: 'px-4 py-2 rounded-md text-sm font-medium transition ' +
+                        (sortMode === 'chronological' ? 'bg-white text-gray-900 shadow' : 'text-gray-600 hover:text-gray-900'),
+                }, 'Chronologicky'),
+                React.createElement('button', {
+                    type: 'button',
+                    onClick: () => setSortMode('team'),
+                    className: 'px-4 py-2 rounded-md text-sm font-medium transition ' +
+                        (sortMode === 'team' ? 'bg-white text-gray-900 shadow' : 'text-gray-600 hover:text-gray-900'),
+                }, 'Podľa názvu tímu'))
+        ),
+
+        assignmentRows.length === 0
+            ? React.createElement(
                 'div',
-                { className: 'flex flex-col items-center justify-center mb-6' },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-4' }, 'Stravovanie'),
-                React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-4 w-full' },
-                    React.createElement('div', { className: 'flex items-center gap-2' },
-                        React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, 'Kategória:'),
-                        React.createElement('select', {
-                            value: filterCategory,
-                            onChange: (e) => setFilterCategory(e.target.value),
-                            className: 'px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
-                        },
-                            React.createElement('option', { value: '' }, 'Všetky'),
-                            availableCategories.map((cat) => React.createElement('option', { key: cat, value: cat }, cat)))),
-                    React.createElement('div', { className: 'flex items-center gap-2' },
-                        React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, 'Dátum:'),
-                        React.createElement('select', {
-                            value: filterDayKey,
-                            onChange: (e) => setFilterDayKey(e.target.value),
-                            className: 'px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
-                        },
-                            React.createElement('option', { value: '' }, 'Všetky'),
-                            visibleDays.map((day) => React.createElement('option', { key: day.key, value: day.key }, day.label)))),
-                    React.createElement('div', { className: 'flex items-center gap-2' },
-                        React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, 'Typ jedla:'),
-                        React.createElement('select', {
-                            value: filterMealType,
-                            onChange: (e) => setFilterMealType(e.target.value),
-                            className: 'px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
-                        },
-                            React.createElement('option', { value: '' }, 'Všetky'),
-                            React.createElement('option', { value: 'lunch' }, 'Obed'),
-                            React.createElement('option', { value: 'dinner' }, 'Večera')))),
-                React.createElement('div', { className: 'flex items-center justify-center gap-1 mt-4 bg-gray-100 rounded-lg p-1 w-fit mx-auto' },
-                    React.createElement('button', {
-                        type: 'button',
-                        onClick: () => setSortMode('chronological'),
-                        className: 'px-4 py-2 rounded-md text-sm font-medium transition ' +
-                            (sortMode === 'chronological' ? 'bg-white text-gray-900 shadow' : 'text-gray-600 hover:text-gray-900'),
-                    }, 'Chronologicky'),
-                    React.createElement('button', {
-                        type: 'button',
-                        onClick: () => setSortMode('team'),
-                        className: 'px-4 py-2 rounded-md text-sm font-medium transition ' +
-                            (sortMode === 'team' ? 'bg-white text-gray-900 shadow' : 'text-gray-600 hover:text-gray-900'),
-                    }, 'Podľa názvu tímu'))),
-            assignmentRows.length === 0
-                ? React.createElement('p', { className: 'text-center text-gray-500 py-8' }, 'Žiadne priradenia stravovania pre zvolené filtre.')
-                : React.createElement('div', { className: 'overflow-x-auto pb-4 w-full min-w-0' },
-                    React.createElement('table', { className: 'min-w-full border-collapse text-sm' },
-                        React.createElement('thead', null,
-                            React.createElement('tr', { className: 'bg-gray-100' },
-                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Kategória'),
-                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Tím'),
-                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Dátum'),
-                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Typ jedla'),
-                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Čas'),
-                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Miesto'))),
-                        React.createElement('tbody', null,
-                            assignmentRows.map((row) => {
-                                return React.createElement('tr', { key: row.key, className: 'border-b border-gray-200 bg-white' },
-                                    React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.category),
-                                    React.createElement('td', { className: 'border border-gray-300 px-3 py-2 font-medium text-gray-800 whitespace-nowrap' }, row.teamName),
-                                    React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.dayLabel),
-                                    React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.mealTypeLabel),
-                                    React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, `${row.slotFrom} – ${row.slotTo}`),
-                                    React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-xs whitespace-nowrap' }, row.placeName || '–'));
-                            })))))
+                { className: 'text-center py-12 bg-gray-50 rounded-xl border border-gray-200' },
+                React.createElement('i', { className: 'fa-solid fa-utensils text-4xl mb-4 text-gray-400' }),
+                React.createElement('p', { className: 'text-lg font-medium text-gray-700' }, 'Žiadne priradenia stravovania pre zvolené filtre.')
+            )
+            : React.createElement(
+                'div',
+                { className: 'overflow-x-auto border border-gray-200 rounded-lg bg-white' },
+                React.createElement(
+                    'table',
+                    { className: 'min-w-full divide-y divide-gray-200' },
+
+                    React.createElement(
+                        'thead',
+                        { className: 'bg-gray-50' },
+                        React.createElement(
+                            'tr',
+                            null,
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'Čas'),
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Tím'),
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32' }, 'Typ jedla'),
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Miesto'),
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info')
+                        )
+                    ),
+
+                    React.createElement(
+                        'tbody',
+                        { className: 'divide-y divide-gray-100' },
+                        groupedRows.map((dayGroup, dayIndex) => {
+                            const dayRows = [];
+
+                            // Hlavička dňa
+                            dayRows.push(
+                                React.createElement(
+                                    'tr',
+                                    { key: `day-${dayIndex}`, className: 'bg-blue-50' },
+                                    React.createElement(
+                                        'td',
+                                        { colSpan: 5, className: 'px-4 py-4 text-left' },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-2' },
+                                            React.createElement('i', { className: 'fa-regular fa-calendar text-blue-500 text-lg' }),
+                                            React.createElement('span', { className: 'font-semibold text-gray-800 text-base' }, dayGroup.dayLabel)
+                                        )
+                                    )
+                                )
+                            );
+
+                            // Riadky stravovania
+                            dayGroup.rows.forEach((row, rowIndex) => {
+                                const infoTags = [];
+
+                                // Tag kategórie
+                                if (row.category) {
+                                    infoTags.push(
+                                        React.createElement('span', {
+                                            key: 'category',
+                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                            style: {
+                                                backgroundColor: '#DBEAFE',
+                                                color: '#1E40AF',
+                                                fontWeight: '500'
+                                            }
+                                        }, row.category)
+                                    );
+                                }
+
+                                // Tag typu (classic/superstructure)
+                                if (row.type === 'superstructure') {
+                                    infoTags.push(
+                                        React.createElement('span', {
+                                            key: 'type',
+                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                            style: {
+                                                backgroundColor: '#F3E8FF',
+                                                color: '#6B21A5',
+                                                fontWeight: '500'
+                                            }
+                                        }, 'Nadstavba')
+                                    );
+                                }
+
+                                // Tag priority
+                                if (row.isPriority === true) {
+                                    infoTags.push(
+                                        React.createElement('span', {
+                                            key: 'priority',
+                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                            style: {
+                                                backgroundColor: '#FEF3C7',
+                                                color: '#92400E',
+                                                fontWeight: '500'
+                                            }
+                                        }, 'Priorita')
+                                    );
+                                }
+
+                                dayRows.push(
+                                    React.createElement(
+                                        'tr',
+                                        { key: row.key, className: 'hover:bg-gray-50 transition-colors' },
+
+                                        // Čas
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-3 whitespace-nowrap' },
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center gap-1' },
+                                                React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
+                                                React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, `${row.slotFrom} – ${row.slotTo}`)
+                                            )
+                                        ),
+
+                                        // Tím
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-3 whitespace-nowrap' },
+                                            React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, row.teamName)
+                                        ),
+
+                                        // Typ jedla
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-3 whitespace-nowrap' },
+                                            React.createElement(
+                                                'span',
+                                                {
+                                                    className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                                    style: {
+                                                        backgroundColor: row.mealType === 'lunch' ? '#DCFCE7' : '#FFEDD5',
+                                                        color: row.mealType === 'lunch' ? '#166534' : '#EA580C',
+                                                        fontWeight: '500'
+                                                    }
+                                                },
+                                                row.mealTypeLabel
+                                            )
+                                        ),
+
+                                        // Miesto
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-3 whitespace-nowrap' },
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center gap-1' },
+                                                React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-400 text-xs' }),
+                                                React.createElement('span', { className: 'text-gray-600 text-sm' }, row.placeName || '–')
+                                            )
+                                        ),
+
+                                        // Info tagy
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-3' },
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex flex-col gap-1' },
+                                                infoTags
+                                            )
+                                        )
+                                    )
+                                );
+                            });
+
+                            return dayRows;
+                        }).flat()
+                    )
+                )
+            )
     );
 };
 
