@@ -264,13 +264,18 @@ const cateringApp = ({ userProfileData }) => {
             if (snap.exists()) {
                 const data = snap.data();
                 const colors = {};
+                const categories = {};
                 Object.entries(data).forEach(([catId, catData]) => {
                     if (catData.drawColor) {
                         colors[catId] = catData.drawColor;
                     }
+                    if (catData.name) {
+                        categories[catId] = catData.name;
+                    }
                 });
                 setCategoryDrawColors(colors);
                 window.categoryDrawColors = colors;
+                window.categoriesData = categories;
             }
         }, () => {});
         return () => unsubscribe();
