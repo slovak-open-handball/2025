@@ -1,3 +1,4 @@
+// logged-in-map.js
 // Importy pre Firebase funkcie
 import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, Timestamp, deleteDoc, GeoPoint, setDoc }
   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -120,6 +121,7 @@ const MapApp = ({ userProfileData }) => {
 
     const [isPlaceAssigned, setIsPlaceAssigned] = useState(false);
     const [isSportHallAssigned, setIsSportHallAssigned] = useState(false);
+    const [isCateringPlaceAssigned, setIsCateringPlaceAssigned] = useState(false);
 
     const [newHeaderColor, setNewHeaderColor] = useState('#1e40af');
     const [editHeaderColor, setEditHeaderColor] = useState('#1e40af');
@@ -323,6 +325,35 @@ const MapApp = ({ userProfileData }) => {
         };
         
         checkIfSportHallHasMatches();
+    }, [selectedPlace, places]);
+
+    useEffect(() => {
+        const checkIfCateringPlaceIsAssigned = async () => {
+            if (!selectedPlace || !window.db || selectedPlace.type !== 'stravovanie') {
+                setIsCateringPlaceAssigned(false);
+                return;
+            }
+    
+            try {
+                const cateringRef = collection(window.db, 'catering');
+                const cateringSnapshot = await getDocs(cateringRef);
+
+                let hasAssignments = false;
+
+                cateringSnapshot.forEach((docSnap) => {
+                    const data = docSnap.data() || {};
+                    if (data.placeId === selectedPlace.id) {
+                        hasAssignments = true;
+                    }
+                });
+
+                setIsCateringPlaceAssigned(hasAssignments);
+            } catch (err) {
+                setIsCateringPlaceAssigned(false);
+            }
+        };
+
+        checkIfCateringPlaceIsAssigned();
     }, [selectedPlace, places]);
 
     useEffect(() => {
@@ -2583,24 +2614,46 @@ const MapApp = ({ userProfileData }) => {
                         },
                         className: 'w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition'
                       }, 'Upraviť polohu'),
-                      React.createElement('button', {
-                          onClick: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
-                                   (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ? 
-                                   null : handleDeletePlace,
-                          disabled: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
-                                    (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned),
-                          className: `w-full py-3 font-medium rounded-lg transition flex items-center justify-center gap-2
-                              ${((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
-                                 (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned))
-                                  ? 'bg-white text-red-600 border-2 border-red-600 opacity-100 hover:cursor-not-allowed' 
-                                  : 'bg-red-600 hover:bg-red-700 text-white'
-                              }`,
-                          title: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) 
-                                 ? 'Miesto nie je možné odstrániť (priradené tímy)'
-                                 : (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned)
-                                   ? 'Halu nie je možné odstrániť (priradené zápasy)'
-                                   : 'Odstrániť miesto'
-                      }, 
+                     React.createElement('button', {
+                         onClick: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
+                                  (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ||
+                                  (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned) ? 
+                                  null : handleDeletePlace,
+                         disabled: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
+                                   (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ||
+                                   (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned),
+                         className: `w-full py-3 font-medium rounded-lg transition flex items-center justify-center gap-2
+                             ${((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
+                                (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ||
+                                (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned))
+                                 ? 'bg-white text-red-600 border-2 border-red-600 opacity-100 hover:cursor-not-allowed' 
+                                 : 'bg-red-600 hover:bg-red-700 text-white'
+                             }`,
+                         title: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) 
+                                ? 'Miesto nie je možné odstrániť (priradené tímy)'
+                                : (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned)
+                                  ? 'Halu nie je možné odstrániť (priradené zápasy)'
+                                  : (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned)
+                                    ? 'Miesto nie je možné odstrániť (priradené tímy)'
+                                    : 'Odstrániť miesto'
+                     }, 
+                     ((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
+                      (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ||
+                      (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned))
+                     ? React.createElement(React.Fragment, null,
+                         React.createElement('i', { 
+                           className: 'fa-solid fa-trash-alt mr-2',
+                           style: { color: 'inherit' }
+                         }),
+                         'Odstrániť miesto'
+                       )
+                     : React.createElement(React.Fragment, null,
+                         React.createElement('i', { 
+                           className: 'fa-solid fa-trash-alt mr-2' 
+                         }),
+                         'Odstrániť miesto'
+                       )
+                     ),
                       ((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
                        (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned))
                       ? React.createElement(React.Fragment, null,
