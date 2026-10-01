@@ -96,9 +96,6 @@ const cleanCategory = (cat) => String(cat || '')
     .replace(/\s+/g, ' ')
     .trim();
 
-// ============================================================
-// Pomocná funkcia: zistí, či má člen tímu daný typ stravovania v danom dni
-// ============================================================
 const memberHasMeal = (member, dayKey, mealType, teamPackageDetails) => {
     const memberMealSetting = member?.packageDetails?.meals?.[dayKey]?.[mealType];
     if (memberMealSetting !== undefined) {
@@ -111,9 +108,6 @@ const memberHasMeal = (member, dayKey, mealType, teamPackageDetails) => {
     return true;
 };
 
-// ============================================================
-// Pomocná funkcia: spočíta koľko členov tímu má daný typ stravovania
-// ============================================================
 const countMembersWithMeal = (teamData, dayKey, mealType) => {
     if (!teamData) return { players: 0, others: 0 };
 
@@ -189,10 +183,6 @@ const loadUserTeams = async (db) => {
     return teams;
 };
 
-// ============================================================
-// Pomocné funkcie pre delenie stravovacích slotov
-// ============================================================
-
 const timeToMinutes = (t) => {
     if (!t || typeof t !== 'string') return null;
     const parts = t.split(':');
@@ -250,32 +240,47 @@ const buildMealSlots = (from, to, unitMinutes) => {
 };
 
 // ============================================================
-// Pomocná funkcia: namapuje názov tímu cez matchTracker.getTeamNameByDisplayId
+// KĽÚČOVÁ FUNKCIA: Získa namapovaný názov tímu z window.teamNames
+// alebo cez matchTracker.getTeamNameByDisplayId (fallback).
 // ============================================================
-const resolveTeamName = async (categoryName, teamName) => {
+const getMappedNameForTeam = async (categoryName, teamName) => {
     if (!teamName) return teamName;
 
-    // Kandidát na vstup: "{kategória} {tím}" (ak tam ešte nie je)
-    let candidate = teamName;
+    // Kandidátske kľúče, ktoré môže mať window.teamNames:
+    // 1) "{kategória} {tím}" (napr. "U12 CH G1")
+    // 2) samotný tím (napr. "G1")
+    // 3) "{tím}" bez kategórie
+    const candidates = [];
+
     if (categoryName && !teamName.includes(categoryName)) {
-        candidate = `${categoryName} ${teamName}`;
+        candidates.push(`${categoryName} ${teamName}`);
+    }
+    candidates.push(teamName);
+
+    // 1) Skús window.teamNames (mapa, ktorú plní matchTracker)
+    if (window.teamNames && typeof window.teamNames === 'object') {
+        for (const key of candidates) {
+            const val = window.teamNames[key];
+            if (val && val !== key && val !== 'null' && val !== 'undefined') {
+                return val;
+            }
+        }
     }
 
+    // 2) Fallback: matchTracker.getTeamNameByDisplayId
     if (
         window.matchTracker &&
         typeof window.matchTracker.getTeamNameByDisplayId === 'function'
     ) {
-        try {
-            const mapped = await window.matchTracker.getTeamNameByDisplayId(candidate);
-
-            // Ak matchTracker vráti niečo iné ako null/undefined/"null",
-            // považujeme to za platný výsledok (aj keď sa rovná vstupu – vtedy
-            // ho vrátime ako teamName, ale nenastavíme mapu – nižšie).
-            if (mapped !== null && mapped !== undefined && mapped !== 'null') {
-                return mapped;
+        for (const key of candidates) {
+            try {
+                const mapped = await window.matchTracker.getTeamNameByDisplayId(key);
+                if (mapped && mapped !== key && mapped !== 'null' && mapped !== 'undefined') {
+                    return mapped;
+                }
+            } catch (e) {
+                // ignore
             }
-        } catch (e) {
-            // ignore
         }
     }
 
@@ -283,9 +288,6 @@ const resolveTeamName = async (categoryName, teamName) => {
 };
 
 const cateringApp = ({ userProfileData }) => {
-    // ============================================================
-    // 1) VŠETKY useState
-    // ============================================================
     const [tournamentDays, setTournamentDays] = useState([]);
     const [userTeams, setUserTeams] = useState([]);
     const [cateringTimes, setCateringTimes] = useState({});
@@ -301,20 +303,18 @@ const cateringApp = ({ userProfileData }) => {
     // Mapa namapovaných názvov tímov: kľúč = "kategória||pôvodnýNázov", hodnota = nový názov
     const [teamNameMap, setTeamNameMap] = useState({});
 
-    // Ref na aktuálne userTeams, aby retry funkcia videla vždy aktuálne dáta
     const userTeamsRef = useRef([]);
     useEffect(() => {
         userTeamsRef.current = userTeams;
     }, [userTeams]);
 
-    // Ref na aktuálnu mapu (aby sme predišli zbytočným re-renderom)
     const teamNameMapRef = useRef({});
     useEffect(() => {
         teamNameMapRef.current = teamNameMap;
     }, [teamNameMap]);
 
     // ============================================================
-    // 2) useMemo – odvodené hodnoty
+    // useMemo – odvodené hodnoty
     // ============================================================
     const availableCategories = React.useMemo(() => {
         return Array.from(
@@ -341,7 +341,7 @@ const cateringApp = ({ userProfileData }) => {
     }, [tournamentDays, cateringTimes, unitMinutes]);
 
     // ============================================================
-    // 3) URL filtre
+    // URL filtre
     // ============================================================
     const loadFiltersFromURL = () => {
         const params = new URLSearchParams(window.location.search);
@@ -367,9 +367,6 @@ const cateringApp = ({ userProfileData }) => {
         window.history.replaceState({}, '', newUrl);
     };
 
-    // ============================================================
-    // 4) URL useEffect-y
-    // ============================================================
     useEffect(() => {
         if (availableCategories.length === 0 && tournamentDays.length === 0) return;
         if (!unitMinutes && Object.keys(cateringTimes).length === 0) return;
@@ -409,7 +406,7 @@ const cateringApp = ({ userProfileData }) => {
     }, [filterCategory, filterDayKey, filterMealType, sortMode, availableCategories, tournamentDays]);
 
     // ============================================================
-    // 5) Data useEffect-y – Firestore
+    // Data useEffect-y – Firestore
     // ============================================================
     useEffect(() => {
         if (!window.db) {
@@ -538,7 +535,7 @@ const cateringApp = ({ userProfileData }) => {
     }, []);
 
     // ============================================================
-    // 5b) Mapovacia funkcia s retry – spustí sa viackrát
+    // 5b) KĽÚČOVÉ: Remapovanie názvov tímov
     // ============================================================
     const triggerTeamNameRemap = async () => {
         const teams = userTeamsRef.current || [];
@@ -552,8 +549,8 @@ const cateringApp = ({ userProfileData }) => {
             const key = `${team.category}||${team.teamName}`;
 
             try {
-                const mapped = await resolveTeamName(team.category, team.teamName);
-                // Ak sa namapovaný názov LÍŠI od pôvodného, uložíme
+                const mapped = await getMappedNameForTeam(team.category, team.teamName);
+                // Uložíme len ak sa namapovaný názov LÍŠI od pôvodného
                 if (mapped && mapped !== team.teamName) {
                     newMap[key] = mapped;
                 }
@@ -564,7 +561,6 @@ const cateringApp = ({ userProfileData }) => {
 
         if (Object.keys(newMap).length > 0) {
             setTeamNameMap((prev) => {
-                // Zistíme, či sa niečo reálne zmenilo
                 let changed = false;
                 for (const k of Object.keys(newMap)) {
                     if (prev[k] !== newMap[k]) {
@@ -572,40 +568,36 @@ const cateringApp = ({ userProfileData }) => {
                         break;
                     }
                 }
-                if (!changed) return prev; // žiadny re-render
+                if (!changed) return prev;
                 return { ...prev, ...newMap };
             });
         }
     };
 
-    // Retry verzia – spustí mapovanie niekoľkokrát s oneskorením,
-    // aby zachytila aj oneskorené aktualizácie v matchTracker cache.
-    const triggerTeamNameRemapWithRetry = (maxAttempts = 10, delayMs = 1000) => {
-        let attempt = 0;
-
-        const runAttempt = async () => {
-            attempt++;
-            try {
-                await triggerTeamNameRemap();
-            } catch (e) {
-                // ignore
-            }
-
-            if (attempt < maxAttempts) {
-                setTimeout(runAttempt, delayMs);
-            }
+    // ============================================================
+    // 5c) POLLING: Nezávisle od udalostí, každých 800 ms kontrolujeme,
+    //     či sa nezmenil window.teamNames alebo výsledok matchTrackera.
+    //     Toto je najspoľahlivejšie riešenie, lebo matchTracker
+    //     nemusí dispatchnúť event vždy, keď zmení cache.
+    // ============================================================
+    useEffect(() => {
+        // Spustíme prvý remap hneď
+        const runRemap = () => {
+            triggerTeamNameRemap();
         };
 
-        // Prvé spustenie hneď, ďalšie s oneskorením
-        setTimeout(runAttempt, 0);
-    };
+        runRemap();
+
+        // Polling každých 800 ms
+        const intervalId = setInterval(runRemap, 800);
+
+        return () => clearInterval(intervalId);
+    }, []);
 
     // ============================================================
-    // 5c) Listener na matches – ak sa nejaký zápas zmení na 'completed',
-    //     spustíme mapovanie názvov tímov S RETRY
+    // 5d) Listener na matches – pri zmene na completed spustíme remap
     // ============================================================
     const prevMatchStatusesRef = useRef({});
-    const hasInitialRemapRun = useRef(false);
 
     useEffect(() => {
         if (!window.db) return;
@@ -621,7 +613,6 @@ const cateringApp = ({ userProfileData }) => {
                 const newStatus = data.status || 'scheduled';
                 const oldStatus = prevMatchStatusesRef.current[matchId];
 
-                // Ak sa status zmenil na 'completed' (a predtým nebol 'completed'), spustíme remap
                 if (newStatus === 'completed' && oldStatus !== 'completed') {
                     shouldRemap = true;
                 }
@@ -629,15 +620,9 @@ const cateringApp = ({ userProfileData }) => {
                 prevMatchStatusesRef.current[matchId] = newStatus;
             });
 
-            // Pri prvom načítaní tiež spustíme remap (aby sa namapovali existujúce názvy)
-            if (!hasInitialRemapRun.current) {
-                hasInitialRemapRun.current = true;
-                shouldRemap = true;
-            }
-
             if (shouldRemap) {
-                // Použijeme retry verziu, aby sme zachytili oneskorené aktualizácie
-                triggerTeamNameRemapWithRetry(10, 1000);
+                // Spustíme remap okamžite, aj keď polling beží
+                triggerTeamNameRemap();
             }
         }, (error) => { });
 
@@ -645,12 +630,11 @@ const cateringApp = ({ userProfileData }) => {
     }, []);
 
     // ============================================================
-    // 5d) Listener na globálne eventy matchTrackera
-    //     (teamNameMappingReady, teamNamesReplaced) – spustí remap
+    // 5e) Listener na globálne eventy matchTrackera
     // ============================================================
     useEffect(() => {
         const handleMappingReady = () => {
-            triggerTeamNameRemapWithRetry(5, 1000);
+            triggerTeamNameRemap();
         };
 
         window.addEventListener('teamNameMappingReady', handleMappingReady);
@@ -661,13 +645,6 @@ const cateringApp = ({ userProfileData }) => {
             window.removeEventListener('teamNamesReplaced', handleMappingReady);
         };
     }, []);
-
-    // Ak sa zmení userTeams (napr. po načítaní), spustíme mapovanie S RETRY
-    useEffect(() => {
-        if (userTeams.length > 0) {
-            triggerTeamNameRemapWithRetry(5, 800);
-        }
-    }, [userTeams]);
 
     // ============================================================
     // 6) useMemo – assignmentsBySlot, daySlots
@@ -743,16 +720,12 @@ const cateringApp = ({ userProfileData }) => {
         return teamName;
     };
 
-    // 🔥 Získanie zobrazeného názvu tímu s mapovaním
     const getMappedTeamName = (category, teamName) => {
         if (!teamName) return teamName;
         const key = `${category}||${teamName}`;
         return teamNameMap[key] || teamName;
     };
 
-    // ============================================================
-    // 8) Pomocné funkcie pre render
-    // ============================================================
     const shouldShowMealType = (mealType) => {
         if (!filterMealType) return true;
         return filterMealType === mealType;
@@ -763,7 +736,7 @@ const cateringApp = ({ userProfileData }) => {
         : userTeams;
 
     // ============================================================
-    // 9) assignmentRows (useMemo) – MUSÍ BYŤ PRED RETURN-MI
+    // 9) assignmentRows
     // ============================================================
     const assignmentRows = React.useMemo(() => {
         const rows = [];
@@ -782,7 +755,6 @@ const cateringApp = ({ userProfileData }) => {
                         const existing = findCateringAssignment(team, day.key, mealType, slot.from);
                         const ss = findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
 
-                        // 🔥 Namapovaný názov tímu pre klasické priradenie
                         const mappedTeamName = getMappedTeamName(team.category, team.teamName);
 
                         if (existing) {
@@ -805,7 +777,6 @@ const cateringApp = ({ userProfileData }) => {
                         }
 
                         if (ss) {
-                            // 🔥 Pri superstructure skúsime namapovať aj názov superstructure tímu
                             const ssRawName = getPlaceTeamDisplayName(ss.teamName, ss.category) || ss.teamName;
                             const ssMappedName = getMappedTeamName(ss.category, ssRawName);
 
@@ -831,7 +802,6 @@ const cateringApp = ({ userProfileData }) => {
             });
         });
 
-        // Zoradenie
         if (sortMode === 'team') {
             rows.sort((a, b) => {
                 const catCmp = (a.category || '').localeCompare(b.category || '', 'sk', { sensitivity: 'base' });
@@ -879,7 +849,7 @@ const cateringApp = ({ userProfileData }) => {
     ]);
 
     // ============================================================
-    // 10) Až TERAZ môžu prísť skoré return-y
+    // 10) Skoré return-y
     // ============================================================
     if (loading) {
         return React.createElement(
