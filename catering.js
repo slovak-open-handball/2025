@@ -1,8 +1,8 @@
 // logged-in-catering.js
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-const { useState, useEffect, useRef, useSyncExternalStore } = React;
+const { useState, useEffect } = React;
 
 /**
  * Globálna funkcia pre zobrazenie notifikácií
@@ -172,7 +172,7 @@ const loadUserTeams = async (db) => {
                     category: cleanCat,
                     playersCount,
                     othersCount: menTeamMembersCount + womenTeamMembersCount + menDriversCount + womenDriversCount,
-                    rawTeamData: team, 
+                    rawTeamData: team,
                     accommodationName: team.accommodation?.name || null,
                     packageName: team.packageDetails?.name || null,
                 });
@@ -251,7 +251,7 @@ const buildMealSlots = (from, to, unitMinutes) => {
 
 const cateringApp = ({ userProfileData }) => {
     // ============================================================
-    // 1) VŠETKY useState – na začiatku, bez výnimky
+    // 1) VŠETKY useState
     // ============================================================
     const [tournamentDays, setTournamentDays] = useState([]);
     const [userTeams, setUserTeams] = useState([]);
@@ -261,37 +261,15 @@ const cateringApp = ({ userProfileData }) => {
     const [accommodations, setAccommodations] = useState([]);
     const [cateringPlaces, setCateringPlaces] = useState([]);
     const [cateringAssignments, setCateringAssignments] = useState([]);
-
-    const [showCateringModal, setShowCateringModal] = useState(false);
-    const [selectedCateringCell, setSelectedCateringCell] = useState(null);
-    const [selectedCateringPlaceId, setSelectedCateringPlaceId] = useState('');
-    const [savingCatering, setSavingCatering] = useState(false);
-
-    const [showChangeConfirm, setShowChangeConfirm] = useState(false);
-    const [pendingChange, setPendingChange] = useState(null);
-    const [packagesList, setPackagesList] = useState([]);
     const [filterCategory, setFilterCategory] = useState('');
     const [filterDayKey, setFilterDayKey] = useState('');
     const [filterMealType, setFilterMealType] = useState('');
-    const [showAssignmentTypeModal, setShowAssignmentTypeModal] = useState(false);
-    const [pendingAssignmentCell, setPendingAssignmentCell] = useState(null);
-    const [showPlaceAssignmentModal, setShowPlaceAssignmentModal] = useState(false);
-    const [showSuperstructureDecisionModal, setShowSuperstructureDecisionModal] = useState(false);
-    const [pendingSuperstructureDecision, setPendingSuperstructureDecision] = useState(null);
-    const [superstructureTeams, setSuperstructureTeams] = useState([]);
-    const [matchTeams, setMatchTeams] = useState([]);
-    const [selectedPlaceTeamId, setSelectedPlaceTeamId] = useState('');
-    const [savingPlaceAssignment, setSavingPlaceAssignment] = useState(false);
-    const [placeAssignmentSearch, setPlaceAssignmentSearch] = useState('');
-    const [showSuperstructureReplanPickerModal, setShowSuperstructureReplanPickerModal] = useState(false);
-    const [superstructureReplanPickerItems, setSuperstructureReplanPickerItems] = useState([]);
-    const [cateringModalIsPriority, setCateringModalIsPriority] = useState(false);
     const [categoriesReady, setCategoriesReady] = useState(false);
     const [categories, setCategories] = useState([]);
     const [scheduledMatches, setScheduledMatches] = useState([]);
 
     // ============================================================
-    // 2) useMemo – odvodené hodnoty (všetky pred return-mi)
+    // 2) useMemo – odvodené hodnoty
     // ============================================================
     const availableCategories = React.useMemo(() => {
         return Array.from(
@@ -533,65 +511,6 @@ const cateringApp = ({ userProfileData }) => {
     useEffect(() => {
         if (!window.db) return;
 
-        const packagesCollectionRef = collection(window.db, 'settings', 'packages', 'list');
-
-        const unsubscribe = onSnapshot(
-            packagesCollectionRef,
-            (snapshot) => {
-                const items = [];
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data() || {};
-                    items.push({
-                        id: docSnap.id,
-                        name: data.name || '',
-                        meals: data.meals || {},
-                        accommodationTypes: data.accommodationTypes || [],
-                    });
-                });
-                setPackagesList(items);
-            },
-            (error) => { }
-        );
-
-        return () => unsubscribe();
-    }, []);
-
-    useEffect(() => {
-        if (!window.db) return;
-
-        const superstructureDocRef = doc(window.db, 'settings', 'superstructureGroups');
-
-        const unsubscribe = onSnapshot(
-            superstructureDocRef,
-            (docSnap) => {
-                const teams = [];
-                if (docSnap.exists()) {
-                    const data = docSnap.data() || {};
-                    Object.entries(data).forEach(([categoryName, teamArray]) => {
-                        if (!Array.isArray(teamArray)) return;
-                        teamArray.forEach((team, idx) => {
-                            if (!team?.teamName) return;
-                            teams.push({
-                                id: team.id || `${categoryName}-${idx}`,
-                                teamName: team.teamName,
-                                category: categoryName,
-                                groupName: team.groupName || null,
-                                order: team.order ?? null,
-                            });
-                        });
-                    });
-                }
-                setSuperstructureTeams(teams);
-            },
-            (error) => { }
-        );
-
-        return () => unsubscribe();
-    }, []);
-
-    useEffect(() => {
-        if (!window.db) return;
-
         const loadCategories = async () => {
             try {
                 const categoriesDocRef = doc(window.db, 'settings', 'categories');
@@ -607,17 +526,9 @@ const cateringApp = ({ userProfileData }) => {
                             categoriesList.push({
                                 id: catId,
                                 name: catData.name,
-                                maxTeams: catData.maxTeams ?? 12,
                                 periods: catData.periods ?? 2,
                                 periodDuration: catData.periodDuration ?? 20,
                                 breakDuration: catData.breakDuration ?? 2,
-                                matchBreak: catData.matchBreak ?? 5,
-                                drawColor: catData.drawColor ?? '#3B82F6',
-                                transportColor: catData.transportColor ?? '#10B981',
-                                timeoutCount: catData.timeoutCount ?? 2,
-                                timeoutDuration: catData.timeoutDuration ?? 1,
-                                exclusionTime: catData.exclusionTime ?? 2,
-                                carryOverPoints: catData.carryOverPoints ?? false,
                             });
                         }
                     });
@@ -634,78 +545,6 @@ const cateringApp = ({ userProfileData }) => {
 
         loadCategories();
     }, []);
-
-    useEffect(() => {
-        if (!window.db || !categoriesReady) return;
-
-        const unsubscribe = onSnapshot(
-            collection(window.db, 'matches'),
-            (snapshot) => {
-                const teamsMap = new Map();
-
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data() || {};
-
-                    let categoryName = data.categoryName || '';
-                    if (!categoryName && data.categoryId && window.categoriesData) {
-                        categoryName = window.categoriesData[data.categoryId] || '';
-                    }
-                    categoryName = cleanCategory(categoryName);
-                    if (!categoryName) return;
-
-                    const groupName = data.groupName || null;
-
-                    const addTeam = (identifierFromMatch, teamNameFromMatch) => {
-                        if (!identifierFromMatch) return;
-                        const key = `${categoryName}||${identifierFromMatch}`;
-                        if (teamsMap.has(key)) return;
-
-                        let displayName = null;
-                        if (
-                            window.teamManager &&
-                            typeof window.teamManager.getTeamNameByDisplayIdSync === 'function'
-                        ) {
-                            try {
-                                const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifierFromMatch);
-                                if (resolved) displayName = resolved;
-                            } catch (e) { /* ignore */ }
-                        }
-                        if (!displayName && teamNameFromMatch) displayName = teamNameFromMatch;
-                        if (!displayName) displayName = identifierFromMatch;
-
-                        displayName = String(displayName).trim();
-                        if (!displayName) return;
-                        if (displayName === 'null' || displayName === 'undefined') {
-                            displayName = identifierFromMatch;
-                        }
-                        if (!displayName.includes(categoryName)) {
-                            if (identifierFromMatch.includes(categoryName)) {
-                                displayName = identifierFromMatch;
-                            } else {
-                                displayName = `${categoryName} ${identifierFromMatch}`;
-                            }
-                        }
-
-                        teamsMap.set(key, {
-                            id: identifierFromMatch,
-                            teamName: displayName,
-                            identifier: identifierFromMatch,
-                            category: categoryName,
-                            groupName: groupName,
-                        });
-                    };
-
-                    addTeam(data.homeTeamIdentifier, data.homeTeamName);
-                    addTeam(data.awayTeamIdentifier, data.awayTeamName);
-                });
-
-                setMatchTeams(Array.from(teamsMap.values()));
-            },
-            (error) => { }
-        );
-
-        return () => unsubscribe();
-    }, [categoriesReady]);
 
     useEffect(() => {
         if (!window.db) return;
@@ -733,38 +572,23 @@ const cateringApp = ({ userProfileData }) => {
                         awayTeamName: data.awayTeamName || null,
                         categoryId: data.categoryId || null,
                         categoryName: cleanCategory(categoryName),
-                        groupName: data.groupName || null,
                         hallId: data.hallId,
                         scheduledTime: data.scheduledTime,
-                        scheduledEndTime: data.scheduledEndTime || null,
                         duration: data.duration ?? null,
-                        status: data.status || null,
-                        isPlacementMatch: data.isPlacementMatch === true,
-                        placementRank: data.placementRank ?? null,
-                        matchType: data.matchType || null,
                     });
-                });
-
-                scheduledMatchesLocal.sort((a, b) => {
-                    try {
-                        const ta = a.scheduledTime?.toDate ? a.scheduledTime.toDate().getTime() : 0;
-                        const tb = b.scheduledTime?.toDate ? b.scheduledTime.toDate().getTime() : 0;
-                        if (ta !== tb) return ta - tb;
-                    } catch (e) { /* ignore */ }
-                    return String(a.id).localeCompare(String(b.id));
                 });
 
                 const cateringSlotsByDay = {};
                 (tournamentDays || []).forEach((day) => {
                     const t = cateringTimes[day.key] || {};
-                    const daySlots = [];
+                    const daySlotsLocal = [];
 
                     if (hasValidMealRange(t.lunch, unitMinutes)) {
                         const built = buildMealSlots(t.lunch.from, t.lunch.to, unitMinutes);
                         built.forEach((s) => {
                             const fromMin = timeToMinutes(s.from);
                             const toMin = timeToMinutes(s.to);
-                            if (fromMin != null && toMin != null) daySlots.push({ fromMin, toMin });
+                            if (fromMin != null && toMin != null) daySlotsLocal.push({ fromMin, toMin });
                         });
                     }
 
@@ -773,11 +597,11 @@ const cateringApp = ({ userProfileData }) => {
                         built.forEach((s) => {
                             const fromMin = timeToMinutes(s.from);
                             const toMin = timeToMinutes(s.to);
-                            if (fromMin != null && toMin != null) daySlots.push({ fromMin, toMin });
+                            if (fromMin != null && toMin != null) daySlotsLocal.push({ fromMin, toMin });
                         });
                     }
 
-                    cateringSlotsByDay[day.key] = daySlots;
+                    cateringSlotsByDay[day.key] = daySlotsLocal;
                 });
 
                 const filteredScheduledMatches = scheduledMatchesLocal.filter((match) => {
@@ -830,7 +654,7 @@ const cateringApp = ({ userProfileData }) => {
     }, [categories, cateringTimes, unitMinutes, tournamentDays]);
 
     // ============================================================
-    // 6) Zvyšné useMemo – všetky pred return-mi!
+    // 6) useMemo – assignmentsBySlot, daySlots
     // ============================================================
     const assignmentsBySlot = React.useMemo(() => {
         const map = new Map();
@@ -864,51 +688,15 @@ const cateringApp = ({ userProfileData }) => {
     }, [tournamentDays, cateringTimes, unitMinutes]);
 
     // ============================================================
-    // Pomocná funkcia: priemer členov kategórie pre konkrétny deň a typ jedla
+    // 7) Pomocné funkcie
     // ============================================================
-    const getSuperstructureAvg = (category, dayKey, mealType) => {
-        const cat = cleanCategory(category);
-        if (!cat) return null;
-
-        const teamsInCategory = (userTeams || []).filter(
-            (t) => cleanCategory(t.category) === cat
-        );
-        if (teamsInCategory.length === 0) return null;
-
-        const slots = daySlots?.[dayKey]?.[mealType] || [];
-        if (slots.length === 0) {
-            const total = teamsInCategory.reduce(
-                (acc, t) => acc + (t.playersCount || 0) + (t.othersCount || 0),
-                0
-            );
-            return Math.ceil(total / teamsInCategory.length);
-        }
-
-        const total = teamsInCategory.reduce((acc, t) => {
-            const effective = countMembersWithMeal(t.rawTeamData, dayKey, mealType);
-            return acc + effective.players + effective.others;
-        }, 0);
-
-        return Math.ceil(total / teamsInCategory.length);
-    };
-
-    // ============================================================
-    // 7) POMOCNÉ FUNKCIE – musia byť PRED skorými return-mi,
-    //    pretože placeCountsBySlot ich používa.
-    // ============================================================
-
-    const getTeamAccommodationColor = (team) => {
-        if (!team.accommodationName) return '#FFFF00';
-        const accommodation = accommodations.find(place => place.name === team.accommodationName);
-        if (!accommodation) return '#FFFF00';
-        return accommodation.headerColor || '#FFFF00';
-    };
-
-    const getTeamAccommodationTextColor = (team) => {
-        if (!team.accommodationName) return '#000000';
-        const accommodation = accommodations.find(place => place.name === team.accommodationName);
-        if (!accommodation) return '#000000';
-        return accommodation.headerTextColor || '#000000';
+    const getCateringPlaceColors = (placeId) => {
+        const place = cateringPlaces.find((p) => p.id === placeId);
+        if (!place) return { bg: '#1e40af', text: '#000000' };
+        return {
+            bg: place.headerColor || '#1e40af',
+            text: place.headerTextColor || '#000000',
+        };
     };
 
     const findCateringAssignment = (team, dayKey, mealType, slotFrom) => {
@@ -931,65 +719,12 @@ const cateringApp = ({ userProfileData }) => {
         );
     };
 
-    const findSuperstructureAssignmentForRow = (team, dayKey, mealType) => {
-        const teamCat = cleanCategory(team.category);
-        return cateringAssignments.find(
-            (a) =>
-                a.isSuperstructure === true &&
-                a.clickedTeamUid === team.uid &&
-                a.clickedTeamIndex === team.teamIndex &&
-                cleanCategory(a.clickedTeamCategory) === teamCat &&
-                a.dayKey === dayKey &&
-                a.mealType === mealType
-        );
-    };
-
-    const findAllSuperstructureAssignmentsForRow = (team, dayKey, mealType) => {
-        const teamCat = cleanCategory(team.category);
-        return cateringAssignments.filter(
-            (a) =>
-                a.isSuperstructure === true &&
-                a.clickedTeamUid === team.uid &&
-                a.clickedTeamIndex === team.teamIndex &&
-                cleanCategory(a.clickedTeamCategory) === teamCat &&
-                a.dayKey === dayKey &&
-                a.mealType === mealType
-        );
-    };
-
     const getPlaceTeamDisplayName = (teamName, category) => {
         if (!teamName) return '';
         if (category && teamName.startsWith(category + ' ')) {
             return teamName.substring(category.length + 1).trim();
         }
         return teamName;
-    };
-
-    const isSuperstructureTeamAlreadyAssigned = (placeTeamName, dayKey, mealType, category) => {
-        const cat = category ? cleanCategory(category) : null;
-        return cateringAssignments.some(
-            (a) =>
-                a.isSuperstructure === true &&
-                (a.teamName === placeTeamName || a.teamIdentifier === placeTeamName) &&
-                (cat == null || cleanCategory(a.category || a.categoryName) === cat) &&
-                a.dayKey === dayKey &&
-                a.mealType === mealType
-        );
-    };
-
-    const getCateringPlaceColors = (placeId) => {
-        const place = cateringPlaces.find((p) => p.id === placeId);
-        if (!place) return { bg: '#1e40af', text: '#000000' };
-        return {
-            bg: place.headerColor || '#1e40af',
-            text: place.headerTextColor || '#000000',
-        };
-    };
-
-    const getCateringPlaceCapacity = (placeId) => {
-        const place = cateringPlaces.find((p) => p.id === placeId);
-        if (!place) return null;
-        return place.capacity != null ? Number(place.capacity) : null;
     };
 
     const teamPlaysDuringSlot = (team, dayKey, slotFrom, slotTo) => {
@@ -1050,31 +785,13 @@ const cateringApp = ({ userProfileData }) => {
             const isTeamInMatch = matchTeamIdentifiers.some((identifier) => {
                 const idStr = String(identifier).trim();
                 if (!idStr) return false;
-
                 if (teamNameVariants.has(idStr)) return true;
-
-                if (
-                    window.teamManager &&
-                    typeof window.teamManager.getTeamNameByDisplayIdSync === 'function'
-                ) {
-                    try {
-                        const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifier);
-                        if (resolved) {
-                            const resolvedStr = String(resolved).trim();
-                            if (teamNameVariants.has(resolvedStr)) return true;
-                            if (teamCategory && teamNameVariants.has(`${teamCategory} ${resolvedStr}`)) {
-                                return true;
-                            }
-                        }
-                    } catch (e) { /* ignore */ }
-                }
 
                 if (teamShortName && teamCategory) {
                     const idStartsWithCategory = idStr.startsWith(teamCategory + ' ') || idStr === teamCategory;
                     const idEndsWithShort = idStr.endsWith(teamShortName) || idStr.includes(` ${teamShortName}`);
                     if (idStartsWithCategory && idEndsWithShort) return true;
                 }
-
                 return false;
             });
 
@@ -1173,31 +890,13 @@ const cateringApp = ({ userProfileData }) => {
             const isTeamInMatch = matchTeamIdentifiers.some((identifier) => {
                 const idStr = String(identifier).trim();
                 if (!idStr) return false;
-
                 if (targetVariants.has(idStr)) return true;
-
-                if (
-                    window.teamManager &&
-                    typeof window.teamManager.getTeamNameByDisplayIdSync === 'function'
-                ) {
-                    try {
-                        const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifier);
-                        if (resolved) {
-                            const resolvedStr = String(resolved).trim();
-                            if (targetVariants.has(resolvedStr)) return true;
-                            if (targetCategory && targetVariants.has(`${targetCategory} ${resolvedStr}`)) {
-                                return true;
-                            }
-                        }
-                    } catch (e) { /* ignore */ }
-                }
 
                 if (targetShortName && targetCategory) {
                     const idStartsWithCategory = idStr.startsWith(targetCategory + ' ') || idStr === targetCategory;
                     const idEndsWithShort = idStr.endsWith(targetShortName) || idStr.includes(` ${targetShortName}`);
                     if (idStartsWithCategory && idEndsWithShort) return true;
                 }
-
                 return false;
             });
 
@@ -1230,227 +929,20 @@ const cateringApp = ({ userProfileData }) => {
         return false;
     };
 
-    const teamHasMealInPackage = (team, dayKey, mealType) => {
-        if (!team) return false;
-        if (!team.packageName) return true;
-        const pkg = packagesList.find(p => p.name === team.packageName);
-        if (!pkg) return true;
-        const mealsForDay = pkg.meals?.[dayKey];
-        if (!mealsForDay) return false;
-        const val = mealsForDay[mealType];
-        return val === 1 || val === true;
-    };
-
-    const teamHasAnyPackage = (team) => {
-        if (!team) return false;
-        if (!team.packageName) return false;
-        const pkg = packagesList.find(p => p.name === team.packageName);
-        return !!pkg;
-    };
-
-    const getAssignedCountForPlace = (placeId, dayKey, mealType, slotFrom) => {
-        const key = `${placeId}|${dayKey}|${mealType}|${slotFrom}`;
-        const raw = placeCountsBySlot.get(key) || 0;
-        return Number.isInteger(raw) ? raw : Math.ceil(raw);
-    };
-
-    const teamHasAnyAssignmentInRow = (team, dayKey, mealType) => {
-        if (!team) return false;
-
-        const teamCat = cleanCategory(team.category);
-
-        const hasClassic = (cateringAssignments || []).some(
-            (a) =>
-                a.isSuperstructure !== true &&
-                a.teamUid === team.uid &&
-                a.teamIndex === team.teamIndex &&
-                cleanCategory(a.category || a.categoryName) === teamCat &&
-                a.dayKey === dayKey &&
-                a.mealType === mealType
-        );
-        if (hasClassic) return true;
-
-        const hasSS = (cateringAssignments || []).some(
-            (a) =>
-                a.isSuperstructure === true &&
-                a.clickedTeamUid === team.uid &&
-                a.clickedTeamIndex === team.teamIndex &&
-                cleanCategory(a.clickedTeamCategory) === teamCat &&
-                a.dayKey === dayKey &&
-                a.mealType === mealType
-        );
-        return hasSS;
-    };
-
-    const placeCountsBySlot = React.useMemo(() => {
-        const counts = new Map();
-
-        const superstructurePlaysInSlot = (ss, dayKey, slotFrom, slotTo) => {
-            return superstructureTeamPlaysDuringSlot(
-                ss.teamName || ss.teamIdentifier,
-                ss.category,
-                dayKey,
-                slotFrom,
-                slotTo
-            );
-        };
-
-        const findSS = (team, dayKey, mealType, slotFrom) => {
-            const teamCat = cleanCategory(team.category);
-            return cateringAssignments.find(
-                (a) =>
-                    a.isSuperstructure === true &&
-                    a.clickedTeamUid === team.uid &&
-                    a.clickedTeamIndex === team.teamIndex &&
-                    cleanCategory(a.clickedTeamCategory) === teamCat &&
-                    a.dayKey === dayKey &&
-                    a.mealType === mealType &&
-                    a.slotFrom === slotFrom
-            );
-        };
-
-        const findCL = (team, dayKey, mealType, slotFrom) => {
-            const cat = cleanCategory(team.category);
-            const key = `${team.uid}|${team.teamIndex}|${cat}|${dayKey}|${mealType}|${slotFrom}`;
-            return assignmentsBySlot.get(key) || null;
-        };
-
-        (userTeams || []).forEach((team) => {
-            Object.entries(daySlots).forEach(([dayKey, meals]) => {
-                ['lunch', 'dinner'].forEach((mealType) => {
-                    const hasAnyAssignmentInRow = teamHasAnyAssignmentInRow(team, dayKey, mealType);
-
-                    const allSuperstructureInRow = findAllSuperstructureAssignmentsForRow(
-                        team, dayKey, mealType
-                    );
-
-                    (meals[mealType] || []).forEach((slot) => {
-                        const isPlaying = teamPlaysDuringSlot(team, dayKey, slot.from, slot.to);
-
-                        const superstructureIsPlayingForForceDash = allSuperstructureInRow.some(
-                            (ss) => superstructurePlaysInSlot(ss, dayKey, slot.from, slot.to)
-                        );
-
-                        const forceDash =
-                            (isPlaying && hasAnyAssignmentInRow) ||
-                            superstructureIsPlayingForForceDash;
-
-                        if (forceDash) return;
-
-                        const ss = findSS(team, dayKey, mealType, slot.from);
-                        if (ss) {
-                            const ssCategory = cleanCategory(ss.categoryName || ss.category);
-                            const avg = getSuperstructureAvg(ssCategory, dayKey, mealType);
-                            if (avg == null) return;
-                            const key = `${ss.placeId}|${dayKey}|${mealType}|${slot.from}`;
-                            counts.set(key, (counts.get(key) || 0) + avg);
-                            return;
-                        }
-
-                        const cl = findCL(team, dayKey, mealType, slot.from);
-                        if (cl) {
-                            const effectiveCounts = countMembersWithMeal(team.rawTeamData, dayKey, mealType);
-                            const members = effectiveCounts.players + effectiveCounts.others;
-                            const key = `${cl.placeId}|${dayKey}|${mealType}|${slot.from}`;
-                            counts.set(key, (counts.get(key) || 0) + members);
-                        }
-                    });
-                });
-            });
-        });
-
-        return counts;
-    }, [
-        cateringAssignments,
-        userTeams,
-        superstructureTeams,
-        daySlots,
-        assignmentsBySlot,
-        scheduledMatches,
-        categories,
-    ]);
-
-    const getDailyAssignedCountForPlace = (placeId, dayKey, mealType) => {
-        const slots = daySlots[dayKey]?.[mealType] || [];
-        let total = 0;
-        slots.forEach((slot) => {
-            const key = `${placeId}|${dayKey}|${mealType}|${slot.from}`;
-            total += placeCountsBySlot.get(key) || 0;
-        });
-        return Number.isInteger(total) ? total : Math.ceil(total);
-    };
-
     // ============================================================
-    // 8) Až TERAZ môžu prísť skoré return-y
+    // 8) Pomocné funkcie pre render (PRED return-mi!)
     // ============================================================
-    if (loading) {
-        return React.createElement(
-            'div',
-            { className: 'flex justify-center items-center h-full pt-16' },
-            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-        );
-    }
-
-    if (tournamentDays.length === 0) {
-        return React.createElement(
-            'div',
-            { className: 'flex-grow flex justify-center items-start p-6' },
-            React.createElement(
-                'div',
-                { className: 'w-full max-w-7xl bg-white rounded-xl shadow-xl p-8' },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-6' }, 'Stravovanie'),
-                React.createElement(
-                    'p',
-                    { className: 'text-center text-gray-500' },
-                    'Nie sú dostupné žiadne dátumy turnaja. Nastavte prosím dátum príchodu a koniec turnaja.'
-                )
-            )
-        );
-    }
-
-    // ============================================================
-    // 9) Zvyšné pomocné funkcie pre render
-    // ============================================================
-    const slotCountFor = (dayKey, mealType) => {
-        const slots = daySlots[dayKey]?.[mealType] || [];
-        return slots.length;
-    };
-
     const shouldShowMealType = (mealType) => {
         if (!filterMealType) return true;
         return filterMealType === mealType;
     };
 
-    const visibleColumnCountForDay = (dayKey) => {
-        const slots = daySlots[dayKey] || { lunch: [], dinner: [] };
-        let count = 0;
-        if (shouldShowMealType('lunch')) count += slots.lunch.length;
-        if (shouldShowMealType('dinner')) count += slots.dinner.length;
-        return count;
-    };
-
-    const dailySummaryColumnsForDay = (dayKey) => {
-        const slots = daySlots[dayKey] || { lunch: [], dinner: [] };
-        let count = 0;
-        if (shouldShowMealType('lunch') && slots.lunch.length > 0) count += 1;
-        if (shouldShowMealType('dinner') && slots.dinner.length > 0) count += 1;
-        return count;
-    };
-
-    const filteredDays = (filterDayKey
-        ? visibleDays.filter((d) => d.key === filterDayKey)
-        : visibleDays
-    ).filter((d) => visibleColumnCountForDay(d.key) > 0);
-
-    const categoryHasVisibleColumns = () => true;
-
-    const filteredTeams = (filterCategory
+    const filteredTeams = filterCategory
         ? userTeams.filter((t) => t.category === filterCategory)
-        : userTeams
-    ).filter((t) => categoryHasVisibleColumns(t.category));
+        : userTeams;
 
     // ============================================================
-    // 9b) NOVÉ: Zoznam priradení (plochý zoznam pre tabuľku)
+    // 9) assignmentRows (useMemo) – MUSÍ BYŤ PRED RETURN-MI
     // ============================================================
     const assignmentRows = React.useMemo(() => {
         const rows = [];
@@ -1486,11 +978,6 @@ const cateringApp = ({ userProfileData }) => {
                                 placeId: existing.placeId,
                                 placeName: existing.placeName || '',
                                 type: 'classic',
-                                isPlaying: false,
-                                clickable: true,
-                                team,
-                                day,
-                                slot,
                             });
                             return;
                         }
@@ -1518,10 +1005,6 @@ const cateringApp = ({ userProfileData }) => {
                                     slot.from,
                                     slot.to
                                 ),
-                                clickable: true,
-                                team,
-                                day,
-                                slot,
                             });
                             return;
                         }
@@ -1541,17 +1024,8 @@ const cateringApp = ({ userProfileData }) => {
                                 placeId: null,
                                 placeName: '',
                                 type: 'playing',
-                                isPlaying: true,
-                                clickable: false,
-                                team,
-                                day,
-                                slot,
                             });
-                            return;
                         }
-
-                        // Voliteľne: ak chceš zobrazovať aj nepriradené bunky, odkomentuj:
-                        // rows.push({ ... type: 'unassigned' ... });
                     });
                 });
             });
@@ -1580,663 +1054,35 @@ const cateringApp = ({ userProfileData }) => {
     ]);
 
     // ============================================================
-    // 10) Handlery
+    // 10) Až TERAZ môžu prísť skoré return-y
     // ============================================================
-    const openCateringModal = (team, day, mealType, slot) => {
-        const allSuperstructureInRow = findAllSuperstructureAssignmentsForRow(
-            team, day.key, mealType
+    if (loading) {
+        return React.createElement(
+            'div',
+            { className: 'flex justify-center items-center h-full pt-16' },
+            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
         );
-        const teamCat = cleanCategory(team.category);
-        const allClassicInRow = cateringAssignments.filter(
-            (a) =>
-                a.isSuperstructure !== true &&
-                a.teamUid === team.uid &&
-                a.teamIndex === team.teamIndex &&
-                cleanCategory(a.category || a.categoryName) === teamCat &&
-                a.dayKey === day.key &&
-                a.mealType === mealType
+    }
+
+    if (tournamentDays.length === 0) {
+        return React.createElement(
+            'div',
+            { className: 'flex-grow flex justify-center items-start p-6' },
+            React.createElement(
+                'div',
+                { className: 'w-full max-w-7xl bg-white rounded-xl shadow-xl p-8' },
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-6' }, 'Stravovanie'),
+                React.createElement(
+                    'p',
+                    { className: 'text-center text-gray-500' },
+                    'Nie sú dostupné žiadne dátumy turnaja. Nastavte prosím dátum príchodu a koniec turnaja.'
+                )
+            )
         );
-        const totalAssignedInRow = allSuperstructureInRow.length + allClassicInRow.length;
-
-        const superstructureExisting = findSuperstructureAssignmentForCell(
-            team, day.key, mealType, slot.from
-        );
-        if (superstructureExisting) {
-            const placeTeam = superstructureTeams.find(
-                (t) => t.id === superstructureExisting.teamIndex
-            ) || {
-                id: superstructureExisting.teamIndex,
-                teamName: superstructureExisting.teamName,
-                category: superstructureExisting.category,
-                groupName: superstructureExisting.groupName || null,
-            };
-
-            const otherSuperstructureInRow = allSuperstructureInRow.filter(
-                (a) => a.id !== superstructureExisting.id
-            );
-            const hasOtherSuperstructureInRow = otherSuperstructureInRow.length > 0;
-
-            setSelectedCateringCell({
-                team,
-                dayKey: day.key,
-                dayLabel: day.fullLabelNumeric,
-                mealType,
-                slotFrom: superstructureExisting.slotFrom || slot.from,
-                slotTo: superstructureExisting.slotTo || slot.to,
-                existingId: superstructureExisting.id || null,
-                isSuperstructure: true,
-                placeTeam,
-                isPriority: false,
-                showPriorityCheckbox: hasOtherSuperstructureInRow,
-            });
-            setCateringModalIsPriority(superstructureExisting.isPriority === true);
-            setSelectedCateringPlaceId(superstructureExisting.placeId || '');
-            setShowCateringModal(true);
-            return;
-        }
-
-        const existingClassic = findCateringAssignment(team, day.key, mealType, slot.from);
-        if (existingClassic) {
-            setSelectedCateringCell({
-                team,
-                dayKey: day.key,
-                dayLabel: day.fullLabelNumeric,
-                mealType,
-                slotFrom: slot.from,
-                slotTo: slot.to,
-                existingId: existingClassic.id || null,
-                isSuperstructure: false,
-                showPriorityCheckbox: false,
-            });
-            setSelectedCateringPlaceId(existingClassic.placeId || '');
-            setCateringModalIsPriority(false);
-            setShowCateringModal(true);
-            return;
-        }
-
-        if (totalAssignedInRow >= 2) {
-            const items = [];
-
-            allSuperstructureInRow.forEach((a) => {
-                const placeTeam = superstructureTeams.find((t) => t.id === a.teamIndex) || {
-                    id: a.teamIndex,
-                    teamName: a.teamName,
-                    category: a.category,
-                    groupName: a.groupName || null,
-                };
-                items.push({ assignment: a, placeTeam, isClassic: false });
-            });
-
-            allClassicInRow.forEach((a) => {
-                items.push({
-                    assignment: a,
-                    placeTeam: {
-                        id: a.teamUid + '-' + a.teamIndex,
-                        teamName: a.teamName || team.teamName,
-                        category: a.categoryName || a.category,
-                        groupName: null,
-                    },
-                    isClassic: true,
-                });
-            });
-
-            setPendingSuperstructureDecision({
-                type: 'row',
-                team,
-                day,
-                mealType,
-                slot,
-                existingId: null,
-                placeTeam: null,
-                existingAssignment: null,
-            });
-
-            setSuperstructureReplanPickerItems(items);
-            setShowSuperstructureReplanPickerModal(true);
-            return;
-        }
-
-        const superstructureInRow = findSuperstructureAssignmentForRow(
-            team, day.key, mealType
-        );
-        if (superstructureInRow) {
-            const placeTeam = superstructureTeams.find(
-                (t) => t.id === superstructureInRow.teamIndex
-            ) || {
-                id: superstructureInRow.teamIndex,
-                teamName: superstructureInRow.teamName,
-                category: superstructureInRow.category,
-                groupName: superstructureInRow.groupName || null,
-            };
-
-            setPendingSuperstructureDecision({
-                type: 'row',
-                team,
-                day,
-                mealType,
-                slot,
-                existingId: superstructureInRow.id || null,
-                placeTeam,
-                existingAssignment: superstructureInRow,
-            });
-            setShowSuperstructureDecisionModal(true);
-            return;
-        }
-
-        if (!teamHasAnyPackage(team)) {
-            setPendingAssignmentCell({ team, day, mealType, slot });
-            setSelectedPlaceTeamId('');
-            setPlaceAssignmentSearch('');
-            setShowAssignmentTypeModal(false);
-            setShowPlaceAssignmentModal(true);
-            return;
-        }
-
-        if (!teamHasMealInPackage(team, day.key, mealType)) {
-            setPendingAssignmentCell({ team, day, mealType, slot });
-            setSelectedPlaceTeamId('');
-            setPlaceAssignmentSearch('');
-            setShowAssignmentTypeModal(false);
-            setShowPlaceAssignmentModal(true);
-            return;
-        }
-
-        setPendingAssignmentCell({ team, day, mealType, slot });
-        setShowAssignmentTypeModal(true);
-    };
-
-    const handleAssignForTeam = () => {
-        if (!pendingAssignmentCell) return;
-        const { team, day, mealType, slot } = pendingAssignmentCell;
-        const existing = findCateringAssignment(team, day.key, mealType, slot.from);
-        setSelectedCateringCell({
-            team,
-            dayKey: day.key,
-            dayLabel: day.fullLabelNumeric,
-            mealType,
-            slotFrom: slot.from,
-            slotTo: slot.to,
-            existingId: existing?.id || null,
-            showPriorityCheckbox: false,
-        });
-        setSelectedCateringPlaceId(existing?.placeId || '');
-        setCateringModalIsPriority(false);
-        setShowAssignmentTypeModal(false);
-        setShowCateringModal(true);
-    };
-
-    const handleAssignByPlace = () => {
-        if (!pendingAssignmentCell) return;
-        setSelectedPlaceTeamId('');
-        setPlaceAssignmentSearch('');
-        setCateringModalIsPriority(false);
-        setShowAssignmentTypeModal(false);
-        setShowPlaceAssignmentModal(true);
-    };
-
-    const cancelAssignmentType = () => {
-        setShowAssignmentTypeModal(false);
-        setPendingAssignmentCell(null);
-    };
-
-    const buildCateringPayload = (placeId) => {
-        const place = cateringPlaces.find((p) => p.id === placeId);
-        const cell = selectedCateringCell;
-
-        if (cell.isSuperstructure && cell.placeTeam) {
-            return {
-                clickedTeamUid: cell.team.uid,
-                clickedTeamIndex: cell.team.teamIndex,
-                clickedTeamCategory: cell.team.category,
-
-                teamUid: 'global',
-                teamIndex: cell.placeTeam.id,
-                category: cell.placeTeam.category,
-                categoryName: cell.placeTeam.category,
-                teamName: cell.placeTeam.teamName,
-                groupName: cell.placeTeam.groupName || null,
-                isSuperstructure: true,
-                isPriority: !!cateringModalIsPriority,
-
-                dayKey: cell.dayKey,
-                dayLabel: cell.dayLabel,
-                mealType: cell.mealType,
-                slotFrom: cell.slotFrom,
-                slotTo: cell.slotTo,
-
-                placeId: placeId,
-                placeName: place?.name || '',
-            };
-        }
-
-        const teamCat = cleanCategory(cell.team.category);
-        return {
-            teamUid: cell.team.uid,
-            teamIndex: cell.team.teamIndex,
-            category: teamCat,
-            categoryName: teamCat,
-            dayKey: cell.dayKey,
-            dayLabel: cell.dayLabel,
-            mealType: cell.mealType,
-            slotFrom: cell.slotFrom,
-            slotTo: cell.slotTo,
-            placeId: placeId,
-            placeName: place?.name || '',
-        };
-    };
-
-    const performSaveCateringAssignment = async (payload, isChange, oldIds) => {
-        try {
-            if (isChange && Array.isArray(oldIds) && oldIds.length > 0) {
-                for (const id of oldIds) {
-                    await deleteDoc(doc(window.db, 'catering', id));
-                }
-                await addDoc(collection(window.db, 'catering'), payload);
-                window.showGlobalNotification('Priradenie bolo zmenené.', 'success');
-            } else {
-                await addDoc(collection(window.db, 'catering'), payload);
-                window.showGlobalNotification('Priradenie bolo uložené.', 'success');
-            }
-
-            setShowCateringModal(false);
-            setSelectedCateringCell(null);
-            setSelectedCateringPlaceId('');
-            setCateringModalIsPriority(false);
-        } catch (err) {
-            window.showGlobalNotification('Nepodarilo sa uložiť priradenie.', 'error');
-        } finally {
-            setSavingCatering(false);
-        }
-    };
-
-    const handleSuperstructureReplan = () => {
-        if (!pendingSuperstructureDecision) return;
-
-        const { team, day, mealType, slot } = pendingSuperstructureDecision;
-
-        const allInRow = findAllSuperstructureAssignmentsForRow(
-            team, day.key, mealType
-        );
-
-        if (allInRow.length <= 1) {
-            const existingAssignment = allInRow[0] || null;
-            const existingId = existingAssignment?.id || null;
-            const teamIndex = existingAssignment?.teamIndex || null;
-
-            const placeTeam = teamIndex
-                ? (superstructureTeams.find((t) => t.id === teamIndex) || {
-                      id: teamIndex,
-                      teamName: existingAssignment.teamName,
-                      category: existingAssignment.category,
-                      groupName: existingAssignment.groupName || null,
-                  })
-                : null;
-
-            setSelectedCateringCell({
-                team,
-                dayKey: day.key,
-                dayLabel: day.fullLabelNumeric,
-                mealType,
-                slotFrom: slot.from,
-                slotTo: slot.to,
-                existingId: existingId,
-                isSuperstructure: true,
-                placeTeam,
-                isPriority: false,
-                showPriorityCheckbox: false,
-            });
-            setCateringModalIsPriority(existingAssignment?.isPriority === true);
-            setSelectedCateringPlaceId(existingAssignment?.placeId || '');
-            setShowSuperstructureDecisionModal(false);
-            setPendingSuperstructureDecision(null);
-            setShowCateringModal(true);
-            return;
-        }
-
-        const items = allInRow.map((a) => {
-            const placeTeam = superstructureTeams.find((t) => t.id === a.teamIndex) || {
-                id: a.teamIndex,
-                teamName: a.teamName,
-                category: a.category,
-                groupName: a.groupName || null,
-            };
-            return {
-                assignment: a,
-                placeTeam,
-            };
-        });
-
-        setSuperstructureReplanPickerItems(items);
-        setShowSuperstructureDecisionModal(false);
-        setShowSuperstructureReplanPickerModal(true);
-    };
-
-    const handlePickSuperstructureReplan = (item) => {
-        if (!pendingSuperstructureDecision || !item) return;
-
-        const { team, day, mealType, slot } = pendingSuperstructureDecision;
-        const { assignment, placeTeam, isClassic } = item;
-
-        if (isClassic) {
-            setSelectedCateringCell({
-                team,
-                dayKey: day.key,
-                dayLabel: day.fullLabelNumeric,
-                mealType,
-                slotFrom: assignment.slotFrom || slot.from,
-                slotTo: assignment.slotTo || slot.to,
-                existingId: assignment.id || null,
-            });
-            setSelectedCateringPlaceId(assignment.placeId || '');
-            setCateringModalIsPriority(false);
-            setShowSuperstructureReplanPickerModal(false);
-            setSuperstructureReplanPickerItems([]);
-            setPendingSuperstructureDecision(null);
-            setShowCateringModal(true);
-            return;
-        }
-
-        setSelectedCateringCell({
-            team,
-            dayKey: day.key,
-            dayLabel: day.fullLabelNumeric,
-            mealType,
-            slotFrom: slot.from,
-            slotTo: slot.to,
-            existingId: assignment.id || null,
-            isSuperstructure: true,
-            placeTeam,
-            isPriority: false,
-            showPriorityCheckbox: true,
-        });
-        setCateringModalIsPriority(assignment.isPriority === true);
-        setSelectedCateringPlaceId(assignment.placeId || '');
-        setShowSuperstructureReplanPickerModal(false);
-        setSuperstructureReplanPickerItems([]);
-        setPendingSuperstructureDecision(null);
-        setShowCateringModal(true);
-    };
-
-    const cancelSuperstructureReplanPicker = () => {
-        setShowSuperstructureReplanPickerModal(false);
-        setSuperstructureReplanPickerItems([]);
-        setPendingSuperstructureDecision(null);
-    };
-
-    const handleSuperstructurePriority = () => {
-        if (!pendingSuperstructureDecision) return;
-        const { team, day, mealType, slot } = pendingSuperstructureDecision;
-
-        setPendingAssignmentCell({ team, day, mealType, slot });
-        setSelectedPlaceTeamId('');
-        setPlaceAssignmentSearch('');
-        setShowSuperstructureDecisionModal(false);
-        setPendingSuperstructureDecision(null);
-        setShowAssignmentTypeModal(false);
-        setShowPlaceAssignmentModal(true);
-    };
-
-    const cancelSuperstructureDecision = () => {
-        setShowSuperstructureDecisionModal(false);
-        setPendingSuperstructureDecision(null);
-    };
-
-    const saveCateringAssignment = async () => {
-        if (!selectedCateringCell || !selectedCateringPlaceId || !window.db) return;
-
-        const payload = buildCateringPayload(selectedCateringPlaceId);
-
-        if (selectedCateringCell.isSuperstructure) {
-            setSavingCatering(true);
-
-            if (selectedCateringCell.existingId) {
-                const oldAssignment = cateringAssignments.find(
-                    (a) => a.id === selectedCateringCell.existingId
-                );
-                const oldWasPriority = oldAssignment?.isPriority === true;
-
-                const newIsPriority = !!cateringModalIsPriority;
-
-                const updatePayload = { ...payload, isPriority: newIsPriority };
-
-                await updateDoc(
-                    doc(window.db, 'catering', selectedCateringCell.existingId),
-                    updatePayload
-                );
-
-                const payloadClickedCat = cleanCategory(payload.clickedTeamCategory);
-                const siblings = cateringAssignments.filter(
-                    (a) =>
-                        a.isSuperstructure === true &&
-                        a.id !== selectedCateringCell.existingId &&
-                        a.clickedTeamUid === payload.clickedTeamUid &&
-                        a.clickedTeamIndex === payload.clickedTeamIndex &&
-                        cleanCategory(a.clickedTeamCategory) === payloadClickedCat &&
-                        a.dayKey === payload.dayKey &&
-                        a.mealType === payload.mealType
-                );
-
-                if (newIsPriority) {
-                    for (const sib of siblings) {
-                        if (sib.isPriority === true) {
-                            await updateDoc(doc(window.db, 'catering', sib.id), {
-                                isPriority: false,
-                            });
-                        }
-                    }
-                    window.showGlobalNotification('Priorita bola presunutá na tento tím.', 'success');
-                } else if (oldWasPriority && !newIsPriority) {
-                    if (siblings.length > 0) {
-                        await updateDoc(doc(window.db, 'catering', siblings[0].id), {
-                            isPriority: true,
-                        });
-                        window.showGlobalNotification('Priorita bola presunutá na iný tím v riadku.', 'success');
-                    } else {
-                        window.showGlobalNotification('Priorita bola odstránená.', 'success');
-                    }
-                } else {
-                    window.showGlobalNotification('Priradenie bolo preplánované.', 'success');
-                }
-
-                setShowCateringModal(false);
-                setSelectedCateringCell(null);
-                setSelectedCateringPlaceId('');
-                setCateringModalIsPriority(false);
-                setSavingCatering(false);
-                return;
-            } else {
-                const newIsPriority = !!cateringModalIsPriority;
-
-                await addDoc(collection(window.db, 'catering'), {
-                    ...payload,
-                    isPriority: newIsPriority,
-                });
-
-                if (!newIsPriority) {
-                    const payloadClickedCat = cleanCategory(payload.clickedTeamCategory);
-                    const siblings = cateringAssignments.filter(
-                        (a) =>
-                            a.isSuperstructure === true &&
-                            a.clickedTeamUid === payload.clickedTeamUid &&
-                            a.clickedTeamIndex === payload.clickedTeamIndex &&
-                            cleanCategory(a.clickedTeamCategory) === payloadClickedCat &&
-                            a.dayKey === payload.dayKey &&
-                            a.mealType === payload.mealType
-                    );
-
-                    if (siblings.length > 0) {
-                        await updateDoc(doc(window.db, 'catering', siblings[0].id), {
-                            isPriority: true,
-                        });
-                        window.showGlobalNotification('Priorita bola nastavená pôvodnému tímu v riadku.', 'success');
-                    } else {
-                        window.showGlobalNotification('Priradenie bolo uložené.', 'success');
-                    }
-                } else {
-                    window.showGlobalNotification('Priradenie bolo uložené.', 'success');
-                }
-
-                setShowCateringModal(false);
-                setSelectedCateringCell(null);
-                setSelectedCateringPlaceId('');
-                setCateringModalIsPriority(false);
-                setSavingCatering(false);
-                return;
-            }
-        }
-
-        const currentCat = cleanCategory(selectedCateringCell.team.category);
-        const existingForTeamDayMeal = cateringAssignments.filter(
-            (a) =>
-                a.isSuperstructure !== true &&
-                a.teamUid === selectedCateringCell.team.uid &&
-                a.teamIndex === selectedCateringCell.team.teamIndex &&
-                cleanCategory(a.category || a.categoryName) === currentCat &&
-                a.dayKey === selectedCateringCell.dayKey &&
-                a.mealType === selectedCateringCell.mealType
-        );
-
-        if (existingForTeamDayMeal.length === 0) {
-            setSavingCatering(true);
-            await performSaveCateringAssignment(payload, false, null);
-            return;
-        }
-
-        const identical = existingForTeamDayMeal.find(
-            (a) =>
-                a.slotFrom === selectedCateringCell.slotFrom &&
-                a.placeId === selectedCateringPlaceId
-        );
-        if (identical) {
-            setShowCateringModal(false);
-            setSelectedCateringCell(null);
-            setSelectedCateringPlaceId('');
-            setCateringModalIsPriority(false);
-            return;
-        }
-
-        setPendingChange({
-            payload,
-            oldIds: existingForTeamDayMeal.map((a) => a.id),
-        });
-        setShowChangeConfirm(true);
-    };
-
-    const confirmChangeAssignment = async () => {
-        if (!pendingChange || !window.db) return;
-        setSavingCatering(true);
-        setShowChangeConfirm(false);
-
-        await performSaveCateringAssignment(
-            pendingChange.payload,
-            true,
-            pendingChange.oldIds
-        );
-
-        setPendingChange(null);
-    };
-
-    const cancelChangeAssignment = () => {
-        setShowChangeConfirm(false);
-        setPendingChange(null);
-        setSavingCatering(false);
-    };
-
-    const savePlaceAssignment = async () => {
-        if (!pendingAssignmentCell || !selectedPlaceTeamId) return;
-
-        const { team, day, mealType, slot } = pendingAssignmentCell;
-
-        const placeTeam = matchTeams.find((t) => t.id === selectedPlaceTeamId);
-        if (!placeTeam) {
-            window.showGlobalNotification('Vybraný tím sa nenašiel.', 'error');
-            return;
-        }
-
-        const existingInRow = findAllSuperstructureAssignmentsForRow(
-            team, day.key, mealType
-        );
-
-        const hasOtherAssignmentInRow = existingInRow.length > 0;
-
-        setSelectedCateringCell({
-            team,
-            dayKey: day.key,
-            dayLabel: day.fullLabelNumeric,
-            mealType,
-            slotFrom: slot.from,
-            slotTo: slot.to,
-            existingId: null,
-            isSuperstructure: true,
-            placeTeam,
-            isPriority: false,
-            showPriorityCheckbox: hasOtherAssignmentInRow,
-        });
-
-        setCateringModalIsPriority(hasOtherAssignmentInRow);
-        setSelectedCateringPlaceId('');
-        setShowPlaceAssignmentModal(false);
-        setShowCateringModal(true);
-    };
-
-    const deleteCateringAssignment = async () => {
-        if (!selectedCateringCell?.existingId || !window.db) return;
-        setSavingCatering(true);
-        try {
-            const deletedAssignment = cateringAssignments.find(
-                (a) => a.id === selectedCateringCell.existingId
-            );
-
-            await deleteDoc(doc(window.db, 'catering', selectedCateringCell.existingId));
-
-            if (
-                selectedCateringCell.isSuperstructure &&
-                deletedAssignment &&
-                deletedAssignment.isSuperstructure === true
-            ) {
-                const deletedCat = cleanCategory(deletedAssignment.clickedTeamCategory);
-                const remainingInRow = cateringAssignments.filter(
-                    (a) =>
-                        a.isSuperstructure === true &&
-                        a.id !== selectedCateringCell.existingId &&
-                        a.clickedTeamUid === deletedAssignment.clickedTeamUid &&
-                        a.clickedTeamIndex === deletedAssignment.clickedTeamIndex &&
-                        cleanCategory(a.clickedTeamCategory) === deletedCat &&
-                        a.dayKey === deletedAssignment.dayKey &&
-                        a.mealType === deletedAssignment.mealType
-                );
-
-                if (remainingInRow.length === 1 && remainingInRow[0].isPriority === true) {
-                    await updateDoc(doc(window.db, 'catering', remainingInRow[0].id), {
-                        isPriority: false,
-                    });
-                    window.showGlobalNotification(
-                        'Superstructure priradenie bolo odstránené. Priorita zvyšného tímu bola automaticky zrušená.',
-                        'success'
-                    );
-                } else {
-                    window.showGlobalNotification('Superstructure priradenie bolo odstránené.', 'success');
-                }
-            } else {
-                const message = selectedCateringCell.isSuperstructure
-                    ? 'Superstructure priradenie bolo odstránené.'
-                    : 'Priradenie bolo odstránené.';
-                window.showGlobalNotification(message, 'success');
-            }
-
-            setShowCateringModal(false);
-            setSelectedCateringCell(null);
-            setSelectedCateringPlaceId('');
-            setCateringModalIsPriority(false);
-        } catch (err) {
-            window.showGlobalNotification('Nepodarilo sa odstrániť priradenie.', 'error');
-        } finally {
-            setSavingCatering(false);
-        }
-    };
+    }
 
     // ============================================================
-    // 11) RENDER – zoznam priradení
+    // 11) RENDER – iba zobrazenie
     // ============================================================
     return React.createElement(
         'div',
@@ -2339,7 +1185,6 @@ const cateringApp = ({ userProfileData }) => {
                               null,
                               assignmentRows.map((row) => {
                                   const colors = row.placeId ? getCateringPlaceColors(row.placeId) : null;
-                                  const isClickable = row.clickable;
 
                                   return React.createElement(
                                       'tr',
@@ -2369,9 +1214,7 @@ const cateringApp = ({ userProfileData }) => {
                                       React.createElement(
                                           'td',
                                           {
-                                              className:
-                                                  'border border-gray-300 px-3 py-2 text-xs whitespace-nowrap ' +
-                                                  (isClickable ? 'cursor-pointer hover:brightness-95 transition' : ''),
+                                              className: 'border border-gray-300 px-3 py-2 text-xs whitespace-nowrap',
                                               style:
                                                   row.type === 'superstructure' && colors
                                                       ? {
@@ -2385,10 +1228,6 @@ const cateringApp = ({ userProfileData }) => {
                                                       : row.type === 'classic' && colors
                                                           ? { backgroundColor: colors.bg, color: colors.text }
                                                           : {},
-                                              onClick: isClickable
-                                                  ? () => openCateringModal(row.team, row.day, row.mealType, row.slot)
-                                                  : undefined,
-                                              title: isClickable ? 'Kliknutím upravíte priradenie' : '',
                                           },
                                           row.type === 'playing'
                                               ? 'Hrá zápas'
@@ -2398,458 +1237,13 @@ const cateringApp = ({ userProfileData }) => {
                               })
                           )
                       )
-                  ),
-
-            // ========== MODÁLY (bez zmeny) ==========
-            showAssignmentTypeModal && React.createElement(
-                'div',
-                {
-                    className: 'fixed inset-0 z-[3050] flex items-center justify-center bg-black/60 backdrop-blur-sm',
-                    onClick: () => cancelAssignmentType(),
-                },
-                React.createElement(
-                    'div',
-                    {
-                        className: 'bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6',
-                        onClick: (e) => e.stopPropagation(),
-                    },
-                    React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800 text-center' }, 'Vyberte typ priradenia'),
-                    React.createElement('p', { className: 'text-gray-600 text-sm mb-6 text-center' }, 'Ako chcete priradiť stravovanie pre túto bunku?'),
-                    React.createElement(
-                        'div',
-                        { className: 'flex flex-col gap-3' },
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: handleAssignForTeam,
-                                className: 'w-full py-3 rounded-lg text-gray-800 font-medium hover:brightness-95 transition border border-green-200',
-                                style: { backgroundColor: '#DCFCE7' },
-                            },
-                            'Priradiť stravovanie pre tím'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: handleAssignByPlace,
-                                className: 'w-full py-3 rounded-lg text-gray-800 font-medium hover:brightness-95 transition border border-blue-200',
-                                style: { backgroundColor: '#DBEAFE' },
-                            },
-                            'Priradiť stravovanie podľa umiestnenia'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: cancelAssignmentType,
-                                className: 'w-full py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition',
-                            },
-                            'Zrušiť'
-                        )
-                    )
-                )
-            ),
-
-            showPlaceAssignmentModal && pendingAssignmentCell && React.createElement(
-                'div',
-                {
-                    className: 'fixed inset-0 z-[3050] flex items-center justify-center bg-black/60 backdrop-blur-sm',
-                    onClick: () => {
-                        if (!savingPlaceAssignment) {
-                            setShowPlaceAssignmentModal(false);
-                            setPendingAssignmentCell(null);
-                            setSelectedPlaceTeamId('');
-                            setCateringModalIsPriority(false);
-                        }
-                    },
-                },
-                React.createElement(
-                    'div',
-                    {
-                        className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 max-h-[85vh] overflow-y-auto',
-                        onClick: (e) => e.stopPropagation(),
-                    },
-                    React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800' }, 'Priradiť stravovanie podľa umiestnenia'),
-
-                    React.createElement(
-                        'div',
-                        { className: 'mb-4 text-sm text-gray-700 space-y-1' },
-                        React.createElement('p', null, React.createElement('strong', null, 'Kategória: '), pendingAssignmentCell.team.category || '—'),
-                        React.createElement('p', null, React.createElement('strong', null, 'Deň: '), pendingAssignmentCell.day.fullLabelNumeric),
-                        React.createElement('p', null, React.createElement('strong', null, 'Jedlo: '), pendingAssignmentCell.mealType === 'lunch' ? 'Obed' : 'Večera'),
-                        React.createElement('p', null, React.createElement('strong', null, 'Čas: '), `${pendingAssignmentCell.slot.from} – ${pendingAssignmentCell.slot.to}`)
-                    ),
-
-                    React.createElement(
-                        'div',
-                        { className: 'mb-3' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Vyhľadať superstructure tím'),
-                        React.createElement('input', {
-                            type: 'text',
-                            value: placeAssignmentSearch,
-                            onChange: (e) => setPlaceAssignmentSearch(e.target.value),
-                            placeholder: 'Napíšte časť názvu tímu...',
-                            className: 'w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
-                        })
-                    ),
-
-                    (() => {
-                        const categoryName = cleanCategory(pendingAssignmentCell.team.category);
-                        const dayKey = pendingAssignmentCell.day.key;
-                        const mealType = pendingAssignmentCell.mealType;
-                        const slot = pendingAssignmentCell.slot;
-
-                        const filtered = matchTeams
-                            .filter((t) => cleanCategory(t.category) === categoryName)
-                            .filter((t) => !isSuperstructureTeamAlreadyAssigned(t.teamName, dayKey, mealType, t.category))
-                            .filter((t) => {
-                                const displayName = getPlaceTeamDisplayName(t.teamName, t.category) || '';
-                                if (/^[A-Za-z]\d+$/.test(displayName)) return false;
-                                return true;
-                            })
-                            .filter((t) => {
-                                const resolvedName = t.teamName || t.identifier;
-                                return !superstructureTeamPlaysDuringSlot(resolvedName, t.category, dayKey, slot.from, slot.to);
-                            })
-                            .filter((t) => {
-                                if (!placeAssignmentSearch.trim()) return true;
-                                return t.teamName.toLowerCase().includes(placeAssignmentSearch.trim().toLowerCase());
-                            })
-                            .sort((a, b) => {
-                                const ga = a.groupName || '';
-                                const gb = b.groupName || '';
-                                const gcmp = ga.localeCompare(gb, 'sk', { sensitivity: 'base' });
-                                if (gcmp !== 0) return gcmp;
-                                return (a.teamName || '').localeCompare(b.teamName || '', 'sk', { sensitivity: 'base' });
-                            });
-
-                        if (filtered.length === 0) {
-                            return React.createElement(
-                                'p',
-                                { className: 'text-sm text-gray-500 italic text-center py-4' },
-                                'Pre túto kategóriu neboli nájdené žiadne tímy.'
-                            );
-                        }
-
-                        return React.createElement(
-                            'div',
-                            { className: 'max-h-64 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100' },
-                            ...filtered.map((t) =>
-                                React.createElement(
-                                    'label',
-                                    {
-                                        key: t.id,
-                                        className: 'flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-blue-50 transition' +
-                                            (selectedPlaceTeamId === t.id ? ' bg-blue-100' : ''),
-                                    },
-                                    React.createElement('input', {
-                                        type: 'radio',
-                                        name: 'placeTeam',
-                                        value: t.id,
-                                        checked: selectedPlaceTeamId === t.id,
-                                        onChange: () => setSelectedPlaceTeamId(t.id),
-                                        className: 'w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300',
-                                    }),
-                                    React.createElement(
-                                        'div',
-                                        { className: 'flex flex-col' },
-                                        React.createElement('span', { className: 'text-sm font-medium text-gray-800' }, getPlaceTeamDisplayName(t.teamName, t.category))
-                                    )
-                                )
-                            )
-                        );
-                    })(),
-
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-end gap-3 mt-6' },
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: () => {
-                                    if (!savingPlaceAssignment) {
-                                        setShowPlaceAssignmentModal(false);
-                                        setPendingAssignmentCell(null);
-                                        setSelectedPlaceTeamId('');
-                                        setCateringModalIsPriority(false);
-                                    }
-                                },
-                                disabled: savingPlaceAssignment,
-                                className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition',
-                            },
-                            'Zrušiť'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: savePlaceAssignment,
-                                disabled: savingPlaceAssignment || !selectedPlaceTeamId,
-                                className: 'px-6 py-2.5 rounded-lg transition font-medium ' +
-                                    (savingPlaceAssignment || !selectedPlaceTeamId
-                                        ? 'bg-white text-green-600 border-2 border-green-600 cursor-not-allowed'
-                                        : 'bg-green-600 text-white hover:bg-green-700 border-2 border-green-600'
-                                    ),
-                            },
-                            savingPlaceAssignment ? 'Ukladám...' : 'Uložiť priradenie'
-                        )
-                    )
-                )
-            ),
-
-            showSuperstructureDecisionModal && pendingSuperstructureDecision && React.createElement(
-                'div',
-                {
-                    className: 'fixed inset-0 z-[3050] flex items-center justify-center bg-black/60 backdrop-blur-sm',
-                    onClick: () => cancelSuperstructureDecision(),
-                },
-                React.createElement(
-                    'div',
-                    {
-                        className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6',
-                        onClick: (e) => e.stopPropagation(),
-                    },
-                    React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800 text-center' }, 'Superstructure priradenie'),
-                    React.createElement('p', { className: 'text-gray-600 text-sm mb-6 text-center' }, 'Pre túto bunku už existuje superstructure priradenie. Čo chcete urobiť?'),
-                    React.createElement(
-                        'div',
-                        { className: 'flex flex-col gap-3' },
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: handleSuperstructureReplan,
-                                className: 'w-full py-3 rounded-lg text-gray-800 font-medium hover:brightness-95 transition border border-green-200',
-                                style: { backgroundColor: '#DCFCE7' },
-                            },
-                            'Preplánovať existujúce miesto a čas pre existujúci tím'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: handleSuperstructurePriority,
-                                className: 'w-full py-3 rounded-lg text-gray-800 font-medium hover:brightness-95 transition border border-blue-200',
-                                style: { backgroundColor: '#DBEAFE' },
-                            },
-                            'Naplánovať prioritnejšie miesto a čas pre iný tím (o umiestnenie)'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: cancelSuperstructureDecision,
-                                className: 'w-full py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition',
-                            },
-                            'Zrušiť'
-                        )
-                    )
-                )
-            ),
-
-            showSuperstructureReplanPickerModal && superstructureReplanPickerItems.length > 0 && React.createElement(
-                'div',
-                {
-                    className: 'fixed inset-0 z-[3050] flex items-center justify-center bg-black/60 backdrop-blur-sm',
-                    onClick: () => cancelSuperstructureReplanPicker(),
-                },
-                React.createElement(
-                    'div',
-                    {
-                        className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 max-h-[85vh] overflow-y-auto',
-                        onClick: (e) => e.stopPropagation(),
-                    },
-                    React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800 text-center' }, 'Vyberte tím na preplánovanie'),
-                    React.createElement('p', { className: 'text-gray-600 text-sm mb-4 text-center' }, 'V tomto riadku (tím, deň a typ jedla) existuje viac superstructure priradení. Ktoré chcete preplánovať?'),
-                    React.createElement(
-                        'div',
-                        { className: 'flex flex-col gap-2' },
-                        ...superstructureReplanPickerItems.map((item, idx) => {
-                            const { assignment, placeTeam } = item;
-                            const placeName =
-                                cateringPlaces.find((p) => p.id === assignment.placeId)?.name ||
-                                assignment.placeName || '—';
-
-                            return React.createElement(
-                                'button',
-                                {
-                                    key: assignment.id || idx,
-                                    onClick: () => handlePickSuperstructureReplan(item),
-                                    className: 'w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-400 transition',
-                                },
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex flex-col gap-1' },
-                                    React.createElement('span', { className: 'text-sm font-semibold text-gray-800' },
-                                        getPlaceTeamDisplayName(placeTeam?.teamName, placeTeam?.category) || '—'
-                                    ),
-                                    React.createElement('span', { className: 'text-xs text-gray-500' },
-                                        `Čas: ${assignment.slotFrom} – ${assignment.slotTo} | Miesto: ${placeName}`
-                                    )
-                                )
-                            );
-                        })
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-end mt-6' },
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: cancelSuperstructureReplanPicker,
-                                className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition',
-                            },
-                            'Zrušiť'
-                        )
-                    )
-                )
-            ),
-
-            showCateringModal && selectedCateringCell && React.createElement(
-                'div',
-                {
-                    className: 'fixed inset-0 z-[3000] flex items-center justify-center bg-black/60 backdrop-blur-sm',
-                    onClick: () => {
-                        if (!savingCatering) {
-                            setShowCateringModal(false);
-                            setSelectedCateringCell(null);
-                            setSelectedCateringPlaceId('');
-                            setCateringModalIsPriority(false);
-                        }
-                    },
-                },
-                React.createElement(
-                    'div',
-                    {
-                        className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6',
-                        onClick: (e) => e.stopPropagation(),
-                    },
-                    React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800' }, 'Priradiť stravovacie miesto'),
-                    React.createElement(
-                        'div',
-                        { className: 'mb-4 text-sm text-gray-700 space-y-1' },
-                        React.createElement('p', null, React.createElement('strong', null, 'Kategória: '), selectedCateringCell.team.category || '—'),
-                        React.createElement('p', null,
-                            React.createElement('strong', null, selectedCateringCell.isSuperstructure ? 'Superstructure tím: ' : 'Tím: '),
-                            selectedCateringCell.isSuperstructure
-                                ? getPlaceTeamDisplayName(selectedCateringCell.placeTeam?.teamName, selectedCateringCell.placeTeam?.category) || '—'
-                                : selectedCateringCell.team.teamName
-                        ),
-                        React.createElement('p', null, React.createElement('strong', null, 'Deň: '), selectedCateringCell.dayLabel),
-                        React.createElement('p', null, React.createElement('strong', null, 'Jedlo: '), selectedCateringCell.mealType === 'lunch' ? 'Obed' : 'Večera'),
-                        React.createElement('p', null, React.createElement('strong', null, 'Čas: '), `${selectedCateringCell.slotFrom} – ${selectedCateringCell.slotTo}`)
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'mb-5' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Stravovacie miesto'),
-                        React.createElement(
-                            'select',
-                            {
-                                value: selectedCateringPlaceId,
-                                onChange: (e) => setSelectedCateringPlaceId(e.target.value),
-                                className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition bg-white',
-                            },
-                            React.createElement('option', { value: '' }, 'Vyberte miesto...'),
-                            cateringPlaces.map((place) =>
-                                React.createElement('option', { key: place.id, value: place.id }, place.name)
-                            )
-                        )
-                    ),
-                    selectedCateringCell.isSuperstructure && selectedCateringCell.showPriorityCheckbox && React.createElement(
-                        'div',
-                        { className: 'mb-5 p-3 bg-amber-50 border border-amber-200 rounded-lg' },
-                        React.createElement(
-                            'label',
-                            { className: 'flex items-center gap-2 cursor-pointer' },
-                            React.createElement('input', {
-                                type: 'checkbox',
-                                checked: cateringModalIsPriority,
-                                onChange: (e) => setCateringModalIsPriority(e.target.checked),
-                                className: 'w-4 h-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded',
-                            }),
-                            React.createElement('span', { className: 'text-sm font-medium text-gray-800' }, 'Prioritné priradenie (zvýrazní sa hrubým čiernym orámovaním)')
-                        ),
-                        React.createElement('p', { className: 'text-xs text-amber-700 mt-1 ml-6' },
-                            cateringModalIsPriority
-                                ? 'Toto priradenie bude prioritné.'
-                                : 'Priorita zostane pôvodnému tímu (ak nejakú mal).'
-                        )
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-end gap-3' },
-                        selectedCateringCell.existingId &&
-                            React.createElement(
-                                'button',
-                                {
-                                    onClick: deleteCateringAssignment,
-                                    disabled: savingCatering,
-                                    className: 'px-4 py-2.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition font-medium',
-                                },
-                                'Odstrániť'
-                            ),
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: () => {
-                                    setShowCateringModal(false);
-                                    setSelectedCateringCell(null);
-                                    setSelectedCateringPlaceId('');
-                                    setCateringModalIsPriority(false);
-                                },
-                                disabled: savingCatering,
-                                className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition',
-                            },
-                            'Zrušiť'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: saveCateringAssignment,
-                                disabled: savingCatering || !selectedCateringPlaceId,
-                                className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-white disabled:text-blue-600 disabled:border-2 disabled:border-blue-600 disabled:cursor-not-allowed transition font-medium',
-                            },
-                            savingCatering ? 'Ukladám...' : 'Uložiť'
-                        )
-                    )
-                )
-            ),
-
-            showChangeConfirm && pendingChange && React.createElement(
-                'div',
-                { className: 'fixed inset-0 z-[3100] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
-                React.createElement(
-                    'div',
-                    { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6' },
-                    React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-800' }, 'Zmeniť priradenie?'),
-                    React.createElement('p', { className: 'text-gray-700 mb-6' },
-                        'Pre tento tím, deň a typ jedla už existuje priradené stravovacie miesto. Prajete si ho nahradiť novým? Pôvodné priradenie pre tento deň a typ jedla bude odstránené.'
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-end gap-3' },
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: cancelChangeAssignment,
-                                disabled: savingCatering,
-                                className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition',
-                            },
-                            'Nie'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: confirmChangeAssignment,
-                                disabled: savingCatering,
-                                className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition font-medium',
-                            },
-                            savingCatering ? 'Ukladám...' : 'Áno, zmeniť'
-                        )
-                    )
-                )
-            )
+                  )
         )
     );
 };
 
 // ============================================================
-// Render – bez čakania na používateľa a bez sync e-mailu
+// Render
 // ============================================================
 const renderCateringApp = () => {
     const rootElement = document.getElementById('root');
@@ -2863,5 +1257,4 @@ const renderCateringApp = () => {
 
 window.addEventListener('globalDataUpdated', renderCateringApp);
 
-// Rovno renderujeme – komponent si dáta načíta sám z Firestore
 renderCateringApp();
