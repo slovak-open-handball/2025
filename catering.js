@@ -871,21 +871,6 @@ const cateringApp = ({ userProfileData }) => {
                                     );
                                 }
 
-                                // Tag typu (classic/superstructure)
-                                if (row.type === 'superstructure') {
-                                    infoTags.push(
-                                        React.createElement('span', {
-                                            key: 'type',
-                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                            style: {
-                                                backgroundColor: '#F3E8FF',
-                                                color: '#6B21A5',
-                                                fontWeight: '500'
-                                            }
-                                        }, 'Nadstavba')
-                                    );
-                                }
-
                                 // Tag priority
                                 if (row.isPriority === true) {
                                     infoTags.push(
