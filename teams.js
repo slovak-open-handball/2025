@@ -1145,7 +1145,7 @@ const TeamCateringList = ({ teamName, categoryName }) => {
     );
 };
 
-const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
+const TeamMatchesList = ({ teamName, categoryName, categoryId, refreshKey }) => {
     const [matches, setMatches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [teamNames, setTeamNames] = useState({});
@@ -1157,12 +1157,9 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
     const [categoriesData, setCategoriesData] = useState({});
     const [allMatchesList, setAllMatchesList] = useState([]);
     
-    // Ref na sledovanie predchádzajúcich statusov zápasov
     const prevStatusesRef = useRef({});
     
-    // Sledovanie zmien v teamName a categoryName pre resetovanie loading stavu
     useEffect(() => {
-        // Reset loading stavu pri zmene tímu alebo kategórie
         setLoading(true);
         setMatches([]);
         setAllMatchesList([]);
@@ -1170,6 +1167,57 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         setMatchScoresFromDb({});
         prevStatusesRef.current = {};
     }, [teamName, categoryName]);
+
+    // 🔥 NOVÉ: Refresh pri zmene refreshKey (po skončení zápasu)
+    useEffect(() => {
+        if (!window.db || !teamName || !categoryName) return;
+        if (refreshKey === undefined || refreshKey === 0) return;
+        
+        const refreshMatches = async () => {
+            try {
+                const matchesRef = collection(window.db, 'matches');
+                const querySnapshot = await getDocs(matchesRef);
+                
+                const allMatches = [];
+                const statuses = {};
+                const scores = {};
+                
+                querySnapshot.forEach((doc) => {
+                    const match = { id: doc.id, ...doc.data() };
+                    allMatches.push(match);
+                    statuses[doc.id] = match.status || 'scheduled';
+                    if (match.homeScore !== undefined && match.awayScore !== undefined) {
+                        scores[doc.id] = { home: match.homeScore, away: match.awayScore };
+                    }
+                });
+                
+                allMatches.sort((a, b) => {
+                    if (!a.scheduledTime) return 1;
+                    if (!b.scheduledTime) return -1;
+                    try {
+                        return a.scheduledTime.toDate().getTime() - b.scheduledTime.toDate().getTime();
+                    } catch (e) { return 0; }
+                });
+                
+                setMatchStatuses(statuses);
+                setMatchScoresFromDb(scores);
+                await loadHallNames(allMatches);
+                
+                let convertedNames = await convertTeamNames(allMatches);
+                convertedNames = await refreshTeamNamesIfNeeded(allMatches, convertedNames);
+                setTeamNames(convertedNames);
+                setAllMatchesList(allMatches);
+                
+                const filtered = filterMatches(allMatches, convertedNames);
+                setMatches(filtered);
+                setLoading(false);
+            } catch (err) {
+                setLoading(false);
+            }
+        };
+        
+        refreshMatches();
+    }, [refreshKey]);
 
     useEffect(() => {
         const loadGroups = async () => {
@@ -1277,7 +1325,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         return names;
     };
 
-    // Nová funkcia: obnoví názvy tímov, ktoré obsahujú názov kategórie
     const refreshTeamNamesIfNeeded = async (matchesList, currentNames) => {
         if (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
             return currentNames;
@@ -1289,7 +1336,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
             const homeDisplay = match._homeDisplay || updatedNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamIdentifier;
             const awayDisplay = match._awayDisplay || updatedNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamIdentifier;
 
-            // Skontroluj, či názov obsahuje názov kategórie
             if (homeDisplay && categoryName && homeDisplay.includes(categoryName)) {
                 try {
                     const converted = await window.matchTracker.getTeamNameByDisplayId(homeDisplay);
@@ -1297,7 +1343,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                         updatedNames[match.homeTeamIdentifier] = converted;
                         changed = true;
                     }
-                } catch (e) { /* ignoruj */ }
+                } catch (e) { }
             }
             if (awayDisplay && categoryName && awayDisplay.includes(categoryName)) {
                 try {
@@ -1306,7 +1352,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                         updatedNames[match.awayTeamIdentifier] = converted;
                         changed = true;
                     }
-                } catch (e) { /* ignoruj */ }
+                } catch (e) { }
             }
         }
 
@@ -1379,7 +1425,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                 } catch (e) { return 0; }
             });
 
-            // Detekcia prechodu do "completed"
             const prevStatuses = prevStatusesRef.current;
             let anyCompleted = false;
             for (const [id, status] of Object.entries(statuses)) {
@@ -1396,7 +1441,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
             
             let convertedNames = await convertTeamNames(allMatches);
             
-            // Ak niektorý zápas prešiel do "completed", obnov názvy tímov
             if (anyCompleted) {
                 convertedNames = await refreshTeamNamesIfNeeded(allMatches, convertedNames);
                 setTeamNames(convertedNames);
@@ -1442,7 +1486,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                 } catch (e) { return 0; }
             });
 
-            // Detekcia prechodu do "completed"
             const prevStatuses = prevStatusesRef.current;
             let anyCompleted = false;
             for (const [id, status] of Object.entries(statuses)) {
@@ -1459,7 +1502,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
             
             let convertedNames = await convertTeamNames(allMatches);
             
-            // Ak niektorý zápas prešiel do "completed", obnov názvy tímov
             if (anyCompleted) {
                 convertedNames = await refreshTeamNamesIfNeeded(allMatches, convertedNames);
                 setTeamNames(convertedNames);
@@ -1757,9 +1799,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
     );
 };
 
-const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
-    // filter: null (všetko), 'matches', 'catering'
-
+const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey }) => {
     // --- Matches state ---
     const [matches, setMatches] = useState([]);
     const [matchesLoading, setMatchesLoading] = useState(true);
@@ -1906,6 +1946,57 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
         setMatchScoresFromDb({});
         prevStatusesRef.current = {};
     }, [teamName, categoryName]);
+
+    // 🔥 NOVÉ: Refresh pri zmene refreshKey (po skončení zápasu)
+    useEffect(() => {
+        if (!window.db || !teamName || !categoryName) return;
+        if (refreshKey === undefined || refreshKey === 0) return;
+
+        const refreshMatches = async () => {
+            try {
+                const matchesRef = collection(window.db, 'matches');
+                const querySnapshot = await getDocs(matchesRef);
+
+                const allMatches = [];
+                const statuses = {};
+                const scores = {};
+
+                querySnapshot.forEach((doc) => {
+                    const match = { id: doc.id, ...doc.data() };
+                    allMatches.push(match);
+                    statuses[doc.id] = match.status || 'scheduled';
+                    if (match.homeScore !== undefined && match.awayScore !== undefined) {
+                        scores[doc.id] = { home: match.homeScore, away: match.awayScore };
+                    }
+                });
+
+                allMatches.sort((a, b) => {
+                    if (!a.scheduledTime) return 1;
+                    if (!b.scheduledTime) return -1;
+                    try {
+                        return a.scheduledTime.toDate().getTime() - b.scheduledTime.toDate().getTime();
+                    } catch (e) { return 0; }
+                });
+
+                setMatchStatuses(statuses);
+                setMatchScoresFromDb(scores);
+                await loadHallNames(allMatches);
+
+                let convertedNames = await convertTeamNames(allMatches);
+                convertedNames = await refreshTeamNamesIfNeeded(allMatches, convertedNames);
+                setTeamNames(convertedNames);
+                setAllMatchesList(allMatches);
+
+                const filtered = filterMatches(allMatches, convertedNames);
+                setMatches(filtered);
+                setMatchesLoading(false);
+            } catch (err) {
+                setMatchesLoading(false);
+            }
+        };
+
+        refreshMatches();
+    }, [refreshKey]);
 
     useEffect(() => {
         const loadGroups = async () => {
@@ -2628,11 +2719,9 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
 
         // Zoraď chronologicky – NAJPRV podľa DŇA (bez času), POTOM podľa časovej zložky
         rows.sort((a, b) => {
-            // Porovnaj len dátum (rok, mesiac, deň) bez času
             const da = a.dateObj ? new Date(a.dateObj.getFullYear(), a.dateObj.getMonth(), a.dateObj.getDate()).getTime() : 0;
             const db = b.dateObj ? new Date(b.dateObj.getFullYear(), b.dateObj.getMonth(), b.dateObj.getDate()).getTime() : 0;
             if (da !== db) return da - db;
-            // V rámci rovnakého dňa porovnaj časovú zložku
             return a.timeMinutes - b.timeMinutes;
         });
 
@@ -2823,7 +2912,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
 
         const cells = [];
 
-        // Čas
         cells.push(
             React.createElement(
                 'td',
@@ -2833,7 +2921,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
         );
 
         if (isCateringOnly) {
-            // Zlúčený stĺpec "Typ stravovania"
             cells.push(
                 React.createElement(
                     'td',
@@ -2853,7 +2940,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
                 )
             );
         } else {
-            // Rozdelené stĺpce Domáci | VS | Hostia (pre stravovanie je len jeden s colspan=3)
             cells.push(
                 React.createElement(
                     'td',
@@ -2874,7 +2960,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
             );
         }
 
-        // Miesto
         cells.push(
             React.createElement(
                 'td',
@@ -2888,7 +2973,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
             )
         );
 
-        // Info a Detail stĺpce sa zobrazia len ak NIE je filter 'catering'
         if (!isCateringOnly) {
             cells.push(React.createElement('td', { key: 'info', className: 'px-4 py-3' }, null));
             cells.push(React.createElement('td', { key: 'detail', className: 'px-4 py-3 whitespace-nowrap text-center' }, null));
@@ -2902,8 +2986,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
     };
 
     const isCateringOnly = (filter === 'catering');
-
-    // Dynamický colSpan pre hlavičku dňa
     const dayHeaderColSpan = isCateringOnly ? 5 : 7;
 
     return React.createElement(
@@ -2928,10 +3010,8 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
                         null,
                         React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'Čas'),
                         isCateringOnly ? (
-                            // Iba stravovanie → jeden zlúčený stĺpec "Typ stravovania"
                             React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider', colSpan: 3 }, 'Typ stravovania')
                         ) : (
-                            // Inak normálne stĺpce Domáci | VS | Hostia
                             React.createElement(React.Fragment, null,
                                 React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
                                 React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
@@ -2939,7 +3019,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
                             )
                         ),
                         React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32' }, 'Miesto'),
-                        // Info a Detail stĺpce len ak NIE je filter 'catering'
                         isCateringOnly ? null : React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info'),
                         isCateringOnly ? null : React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, '')
                     )
@@ -3111,6 +3190,9 @@ const TeamsOverviewApp = (props) => {
     const [membersStats, setMembersStats] = useState({});
     const [updateTrigger, setUpdateTrigger] = useState(0);
 
+    // 🔥 NOVÉ: Refresh key pre zápasy – zvýši sa pri dokončení zápasu
+    const [matchesRefreshKey, setMatchesRefreshKey] = useState(0);
+
     const [teamEventsFilter, setTeamEventsFilter] = useState(null);
 
     const [isRostersVisible, setIsRostersVisible] = useState(
@@ -3178,6 +3260,31 @@ const TeamsOverviewApp = (props) => {
         return () => {
             if (unsubscribe) unsubscribe();
         };
+    }, []);
+
+    // 🔥 NOVÉ: Sleduj zmeny v kolekcii 'matches' a pri dokončení zápasu vynúť refresh
+    useEffect(() => {
+        if (!window.db) return;
+        
+        const matchesRef = collection(window.db, 'matches');
+        const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
+            let shouldRefresh = false;
+            
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'modified') {
+                    const data = change.doc.data();
+                    if (data.status === 'completed') {
+                        shouldRefresh = true;
+                    }
+                }
+            });
+            
+            if (shouldRefresh) {
+                setMatchesRefreshKey(prev => prev + 1);
+            }
+        }, () => {});
+        
+        return () => unsubscribe();
     }, []);
 
     const tableContainerRef = useRef(null);
@@ -3330,15 +3437,12 @@ const TeamsOverviewApp = (props) => {
                     return;
                 }
         
-                // NOVÁ ČASŤ: Zistiť, či sa názov kategórie nachádza v názve tímu zápasu
                 const matchTeamName = eventData.team === 'home' ? matchInfo.homeTeam : matchInfo.awayTeam;
                 if (eventData.categoryName && matchTeamName && matchTeamName.includes(eventData.categoryName)) {
-                    // Ak áno, pošli názov tímu zo zápasu do getTeamNameByDisplayId
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                         try {
                             window.matchTracker.getTeamNameByDisplayId(matchTeamName);
                         } catch (err) {
-                            // ignorovať chybu
                         }
                     }
                 }
@@ -3530,30 +3634,25 @@ const TeamsOverviewApp = (props) => {
         let unsubscribeMatches = null;
         let matchTeamMap = {};
     
-        // Pomocná funkcia na zistenie, či názov tímu obsahuje názov kategórie
         const teamNameContainsCategory = (teamName, categoryName) => {
             if (!teamName || !categoryName) return false;
             return teamName.includes(categoryName);
         };
         
-        // Pomocná async funkcia na zmapovanie názvu tímu zo zápasu
         const mapMatchTeamName = async (matchTeamName, categoryName) => {
             if (!matchTeamName) return matchTeamName;
-            // Ak názov tímu obsahuje názov kategórie, treba ho zmapovať
             if (teamNameContainsCategory(matchTeamName, categoryName)) {
                 if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                     try {
                         const mapped = await window.matchTracker.getTeamNameByDisplayId(matchTeamName);
                         if (mapped) return mapped;
                     } catch (err) {
-                        // ignorovať
                     }
                 }
             }
             return matchTeamName;
         };
         
-        // V processMatches - upravíme tak, aby sa mapovanie dialo asynchrónne
         const processMatches = async (matchesSnapshot) => {
             const newMatchIds = new Set();
             const newMatchTeamMap = {};            
@@ -3561,18 +3660,15 @@ const TeamsOverviewApp = (props) => {
             const fullTeamName = currentTeamName;
             const categoryForMapping = currentCategoryName;
             
-            // Najprv zozbierame všetky zápasy a ich tímy
             const rawMatches = [];
             matchesSnapshot.forEach(doc => {
                 rawMatches.push({ id: doc.id, data: doc.data() });
             });
             
-            // Asynchrónne zmapujeme názvy tímov, ktoré obsahujú názov kategórie
             for (const { id: matchId, data: matchData } of rawMatches) {
                 let convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
                 let convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
                 
-                // Ak názov tímu obsahuje názov kategórie, zmapuj cez matchTracker
                 convertedHome = await mapMatchTeamName(convertedHome, categoryForMapping);
                 convertedAway = await mapMatchTeamName(convertedAway, categoryForMapping);
                 
@@ -4440,8 +4536,6 @@ const TeamsOverviewApp = (props) => {
             if (foundId) categoryId = foundId;
         }
     
-        // Zistíme, či je nejaké tlačidlo modré (vybrané)
-        // T.j. či máme vybranú kategóriu a tím
         const isAnyButtonSelected = hasCategoryInUrl && 
                                     selectedTeamDetails.category !== null &&
                                     selectedTeamDetails.category !== undefined;
@@ -4524,7 +4618,6 @@ const TeamsOverviewApp = (props) => {
                 React.createElement(
                     'div',
                     { className: 'flex flex-wrap gap-3' },
-                    // Tlačidlo "Zápasy"
                     isMatchesVisible ? React.createElement(
                         'button',
                         {
@@ -4539,7 +4632,6 @@ const TeamsOverviewApp = (props) => {
                         },
                         'Zápasy'
                     ) : null,
-                    // Tlačidlo "Stravovanie"
                     isCateringVisible ? React.createElement(
                         'button',
                         {
@@ -4555,7 +4647,6 @@ const TeamsOverviewApp = (props) => {
                         'Stravovanie'
                     ) : null
                 ),
-                // Malý text pod tlačidlami (nepovinné)
                 React.createElement(
                     'div',
                     { className: 'mt-3 text-xs text-gray-500' },
@@ -4571,7 +4662,8 @@ const TeamsOverviewApp = (props) => {
                 teamName: selectedTeamDetails.teamName,
                 categoryName: selectedTeamDetails.category || categoryFromUrl || '',
                 categoryId: categoryId,
-                filter: teamEventsFilter
+                filter: teamEventsFilter,
+                refreshKey: matchesRefreshKey  // 🔥 PRIDANÉ
             }) : null,
             renderTeamRoster()
         );
