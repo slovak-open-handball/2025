@@ -295,6 +295,9 @@ const cateringApp = ({ userProfileData }) => {
     const [filterMealType, setFilterMealType] = useState('');
     const [sortMode, setSortMode] = useState('chronological');
 
+    // 🔥 Balíčky zo settings/packages/list
+    const [packagesList, setPackagesList] = useState([]);
+
     const [teamNameMap, setTeamNameMap] = useState({});
 
     // Ref na cateringAssignments pre remap
@@ -489,6 +492,34 @@ const cateringApp = ({ userProfileData }) => {
                 });
                 places.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
                 setCateringPlaces(places);
+            },
+            (error) => { }
+        );
+
+        return () => unsubscribe();
+    }, []);
+
+    // 🔥 Načítanie balíčkov
+    useEffect(() => {
+        if (!window.db) return;
+
+        const packagesCollectionRef = collection(window.db, 'settings', 'packages', 'list');
+
+        const unsubscribe = onSnapshot(
+            packagesCollectionRef,
+            (snapshot) => {
+                const items = [];
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data() || {};
+                    items.push({
+                        id: docSnap.id,
+                        name: data.name || '',
+                        price: data.price || 0,
+                        meals: data.meals || {},
+                        accommodationTypes: data.accommodationTypes || [],
+                    });
+                });
+                setPackagesList(items);
             },
             (error) => { }
         );
@@ -705,6 +736,25 @@ const cateringApp = ({ userProfileData }) => {
         ? userTeams.filter((t) => t.category === filterCategory)
         : userTeams;
 
+    // 🔥 Pomocná funkcia: Má tím v balíčku daný typ stravovania v danom dni?
+    //    - Ak tím nemá packageName → povolíme (neobmedzujeme).
+    //    - Ak balíček neexistuje v packagesList → povolíme (fallback).
+    //    - Ak balíček existuje, ale pre daný deň nemá záznam → NEPOVOLÍME.
+    //    - Ak má záznam, povolíme len ak meals[dayKey][mealType] === 1.
+    const teamHasMealInPackage = (team, dayKey, mealType) => {
+        if (!team) return false;
+        if (!team.packageName) return true; // nemá balíček → neobmedzujeme
+
+        const pkg = packagesList.find(p => p.name === team.packageName);
+        if (!pkg) return true; // balíček neexistuje → neobmedzujeme
+
+        const mealsForDay = pkg.meals?.[dayKey];
+        if (!mealsForDay) return false; // balíček nemá pre daný deň nič → NEPOVOLÍME
+
+        const val = mealsForDay[mealType];
+        return val === 1 || val === true;
+    };
+
     // ============================================================
     // assignmentRows
     // ============================================================
@@ -720,6 +770,10 @@ const cateringApp = ({ userProfileData }) => {
                 ['lunch', 'dinner'].forEach((mealType) => {
                     if (!shouldShowMealType(mealType)) return;
 
+                    // 🔥 Kontrola balíčka: ak tím nemá tento typ stravovania v tento deň,
+                    //    nezobrazíme riadok.
+                    if (!teamHasMealInPackage(team, day.key, mealType)) return;
+
                     const slots = daySlots[day.key]?.[mealType] || [];
                     slots.forEach((slot) => {
                         const existing = findCateringAssignment(team, day.key, mealType, slot.from);
@@ -729,7 +783,7 @@ const cateringApp = ({ userProfileData }) => {
                             rows.push({
                                 key: `${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
                                 category: team.category,
-                                // 🔥 klasické priradenie – BEZ mapovania, len pôvodný názov
+                                // klasické priradenie – BEZ mapovania
                                 teamName: team.teamName,
                                 dayKey: day.key,
                                 dayLabel: day.fullLabelNumeric,
@@ -746,7 +800,7 @@ const cateringApp = ({ userProfileData }) => {
                         }
 
                         if (ss) {
-                            // 🔥 superstructure – namapovaný názov
+                            // superstructure – namapovaný názov
                             const ssCategory = cleanCategory(ss.category || ss.categoryName || '');
                             const ssTeamName = String(ss.teamName || '').trim();
                             const ssMappedName = getMappedTeamName(ssCategory, ssTeamName);
@@ -817,6 +871,7 @@ const cateringApp = ({ userProfileData }) => {
         cateringAssignments,
         sortMode,
         teamNameMap,
+        packagesList, // 🔥 závislosť na balíčkoch
     ]);
 
     if (loading) {
