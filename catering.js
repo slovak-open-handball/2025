@@ -809,7 +809,7 @@ const cateringApp = ({ userProfileData }) => {
                     React.createElement('option', { value: '' }, 'Všetky'),
                     visibleDays.map((day) => React.createElement('option', { key: day.key, value: day.key }, day.label)))),
             React.createElement('div', { className: 'flex items-center gap-2' },
-                React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, 'Typ stravovania:'),
+                React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, 'Typ:'),
                 React.createElement('select', {
                     value: filterMealType,
                     onChange: (e) => setFilterMealType(e.target.value),
@@ -860,7 +860,7 @@ const cateringApp = ({ userProfileData }) => {
                             null,
                             React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'Čas'),
                             React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Tím'),
-                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32' }, 'Typ stravovania'),
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32' }, 'Typ'),
                             React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Miesto'),
                             React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info')
                         )
@@ -954,7 +954,7 @@ const cateringApp = ({ userProfileData }) => {
                                             React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, row.teamName)
                                         ),
 
-                                        // Typ stravovania
+                                        // Typ
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap' },
