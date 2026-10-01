@@ -902,7 +902,7 @@ const TeamCateringList = ({ teamName, categoryName }) => {
     }, [assignmentRows]);
 
     if (loading) {
-        return null; // V TeamEventsList sa loading rieši centrálne
+        return null;
     }
 
     if (assignmentRows.length === 0) {
@@ -1025,9 +1025,7 @@ const TeamCateringList = ({ teamName, categoryName }) => {
     );
 };
 
-const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
-    // filter: null (všetko), 'matches', 'catering'
-
+const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey }) => {
     // --- Matches state ---
     const [matches, setMatches] = useState([]);
     const [matchesLoading, setMatchesLoading] = useState(true);
@@ -1174,6 +1172,57 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
         setMatchScoresFromDb({});
         prevStatusesRef.current = {};
     }, [teamName, categoryName]);
+
+    // 🔥 NOVÉ: Refresh pri zmene refreshKey (po skončení zápasu)
+    useEffect(() => {
+        if (!window.db || !teamName || !categoryName) return;
+        if (refreshKey === undefined || refreshKey === 0) return;
+
+        const refreshMatches = async () => {
+            try {
+                const matchesRef = collection(window.db, 'matches');
+                const querySnapshot = await getDocs(matchesRef);
+
+                const allMatches = [];
+                const statuses = {};
+                const scores = {};
+
+                querySnapshot.forEach((doc) => {
+                    const match = { id: doc.id, ...doc.data() };
+                    allMatches.push(match);
+                    statuses[doc.id] = match.status || 'scheduled';
+                    if (match.homeScore !== undefined && match.awayScore !== undefined) {
+                        scores[doc.id] = { home: match.homeScore, away: match.awayScore };
+                    }
+                });
+
+                allMatches.sort((a, b) => {
+                    if (!a.scheduledTime) return 1;
+                    if (!b.scheduledTime) return -1;
+                    try {
+                        return a.scheduledTime.toDate().getTime() - b.scheduledTime.toDate().getTime();
+                    } catch (e) { return 0; }
+                });
+
+                setMatchStatuses(statuses);
+                setMatchScoresFromDb(scores);
+                await loadHallNames(allMatches);
+
+                let convertedNames = await convertTeamNames(allMatches);
+                convertedNames = await refreshTeamNamesIfNeeded(allMatches, convertedNames);
+                setTeamNames(convertedNames);
+                setAllMatchesList(allMatches);
+
+                const filtered = filterMatches(allMatches, convertedNames);
+                setMatches(filtered);
+                setMatchesLoading(false);
+            } catch (err) {
+                setMatchesLoading(false);
+            }
+        };
+
+        refreshMatches();
+    }, [refreshKey]);
 
     useEffect(() => {
         const loadGroups = async () => {
@@ -1488,7 +1537,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
         return () => unsubscribe();
     }, [allMatchesList]);
 
-    // ============ 🔥 NOVÝ BLOK – NAČÍTANIE DNI TURNAJA 🔥 ============
+    // ============ 🔥 NAČÍTANIE DNI TURNAJA 🔥 ============
     useEffect(() => {
         if (!window.db) return;
         const settingsDocRef = doc(window.db, 'settings', 'registration');
@@ -1504,7 +1553,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
         }, () => {});
         return () => unsub();
     }, []);
-    // ============ 🔥 KONIEC NOVÉHO BLOKU 🔥 ============
 
     useEffect(() => {
         if (!window.db) return;
@@ -1630,7 +1678,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
         return () => clearInterval(intervalId);
     }, []);
 
-    // --- Presne ako v catering.js ---
     const assignmentsBySlot = React.useMemo(() => {
         const map = new Map();
         (cateringAssignments || []).forEach((a) => {
@@ -1896,11 +1943,9 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
 
         // Zoraď chronologicky – NAJPRV podľa DŇA (bez času), POTOM podľa časovej zložky
         rows.sort((a, b) => {
-            // Porovnaj len dátum (rok, mesiac, deň) bez času
             const da = a.dateObj ? new Date(a.dateObj.getFullYear(), a.dateObj.getMonth(), a.dateObj.getDate()).getTime() : 0;
             const db = b.dateObj ? new Date(b.dateObj.getFullYear(), b.dateObj.getMonth(), b.dateObj.getDate()).getTime() : 0;
             if (da !== db) return da - db;
-            // V rámci rovnakého dňa porovnaj časovú zložku
             return a.timeMinutes - b.timeMinutes;
         });
 
@@ -1945,7 +1990,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
         );
     }
 
-    // Pomocné funkcie pre zápasy
     const createMatchHash = (homeTeamId, awayTeamId) => {
         const encodedHome = encodeURIComponent(homeTeamId.replace(/ /g, '-'));
         const encodedAway = encodeURIComponent(awayTeamId.replace(/ /g, '-'));
@@ -2091,7 +2135,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
 
         const cells = [];
 
-        // Čas
         cells.push(
             React.createElement(
                 'td',
@@ -2101,7 +2144,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
         );
 
         if (isCateringOnly) {
-            // Zlúčený stĺpec "Typ stravovania"
             cells.push(
                 React.createElement(
                     'td',
@@ -2121,7 +2163,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
                 )
             );
         } else {
-            // Rozdelené stĺpce Domáci | VS | Hostia (pre stravovanie je len jeden s colspan=3)
             cells.push(
                 React.createElement(
                     'td',
@@ -2142,7 +2183,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
             );
         }
 
-        // Miesto
         cells.push(
             React.createElement(
                 'td',
@@ -2156,7 +2196,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
             )
         );
 
-        // Info a Detail stĺpce sa zobrazia len ak NIE je filter 'catering'
         if (!isCateringOnly) {
             cells.push(React.createElement('td', { key: 'info', className: 'px-4 py-3' }, null));
             cells.push(React.createElement('td', { key: 'detail', className: 'px-4 py-3 whitespace-nowrap text-center' }, null));
@@ -2170,8 +2209,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
     };
 
     const isCateringOnly = (filter === 'catering');
-
-    // Dynamický colSpan pre hlavičku dňa
     const dayHeaderColSpan = isCateringOnly ? 5 : 7;
 
     return React.createElement(
@@ -2196,10 +2233,8 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
                         null,
                         React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'Čas'),
                         isCateringOnly ? (
-                            // Iba stravovanie → jeden zlúčený stĺpec "Typ stravovania"
                             React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider', colSpan: 3 }, 'Typ stravovania')
                         ) : (
-                            // Inak normálne stĺpce Domáci | VS | Hostia
                             React.createElement(React.Fragment, null,
                                 React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
                                 React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
@@ -2207,7 +2242,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
                             )
                         ),
                         React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32' }, 'Miesto'),
-                        // Info a Detail stĺpce len ak NIE je filter 'catering'
                         isCateringOnly ? null : React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info'),
                         isCateringOnly ? null : React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, '')
                     )
@@ -2268,6 +2302,9 @@ const TeamsOverviewApp = (props) => {
     const [membersStats, setMembersStats] = useState({});
     const [updateTrigger, setUpdateTrigger] = useState(0);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
+
+    // 🔥 NOVÉ: Refresh key pre zápasy – zvýši sa pri dokončení zápasu
+    const [matchesRefreshKey, setMatchesRefreshKey] = useState(0);
 
     const [isMatchesVisible, setIsMatchesVisible] = useState(
         window.pagesVisibility && 
@@ -2338,6 +2375,31 @@ const TeamsOverviewApp = (props) => {
         return () => {
             if (unsubscribe) unsubscribe();
         };
+    }, []);
+
+    // 🔥 NOVÉ: Sleduj zmeny v kolekcii 'matches' a pri dokončení zápasu vynúť refresh
+    useEffect(() => {
+        if (!window.db) return;
+        
+        const matchesRef = collection(window.db, 'matches');
+        const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
+            let shouldRefresh = false;
+            
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'modified') {
+                    const data = change.doc.data();
+                    if (data.status === 'completed') {
+                        shouldRefresh = true;
+                    }
+                }
+            });
+            
+            if (shouldRefresh) {
+                setMatchesRefreshKey(prev => prev + 1);
+            }
+        }, () => {});
+        
+        return () => unsubscribe();
     }, []);
 
     // Načítanie mapovania categoryId -> categoryName
@@ -3373,7 +3435,8 @@ const TeamsOverviewApp = (props) => {
                 teamName: selectedTeamDetails.teamName,
                 categoryName: selectedTeamDetails.category || categoryFromUrl || '',
                 categoryId: categoryId,
-                filter: teamEventsFilter
+                filter: teamEventsFilter,
+                refreshKey: matchesRefreshKey  // 🔥 PRIDANÉ
             }) : null,
     
             renderTeamRoster()
@@ -3400,7 +3463,6 @@ const TeamsOverviewApp = (props) => {
             );
         }
 
-        // Zoradiť podľa kategórie a názvu tímu
         const sorted = [...userTeams].sort((a, b) => {
             const catCompare = slovakCollator.compare(a.category, b.category);
             if (catCompare !== 0) return catCompare;
