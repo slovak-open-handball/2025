@@ -3125,10 +3125,37 @@ const TeamsOverviewApp = (props) => {
                 )
             ),
             // --- STRAVOVANIE TÍMU (vždy zobrazené ak je vybrané tlačidlo) ---
-            (isAnyButtonSelected) ? React.createElement(TeamCateringList, {
-                teamName: selectedTeamDetails.teamName,
-                categoryName: selectedTeamDetails.category || categoryFromUrl || ''
-            }) : null,
+            (isAnyButtonSelected) ? (() => {
+                // Nájdeme presný záznam z userTeams pre tento tím a kategóriu
+                const cleanCat = String(selectedTeamDetails.category || categoryFromUrl || '')
+                    .replace(/\u00A0/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                const cleanTeam = String(selectedTeamDetails.teamName || '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+    
+                // Nájdeme presný záznam z userTeams (rovnaký ako v catering.js)
+                // Použijeme allTeams, ktoré obsahuje všetky tímy z userTeams
+                const exactTeam = allTeams.find(t => {
+                    const tCat = String(t.category || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+                    const tTeam = String(t.teamName || '').trim();
+                    // Skúsime presnú zhodu
+                    if (tCat === cleanCat && tTeam === cleanTeam) return true;
+                    // Skúsime aj tím, ktorého názov začína kategóriou
+                    if (tCat === cleanCat && cleanTeam.startsWith(cleanCat + ' ')) {
+                        const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
+                        if (tTeam === stripped) return true;
+                    }
+                    return false;
+                });
+                
+                // Posielame presne tie hodnoty, ktoré má userTeams (alebo fallback na pôvodné)
+                return React.createElement(TeamCateringList, {
+                    teamName: exactTeam ? exactTeam.teamName : selectedTeamDetails.teamName,
+                    categoryName: exactTeam ? exactTeam.category : (selectedTeamDetails.category || categoryFromUrl || '')
+                });
+            })() : null,
             // --- ZÁPASY TÍMU (zobrazia sa iba ak je matches zverejnená A je vybrané tlačidlo) ---
             (isMatchesVisible && isAnyButtonSelected) ? React.createElement(TeamMatchesList, {
                 teamName: selectedTeamDetails.teamName,
