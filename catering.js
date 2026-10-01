@@ -746,13 +746,13 @@ const cateringApp = ({ userProfileData }) => {
                         onClick: () => setSortMode('chronological'),
                         className: 'px-4 py-2 rounded-md text-sm font-medium transition ' +
                             (sortMode === 'chronological' ? 'bg-white text-gray-900 shadow' : 'text-gray-600 hover:text-gray-900'),
-                    }, '📅 Chronologicky'),
+                    }, 'Chronologicky'),
                     React.createElement('button', {
                         type: 'button',
                         onClick: () => setSortMode('team'),
                         className: 'px-4 py-2 rounded-md text-sm font-medium transition ' +
                             (sortMode === 'team' ? 'bg-white text-gray-900 shadow' : 'text-gray-600 hover:text-gray-900'),
-                    }, '🔤 Podľa tímu'))),
+                    }, 'Podľa názvu tímu'))),
             assignmentRows.length === 0
                 ? React.createElement('p', { className: 'text-center text-gray-500 py-8' }, 'Žiadne priradenia stravovania pre zvolené filtre.')
                 : React.createElement('div', { className: 'overflow-x-auto pb-4 w-full min-w-0' },
