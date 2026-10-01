@@ -344,7 +344,6 @@ const cateringApp = ({ userProfileData }) => {
     // 4) URL useEffect-y
     // ============================================================
     useEffect(() => {
-        // Počkáme, kým sú načítané všetky potrebné dáta
         if (availableCategories.length === 0 && tournamentDays.length === 0) return;
         if (!unitMinutes && Object.keys(cateringTimes).length === 0) return;
 
@@ -354,9 +353,6 @@ const cateringApp = ({ userProfileData }) => {
             setFilterCategory(filters.category);
         }
 
-        // Pre deň kontrolujeme priamo tournamentDays (nie visibleDays),
-        // pretože visibleDays závisí od cateringTimes a unitMinutes,
-        // ktoré sa môžu načítať neskôr.
         if (filters.day && tournamentDays.some((d) => d.key === filters.day)) {
             setFilterDayKey(filters.day);
         }
@@ -879,7 +875,6 @@ const cateringApp = ({ userProfileData }) => {
         );
         if (teamsInCategory.length === 0) return null;
 
-        // Ak nemáme daySlots pre tento deň/typ, použijeme celkové počty
         const slots = daySlots?.[dayKey]?.[mealType] || [];
         if (slots.length === 0) {
             const total = teamsInCategory.reduce(
@@ -889,7 +884,6 @@ const cateringApp = ({ userProfileData }) => {
             return Math.ceil(total / teamsInCategory.length);
         }
 
-        // 🔥 Vypočítame priemer z efektívnych počtov pre konkrétny deň a typ jedla
         const total = teamsInCategory.reduce((acc, t) => {
             const effective = countMembersWithMeal(t.rawTeamData, dayKey, mealType);
             return acc + effective.players + effective.others;
@@ -903,7 +897,6 @@ const cateringApp = ({ userProfileData }) => {
     //    pretože placeCountsBySlot ich používa.
     // ============================================================
 
-    // Farby ubytovne pre tím
     const getTeamAccommodationColor = (team) => {
         if (!team.accommodationName) return '#FFFF00';
         const accommodation = accommodations.find(place => place.name === team.accommodationName);
@@ -1289,8 +1282,6 @@ const cateringApp = ({ userProfileData }) => {
         return hasSS;
     };
 
-    // 🔥 placeCountsBySlot – useMemo, ktorý je teraz PRED return-mi
-    //    a má k dispozícii všetky funkcie vyššie.
     const placeCountsBySlot = React.useMemo(() => {
         const counts = new Map();
 
@@ -1349,7 +1340,6 @@ const cateringApp = ({ userProfileData }) => {
                         const ss = findSS(team, dayKey, mealType, slot.from);
                         if (ss) {
                             const ssCategory = cleanCategory(ss.categoryName || ss.category);
-                            // 🔥 Priemer sa počíta pre konkrétny deň a typ jedla
                             const avg = getSuperstructureAvg(ssCategory, dayKey, mealType);
                             if (avg == null) return;
                             const key = `${ss.placeId}|${dayKey}|${mealType}|${slot.from}`;
@@ -1458,6 +1448,136 @@ const cateringApp = ({ userProfileData }) => {
         ? userTeams.filter((t) => t.category === filterCategory)
         : userTeams
     ).filter((t) => categoryHasVisibleColumns(t.category));
+
+    // ============================================================
+    // 9b) NOVÉ: Zoznam priradení (plochý zoznam pre tabuľku)
+    // ============================================================
+    const assignmentRows = React.useMemo(() => {
+        const rows = [];
+
+        const daysToUse = filterDayKey
+            ? visibleDays.filter((d) => d.key === filterDayKey)
+            : visibleDays;
+
+        filteredTeams.forEach((team) => {
+            daysToUse.forEach((day) => {
+                ['lunch', 'dinner'].forEach((mealType) => {
+                    if (!shouldShowMealType(mealType)) return;
+
+                    const slots = daySlots[day.key]?.[mealType] || [];
+                    slots.forEach((slot) => {
+                        const existing = findCateringAssignment(team, day.key, mealType, slot.from);
+                        const ss = findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
+
+                        const isPlaying = teamPlaysDuringSlot(team, day.key, slot.from, slot.to);
+
+                        if (existing) {
+                            rows.push({
+                                key: `${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
+                                category: team.category,
+                                teamName: team.teamName,
+                                dayKey: day.key,
+                                dayLabel: day.fullLabelNumeric,
+                                daySort: day.date.getTime(),
+                                mealType,
+                                mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
+                                slotFrom: slot.from,
+                                slotTo: slot.to,
+                                placeId: existing.placeId,
+                                placeName: existing.placeName || '',
+                                type: 'classic',
+                                isPlaying: false,
+                                clickable: true,
+                                team,
+                                day,
+                                slot,
+                            });
+                            return;
+                        }
+
+                        if (ss) {
+                            rows.push({
+                                key: `${team.id}-${day.key}-${mealType}-${slot.from}-ss`,
+                                category: team.category,
+                                teamName: getPlaceTeamDisplayName(ss.teamName, ss.category) || ss.teamName,
+                                dayKey: day.key,
+                                dayLabel: day.fullLabelNumeric,
+                                daySort: day.date.getTime(),
+                                mealType,
+                                mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
+                                slotFrom: slot.from,
+                                slotTo: slot.to,
+                                placeId: ss.placeId,
+                                placeName: ss.placeName || '',
+                                type: 'superstructure',
+                                isPriority: ss.isPriority === true,
+                                isPlaying: superstructureTeamPlaysDuringSlot(
+                                    ss.teamName || ss.teamIdentifier,
+                                    ss.category,
+                                    day.key,
+                                    slot.from,
+                                    slot.to
+                                ),
+                                clickable: true,
+                                team,
+                                day,
+                                slot,
+                            });
+                            return;
+                        }
+
+                        if (isPlaying) {
+                            rows.push({
+                                key: `${team.id}-${day.key}-${mealType}-${slot.from}-play`,
+                                category: team.category,
+                                teamName: team.teamName,
+                                dayKey: day.key,
+                                dayLabel: day.fullLabelNumeric,
+                                daySort: day.date.getTime(),
+                                mealType,
+                                mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
+                                slotFrom: slot.from,
+                                slotTo: slot.to,
+                                placeId: null,
+                                placeName: '',
+                                type: 'playing',
+                                isPlaying: true,
+                                clickable: false,
+                                team,
+                                day,
+                                slot,
+                            });
+                            return;
+                        }
+
+                        // Voliteľne: ak chceš zobrazovať aj nepriradené bunky, odkomentuj:
+                        // rows.push({ ... type: 'unassigned' ... });
+                    });
+                });
+            });
+        });
+
+        rows.sort((a, b) => {
+            if (a.daySort !== b.daySort) return a.daySort - b.daySort;
+            const am = timeToMinutes(a.slotFrom);
+            const bm = timeToMinutes(b.slotFrom);
+            if (am != null && bm != null && am !== bm) return am - bm;
+            const catCmp = (a.category || '').localeCompare(b.category || '', 'sk', { sensitivity: 'base' });
+            if (catCmp !== 0) return catCmp;
+            return (a.teamName || '').localeCompare(b.teamName || '', 'sk', { sensitivity: 'base' });
+        });
+
+        return rows;
+    }, [
+        filteredTeams,
+        filterDayKey,
+        visibleDays,
+        daySlots,
+        filterMealType,
+        cateringAssignments,
+        scheduledMatches,
+        categories,
+    ]);
 
     // ============================================================
     // 10) Handlery
@@ -2116,7 +2236,7 @@ const cateringApp = ({ userProfileData }) => {
     };
 
     // ============================================================
-    // 11) RENDER
+    // 11) RENDER – zoznam priradení
     // ============================================================
     return React.createElement(
         'div',
@@ -2187,566 +2307,100 @@ const cateringApp = ({ userProfileData }) => {
                     )
                 )
             ),
-            React.createElement(
-                'div',
-                { className: 'overflow-x-auto pb-4 w-full min-w-0' },
-                React.createElement(
-                    'table',
-                    {
-                        className: 'min-w-max border-collapse text-sm',
-                        key: `${filterCategory}|${filterDayKey}|${filterMealType}`,
-                    },
-                    React.createElement(
-                        'thead',
-                        null,
-                        React.createElement(
-                            'tr',
-                            null,
-                            React.createElement('th', { rowSpan: 3, className: 'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 min-w-[70px]' }, 'Kategória'),
-                            React.createElement('th', { rowSpan: 3, className: 'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 min-w-[180px]' }, 'Tím'),
-                            React.createElement('th', { rowSpan: 3, className: 'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap min-w-[60px]' }, 'Hráči'),
-                            React.createElement('th', { rowSpan: 3, className: 'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap min-w-[60px] border-r-4 border-r-gray-500' }, 'RT'),
-                            React.createElement('th', { rowSpan: 3, className: 'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap min-w-[50px] border-r-4 border-r-gray-500' }, 'Balík'),
-                            filteredDays.map((day, index) => {
-                                const total = visibleColumnCountForDay(day.key) + dailySummaryColumnsForDay(day.key);
-                                return React.createElement(
-                                    'th',
-                                    {
-                                        key: `day-header-${index}`,
-                                        colSpan: total,
-                                        className: 'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap border-r-4 border-r-gray-500',
-                                        title: day.fullLabel,
-                                    },
-                                    day.label
-                                );
-                            })
-                        ),
-                        React.createElement(
-                            'tr',
-                            null,
-                            filteredDays.map((day, index) => {
-                                const lunchCount = shouldShowMealType('lunch') ? slotCountFor(day.key, 'lunch') : 0;
-                                const dinnerCount = shouldShowMealType('dinner') ? slotCountFor(day.key, 'dinner') : 0;
-                                const hasLunchSummary = shouldShowMealType('lunch') && lunchCount > 0;
-                                const hasDinnerSummary = shouldShowMealType('dinner') && dinnerCount > 0;
-                                const parts = [];
 
-                                if (lunchCount > 0 || hasLunchSummary) {
-                                    const lunchColSpan = lunchCount + (hasLunchSummary ? 1 : 0);
-                                    parts.push(
-                                        React.createElement(
-                                            'th',
-                                            {
-                                                key: `lunch-header-${index}`,
-                                                colSpan: lunchColSpan,
-                                                className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs border-r-4 border-r-gray-500',
-                                            },
-                                            'Obed'
-                                        )
-                                    );
-                                }
-
-                                if (dinnerCount > 0 || hasDinnerSummary) {
-                                    const dinnerColSpan = dinnerCount + (hasDinnerSummary ? 1 : 0);
-                                    parts.push(
-                                        React.createElement(
-                                            'th',
-                                            {
-                                                key: `dinner-header-${index}`,
-                                                colSpan: dinnerColSpan,
-                                                className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs border-r-4 border-r-gray-500',
-                                            },
-                                            'Večera'
-                                        )
-                                    );
-                                }
-
-                                return React.createElement(React.Fragment, { key: `meal-header-${index}` }, ...parts);
-                            })
-                        ),
-                        React.createElement(
-                            'tr',
-                            null,
-                            filteredDays.map((day, dayIndex) => {
-                                const lunchSlots = shouldShowMealType('lunch') ? (daySlots[day.key]?.lunch || []) : [];
-                                const dinnerSlots = shouldShowMealType('dinner') ? (daySlots[day.key]?.dinner || []) : [];
-                                const hasLunchSummary = lunchSlots.length > 0;
-                                const hasDinnerSummary = dinnerSlots.length > 0;
-                                const parts = [];
-
-                                lunchSlots.forEach((slot, i) => {
-                                    const isLastLunchSlot = i === lunchSlots.length - 1;
-                                    const hasThickRight = isLastLunchSlot && !hasLunchSummary;
-                                    parts.push(
-                                        React.createElement(
-                                            'th',
-                                            {
-                                                key: `lunch-slot-${dayIndex}-${i}`,
-                                                className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]' +
-                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
-                                                title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
-                                            },
-                                            slot.label
-                                        )
-                                    );
-                                });
-
-                                if (hasLunchSummary) {
-                                    parts.push(
-                                        React.createElement(
-                                            'th',
-                                            {
-                                                key: `lunch-summary-${dayIndex}`,
-                                                className: 'border border-gray-300 bg-amber-100 px-2 py-1 text-center text-[11px] font-bold text-amber-800 whitespace-nowrap min-w-[70px] border-r-4 border-r-gray-500',
-                                                title: 'Denný súčet obeda',
-                                            },
-                                            '∑'
-                                        )
-                                    );
-                                }
-
-                                dinnerSlots.forEach((slot, i) => {
-                                    const isLastDinnerSlot = i === dinnerSlots.length - 1;
-                                    const hasThickRight = isLastDinnerSlot && !hasDinnerSummary;
-                                    parts.push(
-                                        React.createElement(
-                                            'th',
-                                            {
-                                                key: `dinner-slot-${dayIndex}-${i}`,
-                                                className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]' +
-                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
-                                                title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
-                                            },
-                                            slot.label
-                                        )
-                                    );
-                                });
-
-                                if (hasDinnerSummary) {
-                                    parts.push(
-                                        React.createElement(
-                                            'th',
-                                            {
-                                                key: `dinner-summary-${dayIndex}`,
-                                                className: 'border border-gray-300 bg-amber-100 px-2 py-1 text-center text-[11px] font-bold text-amber-800 whitespace-nowrap min-w-[70px] border-r-4 border-r-gray-500',
-                                                title: 'Denný súčet večere',
-                                            },
-                                            '∑'
-                                        )
-                                    );
-                                }
-
-                                return React.createElement(React.Fragment, { key: `slot-headers-${dayIndex}` }, ...parts);
-                            })
-                        )
-                    ),
-                    React.createElement(
-                        'tbody',
-                        null,
-                        filteredTeams.length === 0
-                            ? React.createElement(
+            assignmentRows.length === 0
+                ? React.createElement(
+                      'p',
+                      { className: 'text-center text-gray-500 py-8' },
+                      'Žiadne priradenia stravovania pre zvolené filtre.'
+                  )
+                : React.createElement(
+                      'div',
+                      { className: 'overflow-x-auto pb-4 w-full min-w-0' },
+                      React.createElement(
+                          'table',
+                          { className: 'min-w-full border-collapse text-sm' },
+                          React.createElement(
+                              'thead',
+                              null,
+                              React.createElement(
                                   'tr',
-                                  null,
-                                  React.createElement(
-                                      'td',
-                                      {
-                                          colSpan: 5 + filteredDays.reduce(
-                                              (acc, d) => acc + visibleColumnCountForDay(d.key) + dailySummaryColumnsForDay(d.key), 0
-                                          ),
-                                          className: 'border border-gray-300 px-3 py-4 text-center text-gray-500',
-                                      },
-                                      'Žiadne tímy neboli nájdené.'
-                                  )
+                                  { className: 'bg-gray-100' },
+                                  React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Kategória'),
+                                  React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Tím'),
+                                  React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Dátum'),
+                                  React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Typ jedla'),
+                                  React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Čas'),
+                                  React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Miesto')
                               )
-                            : filteredTeams.map((team, rowIndex) =>
-                                  React.createElement(
+                          ),
+                          React.createElement(
+                              'tbody',
+                              null,
+                              assignmentRows.map((row) => {
+                                  const colors = row.placeId ? getCateringPlaceColors(row.placeId) : null;
+                                  const isClickable = row.clickable;
+
+                                  return React.createElement(
                                       'tr',
                                       {
-                                          key: team.id || `${team.uid}-${team.teamName}-${rowIndex}`,
-                                          className: 'bg-white border-b border-gray-200',
+                                          key: row.key,
+                                          className:
+                                              'border-b border-gray-200 ' +
+                                              (row.type === 'playing'
+                                                  ? 'bg-gray-50 text-gray-500'
+                                                  : row.type === 'superstructure'
+                                                      ? 'bg-blue-50/40'
+                                                      : 'bg-white'),
                                       },
-                                      React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-600 whitespace-nowrap text-xs' }, team.category),
-                                      React.createElement('td', { className: 'border border-gray-300 px-3 py-2 font-medium text-gray-800 whitespace-nowrap' }, team.teamName),
-                                      React.createElement('td', {
-                                          className: 'border border-gray-300 px-3 py-2 text-center whitespace-nowrap text-xs font-medium',
-                                          style: { backgroundColor: getTeamAccommodationColor(team), color: getTeamAccommodationTextColor(team) },
-                                      }, team.playersCount),
-                                      React.createElement('td', {
-                                          className: 'border border-gray-300 px-3 py-2 text-center whitespace-nowrap text-xs font-medium border-r-4 border-r-gray-500',
-                                          style: { backgroundColor: getTeamAccommodationColor(team), color: getTeamAccommodationTextColor(team) },
-                                      }, team.othersCount),
-                                      React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-center whitespace-nowrap text-xs font-medium border-r-4 border-r-gray-500' }, team.packageName || '–'),
-                                      filteredDays.map((day, dayIndex) => {
-                                          const lunchCount = shouldShowMealType('lunch') ? slotCountFor(day.key, 'lunch') : 0;
-                                          const dinnerCount = shouldShowMealType('dinner') ? slotCountFor(day.key, 'dinner') : 0;
-                                          const cells = [];
+                                      React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.category),
+                                      React.createElement(
+                                          'td',
+                                          { className: 'border border-gray-300 px-3 py-2 font-medium text-gray-800 whitespace-nowrap' },
+                                          row.teamName
+                                      ),
+                                      React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.dayLabel),
+                                      React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.mealTypeLabel),
+                                      React.createElement(
+                                          'td',
+                                          { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' },
+                                          `${row.slotFrom} – ${row.slotTo}`
+                                      ),
+                                      React.createElement(
+                                          'td',
+                                          {
+                                              className:
+                                                  'border border-gray-300 px-3 py-2 text-xs whitespace-nowrap ' +
+                                                  (isClickable ? 'cursor-pointer hover:brightness-95 transition' : ''),
+                                              style:
+                                                  row.type === 'superstructure' && colors
+                                                      ? {
+                                                            backgroundColor: colors.bg,
+                                                            color: row.isPlaying ? '#dc2626' : colors.text,
+                                                            ...(row.isPriority && !row.isPlaying
+                                                                ? { border: '3px solid #000000', fontWeight: 'bold' }
+                                                                : {}),
+                                                            ...(row.isPlaying ? { fontWeight: 'bold' } : {}),
+                                                        }
+                                                      : row.type === 'classic' && colors
+                                                          ? { backgroundColor: colors.bg, color: colors.text }
+                                                          : {},
+                                              onClick: isClickable
+                                                  ? () => openCateringModal(row.team, row.day, row.mealType, row.slot)
+                                                  : undefined,
+                                              title: isClickable ? 'Kliknutím upravíte priradenie' : '',
+                                          },
+                                          row.type === 'playing'
+                                              ? 'Hrá zápas'
+                                              : row.placeName || '–'
+                                      )
+                                  );
+                              })
+                          )
+                      )
+                  ),
 
-                                          for (let i = 0; i < lunchCount; i++) {
-                                              const slot = daySlots[day.key].lunch[i];
-                                              const isLastLunchCell = i === lunchCount - 1;
-                                              const hasThickRight = isLastLunchCell;
-
-                                              const isPlaying = teamPlaysDuringSlot(team, day.key, slot.from, slot.to);
-
-                                              const existing = findCateringAssignment(team, day.key, 'lunch', slot.from);
-                                              const superstructureAssignment = findSuperstructureAssignmentForCell(team, day.key, 'lunch', slot.from);
-
-                                              const allSuperstructureInRow = findAllSuperstructureAssignmentsForRow(team, day.key, 'lunch');
-                                              const superstructureIsPlayingForForceDash = allSuperstructureInRow.some((ss) =>
-                                                  superstructureTeamPlaysDuringSlot(ss.teamName || ss.teamIdentifier, ss.category, day.key, slot.from, slot.to)
-                                              );
-
-                                              const hasAnyAssignmentInRow = teamHasAnyAssignmentInRow(team, day.key, 'lunch');
-                                              const forceDash = (isPlaying && hasAnyAssignmentInRow) || superstructureIsPlayingForForceDash;
-
-                                              const effectiveExisting = forceDash ? null : existing;
-                                              const effectiveSuperstructure = forceDash ? null : superstructureAssignment;
-                                              const hasAnyAssignment = !!effectiveExisting || !!effectiveSuperstructure;
-
-                                              const colors = effectiveExisting ? getCateringPlaceColors(effectiveExisting.placeId) : null;
-                                              const effectiveCounts = countMembersWithMeal(team.rawTeamData, day.key, 'lunch');
-                                              const teamTotal = effectiveCounts.players + effectiveCounts.others;
-                                              const hasMealInPackage = teamHasMealInPackage(team, day.key, 'lunch');
-                                              const canClick = forceDash ? false : (hasAnyAssignment ? true : !isPlaying);
-
-                                              const displaySuperstructureName = effectiveSuperstructure
-                                                  ? getPlaceTeamDisplayName(effectiveSuperstructure.teamName, effectiveSuperstructure.category)
-                                                  : null;
-                                              const superstructureColors = effectiveSuperstructure
-                                                  ? getCateringPlaceColors(effectiveSuperstructure.placeId)
-                                                  : null;
-
-                                              const superstructureIsPlaying = effectiveSuperstructure
-                                                  ? superstructureTeamPlaysDuringSlot(
-                                                        effectiveSuperstructure.teamName || effectiveSuperstructure.teamIdentifier,
-                                                        effectiveSuperstructure.category,
-                                                        day.key, slot.from, slot.to
-                                                    )
-                                                  : false;
-
-                                              let cellClass = 'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ';
-
-                                              if (forceDash) {
-                                                  cellClass += 'bg-gray-100 text-gray-500 cursor-not-allowed ';
-                                              } else if (hasAnyAssignment) {
-                                                  cellClass += 'cursor-pointer ';
-                                                  if (effectiveExisting && colors) {
-                                                  } else if (effectiveSuperstructure) {
-                                                      if (superstructureIsPlaying) {
-                                                          cellClass += 'font-bold text-red-600 ';
-                                                      } else if (effectiveSuperstructure.isPriority) {
-                                                          cellClass += 'font-bold ';
-                                                      }
-                                                  }
-                                              } else if (isPlaying) {
-                                                  cellClass += 'bg-gray-100 text-gray-500 cursor-not-allowed ';
-                                              } else {
-                                                  cellClass += 'cursor-pointer ';
-                                                  if (hasMealInPackage) {
-                                                      cellClass += 'text-gray-500 hover:bg-blue-50 ';
-                                                  } else {
-                                                      cellClass += 'bg-gray-100 text-gray-500 hover:bg-green-50 ';
-                                                  }
-                                              }
-                                              cellClass += (hasThickRight ? 'border-r-4 border-r-gray-500' : '');
-
-                                              let cellContent;
-                                              if (forceDash) cellContent = '-';
-                                              else if (effectiveExisting) cellContent = teamTotal;
-                                              else if (displaySuperstructureName) cellContent = displaySuperstructureName;
-                                              else if (isPlaying) cellContent = '-';
-                                              else cellContent = hasMealInPackage ? '' : '–';
-
-                                              let cellTitle;
-                                              if (forceDash) cellTitle = `Tím hrá zápas v čase ${slot.from} – ${slot.to}`;
-                                              else if (effectiveExisting) cellTitle = `${effectiveExisting.placeName} (${slot.from} – ${slot.to})`;
-                                              else if (effectiveSuperstructure) cellTitle = `${effectiveSuperstructure.teamName} (${slot.from} – ${slot.to})`;
-                                              else if (isPlaying) cellTitle = `Tím hrá zápas v čase ${slot.from} – ${slot.to}`;
-                                              else if (hasMealInPackage) cellTitle = `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`;
-                                              else cellTitle = `Tím nemá v balíku '${team.packageName}' obed pre ${day.fullLabelNumeric}. Kliknutím priradíte podľa umiestnenia.`;
-
-                                              cells.push(
-                                                  React.createElement(
-                                                      'td',
-                                                      {
-                                                          key: `cell-lunch-${rowIndex}-${dayIndex}-${i}`,
-                                                          onClick: canClick ? () => openCateringModal(team, day, 'lunch', slot) : undefined,
-                                                          className: cellClass,
-                                                          style: effectiveExisting && colors
-                                                              ? { backgroundColor: colors.bg, color: colors.text }
-                                                              : effectiveSuperstructure && superstructureColors
-                                                                  ? {
-                                                                        backgroundColor: superstructureColors.bg,
-                                                                        color: superstructureIsPlaying ? '#dc2626' : superstructureColors.text,
-                                                                        ...(superstructureIsPlaying
-                                                                            ? { fontWeight: 'bold' }
-                                                                            : effectiveSuperstructure.isPriority
-                                                                                ? { border: '4px solid #000000', fontWeight: 'bold' }
-                                                                                : {}),
-                                                                    }
-                                                                  : {},
-                                                          title: cellTitle,
-                                                      },
-                                                      cellContent
-                                                  )
-                                              );
-                                          }
-
-                                          if (shouldShowMealType('lunch') && lunchCount > 0) {
-                                              cells.push(
-                                                  React.createElement('td', {
-                                                      key: `empty-lunch-summary-${rowIndex}-${dayIndex}`,
-                                                      className: 'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] border-r-4 border-r-gray-500',
-                                                  })
-                                              );
-                                          }
-
-                                          for (let i = 0; i < dinnerCount; i++) {
-                                              const slot = daySlots[day.key].dinner[i];
-                                              const isLastDinnerCell = i === dinnerCount - 1;
-                                              const hasThickRight = isLastDinnerCell;
-
-                                              const isPlaying = teamPlaysDuringSlot(team, day.key, slot.from, slot.to);
-
-                                              const existing = findCateringAssignment(team, day.key, 'dinner', slot.from);
-                                              const superstructureAssignment = findSuperstructureAssignmentForCell(team, day.key, 'dinner', slot.from);
-
-                                              const allSuperstructureInRow = findAllSuperstructureAssignmentsForRow(team, day.key, 'dinner');
-                                              const superstructureIsPlayingForForceDash = allSuperstructureInRow.some((ss) =>
-                                                  superstructureTeamPlaysDuringSlot(ss.teamName || ss.teamIdentifier, ss.category, day.key, slot.from, slot.to)
-                                              );
-
-                                              const hasAnyAssignmentInRow = teamHasAnyAssignmentInRow(team, day.key, 'dinner');
-                                              const forceDash = (isPlaying && hasAnyAssignmentInRow) || superstructureIsPlayingForForceDash;
-
-                                              const effectiveExisting = forceDash ? null : existing;
-                                              const effectiveSuperstructure = forceDash ? null : superstructureAssignment;
-                                              const hasAnyAssignment = !!effectiveExisting || !!effectiveSuperstructure;
-
-                                              const colors = effectiveExisting ? getCateringPlaceColors(effectiveExisting.placeId) : null;
-                                              const effectiveCounts = countMembersWithMeal(team.rawTeamData, day.key, 'dinner');
-                                              const teamTotal = effectiveCounts.players + effectiveCounts.others;
-                                              const hasMealInPackage = teamHasMealInPackage(team, day.key, 'dinner');
-                                              const canClick = forceDash ? false : (hasAnyAssignment ? true : !isPlaying);
-
-                                              const displaySuperstructureName = effectiveSuperstructure
-                                                  ? getPlaceTeamDisplayName(effectiveSuperstructure.teamName, effectiveSuperstructure.category)
-                                                  : null;
-                                              const superstructureColors = effectiveSuperstructure
-                                                  ? getCateringPlaceColors(effectiveSuperstructure.placeId)
-                                                  : null;
-
-                                              const superstructureIsPlaying = effectiveSuperstructure
-                                                  ? superstructureTeamPlaysDuringSlot(
-                                                        effectiveSuperstructure.teamName || effectiveSuperstructure.teamIdentifier,
-                                                        effectiveSuperstructure.category,
-                                                        day.key, slot.from, slot.to
-                                                    )
-                                                  : false;
-
-                                              let cellClass = 'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ';
-
-                                              if (forceDash) {
-                                                  cellClass += 'bg-gray-100 text-gray-500 cursor-not-allowed ';
-                                              } else if (hasAnyAssignment) {
-                                                  cellClass += 'cursor-pointer ';
-                                                  if (effectiveExisting && colors) {
-                                                  } else if (effectiveSuperstructure) {
-                                                      if (superstructureIsPlaying) {
-                                                          cellClass += 'font-bold text-red-600 ';
-                                                      } else if (effectiveSuperstructure.isPriority) {
-                                                          cellClass += 'font-bold ';
-                                                      }
-                                                  }
-                                              } else if (isPlaying) {
-                                                  cellClass += 'bg-gray-100 text-gray-500 cursor-not-allowed ';
-                                              } else {
-                                                  cellClass += 'cursor-pointer ';
-                                                  if (hasMealInPackage) {
-                                                      cellClass += 'text-gray-500 hover:bg-blue-50 ';
-                                                  } else {
-                                                      cellClass += 'bg-gray-100 text-gray-500 hover:bg-green-50 ';
-                                                  }
-                                              }
-                                              cellClass += (hasThickRight ? 'border-r-4 border-r-gray-500' : '');
-
-                                              let cellContent;
-                                              if (forceDash) cellContent = '-';
-                                              else if (effectiveExisting) cellContent = teamTotal;
-                                              else if (displaySuperstructureName) cellContent = displaySuperstructureName;
-                                              else if (isPlaying) cellContent = '-';
-                                              else cellContent = hasMealInPackage ? '' : '–';
-
-                                              let cellTitle;
-                                              if (forceDash) cellTitle = `Tím hrá zápas v čase ${slot.from} – ${slot.to}`;
-                                              else if (effectiveExisting) cellTitle = `${effectiveExisting.placeName} (${slot.from} – ${slot.to})`;
-                                              else if (effectiveSuperstructure) cellTitle = `${effectiveSuperstructure.teamName} (${slot.from} – ${slot.to})`;
-                                              else if (isPlaying) cellTitle = `Tím hrá zápas v čase ${slot.from} – ${slot.to}`;
-                                              else if (hasMealInPackage) cellTitle = `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`;
-                                              else cellTitle = `Tím nemá v balíku '${team.packageName}' večeru pre ${day.fullLabelNumeric}. Kliknutím priradíte podľa umiestnenia.`;
-
-                                              cells.push(
-                                                  React.createElement(
-                                                      'td',
-                                                      {
-                                                          key: `cell-dinner-${rowIndex}-${dayIndex}-${i}`,
-                                                          onClick: canClick ? () => openCateringModal(team, day, 'dinner', slot) : undefined,
-                                                          className: cellClass,
-                                                          style: effectiveExisting && colors
-                                                              ? { backgroundColor: colors.bg, color: colors.text }
-                                                              : effectiveSuperstructure && superstructureColors
-                                                                  ? {
-                                                                        backgroundColor: superstructureColors.bg,
-                                                                        color: superstructureIsPlaying ? '#dc2626' : superstructureColors.text,
-                                                                        ...(superstructureIsPlaying
-                                                                            ? { fontWeight: 'bold' }
-                                                                            : effectiveSuperstructure.isPriority
-                                                                                ? { border: '4px solid #000000', fontWeight: 'bold' }
-                                                                                : {}),
-                                                                    }
-                                                                  : {},
-                                                          title: cellTitle,
-                                                      },
-                                                      cellContent
-                                                  )
-                                              );
-                                          }
-
-                                          if (shouldShowMealType('dinner') && dinnerCount > 0) {
-                                              cells.push(
-                                                  React.createElement('td', {
-                                                      key: `empty-dinner-summary-${rowIndex}-${dayIndex}`,
-                                                      className: 'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] border-r-4 border-r-gray-500',
-                                                  })
-                                              );
-                                          }
-
-                                          return React.createElement(React.Fragment, { key: `cells-${rowIndex}-${dayIndex}` }, ...cells);
-                                      })
-                                  )
-                              ),
-                        React.createElement(
-                            'tr',
-                            { key: 'summary-header', className: 'bg-gray-100' },
-                            React.createElement(
-                                'td',
-                                {
-                                    colSpan: 5 + filteredDays.reduce(
-                                        (acc, d) => acc + visibleColumnCountForDay(d.key) + dailySummaryColumnsForDay(d.key), 0
-                                    ),
-                                    className: 'border border-gray-300 px-3 py-2 text-left text-sm font-bold text-gray-700'
-                                },
-                                'Súčty podľa stravovacích miest:'
-                            )
-                        ),
-                        ...cateringPlaces.flatMap((place) => {
-                            const colors = getCateringPlaceColors(place.id);
-                            const placeCapacity = getCateringPlaceCapacity(place.id);
-
-                            return [React.createElement(
-                                'tr',
-                                {
-                                    key: `summary-place-${place.id}`,
-                                    className: 'border-t-2 border-gray-300',
-                                },
-                                React.createElement('td', {
-                                    colSpan: 2,
-                                    className: 'border border-gray-300 px-3 py-2 text-left font-semibold whitespace-nowrap',
-                                    style: { backgroundColor: colors.bg, color: colors.text },
-                                }, `${place.name}`),
-                                React.createElement('td', {
-                                    colSpan: 3,
-                                    className: 'border border-gray-300 px-3 py-2 text-right font-semibold whitespace-nowrap border-r-4 border-r-gray-500',
-                                    style: { backgroundColor: colors.bg, color: colors.text },
-                                }, placeCapacity != null ? `${placeCapacity}` : '–'),
-                                ...filteredDays.flatMap((day, dayIndex) => {
-                                    const lunchSlots = shouldShowMealType('lunch') ? (daySlots[day.key]?.lunch || []) : [];
-                                    const dinnerSlots = shouldShowMealType('dinner') ? (daySlots[day.key]?.dinner || []) : [];
-                                    const cells = [];
-
-                                    lunchSlots.forEach((slot, i) => {
-                                        const isLastLunchCell = i === lunchSlots.length - 1;
-                                        const hasThickRight = isLastLunchCell;
-                                        const count = getAssignedCountForPlace(place.id, day.key, 'lunch', slot.from);
-                                        const overCapacity = placeCapacity != null && count > placeCapacity;
-
-                                        cells.push(React.createElement(
-                                            'td',
-                                            {
-                                                key: `summary-${place.id}-lunch-${dayIndex}-${i}`,
-                                                className: 'border border-gray-300 px-2 py-2 text-center text-xs font-semibold min-w-[70px]' +
-                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : '') +
-                                                    (overCapacity ? ' font-bold text-red-600' : ''),
-                                                style: count > 0
-                                                    ? { backgroundColor: colors.bg, color: overCapacity ? '#dc2626' : colors.text }
-                                                    : {},
-                                            },
-                                            count > 0 ? count : ''
-                                        ));
-                                    });
-
-                                    if (shouldShowMealType('lunch') && lunchSlots.length > 0) {
-                                        const dailyLunchTotal = getDailyAssignedCountForPlace(place.id, day.key, 'lunch');
-                                        cells.push(React.createElement(
-                                            'td',
-                                            {
-                                                key: `summary-daily-${place.id}-lunch-${dayIndex}`,
-                                                className: 'border border-gray-300 px-2 py-2 text-center text-sm font-bold min-w-[70px] border-r-4 border-r-gray-500',
-                                                style: dailyLunchTotal > 0
-                                                    ? { backgroundColor: colors.bg, color: colors.text }
-                                                    : {},
-                                                title: `Denný súčet obeda pre ${place.name}: ${dailyLunchTotal}`,
-                                            },
-                                            dailyLunchTotal > 0 ? dailyLunchTotal : ''
-                                        ));
-                                    }
-
-                                    dinnerSlots.forEach((slot, i) => {
-                                        const isLastDinnerCell = i === dinnerSlots.length - 1;
-                                        const hasThickRight = isLastDinnerCell;
-                                        const count = getAssignedCountForPlace(place.id, day.key, 'dinner', slot.from);
-                                        const overCapacity = placeCapacity != null && count > placeCapacity;
-
-                                        cells.push(React.createElement(
-                                            'td',
-                                            {
-                                                key: `summary-${place.id}-dinner-${dayIndex}-${i}`,
-                                                className: 'border border-gray-300 px-2 py-2 text-center text-xs font-semibold min-w-[70px]' +
-                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : '') +
-                                                    (overCapacity ? ' font-bold text-red-600' : ''),
-                                                style: count > 0
-                                                    ? { backgroundColor: colors.bg, color: overCapacity ? '#dc2626' : colors.text }
-                                                    : {},
-                                            },
-                                            count > 0 ? count : ''
-                                        ));
-                                    });
-
-                                    if (shouldShowMealType('dinner') && dinnerSlots.length > 0) {
-                                        const dailyDinnerTotal = getDailyAssignedCountForPlace(place.id, day.key, 'dinner');
-                                        cells.push(React.createElement(
-                                            'td',
-                                            {
-                                                key: `summary-daily-${place.id}-dinner-${dayIndex}`,
-                                                className: 'border border-gray-300 px-2 py-2 text-center text-sm font-bold min-w-[70px] border-r-4 border-r-gray-500',
-                                                style: dailyDinnerTotal > 0
-                                                    ? { backgroundColor: colors.bg, color: colors.text }
-                                                    : {},
-                                                title: `Denný súčet večere pre ${place.name}: ${dailyDinnerTotal}`,
-                                            },
-                                            dailyDinnerTotal > 0 ? dailyDinnerTotal : ''
-                                        ));
-                                    }
-
-                                    return cells;
-                                })
-                            )];
-                        })
-                    ),
-                )
-            ),
-
-            // ========== MODÁLY ==========
+            // ========== MODÁLY (bez zmeny) ==========
             showAssignmentTypeModal && React.createElement(
                 'div',
                 {
