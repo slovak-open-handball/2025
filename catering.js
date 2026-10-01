@@ -919,8 +919,8 @@ const cateringApp = ({ userProfileData }) => {
                                                 {
                                                     className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
                                                     style: {
-                                                        backgroundColor: row.mealType === 'lunch' ? '#DCFCE7' : '#FFEDD5',
-                                                        color: row.mealType === 'lunch' ? '#166534' : '#EA580C',
+                                                        backgroundColor: '#E5E7EB',
+                                                        color: '#374151',
                                                         fontWeight: '500'
                                                     }
                                                 },
