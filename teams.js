@@ -2221,8 +2221,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
     }, [allMatchesList]);
 
     // ============ 🔥 NOVÝ BLOK – NAČÍTANIE DNI TURNAJA 🔥 ============
-    // Toto je KĽÚČOVÝ useEffect, ktorý Vám chýbal.
-    // Bez neho je tournamentDays prázdne pole a stravovanie sa nezobrazí.
     useEffect(() => {
         if (!window.db) return;
         const settingsDocRef = doc(window.db, 'settings', 'registration');
@@ -2821,44 +2819,92 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
 
     const renderCateringRow = (entry, dayIndex, rowIndex) => {
         const row = entry.row;
-        return React.createElement(
-            'tr',
-            { key: entry.key, className: 'hover:bg-gray-50 transition-colors' },
+        const isCateringOnly = (filter === 'catering');
+
+        const cells = [];
+
+        // Čas
+        cells.push(
             React.createElement(
                 'td',
-                { className: 'px-4 py-3 whitespace-nowrap' },
+                { key: 'time', className: 'px-4 py-3 whitespace-nowrap' },
                 React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, row.slotFrom)
-            ),
-            React.createElement(
-                'td',
-                { colSpan: 3, className: 'px-4 py-3 whitespace-nowrap text-center' },
+            )
+        );
+
+        if (isCateringOnly) {
+            // Zlúčený stĺpec "Typ stravovania"
+            cells.push(
                 React.createElement(
-                    'span',
-                    {
-                        className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                        style: {
-                            backgroundColor: '#E5E7EB',
-                            color: '#374151',
-                            fontWeight: '500'
-                        }
-                    },
-                    row.mealTypeLabel
+                    'td',
+                    { key: 'mealType', className: 'px-4 py-3 whitespace-nowrap text-center', colSpan: 3 },
+                    React.createElement(
+                        'span',
+                        {
+                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                            style: {
+                                backgroundColor: '#E5E7EB',
+                                color: '#374151',
+                                fontWeight: '500'
+                            }
+                        },
+                        row.mealTypeLabel
+                    )
                 )
-            ),
+            );
+        } else {
+            // Rozdelené stĺpce Domáci | VS | Hostia (pre stravovanie je len jeden s colspan=3)
+            cells.push(
+                React.createElement(
+                    'td',
+                    { key: 'mealType', className: 'px-4 py-3 whitespace-nowrap text-center', colSpan: 3 },
+                    React.createElement(
+                        'span',
+                        {
+                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                            style: {
+                                backgroundColor: '#E5E7EB',
+                                color: '#374151',
+                                fontWeight: '500'
+                            }
+                        },
+                        row.mealTypeLabel
+                    )
+                )
+            );
+        }
+
+        // Miesto
+        cells.push(
             React.createElement(
                 'td',
-                { className: 'px-4 py-3 whitespace-nowrap text-left' },
+                { key: 'place', className: 'px-4 py-3 whitespace-nowrap text-left' },
                 React.createElement(
                     'div',
                     { className: 'flex items-center gap-1' },
                     React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-400 text-xs' }),
                     React.createElement('span', { className: 'text-gray-600 text-sm max-w-32' }, row.placeName || '–')
                 )
-            ),
-            React.createElement('td', { className: 'px-4 py-3' }, null),
-            React.createElement('td', { className: 'px-4 py-3 whitespace-nowrap text-center' }, null)
+            )
+        );
+
+        // Info a Detail stĺpce sa zobrazia len ak NIE je filter 'catering'
+        if (!isCateringOnly) {
+            cells.push(React.createElement('td', { key: 'info', className: 'px-4 py-3' }, null));
+            cells.push(React.createElement('td', { key: 'detail', className: 'px-4 py-3 whitespace-nowrap text-center' }, null));
+        }
+
+        return React.createElement(
+            'tr',
+            { key: entry.key, className: 'hover:bg-gray-50 transition-colors' },
+            cells
         );
     };
+
+    const isCateringOnly = (filter === 'catering');
+
+    // Dynamický colSpan pre hlavičku dňa
+    const dayHeaderColSpan = isCateringOnly ? 3 : 7;
 
     return React.createElement(
         'div',
@@ -2881,12 +2927,21 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
                         'tr',
                         null,
                         React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'Čas'),
-                        React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
-                        React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
-                        React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
+                        isCateringOnly ? (
+                            // Iba stravovanie → jeden zlúčený stĺpec "Typ stravovania"
+                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider', colSpan: 3 }, 'Typ stravovania')
+                        ) : (
+                            // Inak normálne stĺpce Domáci | VS | Hostia
+                            React.createElement(React.Fragment, null,
+                                React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
+                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
+                                React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia')
+                            )
+                        ),
                         React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32' }, 'Miesto'),
-                        React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info'),
-                        React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, '')
+                        // Info a Detail stĺpce len ak NIE je filter 'catering'
+                        isCateringOnly ? null : React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info'),
+                        isCateringOnly ? null : React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, '')
                     )
                 ),
                 React.createElement(
@@ -2900,7 +2955,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
                                 { key: `day-${dayIndex}`, className: 'bg-blue-50' },
                                 React.createElement(
                                     'td',
-                                    { colSpan: 7, className: 'px-4 py-3 text-left' },
+                                    { colSpan: dayHeaderColSpan, className: 'px-4 py-3 text-left' },
                                     React.createElement(
                                         'div',
                                         { className: 'flex items-center gap-2' },
