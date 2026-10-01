@@ -2,7 +2,7 @@
 // Importy pre Firebase funkcie
 import { doc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 /**
  * Globálna funkcia pre zobrazenie notifikácií
@@ -249,6 +249,36 @@ const buildMealSlots = (from, to, unitMinutes) => {
     return slots;
 };
 
+// ============================================================
+// Pomocná funkcia: namapuje názov tímu cez matchTracker.getTeamNameByDisplayId
+// ============================================================
+const resolveTeamName = async (categoryName, teamName) => {
+    if (!teamName) return teamName;
+
+    // Ak už názov obsahuje kategóriu, pošleme ho tak ako je
+    let candidate = teamName;
+    if (categoryName && !teamName.includes(categoryName)) {
+        candidate = `${categoryName} ${teamName}`;
+    }
+
+    // Skús matchTracker
+    if (
+        window.matchTracker &&
+        typeof window.matchTracker.getTeamNameByDisplayId === 'function'
+    ) {
+        try {
+            const mapped = await window.matchTracker.getTeamNameByDisplayId(candidate);
+            if (mapped && mapped !== null && mapped !== 'null' && mapped !== candidate) {
+                return mapped;
+            }
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    return teamName;
+};
+
 const cateringApp = ({ userProfileData }) => {
     // ============================================================
     // 1) VŠETKY useState
@@ -263,7 +293,10 @@ const cateringApp = ({ userProfileData }) => {
     const [filterCategory, setFilterCategory] = useState('');
     const [filterDayKey, setFilterDayKey] = useState('');
     const [filterMealType, setFilterMealType] = useState('');
-    const [sortMode, setSortMode] = useState('chronological'); // 'chronological' | 'team'
+    const [sortMode, setSortMode] = useState('chronological');
+
+    // Mapa namapovaných názvov tímov: kľúč = "kategória||pôvodnýNázov", hodnota = nový názov
+    const [teamNameMap, setTeamNameMap] = useState({});
 
     // ============================================================
     // 2) useMemo – odvodené hodnoty
@@ -293,7 +326,7 @@ const cateringApp = ({ userProfileData }) => {
     }, [tournamentDays, cateringTimes, unitMinutes]);
 
     // ============================================================
-    // 3) URL filtre – pomocné funkcie
+    // 3) URL filtre
     // ============================================================
     const loadFiltersFromURL = () => {
         const params = new URLSearchParams(window.location.search);
@@ -490,6 +523,83 @@ const cateringApp = ({ userProfileData }) => {
     }, []);
 
     // ============================================================
+    // 5b) Listener na matches – ak sa nejaký zápas zmení na 'completed',
+    //     spustíme mapovanie názvov tímov
+    // ============================================================
+    const prevMatchStatusesRef = useRef({});
+
+    useEffect(() => {
+        if (!window.db) return;
+
+        const matchesRef = collection(window.db, 'matches');
+
+        const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
+            let shouldRemap = false;
+
+            snapshot.docChanges().forEach((change) => {
+                const matchId = change.doc.id;
+                const data = change.doc.data() || {};
+                const newStatus = data.status || 'scheduled';
+                const oldStatus = prevMatchStatusesRef.current[matchId];
+
+                // Ak sa status zmenil na 'completed' (a predtým nebol 'completed'), spustíme remap
+                if (newStatus === 'completed' && oldStatus !== 'completed') {
+                    shouldRemap = true;
+                }
+
+                prevMatchStatusesRef.current[matchId] = newStatus;
+            });
+
+            // Pri prvom načítaní tiež spustíme remap (aby sa namapovali existujúce názvy)
+            if (Object.keys(prevMatchStatusesRef.current).length === snapshot.size) {
+                // prvý snapshot – spustíme remap
+                shouldRemap = true;
+            }
+
+            if (shouldRemap) {
+                triggerTeamNameRemap();
+            }
+        }, (error) => { });
+
+        return () => unsubscribe();
+    }, [userTeams]);
+
+    // ============================================================
+    // 5c) Funkcia, ktorá namapuje všetky názvy tímov
+    // ============================================================
+    const triggerTeamNameRemap = async () => {
+        if (!userTeams || userTeams.length === 0) return;
+
+        const newMap = {};
+
+        for (const team of userTeams) {
+            if (!team.teamName || !team.category) continue;
+
+            const key = `${team.category}||${team.teamName}`;
+
+            try {
+                const mapped = await resolveTeamName(team.category, team.teamName);
+                if (mapped && mapped !== team.teamName) {
+                    newMap[key] = mapped;
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        if (Object.keys(newMap).length > 0) {
+            setTeamNameMap((prev) => ({ ...prev, ...newMap }));
+        }
+    };
+
+    // Ak sa zmení userTeams (napr. po načítaní), spustíme mapovanie
+    useEffect(() => {
+        if (userTeams.length > 0) {
+            triggerTeamNameRemap();
+        }
+    }, [userTeams]);
+
+    // ============================================================
     // 6) useMemo – assignmentsBySlot, daySlots
     // ============================================================
     const assignmentsBySlot = React.useMemo(() => {
@@ -563,8 +673,15 @@ const cateringApp = ({ userProfileData }) => {
         return teamName;
     };
 
+    // 🔥 Získanie zobrazeného názvu tímu s mapovaním
+    const getMappedTeamName = (category, teamName) => {
+        if (!teamName) return teamName;
+        const key = `${category}||${teamName}`;
+        return teamNameMap[key] || teamName;
+    };
+
     // ============================================================
-    // 8) Pomocné funkcie pre render (PRED return-mi!)
+    // 8) Pomocné funkcie pre render
     // ============================================================
     const shouldShowMealType = (mealType) => {
         if (!filterMealType) return true;
@@ -577,7 +694,6 @@ const cateringApp = ({ userProfileData }) => {
 
     // ============================================================
     // 9) assignmentRows (useMemo) – MUSÍ BYŤ PRED RETURN-MI
-    //    Zobrazujú sa LEN tímy s reálnym priradením.
     // ============================================================
     const assignmentRows = React.useMemo(() => {
         const rows = [];
@@ -596,11 +712,14 @@ const cateringApp = ({ userProfileData }) => {
                         const existing = findCateringAssignment(team, day.key, mealType, slot.from);
                         const ss = findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
 
+                        // 🔥 Namapovaný názov tímu pre klasické priradenie
+                        const mappedTeamName = getMappedTeamName(team.category, team.teamName);
+
                         if (existing) {
                             rows.push({
                                 key: `${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
                                 category: team.category,
-                                teamName: team.teamName,
+                                teamName: mappedTeamName,
                                 dayKey: day.key,
                                 dayLabel: day.fullLabelNumeric,
                                 daySort: day.date.getTime(),
@@ -616,10 +735,14 @@ const cateringApp = ({ userProfileData }) => {
                         }
 
                         if (ss) {
+                            // 🔥 Pri superstructure skúsime namapovať aj názov superstructure tímu
+                            const ssRawName = getPlaceTeamDisplayName(ss.teamName, ss.category) || ss.teamName;
+                            const ssMappedName = getMappedTeamName(ss.category, ssRawName);
+
                             rows.push({
                                 key: `${team.id}-${day.key}-${mealType}-${slot.from}-ss`,
                                 category: team.category,
-                                teamName: getPlaceTeamDisplayName(ss.teamName, ss.category) || ss.teamName,
+                                teamName: ssMappedName,
                                 dayKey: day.key,
                                 dayLabel: day.fullLabelNumeric,
                                 daySort: day.date.getTime(),
@@ -633,16 +756,13 @@ const cateringApp = ({ userProfileData }) => {
                                 isPriority: ss.isPriority === true,
                             });
                         }
-
-                        // Bez priradenia – NEZOBRAZUJEME
                     });
                 });
             });
         });
 
-        // Zoradenie podľa zvoleného režimu
+        // Zoradenie
         if (sortMode === 'team') {
-            // Abecedne podľa kategórie a názvu tímu
             rows.sort((a, b) => {
                 const catCmp = (a.category || '').localeCompare(b.category || '', 'sk', { sensitivity: 'base' });
                 if (catCmp !== 0) return catCmp;
@@ -662,7 +782,6 @@ const cateringApp = ({ userProfileData }) => {
                 return 0;
             });
         } else {
-            // Chronologicky podľa dátumu a času
             rows.sort((a, b) => {
                 if (a.daySort !== b.daySort) return a.daySort - b.daySort;
 
@@ -686,6 +805,7 @@ const cateringApp = ({ userProfileData }) => {
         filterMealType,
         cateringAssignments,
         sortMode,
+        teamNameMap,
     ]);
 
     // ============================================================
@@ -717,7 +837,7 @@ const cateringApp = ({ userProfileData }) => {
     }
 
     // ============================================================
-    // 11) RENDER – iba zobrazenie
+    // 11) RENDER
     // ============================================================
     return React.createElement(
         'div',
@@ -788,7 +908,6 @@ const cateringApp = ({ userProfileData }) => {
                     )
                 ),
 
-                // Prepínač zobrazenia
                 React.createElement(
                     'div',
                     { className: 'flex items-center justify-center gap-1 mt-4 bg-gray-100 rounded-lg p-1 w-fit mx-auto' },
