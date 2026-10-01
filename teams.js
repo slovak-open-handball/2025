@@ -553,6 +553,21 @@ const TeamCateringList = ({ teamName, categoryName }) => {
         return teamName;
     };
 
+    useEffect(() => {
+        if (!window.db) return;
+        const unsub = onSnapshot(doc(window.db, 'settings', 'catering'), (snap) => {
+            if (snap.exists()) {
+                const data = snap.data() || {};
+                setCateringTimes(data.times || {});
+                setUnitMinutes(data.unitMinutes != null ? String(data.unitMinutes) : '');
+            } else {
+                setCateringTimes({});
+                setUnitMinutes('');
+            }
+        }, () => {});
+        return () => unsub();
+    }, []);
+
     // --- Načítanie nastavení turnaja ---
     useEffect(() => {
         if (!window.db) { setLoading(false); return; }
