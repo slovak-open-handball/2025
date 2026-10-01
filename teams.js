@@ -412,6 +412,559 @@ const getGroupTypeColors = (groupName, categoryId, groupsData) => {
     return result;
 };
 
+const TeamCateringList = ({ teamName, categoryName }) => {
+    const [loading, setLoading] = useState(true);
+    const [cateringRows, setCateringRows] = useState([]);
+    const [cateringTimes, setCateringTimes] = useState({});
+    const [unitMinutes, setUnitMinutes] = useState('');
+    const [tournamentDays, setTournamentDays] = useState([]);
+    const [cateringAssignments, setCateringAssignments] = useState([]);
+    const [packagesList, setPackagesList] = useState([]);
+    const [userTeams, setUserTeams] = useState([]);
+    const [teamNameMap, setTeamNameMap] = useState({});
+
+    const cateringAssignmentsRef = useRef([]);
+    useEffect(() => { cateringAssignmentsRef.current = cateringAssignments; }, [cateringAssignments]);
+
+    // --- Pomocné funkcie (rovnaké ako v catering.js) ---
+    const cleanCategory = (cat) => String(cat || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+
+    const timeToMinutes = (t) => {
+        if (!t || typeof t !== 'string') return null;
+        const parts = t.split(':');
+        if (parts.length < 2) return null;
+        const h = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if (isNaN(h) || isNaN(m)) return null;
+        return h * 60 + m;
+    };
+
+    const minutesToTime = (mins) => {
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    };
+
+    const hasValidMealRange = (mealTimes, unitMinutes) => {
+        if (!mealTimes) return false;
+        const fromMin = timeToMinutes(mealTimes.from);
+        const toMin = timeToMinutes(mealTimes.to);
+        const unit = parseInt(unitMinutes, 10);
+        if (fromMin == null || toMin == null) return false;
+        if (isNaN(unit) || unit <= 0) return false;
+        if (toMin - fromMin < unit) return false;
+        return true;
+    };
+
+    const buildMealSlots = (from, to, unitMinutes) => {
+        const fromMin = timeToMinutes(from);
+        const toMin = timeToMinutes(to);
+        const unit = parseInt(unitMinutes, 10);
+        if (fromMin == null || toMin == null) return [];
+        if (isNaN(unit) || unit <= 0) return [];
+        const total = toMin - fromMin;
+        if (total <= 0) return [];
+        const count = Math.floor(total / unit);
+        if (count <= 0) return [];
+        const slots = [];
+        for (let i = 0; i < count; i++) {
+            const slotFrom = fromMin + i * unit;
+            const slotTo = slotFrom + unit;
+            slots.push({ from: minutesToTime(slotFrom), to: minutesToTime(slotTo), label: minutesToTime(slotFrom) });
+        }
+        return slots;
+    };
+
+    const buildTournamentDays = (arrivalDate, tournamentEnd) => {
+        if (!arrivalDate || !tournamentEnd) return [];
+        const start = new Date(arrivalDate);
+        const end = new Date(tournamentEnd);
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return [];
+        start.setHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
+        if (start > end) return [];
+        const days = [];
+        const current = new Date(start);
+        while (current <= end) {
+            const y = current.getFullYear();
+            const m = String(current.getMonth() + 1).padStart(2, '0');
+            const d = String(current.getDate()).padStart(2, '0');
+            const key = `${y}-${m}-${d}`;
+            days.push({
+                date: new Date(current), key,
+                label: current.toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' }),
+                fullLabel: current.toLocaleDateString('sk-SK', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+                fullLabelNumeric: `${d}. ${m}. ${y}`,
+            });
+            current.setDate(current.getDate() + 1);
+        }
+        return days;
+    };
+
+    const getMappedNameForTeam = async (categoryName, teamName) => {
+        if (!teamName) return teamName;
+        const candidates = [];
+        if (categoryName && !teamName.includes(categoryName)) {
+            candidates.push(`${categoryName} ${teamName}`);
+        }
+        candidates.push(teamName);
+
+        const isValidMappedValue = (val, input) => {
+            if (val === null || val === undefined) return false;
+            const s = String(val).trim();
+            if (!s) return false;
+            if (s === 'null' || s === 'undefined') return false;
+            if (s === String(input)) return false;
+            return true;
+        };
+
+        if (window.teamNames && typeof window.teamNames === 'object') {
+            for (const key of candidates) {
+                const val = window.teamNames[key];
+                if (isValidMappedValue(val, key)) return val;
+            }
+        }
+
+        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+            for (const key of candidates) {
+                try {
+                    const mapped = await window.matchTracker.getTeamNameByDisplayId(key);
+                    if (isValidMappedValue(mapped, key)) return mapped;
+                } catch (e) { }
+            }
+        }
+
+        return teamName;
+    };
+
+    // --- Načítanie nastavení turnaja ---
+    useEffect(() => {
+        if (!window.db) { setLoading(false); return; }
+        const settingsDocRef = doc(window.db, 'settings', 'registration');
+        const unsub = onSnapshot(settingsDocRef, (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+                const arrivalDate = data.arrivalDate ? data.arrivalDate.toDate() : null;
+                const tournamentEnd = data.tournamentEnd ? data.tournamentEnd.toDate() : null;
+                setTournamentDays(buildTournamentDays(arrivalDate, tournamentEnd));
+            } else {
+                setTournamentDays([]);
+            }
+        }, () => {});
+        return () => unsub();
+    }, []);
+
+    // --- Načítanie časov stravovania ---
+    useEffect(() => {
+        if (!window.db) return;
+        const unsub = onSnapshot(doc(window.db, 'settings', 'catering'), (snap) => {
+            if (snap.exists()) {
+                const data = snap.data() || {};
+                setCateringTimes(data.times || {});
+                setUnitMinutes(data.unitMinutes != null ? String(data.unitMinutes) : '');
+            } else {
+                setCateringTimes({});
+                setUnitMinutes('');
+            }
+        }, () => {});
+        return () => unsub();
+    }, []);
+
+    // --- Načítanie balíčkov ---
+    useEffect(() => {
+        if (!window.db) return;
+        const unsub = onSnapshot(collection(window.db, 'settings', 'packages', 'list'), (snap) => {
+            const items = [];
+            snap.forEach((d) => {
+                const data = d.data() || {};
+                items.push({
+                    id: d.id,
+                    name: data.name || '',
+                    price: data.price || 0,
+                    meals: data.meals || {},
+                    accommodationTypes: data.accommodationTypes || [],
+                });
+            });
+            setPackagesList(items);
+        }, () => {});
+        return () => unsub();
+    }, []);
+
+    // --- Načítanie priradení stravovania ---
+    useEffect(() => {
+        if (!window.db) return;
+        const unsub = onSnapshot(collection(window.db, 'catering'), (snap) => {
+            const items = [];
+            snap.forEach((d) => items.push({ id: d.id, ...d.data() }));
+            setCateringAssignments(items);
+        }, () => {});
+        return () => unsub();
+    }, []);
+
+    // --- Načítanie userTeams (rovnaké ako v catering.js) ---
+    useEffect(() => {
+        if (!window.db) return;
+        const unsub = onSnapshot(collection(window.db, 'users'), async () => {
+            try {
+                const usersRef = collection(window.db, 'users');
+                const snap = await getDocs(usersRef);
+                const teams = [];
+                snap.forEach((userDoc) => {
+                    const userData = userDoc.data() || {};
+                    const userTeamsData = userData.teams;
+                    if (!userTeamsData || typeof userTeamsData !== 'object') return;
+                    Object.entries(userTeamsData).forEach(([categoryName, teamArray]) => {
+                        if (!Array.isArray(teamArray)) return;
+                        teamArray.forEach((team, teamIndex) => {
+                            if (!team?.teamName) return;
+                            const playersCount = Array.isArray(team.playerDetails) ? team.playerDetails.length : 0;
+                            const menTeamMembersCount = Array.isArray(team.menTeamMemberDetails) ? team.menTeamMemberDetails.length : 0;
+                            const womenTeamMembersCount = Array.isArray(team.womenTeamMemberDetails) ? team.womenTeamMemberDetails.length : 0;
+                            const menDriversCount = Array.isArray(team.driverDetailsMale) ? team.driverDetailsMale.length : 0;
+                            const womenDriversCount = Array.isArray(team.driverDetailsFemale) ? team.driverDetailsFemale.length : 0;
+                            const cleanCat = cleanCategory(categoryName);
+                            teams.push({
+                                uid: userDoc.id,
+                                teamIndex: teamIndex,
+                                id: team.id || `${userDoc.id}-${cleanCat}-${teamIndex}`,
+                                teamName: team.teamName,
+                                category: cleanCat,
+                                playersCount,
+                                othersCount: menTeamMembersCount + womenTeamMembersCount + menDriversCount + womenDriversCount,
+                                rawTeamData: team,
+                                accommodationName: team.accommodation?.name || null,
+                                packageName: team.packageDetails?.name || null,
+                            });
+                        });
+                    });
+                });
+                setUserTeams(teams);
+            } catch (err) {}
+        }, () => {});
+        return () => unsub();
+    }, []);
+
+    // --- Mapovanie názvov tímov (rovnaké ako v catering.js) ---
+    useEffect(() => {
+        const triggerRemap = async () => {
+            const assignments = cateringAssignmentsRef.current || [];
+            const pairsMap = new Map();
+            assignments.forEach((a) => {
+                if (a.isSuperstructure !== true) return;
+                const cat = cleanCategory(a.category || a.categoryName || '');
+                const tn = String(a.teamName || '').trim();
+                if (!cat || !tn) return;
+                const key = `${cat}||${tn}`;
+                if (!pairsMap.has(key)) pairsMap.set(key, { category: cat, teamName: tn });
+            });
+            if (pairsMap.size === 0) return;
+            const newMap = {};
+            for (const [key, pair] of pairsMap.entries()) {
+                try {
+                    const mapped = await getMappedNameForTeam(pair.category, pair.teamName);
+                    if (mapped && mapped !== pair.teamName) newMap[key] = mapped;
+                } catch (e) {}
+            }
+            if (Object.keys(newMap).length > 0) {
+                setTeamNameMap((prev) => {
+                    let changed = false;
+                    for (const k of Object.keys(newMap)) {
+                        if (prev[k] !== newMap[k]) { changed = true; break; }
+                    }
+                    if (!changed) return prev;
+                    return { ...prev, ...newMap };
+                });
+            }
+        };
+        triggerRemap();
+        const intervalId = setInterval(triggerRemap, 800);
+        return () => clearInterval(intervalId);
+    }, []);
+
+    // --- Výpočet riadkov pre konkrétny tím (podobné ako assignmentRows v catering.js) ---
+    const assignmentRows = React.useMemo(() => {
+        if (!teamName || !categoryName) return [];
+
+        const cleanCat = cleanCategory(categoryName);
+        const cleanTeam = String(teamName).trim();
+
+        const getMappedTeamName = (category, tn) => {
+            if (!tn) return tn;
+            const key = `${category}||${tn}`;
+            const val = teamNameMap[key];
+            if (val === null || val === undefined) return tn;
+            const s = String(val).trim();
+            if (!s || s === 'null' || s === 'undefined') return tn;
+            return val;
+        };
+
+        const teamHasMealInPackage = (team, dayKey, mealType) => {
+            if (!team) return false;
+            if (!team.packageName) return true;
+            const pkg = packagesList.find(p => p.name === team.packageName);
+            if (!pkg) return true;
+            const mealsForDay = pkg.meals?.[dayKey];
+            if (!mealsForDay) return false;
+            const val = mealsForDay[mealType];
+            return val === 1 || val === true;
+        };
+
+        // Nájde tím v userTeams podľa názvu (rovnaké ako v catering.js)
+        const findTeamInUserTeamsByName = (cat, searchName) => {
+            if (!cat || !searchName) return null;
+            const catClean = cleanCategory(cat);
+            const searchClean = String(searchName).trim();
+
+            let found = userTeams.find(t =>
+                cleanCategory(t.category) === catClean &&
+                String(t.teamName).trim() === searchClean
+            );
+            if (found) return found;
+
+            if (searchClean.startsWith(catClean + ' ')) {
+                const stripped = searchClean.substring(catClean.length + 1).trim();
+                found = userTeams.find(t =>
+                    cleanCategory(t.category) === catClean &&
+                    String(t.teamName).trim() === stripped
+                );
+                if (found) return found;
+            }
+
+            found = userTeams.find(t => String(t.teamName).trim() === searchClean);
+            if (found) return found;
+
+            return null;
+        };
+
+        // Nájde tím, ktorý zodpovedá tomuto konkrétnemu tímu (teamName + categoryName)
+        const findMatchingTeamInUserTeams = () => {
+            // Presná zhoda
+            let team = userTeams.find(t =>
+                cleanCategory(t.category) === cleanCat &&
+                String(t.teamName).trim() === cleanTeam
+            );
+            if (team) return team;
+
+            // Skús bez kategórie v názve
+            if (cleanTeam.startsWith(cleanCat + ' ')) {
+                const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
+                team = userTeams.find(t =>
+                    cleanCategory(t.category) === cleanCat &&
+                    String(t.teamName).trim() === stripped
+                );
+                if (team) return team;
+            }
+
+            // Fallback bez kategórie
+            team = userTeams.find(t => String(t.teamName).trim() === cleanTeam);
+            return team || null;
+        };
+
+        const myTeam = findMatchingTeamInUserTeams();
+        if (!myTeam) return [];
+
+        const daySlots = {};
+        (tournamentDays || []).forEach((day) => {
+            const t = cateringTimes[day.key] || {};
+            const lunchTimes = t.lunch || null;
+            const dinnerTimes = t.dinner || null;
+            daySlots[day.key] = {
+                lunch: hasValidMealRange(lunchTimes, unitMinutes) ? buildMealSlots(lunchTimes.from, lunchTimes.to, unitMinutes) : [],
+                dinner: hasValidMealRange(dinnerTimes, unitMinutes) ? buildMealSlots(dinnerTimes.from, dinnerTimes.to, unitMinutes) : [],
+            };
+        });
+
+        const rows = [];
+
+        (tournamentDays || []).forEach((day) => {
+            ['lunch', 'dinner'].forEach((mealType) => {
+                const slots = daySlots[day.key]?.[mealType] || [];
+                slots.forEach((slot) => {
+                    // 1) Klasické priradenie pre tento tím
+                    const existing = cateringAssignments.find((a) =>
+                        a.isSuperstructure !== true &&
+                        a.teamUid === myTeam.uid &&
+                        a.teamIndex === myTeam.teamIndex &&
+                        cleanCategory(a.category || a.categoryName || '') === cleanCat &&
+                        a.dayKey === day.key &&
+                        a.mealType === mealType &&
+                        a.slotFrom === slot.from
+                    );
+
+                    if (existing) {
+                        if (!teamHasMealInPackage(myTeam, day.key, mealType)) return;
+                        rows.push({
+                            key: `${myTeam.id}-${day.key}-${mealType}-${slot.from}-cl`,
+                            dayKey: day.key,
+                            dayLabel: day.fullLabelNumeric,
+                            daySort: day.date.getTime(),
+                            mealType,
+                            mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
+                            slotFrom: slot.from,
+                            slotTo: slot.to,
+                            placeName: existing.placeName || '',
+                            type: 'classic',
+                        });
+                        return;
+                    }
+
+                    // 2) Superstructure priradenie pre tento tím
+                    const ss = cateringAssignments.find((a) =>
+                        a.isSuperstructure === true &&
+                        a.clickedTeamUid === myTeam.uid &&
+                        a.clickedTeamIndex === myTeam.teamIndex &&
+                        cleanCategory(a.clickedTeamCategory) === cleanCat &&
+                        a.dayKey === day.key &&
+                        a.mealType === mealType &&
+                        a.slotFrom === slot.from
+                    );
+
+                    if (ss) {
+                        const ssCategory = cleanCategory(ss.category || ss.categoryName || '');
+                        const ssOriginalTeamName = String(ss.teamName || '').trim();
+                        let ssMappedName = getMappedTeamName(ssCategory, ssOriginalTeamName);
+
+                        if (
+                            ssMappedName === null ||
+                            ssMappedName === undefined ||
+                            String(ssMappedName).trim() === '' ||
+                            String(ssMappedName).trim() === 'null' ||
+                            String(ssMappedName).trim() === 'undefined'
+                        ) {
+                            ssMappedName = ssOriginalTeamName;
+                        }
+
+                        const wasMapped = String(ssMappedName).trim() !== ssOriginalTeamName;
+
+                        if (wasMapped) {
+                            const ssTeam = findTeamInUserTeamsByName(ssCategory, ssMappedName);
+                            if (!ssTeam) return;
+                            if (!teamHasMealInPackage(ssTeam, day.key, mealType)) return;
+                        } else {
+                            const ssTeam = findTeamInUserTeamsByName(ssCategory, ssOriginalTeamName);
+                            if (ssTeam) {
+                                if (!teamHasMealInPackage(ssTeam, day.key, mealType)) return;
+                            }
+                        }
+
+                        rows.push({
+                            key: `${myTeam.id}-${day.key}-${mealType}-${slot.from}-ss`,
+                            dayKey: day.key,
+                            dayLabel: day.fullLabelNumeric,
+                            daySort: day.date.getTime(),
+                            mealType,
+                            mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
+                            slotFrom: slot.from,
+                            slotTo: slot.to,
+                            placeName: ss.placeName || '',
+                            type: 'superstructure',
+                            isPriority: ss.isPriority === true,
+                        });
+                    }
+                });
+            });
+        });
+
+        // Deduplikácia
+        const dedupMap = new Map();
+        rows.forEach((row) => {
+            const key = `${row.dayKey}||${row.mealType}||${row.slotFrom}`;
+            const existing = dedupMap.get(key);
+            if (!existing) {
+                dedupMap.set(key, row);
+                return;
+            }
+            if (existing.isPriority === true && row.isPriority !== true) return;
+            if (row.isPriority === true && existing.isPriority !== true) {
+                dedupMap.set(key, row);
+                return;
+            }
+        });
+
+        const result = Array.from(dedupMap.values());
+        result.sort((a, b) => {
+            if (a.daySort !== b.daySort) return a.daySort - b.daySort;
+            const am = timeToMinutes(a.slotFrom);
+            const bm = timeToMinutes(b.slotFrom);
+            if (am != null && bm != null && am !== bm) return am - bm;
+            if (a.mealType !== b.mealType) return a.mealType === 'lunch' ? -1 : 1;
+            return 0;
+        });
+        return result;
+    }, [teamName, categoryName, tournamentDays, cateringTimes, unitMinutes, cateringAssignments, packagesList, userTeams, teamNameMap]);
+
+    useEffect(() => {
+        setLoading(false);
+    }, [assignmentRows]);
+
+    if (loading) {
+        return React.createElement(
+            'div',
+            { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
+            React.createElement(
+                'div',
+                { className: 'text-center text-gray-500 py-4' },
+                React.createElement('div', { className: 'animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400 mx-auto' }),
+                React.createElement('p', { className: 'text-sm mt-2' }, 'Načítavam stravovanie tímu...')
+            )
+        );
+    }
+
+    if (assignmentRows.length === 0) {
+        return React.createElement(
+            'div',
+            { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
+            React.createElement('h3', { className: 'text-lg font-semibold text-gray-700 mb-2' }, 'Stravovanie tímu'),
+            React.createElement('p', { className: 'text-gray-500 text-sm' }, 'Pre tento tím neboli nájdené žiadne priradenia stravovania.')
+        );
+    }
+
+    return React.createElement(
+        'div',
+        { className: 'mt-4 bg-white rounded-xl shadow-xl p-6 overflow-hidden' },
+        React.createElement('h3', { className: 'text-lg font-semibold text-gray-700 mb-4' }, `Stravovanie tímu: ${teamName}`),
+        React.createElement(
+            'div',
+            { className: 'overflow-x-auto' },
+            React.createElement(
+                'table',
+                { className: 'min-w-full border-collapse text-sm' },
+                React.createElement(
+                    'thead',
+                    { className: 'bg-gray-100' },
+                    React.createElement(
+                        'tr',
+                        null,
+                        React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Dátum'),
+                        React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Typ jedla'),
+                        React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Čas'),
+                        React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Miesto')
+                    )
+                ),
+                React.createElement(
+                    'tbody',
+                    null,
+                    assignmentRows.map((row) => {
+                        return React.createElement(
+                            'tr',
+                            { key: row.key, className: 'border-b border-gray-200 bg-white' },
+                            React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.dayLabel),
+                            React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.mealTypeLabel),
+                            React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, `${row.slotFrom} – ${row.slotTo}`),
+                            React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-xs whitespace-nowrap' }, row.placeName || '–')
+                        );
+                    })
+                )
+            )
+        ),
+        React.createElement(
+            'div',
+            { className: 'mt-3 pt-2 border-t border-gray-200 text-xs text-gray-400' },
+            `Počet záznamov: ${assignmentRows.length}`
+        )
+    );
+};
+
 const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
     const [matches, setMatches] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -1120,6 +1673,11 @@ const renderTeamDetails = () => {
                 `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
             )
         ),
+        // --- STRAVOVANIE TÍMU (vždy zobrazené ak je vybrané tlačidlo) ---
+        (isAnyButtonSelected) ? React.createElement(TeamCateringList, {
+            teamName: selectedTeamDetails.teamName,
+            categoryName: selectedTeamDetails.category || categoryFromUrl || ''
+        }) : null,
         // --- ZÁPASY TÍMU (zobrazia sa iba ak je matches zverejnená A je vybrané tlačidlo) ---
         (isMatchesVisible && isAnyButtonSelected) ? React.createElement(TeamMatchesList, {
             teamName: selectedTeamDetails.teamName,
@@ -2536,6 +3094,11 @@ const TeamsOverviewApp = (props) => {
                     `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
                 )
             ),
+            // --- STRAVOVANIE TÍMU (vždy zobrazené ak je vybrané tlačidlo) ---
+            (isAnyButtonSelected) ? React.createElement(TeamCateringList, {
+                teamName: selectedTeamDetails.teamName,
+                categoryName: selectedTeamDetails.category || categoryFromUrl || ''
+            }) : null,
             // --- ZÁPASY TÍMU (zobrazia sa iba ak je matches zverejnená A je vybrané tlačidlo) ---
             (isMatchesVisible && isAnyButtonSelected) ? React.createElement(TeamMatchesList, {
                 teamName: selectedTeamDetails.teamName,
