@@ -736,6 +736,32 @@ const cateringApp = ({ userProfileData }) => {
         ? userTeams.filter((t) => t.category === filterCategory)
         : userTeams;
 
+    // 🔥 Pomocná funkcia: nájde superstructure tím v userTeams podľa ss.category a ss.teamName
+    //    (aby sme vedeli skontrolovať jeho balíček)
+    const findSsTeamInUserTeams = (ssCategory, ssTeamName) => {
+        if (!ssCategory || !ssTeamName) return null;
+        const catClean = cleanCategory(ssCategory);
+        const tnClean = String(ssTeamName).trim();
+
+        // Skúsime priamu zhodu
+        let found = userTeams.find(t =>
+            cleanCategory(t.category) === catClean &&
+            String(t.teamName).trim() === tnClean
+        );
+        if (found) return found;
+
+        // Skúsime aj keď ss.teamName obsahuje kategóriu (napr. "U12 CH G1")
+        const stripped = tnClean.startsWith(catClean + ' ')
+            ? tnClean.substring(catClean.length + 1).trim()
+            : tnClean;
+
+        found = userTeams.find(t =>
+            cleanCategory(t.category) === catClean &&
+            String(t.teamName).trim() === stripped
+        );
+        return found || null;
+    };
+
     // 🔥 Pomocná funkcia: Má tím v balíčku daný typ stravovania v danom dni?
     //    - Ak tím nemá packageName → povolíme (neobmedzujeme).
     //    - Ak balíček neexistuje v packagesList → povolíme (fallback).
@@ -770,21 +796,19 @@ const cateringApp = ({ userProfileData }) => {
                 ['lunch', 'dinner'].forEach((mealType) => {
                     if (!shouldShowMealType(mealType)) return;
 
-                    // 🔥 Kontrola balíčka: ak tím nemá tento typ stravovania v tento deň,
-                    //    nezobrazíme riadok.
-                    if (!teamHasMealInPackage(team, day.key, mealType)) return;
-
                     const slots = daySlots[day.key]?.[mealType] || [];
                     slots.forEach((slot) => {
                         const existing = findCateringAssignment(team, day.key, mealType, slot.from);
                         const ss = findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
 
                         if (existing) {
+                            // 🔥 Pre klasické priradenie kontrolujeme balíček kliknutého tímu
+                            if (!teamHasMealInPackage(team, day.key, mealType)) return;
+
                             rows.push({
                                 key: `${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
                                 category: team.category,
-                                // klasické priradenie – BEZ mapovania
-                                teamName: team.teamName,
+                                teamName: team.teamName, // bez mapovania
                                 dayKey: day.key,
                                 dayLabel: day.fullLabelNumeric,
                                 daySort: day.date.getTime(),
@@ -800,10 +824,19 @@ const cateringApp = ({ userProfileData }) => {
                         }
 
                         if (ss) {
-                            // superstructure – namapovaný názov
+                            // 🔥 Pre superstructure kontrolujeme balíček SUPERSTRUCTURE tímu
                             const ssCategory = cleanCategory(ss.category || ss.categoryName || '');
                             const ssTeamName = String(ss.teamName || '').trim();
                             const ssMappedName = getMappedTeamName(ssCategory, ssTeamName);
+
+                            const ssTeam = findSsTeamInUserTeams(ssCategory, ssTeamName);
+                            if (!ssTeam) {
+                                // superstructure tím nevieme dohľadať → nezobrazujeme
+                                return;
+                            }
+                            if (!teamHasMealInPackage(ssTeam, day.key, mealType)) {
+                                return; // superstructure tím nemá dané stravovanie v balíčku
+                            }
 
                             rows.push({
                                 key: `${team.id}-${day.key}-${mealType}-${slot.from}-ss`,
