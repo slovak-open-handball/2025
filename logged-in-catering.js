@@ -97,6 +97,46 @@ const cleanCategory = (cat) => String(cat || '')
     .replace(/\s+/g, ' ')
     .trim();
 
+// ============================================================
+// Pomocná funkcia: zistí, či má člen tímu daný typ stravovania v danom dni
+// ============================================================
+const memberHasMeal = (member, dayKey, mealType, teamPackageDetails) => {
+    const memberMealSetting = member?.packageDetails?.meals?.[dayKey]?.[mealType];
+    if (memberMealSetting !== undefined) {
+        return memberMealSetting === 1 || memberMealSetting === true;
+    }
+    const teamMealSetting = teamPackageDetails?.meals?.[dayKey]?.[mealType];
+    if (teamMealSetting !== undefined) {
+        return teamMealSetting === 1 || teamMealSetting === true;
+    }
+    return true;
+};
+
+// ============================================================
+// Pomocná funkcia: spočíta koľko členov tímu má daný typ stravovania
+// ============================================================
+const countMembersWithMeal = (teamData, dayKey, mealType) => {
+    if (!teamData) return { players: 0, others: 0 };
+
+    const teamPackageDetails = teamData.packageDetails || null;
+
+    const countInArray = (arr) => {
+        if (!Array.isArray(arr)) return 0;
+        return arr.filter((member) => memberHasMeal(member, dayKey, mealType, teamPackageDetails)).length;
+    };
+
+    const players = countInArray(teamData.playerDetails);
+    const menTeamMembers = countInArray(teamData.menTeamMemberDetails);
+    const womenTeamMembers = countInArray(teamData.womenTeamMemberDetails);
+    const menDrivers = countInArray(teamData.driverDetailsMale);
+    const womenDrivers = countInArray(teamData.driverDetailsFemale);
+
+    return {
+        players,
+        others: menTeamMembers + womenTeamMembers + menDrivers + womenDrivers,
+    };
+};
+
 const loadUserTeams = async (db) => {
     if (!db) return [];
 
@@ -133,6 +173,7 @@ const loadUserTeams = async (db) => {
                     category: cleanCat,
                     playersCount,
                     othersCount: menTeamMembersCount + womenTeamMembersCount + menDriversCount + womenDriversCount,
+                    rawTeamData: team, 
                     accommodationName: team.accommodation?.name || null,
                     packageName: team.packageDetails?.name || null,
                 });
@@ -840,16 +881,50 @@ const cateringApp = ({ userProfileData }) => {
 
         teamsByCategory.forEach((teams, cat) => {
             if (teams.length === 0) return;
-            const total = teams.reduce(
-                (acc, t) => acc + (t.playersCount || 0) + (t.othersCount || 0),
-                0
-            );
-            const avg = total / teams.length;
-            map.set(cat, Math.ceil(avg));
+
+            // Ak nemáme daySlots, použijeme celkové počty
+            if (!daySlots || Object.keys(daySlots).length === 0) {
+                const total = teams.reduce(
+                    (acc, t) => acc + (t.playersCount || 0) + (t.othersCount || 0),
+                    0
+                );
+                map.set(cat, Math.ceil(total / teams.length));
+                return;
+            }
+
+            // 🔥 Vypočítame priemer z efektívnych počtov cez všetky dni a typy jedál
+            let sumOfAverages = 0;
+            let countOfAverages = 0;
+
+            Object.keys(daySlots).forEach((dayKey) => {
+                ['lunch', 'dinner'].forEach((mealType) => {
+                    const slots = daySlots[dayKey]?.[mealType] || [];
+                    if (slots.length === 0) return;
+
+                    const total = teams.reduce((acc, t) => {
+                        const effective = countMembersWithMeal(t.rawTeamData, dayKey, mealType);
+                        return acc + effective.players + effective.others;
+                    }, 0);
+
+                    const avg = total / teams.length;
+                    sumOfAverages += avg;
+                    countOfAverages += 1;
+                });
+            });
+
+            if (countOfAverages > 0) {
+                map.set(cat, Math.ceil(sumOfAverages / countOfAverages));
+            } else {
+                const total = teams.reduce(
+                    (acc, t) => acc + (t.playersCount || 0) + (t.othersCount || 0),
+                    0
+                );
+                map.set(cat, Math.ceil(total / teams.length));
+            }
         });
 
         return map;
-    }, [userTeams]);
+    }, [userTeams, daySlots]);
 
     // ============================================================
     // 7) POMOCNÉ FUNKCIE – musia byť PRED skorými return-mi,
@@ -1311,7 +1386,8 @@ const cateringApp = ({ userProfileData }) => {
 
                         const cl = findCL(team, dayKey, mealType, slot.from);
                         if (cl) {
-                            const members = (team.playersCount || 0) + (team.othersCount || 0);
+                            const effectiveCounts = countMembersWithMeal(team.rawTeamData, dayKey, mealType);
+                            const members = effectiveCounts.players + effectiveCounts.others;
                             const key = `${cl.placeId}|${dayKey}|${mealType}|${slot.from}`;
                             counts.set(key, (counts.get(key) || 0) + members);
                         }
