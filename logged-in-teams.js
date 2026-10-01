@@ -2172,7 +2172,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
     const isCateringOnly = (filter === 'catering');
 
     // Dynamický colSpan pre hlavičku dňa
-    const dayHeaderColSpan = isCateringOnly ? 3 : 7;
+    const dayHeaderColSpan = isCateringOnly ? 5 : 7;
 
     return React.createElement(
         'div',
