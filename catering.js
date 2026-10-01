@@ -383,8 +383,6 @@ const cateringApp = ({ userProfileData }) => {
     const triggerTeamNameRemap = async () => {
         const assignments = cateringAssignmentsRef.current || [];
         const pairsMap = new Map();
-
-        // 1) superstructure záznamy
         assignments.forEach((a) => {
             if (a.isSuperstructure !== true) return;
             const cat = cleanCategory(a.category || a.categoryName || '');
@@ -393,16 +391,6 @@ const cateringApp = ({ userProfileData }) => {
             const key = `${cat}||${tn}`;
             if (!pairsMap.has(key)) pairsMap.set(key, { category: cat, teamName: tn });
         });
-
-        // 2) classic tímy z userTeams (aby sa mapovali aj ony)
-        (userTeamsRef.current || []).forEach((t) => {
-            const cat = cleanCategory(t.category);
-            const tn = String(t.teamName || '').trim();
-            if (!cat || !tn) return;
-            const key = `${cat}||${tn}`;
-            if (!pairsMap.has(key)) pairsMap.set(key, { category: cat, teamName: tn });
-        });
-    
         if (pairsMap.size === 0) return;
         const newMap = {};
         for (const [key, pair] of pairsMap.entries()) {
@@ -583,17 +571,10 @@ const cateringApp = ({ userProfileData }) => {
                         if (existing) {
                             if (!teamHasMealInPackage(team, day.key, mealType)) return;
 
-                            const classicMappedName = getMappedTeamName(team.category, team.teamName);
-                            const classicNameForDisplay = (() => {
-                                const s = String(classicMappedName ?? '').trim();
-                                if (!s || s === 'null' || s === 'undefined') return team.teamName;
-                                return classicMappedName;
-                            })();
-                            
                             rows.push({
                                 key: `${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
                                 category: team.category,
-                                teamName: classicNameForDisplay,
+                                teamName: team.teamName,
                                 dayKey: day.key,
                                 dayLabel: day.fullLabelNumeric,
                                 daySort: day.date.getTime(),
