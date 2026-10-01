@@ -872,9 +872,34 @@ const TeamCateringList = ({ teamName, categoryName }) => {
             });
         });
 
-        // Deduplikácia s prioritizáciou
-        // Kľúč je rovnaký ako v catering.js: kategória||tím||deň||typ jedla
-        // (BEZ slotFrom – aby sa dva rôzne časy v ten istý deň považovali za konflikt)
+// ===== DEBUG PRED DEDUPLIKÁCIOU =====
+        console.log('=== TeamCateringList DEBUG ===');
+        console.log('teamName:', teamName, '| categoryName:', categoryName);
+        console.log('myTeam:', myTeam);
+        console.log('cleanCat:', cleanCat, '| cleanTeam:', cleanTeam);
+        console.log('Všetky SS priradenia pre tento tím:', cateringAssignments.filter(a => 
+            a.isSuperstructure === true &&
+            a.clickedTeamUid === myTeam.uid
+        ).map(a => ({
+            clickedTeamUid: a.clickedTeamUid,
+            clickedTeamIndex: a.clickedTeamIndex,
+            clickedTeamCategory: a.clickedTeamCategory,
+            dayKey: a.dayKey,
+            mealType: a.mealType,
+            slotFrom: a.slotFrom,
+            isPriority: a.isPriority,
+            teamName: a.teamName
+        })));
+        console.log('Rows PRED dedup:', rows.map(r => ({
+            day: r.dayKey,
+            meal: r.mealType,
+            slot: r.slotFrom,
+            type: r.type,
+            priority: r.isPriority,
+            place: r.placeName
+        })));
+// ===== KONIEC DEBUG PRED =====     
+
         const dedupMap = new Map();
         rows.forEach((row) => {
             const key = `${cleanCat}||${cleanTeam}||${row.dayKey}||${row.mealType}`;
@@ -922,6 +947,18 @@ const TeamCateringList = ({ teamName, categoryName }) => {
             if (a.mealType !== b.mealType) return a.mealType === 'lunch' ? -1 : 1;
             return 0;
         });
+
+// ===== DEBUG PO DEDUPLIKÁCII =====
+        console.log('Rows PO dedup:', result.map(r => ({
+            day: r.dayKey,
+            meal: r.mealType,
+            slot: r.slotFrom,
+            type: r.type,
+            priority: r.isPriority,
+            place: r.placeName
+        })));
+// ===== KONIEC DEBUG PO =====      
+        
         return result;
     }, [teamName, categoryName, tournamentDays, cateringTimes, unitMinutes, cateringAssignments, packagesList, userTeams, teamNameMap]);
 
