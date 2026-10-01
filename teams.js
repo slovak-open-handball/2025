@@ -867,11 +867,8 @@ const TeamCateringList = ({ teamName, categoryName }) => {
         });
 
         // Deduplikácia s prioritizáciou
-        // Pravidlá:
-        // 1) Ak existuje superstructure s isPriority === true, má prednosť pred všetkým.
-        // 2) Ak existuje klasické priradenie (type === 'classic'), má prednosť pred
-        //    superstructure bez priority (rovnaké ako v catering.js).
-        // 3) Ak existujú dve superstructure, prioritná vyhráva.
+        // Kľúč je rovnaký ako v catering.js: kategória||tím||deň||typ jedla
+        // (BEZ slotFrom – aby sa dva rôzne časy v ten istý deň považovali za konflikt)
         const dedupMap = new Map();
         rows.forEach((row) => {
             const key = `${cleanCat}||${cleanTeam}||${row.dayKey}||${row.mealType}`;
@@ -909,7 +906,7 @@ const TeamCateringList = ({ teamName, categoryName }) => {
         
             // 3) Inak ponechaj existujúci (prvý vyhráva)
         });
-        
+
         const result = Array.from(dedupMap.values());
         result.sort((a, b) => {
             if (a.daySort !== b.daySort) return a.daySort - b.daySort;
