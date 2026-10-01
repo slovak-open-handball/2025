@@ -874,7 +874,7 @@ const TeamCateringList = ({ teamName, categoryName }) => {
         // 3) Ak existujú dve superstructure, prioritná vyhráva.
         const dedupMap = new Map();
         rows.forEach((row) => {
-            const key = `${row.dayKey}||${row.mealType}||${row.slotFrom}`;
+            const key = `${cleanCat}||${cleanTeam}||${row.dayKey}||${row.mealType}`;
             const existing = dedupMap.get(key);
         
             if (!existing) {
