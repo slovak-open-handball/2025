@@ -701,33 +701,6 @@ const cateringApp = ({ userProfileData }) => {
         }
 
         return dedupedRows;
-
-        if (sortMode === 'team') {
-            rows.sort((a, b) => {
-                const catCmp = (a.category || '').localeCompare(b.category || '', 'sk', { sensitivity: 'base' });
-                if (catCmp !== 0) return catCmp;
-                const teamCmp = (a.teamName || '').localeCompare(b.teamName || '', 'sk', { sensitivity: 'base' });
-                if (teamCmp !== 0) return teamCmp;
-                if (a.daySort !== b.daySort) return a.daySort - b.daySort;
-                const am = timeToMinutes(a.slotFrom);
-                const bm = timeToMinutes(b.slotFrom);
-                if (am != null && bm != null && am !== bm) return am - bm;
-                if (a.mealType !== b.mealType) return a.mealType === 'lunch' ? -1 : 1;
-                return 0;
-            });
-        } else {
-            rows.sort((a, b) => {
-                if (a.daySort !== b.daySort) return a.daySort - b.daySort;
-                const am = timeToMinutes(a.slotFrom);
-                const bm = timeToMinutes(b.slotFrom);
-                if (am != null && bm != null && am !== bm) return am - bm;
-                const catCmp = (a.category || '').localeCompare(b.category || '', 'sk', { sensitivity: 'base' });
-                if (catCmp !== 0) return catCmp;
-                return (a.teamName || '').localeCompare(b.teamName || '', 'sk', { sensitivity: 'base' });
-            });
-        }
-
-        return rows;
     }, [
         filteredTeams, filterDayKey, visibleDays, daySlots, filterMealType,
         cateringAssignments, sortMode, teamNameMap, packagesList, userTeams,
