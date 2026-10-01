@@ -2171,22 +2171,26 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter }) => {
         return () => unsubscribe();
     }, [allMatchesList]);
 
-    // ================= CATERING LOADING =================
-
+    // 🔥 Keď sú načítané všetky potrebné dáta (tournamentDays, cateringTimes, userTeams, cateringAssignments), 
+    // vypneme cateringLoading
     useEffect(() => {
-        if (!window.db) { setCateringLoading(false); return; }
-        const settingsDocRef = doc(window.db, 'settings', 'registration');
-        const unsub = onSnapshot(settingsDocRef, (snap) => {
-            if (snap.exists()) {
-                const data = snap.data();
-                const arrivalDate = data.arrivalDate ? data.arrivalDate.toDate() : null;
-                const tournamentEnd = data.tournamentEnd ? data.tournamentEnd.toDate() : null;
-                setTournamentDays(buildTournamentDays(arrivalDate, tournamentEnd));
-            } else {
-                setTournamentDays([]);
-            }
-        }, () => {});
-        return () => unsub();
+        if (!window.db) {
+            setCateringLoading(false);
+            return;
+        }
+        // Stačí, keď máme načítané aspoň userTeams a cateringAssignments
+        // (tournamentDays a cateringTimes môžu byť prázdne, ak nie sú nastavené)
+        if (userTeams.length > 0 || cateringAssignments.length > 0) {
+            setCateringLoading(false);
+        }
+    }, [userTeams, cateringAssignments]);
+
+    // Fallback – ak po 5 sekundách stále nič, vypneme loading (aby sa nezasekol navždy)
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            setCateringLoading(false);
+        }, 5000);
+        return () => clearTimeout(timeoutId);
     }, []);
 
     useEffect(() => {
