@@ -1723,7 +1723,7 @@ const renderTeamDetails = () => {
             )
         ),
         // --- STRAVOVANIE TÍMU (vždy zobrazené ak je vybrané tlačidlo) ---
-        (isAnyButtonSelected) ? React.createElement(TeamCateringList, {
+        (isCateringVisible && isAnyButtonSelected) ? React.createElement(TeamCateringList, {
             teamName: selectedTeamDetails.teamName,
             categoryName: selectedTeamDetails.category || categoryFromUrl || ''
         }) : null,
@@ -1760,6 +1760,12 @@ const TeamsOverviewApp = (props) => {
         window.pagesVisibility['rosters'].visible === true
     );
 
+    const [isCateringVisible, setIsCateringVisible] = useState(
+        window.pagesVisibility && 
+        window.pagesVisibility['catering'] && 
+        window.pagesVisibility['catering'].visible === true
+    );
+
     const [isMatchesVisible, setIsMatchesVisible] = useState(
         window.pagesVisibility && 
         window.pagesVisibility['matches'] && 
@@ -1782,6 +1788,7 @@ const TeamsOverviewApp = (props) => {
         const unsubscribe = onSnapshot(pagesRef, (snapshot) => {
             let rostersVisible = false;
             let matchesVisible = false;
+            let cateringVisible = false;
             
             snapshot.forEach((doc) => {
                 if (doc.id === 'rosters') {
@@ -1792,14 +1799,20 @@ const TeamsOverviewApp = (props) => {
                     const data = doc.data();
                     matchesVisible = data.visible === true;
                 }
+                if (doc.id === 'catering') {
+                    const data = doc.data();
+                    cateringVisible = data.visible === true;
+                }
             });
             
             if (!window.pagesVisibility) window.pagesVisibility = {};
             window.pagesVisibility['rosters'] = { visible: rostersVisible };
             window.pagesVisibility['matches'] = { visible: matchesVisible };
+            window.pagesVisibility['catering'] = { visible: cateringVisible };
             
             setIsRostersVisible(rostersVisible);
             setIsMatchesVisible(matchesVisible);
+            setIsCateringVisible(cateringVisible);
         }, (error) => {
         });
 
