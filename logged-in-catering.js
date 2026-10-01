@@ -2432,7 +2432,8 @@ const cateringApp = ({ userProfileData }) => {
                                               const hasAnyAssignment = !!effectiveExisting || !!effectiveSuperstructure;
 
                                               const colors = effectiveExisting ? getCateringPlaceColors(effectiveExisting.placeId) : null;
-                                              const teamTotal = (team.playersCount || 0) + (team.othersCount || 0);
+                                              const effectiveCounts = countMembersWithMeal(team.rawTeamData, day.key, 'lunch');
+                                              const teamTotal = effectiveCounts.players + effectiveCounts.others;
                                               const hasMealInPackage = teamHasMealInPackage(team, day.key, 'lunch');
                                               const canClick = forceDash ? false : (hasAnyAssignment ? true : !isPlaying);
 
@@ -2551,7 +2552,8 @@ const cateringApp = ({ userProfileData }) => {
                                               const hasAnyAssignment = !!effectiveExisting || !!effectiveSuperstructure;
 
                                               const colors = effectiveExisting ? getCateringPlaceColors(effectiveExisting.placeId) : null;
-                                              const teamTotal = (team.playersCount || 0) + (team.othersCount || 0);
+                                              const effectiveCounts = countMembersWithMeal(team.rawTeamData, day.key, 'dinner');
+                                              const teamTotal = effectiveCounts.players + effectiveCounts.others;
                                               const hasMealInPackage = teamHasMealInPackage(team, day.key, 'dinner');
                                               const canClick = forceDash ? false : (hasAnyAssignment ? true : !isPlaying);
 
