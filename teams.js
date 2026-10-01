@@ -828,6 +828,7 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                                 dayKey: day.key,
                                 dayLabel: day.fullLabelNumeric,
                                 daySort: day.date.getTime(),
+                                dateObj: day.date,
                                 mealType,
                                 mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
                                 slotFrom: slot.from,
@@ -880,10 +881,11 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                             rows.push({
                                 key: `${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
                                 category: team.category,
-                                teamName: ssMappedName,  // 🔥 POZOR: teamName je ssMappedName!
+                                teamName: ssMappedName,
                                 dayKey: day.key,
                                 dayLabel: day.fullLabelNumeric,
                                 daySort: day.date.getTime(),
+                                dateObj: day.date,
                                 mealType,
                                 mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
                                 slotFrom: ss.slotFrom,
@@ -973,41 +975,121 @@ const TeamCateringList = ({ teamName, categoryName }) => {
         );
     }
 
+    // 🔥 Zoskupenie podľa dňa (rovnako ako v TeamMatchesList)
+    const getRowsByDay = (rowsList) => {
+        const groups = {};
+        rowsList.forEach((row) => {
+            const date = row.dateObj;
+            if (!date) return;
+            const dateKey = date.toDateString();
+            if (!groups[dateKey]) {
+                groups[dateKey] = { date, rows: [] };
+            }
+            groups[dateKey].rows.push(row);
+        });
+        return Object.values(groups).sort((a, b) => a.date - b.date);
+    };
+
+    const displayDays = getRowsByDay(assignmentRows);
+
     return React.createElement(
         'div',
         { className: 'mt-4 bg-white rounded-xl shadow-xl p-6 overflow-hidden' },
-        React.createElement('h3', { className: 'text-lg font-semibold text-gray-700 mb-4' }, `Stravovanie tímu: ${teamName}`),
+        React.createElement(
+            'h3',
+            { className: 'text-lg font-semibold text-gray-700 mb-4' },
+            `Stravovanie tímu: ${teamName}`
+        ),
         React.createElement(
             'div',
             { className: 'overflow-x-auto' },
             React.createElement(
                 'table',
-                { className: 'min-w-full border-collapse text-sm' },
+                { className: 'min-w-full divide-y divide-gray-200' },
                 React.createElement(
                     'thead',
-                    { className: 'bg-gray-100' },
+                    { className: 'bg-gray-50' },
                     React.createElement(
                         'tr',
                         null,
-                        React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Dátum'),
-                        React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Typ jedla'),
-                        React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Čas'),
-                        React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap' }, 'Miesto')
+                        React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'Čas'),
+                        React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40' }, 'Typ stravovania'),
+                        React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64' }, 'Miesto')
                     )
                 ),
                 React.createElement(
                     'tbody',
-                    null,
-                    assignmentRows.map((row) => {
-                        return React.createElement(
-                            'tr',
-                            { key: row.key, className: 'border-b border-gray-200 bg-white' },
-                            React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.dayLabel),
-                            React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, row.mealTypeLabel),
-                            React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-gray-700 whitespace-nowrap text-xs' }, `${row.slotFrom} – ${row.slotTo}`),
-                            React.createElement('td', { className: 'border border-gray-300 px-3 py-2 text-xs whitespace-nowrap' }, row.placeName || '–')
+                    { className: 'divide-y divide-gray-100' },
+                    displayDays.map((dayGroup, dayIndex) => {
+                        const rows = [];
+                        // Hlavička dňa – presne ako v zápasoch
+                        rows.push(
+                            React.createElement(
+                                'tr',
+                                { key: `day-${dayIndex}`, className: 'bg-blue-50' },
+                                React.createElement(
+                                    'td',
+                                    { colSpan: 3, className: 'px-4 py-3 text-left' },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex items-center gap-2' },
+                                        React.createElement('i', { className: 'fa-regular fa-calendar text-blue-500' }),
+                                        React.createElement('span', { className: 'font-semibold text-gray-800' }, formatDateHeader(dayGroup.date))
+                                    )
+                                )
+                            )
                         );
-                    })
+
+                        // Riadky pre jednotlivé priradenia
+                        dayGroup.rows.forEach((row, rowIndex) => {
+                            rows.push(
+                                React.createElement(
+                                    'tr',
+                                    { key: row.key || `row-${dayIndex}-${rowIndex}`, className: 'hover:bg-gray-50 transition-colors' },
+                                    // Čas – rovnaký štýl ako v zápasoch
+                                    React.createElement(
+                                        'td',
+                                        { className: 'px-4 py-3 whitespace-nowrap' },
+                                        React.createElement(
+                                            'span',
+                                            { className: 'font-mono font-medium text-gray-700 text-sm' },
+                                            `${row.slotFrom} – ${row.slotTo}`
+                                        )
+                                    ),
+                                    // Typ stravovania – namiesto Domáci/VS/Hostia
+                                    React.createElement(
+                                        'td',
+                                        { className: 'px-4 py-3 whitespace-nowrap text-center' },
+                                        React.createElement(
+                                            'span',
+                                            {
+                                                className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                                style: {
+                                                    backgroundColor: row.mealType === 'lunch' ? '#DCFCE7' : '#DBEAFE',
+                                                    color: row.mealType === 'lunch' ? '#166534' : '#1E40AF',
+                                                    fontWeight: '500'
+                                                }
+                                            },
+                                            row.mealTypeLabel
+                                        )
+                                    ),
+                                    // Miesto – rovnaký štýl ako v zápasoch
+                                    React.createElement(
+                                        'td',
+                                        { className: 'px-4 py-3 whitespace-nowrap text-left' },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-400 text-xs' }),
+                                            React.createElement('span', { className: 'text-gray-600 text-sm max-w-32' }, row.placeName || '–')
+                                        )
+                                    )
+                                )
+                            );
+                        });
+
+                        return rows;
+                    }).flat()
                 )
             )
         )
