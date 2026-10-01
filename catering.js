@@ -255,20 +255,23 @@ const buildMealSlots = (from, to, unitMinutes) => {
 const resolveTeamName = async (categoryName, teamName) => {
     if (!teamName) return teamName;
 
-    // Ak už názov obsahuje kategóriu, pošleme ho tak ako je
+    // Kandidát na vstup: "{kategória} {tím}" (ak tam ešte nie je)
     let candidate = teamName;
     if (categoryName && !teamName.includes(categoryName)) {
         candidate = `${categoryName} ${teamName}`;
     }
 
-    // Skús matchTracker
     if (
         window.matchTracker &&
         typeof window.matchTracker.getTeamNameByDisplayId === 'function'
     ) {
         try {
             const mapped = await window.matchTracker.getTeamNameByDisplayId(candidate);
-            if (mapped && mapped !== null && mapped !== 'null' && mapped !== candidate) {
+
+            // Ak matchTracker vráti niečo iné ako null/undefined/"null",
+            // považujeme to za platný výsledok (aj keď sa rovná vstupu – vtedy
+            // ho vrátime ako teamName, ale nenastavíme mapu – nižšie).
+            if (mapped !== null && mapped !== undefined && mapped !== 'null') {
                 return mapped;
             }
         } catch (e) {
@@ -297,6 +300,18 @@ const cateringApp = ({ userProfileData }) => {
 
     // Mapa namapovaných názvov tímov: kľúč = "kategória||pôvodnýNázov", hodnota = nový názov
     const [teamNameMap, setTeamNameMap] = useState({});
+
+    // Ref na aktuálne userTeams, aby retry funkcia videla vždy aktuálne dáta
+    const userTeamsRef = useRef([]);
+    useEffect(() => {
+        userTeamsRef.current = userTeams;
+    }, [userTeams]);
+
+    // Ref na aktuálnu mapu (aby sme predišli zbytočným re-renderom)
+    const teamNameMapRef = useRef({});
+    useEffect(() => {
+        teamNameMapRef.current = teamNameMap;
+    }, [teamNameMap]);
 
     // ============================================================
     // 2) useMemo – odvodené hodnoty
@@ -523,10 +538,74 @@ const cateringApp = ({ userProfileData }) => {
     }, []);
 
     // ============================================================
-    // 5b) Listener na matches – ak sa nejaký zápas zmení na 'completed',
-    //     spustíme mapovanie názvov tímov
+    // 5b) Mapovacia funkcia s retry – spustí sa viackrát
+    // ============================================================
+    const triggerTeamNameRemap = async () => {
+        const teams = userTeamsRef.current || [];
+        if (teams.length === 0) return;
+
+        const newMap = {};
+
+        for (const team of teams) {
+            if (!team.teamName || !team.category) continue;
+
+            const key = `${team.category}||${team.teamName}`;
+
+            try {
+                const mapped = await resolveTeamName(team.category, team.teamName);
+                // Ak sa namapovaný názov LÍŠI od pôvodného, uložíme
+                if (mapped && mapped !== team.teamName) {
+                    newMap[key] = mapped;
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        if (Object.keys(newMap).length > 0) {
+            setTeamNameMap((prev) => {
+                // Zistíme, či sa niečo reálne zmenilo
+                let changed = false;
+                for (const k of Object.keys(newMap)) {
+                    if (prev[k] !== newMap[k]) {
+                        changed = true;
+                        break;
+                    }
+                }
+                if (!changed) return prev; // žiadny re-render
+                return { ...prev, ...newMap };
+            });
+        }
+    };
+
+    // Retry verzia – spustí mapovanie niekoľkokrát s oneskorením,
+    // aby zachytila aj oneskorené aktualizácie v matchTracker cache.
+    const triggerTeamNameRemapWithRetry = (maxAttempts = 10, delayMs = 1000) => {
+        let attempt = 0;
+
+        const runAttempt = async () => {
+            attempt++;
+            try {
+                await triggerTeamNameRemap();
+            } catch (e) {
+                // ignore
+            }
+
+            if (attempt < maxAttempts) {
+                setTimeout(runAttempt, delayMs);
+            }
+        };
+
+        // Prvé spustenie hneď, ďalšie s oneskorením
+        setTimeout(runAttempt, 0);
+    };
+
+    // ============================================================
+    // 5c) Listener na matches – ak sa nejaký zápas zmení na 'completed',
+    //     spustíme mapovanie názvov tímov S RETRY
     // ============================================================
     const prevMatchStatusesRef = useRef({});
+    const hasInitialRemapRun = useRef(false);
 
     useEffect(() => {
         if (!window.db) return;
@@ -551,51 +630,42 @@ const cateringApp = ({ userProfileData }) => {
             });
 
             // Pri prvom načítaní tiež spustíme remap (aby sa namapovali existujúce názvy)
-            if (Object.keys(prevMatchStatusesRef.current).length === snapshot.size) {
-                // prvý snapshot – spustíme remap
+            if (!hasInitialRemapRun.current) {
+                hasInitialRemapRun.current = true;
                 shouldRemap = true;
             }
 
             if (shouldRemap) {
-                triggerTeamNameRemap();
+                // Použijeme retry verziu, aby sme zachytili oneskorené aktualizácie
+                triggerTeamNameRemapWithRetry(10, 1000);
             }
         }, (error) => { });
 
         return () => unsubscribe();
-    }, [userTeams]);
+    }, []);
 
     // ============================================================
-    // 5c) Funkcia, ktorá namapuje všetky názvy tímov
+    // 5d) Listener na globálne eventy matchTrackera
+    //     (teamNameMappingReady, teamNamesReplaced) – spustí remap
     // ============================================================
-    const triggerTeamNameRemap = async () => {
-        if (!userTeams || userTeams.length === 0) return;
+    useEffect(() => {
+        const handleMappingReady = () => {
+            triggerTeamNameRemapWithRetry(5, 1000);
+        };
 
-        const newMap = {};
+        window.addEventListener('teamNameMappingReady', handleMappingReady);
+        window.addEventListener('teamNamesReplaced', handleMappingReady);
 
-        for (const team of userTeams) {
-            if (!team.teamName || !team.category) continue;
+        return () => {
+            window.removeEventListener('teamNameMappingReady', handleMappingReady);
+            window.removeEventListener('teamNamesReplaced', handleMappingReady);
+        };
+    }, []);
 
-            const key = `${team.category}||${team.teamName}`;
-
-            try {
-                const mapped = await resolveTeamName(team.category, team.teamName);
-                if (mapped && mapped !== team.teamName) {
-                    newMap[key] = mapped;
-                }
-            } catch (e) {
-                // ignore
-            }
-        }
-
-        if (Object.keys(newMap).length > 0) {
-            setTeamNameMap((prev) => ({ ...prev, ...newMap }));
-        }
-    };
-
-    // Ak sa zmení userTeams (napr. po načítaní), spustíme mapovanie
+    // Ak sa zmení userTeams (napr. po načítaní), spustíme mapovanie S RETRY
     useEffect(() => {
         if (userTeams.length > 0) {
-            triggerTeamNameRemap();
+            triggerTeamNameRemapWithRetry(5, 800);
         }
     }, [userTeams]);
 
