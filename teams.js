@@ -601,6 +601,23 @@ const TeamCateringList = ({ teamName, categoryName }) => {
         return () => unsub();
     }, []);
 
+    // --- Načítanie nastavení turnaja (dni turnaja) ---
+    useEffect(() => {
+        if (!window.db) return;
+        const settingsDocRef = doc(window.db, 'settings', 'registration');
+        const unsub = onSnapshot(settingsDocRef, (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+                const arrivalDate = data.arrivalDate ? data.arrivalDate.toDate() : null;
+                const tournamentEnd = data.tournamentEnd ? data.tournamentEnd.toDate() : null;
+                setTournamentDays(buildTournamentDays(arrivalDate, tournamentEnd));
+            } else {
+                setTournamentDays([]);
+            }
+        }, () => {});
+        return () => unsub();
+    }, []);
+
     // --- Načítanie balíčkov ---
     useEffect(() => {
         if (!window.db) return;
