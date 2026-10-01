@@ -1799,7 +1799,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId, refreshKey }) => 
     );
 };
 
-const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey }) => {
+const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey, isMatchesVisible, isCateringVisible }) => {
     // --- Matches state ---
     const [matches, setMatches] = useState([]);
     const [matchesLoading, setMatchesLoading] = useState(true);
@@ -2678,16 +2678,17 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
     const mergedRows = React.useMemo(() => {
         const rows = [];
-
-        // Pridaj zápasy
-        if (filter === null || filter === 'matches') {
+    
+        // 🔥 Pridaj zápasy len ak sú viditeľné a filter to dovoľuje
+        const shouldShowMatches = isMatchesVisible && (filter === null || filter === 'matches');
+        if (shouldShowMatches) {
             matches.forEach((match) => {
                 let dateObj = null;
                 try {
                     if (match.scheduledTime) dateObj = match.scheduledTime.toDate();
                 } catch (e) {}
                 if (!dateObj) return;
-
+    
                 const dateTime = formatMatchDateTime(match.scheduledTime);
                 rows.push({
                     kind: 'match',
@@ -2700,8 +2701,9 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
             });
         }
 
-        // Pridaj stravovanie
-        if (filter === null || filter === 'catering') {
+        // 🔥 Pridaj stravovanie len ak je viditeľné a filter to dovoľuje
+        const shouldShowCatering = isCateringVisible && (filter === null || filter === 'catering');
+        if (shouldShowCatering) {
             cateringRows.forEach((row) => {
                 rows.push({
                     kind: 'catering',
@@ -2717,16 +2719,16 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
             });
         }
 
-        // Zoraď chronologicky – NAJPRV podľa DŇA (bez času), POTOM podľa časovej zložky
+        // Zoraď chronologicky
         rows.sort((a, b) => {
             const da = a.dateObj ? new Date(a.dateObj.getFullYear(), a.dateObj.getMonth(), a.dateObj.getDate()).getTime() : 0;
             const db = b.dateObj ? new Date(b.dateObj.getFullYear(), b.dateObj.getMonth(), b.dateObj.getDate()).getTime() : 0;
             if (da !== db) return da - db;
             return a.timeMinutes - b.timeMinutes;
         });
-
+    
         return rows;
-    }, [matches, cateringRows, filter]);
+    }, [matches, cateringRows, filter, isMatchesVisible, isCateringVisible]);
 
     // Zoskupenie podľa dňa
     const displayDays = React.useMemo(() => {
@@ -4668,7 +4670,9 @@ const TeamsOverviewApp = (props) => {
                 categoryName: selectedTeamDetails.category || categoryFromUrl || '',
                 categoryId: categoryId,
                 filter: teamEventsFilter,
-                refreshKey: matchesRefreshKey  // 🔥 PRIDANÉ – refresh po dokončení zápasu
+                refreshKey: matchesRefreshKey,
+                isMatchesVisible: isMatchesVisible,   // 🔥 ZMENA: pridané
+                isCateringVisible: isCateringVisible  // 🔥 PRIDANÉ – refresh po dokončení zápasu
             }) : null,
             renderTeamRoster()
         );
