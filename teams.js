@@ -1804,45 +1804,41 @@ const renderTeamDetails = () => {
                 `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
             )
         ),
-        // --- STRAVOVANIE TÍMU (zobrazí sa iba ak je stránka 'catering' verejná) ---
-            (isCateringVisible && isAnyButtonSelected) ? (() => {
-                // Nájdeme presný záznam z userTeams pre tento tím a kategóriu
-                const cleanCat = String(selectedTeamDetails.category || categoryFromUrl || '')
-                    .replace(/\u00A0/g, ' ')
-                    .replace(/\s+/g, ' ')
-                    .trim();
-                const cleanTeam = String(selectedTeamDetails.teamName || '')
-                    .replace(/\s+/g, ' ')
-                    .trim();
-    
-                // Nájdeme presný záznam z userTeams (rovnaký ako v catering.js)
-                // Použijeme allTeams, ktoré obsahuje všetky tímy z userTeams
-                const exactTeam = allTeams.find(t => {
-                    const tCat = String(t.category || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
-                    const tTeam = String(t.teamName || '').trim();
-                    // Skúsime presnú zhodu
-                    if (tCat === cleanCat && tTeam === cleanTeam) return true;
-                    // Skúsime aj tím, ktorého názov začína kategóriou
-                    if (tCat === cleanCat && cleanTeam.startsWith(cleanCat + ' ')) {
-                        const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
-                        if (tTeam === stripped) return true;
-                    }
-                    return false;
-                });
-                
-                // Posielame presne tie hodnoty, ktoré má userTeams (alebo fallback na pôvodné)
-                return React.createElement(TeamCateringList, {
-                    teamName: exactTeam ? exactTeam.teamName : selectedTeamDetails.teamName,
-                    categoryName: exactTeam ? exactTeam.category : (selectedTeamDetails.category || categoryFromUrl || '')
-                });
-            })() : null,
-        // --- ZÁPASY TÍMU (zobrazia sa iba ak je matches zverejnená A je vybrané tlačidlo) ---
-        (isMatchesVisible && isAnyButtonSelected) ? React.createElement(TeamMatchesList, {
+        // --- STRAVOVANIE TÍMU (zobrazí sa iba ak je stránka 'catering' verejná
+        //     A filter je null (všetko) alebo 'catering') ---
+        (isCateringVisible && isAnyButtonSelected && (teamEventsFilter === null || teamEventsFilter === 'catering')) ? (() => {
+            // Nájdeme presný záznam z userTeams pre tento tím a kategóriu
+            const cleanCat = String(selectedTeamDetails.category || categoryFromUrl || '')
+                .replace(/\u00A0/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            const cleanTeam = String(selectedTeamDetails.teamName || '')
+                .replace(/\s+/g, ' ')
+                .trim();
+                 const exactTeam = allTeams.find(t => {
+                const tCat = String(t.category || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+                const tTeam = String(t.teamName || '').trim();
+                if (tCat === cleanCat && tTeam === cleanTeam) return true;
+                if (tCat === cleanCat && cleanTeam.startsWith(cleanCat + ' ')) {
+                    const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
+                    if (tTeam === stripped) return true;
+                }
+                return false;
+            });
+            
+            return React.createElement(TeamCateringList, {
+                teamName: exactTeam ? exactTeam.teamName : selectedTeamDetails.teamName,
+                categoryName: exactTeam ? exactTeam.category : (selectedTeamDetails.category || categoryFromUrl || '')
+            });
+        })() : null,
+        // --- ZÁPASY TÍMU (zobrazia sa iba ak je matches zverejnená A je vybrané tlačidlo
+        //     A filter je null (všetko) alebo 'matches') ---
+        (isMatchesVisible && isAnyButtonSelected && (teamEventsFilter === null || teamEventsFilter === 'matches')) ? React.createElement(TeamMatchesList, {
             teamName: selectedTeamDetails.teamName,
             categoryName: selectedTeamDetails.category || categoryFromUrl || '',
             categoryId: categoryId
-        }) : null,
-        renderTeamRoster()
+    }) : null,
+    renderTeamRoster()
     );
 };
 
@@ -1862,6 +1858,8 @@ const TeamsOverviewApp = (props) => {
     const [rosterUnsubscribe, setRosterUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
     const [updateTrigger, setUpdateTrigger] = useState(0);
+
+    const [teamEventsFilter, setTeamEventsFilter] = useState(null);
 
     const [isRostersVisible, setIsRostersVisible] = useState(
         window.pagesVisibility && 
@@ -2910,7 +2908,8 @@ const TeamsOverviewApp = (props) => {
             } catch (e) {}
             setRosterUnsubscribe(null);
         }
-        
+      
+        setTeamEventsFilter(null);  
         setSelectedTeamDetails(null);
         setTeamRoster([]);
         setRosterTeamName('');
@@ -2966,7 +2965,8 @@ const TeamsOverviewApp = (props) => {
                 groupName: team.groupName,
                 order: team.order
             }));
-        
+      
+        setTeamEventsFilter(null);
         setSelectedTeamDetails({
             teamName: normalizedTeamName,
             category: normalizedCategory,
@@ -3265,8 +3265,58 @@ const TeamsOverviewApp = (props) => {
                     `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
                 )
             ),
-            // --- STRAVOVANIE TÍMU (zobrazí sa iba ak je stránka 'catering' verejná) ---
-            (isCateringVisible && isAnyButtonSelected) ? (() => {
+            // --- BOX S PREPÍNAČOM ZÁPASY / STRAVOVANIE ---
+            (isCateringVisible || isMatchesVisible) ? React.createElement(
+                'div',
+                { className: 'bg-white rounded-xl shadow-xl p-4 mt-4' },
+                React.createElement(
+                    'div',
+                    { className: 'flex flex-wrap gap-3' },
+                    // Tlačidlo "Zápasy"
+                    isMatchesVisible ? React.createElement(
+                        'button',
+                        {
+                            onClick: () => {
+                                setTeamEventsFilter((prev) => prev === 'matches' ? null : 'matches');
+                            },
+                            className: `px-5 py-2 rounded-lg transition-colors text-sm font-medium ${
+                                teamEventsFilter === 'matches'
+                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`
+                        },
+                        'Zápasy'
+                    ) : null,
+                    // Tlačidlo "Stravovanie"
+                    isCateringVisible ? React.createElement(
+                        'button',
+                        {
+                            onClick: () => {
+                                setTeamEventsFilter((prev) => prev === 'catering' ? null : 'catering');
+                            },
+                            className: `px-5 py-2 rounded-lg transition-colors text-sm font-medium ${
+                                teamEventsFilter === 'catering'
+                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`
+                        },
+                        'Stravovanie'
+                    ) : null
+                ),
+                // Malý text pod tlačidlami (nepovinné)
+                React.createElement(
+                    'div',
+                    { className: 'mt-3 text-xs text-gray-500' },
+                    teamEventsFilter === 'matches'
+                        ? 'Zobrazené: iba zápasy'
+                        : teamEventsFilter === 'catering'
+                            ? 'Zobrazené: iba stravovanie'
+                            : 'Zobrazené: všetky udalosti (chronologicky)'
+                )
+            ) : null,
+            // --- STRAVOVANIE TÍMU (zobrazí sa iba ak je stránka 'catering' verejná
+            //     A filter je null (všetko) alebo 'catering') ---
+            (isCateringVisible && isAnyButtonSelected && (teamEventsFilter === null || teamEventsFilter === 'catering')) ? (() => {
                 // Nájdeme presný záznam z userTeams pre tento tím a kategóriu
                 const cleanCat = String(selectedTeamDetails.category || categoryFromUrl || '')
                     .replace(/\u00A0/g, ' ')
@@ -3276,14 +3326,10 @@ const TeamsOverviewApp = (props) => {
                     .replace(/\s+/g, ' ')
                     .trim();
     
-                // Nájdeme presný záznam z userTeams (rovnaký ako v catering.js)
-                // Použijeme allTeams, ktoré obsahuje všetky tímy z userTeams
                 const exactTeam = allTeams.find(t => {
                     const tCat = String(t.category || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
                     const tTeam = String(t.teamName || '').trim();
-                    // Skúsime presnú zhodu
                     if (tCat === cleanCat && tTeam === cleanTeam) return true;
-                    // Skúsime aj tím, ktorého názov začína kategóriou
                     if (tCat === cleanCat && cleanTeam.startsWith(cleanCat + ' ')) {
                         const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
                         if (tTeam === stripped) return true;
@@ -3291,14 +3337,14 @@ const TeamsOverviewApp = (props) => {
                     return false;
                 });
                 
-                // Posielame presne tie hodnoty, ktoré má userTeams (alebo fallback na pôvodné)
                 return React.createElement(TeamCateringList, {
                     teamName: exactTeam ? exactTeam.teamName : selectedTeamDetails.teamName,
                     categoryName: exactTeam ? exactTeam.category : (selectedTeamDetails.category || categoryFromUrl || '')
                 });
             })() : null,
-            // --- ZÁPASY TÍMU (zobrazia sa iba ak je matches zverejnená A je vybrané tlačidlo) ---
-            (isMatchesVisible && isAnyButtonSelected) ? React.createElement(TeamMatchesList, {
+            // --- ZÁPASY TÍMU (zobrazia sa iba ak je matches zverejnená A je vybrané tlačidlo
+            //     A filter je null (všetko) alebo 'matches') ---
+            (isMatchesVisible && isAnyButtonSelected && (teamEventsFilter === null || teamEventsFilter === 'matches')) ? React.createElement(TeamMatchesList, {
                 teamName: selectedTeamDetails.teamName,
                 categoryName: selectedTeamDetails.category || categoryFromUrl || '',
                 categoryId: categoryId
