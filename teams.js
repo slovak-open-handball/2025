@@ -922,20 +922,13 @@ const TeamCateringList = ({ teamName, categoryName }) => {
             const rowTeam = String(row.teamName || '').trim();
             const rowCat = cleanCategory(row.category);
     
-            // Presná zhoda
+            // 🔥 Presná zhoda: celý názov tímu v kategórii
             if (rowTeam === cleanTeam && rowCat === cleanCat) return true;
     
-            // Ak hľadaný tím začína kategóriou
+            // Ak hľadaný tím začína kategóriou (napr. "A-tím A" -> "A")
             if (cleanTeam.startsWith(cleanCat + ' ')) {
                 const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
                 if (rowTeam === stripped && rowCat === cleanCat) return true;
-            }
-    
-            // Fallback: ak sa tím líši len suffixom (A, B, C)
-            if (rowCat === cleanCat) {
-                const rowBase = removeSuffixLocal(rowTeam);
-                const cleanBase = removeSuffixLocal(cleanTeam);
-                if (rowBase === cleanBase) return true;
             }
     
             return false;
