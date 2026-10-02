@@ -128,6 +128,7 @@ const roleAccess = {
         'logged-in-tournament-settings.html',
         'logged-in-users.html',
         'logged-in-export.html',
+        'logged-in-arrival.html'
     ],
     hall: [
         'logged-in-my-data.html',
