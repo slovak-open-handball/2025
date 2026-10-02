@@ -1,4 +1,4 @@
-// logged-in-arrival.js
+// logged-in-transport.js
 // Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -47,7 +47,7 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-const ArrivalApp = ({ userProfileData }) => {
+const TransportApp = ({ userProfileData }) => {
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center' },
@@ -79,7 +79,7 @@ const handleDataUpdateAndRender = (event) => {
         // Ak sa dáta načítali, nastavíme poslucháča na synchronizáciu e-mailu, ak ešte nebol nastavený
         // Používame window.auth a window.db, ktoré by mali byť nastavené pri načítaní aplikácie.
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
-            console.log("logged-in-Arrival.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
+            console.log("logged-in-Transport.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
             
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
@@ -90,7 +90,7 @@ const handleDataUpdateAndRender = (event) => {
                         if (docSnap.exists()) {
                             const firestoreEmail = docSnap.data().email;
                             if (user.email !== firestoreEmail) {
-                                console.log(`logged-in-Arrival.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
+                                console.log(`logged-in-Transport.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
                                 
                                 await updateDoc(userProfileRef, {
                                     email: user.email
@@ -105,14 +105,14 @@ const handleDataUpdateAndRender = (event) => {
                                 });
                                 
                                 window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
-                                console.log("logged-in-Arrival.js: E-mail vo Firestore bol aktualizovaný a notifikácia vytvorená.");
+                                console.log("logged-in-Transport.js: E-mail vo Firestore bol aktualizovaný a notifikácia vytvorená.");
             
                             } else {
-                                console.log("logged-in-Arrival.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
+                                console.log("logged-in-Transport.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
                             }
                         }
                     } catch (error) {
-                        console.error("logged-in-Arrival.js: Chyba pri porovnávaní a aktualizácii e-mailu:", error);
+                        console.error("logged-in-Transport.js: Chyba pri porovnávaní a aktualizácii e-mailu:", error);
                         window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
                     }
                 }
@@ -122,10 +122,10 @@ const handleDataUpdateAndRender = (event) => {
 
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
-            root.render(React.createElement(ArrivalApp, { userProfileData }));
-            console.log("logged-in-Arrival.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
+            root.render(React.createElement(TransportApp, { userProfileData }));
+            console.log("logged-in-Transport.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
         } else {
-            console.error("logged-in-Arrival.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
+            console.error("logged-in-Transport.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
         }
     } else {
         // Ak dáta nie sú dostupné, zobrazíme loader
@@ -139,19 +139,19 @@ const handleDataUpdateAndRender = (event) => {
                 )
             );
         }
-        console.error("logged-in-Arrival.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'. Zobrazujem loader.");
+        console.error("logged-in-Transport.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'. Zobrazujem loader.");
     }
 };
 
 // Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
-console.log("logged-in-Arrival.js: Registrujem poslucháča pre 'globalDataUpdated'.");
+console.log("logged-in-Transport.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
 // Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
 // skontrolujeme, či sú dáta už dostupné.
-console.log("logged-in-Arrival.js: Kontrolujem, či existujú globálne dáta.");
+console.log("logged-in-Transport.js: Kontrolujem, či existujú globálne dáta.");
 if (window.globalUserProfileData) {
-    console.log("logged-in-Arrival.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
+    console.log("logged-in-Transport.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
     // Ak dáta nie sú dostupné, čakáme na event listener, zatiaľ zobrazíme loader
