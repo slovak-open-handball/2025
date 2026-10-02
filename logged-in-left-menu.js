@@ -70,6 +70,7 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
     const cateringLink = document.getElementById('catering-link');
     const teamsLink = document.getElementById('teams-link');
     const exportLink = document.getElementById('export-link');
+    const transportLink = document.getElementById('transport-link');
 
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) return;
 
@@ -192,6 +193,7 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
                 (href === 'logged-in-notifications.html' && currentPath.includes('notifications')) ||
                 (href === 'logged-in-catering.html' && currentPath.includes('catering')) ||
                 (href === 'logged-in-export.html' && currentPath.includes('export')) ||
+                (href === 'logged-in-transport.html' && currentPath.includes('transport')) ||
                 (href === 'logged-in-teams.html' && currentPath.endsWith('logged-in-teams.html'));
 
             if (isActive) {
@@ -275,6 +277,7 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
         cateringLink?.classList.add('hidden');
         teamsLink?.classList.add('hidden');
         exportLink?.classList.add('hidden');
+        transportLink?.classList.add('hidden');
 
         // Zobrazíme linky podľa role
         if (userProfileData.role === 'admin') {
@@ -291,6 +294,7 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
             matchesHallLink?.classList.add('hidden');
             cateringLink?.classList.remove('hidden');
             exportLink?.classList.remove('hidden');
+            transportLink?.classList.remove('hidden');
             
             // Pre admina kontrolujeme viditeľnosť "Vytvorenie kategórií"
             await checkAndShowPageLink(addCategoriesLink, 'category-creation');
@@ -321,6 +325,7 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
             matchesLink?.classList.add('hidden');
             cateringLink?.classList.add('hidden');
             exportLink?.classList.add('hidden');
+            transportLink?.classList.add('hidden');
         }
     };
 
