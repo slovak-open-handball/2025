@@ -4,218 +4,254 @@
 <div id="left-menu" class="fixed top-0 left-0 h-full w-16 z-10 bg-gray-800 text-white shadow-xl transition-all duration-300 group overflow-hidden flex flex-col hidden overflow-y-auto" style="padding-top: 64px;">
     <!-- Tlačidlo pre rozbalenie/zbalenie menu -->
     <button id="menu-toggle-button" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200">
-        <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
+        <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+            <svg class="w-full h-full" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+        </span>
         <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Menu</span>
     </button>
 
     <!-- Navigačné položky -->
     <nav class="flex-grow">        
         <a href="logged-in-my-data.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200">
-            <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Moje údaje</span>
         </a>
         
         <!-- Položka "Vytvorenie kategórií" - bude podmienene zobrazená pomocou JS -->
         <a id="add-categories-link" href="logged-in-add-categories.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-            </svg>
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Vytvorenie kategórií</span>
         </a>
 
         <a id="add-groups-link" href="logged-in-add-groups.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0" viewBox="0 0 30 36" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
-                <rect x="11" y="2" width="8" height="8" rx="2.5" />
-                <path d="M15 11 V16.5" />
-                <path d="M3 17.5 H27" />
-                <path d="M3 17.5 V25.5" />
-                <path d="M15 17.5 V25.5" />
-                <path d="M27 17.5 V25.5" />
-                <rect x="-1" y="25.5" width="8" height="8" rx="2.5" />
-                <rect x="11" y="25.5" width="8" height="8" rx="2.5" />
-                <rect x="23" y="25.5" width="8" height="8" rx="2.5" />
-            </svg>
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full scale-110" viewBox="0 0 30 36" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+                    <rect x="11" y="2" width="8" height="8" rx="2.5" />
+                    <path d="M15 11 V16.5" />
+                    <path d="M3 17.5 H27" />
+                    <path d="M3 17.5 V25.5" />
+                    <path d="M15 17.5 V25.5" />
+                    <path d="M27 17.5 V25.5" />
+                    <rect x="-1" y="25.5" width="8" height="8" rx="2.5" />
+                    <rect x="11" y="25.5" width="8" height="8" rx="2.5" />
+                    <rect x="23" y="25.5" width="8" height="8" rx="2.5" />
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Vytvorenie skupín</span>
         </a>
 
         <a id="teams-in-groups-link" href="logged-in-teams-in-groups.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 40 40" stroke="currentColor" stroke-width="2">
-              <defs>
-                <clipPath id="clip-left-person">
-                  <rect x="0" y="16" width="14" height="18" rx="3" ry="3" />
-                </clipPath>
-                <clipPath id="clip-right-person">
-                  <rect x="26" y="16" width="14" height="7.5" rx="3" ry="3" />
-                </clipPath>
-              </defs>
-              <path d="M5 22 C 5 28, 15 28, 15 22 L 15 17.5 Q 15 17, 14.5 17 L 5.5 17 Q 5 17, 5 17.5 Z" clip-path="url(#clip-left-person)" stroke="currentColor" stroke-width="2" />
-              <path d="M25 22 C 25 28, 35 28, 35 22 L 35 17.5 Q 35 17, 34.5 17 L 25.5 17 Q 25 17, 25 17.5 Z" clip-path="url(#clip-right-person)" stroke="currentColor" stroke-width="2" />
-              <path d="M14 23 C 14 30.5, 26 30.5, 26 23 L 26 17.5 Q 26 17, 25.5 17 L 14.5 17 Q 14 17, 14 17.5 Z" stroke="#1f2937" stroke-width="4" />
-              <path d="M14 23 C 14 30.5, 26 30.5, 26 23 L 26 17.5 Q 26 17, 25.5 17 L 14.5 17 Q 14 17, 14 17.5 Z" stroke="currentColor" stroke-width="2" />
-              <circle cx="30" cy="28" r="7.5" stroke="#1f2937" stroke-width="1" fill="none" />
-              <circle cx="30" cy="28" r="6" fill="#1f2937" stroke="currentColor" stroke-width="2" />
-              <line x1="30" y1="25" x2="30" y2="31" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-              <line x1="27" y1="28" x2="33" y2="28" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-              <circle cx="10" cy="12" r="3" />
-              <circle cx="20" cy="12" r="4.5" />
-              <circle cx="30" cy="12" r="3" />
-            </svg>
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full scale-110" fill="none" viewBox="0 0 40 40" stroke="currentColor" stroke-width="2">
+                  <defs>
+                    <clipPath id="clip-left-person">
+                      <rect x="0" y="16" width="14" height="18" rx="3" ry="3" />
+                    </clipPath>
+                    <clipPath id="clip-right-person">
+                      <rect x="26" y="16" width="14" height="7.5" rx="3" ry="3" />
+                    </clipPath>
+                  </defs>
+                  <path d="M5 22 C 5 28, 15 28, 15 22 L 15 17.5 Q 15 17, 14.5 17 L 5.5 17 Q 5 17, 5 17.5 Z" clip-path="url(#clip-left-person)" stroke="currentColor" stroke-width="2" />
+                  <path d="M25 22 C 25 28, 35 28, 35 22 L 35 17.5 Q 35 17, 34.5 17 L 25.5 17 Q 25 17, 25 17.5 Z" clip-path="url(#clip-right-person)" stroke="currentColor" stroke-width="2" />
+                  <path d="M14 23 C 14 30.5, 26 30.5, 26 23 L 26 17.5 Q 26 17, 25.5 17 L 14.5 17 Q 14 17, 14 17.5 Z" stroke="#1f2937" stroke-width="4" />
+                  <path d="M14 23 C 14 30.5, 26 30.5, 26 23 L 26 17.5 Q 26 17, 25.5 17 L 14.5 17 Q 14 17, 14 17.5 Z" stroke="currentColor" stroke-width="2" />
+                  <circle cx="30" cy="28" r="7.5" stroke="#1f2937" stroke-width="1" fill="none" />
+                  <circle cx="30" cy="28" r="6" fill="#1f2937" stroke="currentColor" stroke-width="2" />
+                  <line x1="30" y1="25" x2="30" y2="31" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                  <line x1="27" y1="28" x2="33" y2="28" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                  <circle cx="10" cy="12" r="3" />
+                  <circle cx="20" cy="12" r="4.5" />
+                  <circle cx="30" cy="12" r="3" />
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Tímy do skupín</span>
         </a>
 
         <a id="teams-accommodation-link" href="logged-in-teams-in-accommodation.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" fill="currentColor" d="M11 16v-4 a 1 1 0 011 -1 h6 a 2 2 0 012 2 v4" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16h17" />                
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 8v10" /> 
-                <path stroke-linecap="round" stroke-linejoin="round" d="M20 16v2" />                 
-                <circle cx="7" cy="12" r="1.3" fill="currentColor" />
-            </svg>
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" fill="currentColor" d="M11 16v-4 a 1 1 0 011 -1 h6 a 2 2 0 012 2 v4" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16h17" />                
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 8v10" /> 
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 16v2" />                 
+                    <circle cx="7" cy="12" r="1.3" fill="currentColor" />
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Ubytovanie tímov</span>
         </a>
 
         <a id="matches-link" href="logged-in-matches.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M19 4H5C3.89543 4 3 4.89543 3 6V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V6C21 4.89543 20.1046 4 19 4Z" />
-                <path d="M16 2V6M8 2V6M3 8.25H21" />                
-                <circle cx="12" cy="14.5" r="4.5" stroke="currentColor" fill="none" stroke-width="2"/>                
-                <path d="M12 12.5L14 13.8L13.2 16.2L10.8 16.2L10 13.8L12 12.5Z" stroke="currentColor" fill="none" stroke-width="2"/>                
-                <line x1="12" y1="12.5" x2="12" y2="10" stroke="currentColor" stroke-width="2"/>
-                <line x1="14" y1="13.8" x2="16" y2="12.5" stroke="currentColor" stroke-width="2"/>
-                <line x1="13.2" y1="16.2" x2="15" y2="17.5" stroke="currentColor" stroke-width="2"/>
-                <line x1="10.8" y1="16.2" x2="9" y2="17.5" stroke="currentColor" stroke-width="2"/>
-                <line x1="10" y1="13.8" x2="8" y2="12.5" stroke="currentColor" stroke-width="2"/>
-            </svg>    
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 4H5C3.89543 4 3 4.89543 3 6V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V6C21 4.89543 20.1046 4 19 4Z" />
+                    <path d="M16 2V6M8 2V6M3 8.25H21" />                
+                    <circle cx="12" cy="14.5" r="4.5" stroke="currentColor" fill="none" stroke-width="2"/>                
+                    <path d="M12 12.5L14 13.8L13.2 16.2L10.8 16.2L10 13.8L12 12.5Z" stroke="currentColor" fill="none" stroke-width="2"/>                
+                    <line x1="12" y1="12.5" x2="12" y2="10" stroke="currentColor" stroke-width="2"/>
+                    <line x1="14" y1="13.8" x2="16" y2="12.5" stroke="currentColor" stroke-width="2"/>
+                    <line x1="13.2" y1="16.2" x2="15" y2="17.5" stroke="currentColor" stroke-width="2"/>
+                    <line x1="10.8" y1="16.2" x2="9" y2="17.5" stroke="currentColor" stroke-width="2"/>
+                    <line x1="10" y1="13.8" x2="8" y2="12.5" stroke="currentColor" stroke-width="2"/>
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Zápasy</span>
         </a>
 
         <a id="matches-hall-link" href="logged-in-matches-hall.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M19 4H5C3.89543 4 3 4.89543 3 6V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V6C21 4.89543 20.1046 4 19 4Z" />
-                <path d="M16 2V6M8 2V6M3 8.25H21" />                
-                <circle cx="12" cy="14.5" r="4.5" stroke="currentColor" fill="none" stroke-width="2"/>                
-                <path d="M12 12.5L14 13.8L13.2 16.2L10.8 16.2L10 13.8L12 12.5Z" stroke="currentColor" fill="none" stroke-width="2"/>                
-                <line x1="12" y1="12.5" x2="12" y2="10" stroke="currentColor" stroke-width="2"/>
-                <line x1="14" y1="13.8" x2="16" y2="12.5" stroke="currentColor" stroke-width="2"/>
-                <line x1="13.2" y1="16.2" x2="15" y2="17.5" stroke="currentColor" stroke-width="2"/>
-                <line x1="10.8" y1="16.2" x2="9" y2="17.5" stroke="currentColor" stroke-width="2"/>
-                <line x1="10" y1="13.8" x2="8" y2="12.5" stroke="currentColor" stroke-width="2"/>
-            </svg>    
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 4H5C3.89543 4 3 4.89543 3 6V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V6C21 4.89543 20.1046 4 19 4Z" />
+                    <path d="M16 2V6M8 2V6M3 8.25H21" />                
+                    <circle cx="12" cy="14.5" r="4.5" stroke="currentColor" fill="none" stroke-width="2"/>                
+                    <path d="M12 12.5L14 13.8L13.2 16.2L10.8 16.2L10 13.8L12 12.5Z" stroke="currentColor" fill="none" stroke-width="2"/>                
+                    <line x1="12" y1="12.5" x2="12" y2="10" stroke="currentColor" stroke-width="2"/>
+                    <line x1="14" y1="13.8" x2="16" y2="12.5" stroke="currentColor" stroke-width="2"/>
+                    <line x1="13.2" y1="16.2" x2="15" y2="17.5" stroke="currentColor" stroke-width="2"/>
+                    <line x1="10.8" y1="16.2" x2="9" y2="17.5" stroke="currentColor" stroke-width="2"/>
+                    <line x1="10" y1="13.8" x2="8" y2="12.5" stroke="currentColor" stroke-width="2"/>
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Zápasy</span>
         </a>
 
         <!-- Položka "Mapa" -->
         <a id="map-link" href="logged-in-map.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full scale-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Mapa</span>
         </a>
 
         <!-- Catering link (iba pre admina) -->
         <a id="catering-link" href="logged-in-catering.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 122.88 122.88" class="h-6 w-6 flex-shrink-0" fill="currentColor">
-                <path d="M61.44,0A61.46,61.46,0,1,1,18,18,61.21,61.21,0,0,1,61.44,0ZM52.55,58.42c2.92-2,4.39-4.61,4.14-10.58V32.49c0-2.14-3.92-2.4-4.11,0l-.15,12.45a1.75,1.75,0,1,1-3.5,0l.15-12.88c0-2.3-3.77-2.53-3.81,0,0,3.58-.15,9.31-.15,12.88a1.52,1.52,0,1,1-3,0l.15-12.79A2.09,2.09,0,0,0,39,30.61c-1.38.88-1.1,2.65-1.16,4.15l-.48,14.69c.07,4.27,1.19,7.74,4.54,9.22a8.37,8.37,0,0,0,2,.52L42.77,89.25a3.76,3.76,0,0,0,3.71,3.86h.46a4.24,4.24,0,0,0,4.17-4.34l-1-29.59a6.61,6.61,0,0,0,2.45-.76Zm18,29.75-.05-26.41c-11.29-6.52-7.69-31.64,3.6-31.5,13.72.16,15.35,28.31,3.55,31.4l.87,26.64c.17,6.13-8,6.7-8-.13ZM99.29,23.59A53.52,53.52,0,1,0,115,61.44,53.36,53.36,0,0,0,99.29,23.59Z"/>
-            </svg>
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 122.88 122.88" class="w-full h-full scale-125" fill="currentColor">
+                    <path d="M61.44,0A61.46,61.46,0,1,1,18,18,61.21,61.21,0,0,1,61.44,0ZM52.55,58.42c2.92-2,4.39-4.61,4.14-10.58V32.49c0-2.14-3.92-2.4-4.11,0l-.15,12.45a1.75,1.75,0,1,1-3.5,0l.15-12.88c0-2.3-3.77-2.53-3.81,0,0,3.58-.15,9.31-.15,12.88a1.52,1.52,0,1,1-3,0l.15-12.79A2.09,2.09,0,0,0,39,30.61c-1.38.88-1.1,2.65-1.16,4.15l-.48,14.69c.07,4.27,1.19,7.74,4.54,9.22a8.37,8.37,0,0,0,2,.52L42.77,89.25a3.76,3.76,0,0,0,3.71,3.86h.46a4.24,4.24,0,0,0,4.17-4.34l-1-29.59a6.61,6.61,0,0,0,2.45-.76Zm18,29.75-.05-26.41c-11.29-6.52-7.69-31.64,3.6-31.5,13.72.16,15.35,28.31,3.55,31.4l.87,26.64c.17,6.13-8,6.7-8-.13ZM99.29,23.59A53.52,53.52,0,1,0,115,61.44,53.36,53.36,0,0,0,99.29,23.59Z"/>
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Stravovanie</span>
         </a>
 
         <!-- NOVÁ Položka "Transport" s ikonou autobusu (bočný pohľad) -->
         <a id="transport-link" href="logged-in-transport.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0"
-                 xmlns="http://www.w3.org/2000/svg"
-                 viewBox="0 0 122.88 120.96"
-                 fill="currentColor">
-                <path fill-rule="evenodd" d="M105.5,104.64H99.44v9.53A6.81,6.81,0,0,1,92.65,121h-4a6.82,6.82,0,0,1-6.79-6.79v-9.53H40.82v9.53A6.82,6.82,0,0,1,34,121H30a6.81,6.81,0,0,1-6.78-6.79v-9.53H18.1c-3.54-.06-5.24-2-5.5-5.29V21.52c-2,.2-2.95.66-3.43,1.68V45.45H4.87A4.88,4.88,0,0,1,0,40.58V27.44a4.89,4.89,0,0,1,4.73-4.87c.41-3.82,2.06-4.93,8-5.21Q14,7.36,26.36,2.57C44.09-.68,77.73-1,96.52,2.57c8.28,3.19,12.8,8.12,13.62,14.79,6,.3,7.61,1.42,8,5.21a4.89,4.89,0,0,1,4.73,4.87V40.58A4.88,4.88,0,0,1,118,45.45h-4.3V23.14c-.48-1-1.47-1.44-3.43-1.63V98.59c0,4.46-1.44,6-4.78,6ZM16.13,84.87l.28-6.69c.16-1.17.78-1.69,1.89-1.5A129.9,129.9,0,0,1,34.39,86.85c1.09.72.66,2.11-.78,1.85L18.48,87.6a2.74,2.74,0,0,1-2.35-2.73ZM52,93.45H71.3a.94.94,0,0,1,.94.94v3.24a.94.94,0,0,1-.94.94H52a.94.94,0,0,1-.94-.94V94.39a.94.94,0,0,1,.94-.94Zm50.35,0A2.51,2.51,0,1,1,99.82,96a2.51,2.51,0,0,1,2.5-2.51Zm-82.65,0A2.51,2.51,0,1,1,17.16,96a2.51,2.51,0,0,1,2.51-2.51Zm87.08-8.63-.28-6.69c-.16-1.17-.78-1.69-1.88-1.5a129.28,129.28,0,0,0-16.1,10.17c-1.09.72-.66,2.11.78,1.85l15.13-1.1a2.73,2.73,0,0,0,2.35-2.73ZM48.19,6.11h26.5a1.63,1.63,0,0,1,1.62,1.62V12a1.63,1.63,0,0,1-1.62,1.62H48.19A1.63,1.63,0,0,1,46.57,12V7.73a1.63,1.63,0,0,1,1.62-1.62ZM20.32,18.91H102.2a2,2,0,0,1,2,2V64.09c0,1.08-.89,1.69-2,2-28.09,8.53-53.8,8.18-81.88,0-1.11-.3-2-.9-2-2V20.89a2,2,0,0,1,2-2Z"/>
-            </svg>
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full scale-125"
+                     xmlns="http://www.w3.org/2000/svg"
+                     viewBox="0 0 122.88 120.96"
+                     fill="currentColor">
+                    <path fill-rule="evenodd" d="M105.5,104.64H99.44v9.53A6.81,6.81,0,0,1,92.65,121h-4a6.82,6.82,0,0,1-6.79-6.79v-9.53H40.82v9.53A6.82,6.82,0,0,1,34,121H30a6.81,6.81,0,0,1-6.78-6.79v-9.53H18.1c-3.54-.06-5.24-2-5.5-5.29V21.52c-2,.2-2.95.66-3.43,1.68V45.45H4.87A4.88,4.88,0,0,1,0,40.58V27.44a4.89,4.89,0,0,1,4.73-4.87c.41-3.82,2.06-4.93,8-5.21Q14,7.36,26.36,2.57C44.09-.68,77.73-1,96.52,2.57c8.28,3.19,12.8,8.12,13.62,14.79,6,.3,7.61,1.42,8,5.21a4.89,4.89,0,0,1,4.73,4.87V40.58A4.88,4.88,0,0,1,118,45.45h-4.3V23.14c-.48-1-1.47-1.44-3.43-1.63V98.59c0,4.46-1.44,6-4.78,6ZM16.13,84.87l.28-6.69c.16-1.17.78-1.69,1.89-1.5A129.9,129.9,0,0,1,34.39,86.85c1.09.72.66,2.11-.78,1.85L18.48,87.6a2.74,2.74,0,0,1-2.35-2.73ZM52,93.45H71.3a.94.94,0,0,1,.94.94v3.24a.94.94,0,0,1-.94.94H52a.94.94,0,0,1-.94-.94V94.39a.94.94,0,0,1,.94-.94Zm50.35,0A2.51,2.51,0,1,1,99.82,96a2.51,2.51,0,0,1,2.5-2.51Zm-82.65,0A2.51,2.51,0,1,1,17.16,96a2.51,2.51,0,0,1,2.51-2.51Zm87.08-8.63-.28-6.69c-.16-1.17-.78-1.69-1.88-1.5a129.28,129.28,0,0,0-16.1,10.17c-1.09.72-.66,2.11.78,1.85l15.13-1.1a2.73,2.73,0,0,0,2.35-2.73ZM48.19,6.11h26.5a1.63,1.63,0,0,1,1.62,1.62V12a1.63,1.63,0,0,1-1.62,1.62H48.19A1.63,1.63,0,0,1,46.57,12V7.73a1.63,1.63,0,0,1,1.62-1.62ZM20.32,18.91H102.2a2,2,0,0,1,2,2V64.09c0,1.08-.89,1.69-2,2-28.09,8.53-53.8,8.18-81.88,0-1.11-.3-2-.9-2-2V20.89a2,2,0,0,1,2-2Z"/>
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Doprava</span>
         </a>
         
         <!-- NOVÁ Položka "Nastavenia turnaja" - bude podmienene zobrazená pomocou JS pre admina -->
         <a id="tournament-settings-link" href="logged-in-tournament-settings.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Nastavenia turnaja</span>
         </a>
         
         <!-- NOVÁ Položka "Registrácie" - bude podmienene zobrazená pomocou JS pre admina -->
         <a id="all-registrations-link" href="logged-in-all-registrations.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Registrácie</span>
         </a>
 
         <!-- NOVÁ Položka pre "Súpiska" -->
         <a id="team-rosters-link" href="logged-in-rosters.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
-                <rect x="5" y="3" width="14" height="18" rx="2" />
-                <rect x="7" y="7" width="10" height="1" rx="0.5" fill="currentColor" stroke="none"/>
-                <rect x="7" y="9" width="8" height="1" rx="0.5" fill="currentColor" stroke="none"/>
-                <rect x="7" y="11" width="10" height="1" rx="0.5" fill="currentColor" stroke="none"/>
-                <rect x="7" y="13" width="6" height="1" rx="0.5" fill="currentColor" stroke="none"/>
-                <rect x="7" y="15" width="10" height="1" rx="0.5" fill="currentColor" stroke="none"/>
-            </svg>
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full scale-90" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
+                    <rect x="5" y="3" width="14" height="18" rx="2" />
+                    <rect x="7" y="7" width="10" height="1" rx="0.5" fill="currentColor" stroke="none"/>
+                    <rect x="7" y="9" width="8" height="1" rx="0.5" fill="currentColor" stroke="none"/>
+                    <rect x="7" y="11" width="10" height="1" rx="0.5" fill="currentColor" stroke="none"/>
+                    <rect x="7" y="13" width="6" height="1" rx="0.5" fill="currentColor" stroke="none"/>
+                    <rect x="7" y="15" width="10" height="1" rx="0.5" fill="currentColor" stroke="none"/>
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Súpiska</span>
         </a>
 
         <a id="teams-link" href="logged-in-teams.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 40 40" stroke="currentColor" stroke-width="2">
-              <defs>
-                <clipPath id="clip-left-person-2">
-                  <rect x="0" y="16" width="14" height="18" rx="3" ry="3" />
-                </clipPath>
-                <clipPath id="clip-right-person-2">
-                  <rect x="26" y="16" width="14" height="18" rx="3" ry="3" />
-                </clipPath>
-              </defs>
-              <path d="M5 22 C 5 28, 15 28, 15 22 L 15 17.5 Q 15 17, 14.5 17 L 5.5 17 Q 5 17, 5 17.5 Z" clip-path="url(#clip-left-person-2)" stroke="currentColor" stroke-width="2" />
-              <path d="M35 22 C 35 28, 25 28, 25 22 L 25 17.5 Q 25 17, 25.5 17 L 34.5 17 Q 35 17, 35 17.5 Z" clip-path="url(#clip-right-person-2)" stroke="currentColor" stroke-width="2" />
-              <path d="M14 23 C 14 30.5, 26 30.5, 26 23 L 26 17.5 Q 26 17, 25.5 17 L 14.5 17 Q 14 17, 14 17.5 Z" stroke="#1f2937" stroke-width="4" />
-              <path d="M14 23 C 14 30.5, 26 30.5, 26 23 L 26 17.5 Q 26 17, 25.5 17 L 14.5 17 Q 14 17, 14 17.5 Z" stroke="currentColor" stroke-width="2" />
-              <circle cx="10" cy="12" r="3" />
-              <circle cx="20" cy="12" r="4.5" />
-              <circle cx="30" cy="12" r="3" />
-            </svg>
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full scale-110" fill="none" viewBox="0 0 40 40" stroke="currentColor" stroke-width="2">
+                  <defs>
+                    <clipPath id="clip-left-person-2">
+                      <rect x="0" y="16" width="14" height="18" rx="3" ry="3" />
+                    </clipPath>
+                    <clipPath id="clip-right-person-2">
+                      <rect x="26" y="16" width="14" height="18" rx="3" ry="3" />
+                    </clipPath>
+                  </defs>
+                  <path d="M5 22 C 5 28, 15 28, 15 22 L 15 17.5 Q 15 17, 14.5 17 L 5.5 17 Q 5 17, 5 17.5 Z" clip-path="url(#clip-left-person-2)" stroke="currentColor" stroke-width="2" />
+                  <path d="M35 22 C 35 28, 25 28, 25 22 L 25 17.5 Q 25 17, 25.5 17 L 34.5 17 Q 35 17, 35 17.5 Z" clip-path="url(#clip-right-person-2)" stroke="currentColor" stroke-width="2" />
+                  <path d="M14 23 C 14 30.5, 26 30.5, 26 23 L 26 17.5 Q 26 17, 25.5 17 L 14.5 17 Q 14 17, 14 17.5 Z" stroke="#1f2937" stroke-width="4" />
+                  <path d="M14 23 C 14 30.5, 26 30.5, 26 23 L 26 17.5 Q 26 17, 25.5 17 L 14.5 17 Q 14 17, 14 17.5 Z" stroke="currentColor" stroke-width="2" />
+                  <circle cx="10" cy="12" r="3" />
+                  <circle cx="20" cy="12" r="4.5" />
+                  <circle cx="30" cy="12" r="3" />
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Tímy</span>
         </a>
 
         <a id="all-users-link" href="logged-in-users.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 28" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="18" r="2.5" />
-                <circle cx="19" cy="10" r="2.5" />
-                <circle cx="16" cy="3" r="2.5" />
-                <circle cx="8" cy="3" r="2.5" />
-                <circle cx="5" cy="10" r="2.5" />
-                <path d="M9 24 A3 3 0 0 1 15 24" />
-                <path d="M16 16 A3 3 0 0 1 22 16" />
-                <path d="M2 16 A3 3 0 0 1 8 16" />
-            </svg>
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full scale-110" fill="none" viewBox="0 0 24 28" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="18" r="2.5" />
+                    <circle cx="19" cy="10" r="2.5" />
+                    <circle cx="16" cy="3" r="2.5" />
+                    <circle cx="8" cy="3" r="2.5" />
+                    <circle cx="5" cy="10" r="2.5" />
+                    <path d="M9 24 A3 3 0 0 1 15 24" />
+                    <path d="M16 16 A3 3 0 0 1 22 16" />
+                    <path d="M2 16 A3 3 0 0 1 8 16" />
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Používatelia</span>
         </a>
 
         <!-- NOVÁ Položka "Upozornenia" - bude podmienene zobrazená pomocou JS pre admina -->
         <a id="notifications-link" href="logged-in-notifications.html" class="relative flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full scale-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+            </span>
             <span id="notification-badge-count" class="absolute -top-[-6px] left-[32px] inline-flex items-center justify-center h-4 w-4 px-1 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full hidden"></span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300" id="notifications-text-with-count">Upozornenia</span>
         </a>
 
         <a id="export-link" href="logged-in-export.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
-            <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
+            <span class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <svg class="w-full h-full scale-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+            </span>
             <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Export</span>
         </a>
         
