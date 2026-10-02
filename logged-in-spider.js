@@ -4408,7 +4408,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                         title: isMatchReference(homeTeam) ? 'Toto je odkaz na víťaza iného zápasu, nedá sa priamo zmeniť' : 
                                (homeTeam === '---' ? 'Pre priradenie tímu kliknite na modrú ikonu' : 'Pre zmenu tímu kliknite na modrú ikonu')
                     }, homeTeam),
-                    homeScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, homeScore)
+//                    homeScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, homeScore)
                 ),
                 // Ikony pre adminov - NEBUDÚ SA ZOBRAZOVAŤ PRE UKONČENÝ ZÁPAS ALEBO AK EXISTUJE AKÝKOĽVEK UKONČENÝ ZÁPAS V SYSTÉME
                 userProfileData?.role === 'admin' && isFilterActive && !hasCompletedMatch && !isMatchCompleted && React.createElement(
@@ -4485,7 +4485,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                         title: isMatchReference(awayTeam) ? 'Toto je odkaz na víťaza iného zápasu, nedá sa priamo zmeniť' : 
                                (awayTeam === '---' ? 'Pre priradenie tímu kliknite na modrú ikonu' : 'Pre zmenu tímu kliknite na modrú ikonu')
                     }, awayTeam),
-                    awayScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, awayScore)
+//                    awayScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, awayScore)
                 ),
                 userProfileData?.role === 'admin' && isFilterActive && !hasCompletedMatch && !isMatchCompleted && React.createElement(
                     'div',
