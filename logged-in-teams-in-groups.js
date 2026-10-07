@@ -445,15 +445,13 @@ const AddTeamsGroupApp = (props) => {
     const [deleteGapModal, setDeleteGapModal] = useState(null);
     const [showCategoryPrefix, setShowCategoryPrefix] = useState(true);
     const [selectedGroupType, setSelectedGroupType] = useState('');
+    const isGroupTypeLocked = isGroupFixed && !!selectedGroupType;
     const [hasNotifiedMapping, setHasNotifiedMapping] = useState(false);
     const prevAllTeamsLengthRef = useRef(0);
     const [swapModal, setSwapModal] = useState(null);
     const [isSwapping, setIsSwapping] = useState(false);
-    const [categoryMatchStatus, setCategoryMatchStatus] = useState({});
-    
-    // NOVÝ STAV: Sledovanie zápasov
+    const [categoryMatchStatus, setCategoryMatchStatus] = useState({});    
     const [matchesData, setMatchesData] = useState([]);
-
     const [accommodations, setAccommodations] = useState([]);
     const [teamAccommodations, setTeamAccommodations] = useState(new Map());
 
@@ -1659,21 +1657,15 @@ const AddTeamsGroupApp = (props) => {
       const [isDuplicate, setIsDuplicate] = useState(false);
       const [originalTeamName, setOriginalTeamName] = useState('');
       const [originalCategory, setOriginalCategory] = useState('');
-      const [originalGroup, setOriginalGroup] = useState('');
-      
-      // Zistíme, či môžeme meniť názov tímu
-      const canEditTeamName = !teamToEdit || teamToEdit.isSuperstructureTeam;
-      
+      const [originalGroup, setOriginalGroup] = useState('');      
+      const canEditTeamName = !teamToEdit || teamToEdit.isSuperstructureTeam;      
       const isCategoryLocked = !!teamToEdit && !teamToEdit.isSuperstructureTeam;
       const isCategoryFixed = !!defaultCategoryId && !teamToEdit;
       const isGroupFixed = !!defaultGroupName && !teamToEdit;
       const [groupEndingMismatch, setGroupEndingMismatch] = useState(false);
-      const [orderMismatchMessage, setOrderMismatchMessage] = useState(null);
-      
-      // Nový stav pre typ skupiny
+      const [orderMismatchMessage, setOrderMismatchMessage] = useState(null);      
       const [selectedGroupType, setSelectedGroupType] = useState('');
-      
-      // NOVÝ STAV: Posledné písmeno názvu tímu
+      const isGroupTypeLocked = isGroupFixed && !!selectedGroupType;      
       const [lastLetter, setLastLetter] = useState('');
     
       // Efekt na extrahovanie posledného písmena z názvu tímu
@@ -2140,6 +2132,9 @@ const AddTeamsGroupApp = (props) => {
       };
     
       const handleGroupTypeChange = (e) => {
+        // 🔥 Ak je typ skupiny uzamknutý (predvolená skupina), zmenu ignorujeme
+        if (isGroupFixed && selectedGroupType) return;
+  
         setSelectedGroupType(e.target.value);
         setSelectedGroup(''); // Reset výberu skupiny pri zmene typu
       };
@@ -2486,19 +2481,26 @@ const AddTeamsGroupApp = (props) => {
                 'select',
                 {
                   className: `p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${
-                    !selectedCategory ? 'bg-gray-100 cursor-not-allowed' : 'border-gray-300'
+                    !selectedCategory
+                      ? 'bg-gray-100 cursor-not-allowed'
+                      : (isGroupFixed && selectedGroupType)
+                        ? 'bg-gray-100 cursor-not-allowed'
+                        : 'border-gray-300'
                   }`,
                   value: selectedGroupType,
                   onChange: handleGroupTypeChange,
                   required: true,
-                  disabled: !selectedCategory
+                  disabled: !selectedCategory || (isGroupFixed && !!selectedGroupType)
                 },
                 React.createElement('option', { value: '' }, '--- Vyberte typ skupiny ---'),
                 React.createElement('option', { value: 'základná skupina' }, 'Základná skupina'),
                 React.createElement('option', { value: 'nadstavbová skupina' }, 'Nadstavbová skupina')
               ),
-              !selectedCategory ? 
-                React.createElement('p', { className: 'text-xs text-gray-500 mt-1 italic' }, 'Najprv vyberte kategóriu') : null,
+              !selectedCategory
+                ? React.createElement('p', { className: 'text-xs text-gray-500 mt-1 italic' }, 'Najprv vyberte kategóriu')
+                : (isGroupFixed && selectedGroupType)
+                  ? React.createElement('p', { className: 'text-xs text-indigo-600 mt-1 italic' }, `Predvolený typ skupiny: ${selectedGroupType}`)
+                  : null,
               // 🔥 NOVÁ SPRÁVA - informácia o filtrovaní skupín podľa písmena (IBA NESKOR)
               (selectedGroupType && lastLetter && !teamToEdit) ? React.createElement(
                 'p',
