@@ -1004,19 +1004,21 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
     );
 };
 
-// ===== DELETE MATCHES MODAL =====
+// ===== DELETE MATCHES MODAL – s výberom typu skupiny =====
 const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedGroupType, setSelectedGroupType] = useState(''); 
     const [selectedGroup, setSelectedGroup] = useState('');
     const [availableGroups, setAvailableGroups] = useState([]);
-    const [selectedGroupType, setSelectedGroupType] = useState('');
+    const [filteredGroupsByType, setFilteredGroupsByType] = useState([]);
 
     useEffect(() => {
         if (!isOpen) {
             setSelectedCategory('');
+            setSelectedGroupType('');
             setSelectedGroup('');
             setAvailableGroups([]);
-            setSelectedGroupType('');
+            setFilteredGroupsByType([]);
         }
     }, [isOpen]);
 
@@ -1024,31 +1026,42 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
         return [...categories].sort((a, b) => a.name.localeCompare(b.name));
     }, [categories]);
 
+    const groupTypeOptions = [
+        { value: 'základná skupina', label: 'Základná skupina' },
+        { value: 'nadstavbová skupina', label: 'Nadstavbová skupina' }
+    ];
+
+    // Načítanie skupín pri zmene kategórie
     useEffect(() => {
         if (selectedCategory && groupsByCategory[selectedCategory]) {
             const sortedGroups = [...groupsByCategory[selectedCategory]].sort((a, b) => a.name.localeCompare(b.name));
             setAvailableGroups(sortedGroups);
-            setSelectedGroup('');
             setSelectedGroupType('');
+            setSelectedGroup('');
+            setFilteredGroupsByType([]);
         } else {
             setAvailableGroups([]);
-            setSelectedGroup('');
             setSelectedGroupType('');
+            setSelectedGroup('');
+            setFilteredGroupsByType([]);
         }
     }, [selectedCategory, groupsByCategory]);
 
+    // Filtrovanie skupín podľa zvoleného typu
     useEffect(() => {
-        if (selectedGroup && availableGroups.length > 0) {
-            const group = availableGroups.find(g => g.name === selectedGroup);
-            if (group) {
-                if (group.type === 'základná skupina') setSelectedGroupType('Základná skupina');
-                else if (group.type === 'nadstavbová skupina') setSelectedGroupType('Nadstavbová skupina');
-                else setSelectedGroupType('');
-            } else setSelectedGroupType('');
-        } else setSelectedGroupType('');
-    }, [selectedGroup, availableGroups]);
+        if (selectedCategory && selectedGroupType && availableGroups.length > 0) {
+            const filtered = availableGroups.filter(g => g.type === selectedGroupType);
+            setFilteredGroupsByType(filtered);
+            setSelectedGroup('');
+        } else {
+            setFilteredGroupsByType([]);
+            setSelectedGroup('');
+        }
+    }, [selectedCategory, selectedGroupType, availableGroups]);
 
     if (!isOpen) return null;
+
+    const hasGroupsOfSelectedType = filteredGroupsByType.length > 0;
 
     return React.createElement(
         'div',
@@ -1069,6 +1082,8 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
                     React.createElement('i', { className: 'fa-solid fa-times text-xl' })
                 )
             ),
+
+            // Výber kategórie
             React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -1077,47 +1092,54 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
                     'select',
                     {
                         value: selectedCategory,
-                        onChange: (e) => setSelectedCategory(e.target.value),
+                        onChange: (e) => { setSelectedCategory(e.target.value); setSelectedGroupType(''); setSelectedGroup(''); },
                         className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                     },
                     React.createElement('option', { value: '' }, '-- Vyberte kategóriu --'),
-                    sortedCategories.map(cat => 
+                    sortedCategories.map(cat =>
                         React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
                     )
                 )
             ),
+
+            // Výber typu skupiny
             selectedCategory && React.createElement(
                 'div',
                 { className: 'mb-4' },
-                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Skupina:'),
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Typ skupiny:'),
                 React.createElement(
                     'select',
-                    {
-                        value: selectedGroup,
-                        onChange: (e) => setSelectedGroup(e.target.value),
-                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                    },
-                    React.createElement('option', { value: '' }, '-- Všetky skupiny --'),
-                    availableGroups.map((group, index) => 
+                    { value: selectedGroupType, onChange: (e) => setSelectedGroupType(e.target.value), className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black' },
+                    React.createElement('option', { value: '' }, '-- Vyberte typ skupiny --'),
+                    groupTypeOptions.map(opt => React.createElement('option', { key: opt.value, value: opt.value }, opt.label))
+                )
+            ),
+
+            // Výber konkrétnej skupiny (voliteľný)
+            selectedCategory && selectedGroupType && React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Skupina (nepovinné):'),
+                React.createElement(
+                    'select',
+                    { value: selectedGroup, onChange: (e) => setSelectedGroup(e.target.value), className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black' },
+                    React.createElement('option', { value: '' }, hasGroupsOfSelectedType ? '-- Všetky skupiny tohto typu --' : '-- Žiadne skupiny tohto typu --'),
+                    filteredGroupsByType.map((group, index) =>
                         React.createElement('option', { key: index, value: group.name }, group.name)
                     )
                 ),
-                selectedGroup && selectedGroupType && React.createElement(
-                    'div',
-                    { className: 'mt-2 text-sm' },
-                    React.createElement(
-                        'span',
-                        { 
-                            className: `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                selectedGroupType === 'Základná skupina' 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-purple-100 text-purple-800'
-                            }` 
-                        },
-                        selectedGroupType
-                    )
+                React.createElement(
+                    'p',
+                    { className: 'text-xs text-gray-500 mt-1' },
+                    selectedGroup
+                        ? `Vybraná skupina: ${selectedGroup}`
+                        : hasGroupsOfSelectedType
+                            ? `Bez výberu skupiny sa zmažú zápasy pre všetky skupiny typu "${selectedGroupType}".`
+                            : `V tejto kategórii neexistujú skupiny typu "${selectedGroupType}".`
                 )
             ),
+
+            // Upozornenie
             React.createElement(
                 'div',
                 { className: 'mb-6 p-3 bg-red-50 border border-red-200 rounded-lg' },
@@ -1128,6 +1150,8 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
                     'Táto akcia je nenávratná. Všetky vybrané zápasy budú natrvalo odstránené.'
                 )
             ),
+
+            // Tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3' },
@@ -1139,11 +1163,18 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
                 React.createElement(
                     'button',
                     {
-                        onClick: () => { onConfirm({ categoryId: selectedCategory, groupName: selectedGroup || null }); onClose(); },
-                        disabled: !selectedCategory,
+                        onClick: () => {
+                            onConfirm({
+                                categoryId: selectedCategory,
+                                groupType: selectedGroupType || null,
+                                groupName: selectedGroup || null
+                            });
+                            onClose();
+                        },
+                        disabled: !selectedCategory || !selectedGroupType,
                         className: `px-4 py-2 text-white rounded-lg transition-colors ${
-                            selectedCategory 
-                                ? 'bg-red-600 hover:bg-red-700 text-white border border-red-600 cursor-pointer' 
+                            selectedCategory && selectedGroupType
+                                ? 'bg-red-600 hover:bg-red-700 text-white border border-red-600 cursor-pointer'
                                 : 'bg-white text-red-600 border border-red-600 cursor-not-allowed'
                         }`
                     },
@@ -4429,9 +4460,38 @@ const AddMatchesApp = ({ userProfileData }) => {
     const handleBulkDeleteClick = (params) => {
         const category = categories.find(c => c.id === params.categoryId);
         if (!category) return;
-        const matchesToDelete = matches.filter(match => match.categoryId === params.categoryId && (params.groupName ? match.groupName === params.groupName : true));
-        if (matchesToDelete.length === 0) { window.showGlobalNotification('Žiadne zápasy na zmazanie', 'info'); return; }
-        setPendingBulkDelete({ ...params, categoryName: category.name, matchesCount: matchesToDelete.length });
+    
+        let matchesToDelete = [];
+    
+        if (params.groupName) {
+            // Konkrétna skupina
+            matchesToDelete = matches.filter(match =>
+                match.categoryId === params.categoryId && match.groupName === params.groupName
+            );
+        } else if (params.groupType) {
+            // Všetky skupiny daného typu
+            const groupsOfType = (groupsByCategory[params.categoryId] || [])
+                .filter(g => g.type === params.groupType)
+                .map(g => g.name);
+    
+            matchesToDelete = matches.filter(match =>
+                match.categoryId === params.categoryId && groupsOfType.includes(match.groupName)
+            );
+        } else {
+            // Fallback – všetky zápasy v kategórii
+            matchesToDelete = matches.filter(match => match.categoryId === params.categoryId);
+        }
+    
+        if (matchesToDelete.length === 0) {
+            window.showGlobalNotification('Žiadne zápasy na zmazanie', 'info');
+            return;
+        }
+    
+        setPendingBulkDelete({
+            ...params,
+            categoryName: category.name,
+            matchesCount: matchesToDelete.length
+        });
         setIsBulkDeleteConfirmModalOpen(true);
     };
 
@@ -4441,12 +4501,46 @@ const AddMatchesApp = ({ userProfileData }) => {
         if (userProfileData?.role !== 'admin') { window.showGlobalNotification('Na mazanie zápasov potrebujete administrátorské práva', 'error'); return; }
         if (!userProfileData?.approved) { window.showGlobalNotification('Váš účet ešte nebol schválený administrátorom.', 'error'); return; }
         try {
-            const matchesToDelete = matches.filter(match => match.categoryId === pendingBulkDelete.categoryId && (pendingBulkDelete.groupName ? match.groupName === pendingBulkDelete.groupName : true));
+            let matchesToDelete = [];
+    
+            if (pendingBulkDelete.groupName) {
+                // Konkrétna skupina
+                matchesToDelete = matches.filter(match =>
+                    match.categoryId === pendingBulkDelete.categoryId &&
+                    match.groupName === pendingBulkDelete.groupName
+                );
+            } else if (pendingBulkDelete.groupType) {
+                // Všetky skupiny daného typu
+                const groupsOfType = (groupsByCategory[pendingBulkDelete.categoryId] || [])
+                    .filter(g => g.type === pendingBulkDelete.groupType)
+                    .map(g => g.name);
+    
+                matchesToDelete = matches.filter(match =>
+                    match.categoryId === pendingBulkDelete.categoryId &&
+                    groupsOfType.includes(match.groupName)
+                );
+            } else {
+                // Fallback – všetky zápasy v kategórii
+                matchesToDelete = matches.filter(match =>
+                    match.categoryId === pendingBulkDelete.categoryId
+                );
+            }
+    
             for (const match of matchesToDelete) {
                 const matchRef = doc(window.db, 'matches', match.id);
                 await deleteDoc(matchRef);
             }
-            window.showGlobalNotification(`Zmazaných ${matchesToDelete.length} zápasov pre ${pendingBulkDelete.categoryName}${pendingBulkDelete.groupName ? ' - ' + pendingBulkDelete.groupName : ''}`, 'success');
+    
+            const info = pendingBulkDelete.groupName
+                ? ` - ${pendingBulkDelete.groupName}`
+                : pendingBulkDelete.groupType
+                    ? ` - všetky skupiny typu "${pendingBulkDelete.groupType}"`
+                    : '';
+    
+            window.showGlobalNotification(
+                `Zmazaných ${matchesToDelete.length} zápasov pre ${pendingBulkDelete.categoryName}${info}`,
+                'success'
+            );
             setPendingBulkDelete(null);
         } catch (error) {
             console.error('Chyba pri hromadnom mazaní zápasov:', error);
