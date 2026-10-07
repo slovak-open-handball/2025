@@ -445,7 +445,6 @@ const AddTeamsGroupApp = (props) => {
     const [deleteGapModal, setDeleteGapModal] = useState(null);
     const [showCategoryPrefix, setShowCategoryPrefix] = useState(true);
     const [selectedGroupType, setSelectedGroupType] = useState('');
-    const isGroupTypeLocked = isGroupFixed && !!selectedGroupType;
     const [hasNotifiedMapping, setHasNotifiedMapping] = useState(false);
     const prevAllTeamsLengthRef = useRef(0);
     const [swapModal, setSwapModal] = useState(null);
