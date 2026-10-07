@@ -2576,65 +2576,91 @@ const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date, cur
     );
 };
 
-// ===== GENERATION MODAL – zjednodušený, bez carryOver =====
+// ===== GENERATION MODAL – s výberom typu skupiny =====
 const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedGroupType, setSelectedGroupType] = useState(''); // '' | 'základná skupina' | 'nadstavbová skupina'
     const [selectedGroup, setSelectedGroup] = useState('');
     const [withRepetitions, setWithRepetitions] = useState(false);
     const [availableGroups, setAvailableGroups] = useState([]);
-    const [selectedGroupType, setSelectedGroupType] = useState('');
+    const [filteredGroupsByType, setFilteredGroupsByType] = useState([]);
     const [hasDuplicateTeamNames, setHasDuplicateTeamNames] = useState(false);
 
     useEffect(() => {
         if (!isOpen) {
             setSelectedCategory('');
+            setSelectedGroupType('');
             setSelectedGroup('');
             setWithRepetitions(false);
             setAvailableGroups([]);
-            setSelectedGroupType('');
+            setFilteredGroupsByType([]);
             setHasDuplicateTeamNames(false);
         }
     }, [isOpen]);
 
-    const sortedCategories = React.useMemo(() => [...categories].sort((a, b) => a.name.localeCompare(b.name)), [categories]);
+    const sortedCategories = React.useMemo(
+        () => [...categories].sort((a, b) => a.name.localeCompare(b.name)),
+        [categories]
+    );
+
+    const groupTypeOptions = [
+        { value: 'základná skupina', label: 'Základná skupina' },
+        { value: 'nadstavbová skupina', label: 'Nadstavbová skupina' }
+    ];
 
     const checkForDuplicateTeamNames = (categoryId) => {
         if (!categoryId || !window.__teamManagerData?.allTeams) return false;
         const category = categories.find(c => c.id === categoryId);
         if (!category) return false;
         const teamsInCategory = window.__teamManagerData.allTeams.filter(t => t.category === category.name);
-        const normalizeTeamName = (name) => name ? name.replace(/\s+/g, '').toLowerCase() : '';
+        const normalizeTeamName = (name) => (name ? name.replace(/\s+/g, '').toLowerCase() : '');
         const normalizedTeamNames = teamsInCategory.map(t => normalizeTeamName(t.teamName));
         return normalizedTeamNames.length !== new Set(normalizedTeamNames).size;
     };
 
+    // Načítanie skupín pri zmene kategórie
     useEffect(() => {
         if (selectedCategory && groupsByCategory[selectedCategory]) {
             const sortedGroups = [...groupsByCategory[selectedCategory]].sort((a, b) => a.name.localeCompare(b.name));
             setAvailableGroups(sortedGroups);
-            setSelectedGroup('');
             setSelectedGroupType('');
+            setSelectedGroup('');
+            setFilteredGroupsByType([]);
             setHasDuplicateTeamNames(checkForDuplicateTeamNames(selectedCategory));
         } else {
             setAvailableGroups([]);
-            setSelectedGroup('');
             setSelectedGroupType('');
+            setSelectedGroup('');
+            setFilteredGroupsByType([]);
             setHasDuplicateTeamNames(false);
         }
     }, [selectedCategory, groupsByCategory, categories]);
 
+    // Filtrovanie skupín podľa zvoleného typu
+    useEffect(() => {
+        if (selectedCategory && selectedGroupType && availableGroups.length > 0) {
+            const filtered = availableGroups.filter(g => g.type === selectedGroupType);
+            setFilteredGroupsByType(filtered);
+            setSelectedGroup('');
+        } else {
+            setFilteredGroupsByType([]);
+            setSelectedGroup('');
+        }
+    }, [selectedCategory, selectedGroupType, availableGroups]);
+
+    // Automatické zobrazenie typu skupiny pri výbere konkrétnej skupiny
     useEffect(() => {
         if (selectedGroup && availableGroups.length > 0) {
             const group = availableGroups.find(g => g.name === selectedGroup);
-            if (group) {
-                if (group.type === 'základná skupina') setSelectedGroupType('Základná skupina');
-                else if (group.type === 'nadstavbová skupina') setSelectedGroupType('Nadstavbová skupina');
-                else setSelectedGroupType('');
-            } else setSelectedGroupType('');
-        } else setSelectedGroupType('');
-    }, [selectedGroup, availableGroups, selectedCategory, categories]);
+            if (group && group.type && group.type !== selectedGroupType) {
+                setSelectedGroupType(group.type);
+            }
+        }
+    }, [selectedGroup, availableGroups]);
 
     if (!isOpen) return null;
+
+    const hasGroupsOfSelectedType = filteredGroupsByType.length > 0;
 
     return React.createElement(
         'div',
@@ -2648,49 +2674,96 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                 React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Generovať zápasy'),
                 React.createElement('button', { onClick: onClose, className: 'text-gray-500 hover:text-gray-700' }, React.createElement('i', { className: 'fa-solid fa-times text-xl' }))
             ),
+
+            // Výber kategórie
             React.createElement(
                 'div',
                 { className: 'mb-4' },
                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Kategória:'),
                 React.createElement(
                     'select',
-                    { value: selectedCategory, onChange: (e) => { setSelectedCategory(e.target.value); setSelectedGroup(''); setSelectedGroupType(''); }, className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black' },
+                    { value: selectedCategory, onChange: (e) => { setSelectedCategory(e.target.value); setSelectedGroupType(''); setSelectedGroup(''); }, className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black' },
                     React.createElement('option', { value: '' }, '-- Vyberte kategóriu --'),
                     sortedCategories.map(cat => React.createElement('option', { key: cat.id, value: cat.id }, cat.name))
                 )
             ),
+
+            // Upozornenie na duplicitné názvy
             selectedCategory && hasDuplicateTeamNames && React.createElement(
                 'div',
                 { className: 'mb-6 p-4 bg-red-50 border-2 border-red-400 rounded-lg' },
-                React.createElement('div', { className: 'flex items-start gap-3' }, React.createElement('i', { className: 'fa-solid fa-triangle-exclamation text-red-600 text-xl mt-0.5 flex-shrink-0' }), React.createElement('div', null, React.createElement('h4', { className: 'font-bold text-red-700 text-base' }, 'Duplicitné názvy tímov'), React.createElement('p', { className: 'text-sm text-red-600 mt-1' }, 'Vo vybranej kategórii sa nachádzajú tímy s duplicitným názvom. Zápasy nie je možné vygenerovať, kým nebudú názvy tímov unikátne.'), React.createElement('p', { className: 'text-xs text-red-500 mt-1' }, 'Prosím, opravte duplicitné názvy tímov v časti "Registrácie" a skúste znova.')))
+                React.createElement('div', { className: 'flex items-start gap-3' },
+                    React.createElement('i', { className: 'fa-solid fa-triangle-exclamation text-red-600 text-xl mt-0.5 flex-shrink-0' }),
+                    React.createElement('div', null,
+                        React.createElement('h4', { className: 'font-bold text-red-700 text-base' }, 'Duplicitné názvy tímov'),
+                        React.createElement('p', { className: 'text-sm text-red-600 mt-1' }, 'Vo vybranej kategórii sa nachádzajú tímy s duplicitným názvom. Zápasy nie je možné vygenerovať, kým nebudú názvy tímov unikátne.'),
+                        React.createElement('p', { className: 'text-xs text-red-500 mt-1' }, 'Prosím, opravte duplicitné názvy tímov v časti "Registrácie" a skúste znova.')
+                    )
+                )
             ),
+
+            // Výber typu skupiny
             selectedCategory && !hasDuplicateTeamNames && React.createElement(
                 'div',
                 { className: 'mb-4' },
-                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Skupina:'),
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Typ skupiny:'),
+                React.createElement(
+                    'select',
+                    { value: selectedGroupType, onChange: (e) => setSelectedGroupType(e.target.value), className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black' },
+                    React.createElement('option', { value: '' }, '-- Vyberte typ skupiny --'),
+                    groupTypeOptions.map(opt => React.createElement('option', { key: opt.value, value: opt.value }, opt.label))
+                )
+            ),
+
+            // Výber konkrétnej skupiny (voliteľný)
+            selectedCategory && !hasDuplicateTeamNames && selectedGroupType && React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Skupina (nepovinné):'),
                 React.createElement(
                     'select',
                     { value: selectedGroup, onChange: (e) => setSelectedGroup(e.target.value), className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black' },
-                    React.createElement('option', { value: '' }, '-- Všetky skupiny --'),
-                    availableGroups.map((group, index) => React.createElement('option', { key: index, value: group.name }, group.name))
+                    React.createElement('option', { value: '' }, hasGroupsOfSelectedType ? '-- Všetky skupiny tohto typu --' : '-- Žiadne skupiny tohto typu --'),
+                    filteredGroupsByType.map((group, index) => React.createElement('option', { key: index, value: group.name }, group.name))
                 ),
-                selectedGroup && selectedGroupType && React.createElement(
-                    'div',
-                    { className: 'mt-2 text-sm' },
-                    React.createElement('span', { className: `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${selectedGroupType === 'Základná skupina' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}` }, React.createElement('i', { className: `fa-solid ${selectedGroupType === 'Základná skupina' ? 'fa-layer-group' : 'fa-chart-line'} mr-1 text-xs` }), selectedGroupType)
+                React.createElement(
+                    'p',
+                    { className: 'text-xs text-gray-500 mt-1' },
+                    selectedGroup
+                        ? `Vybraná skupina: ${selectedGroup}`
+                        : hasGroupsOfSelectedType
+                            ? `Bez výberu skupiny sa vygenerujú zápasy pre všetky skupiny typu "${selectedGroupType}".`
+                            : `V tejto kategórii neexistujú skupiny typu "${selectedGroupType}".`
                 )
             ),
-            selectedCategory && !hasDuplicateTeamNames && !withRepetitions && React.createElement('p', { className: 'text-xs text-gray-500 mt-1 ml-6' }, 'Vygenerujú sa jedinečné dvojice, každý tím sa stretne s každým práve raz.'),
+
+            // Info o generovaní
+            selectedCategory && !hasDuplicateTeamNames && selectedGroupType && !withRepetitions && React.createElement(
+                'p',
+                { className: 'text-xs text-gray-500 mt-1 ml-0' },
+                'Vygenerujú sa jedinečné dvojice, každý tím sa stretne s každým práve raz.'
+            ),
+
+            // Tlačidlá
             React.createElement(
                 'div',
-                { className: 'flex justify-end gap-3 mt-2' },
+                { className: 'flex justify-end gap-3 mt-6' },
                 React.createElement('button', { onClick: onClose, className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors' }, 'Zrušiť'),
                 React.createElement(
                     'button',
                     {
-                        onClick: () => { onConfirm({ categoryId: selectedCategory, groupName: selectedGroup || null, withRepetitions, transferFromBasicGroup: false }); onClose(); },
-                        disabled: !selectedCategory || hasDuplicateTeamNames,
-                        className: `px-4 py-2 text-white rounded-lg transition-colors ${selectedCategory && !hasDuplicateTeamNames ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer' : 'bg-white border-2 border-green-600 text-green-600 cursor-not-allowed'}`
+                        onClick: () => {
+                            onConfirm({
+                                categoryId: selectedCategory,
+                                groupType: selectedGroupType || null,
+                                groupName: selectedGroup || null,
+                                withRepetitions,
+                                transferFromBasicGroup: false
+                            });
+                            onClose();
+                        },
+                        disabled: !selectedCategory || hasDuplicateTeamNames || !selectedGroupType,
+                        className: `px-4 py-2 text-white rounded-lg transition-colors ${selectedCategory && !hasDuplicateTeamNames && selectedGroupType ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer' : 'bg-white border-2 border-green-600 text-green-600 cursor-not-allowed'}`
                     },
                     'Generovať'
                 )
@@ -4199,64 +4272,88 @@ const AddMatchesApp = ({ userProfileData }) => {
         return savedMatches;
     };
 
-    const generateMatches = async ({ categoryId, groupName, withRepetitions }) => {
+    const generateMatches = async ({ categoryId, groupType, groupName, withRepetitions }) => {
         try {
-            if (userProfileData?.role !== 'admin') { window.showGlobalNotification('Na generovanie zápasov potrebujete administrátorské práva', 'error'); return; }
+            if (userProfileData?.role !== 'admin') {
+                window.showGlobalNotification('Na generovanie zápasov potrebujete administrátorské práva', 'error');
+                return;
+            }
             const category = categories.find(c => c.id === categoryId);
             if (!category) { window.showGlobalNotification('Kategória nebola nájdená', 'error'); return; }
             if (!window.teamManager) { window.showGlobalNotification('TeamManager nie je inicializovaný', 'error'); return; }
+    
             setGenerationInProgress(true);
             let allGeneratedMatches = [];
-            if (groupName) {
-                const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, groupName);
-                if (teamsInGroup.length < 2) { window.showGlobalNotification(`V skupine ${groupName} sú menej ako 2 tímy`, 'error'); setGenerationInProgress(false); return; }
-                
-                // Zistíme typ skupiny z groupsByCategory podľa názvu skupiny
-                const groupMeta = (groupsByCategory[category.id] || []).find(g => g.name === groupName);
+    
+            // Pomocná funkcia na vytvorenie zápasov pre jednu skupinu
+            const buildMatchesForGroup = async (groupNameToUse) => {
+                const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, groupNameToUse);
+                if (teamsInGroup.length < 2) return [];
+    
+                const groupMeta = (groupsByCategory[category.id] || []).find(g => g.name === groupNameToUse);
                 const isNadstavbova = groupMeta?.type === 'nadstavbová skupina';
                 const skipSameGroupLetter = isNadstavbova && category.carryOverPoints === true;
-                
+    
                 const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions, category.name, skipSameGroupLetter);
-                const matchesWithInfo = groupMatches.map((match, index) => ({
+                return groupMatches.map((match) => ({
                     homeTeamIdentifier: match.homeTeamIdentifier,
                     awayTeamIdentifier: match.awayTeamIdentifier,
                     time: '--:--',
                     hallId: null,
                     categoryId: category.id,
                     categoryName: category.name,
-                    groupName: groupName,
+                    groupName: groupNameToUse,
                     status: 'pending'
                 }));
-                allGeneratedMatches = [...allGeneratedMatches, ...matchesWithInfo];
+            };
+    
+            if (groupName) {
+                // Konkrétna skupina
+                const matches = await buildMatchesForGroup(groupName);
+                if (matches.length === 0) {
+                    window.showGlobalNotification(`V skupine ${groupName} sú menej ako 2 tímy`, 'error');
+                    setGenerationInProgress(false);
+                    return;
+                }
+                allGeneratedMatches = [...allGeneratedMatches, ...matches];
+            } else if (groupType) {
+                // Všetky skupiny daného typu
+                const allGroupsOfType = (groupsByCategory[category.id] || []).filter(g => g.type === groupType);
+                if (allGroupsOfType.length === 0) {
+                    window.showGlobalNotification(`V kategórii ${category.name} nie sú žiadne skupiny typu "${groupType}"`, 'error');
+                    setGenerationInProgress(false);
+                    return;
+                }
+                for (const group of allGroupsOfType) {
+                    const matches = await buildMatchesForGroup(group.name);
+                    allGeneratedMatches = [...allGeneratedMatches, ...matches];
+                }
+                if (allGeneratedMatches.length === 0) {
+                    window.showGlobalNotification(`V žiadnej skupine typu "${groupType}" nie sú aspoň 2 tímy`, 'error');
+                    setGenerationInProgress(false);
+                    return;
+                }
             } else {
+                // Fallback – všetky skupiny (pôvodné správanie)
                 const groups = getAllGroupsInCategory(category.name);
-                if (groups.length === 0) { window.showGlobalNotification('V tejto kategórii nie sú žiadne skupiny s aspoň 2 tímami', 'error'); setGenerationInProgress(false); return; }
+                if (groups.length === 0) {
+                    window.showGlobalNotification('V tejto kategórii nie sú žiadne skupiny s aspoň 2 tímami', 'error');
+                    setGenerationInProgress(false);
+                    return;
+                }
                 for (const group of groups) {
-                    const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, group.name);
-                    if (teamsInGroup.length >= 2) {
-                        // Zistíme typ skupiny z groupsByCategory podľa názvu skupiny
-                        const groupMeta = (groupsByCategory[category.id] || []).find(g => g.name === group.name);
-                        const isNadstavbova = groupMeta?.type === 'nadstavbová skupina';
-                        const skipSameGroupLetter = isNadstavbova && category.carryOverPoints === true;
-        
-                        const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions, category.name, skipSameGroupLetter);
-                        const matchesWithInfo = groupMatches.map((match, index) => ({
-                            homeTeamIdentifier: match.homeTeamIdentifier,
-                            awayTeamIdentifier: match.awayTeamIdentifier,
-                            time: '--:--',
-                            hallId: null,
-                            categoryId: category.id,
-                            categoryName: category.name,
-                            groupName: group.name,
-                            status: 'pending'
-                        }));
-                        allGeneratedMatches = [...allGeneratedMatches, ...matchesWithInfo];
-                    }
+                    const matches = await buildMatchesForGroup(group.name);
+                    allGeneratedMatches = [...allGeneratedMatches, ...matches];
                 }
             }
+    
             const { existingMatches, newMatches: newOnes } = checkExistingMatchesDuringGeneration(allGeneratedMatches, withRepetitions);
+    
             if (existingMatches.length > 0) {
-                setCurrentCategoryInfo({ name: category.name, groupName: groupName });
+                setCurrentCategoryInfo({
+                    name: category.name,
+                    groupName: groupName || (groupType ? `typ: ${groupType}` : null)
+                });
                 setNewMatches(newOnes);
                 setExistingMatchesToProcess(existingMatches);
                 setCurrentMatchIndex(0);
@@ -4265,7 +4362,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                 if (allGeneratedMatches.length > 0) {
                     window.showGlobalNotification(`Ukladám ${allGeneratedMatches.length} zápasov...`, 'info');
                     const savedMatches = await saveMatchesToFirebase(allGeneratedMatches);
-                    window.showGlobalNotification(`Vygenerovaných a uložených ${savedMatches.length} zápasov pre ${category.name}${groupName ? ' - ' + groupName : ''}`, 'success');
+                    const info = groupName
+                        ? ` - ${groupName}`
+                        : groupType
+                            ? ` - všetky skupiny typu "${groupType}"`
+                            : '';
+                    window.showGlobalNotification(`Vygenerovaných a uložených ${savedMatches.length} zápasov pre ${category.name}${info}`, 'success');
+                } else {
+                    window.showGlobalNotification('Žiadne nové zápasy neboli vygenerované', 'info');
                 }
                 setGenerationInProgress(false);
             }
@@ -4279,12 +4383,45 @@ const AddMatchesApp = ({ userProfileData }) => {
     const handleGenerateClick = (params) => {
         const category = categories.find(c => c.id === params.categoryId);
         if (!category) return;
+    
+        // Ak je zvolená konkrétna skupina → kontrolovať len tú
+        if (params.groupName) {
+            if (hasExistingMatches(params.categoryId, params.groupName)) {
+                setPendingGeneration(params);
+                setIsConfirmModalOpen(true);
+            } else {
+                generateMatches(params);
+            }
+            return;
+        }
+    
+        // Ak je zvolený typ skupiny (a nie konkrétna skupina) → kontrolovať všetky skupiny daného typu
+        if (params.groupType) {
+            const groupsOfType = (groupsByCategory[params.categoryId] || [])
+                .filter(g => g.type === params.groupType);
+    
+            const anyHasExisting = groupsOfType.some(g =>
+                hasExistingMatches(params.categoryId, g.name)
+            );
+    
+            if (anyHasExisting) {
+                setPendingGeneration(params);
+                setIsConfirmModalOpen(true);
+            } else {
+                generateMatches(params);
+            }
+            return;
+        }
+    
+        // Fallback – pôvodné správanie
         if (hasExistingMatches(params.categoryId, params.groupName)) {
             setPendingGeneration(params);
             setIsConfirmModalOpen(true);
-        } else generateMatches(params);
+        } else {
+            generateMatches(params);
+        }
     };
-
+    
     const handleConfirmRegenerate = () => {
         if (pendingGeneration) { generateMatches(pendingGeneration); setPendingGeneration(null); }
     };
