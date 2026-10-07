@@ -1996,10 +1996,10 @@ const AddTeamsGroupApp = (props) => {
             const categoryId = Object.keys(categoryIdToNameMap).find(
               id => categoryIdToNameMap[id] === teamToEdit.category
             ) || '';
-            
+      
             setSelectedCategory(categoryId);
             setSelectedGroup(teamToEdit.groupName || '');
-            
+      
             // Inicializácia typu skupiny na základe pôvodnej skupiny
             if (teamToEdit.groupName) {
               const groups = allGroupsByCategoryId[categoryId] || [];
@@ -2009,8 +2009,6 @@ const AddTeamsGroupApp = (props) => {
               }
             }
             
-            // Pre superstructure tímy odstránime kategóriu z názvu
-            // Pre používateľské tímy necháme pôvodný názov
             const initialTeamName = teamToEdit.isSuperstructureTeam
               ? teamToEdit.teamName.replace(new RegExp(`^${teamToEdit.category} `), '')
               : teamToEdit.teamName;
@@ -2020,13 +2018,29 @@ const AddTeamsGroupApp = (props) => {
             setOriginalCategory(categoryId);
             setOriginalGroup(teamToEdit.groupName || '');
           } else {
-            setSelectedCategory(defaultCategoryId || '');
-            setSelectedGroup(defaultGroupName || '');
+            const catId = defaultCategoryId || '';
+            const grpName = defaultGroupName || '';
+            
+            setSelectedCategory(catId);
+            setSelectedGroup(grpName);
             setTeamName('');
             setOriginalTeamName('');
             setOriginalCategory('');
             setOriginalGroup('');
-            setSelectedGroupType(''); // Reset typu skupiny
+            
+            // 🔥 DÔLEŽITÉ: Ak máme predvolenú skupinu, musíme nastaviť aj jej typ,
+            // inak sa skupina nezobrazí v selectboxe (filteredGroups by bol prázdny)
+            if (catId && grpName) {
+              const groups = allGroupsByCategoryId[catId] || [];
+              const defaultGroupObj = groups.find(g => g.name === grpName);
+              if (defaultGroupObj) {
+                setSelectedGroupType(defaultGroupObj.type);
+              } else {
+                setSelectedGroupType('');
+              }
+            } else {
+              setSelectedGroupType('');
+            }
           }
         } else {
           setSelectedCategory('');
@@ -2037,7 +2051,7 @@ const AddTeamsGroupApp = (props) => {
           setOriginalCategory('');
           setOriginalGroup('');
           setOrderInputValue(null);
-          setSelectedGroupType(''); // Reset typu skupiny
+          setSelectedGroupType('');
         }
       }, [isOpen, teamToEdit, defaultCategoryId, defaultGroupName, categoryIdToNameMap, allGroupsByCategoryId]);
     
@@ -2079,27 +2093,30 @@ const AddTeamsGroupApp = (props) => {
         if (!selectedCategory || !allGroupsByCategoryId[selectedCategory]) {
           return [];
         }
-        
+  
         const allGroups = allGroupsByCategoryId[selectedCategory];
         const categoryName = categoryIdToNameMap[selectedCategory];
-        
+  
         // Ak nie je vybratý typ skupiny, vrátime prázdny zoznam
         if (!selectedGroupType) {
           return [];
         }
-        
+  
         // Filtrujeme podľa typu
         let filteredByType = allGroups.filter(group => group.type === selectedGroupType);
         
         // 🔥 AK MÁME ZADANÉ PÍSMENO, FILTRUJEME SKUPINY, KTORÉ SÚ ABECEDNE NESKOR (NIE ROVNAKÉ)
+        // Ale ak je vybraná predvolená skupina (napr. z filtra), tak ju vždy zobrazíme
         if (lastLetter && !teamToEdit) {
           filteredByType = filteredByType.filter(group => {
+            // Ak je to aktuálne vybraná skupina, vždy ju zobrazíme
+            if (group.name === selectedGroup) return true;
+      
             const groupLetter = group.name.slice(-1).toUpperCase();
-            // Skupina musí byť abecedne neskôr (NIE rovnaká)
             return groupLetter > lastLetter;
           });
         }
-        
+  
         // Pridáme informáciu o zablokovaní kvôli zápasom
         return filteredByType
           .map(group => ({
