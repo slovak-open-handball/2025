@@ -362,6 +362,13 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
         'div',
         { className: 'modal-content' },
         React.createElement('h3', { className: 'text-xl font-bold mb-4' }, accommodationModalMode === 'add' ? 'Pridať nový typ ubytovania' : `Upraviť typ ubytovania: ${currentAccommodationEdit?.type}`),
+        
+        // 🔥 POPISOK pre názov typu ubytovania
+        React.createElement(
+          'label',
+          { className: 'block text-sm font-medium text-gray-700 mb-1' },
+          'Názov typu ubytovania:'
+        ),
         React.createElement(
           'input',
           {
@@ -371,6 +378,13 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
             value: newAccommodationType,
             onChange: (e) => setNewAccommodationType(e.target.value),
           }
+        ),
+        
+        // 🔥 POPISOK pre kapacitu
+        React.createElement(
+          'label',
+          { className: 'block text-sm font-medium text-gray-700 mb-1' },
+          'Kapacita (počet miest):'
         ),
         React.createElement(
           'input',
@@ -383,25 +397,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
             min: 0,
           }
         ),
-//        React.createElement(
-//          'div',
-//          { className: 'flex items-center justify-between mb-4 p-3 bg-blue-50 rounded-lg' },
-//          React.createElement(
-//            'div',
-//            { className: 'flex items-center space-x-3' },
-//            React.createElement('span', { className: 'text-gray-700 font-medium' }, 'Zverejnenie ubytovne'),
-//            React.createElement(ToggleSwitch, {
-//              isOn: newAccommodationIsPublic,
-//              onToggle: () => setNewAccommodationIsPublic(!newAccommodationIsPublic),
-//              disabled: false
-//            })
-//          ),
-//          React.createElement(
-//            'span',
-//            { className: 'text-sm text-gray-500' },
-//            newAccommodationIsPublic ? 'Ubytovňa bude viditeľná pre všetkých' : 'Ubytovňa bude skrytá'
-//          )
-//        ),
+        
         React.createElement(
           'div',
           { className: 'flex justify-end space-x-3' },
