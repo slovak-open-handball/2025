@@ -454,6 +454,18 @@ const AddTeamsGroupApp = (props) => {
     const [accommodations, setAccommodations] = useState([]);
     const [teamAccommodations, setTeamAccommodations] = useState(new Map());
 
+    // Pomocná funkcia na presné porovnanie názvov tímov (bez trim, bez normalizácie)
+    const teamsNamesMatchExactly = (nameA, nameB) => {
+        if (nameA == null || nameB == null) return nameA === nameB;
+        return String(nameA) === String(nameB);
+    };
+
+    // Pomocná funkcia na nájdenie tímu s presným názvom v poli
+    const findTeamByNameExactly = (teamsArray, teamName) => {
+        if (!Array.isArray(teamsArray)) return null;
+        return teamsArray.find(t => teamsNamesMatchExactly(t.teamName, teamName)) || null;
+    };
+
     const handleSwapTeams = async (teamToSwap, targetGroupName, targetTeamName) => {
         if (!window.db || !teamToSwap || !targetTeamName) return;
         
@@ -488,14 +500,26 @@ const AddTeamsGroupApp = (props) => {
                     
                     let teams = [...(data[categoryName] || [])];
                     
-                    const sourceIndex = teams.findIndex(t => t.id === teamToSwap.id);
-                    const targetIndex = teams.findIndex(t => t.id === targetTeam.id);
-                    
-                    if (sourceIndex === -1 || targetIndex === -1) {
-                        notify("Jeden z tímov sa nenašiel.", "error");
-                        return;
+                    // Najprv skúsime podľa id, ak existuje
+                    let sourceIndex = teams.findIndex(t => 
+                        t.id && teamToSwap.id && t.id === teamToSwap.id
+                    );
+                    if (sourceIndex === -1) {
+                        // Fallback: presné porovnanie celého názvu tímu (vrátane medzier a diakritiky)
+                        sourceIndex = teams.findIndex(t => 
+                            teamsNamesMatchExactly(t.teamName, teamToSwap.teamName)
+                        );
                     }
                     
+                    let targetIndex = teams.findIndex(t => 
+                        t.id && targetTeam.id && t.id === targetTeam.id
+                    );
+                    if (targetIndex === -1) {
+                        targetIndex = teams.findIndex(t => 
+                            teamsNamesMatchExactly(t.teamName, targetTeam.teamName)
+                        );
+                    }
+                  
                     const sourceOrder = teams[sourceIndex].order;
                     const targetOrder = teams[targetIndex].order;
                     
@@ -544,12 +568,24 @@ const AddTeamsGroupApp = (props) => {
                         
                         let teams = [...(userData.teams?.[categoryName] || [])];
                         
-                        const sourceIndex = teams.findIndex(t => t.id === teamToSwap.id);
-                        const targetIndex = teams.findIndex(t => t.id === targetTeam.id);
-                        
-                        if (sourceIndex === -1 || targetIndex === -1) {
-                            notify("Jeden z tímov sa nenašiel.", "error");
-                            return;
+                        // Najprv skúsime podľa id, ak existuje
+                        let sourceIndex = teams.findIndex(t => 
+                            t.id && teamToSwap.id && t.id === teamToSwap.id
+                        );
+                        if (sourceIndex === -1) {
+                            // Fallback: presné porovnanie celého názvu tímu (vrátane medzier a diakritiky)
+                            sourceIndex = teams.findIndex(t => 
+                                teamsNamesMatchExactly(t.teamName, teamToSwap.teamName)
+                            );
+                        }
+
+                        let targetIndex = teams.findIndex(t => 
+                            t.id && targetTeam.id && t.id === targetTeam.id
+                        );
+                        if (targetIndex === -1) {
+                            targetIndex = teams.findIndex(t => 
+                                teamsNamesMatchExactly(t.teamName, targetTeam.teamName)
+                            );
                         }
                         
                         const sourceOrder = teams[sourceIndex].order;
@@ -674,8 +710,25 @@ const AddTeamsGroupApp = (props) => {
                     
                     let teams = [...(data[categoryName] || [])];
                     
-                    const sourceIndex = teams.findIndex(t => t.id === teamToSwap.id);
-                    const targetIndex = teams.findIndex(t => t.id === targetTeam.id);
+                    // Najprv skúsime podľa id, ak existuje
+                    let sourceIndex = teams.findIndex(t => 
+                        t.id && teamToSwap.id && t.id === teamToSwap.id
+                    );
+                    if (sourceIndex === -1) {
+                        // Fallback: presné porovnanie celého názvu tímu (vrátane medzier a diakritiky)
+                        sourceIndex = teams.findIndex(t => 
+                            teamsNamesMatchExactly(t.teamName, teamToSwap.teamName)
+                        );
+                    }
+                    
+                    let targetIndex = teams.findIndex(t => 
+                        t.id && targetTeam.id && t.id === targetTeam.id
+                    );
+                    if (targetIndex === -1) {
+                        targetIndex = teams.findIndex(t => 
+                            teamsNamesMatchExactly(t.teamName, targetTeam.teamName)
+                        );
+                    }
                     
                     if (sourceIndex === -1 || targetIndex === -1) {
                         notify("Jeden z tímov sa nenašiel.", "error");
@@ -729,8 +782,25 @@ const AddTeamsGroupApp = (props) => {
                     
                     let teams = [...(userData.teams?.[categoryName] || [])];
                     
-                    const sourceIndex = teams.findIndex(t => t.id === teamToSwap.id);
-                    const targetIndex = teams.findIndex(t => t.id === targetTeam.id);
+                    // Najprv skúsime podľa id, ak existuje
+                    let sourceIndex = teams.findIndex(t => 
+                        t.id && teamToSwap.id && t.id === teamToSwap.id
+                    );
+                    if (sourceIndex === -1) {
+                        // Fallback: presné porovnanie celého názvu tímu (vrátane medzier a diakritiky)
+                        sourceIndex = teams.findIndex(t => 
+                            teamsNamesMatchExactly(t.teamName, teamToSwap.teamName)
+                        );
+                    }
+                    
+                    let targetIndex = teams.findIndex(t => 
+                        t.id && targetTeam.id && t.id === targetTeam.id
+                    );
+                    if (targetIndex === -1) {
+                        targetIndex = teams.findIndex(t => 
+                            teamsNamesMatchExactly(t.teamName, targetTeam.teamName)
+                        );
+                    }
                     
                     if (sourceIndex === -1 || targetIndex === -1) {
                         notify("Jeden z tímov sa nenašiel.", "error");
@@ -967,10 +1037,14 @@ const AddTeamsGroupApp = (props) => {
                     // Ak nemáš samostatnú funkciu, použijeme podobnú logiku ako v handleUpdateAnyTeam
                     const updatedTeam = { ...team, order: newOrder };
                     // Aktualizujeme tím v poli
-                    const teamIndex = teams.findIndex(t =>
-                        t.teamName === team.teamName &&
-                        (t.id && team.id ? t.id === team.id : true)
+                    let teamIndex = teams.findIndex(t =>
+                        t.id && team.id && t.id === team.id
                     );
+                    if (teamIndex === -1) {
+                        teamIndex = teams.findIndex(t =>
+                            teamsNamesMatchExactly(t.teamName, team.teamName)
+                        );
+                    }
                     if (teamIndex !== -1) {
                         teams[teamIndex] = updatedTeam;
                     }
@@ -1010,10 +1084,15 @@ const AddTeamsGroupApp = (props) => {
                     for (const team of teamsToShift) {
                         const newOrder = (team.order || 0) - 1;
                         // Nájdeme index v poli používateľa
-                        const teamIndex = teamsInCategory.findIndex(t =>
-                            t.teamName === team.teamName &&
-                            (t.order ?? null) === (team.order ?? null)
+                        let teamIndex = teamsInCategory.findIndex(t =>
+                            t.id && team.id && t.id === team.id
                         );
+                        if (teamIndex === -1) {
+                            teamIndex = teamsInCategory.findIndex(t =>
+                                teamsNamesMatchExactly(t.teamName, team.teamName) &&
+                                (t.order ?? null) === (team.order ?? null)
+                            );
+                        }
                         if (teamIndex !== -1) {
                             teamsInCategory[teamIndex] = {
                                 ...teamsInCategory[teamIndex],
@@ -1212,7 +1291,14 @@ const AddTeamsGroupApp = (props) => {
             const docSnap = await getDoc(superstructureDocRef);
             const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
             let teams = globalTeamsData[teamToDelete.category] || [];
-            const teamIndex = teams.findIndex(t => t.id === teamToDelete.id);
+            let teamIndex = teams.findIndex(t => 
+                t.id && teamToDelete.id && t.id === teamToDelete.id
+            );
+            if (teamIndex === -1) {
+                teamIndex = teams.findIndex(t => 
+                    teamsNamesMatchExactly(t.teamName, teamToDelete.teamName)
+                );
+            }
             if (teamIndex === -1) {
                 notify("Odstraňovaný tím sa nenašiel.", "error");
                 return;
@@ -1268,7 +1354,14 @@ const AddTeamsGroupApp = (props) => {
             const userData = userSnap.data();
             const categoryName = team.category;
             const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
-            const teamIndex = teamsInCategory.findIndex(t => t.teamName === team.teamName);
+            let teamIndex = teamsInCategory.findIndex(t => 
+                t.id && team.id && t.id === team.id
+            );
+            if (teamIndex === -1) {
+                teamIndex = teamsInCategory.findIndex(t => 
+                    teamsNamesMatchExactly(t.teamName, team.teamName)
+                );
+            }
             if (teamIndex === -1) {
                 notify("Tím sa nenašiel v profile používateľa.", "error");
                 return;
@@ -1347,7 +1440,14 @@ const AddTeamsGroupApp = (props) => {
             const data = docSnap.data() || {};
             const oldCategory = originalTeam.category;
             let oldTeams = [...(data[oldCategory] || [])];
-            const idx = oldTeams.findIndex(t => t.id === originalTeam.id);
+            let idx = oldTeams.findIndex(t => 
+                t.id && originalTeam.id && t.id === originalTeam.id
+            );
+            if (idx === -1) {
+                idx = oldTeams.findIndex(t => 
+                    teamsNamesMatchExactly(t.teamName, originalTeam.teamName)
+                );
+            }
             if (idx === -1) {
                 notify("Pôvodný tím sa nenašiel.", "error");
                 return;
@@ -1449,7 +1549,14 @@ const AddTeamsGroupApp = (props) => {
 
             const userData = userSnap.data();
             const teamsInCategory = [...(userData.teams?.[originalTeam.category] || [])];
-            const teamIndex = teamsInCategory.findIndex(t => t.teamName === originalTeam.teamName);
+            let teamIndex = teamsInCategory.findIndex(t => 
+                t.id && originalTeam.id && t.id === originalTeam.id
+            );
+            if (teamIndex === -1) {
+                teamIndex = teamsInCategory.findIndex(t => 
+                    teamsNamesMatchExactly(t.teamName, originalTeam.teamName)
+                );
+            }
             if (teamIndex === -1) {
                 notify("Tím sa nenašiel v profile používateľa (podľa názvu).", "error");
                 return;
@@ -1594,7 +1701,14 @@ const AddTeamsGroupApp = (props) => {
             }
             const userData = userSnap.data();
             const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
-            const teamIndex = teamsInCategory.findIndex(t => t.teamName === originalTeam.teamName);
+            let teamIndex = teamsInCategory.findIndex(t => 
+                t.id && originalTeam.id && t.id === originalTeam.id
+            );
+            if (teamIndex === -1) {
+                teamIndex = teamsInCategory.findIndex(t => 
+                    teamsNamesMatchExactly(t.teamName, originalTeam.teamName)
+                );
+            }
             if (teamIndex === -1) {
                 notify("Tím sa nenašiel v profile používateľa (podľa názvu).", "error");
                 return;
@@ -4269,7 +4383,7 @@ window.moveTeamToGroup = async (teamName, targetCategoryName, targetGroupName, t
                     uid: 'global'
                 };
                 allTeams.push(teamObj);
-                if (team.teamName === teamName) {
+                if (teamsNamesMatchExactly(team.teamName, teamName)) {
                     foundTeam = teamObj;
                     teamSource = 'superstructure';
                 }
@@ -4289,7 +4403,7 @@ window.moveTeamToGroup = async (teamName, targetCategoryName, targetGroupName, t
                             uid: userDoc.id
                         };
                         allTeams.push(teamObj);
-                        if (team.teamName === teamName) {
+                        if (teamsNamesMatchExactly(team.teamName, teamName)) {
                             foundTeam = teamObj;
                             teamSource = 'user';
                             teamUserDoc = userDoc;
@@ -4384,7 +4498,14 @@ async function moveSuperstructureTeamDirect(team, targetCategoryName, targetGrou
         
         // Získame tímy v zdrojovej kategórii
         let sourceTeams = [...(data[sourceCategory] || [])];
-        const teamIndex = sourceTeams.findIndex(t => t.id === team.id);
+        let teamIndex = sourceTeams.findIndex(t => 
+            t.id && team.id && t.id === team.id
+        );
+        if (teamIndex === -1) {
+            teamIndex = sourceTeams.findIndex(t => 
+                teamsNamesMatchExactly(t.teamName, team.teamName)
+            );
+        }
         
         if (teamIndex === -1) {
             console.error("❌ Tím sa nenašiel v zdrojovej kategórii!");
@@ -4465,7 +4586,14 @@ async function moveUserTeamDirect(team, targetCategoryName, targetGroupName, tar
         
         // Získame tímy v zdrojovej kategórii
         let sourceTeams = [...(userData.teams?.[sourceCategory] || [])];
-        const teamIndex = sourceTeams.findIndex(t => t.id === team.id);
+        let teamIndex = sourceTeams.findIndex(t => 
+            t.id && team.id && t.id === team.id
+        );
+        if (teamIndex === -1) {
+            teamIndex = sourceTeams.findIndex(t => 
+                teamsNamesMatchExactly(t.teamName, team.teamName)
+            );
+        }
         
         if (teamIndex === -1) {
             console.error("❌ Tím sa nenašiel v profile používateľa!");
