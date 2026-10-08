@@ -543,7 +543,7 @@ const GenerationTypeModal = ({ isOpen, onClose, onSelectType }) => {
 };
 
 // ===== PLACEMENT MATCH MODAL =====
-const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory }) => {
+const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory, existingMatches = [] }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroupType, setSelectedGroupType] = useState('');
     const [selectedGroup1, setSelectedGroup1] = useState('');
@@ -725,12 +725,36 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         setOrderError2('');
     };
 
+    // ===== UPRAVENÉ: kontrola nepárneho čísla a duplicity =====
     const handleRankChange = (e) => {
         const value = e.target.value;
         if (value === '') { setPlacementRank(''); setRankError(''); return; }
         if (!/^\d+$/.test(value)) { setRankError('Zadajte platné číslo'); return; }
         const numValue = parseInt(value, 10);
         if (numValue <= 0) { setRankError('Umiestnenie musí byť väčšie ako 0'); return; }
+        
+        // Kontrola nepárneho čísla
+        if (numValue % 2 === 0) {
+            setRankError('Umiestnenie musí byť nepárne číslo (1, 3, 5, ...)');
+            return;
+        }
+
+        // Kontrola duplicity – či už neexistuje zápas o toto miesto v danej kategórii
+        if (selectedCategory) {
+            const category = categories.find(c => c.id === selectedCategory);
+            if (category) {
+                const existingPlacementMatch = existingMatches.find(m => 
+                    m.isPlacementMatch === true &&
+                    m.categoryId === selectedCategory &&
+                    m.placementRank === numValue
+                );
+                if (existingPlacementMatch) {
+                    setRankError(`Zápas o ${numValue}. miesto už existuje v kategórii ${category.name}`);
+                    return;
+                }
+            }
+        }
+
         setPlacementRank(value);
         setRankError('');
     };
@@ -918,14 +942,14 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 React.createElement(
                     'div',
                     { className: 'mb-3' },
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'O aké miesto sa hrá:'),
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'O aké miesto sa hrá (nepárne číslo):'),
                     React.createElement('input', {
                         type: 'text',
                         inputMode: 'numeric',
                         pattern: '[0-9]*',
                         value: placementRank,
                         onChange: handleRankChange,
-                        placeholder: 'Zadajte číslo (napr. 1, 3, 5...)',
+                        placeholder: 'Zadajte nepárne číslo (1, 3, 5...)',
                         className: `w-full px-3 py-2 border ${rankError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`
                     }),
                     rankError && React.createElement(
@@ -3136,6 +3160,24 @@ const AddMatchesApp = ({ userProfileData }) => {
         if (!window.db) { window.showGlobalNotification('Databáza nie je inicializovaná', 'error'); return; }
         if (userProfileData?.role !== 'admin') { window.showGlobalNotification('Na vytvorenie zápasu potrebujete administrátorské práva', 'error'); return; }
         if (!userProfileData?.approved) { window.showGlobalNotification('Váš účet ešte nebol schválený administrátorom.', 'error'); return; }
+        
+        // ===== KONTROLA NEPÁRNEHO ČÍSLA =====
+        if (matchData.placementRank % 2 === 0) {
+            window.showGlobalNotification('Umiestnenie musí byť nepárne číslo (1, 3, 5, ...)', 'error');
+            return;
+        }
+    
+        // ===== KONTROLA DUPLICITY =====
+        const existingPlacementMatch = matches.find(m => 
+            m.isPlacementMatch === true &&
+            m.categoryId === matchData.categoryId &&
+            m.placementRank === matchData.placementRank
+        );
+        if (existingPlacementMatch) {
+            window.showGlobalNotification(`Zápas o ${matchData.placementRank}. miesto už existuje v tejto kategórii`, 'error');
+            return;
+        }
+    
         try {
             const matchesRef = collection(window.db, 'matches');
             const matchToSave = {
@@ -4790,7 +4832,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             onConfirm: (matchData) => { savePlacementMatch(matchData); setIsPlacementMatchModalOpen(false); },
             categories: categories,
             groupsByCategory: groupsByCategory,
-            teams: teamData
+            teams: teamData,
+            existingMatches: matches
         }),
         React.createElement(SwapMatchesModal, {
             isOpen: isSwapMatchesModalOpen,
