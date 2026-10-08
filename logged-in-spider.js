@@ -4783,6 +4783,7 @@ const SpiderApp = ({ userProfileData }) => {
     const [isAssigningTeam, setIsAssigningTeam] = useState(false);
     const [isTeamIdentifierDuplicate, setIsTeamIdentifierDuplicate] = useState(false);
     const [duplicateMatchInfo, setDuplicateMatchInfo] = useState(null);
+    const [isSelfMatchConflict, setIsSelfMatchConflict] = useState(false);
     
     // NOVÝ STAV: Dáta tímov pre debug a výber
     const [teamsData, setTeamsData] = useState({
@@ -5052,11 +5053,12 @@ const SpiderApp = ({ userProfileData }) => {
         }
     }, [selectedGroup, selectedCategory, categories, teamsData.allTeams]);
 
-    // NOVÝ EFEKT: Kontrola, či sa zadaný identifikátor tímu už nenachádza v inom pavúkovom zápase
+    // NOVÝ EFEKT: Kontrola duplicity v inom zápase + kontrola self-match v tomto zápase
     useEffect(() => {
         // Reset
         setIsTeamIdentifierDuplicate(false);
         setDuplicateMatchInfo(null);
+        setIsSelfMatchConflict(false);
     
         // Ak nemáme všetky potrebné údaje, nemá zmysel kontrolovať
         if (!selectedGroup || !selectedOrder || !selectedCategory || !selectedMatchForTeam) {
@@ -5075,7 +5077,17 @@ const SpiderApp = ({ userProfileData }) => {
         const lastChar = selectedGroup.slice(-1);
         const teamIdentifier = `${categoryWithoutDiacritics} ${selectedOrder}${lastChar}`;
     
-        // Prehľadáme všetky pavúkové zápasy v tejto kategórii (okrem aktuálne upravovaného zápasu)
+        // 1) KONTROLA SELF-MATCH: je už ten istý identifikátor na opačnej strane TOHTO zápasu?
+        const oppositeTeamIdentifier = selectedTeamPosition === 'home'
+            ? (selectedMatchForTeam.awayTeamIdentifier || selectedMatchForTeam.awayTeam || '---')
+            : (selectedMatchForTeam.homeTeamIdentifier || selectedMatchForTeam.homeTeam || '---');
+    
+        if (oppositeTeamIdentifier === teamIdentifier) {
+            setIsSelfMatchConflict(true);
+            return; // self-match je vážnejší, ďalej netreba hľadať
+        }
+    
+        // 2) KONTROLA DUPLICITY V INÝCH ZÁPASOCH
         const spiderMatchTypes = [
             'finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto',
             'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
@@ -5091,7 +5103,7 @@ const SpiderApp = ({ userProfileData }) => {
             m.categoryId === selectedCategory &&
             m.matchType &&
             spiderMatchTypes.includes(m.matchType) &&
-            m.id !== selectedMatchForTeam.id && // vylúčime aktuálny zápas
+            m.id !== selectedMatchForTeam.id &&
             (m.homeTeamIdentifier === teamIdentifier || m.awayTeamIdentifier === teamIdentifier)
         );
     
@@ -5108,6 +5120,7 @@ const SpiderApp = ({ userProfileData }) => {
         selectedOrder,
         selectedCategory,
         selectedMatchForTeam,
+        selectedTeamPosition,
         categories,
         allMatches
     ]);
@@ -5126,7 +5139,16 @@ const SpiderApp = ({ userProfileData }) => {
         // NOVÁ KONTROLA: Blokovať duplicitný identifikátor tímu
         if (isTeamIdentifierDuplicate) {
             window.showGlobalNotification(
-                `Tím "${selectedOrder}${selectedGroup.slice(-1)}" je už priradený v zápase "${duplicateMatchInfo?.matchType}".`,
+                `Tím ${selectedOrder}${selectedGroup.slice(-1)} je už priradený v zápase ${duplicateMatchInfo?.matchType}.`,
+                'error'
+            );
+            return;
+        }
+
+        // NOVÁ KONTROLA: Blokovať, aby tím hral sám proti sebe
+        if (isSelfMatchConflict) {
+            window.showGlobalNotification(
+                `Tím ${selectedOrder}${selectedGroup.slice(-1)} už je priradený na opačnej strane tohto zápasu. Tím nemôže hrať sám proti sebe.`,
                 'error'
             );
             return;
@@ -5176,6 +5198,9 @@ const SpiderApp = ({ userProfileData }) => {
             setSelectedGroup('');
             setSelectedOrder(null);
             setMaxOrderInGroup(0);
+            setIsTeamIdentifierDuplicate(false);
+            setDuplicateMatchInfo(null);
+            setIsSelfMatchConflict(false); 
             
         } catch (error) {
             console.error('Chyba pri priraďovaní tímu:', error);
@@ -7488,6 +7513,7 @@ const SpiderApp = ({ userProfileData }) => {
                         setMaxOrderInGroup(0);
                         setIsTeamIdentifierDuplicate(false);
                         setDuplicateMatchInfo(null);
+                        setIsSelfMatchConflict(false);
                     },
                     style: { backdropFilter: 'blur(4px)' }
                 },
@@ -7517,6 +7543,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     setMaxOrderInGroup(0);
                                     setIsTeamIdentifierDuplicate(false);
                                     setDuplicateMatchInfo(null);
+                                    setIsSelfMatchConflict(false);
                                 },
                                 className: 'text-gray-400 hover:text-gray-600 transition-colors'
                             },
@@ -7579,14 +7606,13 @@ const SpiderApp = ({ userProfileData }) => {
                         )
                     ),
     
-                    // Náhľad výsledného ID + upozornenie na duplicitu
                     selectedGroup && selectedOrder && React.createElement(
                         'div',
-                        { className: 'mb-6 p-4 rounded-lg ' + (isTeamIdentifierDuplicate ? 'bg-red-50 border border-red-300' : 'bg-gray-50') },
+                        { className: 'mb-6 p-4 rounded-lg ' + ((isTeamIdentifierDuplicate || isSelfMatchConflict) ? 'bg-red-50 border border-red-300' : 'bg-gray-50') },
                         React.createElement('p', { className: 'text-sm text-gray-600 mb-1' }, 'Výsledné ID tímu:'),
                         React.createElement(
                             'p',
-                            { className: 'text-lg font-mono font-bold ' + (isTeamIdentifierDuplicate ? 'text-red-600' : 'text-blue-600') },
+                            { className: 'text-lg font-mono font-bold ' + ((isTeamIdentifierDuplicate || isSelfMatchConflict) ? 'text-red-600' : 'text-blue-600') },
                             (() => {
                                 const category = categories.find(c => c.id === selectedCategory);
                                 const categoryName = category ? category.name : '';
@@ -7597,7 +7623,13 @@ const SpiderApp = ({ userProfileData }) => {
                                 return `${categoryWithoutDiacritics} ${selectedOrder}${lastChar}`;
                             })()
                         ),
-                        isTeamIdentifierDuplicate && React.createElement(
+                        isSelfMatchConflict && React.createElement(
+                            'p',
+                            { className: 'text-sm text-red-600 mt-2 flex items-center gap-1' },
+                            React.createElement('i', { className: 'fa-solid fa-triangle-exclamation' }),
+                            'Tento tím je už priradený na opačnej strane tohto zápasu. Tím nemôže hrať sám proti sebe.'
+                        ),
+                        !isSelfMatchConflict && isTeamIdentifierDuplicate && React.createElement(
                             'p',
                             { className: 'text-sm text-red-600 mt-2 flex items-center gap-1' },
                             React.createElement('i', { className: 'fa-solid fa-triangle-exclamation' }),
@@ -7621,6 +7653,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     setMaxOrderInGroup(0);
                                     setIsTeamIdentifierDuplicate(false);
                                     setDuplicateMatchInfo(null);
+                                    setIsSelfMatchConflict(false);
                                 },
                                 className: 'px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors'
                             },
@@ -7630,13 +7663,13 @@ const SpiderApp = ({ userProfileData }) => {
                             'button',
                             {
                                 onClick: assignTeamToMatch,
-                                disabled: !selectedGroup || !selectedOrder || isAssigningTeam || isTeamIdentifierDuplicate,
+                                disabled: !selectedGroup || !selectedOrder || isAssigningTeam || isTeamIdentifierDuplicate || isSelfMatchConflict,
                                 className: `px-4 py-2 text-sm rounded-lg transition-colors border-2 ${
-                                    (!selectedGroup || !selectedOrder || isAssigningTeam || isTeamIdentifierDuplicate)
+                                    (!selectedGroup || !selectedOrder || isAssigningTeam || isTeamIdentifierDuplicate || isSelfMatchConflict)
                                         ? 'bg-white text-blue-600 border-blue-600 cursor-not-allowed opacity-60'
                                         : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
                                     }`,
-                                style: isTeamIdentifierDuplicate ? { cursor: 'not-allowed' } : {}
+                                style: (isTeamIdentifierDuplicate || isSelfMatchConflict) ? { cursor: 'not-allowed' } : {}
                             },
                             isAssigningTeam ? 'Priraďujem...' : 'Priradiť tím'
                         )
