@@ -725,7 +725,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         setOrderError2('');
     };
 
-    // ===== UPRAVENÉ: kontrola nepárneho čísla a duplicity (vrátane pavúka) =====
+    // ===== UPRAVENÉ: kontrola nepárneho čísla a duplicity (matches + pavúk) =====
     const handleRankChange = (e) => {
         const value = e.target.value;
         if (value === '') { setPlacementRank(''); setRankError(''); return; }
@@ -738,27 +738,34 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setRankError('Umiestnenie musí byť nepárne číslo (1, 3, 5, ...)');
             return;
         }
-
+    
         // Kontrola duplicity – či už neexistuje zápas o toto miesto v danej kategórii
         if (selectedCategory) {
             const category = categories.find(c => c.id === selectedCategory);
             if (category) {
                 // 1) Kontrola v existingMatches (matches z Firestore)
+                //    a) zápasy o umiestnenie (isPlacementMatch + placementRank)
+                //    b) pavúkové zápasy (matchType obsahuje "o X. miesto")
                 const existingPlacementMatch = existingMatches.find(m => 
-                    m.isPlacementMatch === true &&
                     m.categoryId === selectedCategory &&
-                    m.placementRank === numValue
+                    (
+                        (m.isPlacementMatch === true && m.placementRank === numValue) ||
+                        (m.matchType && m.matchType.toLowerCase().includes(`o ${numValue}. miesto`))
+                    )
                 );
                 if (existingPlacementMatch) {
                     setRankError(`Zápas o ${numValue}. miesto už existuje v kategórii ${category.name}`);
                     return;
                 }
-
+    
                 // 2) Kontrola v pavúkovi (spider) – ak existuje globálna cache
                 const spiderMatches = window.__spiderMatches || [];
                 const existingInSpider = spiderMatches.find(m => 
                     m.categoryId === selectedCategory &&
-                    m.placementRank === numValue
+                    (
+                        (m.isPlacementMatch === true && m.placementRank === numValue) ||
+                        (m.matchType && m.matchType.toLowerCase().includes(`o ${numValue}. miesto`))
+                    )
                 );
                 if (existingInSpider) {
                     setRankError(`Zápas o ${numValue}. miesto už existuje v pavúkovi pre kategóriu ${category.name}`);
@@ -766,7 +773,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 }
             }
         }
-
+    
         setPlacementRank(value);
         setRankError('');
     };
@@ -3168,7 +3175,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         return Array.from(teamIds).sort((a, b) => a.localeCompare(b));
     };
 
-        const savePlacementMatch = async (matchData) => {
+    const savePlacementMatch = async (matchData) => {
         if (!window.db) { window.showGlobalNotification('Databáza nie je inicializovaná', 'error'); return; }
         if (userProfileData?.role !== 'admin') { window.showGlobalNotification('Na vytvorenie zápasu potrebujete administrátorské práva', 'error'); return; }
         if (!userProfileData?.approved) { window.showGlobalNotification('Váš účet ešte nebol schválený administrátorom.', 'error'); return; }
@@ -3181,20 +3188,25 @@ const AddMatchesApp = ({ userProfileData }) => {
     
         // ===== KONTROLA DUPLICITY (matches + pavúk) =====
         const existingPlacementMatch = matches.find(m => 
-            m.isPlacementMatch === true &&
             m.categoryId === matchData.categoryId &&
-            m.placementRank === matchData.placementRank
+            (
+                (m.isPlacementMatch === true && m.placementRank === matchData.placementRank) ||
+                (m.matchType && m.matchType.toLowerCase().includes(`o ${matchData.placementRank}. miesto`))
+            )
         );
         if (existingPlacementMatch) {
             window.showGlobalNotification(`Zápas o ${matchData.placementRank}. miesto už existuje v tejto kategórii`, 'error');
             return;
         }
-
+    
         // Kontrola v pavúkovi
         const spiderMatches = window.__spiderMatches || [];
         const existingInSpider = spiderMatches.find(m => 
             m.categoryId === matchData.categoryId &&
-            m.placementRank === matchData.placementRank
+            (
+                (m.isPlacementMatch === true && m.placementRank === matchData.placementRank) ||
+                (m.matchType && m.matchType.toLowerCase().includes(`o ${matchData.placementRank}. miesto`))
+            )
         );
         if (existingInSpider) {
             window.showGlobalNotification(`Zápas o ${matchData.placementRank}. miesto už existuje v pavúkovi pre túto kategóriu`, 'error');
