@@ -501,7 +501,7 @@ const GenerationTypeModal = ({ isOpen, onClose, onSelectType }) => {
                         React.createElement(
                             'div',
                             null,
-                            React.createElement('h4', { className: 'font-semibold text-gray-800 text-lg' }, 'Klasické zápasy'),
+                            React.createElement('h4', { className: 'font-semibold text-gray-800 text-lg' }, 'Zápasy v skupinách'),
                             React.createElement('p', { className: 'text-sm text-gray-600' }, 'Generovať zápasy v skupinách (každý s každým)')
                         )
                     )
