@@ -7627,7 +7627,7 @@ const SpiderApp = ({ userProfileData }) => {
                             'p',
                             { className: 'text-sm text-red-600 mt-2 flex items-center gap-1' },
                             React.createElement('i', { className: 'fa-solid fa-triangle-exclamation' }),
-                            'Tento tím je už priradený na opačnej strane tohto zápasu. Tím nemôže hrať sám proti sebe.'
+                            'Tím nemôže hrať sám proti sebe.'
                         ),
                         !isSelfMatchConflict && isTeamIdentifierDuplicate && React.createElement(
                             'p',
