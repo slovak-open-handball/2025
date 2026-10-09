@@ -557,6 +557,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
     const [orderError1, setOrderError1] = useState('');
     const [orderError2, setOrderError2] = useState('');
     const [rankError, setRankError] = useState('');
+    const [sameTeamsError, setSameTeamsError] = useState('');
     const [maxTeamsInGroup1, setMaxTeamsInGroup1] = useState(0);
     const [maxTeamsInGroup2, setMaxTeamsInGroup2] = useState(0);
 
@@ -575,6 +576,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setOrderError1('');
             setOrderError2('');
             setRankError('');
+            setSameTeamsError('');
             setMaxTeamsInGroup1(0);
             setMaxTeamsInGroup2(0);
         }
@@ -607,6 +609,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setOrderError1('');
             setOrderError2('');
             setRankError('');
+            setSameTeamsError('');
             setMaxTeamsInGroup1(0);
             setMaxTeamsInGroup2(0);
             setFilteredGroupsByType([]);
@@ -621,6 +624,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setOrderError1('');
             setOrderError2('');
             setRankError('');
+            setSameTeamsError('');
             setMaxTeamsInGroup1(0);
             setMaxTeamsInGroup2(0);
             setFilteredGroupsByType([]);
@@ -639,6 +643,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setOrderError1('');
             setOrderError2('');
             setRankError('');
+            setSameTeamsError('');
             setMaxTeamsInGroup1(0);
             setMaxTeamsInGroup2(0);
         } else {
@@ -651,6 +656,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setOrderError1('');
             setOrderError2('');
             setRankError('');
+            setSameTeamsError('');
             setMaxTeamsInGroup1(0);
             setMaxTeamsInGroup2(0);
         }
@@ -702,6 +708,19 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setOrderError2('');
         }
     }, [selectedGroup2, selectedCategory, categories]);
+
+    // ===== NOVÝ useEffect: Kontrola, či nie sú vybrané dva rovnaké tímy =====
+    useEffect(() => {
+        if (selectedGroup1 && selectedOrder1 && selectedGroup2 && selectedOrder2) {
+            if (selectedGroup1 === selectedGroup2 && selectedOrder1 === selectedOrder2) {
+                setSameTeamsError('Nemôžete vybrať dva rovnaké tímy (rovnaká skupina aj poradie).');
+            } else {
+                setSameTeamsError('');
+            }
+        } else {
+            setSameTeamsError('');
+        }
+    }, [selectedGroup1, selectedOrder1, selectedGroup2, selectedOrder2]);
 
     const handleOrder1Change = (e) => {
         const value = e.target.value;
@@ -823,7 +842,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
 
     const isValid = selectedCategory && selectedGroupType && selectedGroup1 && selectedGroup2 && 
                     selectedOrder1 && selectedOrder2 && placementRank &&
-                    !orderError1 && !orderError2 && !rankError &&
+                    !orderError1 && !orderError2 && !rankError && !sameTeamsError &&
                     maxTeamsInGroup1 > 0 && maxTeamsInGroup2 > 0;
 
     return React.createElement(
@@ -955,13 +974,26 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                         onChange: handleOrder2Change,
                         placeholder: maxTeamsInGroup2 ? `Zadajte číslo 1-${maxTeamsInGroup2}` : 'Najprv vyberte skupinu',
                         disabled: !maxTeamsInGroup2,
-                        className: `w-full px-3 py-2 border ${orderError2 ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${!maxTeamsInGroup2 ? 'bg-gray-100' : ''}`
+                        className: `w-full px-3 py-2 border ${orderError2 || sameTeamsError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${!maxTeamsInGroup2 ? 'bg-gray-100' : ''}`
                     }),
                     orderError2 && React.createElement(
                         'p',
                         { className: 'text-xs text-red-500 mt-1 flex items-center gap-1' },
                         React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
                         orderError2
+                    )
+                )
+            ),
+            // ===== NOVÁ chybová hláška pre rovnaké tímy =====
+            selectedGroup1 && selectedOrder1 && selectedGroup2 && selectedOrder2 && sameTeamsError && React.createElement(
+                'div',
+                { className: 'mb-6 p-4 bg-red-50 border-2 border-red-400 rounded-lg' },
+                React.createElement('div', { className: 'flex items-start gap-3' },
+                    React.createElement('i', { className: 'fa-solid fa-triangle-exclamation text-red-600 text-xl mt-0.5 flex-shrink-0' }),
+                    React.createElement('div', null,
+                        React.createElement('h4', { className: 'font-bold text-red-700 text-base' }, 'Neplatný výber tímov'),
+                        React.createElement('p', { className: 'text-sm text-red-600 mt-1' }, sameTeamsError),
+                        React.createElement('p', { className: 'text-xs text-red-500 mt-1' }, 'Môžete vybrať rovnakú skupinu s rôznym poradím, alebo rôznu skupinu s rovnakým poradím.')
                     )
                 )
             ),
