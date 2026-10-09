@@ -725,7 +725,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         setOrderError2('');
     };
 
-    // ===== UPRAVENÉ: kontrola nepárneho čísla a duplicity (matches + pavúk) =====
+    // ===== UPRAVENÉ: kontrola nepárneho čísla a duplicity (matches + pavúk + finále) =====
     const handleRankChange = (e) => {
         const value = e.target.value;
         if (value === '') { setPlacementRank(''); setRankError(''); return; }
@@ -739,7 +739,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             return;
         }
     
-        // Kontrola duplicity – či už neexistuje zápas o toto miesto v danej kategórii
         if (selectedCategory) {
             const category = categories.find(c => c.id === selectedCategory);
             if (category) {
@@ -770,6 +769,18 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 if (existingInSpider) {
                     setRankError(`Zápas o ${numValue}. miesto už existuje v pavúkovi pre kategóriu ${category.name}`);
                     return;
+                }
+
+                // 3) NOVÁ KONTROLA: Ak sa hrá o 1. miesto a existuje finále v pavúkovi
+                if (numValue === 1) {
+                    const finalMatch = existingMatches.find(m =>
+                        m.categoryId === selectedCategory &&
+                        m.matchType === 'finále'
+                    );
+                    if (finalMatch) {
+                        setRankError(`Zápas o 1. miesto (finále) už existuje v pavúkovi pre kategóriu ${category.name}`);
+                        return;
+                    }
                 }
             }
         }
@@ -3186,7 +3197,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             return;
         }
     
-        // ===== KONTROLA DUPLICITY (matches + pavúk) =====
+        // ===== KONTROLA DUPLICITY (matches + pavúk + finále) =====
         const existingPlacementMatch = matches.find(m => 
             m.categoryId === matchData.categoryId &&
             (
@@ -3211,6 +3222,18 @@ const AddMatchesApp = ({ userProfileData }) => {
         if (existingInSpider) {
             window.showGlobalNotification(`Zápas o ${matchData.placementRank}. miesto už existuje v pavúkovi pre túto kategóriu`, 'error');
             return;
+        }
+
+        // ===== NOVÁ KONTROLA: Ak sa hrá o 1. miesto a existuje finále v pavúkovi =====
+        if (matchData.placementRank === 1) {
+            const finalMatch = matches.find(m =>
+                m.categoryId === matchData.categoryId &&
+                m.matchType === 'finále'
+            );
+            if (finalMatch) {
+                window.showGlobalNotification(`Zápas o 1. miesto (finále) už existuje v pavúkovi pre túto kategóriu`, 'error');
+                return;
+            }
         }
     
         try {
