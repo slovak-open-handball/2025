@@ -722,6 +722,68 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         }
     }, [selectedGroup1, selectedOrder1, selectedGroup2, selectedOrder2]);
 
+    // ===== NOVÝ useEffect: Kontrola existencie zápasu o dané miesto (s debounce) =====
+    useEffect(() => {
+        // Ak nie je zadané umiestnenie alebo kategória, nič nekontrolujeme
+        if (!placementRank || !selectedCategory) {
+            return;
+        }
+
+        const numValue = parseInt(placementRank, 10);
+        if (isNaN(numValue) || numValue <= 0) return;
+        if (numValue % 2 === 0) return; // nepárne číslo – chybu rieši handleRankChange
+
+        // Debounce: spustí sa až po 500 ms od poslednej zmeny
+        const timeoutId = setTimeout(() => {
+            const category = categories.find(c => c.id === selectedCategory);
+            if (!category) return;
+
+            // 1) Kontrola v existingMatches
+            const existingPlacementMatch = existingMatches.find(m => 
+                m.categoryId === selectedCategory &&
+                (
+                    (m.isPlacementMatch === true && m.placementRank === numValue) ||
+                    (m.matchType && m.matchType.toLowerCase().includes(`o ${numValue}. miesto`))
+                )
+            );
+            if (existingPlacementMatch) {
+                setRankError(`Zápas o ${numValue}. miesto už existuje v kategórii ${category.name}`);
+                return;
+            }
+
+            // 2) Kontrola v pavúkovi
+            const spiderMatches = window.__spiderMatches || [];
+            const existingInSpider = spiderMatches.find(m => 
+                m.categoryId === selectedCategory &&
+                (
+                    (m.isPlacementMatch === true && m.placementRank === numValue) ||
+                    (m.matchType && m.matchType.toLowerCase().includes(`o ${numValue}. miesto`))
+                )
+            );
+            if (existingInSpider) {
+                setRankError(`Zápas o ${numValue}. miesto už existuje v pavúkovi pre kategóriu ${category.name}`);
+                return;
+            }
+
+            // 3) Ak sa hrá o 1. miesto a existuje finále v pavúkovi
+            if (numValue === 1) {
+                const finalMatch = existingMatches.find(m =>
+                    m.categoryId === selectedCategory &&
+                    m.matchType === 'finále'
+                );
+                if (finalMatch) {
+                    setRankError(`Zápas o 1. miesto (finále) už existuje v pavúkovi pre kategóriu ${category.name}`);
+                    return;
+                }
+            }
+
+            // Ak všetko OK, vymažeme chybu
+            setRankError('');
+        }, 500);
+
+        return () => clearTimeout(timeoutId);
+    }, [placementRank, selectedCategory, existingMatches, categories]);
+
     const handleOrder1Change = (e) => {
         const value = e.target.value;
         if (value === '') { setSelectedOrder1(''); setOrderError1(''); return; }
@@ -744,7 +806,8 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         setOrderError2('');
     };
 
-    // ===== UPRAVENÉ: kontrola nepárneho čísla a duplicity (matches + pavúk + finále) =====
+    // ===== ZJEDNODUŠENÉ: handleRankChange kontroluje len formát a nepárnosť =====
+    // (kontrola existencie je presunutá do useEffect s debounce)
     const handleRankChange = (e) => {
         const value = e.target.value;
         if (value === '') { setPlacementRank(''); setRankError(''); return; }
@@ -757,54 +820,9 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setRankError('Umiestnenie musí byť nepárne číslo (1, 3, 5, ...)');
             return;
         }
-    
-        if (selectedCategory) {
-            const category = categories.find(c => c.id === selectedCategory);
-            if (category) {
-                // 1) Kontrola v existingMatches (matches z Firestore)
-                //    a) zápasy o umiestnenie (isPlacementMatch + placementRank)
-                //    b) pavúkové zápasy (matchType obsahuje "o X. miesto")
-                const existingPlacementMatch = existingMatches.find(m => 
-                    m.categoryId === selectedCategory &&
-                    (
-                        (m.isPlacementMatch === true && m.placementRank === numValue) ||
-                        (m.matchType && m.matchType.toLowerCase().includes(`o ${numValue}. miesto`))
-                    )
-                );
-                if (existingPlacementMatch) {
-                    setRankError(`Zápas o ${numValue}. miesto už existuje v kategórii ${category.name}`);
-                    return;
-                }
-    
-                // 2) Kontrola v pavúkovi (spider) – ak existuje globálna cache
-                const spiderMatches = window.__spiderMatches || [];
-                const existingInSpider = spiderMatches.find(m => 
-                    m.categoryId === selectedCategory &&
-                    (
-                        (m.isPlacementMatch === true && m.placementRank === numValue) ||
-                        (m.matchType && m.matchType.toLowerCase().includes(`o ${numValue}. miesto`))
-                    )
-                );
-                if (existingInSpider) {
-                    setRankError(`Zápas o ${numValue}. miesto už existuje v pavúkovi pre kategóriu ${category.name}`);
-                    return;
-                }
 
-                // 3) NOVÁ KONTROLA: Ak sa hrá o 1. miesto a existuje finále v pavúkovi
-                if (numValue === 1) {
-                    const finalMatch = existingMatches.find(m =>
-                        m.categoryId === selectedCategory &&
-                        m.matchType === 'finále'
-                    );
-                    if (finalMatch) {
-                        setRankError(`Zápas o 1. miesto (finále) už existuje v pavúkovi pre kategóriu ${category.name}`);
-                        return;
-                    }
-                }
-            }
-        }
-    
         setPlacementRank(value);
+        // Nulovanie chyby – finálnu kontrolu vykoná useEffect
         setRankError('');
     };
 
