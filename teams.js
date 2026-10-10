@@ -1361,16 +1361,18 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId, refreshKey }) => 
 
     const filterMatches = (allMatches, names) => {
         const filtered = [];
-        
+        const cleanTeamName = removeSuffix(String(teamName).trim());
+
+        // 1) PRESNÁ ZHODA – prioritne
         allMatches.forEach(match => {
             const homeName = names[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamIdentifier;
             const awayName = names[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamIdentifier;
-            
+
             let matchCategory = match.categoryName;
             if (!matchCategory && match.categoryId && categoriesData[match.categoryId]) {
                 matchCategory = categoriesData[match.categoryId];
             }
-            
+
             if ((homeName === teamName || awayName === teamName) && matchCategory === categoryName) {
                 filtered.push({
                     ...match,
@@ -1379,7 +1381,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId, refreshKey }) => 
                 });
             }
         });
-        
+    
         return filtered;
     };
 
@@ -2186,6 +2188,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         const filtered = [];
         const cleanTeamName = removeSuffix(String(teamName).trim());
 
+        // 1) PRESNÁ ZHODA – prioritne
         allMatches.forEach(match => {
             const homeName = names[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamIdentifier;
             const awayName = names[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamIdentifier;
@@ -2195,14 +2198,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                 matchCategory = categoriesData[match.categoryId];
             }
 
-            const homeClean = removeSuffix(String(homeName).trim());
-            const awayClean = removeSuffix(String(awayName).trim());
-    
-            const matchesTeam = 
-                homeName === teamName || awayName === teamName ||
-                homeClean === cleanTeamName || awayClean === cleanTeamName;
-
-            if (matchesTeam && matchCategory === categoryName) {
+            if ((homeName === teamName || awayName === teamName) && matchCategory === categoryName) {
                 filtered.push({
                     ...match,
                     _homeDisplay: homeName,
@@ -2210,7 +2206,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                 });
             }
         });
-    
+
         return filtered;
     };
 
