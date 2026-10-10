@@ -2140,17 +2140,25 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
     const filterMatches = (allMatches, names) => {
         const filtered = [];
+        const cleanTeamName = removeSuffix(String(teamName).trim());
 
         allMatches.forEach(match => {
             const homeName = names[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamIdentifier;
             const awayName = names[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamIdentifier;
-
+    
             let matchCategory = match.categoryName;
             if (!matchCategory && match.categoryId && categoriesData[match.categoryId]) {
                 matchCategory = categoriesData[match.categoryId];
             }
 
-            if ((homeName === teamName || awayName === teamName) && matchCategory === categoryName) {
+            const homeClean = removeSuffix(String(homeName).trim());
+            const awayClean = removeSuffix(String(awayName).trim());
+    
+            const matchesTeam = 
+                homeName === teamName || awayName === teamName ||
+                homeClean === cleanTeamName || awayClean === cleanTeamName;
+
+            if (matchesTeam && matchCategory === categoryName) {
                 filtered.push({
                     ...match,
                     _homeDisplay: homeName,
@@ -2158,7 +2166,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                 });
             }
         });
-
+    
         return filtered;
     };
 
@@ -2209,10 +2217,11 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
             let convertedNames = await convertTeamNames(allMatches);
 
+            // 🔥 VŽDY nastav teamNames (nielen keď anyCompleted)
             if (anyCompleted) {
                 convertedNames = await refreshTeamNamesIfNeeded(allMatches, convertedNames);
-                setTeamNames(convertedNames);
             }
+            setTeamNames(convertedNames);
 
             setAllMatchesList(allMatches);
 
@@ -2270,10 +2279,11 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
             let convertedNames = await convertTeamNames(allMatches);
 
+            // 🔥 VŽDY nastav teamNames
             if (anyCompleted) {
                 convertedNames = await refreshTeamNamesIfNeeded(allMatches, convertedNames);
-                setTeamNames(convertedNames);
             }
+            setTeamNames(convertedNames);
 
             setAllMatchesList(allMatches);
 
@@ -2287,7 +2297,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         return () => {
             if (unsubscribe) unsubscribe();
         };
-    }, [teamName, categoryName, categoriesData]);
+    }, [teamName, categoryName, categoriesData, refreshKey]);
 
     useEffect(() => {
         if (!window.db || allMatchesList.length === 0) return;
