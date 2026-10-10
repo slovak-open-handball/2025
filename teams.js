@@ -422,50 +422,6 @@ const TeamCateringList = ({ teamName, categoryName }) => {
     const [userTeams, setUserTeams] = useState([]);
     const [teamNameMap, setTeamNameMap] = useState({});
 
-    // 🔥 NOVÉ: Periodický remap tímových mien pre zápasy (rovnako ako stravovanie)
-    const teamNamesRef = useRef({});
-    useEffect(() => { teamNamesRef.current = teamNames; }, [teamNames]);
-
-    useEffect(() => {
-        if (!window.db || !teamName || !categoryName) return;
-        if (allMatchesList.length === 0) return;
-    
-        const runMatchRemap = async () => {
-            try {
-                const currentNames = teamNamesRef.current || {};
-                let changed = false;
-                const updated = { ...currentNames };
-
-                for (const match of allMatchesList) {
-                    const identifiers = [match.homeTeamIdentifier, match.awayTeamIdentifier].filter(Boolean);
-                    for (const identifier of identifiers) {
-                        const currentDisplay = updated[identifier] || getDisplayTeamName(identifier) || identifier;
-                        if (!currentDisplay) continue;
-                        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                            try {
-                                const converted = await window.matchTracker.getTeamNameByDisplayId(currentDisplay);
-                                if (converted && converted !== currentDisplay && converted !== updated[identifier]) {
-                                    updated[identifier] = converted;
-                                    changed = true;
-                                }
-                            } catch (e) {}
-                        }
-                    }
-                }
-    
-                if (changed) {
-                    setTeamNames(updated);
-                    const filtered = filterMatches(allMatchesList, updated);
-                    setMatches(filtered);
-                }
-            } catch (e) {}
-        };
-    
-        runMatchRemap();
-        const intervalId = setInterval(runMatchRemap, 800);
-        return () => clearInterval(intervalId);
-    }, [allMatchesList, teamName, categoryName]);
-
     const cateringAssignmentsRef = useRef([]);
     useEffect(() => { cateringAssignmentsRef.current = cateringAssignments; }, [cateringAssignments]);
 
@@ -1865,6 +1821,50 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
     const [packagesList, setPackagesList] = useState([]);
     const [userTeams, setUserTeams] = useState([]);
     const [teamNameMap, setTeamNameMap] = useState({});
+
+    // 🔥 Periodický remap tímových mien pre zápasy
+    const teamNamesRef = useRef({});
+    useEffect(() => { teamNamesRef.current = teamNames; }, [teamNames]);
+
+    useEffect(() => {
+        if (!window.db || !teamName || !categoryName) return;
+        if (allMatchesList.length === 0) return;
+
+        const runMatchRemap = async () => {
+            try {
+                const currentNames = teamNamesRef.current || {};
+                let changed = false;
+                const updated = { ...currentNames };
+
+                for (const match of allMatchesList) {
+                    const identifiers = [match.homeTeamIdentifier, match.awayTeamIdentifier].filter(Boolean);
+                    for (const identifier of identifiers) {
+                        const currentDisplay = updated[identifier] || getDisplayTeamName(identifier) || identifier;
+                        if (!currentDisplay) continue;
+                        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                            try {
+                                const converted = await window.matchTracker.getTeamNameByDisplayId(currentDisplay);
+                                if (converted && converted !== currentDisplay && converted !== updated[identifier]) {
+                                    updated[identifier] = converted;
+                                    changed = true;
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+
+                if (changed) {
+                    setTeamNames(updated);
+                    const filtered = filterMatches(allMatchesList, updated);
+                    setMatches(filtered);
+                }
+            } catch (e) {}
+        };
+
+        runMatchRemap();
+        const intervalId = setInterval(runMatchRemap, 800);
+        return () => clearInterval(intervalId);
+    }, [allMatchesList, teamName, categoryName]);
 
     const cateringAssignmentsRef = useRef([]);
     useEffect(() => { cateringAssignmentsRef.current = cateringAssignments; }, [cateringAssignments]);
