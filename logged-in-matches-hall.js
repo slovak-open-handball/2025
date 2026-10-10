@@ -2945,7 +2945,8 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                         isRunning ? 'bg-red-600 hover:bg-red-700 text-white cursor-pointer' : 'bg-green-600 hover:bg-green-700 text-white cursor-pointer'
                     }` 
                 },
-                    React.createElement('i', { className: isRunning ? 'fa-solid fa-stop mr-1' : 'fa-solid fa-play mr-1' }), isRunning ? 'Stop' : 'Štart'
+                    React.createElement('i', { className: isRunning ? 'fa-solid fa-stop mr-1' : 'fa-solid fa-play mr-1' }), isRunning ? 'Zastaviť' : 'Spustiť'
+//                    React.createElement('i', { className: isRunning ? 'fa-solid fa-stop mr-1' : 'fa-solid fa-play mr-1' }), isRunning ? 'Štart' : 'Stop'
                 ),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
                 React.createElement('button', { 
