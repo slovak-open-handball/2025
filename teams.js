@@ -1450,7 +1450,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                 a.isSuperstructure !== true ||
                 a.dayKey !== dayKey ||
                 a.mealType !== mealType ||
-                a.isPriority !== true ||
                 cleanCategory(a.clickedTeamCategory || a.category || '') !== teamCat
             ) {
                 continue;
@@ -1806,15 +1805,17 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                 );
                                 if (priorityCatId && groupsData) {
                                     let priorityGroupNames = [];
-                                
+
+                                    // 🔥 PREDNOSTNE použi ss.groupName (skupina, v ktorej tím REÁLNE hrá)
                                     if (ss.groupName && String(ss.groupName).trim() !== '') {
                                         priorityGroupNames = [String(ss.groupName).trim()];
                                     } else {
+                                        // Fallback: použi posledné písmeno pôvodného identifikátora
                                         const groups = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
                                         priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
                                     }
                                     priorityGroupNames = priorityGroupNames.filter(Boolean);
-                                
+
                                     if (priorityGroupNames.length > 0) {
                                         const isBlocked = priorityGroupNames.some(gName =>
                                             blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${gName}`)
@@ -1822,22 +1823,15 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                         console.log(
                                             `[cateringRows][ss]   ` +
                                             `priorityGroupNames=${JSON.stringify(priorityGroupNames)} ` +
-                                            `isBlocked=${isBlocked} ` +
-                                            `ssIsPriority=${ss.isPriority === true}`
+                                            `isBlocked=${isBlocked}`
                                         );
-                                
-                                        // 🔥 Blokuj len prioritizované SS záznamy v nedokončených skupinách
-                                        if (isBlocked && ss.isPriority === true) {
-                                            console.log(`[cateringRows][ss]   ❌ BLOKOVANÉ (priorita + nedokončená skupina) → riadok sa nezobrazí`);
+                                        if (isBlocked) {
+                                            console.log(`[cateringRows][ss]   ❌ BLOKOVANÉ → riadok sa nezobrazí`);
                                             continue;
-                                        }
-                                
-                                        if (isBlocked && ss.isPriority !== true) {
-                                            console.log(`[cateringRows][ss]   ⚠️ Skupina nedokončená, ale SS nie je priorita → ZOBRAZENÉ`);
                                         }
                                     }
                                 }
-                                                                
+
                                 console.log(`[cateringRows][ss]   ✅ ZOBRAZENÉ`);
                                 rows.push({
                                     key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
