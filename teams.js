@@ -972,25 +972,6 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                                     }
                                 }
                             }
-
-                            // 🔥 NOVÁ KONTROLA: Ak je to prioritizované miesto (superstructure),
-                            // zistíme, či existuje skupina s rovnakým posledným písmenom ako má
-                            // prioritizovaný tím. Ak taká skupina existuje a NIE JE 100% dokončená,
-                            // riadok sa nezobrazí.
-                            const priorityTeamName = ssMappedName || ssOriginalTeamName;
-                            // Nájdeme categoryId pre kategóriu prioritizovaného tímu
-                            const priorityCategoryId = Object.keys(window.categoriesData || {}).find(
-                                id => (window.categoriesData || {})[id] === ssCategory
-                            );
-                            if (priorityCategoryId && window.groupsData) {
-                                const group = findGroupByLastLetter(priorityTeamName, priorityCategoryId, window.groupsData);
-                                if (group) {
-                                    const isCompleted = isGroupFullyCompleted(group.name, ssCategory, allMatchesList);
-                                    if (!isCompleted) {
-                                        return; // skupina ešte nie je 100% dokončená -> riadok nezobrazíme
-                                    }
-                                }
-                            }
     
                             rows.push({
                                 key: `${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
