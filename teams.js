@@ -1398,50 +1398,6 @@ cateringAssignments.filter(a => a.isSuperstructure === true).forEach(ss => {
                     const teamCategoryClean = cleanCategory(team.category);
                     const teamNameClean = String(team.teamName || '').trim();
 
-                    // Zozbierame všetky unikátne groupName pre tento tím v tejto kategórii.
-                    // Kombinujeme dva zdroje:
-                    //   a) rawTeamData.groupName z userTeams (skutočná skupina z DB),
-                    //   b) odvodenie skupiny z POSLEDNÉHO PÍSMENA názvu tímu (rovnaká logika
-                    //      ako pri prioritizovanom tíme v getUnfinishedPriorityGroupsForDayMeal).
-                    // Tým pokryjeme prípad, keď je tím vo viacerých skupinách, alebo keď jeho
-                    // userTeams záznam neobsahuje groupName.
-                    const teamGroupNames = new Set();
-
-                    // a) z userTeams (ak tam sú reálne groupName)
-                    userTeams.forEach(ut => {
-                        if (
-                            cleanCategory(ut.category) === teamCategoryClean &&
-                            String(ut.teamName || '').trim() === teamNameClean
-                        ) {
-                            const gn = ut?.rawTeamData?.groupName
-                                ? String(ut.rawTeamData.groupName).trim()
-                                : null;
-                            if (gn) teamGroupNames.add(gn);
-                        }
-                    });
-
-                    // b) odvodenie skupiny z posledného písmena názvu tímu
-                    const teamCatId = Object.keys(categoriesData || {}).find(
-                        id => categoriesData[id] === teamCategoryClean
-                    );
-                    if (teamCatId && groupsData) {
-                        const derivedGroup = findGroupByLastLetter(teamNameClean, teamCatId, groupsData);
-                        if (derivedGroup && derivedGroup.name) {
-                            teamGroupNames.add(String(derivedGroup.name).trim());
-                        }
-                    }
-
-                    // Skontrolujeme, či aspoň jedna skupina tímu je blokovaná
-                    let isTeamBlocked = false;
-                    teamGroupNames.forEach(gn => {
-                        if (blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${gn}`)) {
-                            isTeamBlocked = true;
-                        }
-                    });
-
-                    if (isTeamBlocked) {
-                        return;
-                    }
                     const slots = daySlots[day.key]?.[mealType] || [];
                     if (slots.length === 0) return;
 
@@ -1497,6 +1453,21 @@ cateringAssignments.filter(a => a.isSuperstructure === true).forEach(ss => {
                                 const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssOriginalTeamName);
                                 if (ssTeam) {
                                     if (!teamHasMealInPackage(ssTeam, day.key, mealType)) return;
+                                }
+                            }
+
+                            // 🔥 NOVÉ: Skupinu berieme z PRIORITIZOVANÉHO tímu (ss.teamName),
+                            // nie z aktuálneho tímu. Ak je táto skupina blokovaná, tento riadok nezobrazíme.
+                            const priorityCatId = Object.keys(categoriesData || {}).find(
+                                id => categoriesData[id] === ssCategory
+                            );
+                            if (priorityCatId && groupsData) {
+                                const priorityGroup = findGroupByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
+                                if (priorityGroup && priorityGroup.name) {
+                                    const priorityGroupName = String(priorityGroup.name).trim();
+                                    if (blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${priorityGroupName}`)) {
+                                        return; // 🔥 prioritizovaná skupina nie je 100% → tento riadok nezobrazíme
+                                    }
                                 }
                             }
                           
