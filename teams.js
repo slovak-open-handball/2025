@@ -156,7 +156,20 @@ const getUnfinishedPriorityGroupsForDayMeal = (
         const ssCategory = String(ss.category || ss.categoryName || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
         const rawPriorityTeamName = String(ss.teamName || '').trim();
         if (!rawPriorityTeamName) continue;
-
+    
+        // 🔥 LOG: Detail každého superštruktúra záznamu (miesto, čas, priorita)
+        console.log(
+            `[getUnfinishedPriorityGroupsForDayMeal] SS_RECORD: ` +
+            `teamName="${rawPriorityTeamName}" ` +
+            `category="${ssCategory}" ` +
+            `dayKey="${ss.dayKey}" ` +
+            `mealType="${ss.mealType}" ` +
+            `slotFrom="${ss.slotFrom || ''}" ` +
+            `placeName="${ss.placeName || ''}" ` +
+            `isPriority=${ss.isPriority === true} ` +
+            `groupName="${ss.groupName || ''}"`
+        );
+    
         // 🔥 Premapuj identifikátor na finálny názov tímu (ak existuje mapovanie)
         let priorityTeamName = rawPriorityTeamName;
         if (window.teamNames && typeof window.teamNames === 'object') {
@@ -165,23 +178,33 @@ const getUnfinishedPriorityGroupsForDayMeal = (
                 priorityTeamName = String(candidate).trim();
             }
         }
-
+    
         const priorityCategoryId = Object.keys(categoriesData).find(
             id => categoriesData[id] === ssCategory
         );
         if (!priorityCategoryId) continue;
-
+    
         let priorityGroupNames = [];
         const groups = findGroupsByLastLetter(rawPriorityTeamName, priorityCategoryId, groupsData);
         priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
         priorityGroupNames = priorityGroupNames.filter(Boolean);
         if (priorityGroupNames.length === 0) continue;
-
+    
         for (const groupNameToCheck of priorityGroupNames) {
             const isCompleted = isGroupFullyCompleted(groupNameToCheck, ssCategory, allMatchesList);
-
-            console.log(`[getUnfinishedPriorityGroupsForDayMeal]   priorityRaw="${rawPriorityTeamName}" priorityMapped="${priorityTeamName}" category="${ssCategory}" group="${groupNameToCheck}" isCompleted=${isCompleted}`);
-
+    
+            console.log(
+                `[getUnfinishedPriorityGroupsForDayMeal]   ` +
+                `priorityRaw="${rawPriorityTeamName}" ` +
+                `priorityMapped="${priorityTeamName}" ` +
+                `category="${ssCategory}" ` +
+                `group="${groupNameToCheck}" ` +
+                `isCompleted=${isCompleted} ` +
+                `place="${ss.placeName || ''}" ` +
+                `slotFrom="${ss.slotFrom || ''}" ` +
+                `isPriority=${ss.isPriority === true}`
+            );
+    
             if (!isCompleted) {
                 const key = `${ssCategory}||${groupNameToCheck}`;
                 if (!seen.has(key)) {
@@ -1483,12 +1506,23 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
                        if (existing) {
                            if (!teamHasMealInPackage(team, day.key, mealType)) return;
-
+                       
                            const isPrioritized = isTeamPrioritizedForDayMeal(team, day.key, mealType);
-
-                           // 🔥 LOG: Pre každý tím, ktorý má klasické stravovanie
-                           console.log(`[cateringRows][existing] team="${teamNameClean}" cat="${teamCategoryClean}" day=${day.key} meal=${mealType} slot=${slot.from} isPrioritized=${isPrioritized}`);
-
+                       
+                           // 🔥 LOG: Detail klasického stravovania (miesto, čas, priorita)
+                           console.log(
+                               `[cateringRows][existing] CLASSIC: ` +
+                               `team="${teamNameClean}" ` +
+                               `cat="${teamCategoryClean}" ` +
+                               `day=${day.key} ` +
+                               `meal=${mealType} ` +
+                               `slotFrom=${slot.from} ` +
+                               `slotTo=${slot.to} ` +
+                               `place="${existing.placeName || ''}" ` +
+                               `isPriority=false ` +
+                               `isPrioritized=${isPrioritized}`
+                           );
+                       
                            if (isPrioritized) {
                                const teamCatId = Object.keys(categoriesData || {}).find(
                                    id => categoriesData[id] === teamCategoryClean
@@ -1509,10 +1543,12 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                        );
                                        const isBlocked = blockedKeys.some(k => blockedGroupDayMealKeys.has(k));
                        
-                                       // 🔥 LOG: Detail blokovania
-                                       console.log(`[cateringRows][existing]   teamGroupNames=`, teamGroupNames);
-                                       console.log(`[cateringRows][existing]   blockedKeys=`, blockedKeys);
-                                       console.log(`[cateringRows][existing]   isBlocked=${isBlocked} blockedGroupDayMealKeys=`, Array.from(blockedGroupDayMealKeys));
+                                       console.log(
+                                           `[cateringRows][existing]   ` +
+                                           `teamGroupNames=${JSON.stringify(teamGroupNames)} ` +
+                                           `blockedKeys=${JSON.stringify(blockedKeys)} ` +
+                                           `isBlocked=${isBlocked}`
+                                       );
                        
                                        if (isBlocked) {
                                            console.log(`[cateringRows][existing]   ❌ BLOKOVANÉ → riadok sa nezobrazí`);
@@ -1546,8 +1582,24 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                         if (ss) {
                             const ssCategory = cleanCategory(ss.category || ss.categoryName || '');
                             const ssOriginalTeamName = String(ss.teamName || '').trim();
+                        
+                            // 🔥 LOG: Detail superštruktúra stravovania (miesto, čas, priorita)
+                            console.log(
+                                `[cateringRows][ss] SUPERSTRUCTURE: ` +
+                                `clickedTeam="${teamNameClean}" ` +
+                                `cat="${teamCategoryClean}" ` +
+                                `day=${day.key} ` +
+                                `meal=${mealType} ` +
+                                `slotFrom=${ss.slotFrom} ` +
+                                `slotTo=${slot.to} ` +
+                                `place="${ss.placeName || ''}" ` +
+                                `isPriority=${ss.isPriority === true} ` +
+                                `priorityTeamRaw="${ssOriginalTeamName}" ` +
+                                `priorityGroupName="${ss.groupName || ''}"`
+                            );
+                        
                             let ssMappedName = getMappedTeamName(ssCategory, ssOriginalTeamName);
-
+                        
                             if (
                                 ssMappedName === null ||
                                 ssMappedName === undefined ||
@@ -1557,41 +1609,63 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                             ) {
                                 ssMappedName = ssOriginalTeamName;
                             }
-
+                        
                             const wasMapped = String(ssMappedName).trim() !== ssOriginalTeamName;
-
+                        
+                            console.log(
+                                `[cateringRows][ss]   ` +
+                                `ssCategory="${ssCategory}" ` +
+                                `ssOriginalTeamName="${ssOriginalTeamName}" ` +
+                                `ssMappedName="${ssMappedName}" ` +
+                                `wasMapped=${wasMapped}`
+                            );
+                        
                             if (wasMapped) {
                                 const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssMappedName);
-                                if (!ssTeam) return;
-                                if (!teamHasMealInPackage(ssTeam, day.key, mealType)) return;
+                                if (!ssTeam) {
+                                    console.log(`[cateringRows][ss]   ❌ ssTeam nenájdený pre "${ssMappedName}" → riadok sa nezobrazí`);
+                                    return;
+                                }
+                                if (!teamHasMealInPackage(ssTeam, day.key, mealType)) {
+                                    console.log(`[cateringRows][ss]   ❌ ssTeam "${ssMappedName}" nemá jedlo v package → riadok sa nezobrazí`);
+                                    return;
+                                }
                             } else {
                                 const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssOriginalTeamName);
                                 if (ssTeam) {
-                                    if (!teamHasMealInPackage(ssTeam, day.key, mealType)) return;
+                                    if (!teamHasMealInPackage(ssTeam, day.key, mealType)) {
+                                        console.log(`[cateringRows][ss]   ❌ ssTeam "${ssOriginalTeamName}" nemá jedlo v package → riadok sa nezobrazí`);
+                                        return;
+                                    }
                                 }
                             }
-
-                            // 🔥 NOVÉ: Skupinu berieme z PRIORITIZOVANÉHO tímu (ss.teamName),
-                            // nie z aktuálneho tímu. Ak je táto skupina blokovaná, tento riadok nezobrazíme.
+                        
                             const priorityCatId = Object.keys(categoriesData || {}).find(
                                 id => categoriesData[id] === ssCategory
                             );
                             if (priorityCatId && groupsData) {
                                 let priorityGroupNames = [];
-                                const groups = findGroupsByLastLetter(rawPriorityTeamName, priorityCategoryId, groupsData);
+                                const groups = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
                                 priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
                                 priorityGroupNames = priorityGroupNames.filter(Boolean);
-                            
+                        
                                 if (priorityGroupNames.length > 0) {
                                     const isBlocked = priorityGroupNames.some(gName =>
                                         blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${gName}`)
                                     );
+                                    console.log(
+                                        `[cateringRows][ss]   ` +
+                                        `priorityGroupNames=${JSON.stringify(priorityGroupNames)} ` +
+                                        `isBlocked=${isBlocked}`
+                                    );
                                     if (isBlocked) {
+                                        console.log(`[cateringRows][ss]   ❌ BLOKOVANÉ → riadok sa nezobrazí`);
                                         return;
                                     }
                                 }
-                            }                        
-                          
+                            }
+                        
+                            console.log(`[cateringRows][ss]   ✅ ZOBRAZENÉ`);
                             rows.push({
                                 key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
                                 category: team.category,
