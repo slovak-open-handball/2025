@@ -127,7 +127,7 @@ const isGroupFullyCompleted = (groupName, categoryName, allMatchesList) => {
     return completedCount === groupMatches.length;
 };
 
-const getUnfinishedPriorityGroupsForDayMeal = (
+const getUnfinishedPriorityGroupsForDayMeal = async (
     dayKey,
     mealType,
     cateringAssignments,
@@ -156,8 +156,7 @@ const getUnfinishedPriorityGroupsForDayMeal = (
         const ssCategory = String(ss.category || ss.categoryName || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
         const rawPriorityTeamName = String(ss.teamName || '').trim();
         if (!rawPriorityTeamName) continue;
-    
-        // 🔥 LOG: Detail každého superštruktúra záznamu (miesto, čas, priorita)
+
         console.log(
             `[getUnfinishedPriorityGroupsForDayMeal] SS_RECORD: ` +
             `teamName="${rawPriorityTeamName}" ` +
@@ -169,8 +168,8 @@ const getUnfinishedPriorityGroupsForDayMeal = (
             `isPriority=${ss.isPriority === true} ` +
             `groupName="${ss.groupName || ''}"`
         );
-    
-        // 🔥 Premapuj identifikátor na finálny názov tímu (ak existuje mapovanie)
+
+        // 🔥 1) Skús synchrónne mapovanie cez window.teamNames
         let priorityTeamName = rawPriorityTeamName;
         if (window.teamNames && typeof window.teamNames === 'object') {
             const candidate = window.teamNames[rawPriorityTeamName];
@@ -178,21 +177,45 @@ const getUnfinishedPriorityGroupsForDayMeal = (
                 priorityTeamName = String(candidate).trim();
             }
         }
-    
+
+        // 🔥 2) Ak synchrónne mapovanie zlyhalo, skús async cez matchTracker
+        if (
+            priorityTeamName === rawPriorityTeamName &&
+            window.matchTracker &&
+            typeof window.matchTracker.getTeamNameByDisplayId === 'function'
+        ) {
+            try {
+                const mapped = await window.matchTracker.getTeamNameByDisplayId(rawPriorityTeamName);
+                if (
+                    mapped &&
+                    mapped !== null &&
+                    mapped !== undefined &&
+                    String(mapped).trim() !== '' &&
+                    String(mapped).trim() !== 'null' &&
+                    String(mapped).trim() !== 'undefined' &&
+                    String(mapped).trim() !== rawPriorityTeamName
+                ) {
+                    priorityTeamName = String(mapped).trim();
+                }
+            } catch (e) {
+                // ignoruj chybu, použije sa pôvodný názov
+            }
+        }
+
         const priorityCategoryId = Object.keys(categoriesData).find(
             id => categoriesData[id] === ssCategory
         );
         if (!priorityCategoryId) continue;
-    
+
         let priorityGroupNames = [];
         const groups = findGroupsByLastLetter(rawPriorityTeamName, priorityCategoryId, groupsData);
         priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
         priorityGroupNames = priorityGroupNames.filter(Boolean);
         if (priorityGroupNames.length === 0) continue;
-    
+
         for (const groupNameToCheck of priorityGroupNames) {
             const isCompleted = isGroupFullyCompleted(groupNameToCheck, ssCategory, allMatchesList);
-    
+
             console.log(
                 `[getUnfinishedPriorityGroupsForDayMeal]   ` +
                 `priorityRaw="${rawPriorityTeamName}" ` +
@@ -204,7 +227,7 @@ const getUnfinishedPriorityGroupsForDayMeal = (
                 `slotFrom="${ss.slotFrom || ''}" ` +
                 `isPriority=${ss.isPriority === true}`
             );
-    
+
             if (!isCompleted) {
                 const key = `${ssCategory}||${groupNameToCheck}`;
                 if (!seen.has(key)) {
@@ -1450,273 +1473,306 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         return val === 1 || val === true;
     };
 
-    // --- CATERING ROWS ---
-    const cateringRows = React.useMemo(() => {
-        if (!teamName || !categoryName) return [];
-        if (userTeams.length === 0) return [];
+    // --- CATERING ROWS (async, používa matchTracker.getTeamNameByDisplayId) ---
+    const [cateringRows, setCateringRows] = React.useState([]);
 
-        const cleanCat = cleanCategory(categoryName);
-        const cleanTeam = String(teamName).trim();
+    React.useEffect(() => {
+        let cancelled = false;
 
-        const filteredTeams = cleanCat
-            ? userTeams.filter((t) => cleanCategory(t.category) === cleanCat)
-            : userTeams;
+        const computeCateringRows = async () => {
+            if (!teamName || !categoryName) {
+                if (!cancelled) setCateringRows([]);
+                return;
+            }
+            if (userTeams.length === 0) {
+                if (!cancelled) setCateringRows([]);
+                return;
+            }
 
-        const rows = [];
+            const cleanCat = cleanCategory(categoryName);
+            const cleanTeam = String(teamName).trim();
 
-        // 🔥 Predpočítame si množinu blokovaných kombinácií "dayKey|mealType|categoryName|groupName".
-        // Pre každý deň+typ a každé superstructure priradenie zistíme skupinu prioritizovaného tímu.
-        // Ak táto skupina NIE JE 100% dokončená, uložíme si kombináciu do Setu.
-        // Pri každom tíme v cykle potom blokujeme len ak JEHO skupina je v tomto Sete.
-        const blockedGroupDayMealKeys = new Set();   
-      
-        (tournamentDays || []).forEach((day) => {
-            ['lunch', 'dinner'].forEach((mealType) => {
-                const blockedGroups = getUnfinishedPriorityGroupsForDayMeal(
-                    day.key,
-                    mealType,
-                    cateringAssignments,
-                    categoriesData,
-                    groupsData,
-                    allMatchesList,
-                    userTeams
-                );
-                blockedGroups.forEach(({ categoryName, groupName }) => {
-                    blockedGroupDayMealKeys.add(`${day.key}|${mealType}|${categoryName}|${groupName}`);
-                });
-            });
-        });      
+            const filteredTeams = cleanCat
+                ? userTeams.filter((t) => cleanCategory(t.category) === cleanCat)
+                : userTeams;
 
-        filteredTeams.forEach((team) => {
-            (tournamentDays || []).forEach((day) => {
-                ['lunch', 'dinner'].forEach((mealType) => {
-                    // 🔥 Zistíme VŠETKY skupiny, v ktorých sa aktuálne spracúvaný tím nachádza.
-                    // Tím môže byť vo viacerých skupinách (rôzni používatelia, rôzne záznamy).
-                    // Ak aspoň JEDNA z jeho skupín je v tomto dni+type prioritizovaná a nie je 100%,
-                    // zablokujeme riadky pre tento tím.
-                    const teamCategoryClean = cleanCategory(team.category);
-                    const teamNameClean = String(team.teamName || '').trim();
+            const rows = [];
 
-                    const slots = daySlots[day.key]?.[mealType] || [];
-                    if (slots.length === 0) return;
+            // 🔥 Predpočítame si množinu blokovaných kombinácií "dayKey|mealType|categoryName|groupName".
+            const blockedGroupDayMealKeys = new Set();
 
-                    slots.forEach((slot) => {
-                        const existing = findCateringAssignment(team, day.key, mealType, slot.from);
-                        const ss = findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
-
-                       if (existing) {
-                           if (!teamHasMealInPackage(team, day.key, mealType)) return;
-                       
-                           const isPrioritized = isTeamPrioritizedForDayMeal(team, day.key, mealType);
-                       
-                           // 🔥 LOG: Detail klasického stravovania (miesto, čas, priorita)
-                           console.log(
-                               `[cateringRows][existing] CLASSIC: ` +
-                               `team="${teamNameClean}" ` +
-                               `cat="${teamCategoryClean}" ` +
-                               `day=${day.key} ` +
-                               `meal=${mealType} ` +
-                               `slotFrom=${slot.from} ` +
-                               `slotTo=${slot.to} ` +
-                               `place="${existing.placeName || ''}" ` +
-                               `isPriority=false ` +
-                               `isPrioritized=${isPrioritized}`
-                           );
-                       
-                           if (isPrioritized) {
-                               const teamCatId = Object.keys(categoriesData || {}).find(
-                                   id => categoriesData[id] === teamCategoryClean
-                               );
-                               if (teamCatId && groupsData) {
-                                   let teamGroupNames = [];
-                                   if (team.groupName) {
-                                       teamGroupNames = [String(team.groupName).trim()];
-                                   } else {
-                                       const teamGroups = findGroupsByLastLetter(teamNameClean, teamCatId, groupsData);
-                                       teamGroupNames = (teamGroups || []).map(g => String(g.name || '').trim());
-                                   }
-                                   teamGroupNames = teamGroupNames.filter(Boolean);
-                       
-                                   if (teamGroupNames.length > 0) {
-                                       const blockedKeys = teamGroupNames.map(gName =>
-                                           `${day.key}|${mealType}|${teamCategoryClean}|${gName}`
-                                       );
-                                       const isBlocked = blockedKeys.some(k => blockedGroupDayMealKeys.has(k));
-                       
-                                       console.log(
-                                           `[cateringRows][existing]   ` +
-                                           `teamGroupNames=${JSON.stringify(teamGroupNames)} ` +
-                                           `blockedKeys=${JSON.stringify(blockedKeys)} ` +
-                                           `isBlocked=${isBlocked}`
-                                       );
-                       
-                                       if (isBlocked) {
-                                           console.log(`[cateringRows][existing]   ❌ BLOKOVANÉ → riadok sa nezobrazí`);
-                                           return;
-                                       }
-                                   }
-                               }
-                           }
-                       
-                           console.log(`[cateringRows][existing]   ✅ ZOBRAZENÉ`);
-                           rows.push({
-                                key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
-                                category: team.category,
-                                teamName: team.teamName,
-                                dayKey: day.key,
-                                dayLabel: day.fullLabelNumeric,
-                                daySort: day.date.getTime(),
-                                dateObj: day.date,
-                                mealType,
-                                mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
-                                slotFrom: slot.from,
-                                slotTo: slot.to,
-                                placeName: existing.placeName || '',
-                                type: 'classic',
-                                isPriority: false,
-                                kind: 'catering',
-                            });
-                            return;
-                        }
-
-                        if (ss) {
-                            const ssCategory = cleanCategory(ss.category || ss.categoryName || '');
-                            const ssOriginalTeamName = String(ss.teamName || '').trim();
-                        
-                            // 🔥 LOG: Detail superštruktúra stravovania (miesto, čas, priorita)
-                            console.log(
-                                `[cateringRows][ss] SUPERSTRUCTURE: ` +
-                                `clickedTeam="${teamNameClean}" ` +
-                                `cat="${teamCategoryClean}" ` +
-                                `day=${day.key} ` +
-                                `meal=${mealType} ` +
-                                `slotFrom=${ss.slotFrom} ` +
-                                `slotTo=${slot.to} ` +
-                                `place="${ss.placeName || ''}" ` +
-                                `isPriority=${ss.isPriority === true} ` +
-                                `priorityTeamRaw="${ssOriginalTeamName}" ` +
-                                `priorityGroupName="${ss.groupName || ''}"`
-                            );
-                        
-                            let ssMappedName = getMappedTeamName(ssCategory, ssOriginalTeamName);
-                        
-                            if (
-                                ssMappedName === null ||
-                                ssMappedName === undefined ||
-                                String(ssMappedName).trim() === '' ||
-                                String(ssMappedName).trim() === 'null' ||
-                                String(ssMappedName).trim() === 'undefined'
-                            ) {
-                                ssMappedName = ssOriginalTeamName;
-                            }
-                        
-                            const wasMapped = String(ssMappedName).trim() !== ssOriginalTeamName;
-                        
-                            console.log(
-                                `[cateringRows][ss]   ` +
-                                `ssCategory="${ssCategory}" ` +
-                                `ssOriginalTeamName="${ssOriginalTeamName}" ` +
-                                `ssMappedName="${ssMappedName}" ` +
-                                `wasMapped=${wasMapped}`
-                            );
-                        
-                            if (wasMapped) {
-                                const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssMappedName);
-                                if (!ssTeam) {
-                                    console.log(`[cateringRows][ss]   ❌ ssTeam nenájdený pre "${ssMappedName}" → riadok sa nezobrazí`);
-                                    return;
-                                }
-                                if (!teamHasMealInPackage(ssTeam, day.key, mealType)) {
-                                    console.log(`[cateringRows][ss]   ❌ ssTeam "${ssMappedName}" nemá jedlo v package → riadok sa nezobrazí`);
-                                    return;
-                                }
-                            } else {
-                                const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssOriginalTeamName);
-                                if (ssTeam) {
-                                    if (!teamHasMealInPackage(ssTeam, day.key, mealType)) {
-                                        console.log(`[cateringRows][ss]   ❌ ssTeam "${ssOriginalTeamName}" nemá jedlo v package → riadok sa nezobrazí`);
-                                        return;
-                                    }
-                                }
-                            }
-                        
-                            const priorityCatId = Object.keys(categoriesData || {}).find(
-                                id => categoriesData[id] === ssCategory
-                            );
-                            if (priorityCatId && groupsData) {
-                                let priorityGroupNames = [];
-                                const groups = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
-                                priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
-                                priorityGroupNames = priorityGroupNames.filter(Boolean);
-                        
-                                if (priorityGroupNames.length > 0) {
-                                    const isBlocked = priorityGroupNames.some(gName =>
-                                        blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${gName}`)
-                                    );
-                                    console.log(
-                                        `[cateringRows][ss]   ` +
-                                        `priorityGroupNames=${JSON.stringify(priorityGroupNames)} ` +
-                                        `isBlocked=${isBlocked}`
-                                    );
-                                    if (isBlocked) {
-                                        console.log(`[cateringRows][ss]   ❌ BLOKOVANÉ → riadok sa nezobrazí`);
-                                        return;
-                                    }
-                                }
-                            }
-                        
-                            console.log(`[cateringRows][ss]   ✅ ZOBRAZENÉ`);
-                            rows.push({
-                                key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
-                                category: team.category,
-                                teamName: ssMappedName,
-                                dayKey: day.key,
-                                dayLabel: day.fullLabelNumeric,
-                                daySort: day.date.getTime(),
-                                dateObj: day.date,
-                                mealType,
-                                mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
-                                slotFrom: ss.slotFrom,
-                                slotTo: slot.to,
-                                placeName: ss.placeName || '',
-                                type: 'superstructure',
-                                isPriority: ss.isPriority === true,
-                                kind: 'catering',
-                            });
-                        }
+            for (const day of (tournamentDays || [])) {
+                for (const mealType of ['lunch', 'dinner']) {
+                    const blockedGroups = await getUnfinishedPriorityGroupsForDayMeal(
+                        day.key,
+                        mealType,
+                        cateringAssignments,
+                        categoriesData,
+                        groupsData,
+                        allMatchesList,
+                        userTeams
+                    );
+                    blockedGroups.forEach(({ categoryName: cn, groupName }) => {
+                        blockedGroupDayMealKeys.add(`${day.key}|${mealType}|${cn}|${groupName}`);
                     });
-                });
+                }
+            }
+
+            if (cancelled) return;
+
+            for (const team of filteredTeams) {
+                for (const day of (tournamentDays || [])) {
+                    for (const mealType of ['lunch', 'dinner']) {
+                        const teamCategoryClean = cleanCategory(team.category);
+                        const teamNameClean = String(team.teamName || '').trim();
+
+                        const slots = daySlots[day.key]?.[mealType] || [];
+                        if (slots.length === 0) continue;
+
+                        for (const slot of slots) {
+                            const existing = findCateringAssignment(team, day.key, mealType, slot.from);
+                            const ss = findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
+
+                            if (existing) {
+                                if (!teamHasMealInPackage(team, day.key, mealType)) continue;
+
+                                const isPrioritized = isTeamPrioritizedForDayMeal(team, day.key, mealType);
+
+                                console.log(
+                                    `[cateringRows][existing] CLASSIC: ` +
+                                    `team="${teamNameClean}" ` +
+                                    `cat="${teamCategoryClean}" ` +
+                                    `day=${day.key} ` +
+                                    `meal=${mealType} ` +
+                                    `slotFrom=${slot.from} ` +
+                                    `slotTo=${slot.to} ` +
+                                    `place="${existing.placeName || ''}" ` +
+                                    `isPriority=false ` +
+                                    `isPrioritized=${isPrioritized}`
+                                );
+
+                                if (isPrioritized) {
+                                    const teamCatId = Object.keys(categoriesData || {}).find(
+                                        id => categoriesData[id] === teamCategoryClean
+                                    );
+                                    if (teamCatId && groupsData) {
+                                        let teamGroupNames = [];
+                                        if (team.groupName) {
+                                            teamGroupNames = [String(team.groupName).trim()];
+                                        } else {
+                                            const teamGroups = findGroupsByLastLetter(teamNameClean, teamCatId, groupsData);
+                                            teamGroupNames = (teamGroups || []).map(g => String(g.name || '').trim());
+                                        }
+                                        teamGroupNames = teamGroupNames.filter(Boolean);
+
+                                        if (teamGroupNames.length > 0) {
+                                            const blockedKeys = teamGroupNames.map(gName =>
+                                                `${day.key}|${mealType}|${teamCategoryClean}|${gName}`
+                                            );
+                                            const isBlocked = blockedKeys.some(k => blockedGroupDayMealKeys.has(k));
+
+                                            console.log(
+                                                `[cateringRows][existing]   ` +
+                                                `teamGroupNames=${JSON.stringify(teamGroupNames)} ` +
+                                                `blockedKeys=${JSON.stringify(blockedKeys)} ` +
+                                                `isBlocked=${isBlocked}`
+                                            );
+
+                                            if (isBlocked) {
+                                                console.log(`[cateringRows][existing]   ❌ BLOKOVANÉ → riadok sa nezobrazí`);
+                                                continue;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                console.log(`[cateringRows][existing]   ✅ ZOBRAZENÉ`);
+                                rows.push({
+                                    key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
+                                    category: team.category,
+                                    teamName: team.teamName,
+                                    dayKey: day.key,
+                                    dayLabel: day.fullLabelNumeric,
+                                    daySort: day.date.getTime(),
+                                    dateObj: day.date,
+                                    mealType,
+                                    mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
+                                    slotFrom: slot.from,
+                                    slotTo: slot.to,
+                                    placeName: existing.placeName || '',
+                                    type: 'classic',
+                                    isPriority: false,
+                                    kind: 'catering',
+                                });
+                                continue;
+                            }
+
+                            if (ss) {
+                                const ssCategory = cleanCategory(ss.category || ss.categoryName || '');
+                                const ssOriginalTeamName = String(ss.teamName || '').trim();
+
+                                console.log(
+                                    `[cateringRows][ss] SUPERSTRUCTURE: ` +
+                                    `clickedTeam="${teamNameClean}" ` +
+                                    `cat="${teamCategoryClean}" ` +
+                                    `day=${day.key} ` +
+                                    `meal=${mealType} ` +
+                                    `slotFrom=${ss.slotFrom} ` +
+                                    `slotTo=${slot.to} ` +
+                                    `place="${ss.placeName || ''}" ` +
+                                    `isPriority=${ss.isPriority === true} ` +
+                                    `priorityTeamRaw="${ssOriginalTeamName}" ` +
+                                    `priorityGroupName="${ss.groupName || ''}"`
+                                );
+
+                                let ssMappedName = getMappedTeamName(ssCategory, ssOriginalTeamName);
+
+                                if (
+                                    ssMappedName === null ||
+                                    ssMappedName === undefined ||
+                                    String(ssMappedName).trim() === '' ||
+                                    String(ssMappedName).trim() === 'null' ||
+                                    String(ssMappedName).trim() === 'undefined'
+                                ) {
+                                    ssMappedName = ssOriginalTeamName;
+                                }
+
+                                // 🔥 Ak synchrónne mapovanie zlyhalo, skús async cez matchTracker
+                                if (
+                                    String(ssMappedName).trim() === ssOriginalTeamName &&
+                                    window.matchTracker &&
+                                    typeof window.matchTracker.getTeamNameByDisplayId === 'function'
+                                ) {
+                                    try {
+                                        const mapped = await window.matchTracker.getTeamNameByDisplayId(ssOriginalTeamName);
+                                        if (
+                                            mapped &&
+                                            mapped !== null &&
+                                            mapped !== undefined &&
+                                            String(mapped).trim() !== '' &&
+                                            String(mapped).trim() !== 'null' &&
+                                            String(mapped).trim() !== 'undefined' &&
+                                            String(mapped).trim() !== ssOriginalTeamName
+                                        ) {
+                                            ssMappedName = String(mapped).trim();
+                                        }
+                                    } catch (e) {}
+                                }
+
+                                const wasMapped = String(ssMappedName).trim() !== ssOriginalTeamName;
+
+                                console.log(
+                                    `[cateringRows][ss]   ` +
+                                    `ssCategory="${ssCategory}" ` +
+                                    `ssOriginalTeamName="${ssOriginalTeamName}" ` +
+                                    `ssMappedName="${ssMappedName}" ` +
+                                    `wasMapped=${wasMapped}`
+                                );
+
+                                if (wasMapped) {
+                                    const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssMappedName);
+                                    if (!ssTeam) {
+                                        console.log(`[cateringRows][ss]   ❌ ssTeam nenájdený pre "${ssMappedName}" → riadok sa nezobrazí`);
+                                        continue;
+                                    }
+                                    if (!teamHasMealInPackage(ssTeam, day.key, mealType)) {
+                                        console.log(`[cateringRows][ss]   ❌ ssTeam "${ssMappedName}" nemá jedlo v package → riadok sa nezobrazí`);
+                                        continue;
+                                    }
+                                } else {
+                                    const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssOriginalTeamName);
+                                    if (ssTeam) {
+                                        if (!teamHasMealInPackage(ssTeam, day.key, mealType)) {
+                                            console.log(`[cateringRows][ss]   ❌ ssTeam "${ssOriginalTeamName}" nemá jedlo v package → riadok sa nezobrazí`);
+                                            continue;
+                                        }
+                                    }
+                                }
+
+                                const priorityCatId = Object.keys(categoriesData || {}).find(
+                                    id => categoriesData[id] === ssCategory
+                                );
+                                if (priorityCatId && groupsData) {
+                                    let priorityGroupNames = [];
+                                    const groups = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
+                                    priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
+                                    priorityGroupNames = priorityGroupNames.filter(Boolean);
+
+                                    if (priorityGroupNames.length > 0) {
+                                        const isBlocked = priorityGroupNames.some(gName =>
+                                            blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${gName}`)
+                                        );
+                                        console.log(
+                                            `[cateringRows][ss]   ` +
+                                            `priorityGroupNames=${JSON.stringify(priorityGroupNames)} ` +
+                                            `isBlocked=${isBlocked}`
+                                        );
+                                        if (isBlocked) {
+                                            console.log(`[cateringRows][ss]   ❌ BLOKOVANÉ → riadok sa nezobrazí`);
+                                            continue;
+                                        }
+                                    }
+                                }
+
+                                console.log(`[cateringRows][ss]   ✅ ZOBRAZENÉ`);
+                                rows.push({
+                                    key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
+                                    category: team.category,
+                                    teamName: ssMappedName,
+                                    dayKey: day.key,
+                                    dayLabel: day.fullLabelNumeric,
+                                    daySort: day.date.getTime(),
+                                    dateObj: day.date,
+                                    mealType,
+                                    mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
+                                    slotFrom: ss.slotFrom,
+                                    slotTo: slot.to,
+                                    placeName: ss.placeName || '',
+                                    type: 'superstructure',
+                                    isPriority: ss.isPriority === true,
+                                    kind: 'catering',
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (cancelled) return;
+
+            const dedupMap = new Map();
+            rows.forEach((row) => {
+                const key = `${cleanCategory(row.category)}||${String(row.teamName).trim()}||${row.dayKey}||${row.mealType}`;
+                const existing = dedupMap.get(key);
+                if (!existing) {
+                    dedupMap.set(key, row);
+                    return;
+                }
+                if (existing.isPriority === true && row.isPriority !== true) return;
+                if (row.isPriority === true && existing.isPriority !== true) {
+                    dedupMap.set(key, row);
+                    return;
+                }
             });
-        });
+            let dedupedRows = Array.from(dedupMap.values());
 
-        const dedupMap = new Map();
-        rows.forEach((row) => {
-            const key = `${cleanCategory(row.category)}||${String(row.teamName).trim()}||${row.dayKey}||${row.mealType}`;
-            const existing = dedupMap.get(key);
-            if (!existing) {
-                dedupMap.set(key, row);
-                return;
-            }
-            if (existing.isPriority === true && row.isPriority !== true) return;
-            if (row.isPriority === true && existing.isPriority !== true) {
-                dedupMap.set(key, row);
-                return;
-            }
-        });
-        let dedupedRows = Array.from(dedupMap.values());
+            dedupedRows = dedupedRows.filter((row) => {
+                const rowTeam = String(row.teamName || '').trim();
+                const rowCat = cleanCategory(row.category);
+                if (rowTeam === cleanTeam && rowCat === cleanCat) return true;
+                if (cleanTeam.startsWith(cleanCat + ' ')) {
+                    const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
+                    if (rowTeam === stripped && rowCat === cleanCat) return true;
+                }
+                return false;
+            });
 
-        dedupedRows = dedupedRows.filter((row) => {
-            const rowTeam = String(row.teamName || '').trim();
-            const rowCat = cleanCategory(row.category);
-            if (rowTeam === cleanTeam && rowCat === cleanCat) return true;
-            if (cleanTeam.startsWith(cleanCat + ' ')) {
-                const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
-                if (rowTeam === stripped && rowCat === cleanCat) return true;
-            }
-            return false;
-        });
+            if (!cancelled) setCateringRows(dedupedRows);
+        };
 
-        return dedupedRows;
+        computeCateringRows();
+
+        return () => { cancelled = true; };
     }, [teamName, categoryName, tournamentDays, cateringTimes, unitMinutes, cateringAssignments, packagesList, userTeams, teamNameMap, assignmentsBySlot, daySlots, groupsData, allMatchesList, categoriesData]);
 
     // ================= ZLÚČENIE =================
