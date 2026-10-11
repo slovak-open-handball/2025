@@ -525,7 +525,7 @@ const getGroupTypeColors = (groupName, categoryId, groupsData) => {
     return result;
 };
 
-const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey, isMatchesVisible, isCateringVisible, isLoadingEvents, setIsLoadingEvents }) => {
+const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey, isMatchesVisible, isCateringVisible }) => {
     // --- Matches state ---
     const [matches, setMatches] = useState([]);
     const [matchesLoading, setMatchesLoading] = useState(true);
