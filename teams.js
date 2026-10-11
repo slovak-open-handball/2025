@@ -162,13 +162,19 @@ const getUnfinishedPriorityGroupsForDayMeal = (
         );
         if (!priorityCategoryId) continue;
 
-        const groups = findGroupsByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
-        if (!groups || groups.length === 0) continue;
-
-        for (const group of groups) {
-            const groupNameToCheck = String(group.name || '').trim();
-            if (!groupNameToCheck) continue;
-
+        // 🔥 Skupinu prioritizovaného tímu určíme primárne z ss.groupName,
+        // sekundárne z posledného písmena názvu tímu.
+        let priorityGroupNames = [];
+        if (ss.groupName) {
+            priorityGroupNames = [String(ss.groupName).trim()];
+        } else {
+            const groups = findGroupsByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
+            priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
+        }
+        priorityGroupNames = priorityGroupNames.filter(Boolean);
+        if (priorityGroupNames.length === 0) continue;
+        
+        for (const groupNameToCheck of priorityGroupNames) {
             const isCompleted = isGroupFullyCompleted(groupNameToCheck, ssCategory, allMatchesList);
             if (!isCompleted) {
                 const key = `${ssCategory}||${groupNameToCheck}`;
@@ -1565,19 +1571,25 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                 id => categoriesData[id] === ssCategory
                             );
                             if (priorityCatId && groupsData) {
-                                const priorityGroups = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
-                              
-                                if (priorityGroups && priorityGroups.length > 0) {
-                                    const isBlocked = priorityGroups.some(g => {
-                                        const gName = String(g.name || '').trim();
-                                        return gName && blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${gName}`);
-                                    });
+                                let priorityGroupNames = [];
+                                if (ss.groupName) {
+                                    priorityGroupNames = [String(ss.groupName).trim()];
+                                } else {
+                                    const priorityGroups = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
+                                    priorityGroupNames = (priorityGroups || []).map(g => String(g.name || '').trim());
+                                }
+                                priorityGroupNames = priorityGroupNames.filter(Boolean);
+                            
+                                if (priorityGroupNames.length > 0) {
+                                    const isBlocked = priorityGroupNames.some(gName =>
+                                        blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${gName}`)
+                                    );
                                     if (isBlocked) {
                                         console.log(
                                             `[ss-BLOCKED] ssTeam="${ssOriginalTeamName}" | ${day.key} | ${mealType} | ` +
-                                            `prioritizované skupiny=[${priorityGroups.map(g => g.name).join(', ')}]`
+                                            `prioritizované skupiny=[${priorityGroupNames.join(', ')}]`
                                         );
-                                        return; // 🔥 prioritizovaná skupina nie je 100% → tento riadok nezobrazíme
+                                        return;
                                     }
                                 }
                             }
