@@ -208,8 +208,14 @@ const getUnfinishedPriorityGroupsForDayMeal = async (
         if (!priorityCategoryId) continue;
 
         let priorityGroupNames = [];
-        const groups = findGroupsByLastLetter(rawPriorityTeamName, priorityCategoryId, groupsData);
-        priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
+        // 🔥 PREDNOSTNE použi ss.groupName (skupina, v ktorej tím REÁLNE hrá)
+        if (ss.groupName && String(ss.groupName).trim() !== '') {
+            priorityGroupNames = [String(ss.groupName).trim()];
+        } else {
+            // Fallback: použi posledné písmeno názvu tímu
+            const groups = findGroupsByLastLetter(rawPriorityTeamName, priorityCategoryId, groupsData);
+            priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
+        }
         priorityGroupNames = priorityGroupNames.filter(Boolean);
         if (priorityGroupNames.length === 0) continue;
 
@@ -1790,8 +1796,15 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                 );
                                 if (priorityCatId && groupsData) {
                                     let priorityGroupNames = [];
-                                    const groups = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
-                                    priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
+
+                                    // 🔥 PREDNOSTNE použi ss.groupName (skupina, v ktorej tím REÁLNE hrá)
+                                    if (ss.groupName && String(ss.groupName).trim() !== '') {
+                                        priorityGroupNames = [String(ss.groupName).trim()];
+                                    } else {
+                                        // Fallback: použi posledné písmeno pôvodného identifikátora
+                                        const groups = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
+                                        priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
+                                    }
                                     priorityGroupNames = priorityGroupNames.filter(Boolean);
 
                                     if (priorityGroupNames.length > 0) {
