@@ -3078,6 +3078,7 @@ const TeamsOverviewApp = (props) => {
     
             // --- UDALOSTI TÍMU (zlúčené zápasy + stravovanie) ---
             (isAnyButtonSelected && (isCateringVisible || isMatchesVisible)) ? React.createElement(TeamEventsList, {
+                key: `${selectedTeamDetails.teamName}|${selectedTeamDetails.category || categoryFromUrl || ''}`,
                 teamName: selectedTeamDetails.teamName,
                 categoryName: effectiveCategory || '',
                 categoryId: categoryId,
