@@ -2998,7 +2998,7 @@ const TeamsOverviewApp = (props) => {
                     { className: 'flex flex-wrap gap-3 mt-2' },
                     sortedOccurrences.map((occ, index) => {
                         let isSelected = false;
-                        if (hasCategoryInUrl) {
+                        if (hasCategory) {
                             if (selectedTeamDetails.category === null) {
                                 isSelected = occ.teamName === selectedTeamDetails.teamName;
                             } else {
