@@ -172,12 +172,8 @@ const getUnfinishedPriorityGroupsForDayMeal = (
         if (!priorityCategoryId) continue;
 
         let priorityGroupNames = [];
-        if (ss.groupName) {
-            priorityGroupNames = [String(ss.groupName).trim()];
-        } else {
-            const groups = findGroupsByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
-            priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
-        }
+        const groups = findGroupsByLastLetter(rawPriorityTeamName, priorityCategoryId, groupsData);
+        priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
         priorityGroupNames = priorityGroupNames.filter(Boolean);
         if (priorityGroupNames.length === 0) continue;
 
@@ -1582,12 +1578,8 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                             );
                             if (priorityCatId && groupsData) {
                                 let priorityGroupNames = [];
-                                if (ss.groupName) {
-                                    priorityGroupNames = [String(ss.groupName).trim()];
-                                } else {
-                                    const priorityGroups = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
-                                    priorityGroupNames = (priorityGroups || []).map(g => String(g.name || '').trim());
-                                }
+                                const groups = findGroupsByLastLetter(rawPriorityTeamName, priorityCategoryId, groupsData);
+                                priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
                                 priorityGroupNames = priorityGroupNames.filter(Boolean);
                             
                                 if (priorityGroupNames.length > 0) {
