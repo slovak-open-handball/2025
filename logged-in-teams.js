@@ -2723,15 +2723,15 @@ const TeamsOverviewApp = (props) => {
             }));
 
         if (occurrences.length === 0) return;
-
+        
         setSelectedTeamDetails({
             teamName: normalizedTeamName,
             category: categoryName || null,
             occurrences
         });
-
+    
         updateUrlHash(normalizedTeamName, categoryName || null);
-
+    
         const catName = categoryName || occurrences[0].category;
         loadTeamRoster(normalizedTeamName, catName);
     };
@@ -2739,7 +2739,7 @@ const TeamsOverviewApp = (props) => {
     const handleTeamOccurrenceClick = (occ) => {
         const normalizedTeamName = occ.teamName.replace(/\s+/g, ' ').trim();
         const normalizedCategory = occ.category.replace(/\s+/g, ' ').trim();        
-        
+    
         const hashParts = [];
         if (normalizedCategory) {
             let encodedCategory = normalizedCategory.replace(/ - /g, '___TRIPLE_DASH___');
@@ -2753,12 +2753,12 @@ const TeamsOverviewApp = (props) => {
             encodedTeam = encodedTeam.replace(/___TRIPLE_DASH___/g, '---');
             hashParts.push(`team=${encodeURIComponent(encodedTeam)}`);
         }
-        
+    
         const newHash = hashParts.length > 0 ? `#${hashParts.join('&')}` : '';
         if (window.location.hash !== newHash) {
             window.history.replaceState(null, '', newHash);
         }
-        
+    
         const baseTeamName = removeSuffix(normalizedTeamName);
         const userTeams = getUserTeamsFromProfile();
         const allOccurrences = userTeams
@@ -2769,7 +2769,7 @@ const TeamsOverviewApp = (props) => {
                 groupName: t.groupName,
                 order: t.order
             }));
-        
+                
         setSelectedTeamDetails({
             teamName: normalizedTeamName,
             category: normalizedCategory,
