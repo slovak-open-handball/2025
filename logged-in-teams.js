@@ -2205,6 +2205,7 @@ const TeamsOverviewApp = (props) => {
     );
 
     const [teamEventsFilter, setTeamEventsFilter] = useState(null);
+    const [isLoadingEvents, setIsLoadingEvents] = useState(false);
 
     // Získa tímy prihláseného používateľa z props alebo z window.globalUserProfileData
     const getUserTeamsFromProfile = () => {
