@@ -1805,8 +1805,9 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
             !packagesLoading &&
             !cateringAssignmentsLoading &&
             !userTeamsLoading;
-        if (allLoaded) {
-            setIsLoadingEvents(false);
+        
+        if (isLoadingEvents || !allLoaded) {
+            return React.createElement(... 'Načítavam udalosti tímu...' ...);
         }
     }, [matchesLoading, cateringSettingsLoading, tournamentDaysLoading, packagesLoading, cateringAssignmentsLoading, userTeamsLoading, isLoadingEvents, setIsLoadingEvents]);
   
