@@ -1,4 +1,4 @@
-// logged-in-teams.js
+// teams.js
 import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -67,6 +67,119 @@ const removeSuffix = (teamName) => {
     }
     
     return teamName;
+};
+
+// ============================================================
+// POMOCNÉ FUNKCIE PRE KONTROLU 100% DOKONČENIA SKUPINY
+// (rovnaká logika ako v matchTracker.isGroupFullyCompleted)
+// ============================================================
+
+const getLastLetterFromTeamName = (teamName) => {
+    if (!teamName) return null;
+    const trimmed = String(teamName).trim();
+    if (trimmed.length === 0) return null;
+    const lastChar = trimmed[trimmed.length - 1];
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÄČĎÉÍĽĹŇÓÔŘŠŤÚÝŽabcdefghijklmnopqrstuvwxyzáäčďéíĺľňóôřšťúýž';
+    return letters.includes(lastChar) ? lastChar.toUpperCase() : null;
+};
+
+const findGroupsByLastLetter = (teamName, categoryId, groupsData) => {
+    const lastLetter = getLastLetterFromTeamName(teamName);
+    if (!lastLetter) return [];
+    if (!groupsData || !categoryId) return [];
+    const categoryGroups = groupsData[categoryId] || [];
+    return categoryGroups.filter(g => {
+        if (!g || !g.name) return false;
+        return g.name.trim().slice(-1).toUpperCase() === lastLetter;
+    });
+};
+
+const isGroupFullyCompleted = (groupName, categoryName, allMatchesList) => {
+    if (!groupName || !categoryName || !Array.isArray(allMatchesList) || allMatchesList.length === 0) {
+        return true;
+    }
+
+    const groupLastLetter = String(groupName).trim().slice(-1).toUpperCase();
+    if (!groupLastLetter) return true;
+
+    const cleanCat = String(categoryName).replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+    const cleanCatLower = cleanCat.toLowerCase();
+
+    const groupMatches = allMatchesList.filter(m => {
+        if (!m || m.isPlacementMatch) return false;
+
+        const mCat = String(m.categoryName || m.category || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+        if (mCat !== cleanCatLower) return false;
+
+        const mGroup = String(m.groupName || '').trim();
+        if (!mGroup) return false;
+
+        const mGroupLastLetter = mGroup.slice(-1).toUpperCase();
+        return mGroupLastLetter === groupLastLetter;
+    });
+
+    if (groupMatches.length === 0) return true;
+
+    const completedCount = groupMatches.filter(m => m.status === 'completed').length;
+    return completedCount === groupMatches.length;
+};
+
+const getUnfinishedPriorityGroupsForDayMeal = (
+    dayKey,
+    mealType,
+    cateringAssignments,
+    categoriesData,
+    groupsData,
+    allMatchesList,
+    userTeams
+) => {
+    const result = [];
+    if (!Array.isArray(cateringAssignments) || cateringAssignments.length === 0) return result;
+    if (!categoriesData || !groupsData) return result;
+
+    const ssForDayMeal = cateringAssignments.filter(a =>
+        a &&
+        a.isSuperstructure === true &&
+        a.dayKey === dayKey &&
+        a.mealType === mealType
+    );
+    if (ssForDayMeal.length === 0) return result;
+
+    const seen = new Set();
+
+    for (const ss of ssForDayMeal) {
+        const ssCategory = String(ss.category || ss.categoryName || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+        const priorityTeamName = String(ss.teamName || '').trim();
+        if (!priorityTeamName) continue;
+
+        const priorityCategoryId = Object.keys(categoriesData).find(
+            id => categoriesData[id] === ssCategory
+        );
+        if (!priorityCategoryId) continue;
+
+        let priorityGroupNames = [];
+        if (ss.groupName) {
+            priorityGroupNames = [String(ss.groupName).trim()];
+        } else {
+            const groups = findGroupsByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
+            priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
+        }
+        priorityGroupNames = priorityGroupNames.filter(Boolean);
+        if (priorityGroupNames.length === 0) continue;
+        
+        for (const groupNameToCheck of priorityGroupNames) {
+            const isCompleted = isGroupFullyCompleted(groupNameToCheck, ssCategory, allMatchesList);
+            if (!isCompleted) {
+                const key = `${ssCategory}||${groupNameToCheck}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    result.push({ categoryName: ssCategory, groupName: groupNameToCheck });
+                }
+            }
+        }
+    }
+
+    return result;
 };
 
 const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
@@ -412,620 +525,7 @@ const getGroupTypeColors = (groupName, categoryId, groupsData) => {
     return result;
 };
 
-// ============================================================
-// TeamCateringList – skopírovaný z teams.js
-// ============================================================
-const TeamCateringList = ({ teamName, categoryName }) => {
-    const [loading, setLoading] = useState(true);
-    const [cateringTimes, setCateringTimes] = useState({});
-    const [unitMinutes, setUnitMinutes] = useState('');
-    const [tournamentDays, setTournamentDays] = useState([]);
-    const [cateringAssignments, setCateringAssignments] = useState([]);
-    const [packagesList, setPackagesList] = useState([]);
-    const [userTeams, setUserTeams] = useState([]);
-    const [teamNameMap, setTeamNameMap] = useState({});
-
-    const cateringAssignmentsRef = useRef([]);
-    useEffect(() => { cateringAssignmentsRef.current = cateringAssignments; }, [cateringAssignments]);
-
-    const cleanCategory = (cat) => String(cat || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
-
-    const timeToMinutes = (t) => {
-        if (!t || typeof t !== 'string') return null;
-        const parts = t.split(':');
-        if (parts.length < 2) return null;
-        const h = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10);
-        if (isNaN(h) || isNaN(m)) return null;
-        return h * 60 + m;
-    };
-
-    const minutesToTime = (mins) => {
-        const h = Math.floor(mins / 60);
-        const m = mins % 60;
-        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    };
-
-    const hasValidMealRange = (mealTimes, unitMinutes) => {
-        if (!mealTimes) return false;
-        const fromMin = timeToMinutes(mealTimes.from);
-        const toMin = timeToMinutes(mealTimes.to);
-        const unit = parseInt(unitMinutes, 10);
-        if (fromMin == null || toMin == null) return false;
-        if (isNaN(unit) || unit <= 0) return false;
-        if (toMin - fromMin < unit) return false;
-        return true;
-    };
-
-    const buildMealSlots = (from, to, unitMinutes) => {
-        const fromMin = timeToMinutes(from);
-        const toMin = timeToMinutes(to);
-        const unit = parseInt(unitMinutes, 10);
-        if (fromMin == null || toMin == null) return [];
-        if (isNaN(unit) || unit <= 0) return [];
-        const total = toMin - fromMin;
-        if (total <= 0) return [];
-        const count = Math.floor(total / unit);
-        if (count <= 0) return [];
-        const slots = [];
-        for (let i = 0; i < count; i++) {
-            const slotFrom = fromMin + i * unit;
-            const slotTo = slotFrom + unit;
-            slots.push({ from: minutesToTime(slotFrom), to: minutesToTime(slotTo), label: minutesToTime(slotFrom) });
-        }
-        return slots;
-    };
-
-    const buildTournamentDays = (arrivalDate, tournamentEnd) => {
-        if (!arrivalDate || !tournamentEnd) return [];
-        const start = new Date(arrivalDate);
-        const end = new Date(tournamentEnd);
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) return [];
-        start.setHours(0, 0, 0, 0);
-        end.setHours(0, 0, 0, 0);
-        if (start > end) return [];
-        const days = [];
-        const current = new Date(start);
-        while (current <= end) {
-            const y = current.getFullYear();
-            const m = String(current.getMonth() + 1).padStart(2, '0');
-            const d = String(current.getDate()).padStart(2, '0');
-            const key = `${y}-${m}-${d}`;
-            days.push({
-                date: new Date(current), key,
-                label: current.toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' }),
-                fullLabel: current.toLocaleDateString('sk-SK', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
-                fullLabelNumeric: `${d}. ${m}. ${y}`,
-            });
-            current.setDate(current.getDate() + 1);
-        }
-        return days;
-    };
-
-    const getMappedNameForTeam = async (categoryName, teamName) => {
-        if (!teamName) return teamName;
-        const candidates = [];
-        if (categoryName && !teamName.includes(categoryName)) {
-            candidates.push(`${categoryName} ${teamName}`);
-        }
-        candidates.push(teamName);
-
-        const isValidMappedValue = (val, input) => {
-            if (val === null || val === undefined) return false;
-            const s = String(val).trim();
-            if (!s) return false;
-            if (s === 'null' || s === 'undefined') return false;
-            if (s === String(input)) return false;
-            return true;
-        };
-
-        if (window.teamNames && typeof window.teamNames === 'object') {
-            for (const key of candidates) {
-                const val = window.teamNames[key];
-                if (isValidMappedValue(val, key)) return val;
-            }
-        }
-
-        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-            for (const key of candidates) {
-                try {
-                    const mapped = await window.matchTracker.getTeamNameByDisplayId(key);
-                    if (isValidMappedValue(mapped, key)) return mapped;
-                } catch (e) { }
-            }
-        }
-
-        return teamName;
-    };
-
-    useEffect(() => {
-        if (!window.db) return;
-        const settingsDocRef = doc(window.db, 'settings', 'registration');
-        const unsub = onSnapshot(settingsDocRef, (snap) => {
-            if (snap.exists()) {
-                const data = snap.data();
-                const arrivalDate = data.arrivalDate ? data.arrivalDate.toDate() : null;
-                const tournamentEnd = data.tournamentEnd ? data.tournamentEnd.toDate() : null;
-                setTournamentDays(buildTournamentDays(arrivalDate, tournamentEnd));
-            } else {
-                setTournamentDays([]);
-            }
-        }, () => {});
-        return () => unsub();
-    }, []);
-
-    useEffect(() => {
-        if (!window.db) return;
-        const unsub = onSnapshot(doc(window.db, 'settings', 'catering'), (snap) => {
-            if (snap.exists()) {
-                const data = snap.data() || {};
-                setCateringTimes(data.times || {});
-                setUnitMinutes(data.unitMinutes != null ? String(data.unitMinutes) : '');
-            } else {
-                setCateringTimes({});
-                setUnitMinutes('');
-            }
-        }, () => {});
-        return () => unsub();
-    }, []);
-
-    useEffect(() => {
-        if (!window.db) return;
-        const unsub = onSnapshot(collection(window.db, 'settings', 'packages', 'list'), (snap) => {
-            const items = [];
-            snap.forEach((d) => {
-                const data = d.data() || {};
-                items.push({
-                    id: d.id,
-                    name: data.name || '',
-                    price: data.price || 0,
-                    meals: data.meals || {},
-                    accommodationTypes: data.accommodationTypes || [],
-                });
-            });
-            setPackagesList(items);
-        }, () => {});
-        return () => unsub();
-    }, []);
-
-    useEffect(() => {
-        if (!window.db) return;
-        const unsub = onSnapshot(collection(window.db, 'catering'), (snap) => {
-            const items = [];
-            snap.forEach((d) => items.push({ id: d.id, ...d.data() }));
-            setCateringAssignments(items);
-        }, () => {});
-        return () => unsub();
-    }, []);
-
-    useEffect(() => {
-        if (!window.db) return;
-        const unsub = onSnapshot(collection(window.db, 'users'), async () => {
-            try {
-                const usersRef = collection(window.db, 'users');
-                const snap = await getDocs(usersRef);
-                const teams = [];
-                snap.forEach((userDoc) => {
-                    const userData = userDoc.data() || {};
-                    const userTeamsData = userData.teams;
-                    if (!userTeamsData || typeof userTeamsData !== 'object') return;
-                    Object.entries(userTeamsData).forEach(([categoryName, teamArray]) => {
-                        if (!Array.isArray(teamArray)) return;
-                        teamArray.forEach((team, teamIndex) => {
-                            if (!team?.teamName) return;
-                            const playersCount = Array.isArray(team.playerDetails) ? team.playerDetails.length : 0;
-                            const menTeamMembersCount = Array.isArray(team.menTeamMemberDetails) ? team.menTeamMemberDetails.length : 0;
-                            const womenTeamMembersCount = Array.isArray(team.womenTeamMemberDetails) ? team.womenTeamMemberDetails.length : 0;
-                            const menDriversCount = Array.isArray(team.driverDetailsMale) ? team.driverDetailsMale.length : 0;
-                            const womenDriversCount = Array.isArray(team.driverDetailsFemale) ? team.driverDetailsFemale.length : 0;
-                            const cleanCat = cleanCategory(categoryName);
-                            teams.push({
-                                uid: userDoc.id,
-                                teamIndex: teamIndex,
-                                id: team.id || `${userDoc.id}-${cleanCat}-${teamIndex}`,
-                                teamName: team.teamName,
-                                category: cleanCat,
-                                playersCount,
-                                othersCount: menTeamMembersCount + womenTeamMembersCount + menDriversCount + womenDriversCount,
-                                rawTeamData: team,
-                                accommodationName: team.accommodation?.name || null,
-                                packageName: team.packageDetails?.name || null,
-                            });
-                        });
-                    });
-                });
-                setUserTeams(teams);
-            } catch (err) {}
-        }, () => {});
-        return () => unsub();
-    }, []);
-
-    const triggerTeamNameRemap = async () => {
-        const assignments = cateringAssignmentsRef.current || [];
-        const pairsMap = new Map();
-        assignments.forEach((a) => {
-            if (a.isSuperstructure !== true) return;
-            const cat = cleanCategory(a.category || a.categoryName || '');
-            const tn = String(a.teamName || '').trim();
-            if (!cat || !tn) return;
-            const key = `${cat}||${tn}`;
-            if (!pairsMap.has(key)) pairsMap.set(key, { category: cat, teamName: tn });
-        });
-        if (pairsMap.size === 0) return;
-        const newMap = {};
-        for (const [key, pair] of pairsMap.entries()) {
-            try {
-                const mapped = await getMappedNameForTeam(pair.category, pair.teamName);
-                if (mapped && mapped !== pair.teamName) newMap[key] = mapped;
-            } catch (e) {}
-        }
-        if (Object.keys(newMap).length > 0) {
-            setTeamNameMap((prev) => {
-                let changed = false;
-                for (const k of Object.keys(newMap)) {
-                    if (prev[k] !== newMap[k]) { changed = true; break; }
-                }
-                if (!changed) return prev;
-                return { ...prev, ...newMap };
-            });
-        }
-    };
-
-    useEffect(() => {
-        const runRemap = () => { triggerTeamNameRemap(); };
-        runRemap();
-        const intervalId = setInterval(runRemap, 800);
-        return () => clearInterval(intervalId);
-    }, []);
-
-    const assignmentsBySlot = React.useMemo(() => {
-        const map = new Map();
-        (cateringAssignments || []).forEach((a) => {
-            if (a.isSuperstructure === true) return;
-            const cat = cleanCategory(a.category || a.categoryName || '');
-            const key = `${a.teamUid}|${a.teamIndex}|${cat}|${a.dayKey}|${a.mealType}|${a.slotFrom}`;
-            if (!map.has(key)) map.set(key, a);
-        });
-        return map;
-    }, [cateringAssignments]);
-
-    const daySlots = React.useMemo(() => {
-        const result = {};
-        (tournamentDays || []).forEach((day) => {
-            const t = cateringTimes[day.key] || {};
-            const lunchTimes = t.lunch || null;
-            const dinnerTimes = t.dinner || null;
-            result[day.key] = {
-                lunch: hasValidMealRange(lunchTimes, unitMinutes) ? buildMealSlots(lunchTimes.from, lunchTimes.to, unitMinutes) : [],
-                dinner: hasValidMealRange(dinnerTimes, unitMinutes) ? buildMealSlots(dinnerTimes.from, dinnerTimes.to, unitMinutes) : [],
-            };
-        });
-        return result;
-    }, [tournamentDays, cateringTimes, unitMinutes]);
-
-    const findCateringAssignment = (team, dayKey, mealType, slotFrom) => {
-        const cat = cleanCategory(team.category);
-        const key = `${team.uid}|${team.teamIndex}|${cat}|${dayKey}|${mealType}|${slotFrom}`;
-        return assignmentsBySlot.get(key) || null;
-    };
-
-    const findSuperstructureAssignmentForCell = (team, dayKey, mealType, slotFrom) => {
-        const teamCat = cleanCategory(team.category);
-        return cateringAssignments.find(
-            (a) =>
-                a.isSuperstructure === true &&
-                a.clickedTeamUid === team.uid &&
-                a.clickedTeamIndex === team.teamIndex &&
-                cleanCategory(a.clickedTeamCategory) === teamCat &&
-                a.dayKey === dayKey &&
-                a.mealType === mealType &&
-                a.slotFrom === slotFrom
-        );
-    };
-
-    const getMappedTeamName = (category, teamName) => {
-        if (!teamName) return teamName;
-        const key = `${category}||${teamName}`;
-        const val = teamNameMap[key];
-        if (val === null || val === undefined) return teamName;
-        const s = String(val).trim();
-        if (!s || s === 'null' || s === 'undefined') return teamName;
-        return val;
-    };
-
-    const findSsTeamInUserTeamsByName = (ssCategory, searchName) => {
-        if (!ssCategory || !searchName) return null;
-        const catClean = cleanCategory(ssCategory);
-        const searchClean = String(searchName).trim();
-
-        let found = userTeams.find(t =>
-            cleanCategory(t.category) === catClean &&
-            String(t.teamName).trim() === searchClean
-        );
-        if (found) return found;
-
-        if (searchClean.startsWith(catClean + ' ')) {
-            const stripped = searchClean.substring(catClean.length + 1).trim();
-            found = userTeams.find(t =>
-                cleanCategory(t.category) === catClean &&
-                String(t.teamName).trim() === stripped
-            );
-            if (found) return found;
-        }
-
-        found = userTeams.find(t => String(t.teamName).trim() === searchClean);
-        if (found) return found;
-
-        return null;
-    };
-
-    const teamHasMealInPackage = (team, dayKey, mealType) => {
-        if (!team) return false;
-        if (!team.packageName) return true;
-        const pkg = packagesList.find(p => p.name === team.packageName);
-        if (!pkg) return true;
-        const mealsForDay = pkg.meals?.[dayKey];
-        if (!mealsForDay) return false;
-        const val = mealsForDay[mealType];
-        return val === 1 || val === true;
-    };
-
-    const assignmentRows = React.useMemo(() => {
-        if (!teamName || !categoryName) return [];
-        if (userTeams.length === 0) return [];
-
-        const cleanCat = cleanCategory(categoryName);
-        const cleanTeam = String(teamName).trim();
-
-        const filteredTeams = cleanCat
-            ? userTeams.filter((t) => cleanCategory(t.category) === cleanCat)
-            : userTeams;
-
-        const rows = [];
-
-        filteredTeams.forEach((team) => {
-            (tournamentDays || []).forEach((day) => {
-                ['lunch', 'dinner'].forEach((mealType) => {
-                    const slots = daySlots[day.key]?.[mealType] || [];
-                    if (slots.length === 0) return;
-
-                    slots.forEach((slot) => {
-                        const existing = findCateringAssignment(team, day.key, mealType, slot.from);
-                        const ss = findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
-
-                        if (existing) {
-                            if (!teamHasMealInPackage(team, day.key, mealType)) return;
-
-                            rows.push({
-                                key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
-                                category: team.category,
-                                teamName: team.teamName,
-                                dayKey: day.key,
-                                dayLabel: day.fullLabelNumeric,
-                                daySort: day.date.getTime(),
-                                dateObj: day.date,
-                                mealType,
-                                mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
-                                slotFrom: slot.from,
-                                slotTo: slot.to,
-                                placeName: existing.placeName || '',
-                                type: 'classic',
-                                isPriority: false,
-                                kind: 'catering',
-                            });
-                            return;
-                        }
-
-                        if (ss) {
-                            const ssCategory = cleanCategory(ss.category || ss.categoryName || '');
-                            const ssOriginalTeamName = String(ss.teamName || '').trim();
-                            let ssMappedName = getMappedTeamName(ssCategory, ssOriginalTeamName);
-
-                            if (
-                                ssMappedName === null ||
-                                ssMappedName === undefined ||
-                                String(ssMappedName).trim() === '' ||
-                                String(ssMappedName).trim() === 'null' ||
-                                String(ssMappedName).trim() === 'undefined'
-                            ) {
-                                ssMappedName = ssOriginalTeamName;
-                            }
-
-                            const wasMapped = String(ssMappedName).trim() !== ssOriginalTeamName;
-
-                            if (wasMapped) {
-                                const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssMappedName);
-                                if (!ssTeam) return;
-                                if (!teamHasMealInPackage(ssTeam, day.key, mealType)) return;
-                            } else {
-                                const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssOriginalTeamName);
-                                if (ssTeam) {
-                                    if (!teamHasMealInPackage(ssTeam, day.key, mealType)) return;
-                                }
-                            }
-
-                            rows.push({
-                                key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
-                                category: team.category,
-                                teamName: ssMappedName,
-                                dayKey: day.key,
-                                dayLabel: day.fullLabelNumeric,
-                                daySort: day.date.getTime(),
-                                dateObj: day.date,
-                                mealType,
-                                mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
-                                slotFrom: ss.slotFrom,
-                                slotTo: slot.to,
-                                placeName: ss.placeName || '',
-                                type: 'superstructure',
-                                isPriority: ss.isPriority === true,
-                                kind: 'catering',
-                            });
-                        }
-                    });
-                });
-            });
-        });
-
-        const dedupMap = new Map();
-        rows.forEach((row) => {
-            const key = `${cleanCategory(row.category)}||${String(row.teamName).trim()}||${row.dayKey}||${row.mealType}`;
-            const existing = dedupMap.get(key);
-            if (!existing) {
-                dedupMap.set(key, row);
-                return;
-            }
-            if (existing.isPriority === true && row.isPriority !== true) return;
-            if (row.isPriority === true && existing.isPriority !== true) {
-                dedupMap.set(key, row);
-                return;
-            }
-        });
-        let dedupedRows = Array.from(dedupMap.values());
-
-        dedupedRows = dedupedRows.filter((row) => {
-            const rowTeam = String(row.teamName || '').trim();
-            const rowCat = cleanCategory(row.category);
-            if (rowTeam === cleanTeam && rowCat === cleanCat) return true;
-            if (cleanTeam.startsWith(cleanCat + ' ')) {
-                const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
-                if (rowTeam === stripped && rowCat === cleanCat) return true;
-            }
-            return false;
-        });
-
-        return dedupedRows;
-    }, [teamName, categoryName, tournamentDays, cateringTimes, unitMinutes, cateringAssignments, packagesList, userTeams, teamNameMap, assignmentsBySlot, daySlots]);
-
-    useEffect(() => {
-        setLoading(false);
-    }, [assignmentRows]);
-
-    if (loading) {
-        return null;
-    }
-
-    if (assignmentRows.length === 0) {
-        return React.createElement(
-            'div',
-            { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
-            React.createElement('h3', { className: 'text-lg font-semibold text-gray-700 mb-2' }, 'Stravovanie tímu'),
-            React.createElement('p', { className: 'text-gray-500 text-sm' }, 'Pre tento tím neboli nájdené žiadne priradenia stravovania.')
-        );
-    }
-
-    const getRowsByDay = (rowsList) => {
-        const groups = {};
-        rowsList.forEach((row) => {
-            const date = row.dateObj;
-            if (!date) return;
-            const dateKey = date.toDateString();
-            if (!groups[dateKey]) {
-                groups[dateKey] = { date, rows: [] };
-            }
-            groups[dateKey].rows.push(row);
-        });
-        return Object.values(groups).sort((a, b) => a.date - b.date);
-    };
-
-    const displayDays = getRowsByDay(assignmentRows);
-
-    return React.createElement(
-        'div',
-        { className: 'mt-4 bg-white rounded-xl shadow-xl p-6 overflow-hidden' },
-        React.createElement(
-            'h3',
-            { className: 'text-lg font-semibold text-gray-700 mb-4' },
-            `Stravovanie tímu: ${teamName}`
-        ),
-        React.createElement(
-            'div',
-            { className: 'overflow-x-auto' },
-            React.createElement(
-                'table',
-                { className: 'min-w-full divide-y divide-gray-200' },
-                React.createElement(
-                    'thead',
-                    { className: 'bg-gray-50' },
-                    React.createElement(
-                        'tr',
-                        null,
-                        React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'Čas'),
-                        React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40' }, 'Typ stravovania'),
-                        React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64' }, 'Miesto')
-                    )
-                ),
-                React.createElement(
-                    'tbody',
-                    { className: 'divide-y divide-gray-100' },
-                    displayDays.map((dayGroup, dayIndex) => {
-                        const rows = [];
-                        rows.push(
-                            React.createElement(
-                                'tr',
-                                { key: `day-${dayIndex}`, className: 'bg-blue-50' },
-                                React.createElement(
-                                    'td',
-                                    { colSpan: 3, className: 'px-4 py-3 text-left' },
-                                    React.createElement(
-                                        'div',
-                                        { className: 'flex items-center gap-2' },
-                                        React.createElement('i', { className: 'fa-regular fa-calendar text-blue-500' }),
-                                        React.createElement('span', { className: 'font-semibold text-gray-800' }, formatDateHeader(dayGroup.date))
-                                    )
-                                )
-                            )
-                        );
-
-                        dayGroup.rows.forEach((row, rowIndex) => {
-                            rows.push(
-                                React.createElement(
-                                    'tr',
-                                    { key: row.key || `row-${dayIndex}-${rowIndex}`, className: 'hover:bg-gray-50 transition-colors' },
-                                    React.createElement(
-                                        'td',
-                                        { className: 'px-4 py-3 whitespace-nowrap' },
-                                        React.createElement(
-                                            'span',
-                                            { className: 'font-mono font-medium text-gray-700 text-sm' },
-                                            `${row.slotFrom} – ${row.slotTo}`
-                                        )
-                                    ),
-                                    React.createElement(
-                                        'td',
-                                        { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                        React.createElement(
-                                            'span',
-                                            {
-                                                className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                                style: { backgroundColor: '#E5E7EB', color: '#374151', fontWeight: '500' }
-                                            },
-                                            row.mealTypeLabel
-                                        )
-                                    ),
-                                    React.createElement(
-                                        'td',
-                                        { className: 'px-4 py-3 whitespace-nowrap text-left' },
-                                        React.createElement(
-                                            'div',
-                                            { className: 'flex items-center gap-1' },
-                                            React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-400 text-xs' }),
-                                            React.createElement('span', { className: 'text-gray-600 text-sm max-w-32' }, row.placeName || '–')
-                                        )
-                                    )
-                                )
-                            );
-                        });
-
-                        return rows;
-                    }).flat()
-                )
-            )
-        )
-    );
-};
-
-const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey, isMatchesVisible, isCateringVisible }) => {
+const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey, isMatchesVisible, isCateringVisible, isLoadingEvents, setIsLoadingEvents }) => {
     // --- Matches state ---
     const [matches, setMatches] = useState([]);
     const [matchesLoading, setMatchesLoading] = useState(true);
@@ -1039,6 +539,12 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
     const [allMatchesList, setAllMatchesList] = useState([]);
     const prevStatusesRef = useRef({});
 
+    const [cateringSettingsLoading, setCateringSettingsLoading] = useState(true);
+    const [tournamentDaysLoading, setTournamentDaysLoading] = useState(true);
+    const [packagesLoading, setPackagesLoading] = useState(true);
+    const [cateringAssignmentsLoading, setCateringAssignmentsLoading] = useState(true);
+    const [userTeamsLoading, setUserTeamsLoading] = useState(true);
+
     // --- Catering state ---
     const [cateringTimes, setCateringTimes] = useState({});
     const [unitMinutes, setUnitMinutes] = useState('');
@@ -1047,6 +553,52 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
     const [packagesList, setPackagesList] = useState([]);
     const [userTeams, setUserTeams] = useState([]);
     const [teamNameMap, setTeamNameMap] = useState({});
+
+    const teamNamesRef = useRef({});
+  
+    useEffect(() => { 
+        teamNamesRef.current = teamNames; 
+    }, [teamNames]);
+
+    useEffect(() => {
+        if (!window.db || !teamName || !categoryName) return;
+        if (allMatchesList.length === 0) return;
+
+        const runMatchRemap = async () => {
+            try {
+                const currentNames = teamNamesRef.current || {};
+                let changed = false;
+                const updated = { ...currentNames };
+
+                for (const match of allMatchesList) {
+                    const identifiers = [match.homeTeamIdentifier, match.awayTeamIdentifier].filter(Boolean);
+                    for (const identifier of identifiers) {
+                        const currentDisplay = updated[identifier] || getDisplayTeamName(identifier) || identifier;
+                        if (!currentDisplay) continue;
+                        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                            try {
+                                const converted = await window.matchTracker.getTeamNameByDisplayId(currentDisplay);
+                                if (converted && converted !== currentDisplay && converted !== updated[identifier]) {
+                                    updated[identifier] = converted;
+                                    changed = true;
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+
+                if (changed) {
+                    setTeamNames(updated);
+                    const filtered = filterMatches(allMatchesList, updated);
+                    setMatches(filtered);
+                }
+            } catch (e) {}
+        };
+
+        runMatchRemap();
+        const intervalId = setInterval(runMatchRemap, 800);
+        return () => clearInterval(intervalId);
+    }, [allMatchesList, teamName, categoryName]);
 
     const cateringAssignmentsRef = useRef([]);
     useEffect(() => { cateringAssignmentsRef.current = cateringAssignments; }, [cateringAssignments]);
@@ -1162,18 +714,25 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         return teamName;
     };
 
-    // ================= MATCHES LOADING =================
-
     useEffect(() => {
         setMatchesLoading(true);
+        setCateringSettingsLoading(true);
+        setTournamentDaysLoading(true);
+        setPackagesLoading(true);
+        setCateringAssignmentsLoading(true);
+        setUserTeamsLoading(true);
         setMatches([]);
         setAllMatchesList([]);
         setMatchScoresFromEvents({});
         setMatchScoresFromDb({});
+        setUserTeams([]);
+        setCateringAssignments([]);
+        setPackagesList([]);
+        setCateringTimes({});
+        setTournamentDays([]);
         prevStatusesRef.current = {};
     }, [teamName, categoryName]);
 
-    // 🔥 NOVÉ: Refresh pri zmene refreshKey (po skončení zápasu)
     useEffect(() => {
         if (!window.db || !teamName || !categoryName) return;
         if (refreshKey === undefined || refreshKey === 0) return;
@@ -1366,11 +925,12 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
     const filterMatches = (allMatches, names) => {
         const filtered = [];
+        const cleanTeamName = removeSuffix(String(teamName).trim());
 
         allMatches.forEach(match => {
             const homeName = names[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamIdentifier;
             const awayName = names[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamIdentifier;
-
+    
             let matchCategory = match.categoryName;
             if (!matchCategory && match.categoryId && categoriesData[match.categoryId]) {
                 matchCategory = categoriesData[match.categoryId];
@@ -1437,8 +997,8 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
             if (anyCompleted) {
                 convertedNames = await refreshTeamNamesIfNeeded(allMatches, convertedNames);
-                setTeamNames(convertedNames);
             }
+            setTeamNames(convertedNames);
 
             setAllMatchesList(allMatches);
 
@@ -1498,8 +1058,8 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
             if (anyCompleted) {
                 convertedNames = await refreshTeamNamesIfNeeded(allMatches, convertedNames);
-                setTeamNames(convertedNames);
             }
+            setTeamNames(convertedNames);
 
             setAllMatchesList(allMatches);
 
@@ -1513,7 +1073,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         return () => {
             if (unsubscribe) unsubscribe();
         };
-    }, [teamName, categoryName, categoriesData]);
+    }, [teamName, categoryName, categoriesData, refreshKey]);
 
     useEffect(() => {
         if (!window.db || allMatchesList.length === 0) return;
@@ -1537,9 +1097,8 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         return () => unsubscribe();
     }, [allMatchesList]);
 
-    // ============ 🔥 NAČÍTANIE DNI TURNAJA 🔥 ============
     useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) { setTournamentDaysLoading(false); return; }
         const settingsDocRef = doc(window.db, 'settings', 'registration');
         const unsub = onSnapshot(settingsDocRef, (snap) => {
             if (snap.exists()) {
@@ -1550,12 +1109,13 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
             } else {
                 setTournamentDays([]);
             }
-        }, () => {});
+            setTournamentDaysLoading(false);
+        }, () => { setTournamentDaysLoading(false); });
         return () => unsub();
     }, []);
 
     useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) { setCateringSettingsLoading(false); return; }
         const unsub = onSnapshot(doc(window.db, 'settings', 'catering'), (snap) => {
             if (snap.exists()) {
                 const data = snap.data() || {};
@@ -1565,12 +1125,13 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                 setCateringTimes({});
                 setUnitMinutes('');
             }
-        }, () => {});
+            setCateringSettingsLoading(false);
+        }, () => { setCateringSettingsLoading(false); });
         return () => unsub();
     }, []);
 
     useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) { setPackagesLoading(false); return; }
         const unsub = onSnapshot(collection(window.db, 'settings', 'packages', 'list'), (snap) => {
             const items = [];
             snap.forEach((d) => {
@@ -1584,22 +1145,24 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                 });
             });
             setPackagesList(items);
-        }, () => {});
+            setPackagesLoading(false);
+        }, () => { setPackagesLoading(false); });
         return () => unsub();
     }, []);
 
     useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) { setCateringAssignmentsLoading(false); return; }
         const unsub = onSnapshot(collection(window.db, 'catering'), (snap) => {
             const items = [];
             snap.forEach((d) => items.push({ id: d.id, ...d.data() }));
             setCateringAssignments(items);
-        }, () => {});
+            setCateringAssignmentsLoading(false);
+        }, () => { setCateringAssignmentsLoading(false); });
         return () => unsub();
     }, []);
 
     useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) { setUserTeamsLoading(false); return; }
         const unsub = onSnapshot(collection(window.db, 'users'), async () => {
             try {
                 const usersRef = collection(window.db, 'users');
@@ -1636,7 +1199,8 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                 });
                 setUserTeams(teams);
             } catch (err) {}
-        }, () => {});
+            setUserTeamsLoading(false);
+        }, () => { setUserTeamsLoading(false); });
         return () => unsub();
     }, []);
 
@@ -1678,6 +1242,21 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         return () => clearInterval(intervalId);
     }, []);
 
+    useEffect(() => {
+        if (!isLoadingEvents) return;
+        const allLoaded =
+            !matchesLoading &&
+            !cateringSettingsLoading &&
+            !tournamentDaysLoading &&
+            !packagesLoading &&
+            !cateringAssignmentsLoading &&
+            !userTeamsLoading;
+        if (allLoaded) {
+            setIsLoadingEvents(false);
+        }
+    }, [matchesLoading, cateringSettingsLoading, tournamentDaysLoading, packagesLoading, cateringAssignmentsLoading, userTeamsLoading, isLoadingEvents, setIsLoadingEvents]);
+
+    // --- Presne ako v catering.js ---
     const assignmentsBySlot = React.useMemo(() => {
         const map = new Map();
         (cateringAssignments || []).forEach((a) => {
@@ -1784,9 +1363,31 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
         const rows = [];
 
+        const blockedGroupDayMealKeys = new Set();   
+      
+        (tournamentDays || []).forEach((day) => {
+            ['lunch', 'dinner'].forEach((mealType) => {
+                const blockedGroups = getUnfinishedPriorityGroupsForDayMeal(
+                    day.key,
+                    mealType,
+                    cateringAssignments,
+                    categoriesData,
+                    groupsData,
+                    allMatchesList,
+                    userTeams
+                );
+                blockedGroups.forEach(({ categoryName, groupName }) => {
+                    blockedGroupDayMealKeys.add(`${day.key}|${mealType}|${categoryName}|${groupName}`);
+                });
+            });
+        });      
+
         filteredTeams.forEach((team) => {
             (tournamentDays || []).forEach((day) => {
                 ['lunch', 'dinner'].forEach((mealType) => {
+                    const teamCategoryClean = cleanCategory(team.category);
+                    const teamNameClean = String(team.teamName || '').trim();
+
                     const slots = daySlots[day.key]?.[mealType] || [];
                     if (slots.length === 0) return;
 
@@ -1794,10 +1395,33 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                         const existing = findCateringAssignment(team, day.key, mealType, slot.from);
                         const ss = findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
 
-                        if (existing) {
-                            if (!teamHasMealInPackage(team, day.key, mealType)) return;
-
-                            rows.push({
+                       if (existing) {
+                           if (!teamHasMealInPackage(team, day.key, mealType)) return;
+                       
+                           const teamCatId = Object.keys(categoriesData || {}).find(
+                               id => categoriesData[id] === teamCategoryClean
+                           );
+                           if (teamCatId && groupsData) {
+                               let teamGroupNames = [];
+                               if (team.groupName) {
+                                   teamGroupNames = [String(team.groupName).trim()];
+                               } else {
+                                   const teamGroups = findGroupsByLastLetter(teamNameClean, teamCatId, groupsData);
+                                   teamGroupNames = (teamGroups || []).map(g => String(g.name || '').trim());
+                               }
+                               teamGroupNames = teamGroupNames.filter(Boolean);
+                           
+                               if (teamGroupNames.length > 0) {
+                                   const isBlocked = teamGroupNames.some(gName =>
+                                       blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${gName}`)
+                                   );
+                                   if (isBlocked) {
+                                       return;
+                                   }
+                               }
+                           }                 
+                       
+                           rows.push({
                                 key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
                                 category: team.category,
                                 teamName: team.teamName,
@@ -1845,6 +1469,29 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                 }
                             }
 
+                            const priorityCatId = Object.keys(categoriesData || {}).find(
+                                id => categoriesData[id] === ssCategory
+                            );
+                            if (priorityCatId && groupsData) {
+                                let priorityGroupNames = [];
+                                if (ss.groupName) {
+                                    priorityGroupNames = [String(ss.groupName).trim()];
+                                } else {
+                                    const priorityGroups = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
+                                    priorityGroupNames = (priorityGroups || []).map(g => String(g.name || '').trim());
+                                }
+                                priorityGroupNames = priorityGroupNames.filter(Boolean);
+                            
+                                if (priorityGroupNames.length > 0) {
+                                    const isBlocked = priorityGroupNames.some(gName =>
+                                        blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${gName}`)
+                                    );
+                                    if (isBlocked) {
+                                        return;
+                                    }
+                                }
+                            }                        
+                          
                             rows.push({
                                 key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
                                 category: team.category,
@@ -1896,14 +1543,13 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         });
 
         return dedupedRows;
-    }, [teamName, categoryName, tournamentDays, cateringTimes, unitMinutes, cateringAssignments, packagesList, userTeams, teamNameMap, assignmentsBySlot, daySlots]);
+    }, [teamName, categoryName, tournamentDays, cateringTimes, unitMinutes, cateringAssignments, packagesList, userTeams, teamNameMap, assignmentsBySlot, daySlots, groupsData, allMatchesList, categoriesData]);
 
-// ================= ZLÚČENIE =================
+    // ================= ZLÚČENIE =================
 
     const mergedRows = React.useMemo(() => {
         const rows = [];
-
-        // 🔥 ZMENA: zápasy len ak sú viditeľné a filter to dovoľuje
+    
         const shouldShowMatches = isMatchesVisible && (filter === null || filter === 'matches');
         if (shouldShowMatches) {
             matches.forEach((match) => {
@@ -1912,7 +1558,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                     if (match.scheduledTime) dateObj = match.scheduledTime.toDate();
                 } catch (e) {}
                 if (!dateObj) return;
-
+    
                 const dateTime = formatMatchDateTime(match.scheduledTime);
                 rows.push({
                     kind: 'match',
@@ -1925,7 +1571,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
             });
         }
 
-        // 🔥 ZMENA: stravovanie len ak je viditeľné a filter to dovoľuje
         const shouldShowCatering = isCateringVisible && (filter === null || filter === 'catering');
         if (shouldShowCatering) {
             cateringRows.forEach((row) => {
@@ -1943,14 +1588,13 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
             });
         }
 
-        // Zoraď chronologicky – NAJPRV podľa DŇA (bez času), POTOM podľa časovej zložky
         rows.sort((a, b) => {
             const da = a.dateObj ? new Date(a.dateObj.getFullYear(), a.dateObj.getMonth(), a.dateObj.getDate()).getTime() : 0;
             const db = b.dateObj ? new Date(b.dateObj.getFullYear(), b.dateObj.getMonth(), b.dateObj.getDate()).getTime() : 0;
             if (da !== db) return da - db;
             return a.timeMinutes - b.timeMinutes;
         });
-
+    
         return rows;
     }, [matches, cateringRows, filter, isMatchesVisible, isCateringVisible]);
 
@@ -1970,7 +1614,15 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
     const loading = matchesLoading;
 
-    if (loading) {
+    const allLoaded =
+        !matchesLoading &&
+        !cateringSettingsLoading &&
+        !tournamentDaysLoading &&
+        !packagesLoading &&
+        !cateringAssignmentsLoading &&
+        !userTeamsLoading;
+
+    if (isLoadingEvents || !allLoaded) {
         return React.createElement(
             'div',
             { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
@@ -1992,6 +1644,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         );
     }
 
+    // Pomocné funkcie pre zápasy
     const createMatchHash = (homeTeamId, awayTeamId) => {
         const encodedHome = encodeURIComponent(homeTeamId.replace(/ /g, '-'));
         const encodedAway = encodeURIComponent(awayTeamId.replace(/ /g, '-'));
@@ -3386,14 +3039,12 @@ const TeamsOverviewApp = (props) => {
             ),
     
             // --- BOX S PREPÍNAČOM ZÁPASY / STRAVOVANIE ---
-            // Zobrazí sa len ak je viditeľná aspoň jedna z verejných stránok (matches alebo catering)
             (isCateringVisible || isMatchesVisible) ? React.createElement(
                 'div',
                 { className: 'bg-white rounded-xl shadow-xl p-4 mt-4' },
                 React.createElement(
                     'div',
                     { className: 'flex flex-wrap gap-3' },
-                    // Tlačidlo "Zápasy" sa zobrazí len ak je verejná stránka matches
                     isMatchesVisible ? React.createElement(
                         'button',
                         {
@@ -3408,7 +3059,6 @@ const TeamsOverviewApp = (props) => {
                         },
                         'Zápasy'
                     ) : null,
-                    // Tlačidlo "Stravovanie" sa zobrazí len ak je verejná stránka catering
                     isCateringVisible ? React.createElement(
                         'button',
                         {
@@ -3424,7 +3074,6 @@ const TeamsOverviewApp = (props) => {
                         'Stravovanie'
                     ) : null
                 ),
-                // Textový popis pod tlačidlami – zobrazí sa len ak je aspoň jedno tlačidlo viditeľné
                 React.createElement(
                     'div',
                     { className: 'mt-3 text-xs text-gray-500' },
@@ -3443,14 +3092,17 @@ const TeamsOverviewApp = (props) => {
                 categoryId: categoryId,
                 filter: teamEventsFilter,
                 refreshKey: matchesRefreshKey,
-                isMatchesVisible: isMatchesVisible,     // 🔥 ZMENA: pridané
-                isCateringVisible: isCateringVisible 
+                isMatchesVisible: isMatchesVisible,
+                isCateringVisible: isCateringVisible,
+                isLoadingEvents: isLoadingEvents,
+                setIsLoadingEvents: setIsLoadingEvents
             }) : null,
     
             renderTeamRoster()
         );
     };
 
+    // Nová funkcia: zobrazí tímy prihláseného používateľa ako tlačidlá
     const renderUserTeamsInCategories = () => {
         const userTeams = getUserTeamsFromProfile();
 
