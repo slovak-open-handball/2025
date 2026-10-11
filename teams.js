@@ -1301,12 +1301,12 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
     const findSuperstructureAssignmentForCell = (team, dayKey, mealType, slotFrom) => {
         const teamCat = cleanCategory(team.category);
+        const teamNameClean = String(team.teamName || '').trim();
         return cateringAssignments.find(
             (a) =>
                 a.isSuperstructure === true &&
-                a.clickedTeamUid === team.uid &&
-                a.clickedTeamIndex === team.teamIndex &&
-                cleanCategory(a.clickedTeamCategory) === teamCat &&
+                cleanCategory(a.clickedTeamCategory || a.category || '') === teamCat &&
+                String(a.teamName || '').trim() === teamNameClean &&
                 a.dayKey === dayKey &&
                 a.mealType === mealType &&
                 a.slotFrom === slotFrom
@@ -1317,17 +1317,14 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         if (!team || !dayKey || !mealType) return false;
         const teamCat = cleanCategory(team.category);
         const teamNameClean = String(team.teamName || '').trim();
-    
+
         return cateringAssignments.some(
             (a) =>
                 a.isSuperstructure === true &&
                 a.dayKey === dayKey &&
                 a.mealType === mealType &&
                 cleanCategory(a.clickedTeamCategory || a.category || '') === teamCat &&
-                (
-                    String(a.teamName || '').trim() === teamNameClean ||
-                    String(a.clickedTeamName || '').trim() === teamNameClean
-                )
+                String(a.teamName || '').trim() === teamNameClean
         );
     };
 
