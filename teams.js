@@ -1801,7 +1801,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId, refreshKey }) => 
     );
 };
 
-const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey, isMatchesVisible, isCateringVisible }) => {
+const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey, isMatchesVisible, isCateringVisible, isLoadingEvents }) => {
     // --- Matches state ---
     const [matches, setMatches] = useState([]);
     const [matchesLoading, setMatchesLoading] = useState(true);
@@ -2796,7 +2796,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
     const loading = matchesLoading;
 
-    if (loading) {
+    if (isLoadingEvents) {
         return React.createElement(
             'div',
             { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
@@ -3228,8 +3228,7 @@ const renderTeamDetails = () => {
 const TeamsOverviewApp = (props) => {
     const [allTeams, setAllTeams] = useState([]);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
-    const [uiNotification, setUiNotification] = useState(null);
-    
+    const [uiNotification, setUiNotification] = useState(null);    
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedTeamNameFilter, setSelectedTeamNameFilter] = useState('');
     const [selectedTeamDetails, setSelectedTeamDetails] = useState(null);
@@ -3241,11 +3240,9 @@ const TeamsOverviewApp = (props) => {
     const [rosterUnsubscribe, setRosterUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
     const [updateTrigger, setUpdateTrigger] = useState(0);
-
-    // 🔥 NOVÉ: Refresh key pre zápasy – zvýši sa pri dokončení zápasu
     const [matchesRefreshKey, setMatchesRefreshKey] = useState(0);
-
     const [teamEventsFilter, setTeamEventsFilter] = useState(null);
+    const [isLoadingEvents, setIsLoadingEvents] = useState(false);
 
     const [isRostersVisible, setIsRostersVisible] = useState(
         window.pagesVisibility && 
@@ -4331,7 +4328,7 @@ const TeamsOverviewApp = (props) => {
     const handleTeamOccurrenceClick = (occ) => {
         const normalizedTeamName = occ.teamName.replace(/\s+/g, ' ').trim();
         const normalizedCategory = occ.category.replace(/\s+/g, ' ').trim();        
-        
+
         const hashParts = [];
         if (normalizedCategory) {
             let encodedCategory = normalizedCategory.replace(/ - /g, '___TRIPLE_DASH___');
@@ -4345,12 +4342,12 @@ const TeamsOverviewApp = (props) => {
             encodedTeam = encodedTeam.replace(/___TRIPLE_DASH___/g, '---');
             hashParts.push(`team=${encodeURIComponent(encodedTeam)}`);
         }
-        
+
         const newHash = hashParts.length > 0 ? `#${hashParts.join('&')}` : '';
         if (window.location.hash !== newHash) {
             window.history.replaceState(null, '', newHash);
         }
-        
+
         const baseTeamName = removeSuffix(normalizedTeamName);
         const allOccurrences = allTeams
             .filter(team => {
@@ -4365,14 +4362,20 @@ const TeamsOverviewApp = (props) => {
                 groupName: team.groupName,
                 order: team.order
             }));
-      
+    
+        // 🔥 VYČISTENIE OBSAHU A NASTAVENIE LOADING STAVOV
         setTeamEventsFilter(null);
+        setTeamRoster([]);
+        setMembersStats({});
+        setIsLoadingRoster(true);
+        setIsLoadingEvents(true);
+    
         setSelectedTeamDetails({
             teamName: normalizedTeamName,
             category: normalizedCategory,
             occurrences: allOccurrences
         });
-        
+    
         let categoryName = occ.category;
         if (categoryIdToNameMap[categoryName]) {
             categoryName = categoryIdToNameMap[categoryName];
@@ -4721,8 +4724,9 @@ const TeamsOverviewApp = (props) => {
                 categoryId: categoryId,
                 filter: teamEventsFilter,
                 refreshKey: matchesRefreshKey,
-                isMatchesVisible: isMatchesVisible,   // 🔥 ZMENA: pridané
-                isCateringVisible: isCateringVisible  // 🔥 PRIDANÉ – refresh po dokončení zápasu
+                isMatchesVisible: isMatchesVisible,
+                isCateringVisible: isCateringVisible,
+                isLoadingEvents: isLoadingEvents
             }) : null,
             renderTeamRoster()
         );
