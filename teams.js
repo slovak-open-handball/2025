@@ -1400,16 +1400,34 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         filteredTeams.forEach((team) => {
             (tournamentDays || []).forEach((day) => {
                 ['lunch', 'dinner'].forEach((mealType) => {
-                    // 🔥 Zistíme skupinu AKTUÁLNE spracúvaného tímu (team).
-                    // Ak jeho skupina je v tomto dni+type prioritizovaná a nie je 100%,
-                    // zablokujeme len jeho riadky (nie ostatné tímy z iných skupín).
-                    const teamGroupName = team?.rawTeamData?.groupName
-                        ? String(team.rawTeamData.groupName).trim()
-                        : null;
+                    // 🔥 Zistíme VŠETKY skupiny, v ktorých sa aktuálne spracúvaný tím nachádza.
+                    // Tím môže byť vo viacerých skupinách (rôzni používatelia, rôzne záznamy).
+                    // Ak aspoň JEDNA z jeho skupín je v tomto dni+type prioritizovaná a nie je 100%,
+                    // zablokujeme riadky pre tento tím.
                     const teamCategoryClean = cleanCategory(team.category);
-                    const isTeamBlocked =
-                        teamGroupName &&
-                        blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${teamGroupName}`);
+                    const teamNameClean = String(team.teamName || '').trim();
+
+                    // Zozbierame všetky unikátne groupName pre tento tím v tejto kategórii
+                    const teamGroupNames = new Set();
+                    userTeams.forEach(ut => {
+                        if (
+                            cleanCategory(ut.category) === teamCategoryClean &&
+                            String(ut.teamName || '').trim() === teamNameClean
+                        ) {
+                            const gn = ut?.rawTeamData?.groupName
+                                ? String(ut.rawTeamData.groupName).trim()
+                                : null;
+                            if (gn) teamGroupNames.add(gn);
+                        }
+                    });
+
+                    // Skontrolujeme, či aspoň jedna skupina tímu je blokovaná
+                    let isTeamBlocked = false;
+                    teamGroupNames.forEach(gn => {
+                        if (blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${gn}`)) {
+                            isTeamBlocked = true;
+                        }
+                    });
 
                     if (isTeamBlocked) {
                         return;
