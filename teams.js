@@ -100,18 +100,32 @@ const findGroupByLastLetter = (teamName, categoryId, groupsData) => {
 
 const isGroupFullyCompleted = (groupName, categoryName, allMatchesList) => {
     if (!groupName || !categoryName || !Array.isArray(allMatchesList) || allMatchesList.length === 0) {
-        return true; // ak nemáme dáta, neblokujeme
+        return true;
     }
-    const groupMatches = allMatchesList.filter(m =>
-        m &&
-        m.groupName === groupName &&
-        (m.categoryName === categoryName || m.category === categoryName) &&
-        !m.isPlacementMatch
-    );
-    if (groupMatches.length === 0) return true; // skupina nemá zápasy -> neblokujeme
+
+    const groupLastLetter = String(groupName).trim().slice(-1).toUpperCase();
+    if (!groupLastLetter) return true;
+
+    const cleanCat = String(categoryName).replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+    const cleanCatLower = cleanCat.toLowerCase();
+
+    const groupMatches = allMatchesList.filter(m => {
+        if (!m || m.isPlacementMatch) return false;
+
+        const mCat = String(m.categoryName || m.category || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+        if (mCat !== cleanCatLower) return false;
+
+        const mGroup = String(m.groupName || '').trim();
+        if (!mGroup) return false;
+
+        const mGroupLastLetter = mGroup.slice(-1).toUpperCase();
+        return mGroupLastLetter === groupLastLetter;
+    });
+
+    if (groupMatches.length === 0) return true;
+
     const completedCount = groupMatches.filter(m => m.status === 'completed').length;
-    const percentage = (completedCount / groupMatches.length) * 100;
-    return percentage === 100;
+    return completedCount === groupMatches.length;
 };
 
 const getUnfinishedPriorityGroupsForDayMeal = (
