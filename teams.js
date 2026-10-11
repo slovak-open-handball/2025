@@ -1793,23 +1793,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
     const [userTeams, setUserTeams] = useState([]);
     const [teamNameMap, setTeamNameMap] = useState({});
 
-    // 🔥 Periodický remap tímových mien pre zápasy
     const teamNamesRef = useRef({});
-
-    useEffect(() => {
-        if (!isLoadingEvents) return;
-        const allLoaded =
-            !matchesLoading &&
-            !cateringSettingsLoading &&
-            !tournamentDaysLoading &&
-            !packagesLoading &&
-            !cateringAssignmentsLoading &&
-            !userTeamsLoading;
-        
-        if (isLoadingEvents || !allLoaded) {
-            return React.createElement(... 'Načítavam udalosti tímu...' ...);
-        }
-    }, [matchesLoading, cateringSettingsLoading, tournamentDaysLoading, packagesLoading, cateringAssignmentsLoading, userTeamsLoading, isLoadingEvents, setIsLoadingEvents]);
   
     useEffect(() => { 
         teamNamesRef.current = teamNames; 
@@ -2794,7 +2778,17 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
     const loading = matchesLoading;
 
-    if (isLoadingEvents) {
+    // 🔥 Vypočítame, či sú všetky loadingy false
+    const allLoaded =
+        !matchesLoading &&
+        !cateringSettingsLoading &&
+        !tournamentDaysLoading &&
+        !packagesLoading &&
+        !cateringAssignmentsLoading &&
+        !userTeamsLoading;
+
+    // 🔥 Zobrazíme loading, ak je isLoadingEvents true ALEBO nie sú načítané všetky dáta
+    if (isLoadingEvents || !allLoaded) {
         return React.createElement(
             'div',
             { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
@@ -4723,6 +4717,7 @@ const TeamsOverviewApp = (props) => {
             // --- UDALOSTI TÍMU (zlúčené zápasy + stravovanie) ---
             // Zobrazí sa len ak je vybraný tím a aspoň jedna z verejných stránok je viditeľná
             (isAnyButtonSelected && (isCateringVisible || isMatchesVisible)) ? React.createElement(TeamEventsList, {
+                key: `${selectedTeamDetails.teamName}|${selectedTeamDetails.category || categoryFromUrl || ''}`,
                 teamName: selectedTeamDetails.teamName,
                 categoryName: selectedTeamDetails.category || categoryFromUrl || '',
                 categoryId: categoryId,
