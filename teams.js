@@ -1378,55 +1378,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         // Pre každý deň+typ a každé superstructure priradenie zistíme skupinu prioritizovaného tímu.
         // Ak táto skupina NIE JE 100% dokončená, uložíme si kombináciu do Setu.
         // Pri každom tíme v cykle potom blokujeme len ak JEHO skupina je v tomto Sete.
-        const blockedGroupDayMealKeys = new Set();
-// ----------------------------------------------------------------------------------------- ZMAŽ      
-        console.log('=== DEBUG cateringRows ===');
-        console.log('teamName:', teamName, '| categoryName:', categoryName);
-        console.log('blockedGroupDayMealKeys:', Array.from(blockedGroupDayMealKeys));
-
-        // Vypíš, pre ktoré tímy je prioritizované stravovanie v každom dni/type
-        (tournamentDays || []).forEach((day) => {
-            ['lunch', 'dinner'].forEach((mealType) => {
-                const ssForDayMeal = cateringAssignments.filter(a =>
-                    a && a.isSuperstructure === true &&
-                    a.dayKey === day.key &&
-                    a.mealType === mealType
-                );
-                if (ssForDayMeal.length === 0) return;
-                console.log(`--- Priorita pre ${day.key} / ${mealType} ---`);
-                ssForDayMeal.forEach((ss) => {
-                    const ssCat = cleanCategory(ss.category || ss.categoryName || '');
-                    const priorityCatId = Object.keys(categoriesData || {}).find(id => categoriesData[id] === ssCat);
-                    const groups = priorityCatId
-                        ? findGroupsByLastLetter(String(ss.teamName || '').trim(), priorityCatId, groupsData)
-                        : [];
-                    console.log(
-                        `  SS team="${ss.teamName}" | cat="${ssCat}" | isPriority=${ss.isPriority === true} | ` +
-                        `skupiny=[${groups.map(g => g.name).join(', ')}]`
-                    );
-                });
-            });
-        });
-
-        // Vypíš skupiny aktuálne zobrazeného tímu
-        const dbgCurrentTeamName = String(teamName || '').trim();
-        const dbgCurrentCategory = cleanCategory(categoryName);
-        const dbgCurrentCatId = Object.keys(categoriesData || {}).find(
-            id => categoriesData[id] === dbgCurrentCategory
-        );
-        if (dbgCurrentCatId && groupsData) {
-            const dbgGroups = findGroupsByLastLetter(dbgCurrentTeamName, dbgCurrentCatId, groupsData);
-            console.log(
-                `Aktuálne zobrazený tím: "${dbgCurrentTeamName}" (${dbgCurrentCategory}) ` +
-                `| skupiny=[${dbgGroups.map(g => g.name).join(', ')}]`
-            );
-        } else {
-            console.log(
-                `Aktuálne zobrazený tím: "${dbgCurrentTeamName}" (${dbgCurrentCategory}) ` +
-                `| skupiny=[] (kategória sa nenašla v categoriesData)`
-            );
-        }
-// ----------------------------------------------------------------------------------------- ZMAŽ      
+        const blockedGroupDayMealKeys = new Set();   
       
         (tournamentDays || []).forEach((day) => {
             ['lunch', 'dinner'].forEach((mealType) => {
@@ -1487,35 +1439,10 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                        blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${gName}`)
                                    );
                                    if (isBlocked) {
-                                       console.log(
-                                           `[existing-BLOCKED] team="${teamNameClean}" | ${day.key} | ${mealType} | ` +
-                                           `skupiny=[${teamGroupNames.join(', ')}]`
-                                       );
                                        return;
                                    }
                                }
-                           }
-
-// ------------------------------- ZMAŽ
-{
-    let dbgGroupNames = [];
-    if (team.groupName) {
-        dbgGroupNames = [String(team.groupName).trim()];
-    } else {
-        const dbgTeamCatId = Object.keys(categoriesData || {}).find(
-            id => categoriesData[id] === teamCategoryClean
-        );
-        const dbgGroups = (dbgTeamCatId && groupsData)
-            ? findGroupsByLastLetter(teamNameClean, dbgTeamCatId, groupsData)
-            : [];
-        dbgGroupNames = dbgGroups.map(g => String(g.name || '').trim());
-    }
-    console.log(
-        `[existing-SHOWN] team="${teamNameClean}" | ${day.key} | ${mealType} | ` +
-        `skupiny=[${dbgGroupNames.join(', ')}]`
-    );
-}                      
-// ------------------------------- ZMAŽ                    
+                           }                 
                        
                            rows.push({
                                 key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
@@ -1585,26 +1512,10 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                         blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${gName}`)
                                     );
                                     if (isBlocked) {
-                                        console.log(
-                                            `[ss-BLOCKED] ssTeam="${ssOriginalTeamName}" | ${day.key} | ${mealType} | ` +
-                                            `prioritizované skupiny=[${priorityGroupNames.join(', ')}]`
-                                        );
                                         return;
                                     }
                                 }
-                            }
-
-// ------------------------------------ ZMAŽ
-{
-    const dbgPriorityGroups = priorityCatId && groupsData
-        ? findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData)
-        : [];
-        console.log(
-            `[ss-SHOWN] ssTeam="${ssOriginalTeamName}" | ${day.key} | ${mealType} | ` +
-            `prioritizované skupiny=[${dbgPriorityGroups.map(g => g.name).join(', ')}]`
-        );
-}
-// ------------------------------------ ZMAŽ                          
+                            }                        
                           
                             rows.push({
                                 key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
