@@ -69,6 +69,51 @@ const removeSuffix = (teamName) => {
     return teamName;
 };
 
+// ============================================================
+// POMOCNÉ FUNKCIE PRE KONTROLU 100% DOKONČENIA SKUPINY
+// (rovnaká logika ako v matchTracker.isGroupFullyCompleted)
+// ============================================================
+
+// Získa posledné písmeno z názvu tímu (napr. "A-tím A" -> "A", "U12 D 3B" -> "B")
+const getLastLetterFromTeamName = (teamName) => {
+    if (!teamName) return null;
+    const trimmed = String(teamName).trim();
+    if (trimmed.length === 0) return null;
+    const lastChar = trimmed[trimmed.length - 1];
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÄČĎÉÍĽĹŇÓÔŘŠŤÚÝŽabcdefghijklmnopqrstuvwxyzáäčďéíĺľňóôřšťúýž';
+    return letters.includes(lastChar) ? lastChar.toUpperCase() : null;
+};
+
+// Nájde skupinu v groupsData, ktorej posledné písmeno názvu je zhodné s posledným znakom názvu tímu.
+// groupsData formát: { [categoryId]: [ { name, type, ... }, ... ] }
+const findGroupByLastLetter = (teamName, categoryId, groupsData) => {
+    const lastLetter = getLastLetterFromTeamName(teamName);
+    if (!lastLetter) return null;
+    if (!groupsData || !categoryId) return null;
+    const categoryGroups = groupsData[categoryId] || [];
+    return categoryGroups.find(g => {
+        if (!g || !g.name) return false;
+        const groupLastChar = g.name.trim().slice(-1).toUpperCase();
+        return groupLastChar === lastLetter;
+    }) || null;
+};
+
+const isGroupFullyCompleted = (groupName, categoryName, allMatchesList) => {
+    if (!groupName || !categoryName || !Array.isArray(allMatchesList) || allMatchesList.length === 0) {
+        return true; // ak nemáme dáta, neblokujeme
+    }
+    const groupMatches = allMatchesList.filter(m =>
+        m &&
+        m.groupName === groupName &&
+        (m.categoryName === categoryName || m.category === categoryName) &&
+        !m.isPlacementMatch
+    );
+    if (groupMatches.length === 0) return true; // skupina nemá zápasy -> neblokujeme
+    const completedCount = groupMatches.filter(m => m.status === 'completed').length;
+    const percentage = (completedCount / groupMatches.length) * 100;
+    return percentage === 100;
+};
+
 const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
     if (!window.db || !teamName || !categoryName) {
         if (onUpdate) onUpdate([]);
@@ -879,6 +924,25 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                                     }
                                 }
                             }
+
+                            // 🔥 NOVÁ KONTROLA: Ak je to prioritizované miesto (superstructure),
+                            // zistíme, či existuje skupina s rovnakým posledným písmenom ako má
+                            // prioritizovaný tím. Ak taká skupina existuje a NIE JE 100% dokončená,
+                            // riadok sa nezobrazí.
+                            const priorityTeamName = ssMappedName || ssOriginalTeamName;
+                            // Nájdeme categoryId pre kategóriu prioritizovaného tímu
+                            const priorityCategoryId = Object.keys(window.categoriesData || {}).find(
+                                id => (window.categoriesData || {})[id] === ssCategory
+                            );
+                            if (priorityCategoryId && window.groupsData) {
+                                const group = findGroupByLastLetter(priorityTeamName, priorityCategoryId, window.groupsData);
+                                if (group) {
+                                    const isCompleted = isGroupFullyCompleted(group.name, ssCategory, allMatchesList);
+                                    if (!isCompleted) {
+                                        return; // skupina ešte nie je 100% dokončená -> riadok nezobrazíme
+                                    }
+                                }
+                            }
     
                             rows.push({
                                 key: `${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
@@ -949,7 +1013,7 @@ const TeamCateringList = ({ teamName, categoryName }) => {
         });
     
         return dedupedRows;
-    }, [teamName, categoryName, tournamentDays, cateringTimes, unitMinutes, cateringAssignments, packagesList, userTeams, teamNameMap, assignmentsBySlot, daySlots]);
+    }, [teamName, categoryName, tournamentDays, cateringTimes, unitMinutes, cateringAssignments, packagesList, userTeams, teamNameMap, assignmentsBySlot, daySlots, groupsData, allMatchesList, categoriesData]);
 
     useEffect(() => {
         setLoading(false);
@@ -2667,6 +2731,25 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                 }
                             }
 
+                            // 🔥 NOVÁ KONTROLA: Ak je to prioritizované miesto (superstructure),
+                            // zistíme, či existuje skupina s rovnakým posledným písmenom ako má
+                            // prioritizovaný tím. Ak taká skupina existuje a NIE JE 100% dokončená,
+                            // riadok sa nezobrazí.
+                            const priorityTeamName = ssMappedName || ssOriginalTeamName;
+                            // Nájdeme categoryId pre kategóriu prioritizovaného tímu
+                            const priorityCategoryId = Object.keys(categoriesData || {}).find(
+                                id => categoriesData[id] === ssCategory
+                            );
+                            if (priorityCategoryId && groupsData) {
+                                const group = findGroupByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
+                                if (group) {
+                                    const isCompleted = isGroupFullyCompleted(group.name, ssCategory, allMatchesList);
+                                    if (!isCompleted) {
+                                        return; // skupina ešte nie je 100% dokončená -> riadok nezobrazíme
+                                    }
+                                }
+                            }
+
                             rows.push({
                                 key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
                                 category: team.category,
@@ -2718,7 +2801,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         });
 
         return dedupedRows;
-    }, [teamName, categoryName, tournamentDays, cateringTimes, unitMinutes, cateringAssignments, packagesList, userTeams, teamNameMap, assignmentsBySlot, daySlots]);
+    }, [teamName, categoryName, tournamentDays, cateringTimes, unitMinutes, cateringAssignments, packagesList, userTeams, teamNameMap, assignmentsBySlot, daySlots, groupsData, allMatchesList, categoriesData]);
 
     // ================= ZLÚČENIE =================
 
