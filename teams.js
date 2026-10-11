@@ -1357,11 +1357,12 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         return assignmentsBySlot.get(key) || null;
     };
 
-    const findSuperstructureAssignmentForCell = (team, dayKey, mealType, slotFrom) => {
+        const findSuperstructureAssignmentForCell = async (team, dayKey, mealType, slotFrom) => {
         const teamCat = cleanCategory(team.category);
         const teamNameClean = String(team.teamName || '').trim();
 
-        return cateringAssignments.find((a) => {
+        // 🔥 Nájdeme všetky superstructure záznamy pre danú bunku (bez mapovania)
+        const candidates = cateringAssignments.filter((a) => {
             if (
                 a.isSuperstructure !== true ||
                 cleanCategory(a.clickedTeamCategory || a.category || '') !== teamCat ||
@@ -1371,10 +1372,19 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
             ) {
                 return false;
             }
-
             const rawPriorityName = String(a.teamName || '').trim();
-            if (!rawPriorityName) return false;
-    
+            return !!rawPriorityName;
+        });
+
+        if (candidates.length === 0) return null;
+
+        for (const a of candidates) {
+            const rawPriorityName = String(a.teamName || '').trim();
+
+            // 1) Skús priame porovnanie raw názvu
+            if (rawPriorityName === teamNameClean) return a;
+
+            // 2) Skús window.teamNames
             let mappedPriorityName = rawPriorityName;
             if (window.teamNames && typeof window.teamNames === 'object') {
                 const candidate = window.teamNames[rawPriorityName];
@@ -1382,30 +1392,61 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                     mappedPriorityName = String(candidate).trim();
                 }
             }
-    
-            return mappedPriorityName === teamNameClean || rawPriorityName === teamNameClean;
-        });
+            if (mappedPriorityName === teamNameClean) return a;
+
+            // 3) Skús teamNameMap (stav) – kľúč je `category||teamName`
+            const catForMap = cleanCategory(a.category || a.categoryName || '');
+            const key = `${catForMap}||${rawPriorityName}`;
+            const valFromMap = teamNameMap[key];
+            if (valFromMap && String(valFromMap).trim() !== '' && String(valFromMap).trim() !== 'null' && String(valFromMap).trim() !== 'undefined') {
+                if (String(valFromMap).trim() === teamNameClean) return a;
+            }
+
+            // 4) Skús async matchTracker.getTeamNameByDisplayId
+            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                try {
+                    const mapped = await window.matchTracker.getTeamNameByDisplayId(rawPriorityName);
+                    if (
+                        mapped &&
+                        mapped !== null &&
+                        mapped !== undefined &&
+                        String(mapped).trim() !== '' &&
+                        String(mapped).trim() !== 'null' &&
+                        String(mapped).trim() !== 'undefined' &&
+                        String(mapped).trim() !== rawPriorityName &&
+                        String(mapped).trim() === teamNameClean
+                    ) {
+                        return a;
+                    }
+                } catch (e) {}
+            }
+        }
+
+        return null;
     };
 
-    const isTeamPrioritizedForDayMeal = (team, dayKey, mealType) => {
+    const isTeamPrioritizedForDayMeal = async (team, dayKey, mealType) => {
         if (!team || !dayKey || !mealType) return false;
         const teamCat = cleanCategory(team.category);
         const teamNameClean = String(team.teamName || '').trim();
     
-        return cateringAssignments.some((a) => {
+        for (const a of cateringAssignments) {
             if (
                 a.isSuperstructure !== true ||
                 a.dayKey !== dayKey ||
                 a.mealType !== mealType ||
                 cleanCategory(a.clickedTeamCategory || a.category || '') !== teamCat
             ) {
-                return false;
+                continue;
             }
     
             const rawPriorityName = String(a.teamName || '').trim();
-            if (!rawPriorityName) return false;
+            if (!rawPriorityName) continue;
+
+            // 1) Priame porovnanie
+            if (rawPriorityName === teamNameClean) return true;
     
-            // 🔥 Premapuj identifikátor na finálny názov tímu
+            // 2) window.teamNames
             let mappedPriorityName = rawPriorityName;
             if (window.teamNames && typeof window.teamNames === 'object') {
                 const candidate = window.teamNames[rawPriorityName];
@@ -1413,21 +1454,37 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                     mappedPriorityName = String(candidate).trim();
                 }
             }
-    
-            // 🔥 Priame porovnanie premapovaného názvu s aktuálnym tímom
-            if (mappedPriorityName === teamNameClean) {
-                console.log(`[isTeamPrioritizedForDayMeal] ✅ MATCH: priorityRaw="${rawPriorityName}" → mapped="${mappedPriorityName}" team="${teamNameClean}" day=${dayKey} meal=${mealType}`);
-                return true;
+            if (mappedPriorityName === teamNameClean) return true;
+
+            // 3) teamNameMap
+            const catForMap = cleanCategory(a.category || a.categoryName || '');
+            const key = `${catForMap}||${rawPriorityName}`;
+            const valFromMap = teamNameMap[key];
+            if (valFromMap && String(valFromMap).trim() !== '' && String(valFromMap).trim() !== 'null' && String(valFromMap).trim() !== 'undefined') {
+                if (String(valFromMap).trim() === teamNameClean) return true;
             }
-    
-            // Fallback: ak sa raw zhoduje s aktuálnym názvom (nemapované)
-            if (rawPriorityName === teamNameClean) {
-                console.log(`[isTeamPrioritizedForDayMeal] ✅ MATCH (raw): priorityRaw="${rawPriorityName}" team="${teamNameClean}"`);
-                return true;
+
+            // 4) matchTracker async
+            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                try {
+                    const mapped = await window.matchTracker.getTeamNameByDisplayId(rawPriorityName);
+                    if (
+                        mapped &&
+                        mapped !== null &&
+                        mapped !== undefined &&
+                        String(mapped).trim() !== '' &&
+                        String(mapped).trim() !== 'null' &&
+                        String(mapped).trim() !== 'undefined' &&
+                        String(mapped).trim() !== rawPriorityName &&
+                        String(mapped).trim() === teamNameClean
+                    ) {
+                        return true;
+                    }
+                } catch (e) {}
             }
-    
-            return false;
-        });
+        }
+
+        return false;
     };
 
     const getMappedTeamName = (category, teamName) => {
@@ -1537,12 +1594,12 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
                         for (const slot of slots) {
                             const existing = findCateringAssignment(team, day.key, mealType, slot.from);
-                            const ss = findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
+                            const ss = await findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
 
                             if (existing) {
                                 if (!teamHasMealInPackage(team, day.key, mealType)) continue;
 
-                                const isPrioritized = isTeamPrioritizedForDayMeal(team, day.key, mealType);
+                                const isPrioritized = await isTeamPrioritizedForDayMeal(team, day.key, mealType);
 
                                 console.log(
                                     `[cateringRows][existing] CLASSIC: ` +
