@@ -555,7 +555,7 @@ const TeamCateringList = ({ teamName, categoryName }) => {
 
     // --- Načítanie nastavení turnaja (dni turnaja) ---
     useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) { setTournamentDaysLoading(false); return; }
         const settingsDocRef = doc(window.db, 'settings', 'registration');
         const unsub = onSnapshot(settingsDocRef, (snap) => {
             if (snap.exists()) {
@@ -566,12 +566,13 @@ const TeamCateringList = ({ teamName, categoryName }) => {
             } else {
                 setTournamentDays([]);
             }
-        }, () => {});
+            setTournamentDaysLoading(false);
+        }, () => { setTournamentDaysLoading(false); });
         return () => unsub();
     }, []);
 
     useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) { setCateringSettingsLoading(false); return; }
         const unsub = onSnapshot(doc(window.db, 'settings', 'catering'), (snap) => {
             if (snap.exists()) {
                 const data = snap.data() || {};
@@ -581,63 +582,13 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                 setCateringTimes({});
                 setUnitMinutes('');
             }
-        }, () => {});
+            setCateringSettingsLoading(false);
+        }, () => { setCateringSettingsLoading(false); });
         return () => unsub();
     }, []);
 
-    // --- Načítanie nastavení turnaja ---
     useEffect(() => {
-        if (!window.db) { setLoading(false); return; }
-        const settingsDocRef = doc(window.db, 'settings', 'registration');
-        const unsub = onSnapshot(settingsDocRef, (snap) => {
-            if (snap.exists()) {
-                const data = snap.data();
-                const arrivalDate = data.arrivalDate ? data.arrivalDate.toDate() : null;
-                const tournamentEnd = data.tournamentEnd ? data.tournamentEnd.toDate() : null;
-                setTournamentDays(buildTournamentDays(arrivalDate, tournamentEnd));
-            } else {
-                setTournamentDays([]);
-            }
-        }, () => {});
-        return () => unsub();
-    }, []);
-
-    // --- Načítanie časov stravovania ---
-    useEffect(() => {
-        if (!window.db) return;
-        const unsub = onSnapshot(doc(window.db, 'settings', 'catering'), (snap) => {
-            if (snap.exists()) {
-                const data = snap.data() || {};
-                setCateringTimes(data.times || {});
-                setUnitMinutes(data.unitMinutes != null ? String(data.unitMinutes) : '');
-            } else {
-                setCateringTimes({});
-                setUnitMinutes('');
-            }
-        }, () => {});
-        return () => unsub();
-    }, []);
-
-    // --- Načítanie nastavení turnaja (dni turnaja) ---
-    useEffect(() => {
-        if (!window.db) return;
-        const settingsDocRef = doc(window.db, 'settings', 'registration');
-        const unsub = onSnapshot(settingsDocRef, (snap) => {
-            if (snap.exists()) {
-                const data = snap.data();
-                const arrivalDate = data.arrivalDate ? data.arrivalDate.toDate() : null;
-                const tournamentEnd = data.tournamentEnd ? data.tournamentEnd.toDate() : null;
-                setTournamentDays(buildTournamentDays(arrivalDate, tournamentEnd));
-            } else {
-                setTournamentDays([]);
-            }
-        }, () => {});
-        return () => unsub();
-    }, []);
-
-    // --- Načítanie balíčkov ---
-    useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) { setPackagesLoading(false); return; }
         const unsub = onSnapshot(collection(window.db, 'settings', 'packages', 'list'), (snap) => {
             const items = [];
             snap.forEach((d) => {
@@ -651,24 +602,25 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                 });
             });
             setPackagesList(items);
-        }, () => {});
+            setPackagesLoading(false);
+        }, () => { setPackagesLoading(false); });
         return () => unsub();
     }, []);
 
-    // --- Načítanie priradení stravovania ---
     useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) { setCateringAssignmentsLoading(false); return; }
         const unsub = onSnapshot(collection(window.db, 'catering'), (snap) => {
             const items = [];
             snap.forEach((d) => items.push({ id: d.id, ...d.data() }));
             setCateringAssignments(items);
-        }, () => {});
+            setCateringAssignmentsLoading(false);
+        }, () => { setCateringAssignmentsLoading(false); });
         return () => unsub();
     }, []);
 
     // --- Načítanie userTeams (presne ako v catering.js) ---
     useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) { setUserTeamsLoading(false); return; }
         const unsub = onSnapshot(collection(window.db, 'users'), async () => {
             try {
                 const usersRef = collection(window.db, 'users');
@@ -705,7 +657,8 @@ const TeamCateringList = ({ teamName, categoryName }) => {
                 });
                 setUserTeams(teams);
             } catch (err) {}
-        }, () => {});
+            setUserTeamsLoading(false);
+        }, () => { setUserTeamsLoading(false); });
         return () => unsub();
     }, []);
 
@@ -1160,11 +1113,21 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId, refreshKey }) => 
     const prevStatusesRef = useRef({});
     
     useEffect(() => {
-        setLoading(true);
+        setMatchesLoading(true);
+        setCateringSettingsLoading(true);
+        setTournamentDaysLoading(true);
+        setPackagesLoading(true);
+        setCateringAssignmentsLoading(true);
+        setUserTeamsLoading(true);
         setMatches([]);
         setAllMatchesList([]);
         setMatchScoresFromEvents({});
         setMatchScoresFromDb({});
+        setUserTeams([]);
+        setCateringAssignments([]);
+        setPackagesList([]);
+        setCateringTimes({});
+        setTournamentDays([]);
         prevStatusesRef.current = {};
     }, [teamName, categoryName]);
 
@@ -1815,6 +1778,12 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
     const [allMatchesList, setAllMatchesList] = useState([]);
     const prevStatusesRef = useRef({});
 
+    const [cateringSettingsLoading, setCateringSettingsLoading] = useState(true);
+    const [tournamentDaysLoading, setTournamentDaysLoading] = useState(true);
+    const [packagesLoading, setPackagesLoading] = useState(true);
+    const [cateringAssignmentsLoading, setCateringAssignmentsLoading] = useState(true);
+    const [userTeamsLoading, setUserTeamsLoading] = useState(true);
+
     // --- Catering state ---
     const [cateringTimes, setCateringTimes] = useState({});
     const [unitMinutes, setUnitMinutes] = useState('');
@@ -1829,10 +1798,17 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
     useEffect(() => {
         if (!isLoadingEvents) return;
-        if (!matchesLoading) {
+        const allLoaded =
+            !matchesLoading &&
+            !cateringSettingsLoading &&
+            !tournamentDaysLoading &&
+            !packagesLoading &&
+            !cateringAssignmentsLoading &&
+            !userTeamsLoading;
+        if (allLoaded) {
             setIsLoadingEvents(false);
         }
-    }, [matchesLoading, isLoadingEvents, setIsLoadingEvents]);
+    }, [matchesLoading, cateringSettingsLoading, tournamentDaysLoading, packagesLoading, cateringAssignmentsLoading, userTeamsLoading, isLoadingEvents, setIsLoadingEvents]);
   
     useEffect(() => { 
         teamNamesRef.current = teamNames; 
@@ -1992,14 +1968,22 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         return teamName;
     };
 
-    // ================= MATCHES LOADING =================
-
     useEffect(() => {
         setMatchesLoading(true);
+        setCateringSettingsLoading(true);
+        setTournamentDaysLoading(true);
+        setPackagesLoading(true);
+        setCateringAssignmentsLoading(true);
+        setUserTeamsLoading(true);
         setMatches([]);
         setAllMatchesList([]);
         setMatchScoresFromEvents({});
         setMatchScoresFromDb({});
+        setUserTeams([]);
+        setCateringAssignments([]);
+        setPackagesList([]);
+        setCateringTimes({});
+        setTournamentDays([]);
         prevStatusesRef.current = {};
     }, [teamName, categoryName]);
 
@@ -2371,9 +2355,8 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         return () => unsubscribe();
     }, [allMatchesList]);
 
-    // ============ 🔥 NOVÝ BLOK – NAČÍTANIE DNI TURNAJA 🔥 ============
     useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) { setTournamentDaysLoading(false); return; }
         const settingsDocRef = doc(window.db, 'settings', 'registration');
         const unsub = onSnapshot(settingsDocRef, (snap) => {
             if (snap.exists()) {
@@ -2384,13 +2367,13 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
             } else {
                 setTournamentDays([]);
             }
-        }, () => {});
+            setTournamentDaysLoading(false);
+        }, () => { setTournamentDaysLoading(false); });
         return () => unsub();
     }, []);
-    // ============ 🔥 KONIEC NOVÉHO BLOKU 🔥 ============
 
     useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) { setCateringSettingsLoading(false); return; }
         const unsub = onSnapshot(doc(window.db, 'settings', 'catering'), (snap) => {
             if (snap.exists()) {
                 const data = snap.data() || {};
@@ -2400,12 +2383,13 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                 setCateringTimes({});
                 setUnitMinutes('');
             }
-        }, () => {});
+            setCateringSettingsLoading(false);
+        }, () => { setCateringSettingsLoading(false); });
         return () => unsub();
     }, []);
 
     useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) { setPackagesLoading(false); return; }
         const unsub = onSnapshot(collection(window.db, 'settings', 'packages', 'list'), (snap) => {
             const items = [];
             snap.forEach((d) => {
@@ -2419,22 +2403,24 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                 });
             });
             setPackagesList(items);
-        }, () => {});
+            setPackagesLoading(false);
+        }, () => { setPackagesLoading(false); });
         return () => unsub();
     }, []);
 
     useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) { setCateringAssignmentsLoading(false); return; }
         const unsub = onSnapshot(collection(window.db, 'catering'), (snap) => {
             const items = [];
             snap.forEach((d) => items.push({ id: d.id, ...d.data() }));
             setCateringAssignments(items);
-        }, () => {});
+            setCateringAssignmentsLoading(false);
+        }, () => { setCateringAssignmentsLoading(false); });
         return () => unsub();
     }, []);
 
     useEffect(() => {
-        if (!window.db) return;
+        if (!window.db) { setUserTeamsLoading(false); return; }
         const unsub = onSnapshot(collection(window.db, 'users'), async () => {
             try {
                 const usersRef = collection(window.db, 'users');
@@ -2471,7 +2457,8 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                 });
                 setUserTeams(teams);
             } catch (err) {}
-        }, () => {});
+            setUserTeamsLoading(false);
+        }, () => { setUserTeamsLoading(false); });
         return () => unsub();
     }, []);
 
