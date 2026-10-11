@@ -1269,7 +1269,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         return () => unsub();
     }, []);
 
-    const triggerTeamNameRemap = async () => {
+        const triggerTeamNameRemap = async () => {
         const assignments = cateringAssignmentsRef.current || [];
         const pairsMap = new Map();
         assignments.forEach((a) => {
@@ -1285,8 +1285,12 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         for (const [key, pair] of pairsMap.entries()) {
             try {
                 const mapped = await getMappedNameForTeam(pair.category, pair.teamName);
-                if (mapped && mapped !== pair.teamName) newMap[key] = mapped;
-            } catch (e) {}
+                // 🔥 Uložíme VŽDY, aj keď mapped === pair.teamName (aby getMappedTeamName vedel,
+                // že mapovanie už bolo skúšané a výsledok je totožný s pôvodným názvom)
+                newMap[key] = mapped && String(mapped).trim() !== '' ? String(mapped).trim() : pair.teamName;
+            } catch (e) {
+                newMap[key] = pair.teamName;
+            }
         }
         if (Object.keys(newMap).length > 0) {
             setTeamNameMap((prev) => {
@@ -1433,7 +1437,9 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         if (val === null || val === undefined) return teamName;
         const s = String(val).trim();
         if (!s || s === 'null' || s === 'undefined') return teamName;
-        return val;
+        // Ak je namapovaná hodnota totožná s pôvodným názvom, vráť pôvodný názov
+        // (nezmenené správanie, ale aspoň vieme, že mapovanie už bolo skúšané)
+        return s;
     };
 
     const findSsTeamInUserTeamsByName = (ssCategory, searchName) => {
@@ -1637,9 +1643,9 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                     ssMappedName = ssOriginalTeamName;
                                 }
 
-                                // 🔥 Ak synchrónne mapovanie zlyhalo, skús async cez matchTracker
+                                // 🔥 VŽDY skús async cez matchTracker (aj keď getMappedTeamName niečo vrátil),
+                                // aby sme mali garantované správne mapovanie pred finálnym filtrom
                                 if (
-                                    String(ssMappedName).trim() === ssOriginalTeamName &&
                                     window.matchTracker &&
                                     typeof window.matchTracker.getTeamNameByDisplayId === 'function'
                                 ) {
