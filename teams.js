@@ -235,6 +235,15 @@ const getUnfinishedPriorityGroupsForDayMeal = async (
             );
 
             if (!isCompleted) {
+                // 🔥 NOVÉ: Blokuj len prioritné záznamy (isPriority === true)
+                if (ss.isPriority !== true) {
+                    console.log(
+                        `[getUnfinishedPriorityGroupsForDayMeal]   ` +
+                        `⏭️ PRESKOČENÉ (nie je priorita): group="${groupNameToCheck}" isPriority=${ss.isPriority}`
+                    );
+                    continue;
+                }
+            
                 const key = `${ssCategory}||${groupNameToCheck}`;
                 if (!seen.has(key)) {
                     seen.add(key);
