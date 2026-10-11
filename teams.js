@@ -2485,6 +2485,20 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         return () => clearInterval(intervalId);
     }, []);
 
+    useEffect(() => {
+        if (!isLoadingEvents) return;
+        const allLoaded =
+            !matchesLoading &&
+            !cateringSettingsLoading &&
+            !tournamentDaysLoading &&
+            !packagesLoading &&
+            !cateringAssignmentsLoading &&
+            !userTeamsLoading;
+        if (allLoaded) {
+            setIsLoadingEvents(false);
+        }
+    }, [matchesLoading, cateringSettingsLoading, tournamentDaysLoading, packagesLoading, cateringAssignmentsLoading, userTeamsLoading, isLoadingEvents, setIsLoadingEvents]);
+
     // --- Presne ako v catering.js ---
     const assignmentsBySlot = React.useMemo(() => {
         const map = new Map();
