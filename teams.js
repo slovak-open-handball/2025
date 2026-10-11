@@ -148,15 +148,23 @@ const getUnfinishedPriorityGroupsForDayMeal = (
     );
     if (ssForDayMeal.length === 0) return result;
 
-    // 🔥 LOG: Koľko superštruktúra priradení je pre tento deň+typ
     console.log(`[getUnfinishedPriorityGroupsForDayMeal] day=${dayKey} meal=${mealType} ssCount=${ssForDayMeal.length}`);
 
     const seen = new Set();
 
     for (const ss of ssForDayMeal) {
         const ssCategory = String(ss.category || ss.categoryName || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
-        const priorityTeamName = String(ss.teamName || '').trim();
-        if (!priorityTeamName) continue;
+        const rawPriorityTeamName = String(ss.teamName || '').trim();
+        if (!rawPriorityTeamName) continue;
+
+        // 🔥 Premapuj identifikátor na finálny názov tímu (ak existuje mapovanie)
+        let priorityTeamName = rawPriorityTeamName;
+        if (window.teamNames && typeof window.teamNames === 'object') {
+            const candidate = window.teamNames[rawPriorityTeamName];
+            if (candidate && String(candidate).trim() !== '') {
+                priorityTeamName = String(candidate).trim();
+            }
+        }
 
         const priorityCategoryId = Object.keys(categoriesData).find(
             id => categoriesData[id] === ssCategory
@@ -172,13 +180,12 @@ const getUnfinishedPriorityGroupsForDayMeal = (
         }
         priorityGroupNames = priorityGroupNames.filter(Boolean);
         if (priorityGroupNames.length === 0) continue;
-        
+
         for (const groupNameToCheck of priorityGroupNames) {
             const isCompleted = isGroupFullyCompleted(groupNameToCheck, ssCategory, allMatchesList);
-            
-            // 🔥 LOG: Detail pre každú prioritizovanú skupinu
-            console.log(`[getUnfinishedPriorityGroupsForDayMeal]   priorityTeam="${priorityTeamName}" category="${ssCategory}" group="${groupNameToCheck}" isCompleted=${isCompleted}`);
-            
+
+            console.log(`[getUnfinishedPriorityGroupsForDayMeal]   priorityRaw="${rawPriorityTeamName}" priorityMapped="${priorityTeamName}" category="${ssCategory}" group="${groupNameToCheck}" isCompleted=${isCompleted}`);
+
             if (!isCompleted) {
                 const key = `${ssCategory}||${groupNameToCheck}`;
                 if (!seen.has(key)) {
@@ -189,7 +196,6 @@ const getUnfinishedPriorityGroupsForDayMeal = (
         }
     }
 
-    // 🔥 LOG: Výsledok
     console.log(`[getUnfinishedPriorityGroupsForDayMeal] day=${dayKey} meal=${mealType} BLOCKED_GROUPS=`, result);
 
     return result;
@@ -1308,36 +1314,74 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
     const findSuperstructureAssignmentForCell = (team, dayKey, mealType, slotFrom) => {
         const teamCat = cleanCategory(team.category);
         const teamNameClean = String(team.teamName || '').trim();
-        return cateringAssignments.find(
-            (a) =>
-                a.isSuperstructure === true &&
-                cleanCategory(a.clickedTeamCategory || a.category || '') === teamCat &&
-                String(a.teamName || '').trim() === teamNameClean &&
-                a.dayKey === dayKey &&
-                a.mealType === mealType &&
-                a.slotFrom === slotFrom
-        );
+
+        return cateringAssignments.find((a) => {
+            if (
+                a.isSuperstructure !== true ||
+                cleanCategory(a.clickedTeamCategory || a.category || '') !== teamCat ||
+                a.dayKey !== dayKey ||
+                a.mealType !== mealType ||
+                a.slotFrom !== slotFrom
+            ) {
+                return false;
+            }
+
+            const rawPriorityName = String(a.teamName || '').trim();
+            if (!rawPriorityName) return false;
+    
+            let mappedPriorityName = rawPriorityName;
+            if (window.teamNames && typeof window.teamNames === 'object') {
+                const candidate = window.teamNames[rawPriorityName];
+                if (candidate && String(candidate).trim() !== '') {
+                    mappedPriorityName = String(candidate).trim();
+                }
+            }
+    
+            return mappedPriorityName === teamNameClean || rawPriorityName === teamNameClean;
+        });
     };
 
     const isTeamPrioritizedForDayMeal = (team, dayKey, mealType) => {
         if (!team || !dayKey || !mealType) return false;
         const teamCat = cleanCategory(team.category);
         const teamNameClean = String(team.teamName || '').trim();
-
-        const matches = cateringAssignments.filter(
-            (a) =>
-                a.isSuperstructure === true &&
-                a.dayKey === dayKey &&
-                a.mealType === mealType &&
-                cleanCategory(a.clickedTeamCategory || a.category || '') === teamCat &&
-                String(a.teamName || '').trim() === teamNameClean
-        );
     
-        if (matches.length > 0) {
-            console.log(`[isTeamPrioritizedForDayMeal] ✅ team="${teamNameClean}" cat="${teamCat}" day=${dayKey} meal=${mealType} matches=`, matches);
-        }
+        return cateringAssignments.some((a) => {
+            if (
+                a.isSuperstructure !== true ||
+                a.dayKey !== dayKey ||
+                a.mealType !== mealType ||
+                cleanCategory(a.clickedTeamCategory || a.category || '') !== teamCat
+            ) {
+                return false;
+            }
     
-        return matches.length > 0;
+            const rawPriorityName = String(a.teamName || '').trim();
+            if (!rawPriorityName) return false;
+    
+            // 🔥 Premapuj identifikátor na finálny názov tímu
+            let mappedPriorityName = rawPriorityName;
+            if (window.teamNames && typeof window.teamNames === 'object') {
+                const candidate = window.teamNames[rawPriorityName];
+                if (candidate && String(candidate).trim() !== '') {
+                    mappedPriorityName = String(candidate).trim();
+                }
+            }
+    
+            // 🔥 Priame porovnanie premapovaného názvu s aktuálnym tímom
+            if (mappedPriorityName === teamNameClean) {
+                console.log(`[isTeamPrioritizedForDayMeal] ✅ MATCH: priorityRaw="${rawPriorityName}" → mapped="${mappedPriorityName}" team="${teamNameClean}" day=${dayKey} meal=${mealType}`);
+                return true;
+            }
+    
+            // Fallback: ak sa raw zhoduje s aktuálnym názvom (nemapované)
+            if (rawPriorityName === teamNameClean) {
+                console.log(`[isTeamPrioritizedForDayMeal] ✅ MATCH (raw): priorityRaw="${rawPriorityName}" team="${teamNameClean}"`);
+                return true;
+            }
+    
+            return false;
+        });
     };
 
     const getMappedTeamName = (category, teamName) => {
