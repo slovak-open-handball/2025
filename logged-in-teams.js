@@ -2772,9 +2772,11 @@ const TeamsOverviewApp = (props) => {
     
     const renderTeamRoster = () => {
         const categoryFromUrl = getCategoryFromUrl();
-        const hasCategoryInUrl = !!categoryFromUrl;
-        
-        if (!hasCategoryInUrl) {
+        // 🔥 Použijeme kategóriu z selectedTeamDetails, ak existuje, inak z URL
+        const effectiveCategory = selectedTeamDetails?.category || categoryFromUrl;
+        const hasCategory = !!effectiveCategory;
+    
+        if (!hasCategory) {
             return null;
         }
         
@@ -2959,7 +2961,9 @@ const TeamsOverviewApp = (props) => {
         if (!selectedTeamDetails) return null;
     
         const categoryFromUrl = getCategoryFromUrl();
-        const hasCategoryInUrl = !!categoryFromUrl;
+        // 🔥 Použijeme kategóriu z selectedTeamDetails, ak existuje, inak z URL
+        const effectiveCategory = selectedTeamDetails.category || categoryFromUrl;
+        const hasCategory = !!effectiveCategory;
     
         const sortedOccurrences = [...selectedTeamDetails.occurrences].sort((a, b) => {
             const categoryCompare = slovakCollator.compare(a.category, b.category);
@@ -2974,9 +2978,9 @@ const TeamsOverviewApp = (props) => {
             if (foundId) categoryId = foundId;
         }
     
-        const isAnyButtonSelected = hasCategoryInUrl && 
-                                    selectedTeamDetails.category !== null &&
-                                    selectedTeamDetails.category !== undefined;
+        const isAnyButtonSelected = hasCategory && 
+                                selectedTeamDetails.category !== null &&
+                                selectedTeamDetails.category !== undefined;
     
         return React.createElement(
             'div',
@@ -3075,13 +3079,14 @@ const TeamsOverviewApp = (props) => {
             // --- UDALOSTI TÍMU (zlúčené zápasy + stravovanie) ---
             (isAnyButtonSelected && (isCateringVisible || isMatchesVisible)) ? React.createElement(TeamEventsList, {
                 teamName: selectedTeamDetails.teamName,
-                categoryName: selectedTeamDetails.category || categoryFromUrl || '',
+                categoryName: effectiveCategory || '',
                 categoryId: categoryId,
                 filter: teamEventsFilter,
                 refreshKey: matchesRefreshKey,
                 isMatchesVisible: isMatchesVisible,
                 isCateringVisible: isCateringVisible
             }) : null,
+
     
             renderTeamRoster()
         );
