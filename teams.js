@@ -1417,32 +1417,36 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                        if (existing) {
                            if (!teamHasMealInPackage(team, day.key, mealType)) return;
                        
-                           // 🔥 Skontroluj, či tím patrí do prioritizovanej nedokončenej skupiny.
-                           // Skupinu určíme z POSLEDNÉHO PÍSMENA názvu aktuálneho tímu.
-                           const teamCatId = Object.keys(categoriesData || {}).find(
-                               id => categoriesData[id] === teamCategoryClean
-                           );
-                           if (teamCatId && groupsData) {
-                               // 🔥 Skupinu tímu určíme primárne z team.groupName (štítok v stĺpci INFO),
-                               // sekundárne z posledného písmena názvu tímu.
-                               let teamGroupNames = [];
-                               if (team.groupName) {
-                                   teamGroupNames = [String(team.groupName).trim()];
-                               } else {
-                                   const teamGroups = findGroupsByLastLetter(teamNameClean, teamCatId, groupsData);
-                                   teamGroupNames = (teamGroups || []).map(g => String(g.name || '').trim());
-                               }
-                               teamGroupNames = teamGroupNames.filter(Boolean);
+                           // 🔥 Blokovanie sa aplikuje LEN na prioritizované tímy (tie, ktoré majú
+                           // superštruktúra priradenie pre daný deň+typ+slot). NEPRIORITIZOVANÉ tímy
+                           // sa zobrazujú VŽDY, bez ohľadu na to, či nejaká skupina je alebo nie je
+                           // 100% dokončená.
+                           const hasSuperstructure = ss !== null && ss !== undefined;
                            
-                               if (teamGroupNames.length > 0) {
-                                   const isBlocked = teamGroupNames.some(gName =>
-                                       blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${gName}`)
-                                   );
-                                   if (isBlocked) {
-                                       return;
+                           if (hasSuperstructure) {
+                               const teamCatId = Object.keys(categoriesData || {}).find(
+                                   id => categoriesData[id] === teamCategoryClean
+                               );
+                               if (teamCatId && groupsData) {
+                                   let teamGroupNames = [];
+                                   if (team.groupName) {
+                                       teamGroupNames = [String(team.groupName).trim()];
+                                   } else {
+                                       const teamGroups = findGroupsByLastLetter(teamNameClean, teamCatId, groupsData);
+                                       teamGroupNames = (teamGroups || []).map(g => String(g.name || '').trim());
+                                   }
+                                   teamGroupNames = teamGroupNames.filter(Boolean);
+                               
+                                   if (teamGroupNames.length > 0) {
+                                       const isBlocked = teamGroupNames.some(gName =>
+                                           blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${gName}`)
+                                       );
+                                       if (isBlocked) {
+                                           return;
+                                       }
                                    }
                                }
-                           }                 
+                           }
                        
                            rows.push({
                                 key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
