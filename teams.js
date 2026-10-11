@@ -114,13 +114,13 @@ const isGroupFullyCompleted = (groupName, categoryName, allMatchesList) => {
     return percentage === 100;
 };
 
-// Zistí, či existuje pre daný deň + typ stravovania nejaké prioritizované (superstructure)
-// priradenie, ktorého prioritizovaný tím patrí do skupiny, ktorá NIE JE 100% dokončená.
-// Ak áno, vráti true = celý deň+typ treba BLOKOVAŤ (nezobrazovať žiadne stravovanie).
+// Vráti zoznam názvov skupín, ktoré sú v danom dni + type prioritizované (existuje pre ne
+// superstructure priradenie) a NIE SÚ 100% dokončené. Tieto skupiny treba blokovať pre
+// všetky tímy, ktoré do nich patria.
 //
 // Skupinu prioritizovaného tímu zisťujeme PRIMÁRNE z `rawTeamData.groupName` (skutočná
 // skupina z DB), nie len podľa posledného písmena názvu.
-const isDayMealBlockedByUnfinishedPriorityGroup = (
+const getUnfinishedPriorityGroupsForDayMeal = (
     dayKey,
     mealType,
     cateringAssignments,
@@ -129,17 +129,19 @@ const isDayMealBlockedByUnfinishedPriorityGroup = (
     allMatchesList,
     userTeams
 ) => {
-    if (!Array.isArray(cateringAssignments) || cateringAssignments.length === 0) return false;
-    if (!categoriesData || !groupsData) return false;
+    const result = [];
+    if (!Array.isArray(cateringAssignments) || cateringAssignments.length === 0) return result;
+    if (!categoriesData || !groupsData) return result;
 
-    // Nájdeme všetky superstructure priradenia pre daný deň + typ
     const ssForDayMeal = cateringAssignments.filter(a =>
         a &&
         a.isSuperstructure === true &&
         a.dayKey === dayKey &&
         a.mealType === mealType
     );
-    if (ssForDayMeal.length === 0) return false;
+    if (ssForDayMeal.length === 0) return result;
+
+    const seen = new Set();
 
     for (const ss of ssForDayMeal) {
         const ssCategory = String(ss.category || ss.categoryName || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
@@ -177,11 +179,15 @@ const isDayMealBlockedByUnfinishedPriorityGroup = (
 
         const isCompleted = isGroupFullyCompleted(groupNameToCheck, ssCategory, allMatchesList);
         if (!isCompleted) {
-            return true; // skupina prioritizovaného tímu nie je 100% -> BLOKUJ celý deň + typ
+            const key = `${ssCategory}||${groupNameToCheck}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                result.push({ categoryName: ssCategory, groupName: groupNameToCheck });
+            }
         }
     }
 
-    return false;
+    return result;
 };
 
 const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
@@ -1369,14 +1375,14 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
         const rows = [];
 
-        // 🔥 Predpočítame si množinu blokovaných kombinácií "dayKey|mealType".
-        // Ak má deň+typ aspoň jedno superstructure priradenie, ktorého prioritizovaný tím
-        // patrí do skupiny, ktorá nie je 100% dokončená, blokujeme CELÝ deň+typ
-        // pre všetky tímy (klasické aj superstructure).
-        const blockedDayMealKeys = new Set();
+        // 🔥 Predpočítame si množinu blokovaných kombinácií "dayKey|mealType|categoryName|groupName".
+        // Pre každý deň+typ a každé superstructure priradenie zistíme skupinu prioritizovaného tímu.
+        // Ak táto skupina NIE JE 100% dokončená, uložíme si kombináciu do Setu.
+        // Pri každom tíme v cykle potom blokujeme len ak JEHO skupina je v tomto Sete.
+        const blockedGroupDayMealKeys = new Set();
         (tournamentDays || []).forEach((day) => {
             ['lunch', 'dinner'].forEach((mealType) => {
-                const blocked = isDayMealBlockedByUnfinishedPriorityGroup(
+                const blockedGroups = getUnfinishedPriorityGroupsForDayMeal(
                     day.key,
                     mealType,
                     cateringAssignments,
@@ -1385,19 +1391,27 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                     allMatchesList,
                     userTeams
                 );
-                if (blocked) {
-                    blockedDayMealKeys.add(`${day.key}|${mealType}`);
-                }
+                blockedGroups.forEach(({ categoryName, groupName }) => {
+                    blockedGroupDayMealKeys.add(`${day.key}|${mealType}|${categoryName}|${groupName}`);
+                });
             });
         });
 
         filteredTeams.forEach((team) => {
             (tournamentDays || []).forEach((day) => {
                 ['lunch', 'dinner'].forEach((mealType) => {
-                    // 🔥 Ak je tento deň + typ blokovaný (niektorá prioritizovaná skupina
-                    // ešte nie je 100% dokončená), nezobrazíme ŽIADNY riadok stravovania
-                    // pre tento deň a typ – ani klasický, ani superstructure.
-                    if (blockedDayMealKeys.has(`${day.key}|${mealType}`)) {
+                    // 🔥 Zistíme skupinu AKTUÁLNE spracúvaného tímu (team).
+                    // Ak jeho skupina je v tomto dni+type prioritizovaná a nie je 100%,
+                    // zablokujeme len jeho riadky (nie ostatné tímy z iných skupín).
+                    const teamGroupName = team?.rawTeamData?.groupName
+                        ? String(team.rawTeamData.groupName).trim()
+                        : null;
+                    const teamCategoryClean = cleanCategory(team.category);
+                    const isTeamBlocked =
+                        teamGroupName &&
+                        blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${teamGroupName}`);
+
+                    if (isTeamBlocked) {
                         return;
                     }
 
