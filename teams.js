@@ -86,7 +86,7 @@ const getLastLetterFromTeamName = (teamName) => {
 
 // Nájde skupinu v groupsData, ktorej posledné písmeno názvu je zhodné s posledným znakom názvu tímu.
 // groupsData formát: { [categoryId]: [ { name, type, ... }, ... ] }
-const findGroupByLastLetter = (teamName, categoryId, groupsData) => {
+const findGroupsByLastLetter = (teamName, categoryId, groupsData) => {
     const lastLetter = getLastLetterFromTeamName(teamName);
     if (!lastLetter) return [];
     if (!groupsData || !categoryId) return [];
@@ -162,7 +162,7 @@ const getUnfinishedPriorityGroupsForDayMeal = (
         );
         if (!priorityCategoryId) continue;
 
-        const group = findGroupByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
+        const group = findGroupsByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
         if (!group) continue;
 
         const groupNameToCheck = group.name;
@@ -1501,7 +1501,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                 id => categoriesData[id] === ssCategory
                             );
                             if (priorityCatId && groupsData) {
-                                const priorityGroup = findGroupByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
+                                const priorityGroup = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
 
                                 console.log(`SS team="${ssOriginalTeamName}", priorityCatId="${priorityCatId}", priorityGroup="${priorityGroup?.name}", key="${day.key}|${mealType}|${ssCategory}|${priorityGroup?.name}", blocked=${blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${priorityGroup?.name}`)}`);
                               
