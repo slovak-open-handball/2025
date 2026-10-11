@@ -86,7 +86,7 @@ const getLastLetterFromTeamName = (teamName) => {
 
 // Nájde skupinu v groupsData, ktorej posledné písmeno názvu je zhodné s posledným znakom názvu tímu.
 // groupsData formát: { [categoryId]: [ { name, type, ... }, ... ] }
-const findGroupsByLastLetter = (teamName, categoryId, groupsData) => {
+const findGroupByLastLetter = (teamName, categoryId, groupsData) => {
     const lastLetter = getLastLetterFromTeamName(teamName);
     if (!lastLetter) return [];
     if (!groupsData || !categoryId) return [];
