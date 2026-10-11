@@ -1407,10 +1407,24 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                         const existing = findCateringAssignment(team, day.key, mealType, slot.from);
                         const ss = findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
 
-                        if (existing) {
-                            if (!teamHasMealInPackage(team, day.key, mealType)) return;
-
-                            rows.push({
+                       if (existing) {
+                           if (!teamHasMealInPackage(team, day.key, mealType)) return;
+                       
+                           // 🔥 NOVÉ: Skontroluj, či tím nepatrí do prioritizovanej nedokončenej skupiny
+                           const teamCatId = Object.keys(categoriesData || {}).find(
+                               id => categoriesData[id] === teamCategoryClean
+                           );
+                           if (teamCatId && groupsData) {
+                               const teamGroup = findGroupByLastLetter(teamNameClean, teamCatId, groupsData);
+                               if (teamGroup && teamGroup.name) {
+                                   const teamGroupName = String(teamGroup.name).trim();
+                                   if (blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${teamGroupName}`)) {
+                                       return; // 🔥 tím je v nedokončenej prioritizovanej skupine → nezobraz
+                                   }
+                               }
+                           }
+                       
+                           rows.push({
                                 key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
                                 category: team.category,
                                 teamName: team.teamName,
