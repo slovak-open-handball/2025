@@ -1,4 +1,4 @@
-// teams.js
+// logged-in-teams.js
 import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -1242,20 +1242,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         return () => clearInterval(intervalId);
     }, []);
 
-    useEffect(() => {
-        if (!isLoadingEvents) return;
-        const allLoaded =
-            !matchesLoading &&
-            !cateringSettingsLoading &&
-            !tournamentDaysLoading &&
-            !packagesLoading &&
-            !cateringAssignmentsLoading &&
-            !userTeamsLoading;
-        if (allLoaded) {
-            setIsLoadingEvents(false);
-        }
-    }, [matchesLoading, cateringSettingsLoading, tournamentDaysLoading, packagesLoading, cateringAssignmentsLoading, userTeamsLoading, isLoadingEvents, setIsLoadingEvents]);
-
     // --- Presne ako v catering.js ---
     const assignmentsBySlot = React.useMemo(() => {
         const map = new Map();
@@ -1622,7 +1608,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         !cateringAssignmentsLoading &&
         !userTeamsLoading;
 
-    if (isLoadingEvents || !allLoaded) {
+    if (!allLoaded) {
         return React.createElement(
             'div',
             { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
@@ -2722,14 +2708,14 @@ const TeamsOverviewApp = (props) => {
                 order: t.order
             }));
 
-        if (occurrences.length === 0) return;
-        
+        if (occurrences.length === 0) return;    
+
         setSelectedTeamDetails({
             teamName: normalizedTeamName,
             category: categoryName || null,
             occurrences
         });
-    
+
         updateUrlHash(normalizedTeamName, categoryName || null);
     
         const catName = categoryName || occurrences[0].category;
@@ -2739,7 +2725,7 @@ const TeamsOverviewApp = (props) => {
     const handleTeamOccurrenceClick = (occ) => {
         const normalizedTeamName = occ.teamName.replace(/\s+/g, ' ').trim();
         const normalizedCategory = occ.category.replace(/\s+/g, ' ').trim();        
-    
+
         const hashParts = [];
         if (normalizedCategory) {
             let encodedCategory = normalizedCategory.replace(/ - /g, '___TRIPLE_DASH___');
@@ -2753,12 +2739,12 @@ const TeamsOverviewApp = (props) => {
             encodedTeam = encodedTeam.replace(/___TRIPLE_DASH___/g, '---');
             hashParts.push(`team=${encodeURIComponent(encodedTeam)}`);
         }
-    
+
         const newHash = hashParts.length > 0 ? `#${hashParts.join('&')}` : '';
         if (window.location.hash !== newHash) {
             window.history.replaceState(null, '', newHash);
         }
-    
+
         const baseTeamName = removeSuffix(normalizedTeamName);
         const userTeams = getUserTeamsFromProfile();
         const allOccurrences = userTeams
@@ -2769,13 +2755,15 @@ const TeamsOverviewApp = (props) => {
                 groupName: t.groupName,
                 order: t.order
             }));
-                
+    
+        // 🔥 ODSTRÁNENÉ: setIsLoadingRoster(true), setIsLoadingEvents(true)
+    
         setSelectedTeamDetails({
             teamName: normalizedTeamName,
             category: normalizedCategory,
             occurrences: allOccurrences
         });
-        
+    
         let categoryName = occ.category;
         if (categoryIdToNameMap[categoryName]) {
             categoryName = categoryIdToNameMap[categoryName];
@@ -3093,9 +3081,7 @@ const TeamsOverviewApp = (props) => {
                 filter: teamEventsFilter,
                 refreshKey: matchesRefreshKey,
                 isMatchesVisible: isMatchesVisible,
-                isCateringVisible: isCateringVisible,
-                isLoadingEvents: isLoadingEvents,
-                setIsLoadingEvents: setIsLoadingEvents
+                isCateringVisible: isCateringVisible
             }) : null,
     
             renderTeamRoster()
