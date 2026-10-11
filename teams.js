@@ -1465,18 +1465,25 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                id => categoriesData[id] === teamCategoryClean
                            );
                            if (teamCatId && groupsData) {
-                               const teamGroups = findGroupsByLastLetter(teamNameClean, teamCatId, groupsData);
-                               if (teamGroups && teamGroups.length > 0) {
-                                   const isBlocked = teamGroups.some(g => {
-                                       const gName = String(g.name || '').trim();
-                                       return gName && blockedGroupDayMealKeys.has(
-                                           `${day.key}|${mealType}|${teamCategoryClean}|${gName}`
-                                       );
-                                   });
+                               // 🔥 Skupinu tímu určíme primárne z team.groupName (štítok v stĺpci INFO),
+                               // sekundárne z posledného písmena názvu tímu.
+                               let teamGroupNames = [];
+                               if (team.groupName) {
+                                   teamGroupNames = [String(team.groupName).trim()];
+                               } else {
+                                   const teamGroups = findGroupsByLastLetter(teamNameClean, teamCatId, groupsData);
+                                   teamGroupNames = (teamGroups || []).map(g => String(g.name || '').trim());
+                               }
+                               teamGroupNames = teamGroupNames.filter(Boolean);
+                           
+                               if (teamGroupNames.length > 0) {
+                                   const isBlocked = teamGroupNames.some(gName =>
+                                       blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${gName}`)
+                                   );
                                    if (isBlocked) {
                                        console.log(
                                            `[existing-BLOCKED] team="${teamNameClean}" | ${day.key} | ${mealType} | ` +
-                                           `skupiny=[${teamGroups.map(g => g.name).join(', ')}]`
+                                           `skupiny=[${teamGroupNames.join(', ')}]`
                                        );
                                        return;
                                    }
@@ -1485,18 +1492,23 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
 // ------------------------------- ZMAŽ
 {
-    const dbgTeamCatId = Object.keys(categoriesData || {}).find(
-        id => categoriesData[id] === teamCategoryClean
-    );
-    const dbgGroups = (dbgTeamCatId && groupsData)
-        ? findGroupsByLastLetter(teamNameClean, dbgTeamCatId, groupsData)
-        : [];
-    const dbgGroupNames = dbgGroups.map(g => String(g.name || '').trim()).filter(Boolean);
+    let dbgGroupNames = [];
+    if (team.groupName) {
+        dbgGroupNames = [String(team.groupName).trim()];
+    } else {
+        const dbgTeamCatId = Object.keys(categoriesData || {}).find(
+            id => categoriesData[id] === teamCategoryClean
+        );
+        const dbgGroups = (dbgTeamCatId && groupsData)
+            ? findGroupsByLastLetter(teamNameClean, dbgTeamCatId, groupsData)
+            : [];
+        dbgGroupNames = dbgGroups.map(g => String(g.name || '').trim());
+    }
     console.log(
         `[existing-SHOWN] team="${teamNameClean}" | ${day.key} | ${mealType} | ` +
         `skupiny=[${dbgGroupNames.join(', ')}]`
     );
-}                         
+}                      
 // ------------------------------- ZMAŽ                    
                        
                            rows.push({
