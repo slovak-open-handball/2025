@@ -97,7 +97,9 @@ const isGroupFullyCompleted = (groupName, categoryName, allMatchesList) => {
         return mGroup.slice(-1).toUpperCase() === groupLastLetter;
     });
 
-    if (groupMatches.length === 0) return true;
+    if (groupMatches.length === 0) {
+        return false;
+    }
 
     const completedCount = groupMatches.filter(m => m.status === 'completed').length;
     return completedCount === groupMatches.length;
