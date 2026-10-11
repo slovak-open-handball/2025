@@ -1374,6 +1374,20 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
             });
         });
 
+
+    //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------VYMAZAŤ
+console.log('=== userTeams ===');
+userTeams.forEach(t => {
+    console.log(`teamName="${t.teamName}", category="${t.category}", groupName="${t.rawTeamData?.groupName}", uid="${t.uid}", teamIndex="${t.teamIndex}"`);
+});
+console.log('=== cateringAssignments (superstructure) ===');
+cateringAssignments.filter(a => a.isSuperstructure === true).forEach(ss => {
+    console.log(`teamName="${ss.teamName}", category="${ss.category}", clickedTeamUid="${ss.clickedTeamUid}", clickedTeamIndex="${ss.clickedTeamIndex}", dayKey="${ss.dayKey}", mealType="${ss.mealType}"`);
+});
+    //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------VYMAZAŤ
+
+      
+
         filteredTeams.forEach((team) => {
             (tournamentDays || []).forEach((day) => {
                 ['lunch', 'dinner'].forEach((mealType) => {
