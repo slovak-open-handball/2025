@@ -71,7 +71,6 @@ const removeSuffix = (teamName) => {
 
 // ============================================================
 // POMOCNÉ FUNKCIE PRE KONTROLU 100% DOKONČENIA SKUPINY
-// (rovnaká logika ako v matchTracker.isGroupFullyCompleted)
 // ============================================================
 
 const getLastLetterFromTeamName = (teamName) => {
@@ -124,7 +123,7 @@ const isGroupFullyCompleted = (groupName, categoryName, allMatchesList) => {
     return completedCount === groupMatches.length;
 };
 
-const getUnfinishedPriorityGroupsForDayMeal = (
+const getUnfinishedPriorityGroupsForDayMeal = async (
     dayKey,
     mealType,
     cateringAssignments,
@@ -149,8 +148,38 @@ const getUnfinishedPriorityGroupsForDayMeal = (
 
     for (const ss of ssForDayMeal) {
         const ssCategory = String(ss.category || ss.categoryName || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
-        const priorityTeamName = String(ss.teamName || '').trim();
-        if (!priorityTeamName) continue;
+        const rawPriorityTeamName = String(ss.teamName || '').trim();
+        if (!rawPriorityTeamName) continue;
+
+        let priorityTeamName = rawPriorityTeamName;
+        if (window.teamNames && typeof window.teamNames === 'object') {
+            const candidate = window.teamNames[rawPriorityTeamName];
+            if (candidate && String(candidate).trim() !== '') {
+                priorityTeamName = String(candidate).trim();
+            }
+        }
+
+        if (
+            priorityTeamName === rawPriorityTeamName &&
+            window.matchTracker &&
+            typeof window.matchTracker.getTeamNameByDisplayId === 'function'
+        ) {
+            try {
+                const mapped = await window.matchTracker.getTeamNameByDisplayId(rawPriorityTeamName);
+                if (
+                    mapped &&
+                    mapped !== null &&
+                    mapped !== undefined &&
+                    String(mapped).trim() !== '' &&
+                    String(mapped).trim() !== 'null' &&
+                    String(mapped).trim() !== 'undefined' &&
+                    String(mapped).trim() !== rawPriorityTeamName
+                ) {
+                    priorityTeamName = String(mapped).trim();
+                }
+            } catch (e) {
+            }
+        }
 
         const priorityCategoryId = Object.keys(categoriesData).find(
             id => categoriesData[id] === ssCategory
@@ -158,18 +187,23 @@ const getUnfinishedPriorityGroupsForDayMeal = (
         if (!priorityCategoryId) continue;
 
         let priorityGroupNames = [];
-        if (ss.groupName) {
+        if (ss.groupName && String(ss.groupName).trim() !== '') {
             priorityGroupNames = [String(ss.groupName).trim()];
         } else {
-            const groups = findGroupsByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
+            const groups = findGroupsByLastLetter(rawPriorityTeamName, priorityCategoryId, groupsData);
             priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
         }
         priorityGroupNames = priorityGroupNames.filter(Boolean);
         if (priorityGroupNames.length === 0) continue;
-        
+
         for (const groupNameToCheck of priorityGroupNames) {
             const isCompleted = isGroupFullyCompleted(groupNameToCheck, ssCategory, allMatchesList);
+
             if (!isCompleted) {
+                if (ss.isPriority !== true) {
+                    continue;
+                }
+            
                 const key = `${ssCategory}||${groupNameToCheck}`;
                 if (!seen.has(key)) {
                     seen.add(key);
@@ -525,7 +559,7 @@ const getGroupTypeColors = (groupName, categoryId, groupsData) => {
     return result;
 };
 
-const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey, isMatchesVisible, isCateringVisible }) => {
+const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey, isMatchesVisible, isCateringVisible, isLoadingEvents, setIsLoadingEvents }) => {
     // --- Matches state ---
     const [matches, setMatches] = useState([]);
     const [matchesLoading, setMatchesLoading] = useState(true);
@@ -1220,8 +1254,10 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         for (const [key, pair] of pairsMap.entries()) {
             try {
                 const mapped = await getMappedNameForTeam(pair.category, pair.teamName);
-                if (mapped && mapped !== pair.teamName) newMap[key] = mapped;
-            } catch (e) {}
+                newMap[key] = mapped && String(mapped).trim() !== '' ? String(mapped).trim() : pair.teamName;
+            } catch (e) {
+                newMap[key] = pair.teamName;
+            }
         }
         if (Object.keys(newMap).length > 0) {
             setTeamNameMap((prev) => {
@@ -1241,6 +1277,20 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         const intervalId = setInterval(runRemap, 800);
         return () => clearInterval(intervalId);
     }, []);
+
+    useEffect(() => {
+        if (!isLoadingEvents) return;
+        const allLoaded =
+            !matchesLoading &&
+            !cateringSettingsLoading &&
+            !tournamentDaysLoading &&
+            !packagesLoading &&
+            !cateringAssignmentsLoading &&
+            !userTeamsLoading;
+        if (allLoaded) {
+            setIsLoadingEvents(false);
+        }
+    }, [matchesLoading, cateringSettingsLoading, tournamentDaysLoading, packagesLoading, cateringAssignmentsLoading, userTeamsLoading, isLoadingEvents, setIsLoadingEvents]);
 
     // --- Presne ako v catering.js ---
     const assignmentsBySlot = React.useMemo(() => {
@@ -1274,18 +1324,125 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         return assignmentsBySlot.get(key) || null;
     };
 
-    const findSuperstructureAssignmentForCell = (team, dayKey, mealType, slotFrom) => {
+    const findSuperstructureAssignmentForCell = async (team, dayKey, mealType, slotFrom) => {
         const teamCat = cleanCategory(team.category);
-        return cateringAssignments.find(
-            (a) =>
-                a.isSuperstructure === true &&
-                a.clickedTeamUid === team.uid &&
-                a.clickedTeamIndex === team.teamIndex &&
-                cleanCategory(a.clickedTeamCategory) === teamCat &&
-                a.dayKey === dayKey &&
-                a.mealType === mealType &&
-                a.slotFrom === slotFrom
-        );
+        const teamNameClean = String(team.teamName || '').trim();
+
+        const candidates = cateringAssignments.filter((a) => {
+            if (
+                a.isSuperstructure !== true ||
+                cleanCategory(a.clickedTeamCategory || a.category || '') !== teamCat ||
+                a.dayKey !== dayKey ||
+                a.mealType !== mealType ||
+                a.slotFrom !== slotFrom
+            ) {
+                return false;
+            }
+            const rawPriorityName = String(a.teamName || '').trim();
+            return !!rawPriorityName;
+        });
+
+        if (candidates.length === 0) return null;
+
+        for (const a of candidates) {
+            const rawPriorityName = String(a.teamName || '').trim();
+
+            if (rawPriorityName === teamNameClean) return a;
+
+            let mappedPriorityName = rawPriorityName;
+            if (window.teamNames && typeof window.teamNames === 'object') {
+                const candidate = window.teamNames[rawPriorityName];
+                if (candidate && String(candidate).trim() !== '') {
+                    mappedPriorityName = String(candidate).trim();
+                }
+            }
+            if (mappedPriorityName === teamNameClean) return a;
+
+            const catForMap = cleanCategory(a.category || a.categoryName || '');
+            const key = `${catForMap}||${rawPriorityName}`;
+            const valFromMap = teamNameMap[key];
+            if (valFromMap && String(valFromMap).trim() !== '' && String(valFromMap).trim() !== 'null' && String(valFromMap).trim() !== 'undefined') {
+                if (String(valFromMap).trim() === teamNameClean) return a;
+            }
+
+            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                try {
+                    const mapped = await window.matchTracker.getTeamNameByDisplayId(rawPriorityName);
+                    if (
+                        mapped &&
+                        mapped !== null &&
+                        mapped !== undefined &&
+                        String(mapped).trim() !== '' &&
+                        String(mapped).trim() !== 'null' &&
+                        String(mapped).trim() !== 'undefined' &&
+                        String(mapped).trim() !== rawPriorityName &&
+                        String(mapped).trim() === teamNameClean
+                    ) {
+                        return a;
+                    }
+                } catch (e) {}
+            }
+        }
+
+        return null;
+    };
+
+    const isTeamPrioritizedForDayMeal = async (team, dayKey, mealType) => {
+        if (!team || !dayKey || !mealType) return false;
+        const teamCat = cleanCategory(team.category);
+        const teamNameClean = String(team.teamName || '').trim();
+    
+        for (const a of cateringAssignments) {
+            if (
+                a.isSuperstructure !== true ||
+                a.dayKey !== dayKey ||
+                a.mealType !== mealType ||
+                cleanCategory(a.clickedTeamCategory || a.category || '') !== teamCat
+            ) {
+                continue;
+            }
+    
+            const rawPriorityName = String(a.teamName || '').trim();
+            if (!rawPriorityName) continue;
+
+            if (rawPriorityName === teamNameClean) return true;
+    
+            let mappedPriorityName = rawPriorityName;
+            if (window.teamNames && typeof window.teamNames === 'object') {
+                const candidate = window.teamNames[rawPriorityName];
+                if (candidate && String(candidate).trim() !== '') {
+                    mappedPriorityName = String(candidate).trim();
+                }
+            }
+            if (mappedPriorityName === teamNameClean) return true;
+
+            const catForMap = cleanCategory(a.category || a.categoryName || '');
+            const key = `${catForMap}||${rawPriorityName}`;
+            const valFromMap = teamNameMap[key];
+            if (valFromMap && String(valFromMap).trim() !== '' && String(valFromMap).trim() !== 'null' && String(valFromMap).trim() !== 'undefined') {
+                if (String(valFromMap).trim() === teamNameClean) return true;
+            }
+
+            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                try {
+                    const mapped = await window.matchTracker.getTeamNameByDisplayId(rawPriorityName);
+                    if (
+                        mapped &&
+                        mapped !== null &&
+                        mapped !== undefined &&
+                        String(mapped).trim() !== '' &&
+                        String(mapped).trim() !== 'null' &&
+                        String(mapped).trim() !== 'undefined' &&
+                        String(mapped).trim() !== rawPriorityName &&
+                        String(mapped).trim() === teamNameClean
+                    ) {
+                        return true;
+                    }
+                } catch (e) {}
+            }
+        }
+
+        return false;
     };
 
     const getMappedTeamName = (category, teamName) => {
@@ -1295,7 +1452,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         if (val === null || val === undefined) return teamName;
         const s = String(val).trim();
         if (!s || s === 'null' || s === 'undefined') return teamName;
-        return val;
+        return s;
     };
 
     const findSsTeamInUserTeamsByName = (ssCategory, searchName) => {
@@ -1335,208 +1492,289 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         return val === 1 || val === true;
     };
 
-    // --- CATERING ROWS ---
-    const cateringRows = React.useMemo(() => {
-        if (!teamName || !categoryName) return [];
-        if (userTeams.length === 0) return [];
+    // --- CATERING ROWS (async, používa matchTracker.getTeamNameByDisplayId) ---
+    const [cateringRows, setCateringRows] = React.useState([]);
 
-        const cleanCat = cleanCategory(categoryName);
-        const cleanTeam = String(teamName).trim();
+    React.useEffect(() => {
+        let cancelled = false;
 
-        const filteredTeams = cleanCat
-            ? userTeams.filter((t) => cleanCategory(t.category) === cleanCat)
-            : userTeams;
+        const computeCateringRows = async () => {
+            if (!teamName || !categoryName) {
+                if (!cancelled) setCateringRows([]);
+                return;
+            }
+            if (userTeams.length === 0) {
+                if (!cancelled) setCateringRows([]);
+                return;
+            }
 
-        const rows = [];
+            const cleanCat = cleanCategory(categoryName);
+            const cleanTeam = String(teamName).trim();
 
-        const blockedGroupDayMealKeys = new Set();   
-      
-        (tournamentDays || []).forEach((day) => {
-            ['lunch', 'dinner'].forEach((mealType) => {
-                const blockedGroups = getUnfinishedPriorityGroupsForDayMeal(
-                    day.key,
-                    mealType,
-                    cateringAssignments,
-                    categoriesData,
-                    groupsData,
-                    allMatchesList,
-                    userTeams
-                );
-                blockedGroups.forEach(({ categoryName, groupName }) => {
-                    blockedGroupDayMealKeys.add(`${day.key}|${mealType}|${categoryName}|${groupName}`);
-                });
-            });
-        });      
+            const filteredTeams = cleanCat
+                ? userTeams.filter((t) => cleanCategory(t.category) === cleanCat)
+                : userTeams;
 
-        filteredTeams.forEach((team) => {
-            (tournamentDays || []).forEach((day) => {
-                ['lunch', 'dinner'].forEach((mealType) => {
-                    const teamCategoryClean = cleanCategory(team.category);
-                    const teamNameClean = String(team.teamName || '').trim();
+            const rows = [];
 
-                    const slots = daySlots[day.key]?.[mealType] || [];
-                    if (slots.length === 0) return;
+            const blockedGroupDayMealKeys = new Set();
 
-                    slots.forEach((slot) => {
-                        const existing = findCateringAssignment(team, day.key, mealType, slot.from);
-                        const ss = findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
+            for (const day of (tournamentDays || [])) {
+                for (const mealType of ['lunch', 'dinner']) {
+                    const blockedGroups = await getUnfinishedPriorityGroupsForDayMeal(
+                        day.key,
+                        mealType,
+                        cateringAssignments,
+                        categoriesData,
+                        groupsData,
+                        allMatchesList,
+                        userTeams
+                    );
+                    blockedGroups.forEach(({ categoryName: cn, groupName }) => {
+                        blockedGroupDayMealKeys.add(`${day.key}|${mealType}|${cn}|${groupName}`);
+                    });
+                }
+            }
 
-                       if (existing) {
-                           if (!teamHasMealInPackage(team, day.key, mealType)) return;
+            if (cancelled) return;
 
-                           // 🔥 Blokovanie sa aplikuje LEN na prioritizované tímy (tie, ktoré majú
-                           // superštruktúra priradenie pre daný deň+typ+slot). NEPRIORITIZOVANÉ tímy
-                           // sa zobrazujú VŽDY, bez ohľadu na to, či nejaká skupina je alebo nie je
-                           // 100% dokončená.
-                           const hasSuperstructure = ss !== null && ss !== undefined;
-                           
-                           if (hasSuperstructure) {
-                               const teamCatId = Object.keys(categoriesData || {}).find(
-                                   id => categoriesData[id] === teamCategoryClean
-                               );
-                               if (teamCatId && groupsData) {
-                                   let teamGroupNames = [];
-                                   if (team.groupName) {
-                                       teamGroupNames = [String(team.groupName).trim()];
-                                   } else {
-                                       const teamGroups = findGroupsByLastLetter(teamNameClean, teamCatId, groupsData);
-                                       teamGroupNames = (teamGroups || []).map(g => String(g.name || '').trim());
-                                   }
-                                   teamGroupNames = teamGroupNames.filter(Boolean);
-                               
-                                   if (teamGroupNames.length > 0) {
-                                       const isBlocked = teamGroupNames.some(gName =>
-                                           blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${gName}`)
-                                       );
-                                       if (isBlocked) {
-                                           return;
-                                       }
-                                   }
-                               }
-                           }
-                       
-                           rows.push({
-                                key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
-                                category: team.category,
-                                teamName: team.teamName,
-                                dayKey: day.key,
-                                dayLabel: day.fullLabelNumeric,
-                                daySort: day.date.getTime(),
-                                dateObj: day.date,
-                                mealType,
-                                mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
-                                slotFrom: slot.from,
-                                slotTo: slot.to,
-                                placeName: existing.placeName || '',
-                                type: 'classic',
-                                isPriority: false,
-                                kind: 'catering',
-                            });
-                            return;
+            for (const team of filteredTeams) {
+                for (const day of (tournamentDays || [])) {
+                    for (const mealType of ['lunch', 'dinner']) {
+                        const teamCategoryClean = cleanCategory(team.category);
+                        const teamNameClean = String(team.teamName || '').trim();
+
+                        const slots = daySlots[day.key]?.[mealType] || [];
+                        if (slots.length === 0) continue;
+
+                        const teamCatId = Object.keys(categoriesData || {}).find(
+                            id => categoriesData[id] === teamCategoryClean
+                        );
+                        if (teamCatId && groupsData) {
+                            let teamGroupNames = [];
+                            if (team.groupName) {
+                                teamGroupNames = [String(team.groupName).trim()];
+                            } else {
+                                const teamGroups = findGroupsByLastLetter(teamNameClean, teamCatId, groupsData);
+                                teamGroupNames = (teamGroups || []).map(g => String(g.name || '').trim());
+                            }
+                            teamGroupNames = teamGroupNames.filter(Boolean);
+
+                            if (teamGroupNames.length > 0) {
+                                const isBlocked = teamGroupNames.some(gName =>
+                                    blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${gName}`)
+                                );
+                                if (isBlocked) {
+                                    continue;
+                                }
+                            }
                         }
 
-                        if (ss) {
-                            const ssCategory = cleanCategory(ss.category || ss.categoryName || '');
-                            const ssOriginalTeamName = String(ss.teamName || '').trim();
-                            let ssMappedName = getMappedTeamName(ssCategory, ssOriginalTeamName);
+                        for (const slot of slots) {
+                            const existing = findCateringAssignment(team, day.key, mealType, slot.from);
+                            const ss = await findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
 
-                            if (
-                                ssMappedName === null ||
-                                ssMappedName === undefined ||
-                                String(ssMappedName).trim() === '' ||
-                                String(ssMappedName).trim() === 'null' ||
-                                String(ssMappedName).trim() === 'undefined'
-                            ) {
-                                ssMappedName = ssOriginalTeamName;
-                            }
+                            if (existing) {
+                                if (!teamHasMealInPackage(team, day.key, mealType)) continue;
 
-                            const wasMapped = String(ssMappedName).trim() !== ssOriginalTeamName;
+                                const isPrioritized = await isTeamPrioritizedForDayMeal(team, day.key, mealType);
 
-                            if (wasMapped) {
-                                const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssMappedName);
-                                if (!ssTeam) return;
-                                if (!teamHasMealInPackage(ssTeam, day.key, mealType)) return;
-                            } else {
-                                const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssOriginalTeamName);
-                                if (ssTeam) {
-                                    if (!teamHasMealInPackage(ssTeam, day.key, mealType)) return;
-                                }
-                            }
-
-                            const priorityCatId = Object.keys(categoriesData || {}).find(
-                                id => categoriesData[id] === ssCategory
-                            );
-                            if (priorityCatId && groupsData) {
-                                let priorityGroupNames = [];
-                                if (ss.groupName) {
-                                    priorityGroupNames = [String(ss.groupName).trim()];
-                                } else {
-                                    const priorityGroups = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
-                                    priorityGroupNames = (priorityGroups || []).map(g => String(g.name || '').trim());
-                                }
-                                priorityGroupNames = priorityGroupNames.filter(Boolean);
-                            
-                                if (priorityGroupNames.length > 0) {
-                                    const isBlocked = priorityGroupNames.some(gName =>
-                                        blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${gName}`)
+                                if (isPrioritized) {
+                                    const teamCatId = Object.keys(categoriesData || {}).find(
+                                        id => categoriesData[id] === teamCategoryClean
                                     );
-                                    if (isBlocked) {
-                                        return;
+                                    if (teamCatId && groupsData) {
+                                        let teamGroupNames = [];
+                                        if (team.groupName) {
+                                            teamGroupNames = [String(team.groupName).trim()];
+                                        } else {
+                                            const teamGroups = findGroupsByLastLetter(teamNameClean, teamCatId, groupsData);
+                                            teamGroupNames = (teamGroups || []).map(g => String(g.name || '').trim());
+                                        }
+                                        teamGroupNames = teamGroupNames.filter(Boolean);
+
+                                        if (teamGroupNames.length > 0) {
+                                            const blockedKeys = teamGroupNames.map(gName =>
+                                                `${day.key}|${mealType}|${teamCategoryClean}|${gName}`
+                                            );
+                                            const isBlocked = blockedKeys.some(k => blockedGroupDayMealKeys.has(k));
+
+                                            if (isBlocked) {
+                                                continue;
+                                            }
+                                        }
                                     }
                                 }
-                            }                        
-                          
-                            rows.push({
-                                key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
-                                category: team.category,
-                                teamName: ssMappedName,
-                                dayKey: day.key,
-                                dayLabel: day.fullLabelNumeric,
-                                daySort: day.date.getTime(),
-                                dateObj: day.date,
-                                mealType,
-                                mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
-                                slotFrom: ss.slotFrom,
-                                slotTo: slot.to,
-                                placeName: ss.placeName || '',
-                                type: 'superstructure',
-                                isPriority: ss.isPriority === true,
-                                kind: 'catering',
-                            });
+
+                                rows.push({
+                                    key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
+                                    category: team.category,
+                                    teamName: team.teamName,
+                                    dayKey: day.key,
+                                    dayLabel: day.fullLabelNumeric,
+                                    daySort: day.date.getTime(),
+                                    dateObj: day.date,
+                                    mealType,
+                                    mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
+                                    slotFrom: slot.from,
+                                    slotTo: slot.to,
+                                    placeName: existing.placeName || '',
+                                    type: 'classic',
+                                    isPriority: false,
+                                    kind: 'catering',
+                                });
+                                continue;
+                            }
+
+                            if (ss) {
+                                const ssCategory = cleanCategory(ss.category || ss.categoryName || '');
+                                const ssOriginalTeamName = String(ss.teamName || '').trim();
+
+                                let ssMappedName = getMappedTeamName(ssCategory, ssOriginalTeamName);
+
+                                if (
+                                    ssMappedName === null ||
+                                    ssMappedName === undefined ||
+                                    String(ssMappedName).trim() === '' ||
+                                    String(ssMappedName).trim() === 'null' ||
+                                    String(ssMappedName).trim() === 'undefined'
+                                ) {
+                                    ssMappedName = ssOriginalTeamName;
+                                }
+
+                                if (
+                                    window.matchTracker &&
+                                    typeof window.matchTracker.getTeamNameByDisplayId === 'function'
+                                ) {
+                                    try {
+                                        const mapped = await window.matchTracker.getTeamNameByDisplayId(ssOriginalTeamName);
+                                        if (
+                                            mapped &&
+                                            mapped !== null &&
+                                            mapped !== undefined &&
+                                            String(mapped).trim() !== '' &&
+                                            String(mapped).trim() !== 'null' &&
+                                            String(mapped).trim() !== 'undefined' &&
+                                            String(mapped).trim() !== ssOriginalTeamName
+                                        ) {
+                                            ssMappedName = String(mapped).trim();
+                                        }
+                                    } catch (e) {}
+                                }
+
+                                const wasMapped = String(ssMappedName).trim() !== ssOriginalTeamName;
+
+                                if (wasMapped) {
+                                    const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssMappedName);
+                                    if (!ssTeam) {
+                                        continue;
+                                    }
+                                    if (!teamHasMealInPackage(ssTeam, day.key, mealType)) {
+                                        continue;
+                                    }
+                                } else {
+                                    const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssOriginalTeamName);
+                                    if (ssTeam) {
+                                        if (!teamHasMealInPackage(ssTeam, day.key, mealType)) {
+                                            continue;
+                                        }
+                                    }
+                                }
+
+                                const priorityCatId = Object.keys(categoriesData || {}).find(
+                                    id => categoriesData[id] === ssCategory
+                                );
+                                if (priorityCatId && groupsData) {
+                                    let priorityGroupNames = [];
+
+                                    if (ss.groupName && String(ss.groupName).trim() !== '') {
+                                        priorityGroupNames = [String(ss.groupName).trim()];
+                                    } else {
+                                        const groups = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
+                                        priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
+                                    }
+                                    priorityGroupNames = priorityGroupNames.filter(Boolean);
+
+                                    if (priorityGroupNames.length > 0) {
+                                        const isBlocked = priorityGroupNames.some(gName =>
+                                            blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${gName}`)
+                                        );
+                                        if (isBlocked) {
+                                            continue;
+                                        }
+                                    }
+                                }
+
+                                rows.push({
+                                    key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
+                                    category: team.category,
+                                    teamName: ssMappedName,
+                                    originalTeamName: ssOriginalTeamName,
+                                    dayKey: day.key,
+                                    dayLabel: day.fullLabelNumeric,
+                                    daySort: day.date.getTime(),
+                                    dateObj: day.date,
+                                    mealType,
+                                    mealTypeLabel: mealType === 'lunch' ? 'Obed' : 'Večera',
+                                    slotFrom: ss.slotFrom,
+                                    slotTo: slot.to,
+                                    placeName: ss.placeName || '',
+                                    type: 'superstructure',
+                                    isPriority: ss.isPriority === true,
+                                    kind: 'catering',
+                                });
+                            }
                         }
-                    });
-                });
+                    }
+                }
+            }
+
+            if (cancelled) return;
+
+            const dedupMap = new Map();
+            rows.forEach((row) => {
+                const key = `${cleanCategory(row.category)}||${String(row.teamName).trim()}||${row.dayKey}||${row.mealType}`;
+                const existing = dedupMap.get(key);
+                if (!existing) {
+                    dedupMap.set(key, row);
+                    return;
+                }
+                if (existing.isPriority === true && row.isPriority !== true) return;
+                if (row.isPriority === true && existing.isPriority !== true) {
+                    dedupMap.set(key, row);
+                    return;
+                }
             });
-        });
+            let dedupedRows = Array.from(dedupMap.values());
 
-        const dedupMap = new Map();
-        rows.forEach((row) => {
-            const key = `${cleanCategory(row.category)}||${String(row.teamName).trim()}||${row.dayKey}||${row.mealType}`;
-            const existing = dedupMap.get(key);
-            if (!existing) {
-                dedupMap.set(key, row);
-                return;
-            }
-            if (existing.isPriority === true && row.isPriority !== true) return;
-            if (row.isPriority === true && existing.isPriority !== true) {
-                dedupMap.set(key, row);
-                return;
-            }
-        });
-        let dedupedRows = Array.from(dedupMap.values());
+            dedupedRows = dedupedRows.filter((row) => {
+                const rowTeam = String(row.teamName || '').trim();
+                const rowOriginalTeam = String(row.originalTeamName || '').trim();
+                const rowCat = cleanCategory(row.category);
 
-        dedupedRows = dedupedRows.filter((row) => {
-            const rowTeam = String(row.teamName || '').trim();
-            const rowCat = cleanCategory(row.category);
-            if (rowTeam === cleanTeam && rowCat === cleanCat) return true;
-            if (cleanTeam.startsWith(cleanCat + ' ')) {
-                const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
-                if (rowTeam === stripped && rowCat === cleanCat) return true;
-            }
-            return false;
-        });
+                if (rowTeam === cleanTeam && rowCat === cleanCat) return true;
+                if (cleanTeam.startsWith(cleanCat + ' ')) {
+                    const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
+                    if (rowTeam === stripped && rowCat === cleanCat) return true;
+                }
 
-        return dedupedRows;
+                if (rowOriginalTeam && rowCat === cleanCat) {
+                    if (rowOriginalTeam === cleanTeam) return true;
+                    if (cleanTeam.startsWith(cleanCat + ' ')) {
+                        const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
+                        if (rowOriginalTeam === stripped) return true;
+                    }
+                }
+
+                return false;
+            });
+
+            if (!cancelled) setCateringRows(dedupedRows);
+        };
+
+        computeCateringRows();
+
+        return () => { cancelled = true; };
     }, [teamName, categoryName, tournamentDays, cateringTimes, unitMinutes, cateringAssignments, packagesList, userTeams, teamNameMap, assignmentsBySlot, daySlots, groupsData, allMatchesList, categoriesData]);
 
     // ================= ZLÚČENIE =================
@@ -1616,7 +1854,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         !cateringAssignmentsLoading &&
         !userTeamsLoading;
 
-    if (!allLoaded) {
+    if (isLoadingEvents || !allLoaded) {
         return React.createElement(
             'div',
             { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
@@ -2025,7 +2263,6 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
-    // 🔥 NOVÉ: Sleduj zmeny v kolekcii 'matches' a pri dokončení zápasu vynúť refresh
     useEffect(() => {
         if (!window.db) return;
         
@@ -2763,8 +3000,6 @@ const TeamsOverviewApp = (props) => {
                 order: t.order
             }));
     
-        // 🔥 ODSTRÁNENÉ: setIsLoadingRoster(true), setIsLoadingEvents(true)
-    
         setSelectedTeamDetails({
             teamName: normalizedTeamName,
             category: normalizedCategory,
@@ -2780,7 +3015,6 @@ const TeamsOverviewApp = (props) => {
     
     const renderTeamRoster = () => {
         const categoryFromUrl = getCategoryFromUrl();
-        // 🔥 Použijeme kategóriu z selectedTeamDetails, ak existuje, inak z URL
         const effectiveCategory = selectedTeamDetails?.category || categoryFromUrl;
         const hasCategory = !!effectiveCategory;
     
@@ -2969,7 +3203,6 @@ const TeamsOverviewApp = (props) => {
         if (!selectedTeamDetails) return null;
     
         const categoryFromUrl = getCategoryFromUrl();
-        // 🔥 Použijeme kategóriu z selectedTeamDetails, ak existuje, inak z URL
         const effectiveCategory = selectedTeamDetails.category || categoryFromUrl;
         const hasCategory = !!effectiveCategory;
     
@@ -3093,15 +3326,15 @@ const TeamsOverviewApp = (props) => {
                 filter: teamEventsFilter,
                 refreshKey: matchesRefreshKey,
                 isMatchesVisible: isMatchesVisible,
-                isCateringVisible: isCateringVisible
+                isCateringVisible: isCateringVisible,
+                isLoadingEvents: isLoadingEvents,
+                setIsLoadingEvents: setIsLoadingEvents
             }) : null,
-
-    
             renderTeamRoster()
         );
     };
 
-    // Nová funkcia: zobrazí tímy prihláseného používateľa ako tlačidlá
+    // Zobrazí tímy prihláseného používateľa ako tlačidlá
     const renderUserTeamsInCategories = () => {
         const userTeams = getUserTeamsFromProfile();
 
