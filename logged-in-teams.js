@@ -1945,7 +1945,6 @@ const TeamsOverviewApp = (props) => {
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
 
     const [matchesRefreshKey, setMatchesRefreshKey] = useState(0);
-    const [isLoadingEvents, setIsLoadingEvents] = useState(false);
 
     const [isMatchesVisible, setIsMatchesVisible] = useState(
         window.pagesVisibility && 
