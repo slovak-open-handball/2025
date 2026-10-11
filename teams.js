@@ -117,13 +117,17 @@ const isGroupFullyCompleted = (groupName, categoryName, allMatchesList) => {
 // Zistí, či existuje pre daný deň + typ stravovania nejaké prioritizované (superstructure)
 // priradenie, ktorého prioritizovaný tím patrí do skupiny, ktorá NIE JE 100% dokončená.
 // Ak áno, vráti true = celý deň+typ treba BLOKOVAŤ (nezobrazovať žiadne stravovanie).
+//
+// Skupinu prioritizovaného tímu zisťujeme PRIMÁRNE z `rawTeamData.groupName` (skutočná
+// skupina z DB), nie len podľa posledného písmena názvu.
 const isDayMealBlockedByUnfinishedPriorityGroup = (
     dayKey,
     mealType,
     cateringAssignments,
     categoriesData,
     groupsData,
-    allMatchesList
+    allMatchesList,
+    userTeams
 ) => {
     if (!Array.isArray(cateringAssignments) || cateringAssignments.length === 0) return false;
     if (!categoriesData || !groupsData) return false;
@@ -137,25 +141,43 @@ const isDayMealBlockedByUnfinishedPriorityGroup = (
     );
     if (ssForDayMeal.length === 0) return false;
 
-    // Pre každé také priradenie zistíme, či jeho prioritizovaný tím patrí do skupiny,
-    // ktorá nie je 100% dokončená. Ak áno -> blokujeme.
     for (const ss of ssForDayMeal) {
         const ssCategory = String(ss.category || ss.categoryName || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
         const priorityTeamName = String(ss.teamName || '').trim();
         if (!priorityTeamName) continue;
 
-        // Nájdeme categoryId
-        const priorityCategoryId = Object.keys(categoriesData).find(
-            id => categoriesData[id] === ssCategory
-        );
-        if (!priorityCategoryId) continue;
+        let groupNameToCheck = null;
 
-        const group = findGroupByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
-        if (!group) continue;
+        // 🔥 PRIMÁRNE: zistiť SKUTOČNÚ skupinu prioritizovaného tímu z userTeams
+        if (Array.isArray(userTeams) && userTeams.length > 0) {
+            const priorityTeamInUserTeams = userTeams.find(t =>
+                String(t.category || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim() === ssCategory &&
+                String(t.teamName || '').trim() === priorityTeamName
+            );
+            const realGroupName = priorityTeamInUserTeams?.rawTeamData?.groupName
+                ? String(priorityTeamInUserTeams.rawTeamData.groupName).trim()
+                : null;
+            if (realGroupName) {
+                groupNameToCheck = realGroupName;
+            }
+        }
 
-        const isCompleted = isGroupFullyCompleted(group.name, ssCategory, allMatchesList);
+        // 🔥 FALLBACK: ak nemáme reálnu skupinu, skúsime podľa posledného písmena
+        if (!groupNameToCheck) {
+            const priorityCategoryId = Object.keys(categoriesData).find(
+                id => categoriesData[id] === ssCategory
+            );
+            if (!priorityCategoryId) continue;
+            const group = findGroupByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
+            if (!group) continue;
+            groupNameToCheck = group.name;
+        }
+
+        if (!groupNameToCheck) continue;
+
+        const isCompleted = isGroupFullyCompleted(groupNameToCheck, ssCategory, allMatchesList);
         if (!isCompleted) {
-            return true; // skupina nie je 100% -> BLOKUJ celý deň + typ
+            return true; // skupina prioritizovaného tímu nie je 100% -> BLOKUJ celý deň + typ
         }
     }
 
@@ -1347,9 +1369,38 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
         const rows = [];
 
+        // 🔥 Predpočítame si množinu blokovaných kombinácií "dayKey|mealType".
+        // Ak má deň+typ aspoň jedno superstructure priradenie, ktorého prioritizovaný tím
+        // patrí do skupiny, ktorá nie je 100% dokončená, blokujeme CELÝ deň+typ
+        // pre všetky tímy (klasické aj superstructure).
+        const blockedDayMealKeys = new Set();
+        (tournamentDays || []).forEach((day) => {
+            ['lunch', 'dinner'].forEach((mealType) => {
+                const blocked = isDayMealBlockedByUnfinishedPriorityGroup(
+                    day.key,
+                    mealType,
+                    cateringAssignments,
+                    categoriesData,
+                    groupsData,
+                    allMatchesList,
+                    userTeams
+                );
+                if (blocked) {
+                    blockedDayMealKeys.add(`${day.key}|${mealType}`);
+                }
+            });
+        });
+
         filteredTeams.forEach((team) => {
             (tournamentDays || []).forEach((day) => {
                 ['lunch', 'dinner'].forEach((mealType) => {
+                    // 🔥 Ak je tento deň + typ blokovaný (niektorá prioritizovaná skupina
+                    // ešte nie je 100% dokončená), nezobrazíme ŽIADNY riadok stravovania
+                    // pre tento deň a typ – ani klasický, ani superstructure.
+                    if (blockedDayMealKeys.has(`${day.key}|${mealType}`)) {
+                        return;
+                    }
+
                     const slots = daySlots[day.key]?.[mealType] || [];
                     if (slots.length === 0) return;
 
@@ -1405,48 +1456,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                 const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssOriginalTeamName);
                                 if (ssTeam) {
                                     if (!teamHasMealInPackage(ssTeam, day.key, mealType)) return;
-                                }
-                            }
-
-                            // 🔥 Kontrola 100% dokončenia skupiny PRE TENTO KONKRÉTNY RIADOK.
-                            // Nájdeme prioritizovaný tím v userTeams a zistíme jeho SKUTOČNÚ skupinu
-                            // (z poľa `groupName` v DB), nie len podľa posledného písmena názvu.
-                            // Ak je jeho skupina nájdená a NIE JE 100% dokončená, tento riadok nezobrazíme.
-                            // Ak tím nie je v žiadnej skupine, alebo skupina neexistuje, riadok zobrazíme.
-                            const priorityTeamName = String(ss.teamName || '').trim();
-                            const priorityCategory = cleanCategory(ss.category || ss.categoryName || '');
-                            
-                            // Nájdeme prioritizovaný tím v userTeams (podľa názvu + kategórie)
-                            const priorityTeamInUserTeams = userTeams.find(t =>
-                                cleanCategory(t.category) === priorityCategory &&
-                                String(t.teamName || '').trim() === priorityTeamName
-                            );
-                            
-                            // Získame SKUTOČNÝ groupName z DB (rawTeamData.groupName)
-                            const priorityTeamRealGroupName = priorityTeamInUserTeams?.rawTeamData?.groupName
-                                ? String(priorityTeamInUserTeams.rawTeamData.groupName).trim()
-                                : null;
-                            
-                            // Ak má tím reálnu skupinu z DB, skontrolujeme jej dokončenie
-                            if (priorityTeamRealGroupName) {
-                                const completed = isGroupFullyCompleted(priorityTeamRealGroupName, priorityCategory, allMatchesList);
-                                if (!completed) {
-                                    return; // skupina prioritizovaného tímu nie je 100% → tento riadok nezobrazíme
-                                }
-                            } else {
-                                // Fallback: ak tím nemá groupName v DB (napr. superstructure tímy),
-                                // skúsime odvodiť skupinu podľa posledného písmena názvu
-                                const priorityCategoryId = Object.keys(categoriesData || {}).find(
-                                    id => categoriesData[id] === priorityCategory
-                                );
-                                if (priorityCategoryId && groupsData) {
-                                    const priorityGroup = findGroupByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
-                                    if (priorityGroup) {
-                                        const completed = isGroupFullyCompleted(priorityGroup.name, priorityCategory, allMatchesList);
-                                        if (!completed) {
-                                            return; // skupina nie je 100% → tento riadok nezobrazíme
-                                        }
-                                    }
                                 }
                             }
                           
