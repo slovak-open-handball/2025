@@ -1316,14 +1316,18 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
     const isTeamPrioritizedForDayMeal = (team, dayKey, mealType) => {
         if (!team || !dayKey || !mealType) return false;
         const teamCat = cleanCategory(team.category);
+        const teamNameClean = String(team.teamName || '').trim();
+    
         return cateringAssignments.some(
             (a) =>
                 a.isSuperstructure === true &&
-                a.clickedTeamUid === team.uid &&
-                a.clickedTeamIndex === team.teamIndex &&
-                cleanCategory(a.clickedTeamCategory) === teamCat &&
                 a.dayKey === dayKey &&
-                a.mealType === mealType
+                a.mealType === mealType &&
+                cleanCategory(a.clickedTeamCategory || a.category || '') === teamCat &&
+                (
+                    String(a.teamName || '').trim() === teamNameClean ||
+                    String(a.clickedTeamName || '').trim() === teamNameClean
+                )
         );
     };
 
@@ -1431,10 +1435,11 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                        if (existing) {
                            if (!teamHasMealInPackage(team, day.key, mealType)) return;
 
-                           // 🔥 Blokovanie sa aplikuje LEN na prioritizované tímy pre daný deň+typ
-                           // (bez ohľadu na konkrétny slot). NEPRIORITIZOVANÉ tímy sa zobrazujú VŽDY.
+                           // 🔥 Blokovanie sa aplikuje LEN na prioritizované tímy pre daný deň+typ.
+                           // Ak tím NIE JE prioritizovaný, jeho klasické stravovanie sa zobrazuje VŽDY,
+                           // bez ohľadu na to, či jeho skupina je alebo nie je v blockedGroupDayMealKeys.
                            const isPrioritized = isTeamPrioritizedForDayMeal(team, day.key, mealType);
-                           
+    
                            if (isPrioritized) {
                                const teamCatId = Object.keys(categoriesData || {}).find(
                                    id => categoriesData[id] === teamCategoryClean
