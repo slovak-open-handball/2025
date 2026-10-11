@@ -1390,8 +1390,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
             });
         });      
 
-        console.log('blockedGroupDayMealKeys:', Array.from(blockedGroupDayMealKeys));
-
         filteredTeams.forEach((team) => {
             (tournamentDays || []).forEach((day) => {
                 ['lunch', 'dinner'].forEach((mealType) => {
@@ -1504,8 +1502,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                             );
                             if (priorityCatId && groupsData) {
                                 const priorityGroups = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
-
-                                console.log(`SS team="${ssOriginalTeamName}", priorityCatId="${priorityCatId}", priorityGroup="${priorityGroup?.name}", key="${day.key}|${mealType}|${ssCategory}|${priorityGroup?.name}", blocked=${blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${priorityGroup?.name}`)}`);
                               
                                 if (priorityGroups && priorityGroups.length > 0) {
                                     const isBlocked = priorityGroups.some(g => {
