@@ -1592,6 +1592,39 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                         const slots = daySlots[day.key]?.[mealType] || [];
                         if (slots.length === 0) continue;
 
+                        // 🔥 NOVÉ: Zisti, v ktorých skupinách tento tím hrá (podľa posledného písmena názvu)
+                        // a ak aspoň jedna z týchto skupín je blokovaná pre daný deň+typ, preskoč celý tím.
+                        const teamCatId = Object.keys(categoriesData || {}).find(
+                            id => categoriesData[id] === teamCategoryClean
+                        );
+                        if (teamCatId && groupsData) {
+                            let teamGroupNames = [];
+                            if (team.groupName) {
+                                teamGroupNames = [String(team.groupName).trim()];
+                            } else {
+                                const teamGroups = findGroupsByLastLetter(teamNameClean, teamCatId, groupsData);
+                                teamGroupNames = (teamGroups || []).map(g => String(g.name || '').trim());
+                            }
+                            teamGroupNames = teamGroupNames.filter(Boolean);
+
+                            if (teamGroupNames.length > 0) {
+                                const isBlocked = teamGroupNames.some(gName =>
+                                    blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${gName}`)
+                                );
+                                if (isBlocked) {
+                                    console.log(
+                                        `[cateringRows] ⛔ TÍM BLOKOVANÝ (skupina): ` +
+                                        `team="${teamNameClean}" ` +
+                                        `cat="${teamCategoryClean}" ` +
+                                        `day=${day.key} ` +
+                                        `meal=${mealType} ` +
+                                        `teamGroupNames=${JSON.stringify(teamGroupNames)}`
+                                    );
+                                    continue;
+                                }
+                            }
+                        }
+
                         for (const slot of slots) {
                             const existing = findCateringAssignment(team, day.key, mealType, slot.from);
                             const ss = await findSuperstructureAssignmentForCell(team, day.key, mealType, slot.from);
