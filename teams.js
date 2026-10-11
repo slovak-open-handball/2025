@@ -1416,17 +1416,38 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                id => categoriesData[id] === teamCategoryClean
                            );
                            if (teamCatId && groupsData) {
-                               const teamGroups = findGroupsByLastLetter(teamNameClean, teamCatId, groupsData);
-                               if (teamGroups && teamGroups.length > 0) {
-                                   const isBlocked = teamGroups.some(g => {
+                               // 🔥 Nájdi VŠETKY userTeams záznamy, ktoré zodpovedajú tomuto tímu
+                               // (rovnaká kategória + rovnaký alebo suffixovaný názov).
+                               const matchingTeamRecords = userTeams.filter(t => {
+                                   if (cleanCategory(t.category) !== teamCategoryClean) return false;
+                                   const tName = String(t.teamName || '').trim();
+                                   if (tName === teamNameClean) return true;
+                                   if (teamNameClean.startsWith(teamCategoryClean + ' ')) {
+                                       const stripped = teamNameClean.substring(teamCategoryClean.length + 1).trim();
+                                       if (tName === stripped) return true;
+                                   }
+                                   if (tName.startsWith(teamCategoryClean + ' ')) {
+                                       const stripped = tName.substring(teamCategoryClean.length + 1).trim();
+                                       if (stripped === teamNameClean) return true;
+                                   }
+                                   return false;
+                               });
+
+                               // 🔥 Pre každý záznam zisti VŠETKY jeho skupiny a skontroluj, či niektorá
+                               // z nich je v blockedGroupDayMealKeys. Ak áno, riadok nezobraz.
+                               const isBlocked = matchingTeamRecords.some(rec => {
+                                   const recName = String(rec.teamName || '').trim();
+                                   const groups = findGroupsByLastLetter(recName, teamCatId, groupsData);
+                                   return groups.some(g => {
                                        const gName = String(g.name || '').trim();
                                        return gName && blockedGroupDayMealKeys.has(
                                            `${day.key}|${mealType}|${teamCategoryClean}|${gName}`
                                        );
                                    });
-                                   if (isBlocked) {
-                                       return; // 🔥 skupina aktuálneho tímu nie je 100% → riadok nezobraz
-                                   }
+                               });
+                           
+                               if (isBlocked) {
+                                   return;
                                }
                            }
                        
