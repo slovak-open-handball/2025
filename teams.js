@@ -1801,7 +1801,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId, refreshKey }) => 
     );
 };
 
-const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey, isMatchesVisible, isCateringVisible, isLoadingEvents }) => {
+const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey, isMatchesVisible, isCateringVisible, isLoadingEvents, setIsLoadingEvents }) => {
     // --- Matches state ---
     const [matches, setMatches] = useState([]);
     const [matchesLoading, setMatchesLoading] = useState(true);
@@ -1826,7 +1826,17 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
     // 🔥 Periodický remap tímových mien pre zápasy
     const teamNamesRef = useRef({});
-    useEffect(() => { teamNamesRef.current = teamNames; }, [teamNames]);
+
+    useEffect(() => {
+        if (!isLoadingEvents) return;
+        if (!matchesLoading) {
+            setIsLoadingEvents(false);
+        }
+    }, [matchesLoading, isLoadingEvents, setIsLoadingEvents]);
+  
+    useEffect(() => { 
+        teamNamesRef.current = teamNames; 
+    }, [teamNames]);
 
     useEffect(() => {
         if (!window.db || !teamName || !categoryName) return;
@@ -4726,7 +4736,8 @@ const TeamsOverviewApp = (props) => {
                 refreshKey: matchesRefreshKey,
                 isMatchesVisible: isMatchesVisible,
                 isCateringVisible: isCateringVisible,
-                isLoadingEvents: isLoadingEvents
+                isLoadingEvents: isLoadingEvents,
+                setIsLoadingEvents: setIsLoadingEvents
             }) : null,
             renderTeamRoster()
         );
