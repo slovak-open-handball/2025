@@ -86,16 +86,15 @@ const getLastLetterFromTeamName = (teamName) => {
 
 // Nájde skupinu v groupsData, ktorej posledné písmeno názvu je zhodné s posledným znakom názvu tímu.
 // groupsData formát: { [categoryId]: [ { name, type, ... }, ... ] }
-const findGroupByLastLetter = (teamName, categoryId, groupsData) => {
+const findGroupsByLastLetter = (teamName, categoryId, groupsData) => {
     const lastLetter = getLastLetterFromTeamName(teamName);
-    if (!lastLetter) return null;
-    if (!groupsData || !categoryId) return null;
+    if (!lastLetter) return [];
+    if (!groupsData || !categoryId) return [];
     const categoryGroups = groupsData[categoryId] || [];
-    return categoryGroups.find(g => {
+    return categoryGroups.filter(g => {
         if (!g || !g.name) return false;
-        const groupLastChar = g.name.trim().slice(-1).toUpperCase();
-        return groupLastChar === lastLetter;
-    }) || null;
+        return g.name.trim().slice(-1).toUpperCase() === lastLetter;
+    });
 };
 
 const isGroupFullyCompleted = (groupName, categoryName, allMatchesList) => {
@@ -1411,16 +1410,40 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                            if (!teamHasMealInPackage(team, day.key, mealType)) return;
                        
                            // 🔥 NOVÉ: Skontroluj, či tím nepatrí do prioritizovanej nedokončenej skupiny
+                           // 🔥 NOVÉ: Zisti VŠETKY skupiny, do ktorých tento tím (vo všetkých svojich záznamoch) patrí.
+                           // Ak aspoň jedna z nich je v blockedGroupDayMealKeys, riadok nezobraz.
                            const teamCatId = Object.keys(categoriesData || {}).find(
                                id => categoriesData[id] === teamCategoryClean
                            );
                            if (teamCatId && groupsData) {
-                               const teamGroup = findGroupByLastLetter(teamNameClean, teamCatId, groupsData);
-                               if (teamGroup && teamGroup.name) {
-                                   const teamGroupName = String(teamGroup.name).trim();
-                                   if (blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${teamGroupName}`)) {
-                                       return; // 🔥 tím je v nedokončenej prioritizovanej skupine → nezobraz
+                               // Nájdi všetky userTeams záznamy, ktoré zodpovedajú tomuto tímu (rovnaká kategória + rovnaký alebo suffixovaný názov)
+                               const matchingTeamRecords = userTeams.filter(t => {
+                                   if (cleanCategory(t.category) !== teamCategoryClean) return false;
+                                   const tName = String(t.teamName || '').trim();
+                                   if (tName === teamNameClean) return true;
+                                   // tím môže byť uložený bez kategórie ako prefix
+                                   if (teamNameClean.startsWith(teamCategoryClean + ' ')) {
+                                       const stripped = teamNameClean.substring(teamCategoryClean.length + 1).trim();
+                                       if (tName === stripped) return true;
                                    }
+                                   if (tName.startsWith(teamCategoryClean + ' ')) {
+                                       const stripped = tName.substring(teamCategoryClean.length + 1).trim();
+                                       if (stripped === teamNameClean) return true;
+                                   }
+                                   return false;
+                               });
+                           
+                               const isBlocked = matchingTeamRecords.some(rec => {
+                                   const recName = String(rec.teamName || '').trim();
+                                   const groups = findGroupsByLastLetter(recName, teamCatId, groupsData);
+                                   return groups.some(g => {
+                                       const gName = String(g.name).trim();
+                                       return blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${gName}`);
+                                   });
+                               });
+                           
+                               if (isBlocked) {
+                                   return;
                                }
                            }
                        
