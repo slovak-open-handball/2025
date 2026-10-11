@@ -1313,6 +1313,20 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
         );
     };
 
+    const isTeamPrioritizedForDayMeal = (team, dayKey, mealType) => {
+        if (!team || !dayKey || !mealType) return false;
+        const teamCat = cleanCategory(team.category);
+        return cateringAssignments.some(
+            (a) =>
+                a.isSuperstructure === true &&
+                a.clickedTeamUid === team.uid &&
+                a.clickedTeamIndex === team.teamIndex &&
+                cleanCategory(a.clickedTeamCategory) === teamCat &&
+                a.dayKey === dayKey &&
+                a.mealType === mealType
+        );
+    };
+
     const getMappedTeamName = (category, teamName) => {
         if (!teamName) return teamName;
         const key = `${category}||${teamName}`;
@@ -1416,14 +1430,12 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
                        if (existing) {
                            if (!teamHasMealInPackage(team, day.key, mealType)) return;
-                       
-                           // 🔥 Blokovanie sa aplikuje LEN na prioritizované tímy (tie, ktoré majú
-                           // superštruktúra priradenie pre daný deň+typ+slot). NEPRIORITIZOVANÉ tímy
-                           // sa zobrazujú VŽDY, bez ohľadu na to, či nejaká skupina je alebo nie je
-                           // 100% dokončená.
-                           const hasSuperstructure = ss !== null && ss !== undefined;
+
+                           // 🔥 Blokovanie sa aplikuje LEN na prioritizované tímy pre daný deň+typ
+                           // (bez ohľadu na konkrétny slot). NEPRIORITIZOVANÉ tímy sa zobrazujú VŽDY.
+                           const isPrioritized = isTeamPrioritizedForDayMeal(team, day.key, mealType);
                            
-                           if (hasSuperstructure) {
+                           if (isPrioritized) {
                                const teamCatId = Object.keys(categoriesData || {}).find(
                                    id => categoriesData[id] === teamCategoryClean
                                );
@@ -1436,7 +1448,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                        teamGroupNames = (teamGroups || []).map(g => String(g.name || '').trim());
                                    }
                                    teamGroupNames = teamGroupNames.filter(Boolean);
-                               
+                       
                                    if (teamGroupNames.length > 0) {
                                        const isBlocked = teamGroupNames.some(gName =>
                                            blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${teamCategoryClean}|${gName}`)
