@@ -162,17 +162,20 @@ const getUnfinishedPriorityGroupsForDayMeal = (
         );
         if (!priorityCategoryId) continue;
 
-        const group = findGroupsByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
-        if (!group) continue;
+        const groups = findGroupsByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
+        if (!groups || groups.length === 0) continue;
 
-        const groupNameToCheck = group.name;
+        for (const group of groups) {
+            const groupNameToCheck = String(group.name || '').trim();
+            if (!groupNameToCheck) continue;
 
-        const isCompleted = isGroupFullyCompleted(groupNameToCheck, ssCategory, allMatchesList);
-        if (!isCompleted) {
-            const key = `${ssCategory}||${groupNameToCheck}`;
-            if (!seen.has(key)) {
-                seen.add(key);
-                result.push({ categoryName: ssCategory, groupName: groupNameToCheck });
+            const isCompleted = isGroupFullyCompleted(groupNameToCheck, ssCategory, allMatchesList);
+            if (!isCompleted) {
+                const key = `${ssCategory}||${groupNameToCheck}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    result.push({ categoryName: ssCategory, groupName: groupNameToCheck });
+                }
             }
         }
     }
@@ -1421,7 +1424,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                    if (cleanCategory(t.category) !== teamCategoryClean) return false;
                                    const tName = String(t.teamName || '').trim();
                                    if (tName === teamNameClean) return true;
-                                   // tím môže byť uložený bez kategórie ako prefix
                                    if (teamNameClean.startsWith(teamCategoryClean + ' ')) {
                                        const stripped = teamNameClean.substring(teamCategoryClean.length + 1).trim();
                                        if (tName === stripped) return true;
@@ -1501,13 +1503,16 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                 id => categoriesData[id] === ssCategory
                             );
                             if (priorityCatId && groupsData) {
-                                const priorityGroup = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
+                                const priorityGroups = findGroupsByLastLetter(ssOriginalTeamName, priorityCatId, groupsData);
 
                                 console.log(`SS team="${ssOriginalTeamName}", priorityCatId="${priorityCatId}", priorityGroup="${priorityGroup?.name}", key="${day.key}|${mealType}|${ssCategory}|${priorityGroup?.name}", blocked=${blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${priorityGroup?.name}`)}`);
                               
-                                if (priorityGroup && priorityGroup.name) {
-                                    const priorityGroupName = String(priorityGroup.name).trim();
-                                    if (blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${priorityGroupName}`)) {
+                                if (priorityGroups && priorityGroups.length > 0) {
+                                    const isBlocked = priorityGroups.some(g => {
+                                        const gName = String(g.name || '').trim();
+                                        return gName && blockedGroupDayMealKeys.has(`${day.key}|${mealType}|${ssCategory}|${gName}`);
+                                    });
+                                    if (isBlocked) {
                                         return; // 🔥 prioritizovaná skupina nie je 100% → tento riadok nezobrazíme
                                     }
                                 }
