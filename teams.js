@@ -114,6 +114,54 @@ const isGroupFullyCompleted = (groupName, categoryName, allMatchesList) => {
     return percentage === 100;
 };
 
+// Zistí, či existuje pre daný deň + typ stravovania nejaké prioritizované (superstructure)
+// priradenie, ktorého prioritizovaný tím patrí do skupiny, ktorá NIE JE 100% dokončená.
+// Ak áno, vráti true = celý deň+typ treba BLOKOVAŤ (nezobrazovať žiadne stravovanie).
+const isDayMealBlockedByUnfinishedPriorityGroup = (
+    dayKey,
+    mealType,
+    cateringAssignments,
+    categoriesData,
+    groupsData,
+    allMatchesList
+) => {
+    if (!Array.isArray(cateringAssignments) || cateringAssignments.length === 0) return false;
+    if (!categoriesData || !groupsData) return false;
+
+    // Nájdeme všetky superstructure priradenia pre daný deň + typ
+    const ssForDayMeal = cateringAssignments.filter(a =>
+        a &&
+        a.isSuperstructure === true &&
+        a.dayKey === dayKey &&
+        a.mealType === mealType
+    );
+    if (ssForDayMeal.length === 0) return false;
+
+    // Pre každé také priradenie zistíme, či jeho prioritizovaný tím patrí do skupiny,
+    // ktorá nie je 100% dokončená. Ak áno -> blokujeme.
+    for (const ss of ssForDayMeal) {
+        const ssCategory = String(ss.category || ss.categoryName || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+        const priorityTeamName = String(ss.teamName || '').trim();
+        if (!priorityTeamName) continue;
+
+        // Nájdeme categoryId
+        const priorityCategoryId = Object.keys(categoriesData).find(
+            id => categoriesData[id] === ssCategory
+        );
+        if (!priorityCategoryId) continue;
+
+        const group = findGroupByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
+        if (!group) continue;
+
+        const isCompleted = isGroupFullyCompleted(group.name, ssCategory, allMatchesList);
+        if (!isCompleted) {
+            return true; // skupina nie je 100% -> BLOKUJ celý deň + typ
+        }
+    }
+
+    return false;
+};
+
 const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
     if (!window.db || !teamName || !categoryName) {
         if (onUpdate) onUpdate([]);
@@ -2668,11 +2716,39 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
             ? userTeams.filter((t) => cleanCategory(t.category) === cleanCat)
             : userTeams;
 
+        // 🔥 Predpočítame si množinu blokovaných kombinácií "dayKey|mealType".
+        // Ak má deň+typ aspoň jedno superstructure priradenie, ktorého prioritizovaný tím
+        // patrí do skupiny, ktorá nie je 100% dokončená, blokujeme CELÝ deň+typ
+        // pre všetky tímy (klasické aj superstructure).
+        const blockedDayMealKeys = new Set();
+        (tournamentDays || []).forEach((day) => {
+            ['lunch', 'dinner'].forEach((mealType) => {
+                const blocked = isDayMealBlockedByUnfinishedPriorityGroup(
+                    day.key,
+                    mealType,
+                    cateringAssignments,
+                    categoriesData,
+                    groupsData,
+                    allMatchesList
+                );
+                if (blocked) {
+                    blockedDayMealKeys.add(`${day.key}|${mealType}`);
+                }
+            });
+        });
+
         const rows = [];
 
         filteredTeams.forEach((team) => {
             (tournamentDays || []).forEach((day) => {
                 ['lunch', 'dinner'].forEach((mealType) => {
+                    // 🔥 Ak je tento deň + typ blokovaný (niektorá prioritizovaná skupina
+                    // ešte nie je 100% dokončená), nezobrazíme ŽIADNY riadok stravovania
+                    // pre tento deň a typ – ani klasický, ani superstructure.
+                    if (blockedDayMealKeys.has(`${day.key}|${mealType}`)) {
+                        return;
+                    }
+
                     const slots = daySlots[day.key]?.[mealType] || [];
                     if (slots.length === 0) return;
 
@@ -2728,25 +2804,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                 const ssTeam = findSsTeamInUserTeamsByName(ssCategory, ssOriginalTeamName);
                                 if (ssTeam) {
                                     if (!teamHasMealInPackage(ssTeam, day.key, mealType)) return;
-                                }
-                            }
-
-                            // 🔥 NOVÁ KONTROLA: Ak je to prioritizované miesto (superstructure),
-                            // zistíme, či existuje skupina s rovnakým posledným písmenom ako má
-                            // prioritizovaný tím. Ak taká skupina existuje a NIE JE 100% dokončená,
-                            // riadok sa nezobrazí.
-                            const priorityTeamName = ssMappedName || ssOriginalTeamName;
-                            // Nájdeme categoryId pre kategóriu prioritizovaného tímu
-                            const priorityCategoryId = Object.keys(categoriesData || {}).find(
-                                id => categoriesData[id] === ssCategory
-                            );
-                            if (priorityCategoryId && groupsData) {
-                                const group = findGroupByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
-                                if (group) {
-                                    const isCompleted = isGroupFullyCompleted(group.name, ssCategory, allMatchesList);
-                                    if (!isCompleted) {
-                                        return; // skupina ešte nie je 100% dokončená -> riadok nezobrazíme
-                                    }
                                 }
                             }
 
