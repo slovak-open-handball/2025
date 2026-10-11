@@ -1958,8 +1958,8 @@ const TeamsOverviewApp = (props) => {
     const [updateTrigger, setUpdateTrigger] = useState(0);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
 
-    // 🔥 NOVÉ: Refresh key pre zápasy – zvýši sa pri dokončení zápasu
     const [matchesRefreshKey, setMatchesRefreshKey] = useState(0);
+    const [isLoadingEvents, setIsLoadingEvents] = useState(false);
 
     const [isMatchesVisible, setIsMatchesVisible] = useState(
         window.pagesVisibility && 
