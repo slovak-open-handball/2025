@@ -4297,6 +4297,12 @@ const TeamsOverviewApp = (props) => {
             }));
 
         if (teamOccurrences.length > 0) {
+            setTeamEventsFilter(null);
+            setTeamRoster([]);
+            setMembersStats({});
+            setIsLoadingRoster(true);
+            setIsLoadingEvents(true);
+          
             setSelectedTeamDetails({
                 teamName: normalizedTeamName,
                 category: currentCategoryName,
