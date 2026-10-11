@@ -1719,6 +1719,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                                     key: `cat-${team.id}-${day.key}-${mealType}-${slot.from}-ss-${ss.id}`,
                                     category: team.category,
                                     teamName: ssMappedName,
+                                    originalTeamName: ssOriginalTeamName,
                                     dayKey: day.key,
                                     dayLabel: day.fullLabelNumeric,
                                     daySort: day.date.getTime(),
@@ -1758,12 +1759,26 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
 
             dedupedRows = dedupedRows.filter((row) => {
                 const rowTeam = String(row.teamName || '').trim();
+                const rowOriginalTeam = String(row.originalTeamName || '').trim();
                 const rowCat = cleanCategory(row.category);
+
+                // 🔥 Pôvodná kontrola – row.teamName sa rovná zobrazenému tímu
                 if (rowTeam === cleanTeam && rowCat === cleanCat) return true;
                 if (cleanTeam.startsWith(cleanCat + ' ')) {
                     const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
                     if (rowTeam === stripped && rowCat === cleanCat) return true;
                 }
+
+                // 🔥 NOVÉ: Ak ide o superstructure riadok a pôvodný identifikátor (napr. "U12 D 3E")
+                // sa rovná zobrazenému tímu, riadok zobrazíme – aj keď bol namapovaný na iný názov.
+                if (rowOriginalTeam && rowCat === cleanCat) {
+                    if (rowOriginalTeam === cleanTeam) return true;
+                    if (cleanTeam.startsWith(cleanCat + ' ')) {
+                        const stripped = cleanTeam.substring(cleanCat.length + 1).trim();
+                        if (rowOriginalTeam === stripped) return true;
+                    }
+                }
+
                 return false;
             });
 
