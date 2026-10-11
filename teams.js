@@ -114,12 +114,6 @@ const isGroupFullyCompleted = (groupName, categoryName, allMatchesList) => {
     return percentage === 100;
 };
 
-// Vráti zoznam názvov skupín, ktoré sú v danom dni + type prioritizované (existuje pre ne
-// superstructure priradenie) a NIE SÚ 100% dokončené. Tieto skupiny treba blokovať pre
-// všetky tímy, ktoré do nich patria.
-//
-// Skupinu prioritizovaného tímu zisťujeme PRIMÁRNE z `rawTeamData.groupName` (skutočná
-// skupina z DB), nie len podľa posledného písmena názvu.
 const getUnfinishedPriorityGroupsForDayMeal = (
     dayKey,
     mealType,
@@ -148,34 +142,17 @@ const getUnfinishedPriorityGroupsForDayMeal = (
         const priorityTeamName = String(ss.teamName || '').trim();
         if (!priorityTeamName) continue;
 
-        let groupNameToCheck = null;
+        // 🔥 Skupinu prioritizovaného tímu určujeme z POSLEDNÉHO PÍSMENA jeho názvu.
+        // (rovnaká logika ako v matchTracker pri odvodzovaní skupiny z identifikátora)
+        const priorityCategoryId = Object.keys(categoriesData).find(
+            id => categoriesData[id] === ssCategory
+        );
+        if (!priorityCategoryId) continue;
 
-        // 🔥 PRIMÁRNE: zistiť SKUTOČNÚ skupinu prioritizovaného tímu z userTeams
-        if (Array.isArray(userTeams) && userTeams.length > 0) {
-            const priorityTeamInUserTeams = userTeams.find(t =>
-                String(t.category || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim() === ssCategory &&
-                String(t.teamName || '').trim() === priorityTeamName
-            );
-            const realGroupName = priorityTeamInUserTeams?.rawTeamData?.groupName
-                ? String(priorityTeamInUserTeams.rawTeamData.groupName).trim()
-                : null;
-            if (realGroupName) {
-                groupNameToCheck = realGroupName;
-            }
-        }
+        const group = findGroupByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
+        if (!group) continue;
 
-        // 🔥 FALLBACK: ak nemáme reálnu skupinu, skúsime podľa posledného písmena
-        if (!groupNameToCheck) {
-            const priorityCategoryId = Object.keys(categoriesData).find(
-                id => categoriesData[id] === ssCategory
-            );
-            if (!priorityCategoryId) continue;
-            const group = findGroupByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
-            if (!group) continue;
-            groupNameToCheck = group.name;
-        }
-
-        if (!groupNameToCheck) continue;
+        const groupNameToCheck = group.name;
 
         const isCompleted = isGroupFullyCompleted(groupNameToCheck, ssCategory, allMatchesList);
         if (!isCompleted) {
