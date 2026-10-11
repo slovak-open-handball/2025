@@ -1384,8 +1384,16 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                     const teamCategoryClean = cleanCategory(team.category);
                     const teamNameClean = String(team.teamName || '').trim();
 
-                    // Zozbierame všetky unikátne groupName pre tento tím v tejto kategórii
+                    // Zozbierame všetky unikátne groupName pre tento tím v tejto kategórii.
+                    // Kombinujeme dva zdroje:
+                    //   a) rawTeamData.groupName z userTeams (skutočná skupina z DB),
+                    //   b) odvodenie skupiny z POSLEDNÉHO PÍSMENA názvu tímu (rovnaká logika
+                    //      ako pri prioritizovanom tíme v getUnfinishedPriorityGroupsForDayMeal).
+                    // Tým pokryjeme prípad, keď je tím vo viacerých skupinách, alebo keď jeho
+                    // userTeams záznam neobsahuje groupName.
                     const teamGroupNames = new Set();
+
+                    // a) z userTeams (ak tam sú reálne groupName)
                     userTeams.forEach(ut => {
                         if (
                             cleanCategory(ut.category) === teamCategoryClean &&
@@ -1398,6 +1406,17 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                         }
                     });
 
+                    // b) odvodenie skupiny z posledného písmena názvu tímu
+                    const teamCatId = Object.keys(categoriesData || {}).find(
+                        id => categoriesData[id] === teamCategoryClean
+                    );
+                    if (teamCatId && groupsData) {
+                        const derivedGroup = findGroupByLastLetter(teamNameClean, teamCatId, groupsData);
+                        if (derivedGroup && derivedGroup.name) {
+                            teamGroupNames.add(String(derivedGroup.name).trim());
+                        }
+                    }
+
                     // Skontrolujeme, či aspoň jedna skupina tímu je blokovaná
                     let isTeamBlocked = false;
                     teamGroupNames.forEach(gn => {
@@ -1409,7 +1428,6 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
                     if (isTeamBlocked) {
                         return;
                     }
-
                     const slots = daySlots[day.key]?.[mealType] || [];
                     if (slots.length === 0) return;
 
