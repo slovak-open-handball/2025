@@ -1,6 +1,6 @@
 // catering.js
 // Importy pre Firebase funkcie
-import { doc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect, useRef } = React;
 
@@ -53,6 +53,113 @@ const buildTournamentDays = (arrivalDate, tournamentEnd) => {
 };
 
 const cleanCategory = (cat) => String(cat || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+
+const getLastLetterFromTeamName = (teamName) => {
+    if (!teamName) return null;
+    const trimmed = String(teamName).trim();
+    if (trimmed.length === 0) return null;
+    const lastChar = trimmed[trimmed.length - 1];
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÄČĎÉÍĽĹŇÓÔŘŠŤÚÝŽabcdefghijklmnopqrstuvwxyzáäčďéíĺľňóôřšťúýž';
+    return letters.includes(lastChar) ? lastChar.toUpperCase() : null;
+};
+
+const findGroupsByLastLetter = (teamName, categoryId, groupsData) => {
+    const lastLetter = getLastLetterFromTeamName(teamName);
+    if (!lastLetter) return [];
+    if (!groupsData || !categoryId) return [];
+    const categoryGroups = groupsData[categoryId] || [];
+    return categoryGroups.filter(g => {
+        if (!g || !g.name) return false;
+        return g.name.trim().slice(-1).toUpperCase() === lastLetter;
+    });
+};
+
+const isGroupFullyCompleted = (groupName, categoryName, allMatchesList) => {
+    if (!groupName || !categoryName || !Array.isArray(allMatchesList) || allMatchesList.length === 0) {
+        return true;
+    }
+
+    const groupLastLetter = String(groupName).trim().slice(-1).toUpperCase();
+    if (!groupLastLetter) return true;
+
+    const cleanCat = String(categoryName).replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+    const cleanCatLower = cleanCat.toLowerCase();
+
+    const groupMatches = allMatchesList.filter(m => {
+        if (!m || m.isPlacementMatch) return false;
+
+        const mCat = String(m.categoryName || m.category || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+        if (mCat !== cleanCatLower) return false;
+
+        const mGroup = String(m.groupName || '').trim();
+        if (!mGroup) return false;
+
+        return mGroup.slice(-1).toUpperCase() === groupLastLetter;
+    });
+
+    if (groupMatches.length === 0) return true;
+
+    const completedCount = groupMatches.filter(m => m.status === 'completed').length;
+    return completedCount === groupMatches.length;
+};
+
+const getUnfinishedPriorityGroupsForDayMeal = (
+    dayKey,
+    mealType,
+    cateringAssignments,
+    categoriesData,
+    groupsData,
+    allMatchesList
+) => {
+    const result = [];
+    if (!Array.isArray(cateringAssignments) || cateringAssignments.length === 0) return result;
+    if (!categoriesData || !groupsData) return result;
+
+    const ssForDayMeal = cateringAssignments.filter(a =>
+        a && a.isSuperstructure === true &&
+        a.dayKey === dayKey &&
+        a.mealType === mealType
+    );
+    if (ssForDayMeal.length === 0) return result;
+
+    const seen = new Set();
+
+    for (const ss of ssForDayMeal) {
+        const ssCategory = String(ss.category || ss.categoryName || '')
+            .replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+        const priorityTeamName = String(ss.teamName || '').trim();
+        if (!priorityTeamName) continue;
+
+        const priorityCategoryId = Object.keys(categoriesData).find(
+            id => categoriesData[id] === ssCategory
+        );
+        if (!priorityCategoryId) continue;
+
+        // 🔥 Primárne použi ss.groupName, sekundárne odvoď z posledného písmena názvu.
+        let priorityGroupNames = [];
+        if (ss.groupName) {
+            priorityGroupNames = [String(ss.groupName).trim()];
+        } else {
+            const groups = findGroupsByLastLetter(priorityTeamName, priorityCategoryId, groupsData);
+            priorityGroupNames = (groups || []).map(g => String(g.name || '').trim());
+        }
+        priorityGroupNames = priorityGroupNames.filter(Boolean);
+        if (priorityGroupNames.length === 0) continue;
+
+        for (const groupNameToCheck of priorityGroupNames) {
+            const isCompleted = isGroupFullyCompleted(groupNameToCheck, ssCategory, allMatchesList);
+            if (!isCompleted) {
+                const key = `${ssCategory}||${groupNameToCheck}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    result.push({ categoryName: ssCategory, groupName: groupNameToCheck });
+                }
+            }
+        }
+    }
+
+    return result;
+};
 
 const memberHasMeal = (member, dayKey, mealType, teamPackageDetails) => {
     const memberMealSetting = member?.packageDetails?.meals?.[dayKey]?.[mealType];
@@ -107,6 +214,7 @@ const loadUserTeams = async (db) => {
                     rawTeamData: team,
                     accommodationName: team.accommodation?.name || null,
                     packageName: team.packageDetails?.name || null,
+                    groupName: team.groupName || null,
                 });
             });
         });
@@ -216,6 +324,9 @@ const cateringApp = ({ userProfileData }) => {
     const [packagesList, setPackagesList] = useState([]);
     const [teamNameMap, setTeamNameMap] = useState({});
     const [categoryDrawColors, setCategoryDrawColors] = useState({});
+    const [groupsData, setGroupsData] = useState({});
+    const [allMatchesList, setAllMatchesList] = useState([]);
+    const [categoriesData, setCategoriesData] = useState({});
 
     const cateringAssignmentsRef = useRef([]);
     useEffect(() => { cateringAssignmentsRef.current = cateringAssignments; }, [cateringAssignments]);
@@ -274,6 +385,7 @@ const cateringApp = ({ userProfileData }) => {
                     }
                 });
                 setCategoryDrawColors(colors);
+                setCategoriesData(categories);
                 window.categoryDrawColors = colors;
                 window.categoriesData = categories;
             }
@@ -369,6 +481,35 @@ const cateringApp = ({ userProfileData }) => {
             places.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
             setCateringPlaces(places);
         }, (error) => { });
+        return () => unsubscribe();
+    }, []);
+
+        // Načítaj groups (rovnako ako v teams.js)
+    useEffect(() => {
+        if (!window.db) return;
+        const loadGroups = async () => {
+            try {
+                const groupsRef = doc(window.db, 'settings', 'groups');
+                const groupsSnap = await getDoc(groupsRef);
+                if (groupsSnap.exists()) {
+                    const data = groupsSnap.data();
+                    setGroupsData(data);
+                    window.groupsData = data;
+                }
+            } catch (err) {}
+        };
+        loadGroups();
+    }, []);
+
+    // Načítaj všetky zápasy (pre kontrolu dokončenia skupín)
+    useEffect(() => {
+        if (!window.db) return;
+        const matchesRef = collection(window.db, 'matches');
+        const unsubscribe = onSnapshot(matchesRef, (snap) => {
+            const allMatches = [];
+            snap.forEach((d) => allMatches.push({ id: d.id, ...d.data() }));
+            setAllMatchesList(allMatches);
+        }, () => {});
         return () => unsubscribe();
     }, []);
 
@@ -601,6 +742,28 @@ const cateringApp = ({ userProfileData }) => {
         const rows = [];
         const daysToUse = filterDayKey ? visibleDays.filter((d) => d.key === filterDayKey) : visibleDays;
 
+        // 🔥 Predpočítame si množinu blokovaných kombinácií "dayKey|mealType|categoryName|groupName"
+        // pre skupiny, ktoré majú prioritizované stravovanie a nie sú 100% dokončené.
+        const blockedGroupDayMealKeys = new Set();
+        const daysToCheck = filterDayKey
+            ? visibleDays.filter((d) => d.key === filterDayKey)
+            : visibleDays;
+        daysToCheck.forEach((day) => {
+            ['lunch', 'dinner'].forEach((mealType) => {
+                const blockedGroups = getUnfinishedPriorityGroupsForDayMeal(
+                    day.key,
+                    mealType,
+                    cateringAssignments,
+                    window.categoriesData || {},
+                    groupsData,
+                    allMatchesList
+                );
+                blockedGroups.forEach(({ categoryName, groupName }) => {
+                    blockedGroupDayMealKeys.add(`${day.key}|${mealType}|${categoryName}|${groupName}`);
+                });
+            });
+        });
+
         filteredTeams.forEach((team) => {
             daysToUse.forEach((day) => {
                 ['lunch', 'dinner'].forEach((mealType) => {
@@ -613,6 +776,30 @@ const cateringApp = ({ userProfileData }) => {
 
                         if (existing) {
                             if (!teamHasMealInPackage(team, day.key, mealType)) return;
+
+                                                        // 🔥 Skontroluj, či tím patrí do prioritizovanej nedokončenej skupiny.
+                            const teamCategoryClean = cleanCategory(team.category);
+                            const teamNameClean = String(team.teamName || '').trim();
+                            const teamCatId = Object.keys(window.categoriesData || {}).find(
+                                id => window.categoriesData[id] === teamCategoryClean
+                            );
+                            if (teamCatId && groupsData) {
+                                let teamGroupNames = [];
+                                if (team.groupName) {
+                                    teamGroupNames = [String(team.groupName).trim()];
+                                } else {
+                                    const teamGroups = findGroupsByLastLetter(teamNameClean, teamCatId, groupsData);
+                                    teamGroupNames = (teamGroups || []).map(g => String(g.name || '').trim());
+                                }
+                                teamGroupNames = teamGroupNames.filter(Boolean);
+
+                                const isBlocked = teamGroupNames.some(gName =>
+                                    blockedGroupDayMealKeys.has(
+                                        `${day.key}|${mealType}|${teamCategoryClean}|${gName}`
+                                    )
+                                );
+                                if (isBlocked) return;
+                            }
 
                             rows.push({
                                 key: `${team.id}-${day.key}-${mealType}-${slot.from}-cl`,
@@ -676,6 +863,30 @@ const cateringApp = ({ userProfileData }) => {
                                     }
                                 }
                                 // Ak tím neexistuje v userTeams → zobrazíme (nemáme ako overiť balíček)
+                            }
+
+                                                        // 🔥 Skontroluj, či prioritizovaná skupina nie je blokovaná
+                            const ssCategoryClean = cleanCategory(ss.category || ss.categoryName || '');
+                            const ssPriorityTeamName = String(ss.teamName || '').trim();
+                            const ssPriorityCatId = Object.keys(window.categoriesData || {}).find(
+                                id => window.categoriesData[id] === ssCategoryClean
+                            );
+                            if (ssPriorityCatId && groupsData) {
+                                let priorityGroupNames = [];
+                                if (ss.groupName) {
+                                    priorityGroupNames = [String(ss.groupName).trim()];
+                                } else {
+                                    const priorityGroups = findGroupsByLastLetter(ssPriorityTeamName, ssPriorityCatId, groupsData);
+                                    priorityGroupNames = (priorityGroups || []).map(g => String(g.name || '').trim());
+                                }
+                                priorityGroupNames = priorityGroupNames.filter(Boolean);
+
+                                const isBlocked = priorityGroupNames.some(gName =>
+                                    blockedGroupDayMealKeys.has(
+                                        `${day.key}|${mealType}|${ssCategoryClean}|${gName}`
+                                    )
+                                );
+                                if (isBlocked) return;
                             }
 
                             rows.push({
@@ -747,6 +958,7 @@ const cateringApp = ({ userProfileData }) => {
     }, [
         filteredTeams, filterDayKey, visibleDays, daySlots, filterMealType,
         cateringAssignments, sortMode, teamNameMap, packagesList, userTeams,
+        groupsData, allMatchesList,
     ]);
 
     if (loading) {
