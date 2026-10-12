@@ -681,14 +681,11 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
                     if (!teamGroup || teamGroup !== targetGroup) return;
 
                     const accomName = team.accommodation?.name?.trim?.() || '';
-                    const accomType = team.accommodation?.type?.trim?.() || '';
                     const order = (typeof team.order === 'number' && team.order > 0) ? team.order : null;
 
                     result.push({
-                        teamName: team.teamName.trim(),
                         order,
                         accommodationName: accomName || '---',
-                        accommodationType: accomType || '---',
                     });
                 });
             });
@@ -699,16 +696,16 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
             const oa = a.order ?? Number.POSITIVE_INFINITY;
             const ob = b.order ?? Number.POSITIVE_INFINITY;
             if (oa !== ob) return oa - ob;
-            return a.teamName.localeCompare(b.teamName, 'sk', { sensitivity: 'base' });
+            return a.accommodationName.localeCompare(b.accommodationName, 'sk', { sensitivity: 'base' });
         });
 
-        console.log(`[TRANSPORT] ===== UBYTOVNNE PRE KATEGÓRIU "${targetCategory}" A SKUPINU "${targetGroup}" =====`);
+        console.log(`[TRANSPORT] ===== UBYTOVNE PRE KATEGÓRIU "${targetCategory}" A SKUPINU "${targetGroup}" =====`);
         if (result.length === 0) {
             console.log('[TRANSPORT] Žiadne tímy sa nenašli.');
         } else {
             result.forEach((t) => {
                 const orderStr = t.order != null ? `${t.order}. ` : '';
-                console.log(`   • ${orderStr}${t.teamName}  →  ubytovňa: "${t.accommodationName}"  (typ: ${t.accommodationType})`);
+                console.log(`   • ${orderStr}${t.accommodationName}`);
             });
         }
         console.log(`[TRANSPORT] Spolu: ${result.length} tímov.`);
