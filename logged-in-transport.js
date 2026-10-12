@@ -342,17 +342,50 @@ const TransportApp = ({ userProfileData }) => {
                         (accommodationByTeam[category] && accommodationByTeam[category][teamName]) || null;
     
                     // ------------------------------------------------------------
-                    // Detekcia zmeny miesta medzi dvoma po sebe idúcimi udalosťami
-                    // + na konci každého dňa kontrola voči ubytovaniu
+                    // Detekcia zmeny miesta:
+                    //   • medzi dvoma susednými udalosťami
+                    //   • na konci dňa (posledná udalosť dňa ≠ ubytovanie)
+                    //   • na začiatku dňa (prvá udalosť dňa ≠ ubytovanie)
                     // ------------------------------------------------------------
                     const enriched = [];
                     for (let i = 0; i < events.length; i++) {
                         const current = events[i];
-                        enriched.push(current);
-    
+                        const prev = events[i - 1];
                         const next = events[i + 1];
     
-                        // 1) Zmena miesta medzi dvoma susednými udalosťami
+                        const currentDay = extractDayKeyFromWhen(current.when);
+                        const prevDay = prev ? extractDayKeyFromWhen(prev.when) : null;
+                        const nextDay = next ? extractDayKeyFromWhen(next.when) : null;
+    
+                        const isFirstEventOfDay =
+                            currentDay != null && (prev == null || prevDay == null || prevDay !== currentDay);
+    
+                        const isLastEventOfDay =
+                            currentDay != null && (next == null || nextDay == null || nextDay !== currentDay);
+    
+                        // A) Začiatok dňa – tím sa musí presunúť z ubytovania na miesto prvej udalosti dňa
+                        if (
+                            isFirstEventOfDay &&
+                            accommodationName &&
+                            current.location &&
+                            current.location !== accommodationName
+                        ) {
+                            enriched.push({
+                                ts: current.ts,
+                                when: current.when,
+                                type: 'transfer',
+                                text:
+                                    `Presun z ubytovania "${accommodationName}" do "${current.location}" ` +
+                                    `(prvá udalosť dňa: ${current.when || '—'})`,
+                                location: null,
+                                isTransfer: true,
+                            });
+                        }
+    
+                        // Vložíme samotnú udalosť
+                        enriched.push(current);
+    
+                        // B) Zmena miesta medzi dvoma susednými udalosťami v rámci toho istého dňa
                         if (
                             next &&
                             current.location &&
@@ -372,14 +405,8 @@ const TransportApp = ({ userProfileData }) => {
                             });
                         }
     
-                        // 2) Koniec dňa – ak je posledná udalosť dňa inde než ubytovanie,
+                        // C) Koniec dňa – ak je posledná udalosť dňa inde než ubytovanie,
                         //    vložíme presun do ubytovania.
-                        const currentDay = extractDayKeyFromWhen(current.when);
-                        const nextDay = next ? extractDayKeyFromWhen(next.when) : null;
-    
-                        const isLastEventOfDay =
-                            currentDay != null && (next == null || nextDay == null || nextDay !== currentDay);
-    
                         if (
                             isLastEventOfDay &&
                             accommodationName &&
