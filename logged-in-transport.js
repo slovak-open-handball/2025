@@ -89,6 +89,18 @@ const resolveTeamName = (identifier) => {
     return identifier;
 };
 
+// ============================================================
+// Pomocná funkcia: naformátuje typ dopravy a čas príchodu
+// ============================================================
+const formatArrival = (arrival) => {
+    if (!arrival || !arrival.type) return '---';
+    const type = String(arrival.type).trim();
+    const time = arrival.time ? String(arrival.time).trim() : '';
+    if (!type) return '---';
+    if (time) return `${type} (${time})`;
+    return type;
+};
+
 const TransportApp = ({ userProfileData }) => {
     // Mapa placeId → placeName (aby sme pri zápasoch vedeli zobraziť názov haly)
     const placesMapRef = useRef({});
@@ -128,7 +140,6 @@ const TransportApp = ({ userProfileData }) => {
 
         // ============================================================
         // 0b) POUŽÍVATELIA (users) – lookup pre názvy tímov
-        //     (aby sme pri stravovaní vedeli zobraziť tím v riadku)
         // ============================================================
         const loadTeamsLookup = async () => {
             try {
@@ -200,7 +211,7 @@ const TransportApp = ({ userProfileData }) => {
         }
 
         // ============================================================
-        // 2) TÍMY S PRIRADENOU UBYTOVŇOU PODĽA KATEGÓRIÍ
+        // 2) TÍMY – ubytovanie + typ dopravy + čas príchodu
         // ============================================================
         const loadTeamsWithAccommodation = async () => {
             try {
@@ -226,6 +237,7 @@ const TransportApp = ({ userProfileData }) => {
                                 teamName: team.teamName.trim(),
                                 accommodationType: accomType || '(nešpecifikovaný)',
                                 accommodationName: accomName,
+                                arrivalDisplay: formatArrival(team.arrival),
                                 userId: userDoc.id
                             });
                         });
@@ -245,7 +257,7 @@ const TransportApp = ({ userProfileData }) => {
                         grouped[category]
                             .sort((a, b) => a.teamName.localeCompare(b.teamName, 'sk', { sensitivity: 'base' }))
                             .forEach((t) => {
-                                console.log(`   • ${t.teamName}  →  ubytovňa: "${t.accommodationName}"  (typ: ${t.accommodationType})`);
+                                console.log(`   • ${t.teamName}  →  ubytovňa: "${t.accommodationName}"  (typ: ${t.accommodationType})  |  doprava: ${t.arrivalDisplay}`);
                             });
                     });
                 }
@@ -338,12 +350,10 @@ const TransportApp = ({ userProfileData }) => {
 
         // ============================================================
         // 4) VŠETKY NAPLÁNOVANÉ STRAVOVANIA
-        //    – zobrazujeme NÁZOV TÍMU V RIADKU (nie superstructure teamName)
         // ============================================================
         const getRowTeamName = (a) => {
             const lookup = teamsLookupRef.current;
 
-            // 1) Superstructure → tím v riadku je v clickedTeam*
             if (a.isSuperstructure === true) {
                 const cat = cleanCategory(a.clickedTeamCategory || '');
                 const key = `${a.clickedTeamUid}|${cat}|${a.clickedTeamIndex}`;
@@ -352,7 +362,6 @@ const TransportApp = ({ userProfileData }) => {
                 return `(row team: ${a.clickedTeamUid || '?'} / ${a.clickedTeamCategory || '?'} / ${a.clickedTeamIndex ?? '?'})`;
             }
 
-            // 2) Klasické priradenie → tím v riadku je v team*
             const cat = cleanCategory(a.category || a.categoryName || '');
             const key = `${a.teamUid}|${cat}|${a.teamIndex}`;
             const found = lookup[key];
