@@ -37,6 +37,28 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
+// Pomocná funkcia: Firestore Timestamp / Date / ISO string → "DD. MM. YYYY"
+const formatDateDDMMYYYY = (ts) => {
+    if (!ts) return null;
+
+    let date;
+    if (typeof ts.toDate === 'function') {
+        date = ts.toDate();
+    } else if (ts instanceof Date) {
+        date = ts;
+    } else {
+        date = new Date(ts);
+    }
+
+    if (isNaN(date.getTime())) return null;
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+
+    return `${day}. ${month}. ${year}`;
+};
+
 const TransportApp = ({ userProfileData }) => {
     // ============================================================
     // NAČÍTANIE tournamentStart / tournamentEnd + TÍMOV S UBYTOVŇOU
@@ -45,14 +67,6 @@ const TransportApp = ({ userProfileData }) => {
         if (!window.db) return;
 
         let unsubscribeRegistration = null;
-
-        const formatTs = (ts) => {
-            if (!ts) return null;
-            if (typeof ts.toDate === 'function') {
-                return ts.toDate().toISOString();
-            }
-            return ts;
-        };
 
         // 1) Dátumy turnaja – len tournamentStart a tournamentEnd
         const loadTournamentDates = async () => {
@@ -68,8 +82,8 @@ const TransportApp = ({ userProfileData }) => {
                 const data = snap.data();
 
                 console.log('[TRANSPORT] ===== DÁTUMY TURNAJA =====');
-                console.log('[TRANSPORT] tournamentStart:', formatTs(data.tournamentStart));
-                console.log('[TRANSPORT] tournamentEnd:  ', formatTs(data.tournamentEnd));
+                console.log('[TRANSPORT] tournamentStart:', formatDateDDMMYYYY(data.tournamentStart));
+                console.log('[TRANSPORT] tournamentEnd:  ', formatDateDDMMYYYY(data.tournamentEnd));
                 console.log('[TRANSPORT] ============================');
             } catch (err) {
                 console.error('[TRANSPORT] Chyba pri načítaní dátumov turnaja:', err);
@@ -82,8 +96,8 @@ const TransportApp = ({ userProfileData }) => {
             unsubscribeRegistration = onSnapshot(regRef, (snap) => {
                 if (!snap.exists()) return;
                 const data = snap.data();
-                console.log('[TRANSPORT] (live) tournamentStart:', formatTs(data.tournamentStart));
-                console.log('[TRANSPORT] (live) tournamentEnd:  ', formatTs(data.tournamentEnd));
+                console.log('[TRANSPORT] (live) tournamentStart:', formatDateDDMMYYYY(data.tournamentStart));
+                console.log('[TRANSPORT] (live) tournamentEnd:  ', formatDateDDMMYYYY(data.tournamentEnd));
             }, (err) => {
                 console.error('[TRANSPORT] onSnapshot(settings/registration) error:', err);
             });
