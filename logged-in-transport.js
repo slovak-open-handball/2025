@@ -444,9 +444,12 @@ const TransportApp = ({ userProfileData }) => {
                         // Vložíme samotnú udalosť
                         enriched.push(current);
     
-                        // B) Zmena miesta medzi dvoma susednými udalosťami v rámci toho istého dňa
+                        // B) Zmena miesta medzi dvoma susednými udalosťami v rámci toho istého dňa.
+                        //    NEAPLIKUJEME na prechod z ubytovania (typ 'accommodation') na prvú
+                        //    časovú udalosť dňa – to rieši typ A (začiatok dňa, len príchod).
                         if (
                             next &&
+                            current.type !== 'accommodation' &&
                             current.location &&
                             next.location &&
                             current.location !== next.location
