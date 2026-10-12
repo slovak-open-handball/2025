@@ -170,6 +170,17 @@ const TransportApp = ({ userProfileData }) => {
     const [placeForStopSelectedStopId, setPlaceForStopSelectedStopId] = useState('');
     const [placeForStopSaving, setPlaceForStopSaving] = useState(false);
 
+    // ==== POD-ZÁLOŽKA V NASTAVENIACH ====
+    // 'priradenie' | 'trvanie'
+    const [nastaveniaTab, setNastaveniaTab] = useState('priradenie');
+
+    // ==== TRVANIA JÁZDY MEDZI ZASTÁVKAMI ====
+    // travelTimes[`${fromId}|${toId}`] = { fromId, fromName, toId, toName, minutes }
+    const [travelTimes, setTravelTimes] = useState({});
+    // Maticový editor – dočasné hodnoty (string), kľúč `fromId|toId`
+    const [travelTimesDraft, setTravelTimesDraft] = useState({});
+    const [travelTimesSaving, setTravelTimesSaving] = useState(false);
+
     // ============================================================
     // ZBUILDÍ A VYPÍŠE ČASOVÚ OS PRE KAŽDÝ TÍM V KAŽDEJ KATEGÓRII
     // ============================================================
@@ -399,6 +410,36 @@ const TransportApp = ({ userProfileData }) => {
             });
         } catch (e) {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport:', e);
+        }
+
+        // ============================================================
+        // 0a1c) TRVANIA JÁZDY MEDZI ZASTÁVKAMI (settings/transportTravelTimes)
+        // ============================================================
+        let unsubscribeTravelTimes = null;
+        try {
+            const ttRef = doc(window.db, 'settings', 'transportTravelTimes');
+            unsubscribeTravelTimes = onSnapshot(ttRef, (snap) => {
+                const map = {};
+                if (snap.exists()) {
+                    const data = snap.data() || {};
+                    const raw = data.times || {};
+                    Object.entries(raw).forEach(([key, v]) => {
+                        if (v == null) return;
+                        map[key] = {
+                            fromId: v.fromId || null,
+                            fromName: v.fromName || null,
+                            toId: v.toId || null,
+                            toName: v.toName || null,
+                            minutes: Number(v.minutes) || 0,
+                        };
+                    });
+                }
+                setTravelTimes(map);
+            }, (err) => {
+                console.error('[TRANSPORT] onSnapshot(settings/transportTravelTimes) error:', err);
+            });
+        } catch (e) {
+            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transportTravelTimes:', e);
         }
 
         // ============================================================
@@ -755,6 +796,7 @@ const TransportApp = ({ userProfileData }) => {
             if (unsubscribeCateringSettings) unsubscribeCateringSettings();
             if (unsubscribeCategorySettings) unsubscribeCategorySettings();
             if (unsubscribeTransport) unsubscribeTransport();
+            if (unsubscribeTravelTimes) unsubscribeTravelTimes();
         };
     }, []);
 
@@ -909,6 +951,60 @@ const TransportApp = ({ userProfileData }) => {
     };    
 
     // ============================================================
+    // ULOŽENIE TRVANIA JÁZDY MEDZI DVOMA ZASTÁVKAMI
+    // ============================================================
+    const saveTravelTime = async (fromStop, toStop, rawValue) => {
+        if (!window.db || !fromStop || !toStop) return;
+
+        const key = `${fromStop.id}|${toStop.id}`;
+        const minutes = rawValue === '' ? null : parseInt(rawValue, 10);
+
+        if (minutes != null && (isNaN(minutes) || minutes < 0)) {
+            window.showGlobalNotification('Trvanie musí byť nezáporné číslo (minúty).', 'error');
+            return;
+        }
+
+        setTravelTimesSaving(true);
+        try {
+            const docRef = doc(window.db, 'settings', 'transportTravelTimes');
+            // Načítame aktuálne dáta (aby sme neprepísali ostatné dvojice)
+            const snap = await getDoc(docRef);
+            const data = snap.exists() ? (snap.data() || {}) : {};
+            const times = { ...(data.times || {}) };
+
+            if (minutes == null) {
+                delete times[key];
+            } else {
+                times[key] = {
+                    fromId: fromStop.id,
+                    fromName: fromStop.name,
+                    toId: toStop.id,
+                    toName: toStop.name,
+                    minutes,
+                };
+            }
+
+            await setDoc(docRef, {
+                times,
+                updatedAt: Timestamp.fromDate(new Date()),
+                updatedBy: userProfileData?.email || null,
+            }, { merge: true });
+
+            window.showGlobalNotification(
+                minutes == null
+                    ? `Trvanie "${fromStop.name} → ${toStop.name}" bolo odstránené.`
+                    : `Trvanie "${fromStop.name} → ${toStop.name}" = ${minutes} min.`,
+                'success'
+            );
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri ukladaní trvania jazdy:', err);
+            window.showGlobalNotification('Nepodarilo sa uložiť trvanie.', 'error');
+        } finally {
+            setTravelTimesSaving(false);
+        }
+    };    
+
+    // ============================================================
     // ZOZNAM ZASTÁVOK S ODSAdeným ZOZNAMOM PRIRADENÝCH MIEST
     // ============================================================
     const renderStopsWithAssignments = () => {
@@ -1043,6 +1139,150 @@ const TransportApp = ({ userProfileData }) => {
             })
         );
     };
+
+    // ============================================================
+    // RENDER – TRVANIA JÁZDY MEDZI ZASTÁVKAMI (matica NxN)
+    // ============================================================
+    const renderTravelTimes = () => {
+        if (stopsList.length === 0) {
+            return React.createElement(
+                'div',
+                { className: 'text-gray-400 italic text-sm px-1' },
+                'Žiadne zastávky.'
+            );
+        }
+
+        if (stopsList.length === 1) {
+            return React.createElement(
+                'div',
+                { className: 'text-gray-500 italic text-sm px-1' },
+                'Pre výpočet trvania jázd sú potrebné aspoň 2 zastávky.'
+            );
+        }
+
+        const getInputValue = (fromId, toId) => {
+            const key = `${fromId}|${toId}`;
+            return travelTimesDraft[key] != null ? travelTimesDraft[key] : '';
+        };
+
+        const handleDraftChange = (fromId, toId, value) => {
+            const key = `${fromId}|${toId}`;
+            setTravelTimesDraft((prev) => ({ ...prev, [key]: value }));
+        };
+
+        const handleBlur = (fromStop, toStop) => {
+            const key = `${fromStop.id}|${toStop.id}`;
+            const raw = travelTimesDraft[key] != null ? travelTimesDraft[key] : '';
+            const existing = travelTimes[key];
+            const existingMinutes = existing ? String(existing.minutes) : '';
+
+            // Ak sa hodnota nezmenila, nič neukladáme
+            if (raw === existingMinutes) return;
+
+            saveTravelTime(fromStop, toStop, raw);
+        };
+
+        return React.createElement(
+            'div',
+            { className: 'w-full overflow-x-auto' },
+            React.createElement(
+                'p',
+                { className: 'text-xs text-gray-500 mb-3 italic' },
+                'Hodnota predstavuje počet minút jazdy z riadkovej zastávky (od) do stĺpcovej zastávky (do). Diagonála je vždy 0. Prázdne pole = nezadané.'
+            ),
+            React.createElement(
+                'table',
+                { className: 'min-w-max border-collapse text-sm' },
+                React.createElement(
+                    'thead',
+                    null,
+                    React.createElement(
+                        'tr',
+                        null,
+                        React.createElement(
+                            'th',
+                            { className: 'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap sticky left-0 z-10' },
+                            'Od \\ Do'
+                        ),
+                        stopsList.map((toStop) =>
+                            React.createElement(
+                                'th',
+                                {
+                                    key: `th-${toStop.id}`,
+                                    className: 'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap min-w-[110px]'
+                                },
+                                React.createElement('i', { className: 'fa-solid fa-bus text-blue-600 mr-1' }),
+                                toStop.name
+                            )
+                        )
+                    )
+                ),
+                React.createElement(
+                    'tbody',
+                    null,
+                    stopsList.map((fromStop, rowIdx) =>
+                        React.createElement(
+                            'tr',
+                            {
+                                key: `tr-${fromStop.id}`,
+                                className: rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                            },
+                            React.createElement(
+                                'th',
+                                {
+                                    className: 'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap sticky left-0 z-10'
+                                },
+                                React.createElement('i', { className: 'fa-solid fa-bus text-blue-600 mr-1' }),
+                                fromStop.name
+                            ),
+                            stopsList.map((toStop) => {
+                                const isDiagonal = fromStop.id === toStop.id;
+                                if (isDiagonal) {
+                                    return React.createElement(
+                                        'td',
+                                        {
+                                            key: `td-${fromStop.id}-${toStop.id}`,
+                                            className: 'border border-gray-300 px-2 py-1 text-center text-gray-400 bg-gray-100'
+                                        },
+                                        '0'
+                                    );
+                                }
+                                const value = getInputValue(fromStop.id, toStop.id);
+                                const key = `${fromStop.id}|${toStop.id}`;
+                                const existing = travelTimes[key];
+                                const changed = (value || '') !== (existing ? String(existing.minutes) : '');
+                                return React.createElement(
+                                    'td',
+                                    {
+                                        key: `td-${fromStop.id}-${toStop.id}`,
+                                        className: 'border border-gray-300 px-1 py-1 text-center'
+                                    },
+                                    React.createElement('input', {
+                                        type: 'number',
+                                        min: '0',
+                                        step: '1',
+                                        value: value,
+                                        onChange: (e) => handleDraftChange(fromStop.id, toStop.id, e.target.value),
+                                        onBlur: () => handleBlur(fromStop, toStop),
+                                        onKeyDown: (e) => { if (e.key === 'Enter') e.target.blur(); },
+                                        placeholder: '—',
+                                        className: `w-24 px-2 py-1 border rounded text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                                            changed ? 'border-amber-400 bg-amber-50' : 'border-gray-300 bg-white'
+                                        }`
+                                    })
+                                );
+                            })
+                        )
+                    )
+                )
+            ),
+            travelTimesSaving && React.createElement(
+                'div',
+                { className: 'text-xs text-blue-600 mt-2 italic' },
+                'Ukladám...'
+            )
+        );
+    };    
 
     // ============================================================
     // MODÁLNE OKNO – priradenie miest k zastávke
@@ -1348,39 +1588,84 @@ const TransportApp = ({ userProfileData }) => {
                     ? React.createElement(
                         'div',
                         { className: 'w-full' },
+                        // Pod-záložky
                         React.createElement(
                             'div',
-                            { className: 'flex items-center justify-between mb-4 pb-3 border-b border-gray-200' },
-                            React.createElement('h3', { className: 'text-xl font-semibold text-gray-700' }, 'Zoznam všetkých miest'),
-                            React.createElement('span', { className: 'text-sm text-gray-500' }, `Spolu: ${allPlaces.length}`)
-                        ),
-                        // Dvojstĺpcový zoznam
-                        React.createElement(
-                            'div',
-                            { className: 'flex flex-col md:flex-row gap-6 w-full' },
-                            // ĽAVÝ STĹPEC – zastávky s odsadeným zoznamom priradených miest
+                            { className: 'w-full flex flex-wrap items-center justify-center gap-3 mb-6' },
                             React.createElement(
-                                'div',
-                                { className: 'flex-1 min-w-0' },
-                                React.createElement(
-                                    'h4',
-                                    { className: 'text-sm font-bold uppercase tracking-wide mb-3 text-blue-700' },
-                                    `Zastávky (${stopsList.length})`
-                                ),
-                                renderStopsWithAssignments()
+                                'button',
+                                {
+                                    onClick: () => setNastaveniaTab('priradenie'),
+                                    className: `px-4 py-2 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
+                                        nastaveniaTab === 'priradenie'
+                                            ? 'bg-blue-600 text-white border-blue-600'
+                                            : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
+                                    }`
+                                },
+                                React.createElement('i', { className: 'fa-solid fa-link' }),
+                                'Priradenie miest k zastávkam'
                             ),
-                            // PRAVÝ STĹPEC – ostatné miesta
                             React.createElement(
-                                'div',
-                                { className: 'flex-1 min-w-0' },
-                                React.createElement(
-                                    'h4',
-                                    { className: 'text-sm font-bold uppercase tracking-wide mb-3 text-gray-700' },
-                                    `Ostatné miesta (${allPlaces.filter((p) => p.type !== 'zastavka').length})`
-                                ),
-                                renderOtherPlaces()
+                                'button',
+                                {
+                                    onClick: () => setNastaveniaTab('trvanie'),
+                                    className: `px-4 py-2 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
+                                        nastaveniaTab === 'trvanie'
+                                            ? 'bg-blue-600 text-white border-blue-600'
+                                            : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
+                                    }`
+                                },
+                                React.createElement('i', { className: 'fa-solid fa-clock' }),
+                                'Trvania jazdy medzi zastávkami'
                             )
-                        )
+                        ),
+                        // Obsah pod-záložky
+                        nastaveniaTab === 'priradenie'
+                            ? React.createElement(
+                                'div',
+                                { className: 'w-full' },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex items-center justify-between mb-4 pb-3 border-b border-gray-200' },
+                                    React.createElement('h3', { className: 'text-xl font-semibold text-gray-700' }, 'Zoznam všetkých miest'),
+                                    React.createElement('span', { className: 'text-sm text-gray-500' }, `Spolu: ${allPlaces.length}`)
+                                ),
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex flex-col md:flex-row gap-6 w-full' },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex-1 min-w-0' },
+                                        React.createElement(
+                                            'h4',
+                                            { className: 'text-sm font-bold uppercase tracking-wide mb-3 text-blue-700' },
+                                            `Zastávky (${stopsList.length})`
+                                        ),
+                                        renderStopsWithAssignments()
+                                    ),
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex-1 min-w-0' },
+                                        React.createElement(
+                                            'h4',
+                                            { className: 'text-sm font-bold uppercase tracking-wide mb-3 text-gray-700' },
+                                            `Ostatné miesta (${allPlaces.filter((p) => p.type !== 'zastavka').length})`
+                                        ),
+                                        renderOtherPlaces()
+                                    )
+                                )
+                            )
+                            : React.createElement(
+                                'div',
+                                { className: 'w-full' },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex items-center justify-between mb-4 pb-3 border-b border-gray-200' },
+                                    React.createElement('h3', { className: 'text-xl font-semibold text-gray-700' }, 'Trvania jazdy medzi zastávkami'),
+                                    React.createElement('span', { className: 'text-sm text-gray-500' }, `Zastávok: ${stopsList.length}`)
+                                ),
+                                renderTravelTimes()
+                            )
                     )
                     : React.createElement(
                         'div',
