@@ -1767,7 +1767,20 @@ const TransportApp = ({ userProfileData }) => {
                     React.createElement(
                         'p',
                         { className: 'text-sm mt-1' },
-                        'Kliknutím na zelené tlačidlo "+" v pravom dolnom rohu pridáte autobus.'
+                        'Kliknutím na zelené tlačidlo "+" pridáte autobus.'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: addNewBus,
+                            disabled: busSaving,
+                            className: `mt-6 w-14 h-14 rounded-full bg-green-600 text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all duration-200 flex items-center justify-center text-2xl font-bold ${busSaving ? 'opacity-60 cursor-not-allowed' : ''}`,
+                            title: 'Pridať autobus'
+                        },
+                        React.createElement('i', {
+                            className: busSaving ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-plus'
+                        })
                     )
                 )
                 : React.createElement(
