@@ -1,6 +1,5 @@
 // logged-in-transport.js
-// Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const { useState, useEffect, useRef, useSyncExternalStore } = React;
@@ -20,17 +19,10 @@ window.showGlobalNotification = (message, type = 'success') => {
     const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
     let typeClasses = '';
     switch (type) {
-        case 'success':
-            typeClasses = 'bg-green-500 text-white';
-            break;
-        case 'error':
-            typeClasses = 'bg-red-500 text-white';
-            break;
-        case 'info':
-            typeClasses = 'bg-blue-500 text-white';
-            break;
-        default:
-            typeClasses = 'bg-gray-700 text-white';
+        case 'success': typeClasses = 'bg-green-500 text-white'; break;
+        case 'error':   typeClasses = 'bg-red-500 text-white';   break;
+        case 'info':    typeClasses = 'bg-blue-500 text-white';  break;
+        default:        typeClasses = 'bg-gray-700 text-white';
     }
 
     notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
@@ -47,59 +39,51 @@ window.showGlobalNotification = (message, type = 'success') => {
 
 const TransportApp = ({ userProfileData }) => {
     // ============================================================
-    // NAČÍTANIE DÁTUMOV TURNAJA + TÍMOV S UBYTOVŇOU (do konzoly)
+    // NAČÍTANIE tournamentStart / tournamentEnd + TÍMOV S UBYTOVŇOU
     // ============================================================
     useEffect(() => {
         if (!window.db) return;
 
         let unsubscribeRegistration = null;
 
-        // 1) Dátumy turnaja zo settings/registration
+        const formatTs = (ts) => {
+            if (!ts) return null;
+            if (typeof ts.toDate === 'function') {
+                return ts.toDate().toISOString();
+            }
+            return ts;
+        };
+
+        // 1) Dátumy turnaja – len tournamentStart a tournamentEnd
         const loadTournamentDates = async () => {
             try {
                 const regRef = doc(window.db, 'settings', 'registration');
                 const snap = await getDoc(regRef);
 
                 if (!snap.exists()) {
-                    console.log('[TRANSPORT] settings/registration neexistuje – žiadne dátumy turnaja.');
+                    console.log('[TRANSPORT] settings/registration neexistuje.');
                     return;
                 }
 
                 const data = snap.data();
 
-                const formatTs = (ts) => {
-                    if (!ts) return null;
-                    if (typeof ts.toDate === 'function') {
-                        return ts.toDate().toISOString();
-                    }
-                    return ts;
-                };
-
                 console.log('[TRANSPORT] ===== DÁTUMY TURNAJA =====');
-                console.log('[TRANSPORT] tournamentStart:      ', formatTs(data.tournamentStart));
-                console.log('[TRANSPORT] tournamentEnd:        ', formatTs(data.tournamentEnd));
-                console.log('[TRANSPORT] arrivalDate:           ', formatTs(data.arrivalDate));
-                console.log('[TRANSPORT] registrationStartDate: ', formatTs(data.registrationStartDate));
-                console.log('[TRANSPORT] registrationEndDate:   ', formatTs(data.registrationEndDate));
-                console.log('[TRANSPORT] dataEditDeadline:      ', formatTs(data.dataEditDeadline));
-                console.log('[TRANSPORT] rosterEditDeadline:    ', formatTs(data.rosterEditDeadline));
+                console.log('[TRANSPORT] tournamentStart:', formatTs(data.tournamentStart));
+                console.log('[TRANSPORT] tournamentEnd:  ', formatTs(data.tournamentEnd));
                 console.log('[TRANSPORT] ============================');
             } catch (err) {
                 console.error('[TRANSPORT] Chyba pri načítaní dátumov turnaja:', err);
             }
         };
 
-        // Real-time listener na zmeny dátumov turnaja
+        // Live listener na zmeny tournamentStart / tournamentEnd
         try {
             const regRef = doc(window.db, 'settings', 'registration');
             unsubscribeRegistration = onSnapshot(regRef, (snap) => {
                 if (!snap.exists()) return;
                 const data = snap.data();
-                const formatTs = (ts) => (ts && typeof ts.toDate === 'function') ? ts.toDate().toISOString() : ts;
-                console.log('[TRANSPORT] (live) Dátumy turnaja zmenené:');
                 console.log('[TRANSPORT] (live) tournamentStart:', formatTs(data.tournamentStart));
                 console.log('[TRANSPORT] (live) tournamentEnd:  ', formatTs(data.tournamentEnd));
-                console.log('[TRANSPORT] (live) arrivalDate:     ', formatTs(data.arrivalDate));
             }, (err) => {
                 console.error('[TRANSPORT] onSnapshot(settings/registration) error:', err);
             });
@@ -113,7 +97,6 @@ const TransportApp = ({ userProfileData }) => {
                 const usersRef = collection(window.db, 'users');
                 const usersSnap = await getDocs(usersRef);
 
-                // grouped[category] = [ { teamName, accommodation, userId }, ... ]
                 const grouped = {};
 
                 usersSnap.forEach((userDoc) => {
@@ -130,7 +113,7 @@ const TransportApp = ({ userProfileData }) => {
                             const accomType = team.accommodation?.type?.trim?.() || '';
                             const accomName = team.accommodation?.name?.trim?.() || '';
 
-                            // Zaujímajú nás len tímy s priradenou ubytovňou (má name)
+                            // Len tímy s priradenou konkrétnou ubytovňou (majú name)
                             if (!accomName) return;
 
                             if (!grouped[category]) grouped[category] = [];
@@ -220,7 +203,6 @@ const handleDataUpdateAndRender = (event) => {
                                 });
                                 
                                 window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
-            
                             }
                         }
                     } catch (error) {
