@@ -1209,8 +1209,49 @@ const TransportApp = ({ userProfileData }) => {
                         null,
                         React.createElement(
                             'th',
-                            { className: 'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap sticky left-0 z-10' },
-                            'Od \\ Do'
+                            {
+                                className: 'border border-gray-300 bg-gray-100 p-0 whitespace-nowrap sticky left-0 z-10',
+                                style: { width: '90px', minWidth: '90px', height: '48px', position: 'relative' }
+                            },
+                            React.createElement(
+                                'div',
+                                {
+                                    style: {
+                                        position: 'relative',
+                                        width: '100%',
+                                        height: '100%',
+                                        background: 'linear-gradient(to bottom right, transparent calc(50% - 1px), #9ca3af calc(50% - 1px), #9ca3af calc(50% + 1px), transparent calc(50% + 1px))',
+                                    }
+                                },
+                                React.createElement(
+                                    'span',
+                                    {
+                                        style: {
+                                            position: 'absolute',
+                                            bottom: '4px',
+                                            left: '6px',
+                                            fontWeight: 'bold',
+                                            color: '#374151',
+                                            fontSize: '12px',
+                                        }
+                                    },
+                                    'Z'
+                                ),
+                                React.createElement(
+                                    'span',
+                                    {
+                                        style: {
+                                            position: 'absolute',
+                                            top: '4px',
+                                            right: '6px',
+                                            fontWeight: 'bold',
+                                            color: '#374151',
+                                            fontSize: '12px',
+                                        }
+                                    },
+                                    'Do'
+                                )
+                            )
                         ),
                         stopsList.map((toStop) =>
                             React.createElement(
