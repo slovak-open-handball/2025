@@ -1281,6 +1281,16 @@ const TransportApp = ({ userProfileData }) => {
         const handleDraftChange = (fromId, toId, value) => {
             const key = `${fromId}|${toId}`;
             setTravelTimesDraft((prev) => ({ ...prev, [key]: value }));
+        
+            // Ak používateľ vymazal celé pole, okamžite ulož prázdnu hodnotu (vymaž z DB)
+            if (value === '') {
+                const fromStop = stopsList.find((s) => s.id === fromId);
+                const toStop = stopsList.find((s) => s.id === toId);
+                const existing = travelTimes[key];
+                if (fromStop && toStop && existing) {
+                    saveTravelTime(fromStop, toStop, '');
+                }
+            }
         };
 
         const handleBlur = (fromStop, toStop) => {
