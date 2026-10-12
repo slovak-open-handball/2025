@@ -1295,7 +1295,7 @@ const TransportApp = ({ userProfileData }) => {
 
             // Ak sa hodnota nezmenila, nič neukladáme
             if (raw === existingMinutes) return;
-
+        
             saveTravelTime(fromStop, toStop, raw);
         };
 
