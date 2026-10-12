@@ -208,11 +208,26 @@ const TransportApp = ({ userProfileData }) => {
             return grouped[category][teamName];
         };
     
+        // Pomocná funkcia: skrátený čas "HH:MM" z timestampu (number)
+        const formatTimeShort = (ts) => {
+            if (ts == null || !isFinite(ts)) return null;
+            const d = new Date(ts);
+            if (isNaN(d.getTime())) return null;
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            return `${hh}:${mm}`;
+        };
+    
+        // Pomocná funkcia: plný dátum+čas z timestampu (number)
+        const formatFullFromTs = (ts) => {
+            if (ts == null || !isFinite(ts)) return null;
+            return formatDateTime(new Date(ts));
+        };
+    
         // 1) TÍMY – info o skupine, ubytovaní a doprave
         teamsArrivalBufferRef.current.forEach((t) => {
             const arr = ensure(t.category, t.teamName);
     
-            // Zapamätaj si ubytovanie pre tím
             if (t.accommodationName) {
                 if (!accommodationByTeam[t.category]) accommodationByTeam[t.category] = {};
                 accommodationByTeam[t.category][t.teamName] = t.accommodationName;
@@ -222,6 +237,8 @@ const TransportApp = ({ userProfileData }) => {
                 const orderStr = t.order != null ? `, poradie ${t.order}` : '';
                 arr.push({
                     ts: -Infinity,
+                    startTs: null,
+                    endTs: null,
                     when: '—',
                     type: 'group',
                     text: `Skupina: ${t.groupName}${orderStr}`,
@@ -232,6 +249,8 @@ const TransportApp = ({ userProfileData }) => {
             if (t.accommodationName) {
                 arr.push({
                     ts: -Infinity,
+                    startTs: null,
+                    endTs: null,
                     when: '—',
                     type: 'accommodation',
                     text: `Ubytovanie: "${t.accommodationName}" (typ: ${t.accommodationType || 'neurčený'})`,
@@ -242,6 +261,8 @@ const TransportApp = ({ userProfileData }) => {
             if (t.arrivalDisplay && t.arrivalDisplay !== '---') {
                 arr.push({
                     ts: -Infinity,
+                    startTs: null,
+                    endTs: null,
                     when: '—',
                     type: 'arrival',
                     text: `Doprava / príchod: ${t.arrivalDisplay}`,
@@ -257,8 +278,13 @@ const TransportApp = ({ userProfileData }) => {
                 : 'nenaplánované';
             const text = `${m.home} vs ${m.away}${m.special}${m.hallName ? ` | ${m.hallName}` : ''}${m.status ? ` | status=${m.status}` : ''}`;
     
+            const startTs = m.scheduledTs ?? null;
+            const endTs = m.scheduledEndTs ?? startTs;
+    
             ensure(m.category, m.home).push({
                 ts: m.scheduledTs ?? Number.POSITIVE_INFINITY,
+                startTs,
+                endTs,
                 when: timeRange,
                 type: 'match',
                 text,
@@ -267,6 +293,8 @@ const TransportApp = ({ userProfileData }) => {
             if (m.away !== m.home) {
                 ensure(m.category, m.away).push({
                     ts: m.scheduledTs ?? Number.POSITIVE_INFINITY,
+                    startTs,
+                    endTs,
                     when: timeRange,
                     type: 'match',
                     text,
@@ -291,8 +319,13 @@ const TransportApp = ({ userProfileData }) => {
                 ? (c.slotTo ? `${c.slotFrom} – ${c.slotTo}` : c.slotFrom)
                 : '--:--';
     
+            const startTs = c.ts ?? null;
+            const endTs = c.slotToTs ?? startTs;
+    
             ensure(c.category, c.teamName).push({
                 ts: c.ts ?? Number.POSITIVE_INFINITY,
+                startTs,
+                endTs,
                 when: `${formattedDay} ${timeRange}`.trim(),
                 type: 'catering',
                 text: `${mealLabel} (${timeRange}) → ${c.placeName}${superstructureStr}${flagStr}`,
@@ -311,6 +344,22 @@ const TransportApp = ({ userProfileData }) => {
             const mo = String(m[2]).padStart(2, '0');
             const y = m[3];
             return `${y}-${mo}-${d}`;
+        };
+    
+        // ============================================================
+        // Pomocná funkcia: vytvorí text presunu s časom odchodu a príchodu
+        //   fromEvent – udalosť, z ktorej sa odchádza (použije sa endTs)
+        //   toEvent   – udalosť, na ktorú sa prichádza (použije sa startTs)
+        //   fromLabel / toLabel – textové označenie miest (napr. "Bôrik/Korytnačka", "ubytovania \"Slovakia\"")
+        // ============================================================
+        const buildTransferText = (fromEvent, toEvent, fromLabel, toLabel) => {
+            const departureTs = fromEvent && fromEvent.endTs != null ? fromEvent.endTs : (fromEvent ? fromEvent.startTs : null);
+            const arrivalTs = toEvent && toEvent.startTs != null ? toEvent.startTs : null;
+    
+            const departureStr = formatFullFromTs(departureTs) || '—';
+            const arrivalStr = formatFullFromTs(arrivalTs) || '—';
+    
+            return `Presun z ${fromLabel} do ${toLabel} (odchod: ${departureStr}, príchod: ${arrivalStr})`;
         };
     
         // ============================================================
@@ -363,20 +412,31 @@ const TransportApp = ({ userProfileData }) => {
                         const isLastEventOfDay =
                             currentDay != null && (next == null || nextDay == null || nextDay !== currentDay);
     
-                        // A) Začiatok dňa – tím sa musí presunúť z ubytovania na miesto prvej udalosti dňa
+                        // A) Začiatok dňa – tím sa musí presunúť z ubytovania na miesto prvej udalosti dňa.
+                        //    Ako "fromEvent" použijeme prvú udalosť dňa samotnú (nemáme samostatnú
+                        //    ubytovaciu udalosť s časom), takže odchod = startTs prvej udalosti dňa.
+                        //    Ak by sme chceli presnejšie, dalo by sa použiť endTs poslednej udalosti
+                        //    predošlého dňa, čo je reálnejšie – použijeme to.
                         if (
                             isFirstEventOfDay &&
                             accommodationName &&
                             current.location &&
                             current.location !== accommodationName
                         ) {
+                            const lastPrevEvent = prev || null;
+                            const departureEvent = lastPrevEvent && lastPrevEvent.endTs != null
+                                ? lastPrevEvent
+                                : current; // fallback: odchod = začiatok prvej udalosti dňa
                             enriched.push({
                                 ts: current.ts,
                                 when: current.when,
                                 type: 'transfer',
-                                text:
-                                    `Presun z ubytovania "${accommodationName}" do "${current.location}" ` +
-                                    `(prvá udalosť dňa: ${current.when || '—'})`,
+                                text: buildTransferText(
+                                    departureEvent,
+                                    current,
+                                    `ubytovania "${accommodationName}"`,
+                                    `"${current.location}"`
+                                ),
                                 location: null,
                                 isTransfer: true,
                             });
@@ -396,30 +456,35 @@ const TransportApp = ({ userProfileData }) => {
                                 ts: current.ts,
                                 when: current.when,
                                 type: 'transfer',
-                                text:
-                                    `Presun z "${current.location}" do "${next.location}" ` +
-                                    `(posledná udalosť: ${current.when || '—'}, ` +
-                                    `prvá udalosť v novom mieste: ${next.when || '—'})`,
+                                text: buildTransferText(
+                                    current,
+                                    next,
+                                    `"${current.location}"`,
+                                    `"${next.location}"`
+                                ),
                                 location: null,
                                 isTransfer: true,
                             });
                         }
     
                         // C) Koniec dňa – ak je posledná udalosť dňa inde než ubytovanie,
-                        //    vložíme presun do ubytovania.
+                        //    vložíme presun do ubytovania. Odchod = endTs poslednej udalosti dňa,
+                        //    príchod = neznámy (nemáme čas ubytovacej udalosti), preto len odchod.
                         if (
                             isLastEventOfDay &&
                             accommodationName &&
                             current.location &&
                             current.location !== accommodationName
                         ) {
+                            const departureTs = current.endTs != null ? current.endTs : current.startTs;
+                            const departureStr = formatFullFromTs(departureTs) || '—';
                             enriched.push({
                                 ts: current.ts,
                                 when: current.when,
                                 type: 'transfer',
                                 text:
                                     `Presun z "${current.location}" do ubytovania "${accommodationName}" ` +
-                                    `(posledná udalosť dňa: ${current.when || '—'})`,
+                                    `(odchod: ${departureStr})`,
                                 location: null,
                                 isTransfer: true,
                             });
