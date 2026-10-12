@@ -140,6 +140,10 @@ const TransportApp = ({ userProfileData }) => {
     const matchesBufferRef = useRef([]);
     const cateringBufferRef = useRef([]);
     const teamsArrivalBufferRef = useRef([]);
+
+    // Zrkadlo `allPlaces` pre použitie v `rebuildAndLogTimeline`
+    const allPlacesRef = useRef([]);
+
     // Zabráni opakovanému spracovaniu pred prvým načítaním
     const matchesLoadedRef = useRef(false);
     const cateringLoadedRef = useRef(false);
@@ -152,44 +156,39 @@ const TransportApp = ({ userProfileData }) => {
     const [allPlaces, setAllPlaces] = useState([]);
 
     // Priradenia miesto → zastávka (z kolekcie `transport`)
-    //   transportAssignments[placeId] = { stopId, stopName }
     const [transportAssignments, setTransportAssignments] = useState({});
     // Uložené zastávky pre select
     const [stopsList, setStopsList] = useState([]);
 
     // ==== MODÁLNE OKNO PRE PRIRADENIE ====
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-    const [assignTargetStop, setAssignTargetStop] = useState(null); // zastávka, ku ktorej priradujeme
-    const [assignSelectedIds, setAssignSelectedIds] = useState({}); // { placeId: true/false }
+    const [assignTargetStop, setAssignTargetStop] = useState(null);
+    const [assignSelectedIds, setAssignSelectedIds] = useState({});
     const [assignSaving, setAssignSaving] = useState(false);
     const [assignSearch, setAssignSearch] = useState('');
+    // Flag: je táto zastávka nástupná pre tímy s inou ako vlastnou dopravou?
+    const [assignIsExternalArrivalStop, setAssignIsExternalArrivalStop] = useState(false);
 
     // ==== MODÁLNE OKNO PRE PRIRADENIE MIESTA K ZASTÁVKE ====
     const [isPlaceForStopModalOpen, setIsPlaceForStopModalOpen] = useState(false);
-    const [placeForStopTarget, setPlaceForStopTarget] = useState(null); // miesto, ktorému priradujeme zastávku
+    const [placeForStopTarget, setPlaceForStopTarget] = useState(null);
     const [placeForStopSelectedStopId, setPlaceForStopSelectedStopId] = useState('');
     const [placeForStopSaving, setPlaceForStopSaving] = useState(false);
 
     // ==== POD-ZÁLOŽKA V NASTAVENIACH ====
-    // 'priradenie' | 'trvanie'
     const [nastaveniaTab, setNastaveniaTab] = useState('trvanie');
 
     // ==== TRVANIA JÁZDY MEDZI ZASTÁVKAMI ====
-    // travelTimes[`${fromId}|${toId}`] = { fromId, fromName, toId, toName, minutes }
     const [travelTimes, setTravelTimes] = useState({});
-    // Maticový editor – dočasné hodnoty (string), kľúč `fromId|toId`
     const [travelTimesDraft, setTravelTimesDraft] = useState({});
     const [travelTimesSaving, setTravelTimesSaving] = useState(false);
 
     // ==== PLÁNOVANIE – AUTOBUSY A DNI TURNAJA ====
-    // Zoznam autobusov: [{ id, name, number }]
     const [buses, setBuses] = useState([]);
-    // Zoznam dní turnaja: [{ dayKey, dateLabel, dayName }]
     const [tournamentDays, setTournamentDays] = useState([]);
-    // Načítané? (aby sme pred prvým snapshotom nezobrazovali „žiadne dátumy“)
     const [tournamentDaysLoaded, setTournamentDaysLoaded] = useState(false);
     const [busSaving, setBusSaving] = useState(false);
-    
+
     // ============================================================
     // ZBUILDÍ A VYPÍŠE ČASOVÚ OS PRE KAŽDÝ TÍM V KAŽDEJ KATEGÓRII
     // ============================================================
@@ -197,39 +196,40 @@ const TransportApp = ({ userProfileData }) => {
         if (!matchesLoadedRef.current || !cateringLoadedRef.current || !teamsLoadedRef.current) {
             return;
         }
-    
+
         const grouped = {};
         const accommodationByTeam = {};
-    
+        const arrivalTypeByTeam = {};
+
+        // Nájdi zastávku označenú ako nástupnú pre externé tímy
+        const externalArrivalStop =
+            (allPlacesRef.current || []).find((p) => p.isExternalArrivalStop === true) || null;
+
         const ensure = (category, teamName) => {
             if (!grouped[category]) grouped[category] = {};
             if (!grouped[category][teamName]) grouped[category][teamName] = [];
             return grouped[category][teamName];
         };
-    
-        const formatTimeShort = (ts) => {
-            if (ts == null || !isFinite(ts)) return null;
-            const d = new Date(ts);
-            if (isNaN(d.getTime())) return null;
-            const hh = String(d.getHours()).padStart(2, '0');
-            const mm = String(d.getMinutes()).padStart(2, '0');
-            return `${hh}:${mm}`;
-        };
-    
+
         const formatFullFromTs = (ts) => {
             if (ts == null || !isFinite(ts)) return null;
             return formatDateTime(new Date(ts));
         };
-    
+
         // 1) TÍMY
         teamsArrivalBufferRef.current.forEach((t) => {
             const arr = ensure(t.category, t.teamName);
-    
+
             if (t.accommodationName) {
                 if (!accommodationByTeam[t.category]) accommodationByTeam[t.category] = {};
                 accommodationByTeam[t.category][t.teamName] = t.accommodationName;
             }
-    
+
+            if (t.arrivalType) {
+                if (!arrivalTypeByTeam[t.category]) arrivalTypeByTeam[t.category] = {};
+                arrivalTypeByTeam[t.category][t.teamName] = t.arrivalType;
+            }
+
             if (t.groupName) {
                 const orderStr = t.order != null ? `, poradie ${t.order}` : '';
                 arr.push({
@@ -242,7 +242,7 @@ const TransportApp = ({ userProfileData }) => {
                     location: null,
                 });
             }
-    
+
             if (t.accommodationName) {
                 arr.push({
                     ts: -Infinity,
@@ -254,7 +254,7 @@ const TransportApp = ({ userProfileData }) => {
                     location: t.accommodationName,
                 });
             }
-    
+
             if (t.arrivalDisplay && t.arrivalDisplay !== '---') {
                 arr.push({
                     ts: -Infinity,
@@ -267,17 +267,17 @@ const TransportApp = ({ userProfileData }) => {
                 });
             }
         });
-    
+
         // 2) ZÁPASY
         matchesBufferRef.current.forEach((m) => {
             const timeRange = m.scheduledTime
                 ? (m.scheduledEndTime ? `${m.scheduledTime} – ${m.scheduledEndTime}` : m.scheduledTime)
                 : 'nenaplánované';
             const text = `${m.home} vs ${m.away}${m.special}${m.hallName ? ` | ${m.hallName}` : ''}${m.status ? ` | status=${m.status}` : ''}`;
-    
+
             const startTs = m.scheduledTs ?? null;
             const endTs = m.scheduledEndTs ?? startTs;
-    
+
             ensure(m.category, m.home).push({
                 ts: m.scheduledTs ?? Number.POSITIVE_INFINITY,
                 startTs,
@@ -299,26 +299,26 @@ const TransportApp = ({ userProfileData }) => {
                 });
             }
         });
-    
+
         // 3) STRAVOVANIA
         cateringBufferRef.current.forEach((c) => {
             const flags = [];
             if (c.isPriority) flags.push('PRIORITA');
             const flagStr = flags.length ? ` [${flags.join(', ')}]` : '';
             const mealLabel = c.mealType === 'lunch' ? 'Obed' : c.mealType === 'dinner' ? 'Večera' : c.mealType;
-    
+
             const superstructureStr = c.isSuperstructure
                 ? ` ${c.superstructureTeamName}`
                 : '';
-    
+
             const formattedDay = c.dayKey ? (formatDateDDMMYYYY(c.dayKey) || c.dayKey) : '?';
             const timeRange = c.slotFrom
                 ? (c.slotTo ? `${c.slotFrom} – ${c.slotTo}` : c.slotFrom)
                 : '--:--';
-    
+
             const startTs = c.ts ?? null;
             const endTs = c.slotToTs ?? startTs;
-    
+
             ensure(c.category, c.teamName).push({
                 ts: c.ts ?? Number.POSITIVE_INFINITY,
                 startTs,
@@ -329,7 +329,7 @@ const TransportApp = ({ userProfileData }) => {
                 location: c.placeName || null,
             });
         });
-    
+
         const extractDayKeyFromWhen = (when) => {
             if (!when) return null;
             const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(when);
@@ -363,7 +363,7 @@ const TransportApp = ({ userProfileData }) => {
             const d = new Date(year, month, day, 0, 0, 0, 0);
             return isNaN(d.getTime()) ? null : d.getTime();
         };
-    
+
         const buildTransferText = (
             fromEvent,
             toEvent,
@@ -376,23 +376,23 @@ const TransportApp = ({ userProfileData }) => {
             const arrivalTs = toEvent && toEvent.startTs != null ? toEvent.startTs : null;
             const computedArrivalStr = formatFullFromTs(arrivalTs) || '—';
             const arrivalStr = overrideArrivalStr != null ? overrideArrivalStr : computedArrivalStr;
-    
+
             if (arrivalOnly) {
                 return `Presun z ${fromLabel} do ${toLabel} (príchod: ${arrivalStr})`;
             }
-    
+
             const departureTs = fromEvent && fromEvent.endTs != null ? fromEvent.endTs : (fromEvent ? fromEvent.startTs : null);
             const computedDepartureStr = formatFullFromTs(departureTs) || '—';
             const departureStr = overrideDepartureStr != null ? overrideDepartureStr : computedDepartureStr;
-    
+
             return `Presun z ${fromLabel} do ${toLabel} (odchod: ${departureStr}, príchod: ${arrivalStr})`;
         };
-    
+
         console.log('[TRANSPORT] ===== ČASOVÁ OS UDALOSTÍ PRE KAŽDÝ TÍM =====');
         const categories = Object.keys(grouped).sort((a, b) =>
             a.localeCompare(b, 'sk', { sensitivity: 'base' })
         );
-    
+
         if (categories.length === 0) {
             console.log('[TRANSPORT] Žiadne udalosti.');
         } else {
@@ -401,89 +401,102 @@ const TransportApp = ({ userProfileData }) => {
                 const teams = Object.keys(grouped[category]).sort((a, b) =>
                     a.localeCompare(b, 'sk', { sensitivity: 'base' })
                 );
-    
+
                 teams.forEach((teamName) => {
                     const events = grouped[category][teamName];
-    
-                    // Zoradíme pôvodné udalosti podľa času; meta-udalosti (-Infinity) pôjdu na začiatok
+
                     events.sort((a, b) => {
                         if (a.ts !== b.ts) return a.ts - b.ts;
                         return String(a.text).localeCompare(String(b.text), 'sk');
                     });
-    
+
                     const accommodationName =
                         (accommodationByTeam[category] && accommodationByTeam[category][teamName]) || null;
-    
+                    const teamArrivalType =
+                        (arrivalTypeByTeam[category] && arrivalTypeByTeam[category][teamName]) || '';
+
                     const enriched = [];
                     for (let i = 0; i < events.length; i++) {
                         const current = events[i];
                         const prev = events[i - 1];
                         const next = events[i + 1];
-    
+
                         const currentDay = extractDayKeyFromWhen(current.when);
                         const prevDay = prev ? extractDayKeyFromWhen(prev.when) : null;
                         const nextDay = next ? extractDayKeyFromWhen(next.when) : null;
-    
+
                         const isFirstEventOfDay =
                             currentDay != null && (prev == null || prevDay == null || prevDay !== currentDay);
-    
+
                         const isLastEventOfDay =
                             currentDay != null && (next == null || nextDay == null || nextDay !== currentDay);
-    
-                        // ------------------------------------------------------------
-                        // A) PRED current: Začiatok dňa – presun z ubytovania na prvú udalosť dňa.
-                        // ------------------------------------------------------------
-                        if (
-                            isFirstEventOfDay &&
-                            accommodationName &&
-                            current.location &&
-                            current.location !== accommodationName
-                        ) {
-                            const dayRefTs =
-                                current.startTs != null
-                                    ? current.startTs
-                                    : midnightFromWhen(current.when);
 
-                            const arrivalStr =
-                                formatFullFromTs(current.startTs) || current.when;
+                        // A) Začiatok dňa – presun na prvú udalosť dňa.
+                        //    Ak má tím iný typ dopravy ako "vlastná doprava" a existuje
+                        //    zastávka označená ako nástupná pre externé tímy, použijeme ju.
+                        if (isFirstEventOfDay && current.location) {
+                            const isExternalTransport =
+                                teamArrivalType &&
+                                teamArrivalType.toLowerCase() !== 'vlastná doprava';
 
-                            const departureStr = formatDayWithTime(dayRefTs, 0, 0) || '00:00';
+                            const useExternalStop =
+                                isExternalTransport && externalArrivalStop;
 
-                            let whenStr;
-                            if (departureStr && arrivalStr) {
-                                whenStr = `${departureStr} – ${arrivalStr}`;
-                            } else if (arrivalStr) {
-                                whenStr = arrivalStr;
-                            } else {
-                                whenStr = current.when;
+                            const fromLabel = useExternalStop
+                                ? `zastávky "${externalArrivalStop.name}"`
+                                : (accommodationName ? `ubytovania "${accommodationName}"` : null);
+
+                            const currentLocationIsAccommodation =
+                                accommodationName && current.location === accommodationName;
+
+                            const shouldGenerateTransfer =
+                                fromLabel &&
+                                !currentLocationIsAccommodation &&
+                                current.location !== (useExternalStop ? externalArrivalStop.name : accommodationName);
+
+                            if (shouldGenerateTransfer) {
+                                const dayRefTs =
+                                    current.startTs != null
+                                        ? current.startTs
+                                        : midnightFromWhen(current.when);
+
+                                const arrivalStr =
+                                    formatFullFromTs(current.startTs) || current.when;
+
+                                const departureStr = formatDayWithTime(dayRefTs, 0, 0) || '00:00';
+
+                                let whenStr;
+                                if (departureStr && arrivalStr) {
+                                    whenStr = `${departureStr} – ${arrivalStr}`;
+                                } else if (arrivalStr) {
+                                    whenStr = arrivalStr;
+                                } else {
+                                    whenStr = current.when;
+                                }
+
+                                enriched.push({
+                                    ts: current.ts - 1,
+                                    when: whenStr,
+                                    type: 'transfer',
+                                    text: buildTransferText(
+                                        null,
+                                        current,
+                                        fromLabel,
+                                        `"${current.location}"`,
+                                        false,
+                                        departureStr,
+                                        arrivalStr
+                                    ),
+                                    location: null,
+                                    isTransfer: true,
+                                });
                             }
-
-                            enriched.push({
-                                ts: current.ts - 1,
-                                when: whenStr,
-                                type: 'transfer',
-                                text: buildTransferText(
-                                    null,
-                                    current,
-                                    `ubytovania "${accommodationName}"`,
-                                    `"${current.location}"`,
-                                    false,
-                                    departureStr,
-                                    arrivalStr
-                                ),
-                                location: null,
-                                isTransfer: true,
-                            });
                         }
-    
-                        // ------------------------------------------------------------
-                        // VŽDY: Vložíme samotnú udalosť (zápas, stravovanie, ubytovanie, ...)
-                        // ------------------------------------------------------------
+
+                        // VŽDY: Vložíme samotnú udalosť
                         enriched.push(current);
-    
-                        // ------------------------------------------------------------
-                        // B) PO current: Zmena miesta medzi dvoma susednými udalosťami v rámci dňa.
-                        // ------------------------------------------------------------
+
+                        // B) Zmena miesta medzi dvoma susednými udalosťami v rámci dňa.
                         const currentIsTimedEvent =
                             current.type === 'match' || current.type === 'catering';
 
@@ -527,10 +540,8 @@ const TransportApp = ({ userProfileData }) => {
                                 isTransfer: true,
                             });
                         }
-    
-                        // ------------------------------------------------------------
-                        // C) PO current: Koniec dňa – presun z poslednej udalosti dňa na ubytovanie.
-                        // ------------------------------------------------------------
+
+                        // C) Koniec dňa – presun na ubytovanie (ak je posledná udalosť inde).
                         if (
                             isLastEventOfDay &&
                             accommodationName &&
@@ -572,14 +583,12 @@ const TransportApp = ({ userProfileData }) => {
                             });
                         }
                     }
-    
-                    // Pre istotu zoradíme `enriched` ešte raz podľa `ts`,
-                    // aby transfer s ts = current.ts - 1 / +0.5 / +1 sedel presne na svojom mieste.
+
                     enriched.sort((a, b) => {
                         if (a.ts !== b.ts) return a.ts - b.ts;
                         return String(a.text).localeCompare(String(b.text), 'sk');
                     });
-    
+
                     console.log(`\n  [TRANSPORT] Tím: ${teamName} (${events.length} udalostí)`);
                     enriched.forEach((ev) => {
                         let icon = '•';
@@ -589,7 +598,7 @@ const TransportApp = ({ userProfileData }) => {
                         else if (ev.type === 'accommodation') icon = '🛏';
                         else if (ev.type === 'group') icon = '📂';
                         else if (ev.type === 'transfer') icon = '🚐';
-    
+
                         const when = ev.when || '—';
                         console.log(`     ${icon} ${when}  |  ${ev.text}`);
                     });
@@ -611,9 +620,7 @@ const TransportApp = ({ userProfileData }) => {
         let unsubscribeCategorySettings = null;
         let unsubscribeTransport = null;
 
-        // ============================================================
         // 0a) MIESTO (places) – mapa placeId → názov (pre zápasy)
-        // ============================================================
         try {
             const placesRef = collection(window.db, 'places');
             unsubscribePlaces = onSnapshot(placesRef, (snapshot) => {
@@ -630,9 +637,7 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na places:', e);
         }
 
-        // ============================================================
         // 0a1) VŠETKY MIESTA (places) – pre záložku „Nastavenia"
-        // ============================================================
         try {
             const placesRef = collection(window.db, 'places');
             unsubscribeAllPlaces = onSnapshot(placesRef, (snapshot) => {
@@ -651,6 +656,7 @@ const TransportApp = ({ userProfileData }) => {
                         lng: loc?.longitude ?? data.lng ?? null,
                         headerColor: data.headerColor || '#1e40af',
                         headerTextColor: data.headerTextColor || '#000000',
+                        isExternalArrivalStop: data.isExternalArrivalStop === true,
                     });
                 });
                 list.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
@@ -662,9 +668,7 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na places (Nastavenia):', e);
         }
 
-        // ============================================================
         // 0a1b) KOLEKCIA `transport` – priradenia miesto → zastávka
-        // ============================================================
         try {
             const transportRef = collection(window.db, 'transport');
             unsubscribeTransport = onSnapshot(transportRef, (snapshot) => {
@@ -691,9 +695,7 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport:', e);
         }
 
-        // ============================================================
         // 0a1c) TRVANIA JÁZDY MEDZI ZASTÁVKAMI (settings/transportTravelTimes)
-        // ============================================================
         let unsubscribeTravelTimes = null;
         try {
             const ttRef = doc(window.db, 'settings', 'transportTravelTimes');
@@ -721,9 +723,7 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transportTravelTimes:', e);
         }
 
-        // ============================================================
         // 0a1d) KOLEKCIA `transport` – autobusy (dokumenty typu 'bus')
-        // ============================================================
         let unsubscribeBuses = null;
         try {
             const transportRef = collection(window.db, 'transport');
@@ -746,11 +746,9 @@ const TransportApp = ({ userProfileData }) => {
             });
         } catch (e) {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport (buses):', e);
-        }        
+        }
 
-        // ============================================================
         // 0a2) STRAVOVACIA JEDNOTKA (unitMinutes)
-        // ============================================================
         try {
             const cateringSettingsRef = doc(window.db, 'settings', 'catering');
             unsubscribeCateringSettings = onSnapshot(cateringSettingsRef, (snap) => {
@@ -771,9 +769,7 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na settings/catering:', e);
         }
 
-        // ============================================================
         // 0a3) KATEGÓRIE (trvanie zápasu)
-        // ============================================================
         try {
             const catRef = doc(window.db, 'settings', 'categories');
             unsubscribeCategorySettings = onSnapshot(catRef, (snap) => {
@@ -801,9 +797,7 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na settings/categories:', e);
         }
 
-        // ============================================================
         // 0b) POUŽÍVATELIA (users) – lookup pre názvy tímov
-        // ============================================================
         const loadTeamsLookup = async () => {
             try {
                 const usersRef = collection(window.db, 'users');
@@ -838,9 +832,7 @@ const TransportApp = ({ userProfileData }) => {
         };
         loadTeamsLookup();
 
-        // ============================================================
         // 1) DÁTUMY TURNAJA + GENEROVANIE DNI PRE PLÁNOVANIE
-        // ============================================================
         try {
             const regRef = doc(window.db, 'settings', 'registration');
             unsubscribeRegistration = onSnapshot(regRef, (snap) => {
@@ -850,9 +842,6 @@ const TransportApp = ({ userProfileData }) => {
                     return;
                 }
                 const data = snap.data() || {};
-
-                console.log('[TRANSPORT] (live) tournamentStart:', formatDateDDMMYYYY(data.tournamentStart));
-                console.log('[TRANSPORT] (live) tournamentEnd:  ', formatDateDDMMYYYY(data.tournamentEnd));
 
                 const toDate = (ts) => {
                     if (!ts) return null;
@@ -895,9 +884,7 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na settings/registration:', e);
         }
 
-        // ============================================================
         // 2) TÍMY – ubytovanie + typ dopravy + čas príchodu + skupina
-        // ============================================================
         const loadTeamsWithAccommodation = async () => {
             try {
                 const usersRef = collection(window.db, 'users');
@@ -924,6 +911,7 @@ const TransportApp = ({ userProfileData }) => {
                                 accommodationType: accomType || '(nešpecifikovaný)',
                                 accommodationName: accomName,
                                 arrivalDisplay: formatArrival(team.arrival),
+                                arrivalType: team.arrival?.type ? String(team.arrival.type).trim() : '',
                                 groupName: team.groupName ? String(team.groupName).trim() : null,
                                 order: (typeof team.order === 'number' && team.order > 0) ? team.order : null,
                             });
@@ -941,9 +929,7 @@ const TransportApp = ({ userProfileData }) => {
             }
         };
 
-        // ============================================================
         // 3) VŠETKY ZÁPASY PODĽA KATEGÓRIÍ
-        // ============================================================
         const buildMatchesBuffer = (snapshot) => {
             const buffer = [];
 
@@ -1020,9 +1006,7 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na matches:', e);
         }
 
-        // ============================================================
         // 4) VŠETKY NAPLÁNOVANÉ STRAVOVANIA
-        // ============================================================
         const getRowTeamName = (a) => {
             const lookup = teamsLookupRef.current;
 
@@ -1128,9 +1112,12 @@ const TransportApp = ({ userProfileData }) => {
         };
     }, []);
 
-    // ============================================================
+    // Zrkadlenie allPlaces pre rebuildAndLogTimeline
+    useEffect(() => {
+        allPlacesRef.current = allPlaces;
+    }, [allPlaces]);
+
     // Naplnenie `stopsList` pri zmene `allPlaces`
-    // ============================================================
     useEffect(() => {
         const stops = allPlaces
             .filter((p) => p.type === 'zastavka')
@@ -1147,7 +1134,7 @@ const TransportApp = ({ userProfileData }) => {
     }, [travelTimes]);
 
     // ============================================================
-    // PRIDANIE NOVÉHO AUTOBUSU (plánovanie) – uloženie do Firestore
+    // PRIDANIE NOVÉHO AUTOBUSU
     // ============================================================
     const addNewBus = async () => {
         if (!window.db || busSaving) return;
@@ -1177,9 +1164,6 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
-    // ============================================================
-    // ODSTRÁNENIE AUTOBUSU
-    // ============================================================
     const removeBus = async (bus) => {
         if (!window.db || !bus) return;
         try {
@@ -1192,7 +1176,7 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
-    // OTVORENIE MODÁLU PRE PRIRADENIE MIEST K ZASTÁVKE
+    // MODÁL – priradenie miest k zastávke
     // ============================================================
     const openAssignModalForStop = (stop) => {
         const preselected = {};
@@ -1204,6 +1188,7 @@ const TransportApp = ({ userProfileData }) => {
         setAssignTargetStop(stop);
         setAssignSelectedIds(preselected);
         setAssignSearch('');
+        setAssignIsExternalArrivalStop(stop.isExternalArrivalStop === true);
         setIsAssignModalOpen(true);
     };
 
@@ -1212,6 +1197,7 @@ const TransportApp = ({ userProfileData }) => {
         setAssignTargetStop(null);
         setAssignSelectedIds({});
         setAssignSearch('');
+        setAssignIsExternalArrivalStop(false);
     };
 
     const toggleAssignSelection = (placeId) => {
@@ -1223,14 +1209,17 @@ const TransportApp = ({ userProfileData }) => {
         });
     };
 
-    // ============================================================
-    // ULOŽENIE PRIRADENIA MIEST K ZASTÁVKE (batch)
-    // ============================================================
     const saveAssignmentsForStop = async () => {
         if (!window.db || !assignTargetStop) return;
         setAssignSaving(true);
         try {
             const batch = writeBatch(window.db);
+
+            // Flag na zastávke (places/<stopId>)
+            const stopPlaceRef = doc(window.db, 'places', assignTargetStop.id);
+            batch.set(stopPlaceRef, {
+                isExternalArrivalStop: assignIsExternalArrivalStop === true,
+            }, { merge: true });
 
             Object.entries(transportAssignments).forEach(([placeId, a]) => {
                 if (a && a.stopId === assignTargetStop.id) {
@@ -1273,7 +1262,7 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
-    // OTVORENIE MODÁLU PRE PRIRADENIE MIESTA K ZASTÁVKE
+    // MODÁL – priradenie zastávky k miestu
     // ============================================================
     const openAssignStopToPlaceModal = (place) => {
         const existing = transportAssignments[place.id];
@@ -1328,33 +1317,31 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
-    // ULOŽENIE TRVANIA JÁZDY MEDZI DVOMA ZASTÁVKAMI
+    // TRVANIA JÁZDY
     // ============================================================
     const saveTravelTime = async (fromStop, toStop, rawValue) => {
         if (!window.db || !fromStop || !toStop) return;
-    
+
         const key = `${fromStop.id}|${toStop.id}`;
         const rawStr = rawValue == null ? '' : String(rawValue).trim();
         const minutes = rawStr === '' ? null : parseInt(rawStr, 10);
-    
+
         if (minutes != null && (isNaN(minutes) || minutes < 0)) {
             window.showGlobalNotification('Trvanie musí byť nezáporné číslo (minúty).', 'error');
             return;
         }
-    
+
         setTravelTimesSaving(true);
         try {
             const docRef = doc(window.db, 'settings', 'transportTravelTimes');
-    
+
             if (minutes == null) {
                 await setDoc(docRef, {
-                    times: {
-                        [key]: deleteField(),
-                    },
+                    times: { [key]: deleteField() },
                     updatedAt: Timestamp.fromDate(new Date()),
                     updatedBy: userProfileData?.email || null,
                 }, { merge: true });
-    
+
                 window.showGlobalNotification(
                     `Trvanie ${fromStop.name} → ${toStop.name} bolo odstránené.`,
                     'success'
@@ -1373,7 +1360,7 @@ const TransportApp = ({ userProfileData }) => {
                     updatedAt: Timestamp.fromDate(new Date()),
                     updatedBy: userProfileData?.email || null,
                 }, { merge: true });
-    
+
                 window.showGlobalNotification(
                     `Trvanie ${fromStop.name} → ${toStop.name} = ${minutes} min.`,
                     'success'
@@ -1388,7 +1375,7 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
-    // ZOZNAM ZASTÁVOK S ODSADENÝM ZOZNAMOM PRIRADENÝCH MIEST
+    // RENDER – zoznam zastávok s priradeniami
     // ============================================================
     const renderStopsWithAssignments = () => {
         if (stopsList.length === 0) {
@@ -1438,6 +1425,12 @@ const TransportApp = ({ userProfileData }) => {
                             { className: 'text-gray-800 font-medium flex-1' },
                             stop.name
                         ),
+                        stop.isExternalArrivalStop &&
+                            React.createElement(
+                                'span',
+                                { className: 'text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 whitespace-nowrap' },
+                                'Externé tímy'
+                            ),
                         React.createElement(
                             'span',
                             { className: 'text-xs text-gray-500' },
@@ -1464,7 +1457,7 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
-    // ZOZNAM OSTATNÝCH MIEST (bez zastávok)
+    // RENDER – ostatné miesta
     // ============================================================
     const renderOtherPlaces = () => {
         const others = allPlaces
@@ -1521,7 +1514,7 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
-    // RENDER – TRVANIA JÁZDY MEDZI ZASTÁVKAMI (matica NxN)
+    // RENDER – matica trvania jázd
     // ============================================================
     const renderTravelTimes = () => {
         if (stopsList.length === 0) {
@@ -1557,7 +1550,7 @@ const TransportApp = ({ userProfileData }) => {
             const existingMinutes = existing ? String(existing.minutes) : '';
 
             if (raw === existingMinutes) return;
-        
+
             saveTravelTime(fromStop, toStop, raw);
         };
 
@@ -1705,16 +1698,13 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
-    // RENDER – PLÁNOVANIE (autobusy + dni turnaja)
-    // POZOR: Tlačidlo „+“ už NIE JE tu – je v hlavnom renderi mimo
-    //        `transform` rodiča, aby bolo skutočne fixné vo viewporte.
+    // RENDER – plánovanie
     // ============================================================
     const renderPlanning = () => {
         return React.createElement(
             'div',
             { className: 'w-full flex flex-col items-start justify-start py-6 relative min-h-[400px]' },
 
-            // Ak ešte nie je pridaný žiadny autobus
             buses.length === 0
                 ? React.createElement(
                     'div',
@@ -1738,7 +1728,6 @@ const TransportApp = ({ userProfileData }) => {
                                 className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
                                 style: { width: '650px', maxWidth: '100%' }
                             },
-                            // Hlavička autobusu
                             React.createElement(
                                 'div',
                                 {
@@ -1758,7 +1747,6 @@ const TransportApp = ({ userProfileData }) => {
                                     React.createElement('i', { className: 'fa-solid fa-trash' })
                                 )
                             ),
-                            // Tabuľka dní – jeden riadok na deň (dátum + názov dňa v jednom stĺpci)
                             tournamentDays.length === 0
                                 ? React.createElement(
                                     'p',
@@ -1810,7 +1798,7 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
-    // MODÁLNE OKNO – priradenie miest k zastávke
+    // MODÁL – priradenie miest k zastávke
     // ============================================================
     const renderAssignModal = () => {
         if (!isAssignModalOpen || !assignTargetStop) return null;
@@ -1868,6 +1856,27 @@ const TransportApp = ({ userProfileData }) => {
                         { className: 'text-sm text-gray-600 mt-1 flex items-center gap-2' },
                         React.createElement('i', { className: 'fa-solid fa-bus text-blue-600' }),
                         React.createElement('span', { className: 'font-medium' }, assignTargetStop.name)
+                    ),
+                    // NOVÉ: checkbox pre nástupnú zastávku externých tímov
+                    React.createElement(
+                        'label',
+                        { className: 'mt-3 flex items-start gap-2 text-sm text-gray-700 cursor-pointer select-none' },
+                        React.createElement('input', {
+                            type: 'checkbox',
+                            checked: assignIsExternalArrivalStop,
+                            onChange: (e) => setAssignIsExternalArrivalStop(e.target.checked),
+                            className: 'mt-0.5 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500'
+                        }),
+                        React.createElement(
+                            'span',
+                            null,
+                            'Táto zastávka je nástupná pre tímy s inou ako vlastnou dopravou ',
+                            React.createElement(
+                                'span',
+                                { className: 'text-gray-500' },
+                                '(tímy sa na ňu dostavia pred prvou udalosťou dňa)'
+                            )
+                        )
                     )
                 ),
                 React.createElement(
@@ -1955,7 +1964,7 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
-    // MODÁLNE OKNO – priradenie zastávky k miestu
+    // MODÁL – priradenie zastávky k miestu
     // ============================================================
     const renderAssignStopToPlaceModal = () => {
         if (!isPlaceForStopModalOpen || !placeForStopTarget) return null;
@@ -2056,13 +2065,11 @@ const TransportApp = ({ userProfileData }) => {
             {
                 className: 'bg-white rounded-xl shadow-xl p-8 flex flex-col items-start justify-start w-max min-w-full transition-all duration-500'
             },
-            // Nadpis
             React.createElement(
                 'div',
                 { className: 'w-full flex flex-col items-center mb-6' },
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-4' }, 'Doprava')
             ),
-            // Dve tlačidlá
             React.createElement(
                 'div',
                 { className: 'w-full flex flex-wrap items-center justify-center gap-3 mb-6' },
@@ -2093,7 +2100,6 @@ const TransportApp = ({ userProfileData }) => {
                     'Nastavenia'
                 )
             ),
-            // Obsah záložky
             React.createElement(
                 'div',
                 { className: 'w-full flex-1' },
@@ -2101,7 +2107,6 @@ const TransportApp = ({ userProfileData }) => {
                     ? React.createElement(
                         'div',
                         { className: 'w-full' },
-                        // Pod-záložky
                         React.createElement(
                             'div',
                             { className: 'w-full flex flex-wrap items-center justify-center gap-3 mb-6' },
@@ -2132,7 +2137,6 @@ const TransportApp = ({ userProfileData }) => {
                                 'Priradenie miest k zastávkam'
                             )
                         ),
-                        // Obsah pod-záložky
                         nastaveniaTab === 'priradenie'
                             ? React.createElement(
                                 'div',
@@ -2182,11 +2186,9 @@ const TransportApp = ({ userProfileData }) => {
                     )
                     : renderPlanning()
             ),
-            // Modálne okná
             renderAssignModal(),
             renderAssignStopToPlaceModal()
         ),
-        // Zelené okrúhle tlačidlo „+“ – mimo `transform` rodiča
         activeView === 'planovanie' && React.createElement(
             'button',
             {
