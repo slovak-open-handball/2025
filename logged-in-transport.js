@@ -146,7 +146,7 @@ const TransportApp = ({ userProfileData }) => {
     const teamsLoadedRef = useRef(false);
 
     // UI prepínač: 'planovanie' | 'nastavenia'
-    const [activeView, setActiveView] = useState('nastavenia');
+    const [activeView, setActiveView] = useState('planovanie');
 
     // Zoznam všetkých miest (z kolekcie `places`)
     const [allPlaces, setAllPlaces] = useState([]);
