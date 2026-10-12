@@ -164,6 +164,12 @@ const TransportApp = ({ userProfileData }) => {
     const [assignSaving, setAssignSaving] = useState(false);
     const [assignSearch, setAssignSearch] = useState('');
 
+    // ==== MODÁLNE OKNO PRE PRIRADENIE MIESTA K ZASTÁVKE ====
+    const [isPlaceForStopModalOpen, setIsPlaceForStopModalOpen] = useState(false);
+    const [placeForStopTarget, setPlaceForStopTarget] = useState(null); // miesto, ktorému priradujeme zastávku
+    const [placeForStopSelectedStopId, setPlaceForStopSelectedStopId] = useState('');
+    const [placeForStopSaving, setPlaceForStopSaving] = useState(false);
+
     // ============================================================
     // ZBUILDÍ A VYPÍŠE ČASOVÚ OS PRE KAŽDÝ TÍM V KAŽDEJ KATEGÓRII
     // ============================================================
@@ -847,6 +853,62 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // OTVORENIE MODÁLU PRE PRIRADENIE MIESTA K ZASTÁVKE
+    // ============================================================
+    const openAssignStopToPlaceModal = (place) => {
+        const existing = transportAssignments[place.id];
+        setPlaceForStopTarget(place);
+        setPlaceForStopSelectedStopId(existing?.stopId || '');
+        setIsPlaceForStopModalOpen(true);
+    };
+
+    const closeAssignStopToPlaceModal = () => {
+        setIsPlaceForStopModalOpen(false);
+        setPlaceForStopTarget(null);
+        setPlaceForStopSelectedStopId('');
+    };
+
+    const saveStopForPlace = async () => {
+        if (!window.db || !placeForStopTarget) return;
+        setPlaceForStopSaving(true);
+        try {
+            const place = placeForStopTarget;
+            const stopId = placeForStopSelectedStopId;
+            const stop = stopsList.find((s) => s.id === stopId) || null;
+            const docRef = doc(window.db, 'transport', place.id);
+
+            if (!stop) {
+                // Odstrániť priradenie
+                await deleteDoc(docRef);
+                window.showGlobalNotification(
+                    `Priradenie miesta "${place.name}" bolo odstránené.`,
+                    'info'
+                );
+            } else {
+                await setDoc(docRef, {
+                    placeId: place.id,
+                    placeName: place.name,
+                    placeType: place.type || null,
+                    stopId: stop.id,
+                    stopName: stop.name,
+                    updatedAt: Timestamp.fromDate(new Date()),
+                    updatedBy: userProfileData?.email || null,
+                }, { merge: true });
+                window.showGlobalNotification(
+                    `Miesto "${place.name}" priradené k zastávke "${stop.name}".`,
+                    'success'
+                );
+            }
+            closeAssignStopToPlaceModal();
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri ukladaní priradenia miesta k zastávke:', err);
+            window.showGlobalNotification('Nepodarilo sa uložiť priradenie.', 'error');
+        } finally {
+            setPlaceForStopSaving(false);
+        }
+    };    
+
+    // ============================================================
     // ZOZNAM ZASTÁVOK S ODSAdeným ZOZNAMOM PRIRADENÝCH MIEST
     // ============================================================
     const renderStopsWithAssignments = () => {
@@ -950,32 +1012,27 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         return React.createElement(
-            'ul',
-            { className: 'space-y-2' },
-            others.map((place) => {
-                const a = transportAssignments[place.id];
-                const stopName = a?.stopName || null;
-                return React.createElement(
-                    'li',
-                    {
-                        key: place.id,
-                        className: 'bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-2.5 flex items-center gap-3'
-                    },
-                    getPlaceIcon(place.type),
-                    React.createElement(
-                        'span',
-                        { className: 'text-gray-800 font-medium truncate flex-1' },
-                        place.name
-                    ),
-                    stopName &&
-                        React.createElement(
-                            'span',
-                            { className: 'text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5 whitespace-nowrap' },
-                            React.createElement('i', { className: 'fa-solid fa-bus mr-1' }),
-                            stopName
-                        )
-                );
-            })
+            'li',
+            {
+                key: place.id,
+                onClick: () => openAssignStopToPlaceModal(place),
+                className: 'bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors',
+                title: 'Kliknutím priradíte zastávku tomuto miestu'
+            },
+            getPlaceIcon(place.type),
+            React.createElement(
+                'span',
+                { className: 'text-gray-800 font-medium truncate flex-1' },
+                place.name
+            ),
+            stopName &&
+                React.createElement(
+                    'span',
+                        { className: 'text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5 whitespace-nowrap' },
+                    React.createElement('i', { className: 'fa-solid fa-bus mr-1' }),
+                    stopName
+                ),
+            React.createElement('i', { className: 'fa-solid fa-pen-to-square text-gray-400 ml-1' })
         );
     };
 
@@ -1116,6 +1173,100 @@ const TransportApp = ({ userProfileData }) => {
         );
     };
 
+        // ============================================================
+    // MODÁLNE OKNO – priradenie zastávky k miestu
+    // ============================================================
+    const renderAssignStopToPlaceModal = () => {
+        if (!isPlaceForStopModalOpen || !placeForStopTarget) return null;
+
+        const place = placeForStopTarget;
+        const currentStopId = placeForStopSelectedStopId || '';
+
+        return React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 z-[3000] flex items-center justify-center bg-black/60 backdrop-blur-sm',
+                onClick: (e) => { if (e.target === e.currentTarget) closeAssignStopToPlaceModal(); }
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                // Hlavička
+                React.createElement(
+                    'div',
+                    { className: 'mb-5' },
+                    React.createElement('h3', { className: 'text-xl font-bold text-gray-800' },
+                        'Priradiť zastávku k miestu'
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-sm text-gray-600 mt-1 flex items-center gap-2' },
+                        (() => {
+                            const config = placeTypeIcons[place.type] || { icon: 'fa-location-dot', color: '#6b7280' };
+                            return React.createElement('i', {
+                                className: `fa-solid ${config.icon}`,
+                                style: { color: config.color }
+                            });
+                        })(),
+                        React.createElement('span', { className: 'font-medium' }, place.name)
+                    )
+                ),
+                // Výber zastávky
+                React.createElement(
+                    'div',
+                    { className: 'mb-6' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                        'Zastávka:'
+                    ),
+                    stopsList.length === 0
+                        ? React.createElement(
+                            'div',
+                            { className: 'text-center py-4 text-amber-700 bg-amber-50 rounded-lg border border-amber-200 text-sm' },
+                            'Žiadne zastávky. Najprv pridajte zastávku v sekcii Mapa.'
+                        )
+                        : React.createElement(
+                            'select',
+                            {
+                                value: currentStopId,
+                                onChange: (e) => setPlaceForStopSelectedStopId(e.target.value),
+                                className: 'w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white'
+                            },
+                            React.createElement('option', { value: '' }, '— nepriradené —'),
+                            stopsList.map((stop) =>
+                                React.createElement('option', { key: stop.id, value: stop.id }, stop.name)
+                            )
+                        )
+                ),
+                // Tlačidlá
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: closeAssignStopToPlaceModal,
+                            disabled: placeForStopSaving,
+                            className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition disabled:opacity-50'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: saveStopForPlace,
+                            disabled: placeForStopSaving || stopsList.length === 0,
+                            className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition font-medium disabled:opacity-50'
+                        },
+                        placeForStopSaving ? 'Ukladám...' : 'Uložiť'
+                    )
+                )
+            )
+        );
+    };
+
     // ============================================================
     // HLAVNÝ RENDER
     // ============================================================
@@ -1218,7 +1369,8 @@ const TransportApp = ({ userProfileData }) => {
                     )
             ),
             // Modálne okno
-            renderAssignModal()
+            renderAssignModal(),
+            renderAssignStopToPlaceModal()
         )
     );
 };
