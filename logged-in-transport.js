@@ -189,7 +189,7 @@ const TransportApp = ({ userProfileData }) => {
     // Načítané? (aby sme pred prvým snapshotom nezobrazovali „žiadne dátumy“)
     const [tournamentDaysLoaded, setTournamentDaysLoaded] = useState(false);
     const [busSaving, setBusSaving] = useState(false);
-
+    
     // ============================================================
     // ZBUILDÍ A VYPÍŠE ČASOVÚ OS PRE KAŽDÝ TÍM V KAŽDEJ KATEGÓRII
     // ============================================================
@@ -347,17 +347,22 @@ const TransportApp = ({ userProfileData }) => {
         };
     
         // ============================================================
-        // Pomocná funkcia: vytvorí text presunu s časom odchodu a príchodu
+        // Pomocná funkcia: vytvorí text presunu
         //   fromEvent – udalosť, z ktorej sa odchádza (použije sa endTs)
         //   toEvent   – udalosť, na ktorú sa prichádza (použije sa startTs)
-        //   fromLabel / toLabel – textové označenie miest (napr. "Bôrik/Korytnačka", "ubytovania \"Slovakia\"")
+        //   fromLabel / toLabel – textové označenie miest
+        //   arrivalOnly – ak true, zobrazí iba čas príchodu (bez odchodu)
         // ============================================================
-        const buildTransferText = (fromEvent, toEvent, fromLabel, toLabel) => {
-            const departureTs = fromEvent && fromEvent.endTs != null ? fromEvent.endTs : (fromEvent ? fromEvent.startTs : null);
+        const buildTransferText = (fromEvent, toEvent, fromLabel, toLabel, arrivalOnly = false) => {
             const arrivalTs = toEvent && toEvent.startTs != null ? toEvent.startTs : null;
-    
-            const departureStr = formatFullFromTs(departureTs) || '—';
             const arrivalStr = formatFullFromTs(arrivalTs) || '—';
+    
+            if (arrivalOnly) {
+                return `Presun z ${fromLabel} do ${toLabel} (príchod: ${arrivalStr})`;
+            }
+    
+            const departureTs = fromEvent && fromEvent.endTs != null ? fromEvent.endTs : (fromEvent ? fromEvent.startTs : null);
+            const departureStr = formatFullFromTs(departureTs) || '—';
     
             return `Presun z ${fromLabel} do ${toLabel} (odchod: ${departureStr}, príchod: ${arrivalStr})`;
         };
@@ -413,29 +418,23 @@ const TransportApp = ({ userProfileData }) => {
                             currentDay != null && (next == null || nextDay == null || nextDay !== currentDay);
     
                         // A) Začiatok dňa – tím sa musí presunúť z ubytovania na miesto prvej udalosti dňa.
-                        //    Ako "fromEvent" použijeme prvú udalosť dňa samotnú (nemáme samostatnú
-                        //    ubytovaciu udalosť s časom), takže odchod = startTs prvej udalosti dňa.
-                        //    Ak by sme chceli presnejšie, dalo by sa použiť endTs poslednej udalosti
-                        //    predošlého dňa, čo je reálnejšie – použijeme to.
+                        //    Zobrazujeme IBA čas príchodu (odchod z ubytovania nevieme presne určiť).
                         if (
                             isFirstEventOfDay &&
                             accommodationName &&
                             current.location &&
                             current.location !== accommodationName
                         ) {
-                            const lastPrevEvent = prev || null;
-                            const departureEvent = lastPrevEvent && lastPrevEvent.endTs != null
-                                ? lastPrevEvent
-                                : current; // fallback: odchod = začiatok prvej udalosti dňa
                             enriched.push({
                                 ts: current.ts,
                                 when: current.when,
                                 type: 'transfer',
                                 text: buildTransferText(
-                                    departureEvent,
+                                    null, // fromEvent – neznámy (odchod z ubytovania sa nezobrazuje)
                                     current,
                                     `ubytovania "${accommodationName}"`,
-                                    `"${current.location}"`
+                                    `"${current.location}"`,
+                                    true // arrivalOnly
                                 ),
                                 location: null,
                                 isTransfer: true,
