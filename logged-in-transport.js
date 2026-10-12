@@ -876,21 +876,19 @@ const TransportApp = ({ userProfileData }) => {
         setTravelTimesDraft(draft);
     }, [travelTimes]);
 
-        // ============================================================
+    // ============================================================
     // PRIDANIE NOVÉHO AUTOBUSU (plánovanie) – uloženie do Firestore
     // ============================================================
     const addNewBus = async () => {
         if (!window.db || busSaving) return;
         setBusSaving(true);
         try {
-            // 1) Zisti najvyššie existujúce číslo busu
             const maxNumber = buses.reduce(
                 (max, b) => (b.number > max ? b.number : max),
                 0
             );
             const nextNumber = maxNumber + 1;
 
-            // 2) Vytvor dokument v kolekcii `transport`
             const docRef = doc(collection(window.db, 'transport'));
             await setDoc(docRef, {
                 type: 'bus',
@@ -924,10 +922,9 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
-    // OTVORENIE MODÁLU PRE PRIradenie miest k zastávke
+    // OTVORENIE MODÁLU PRE PRIRADENIE MIEST K ZASTÁVKE
     // ============================================================
     const openAssignModalForStop = (stop) => {
-        // Predvyplníme checkboxy podľa aktuálnych priradení
         const preselected = {};
         Object.entries(transportAssignments).forEach(([placeId, a]) => {
             if (a && a.stopId === stop.id) {
@@ -957,7 +954,7 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
-    // ULOŽENIE PRIradenia miest k zastávke (batch)
+    // ULOŽENIE PRIRADENIA MIEST K ZASTÁVKE (batch)
     // ============================================================
     const saveAssignmentsForStop = async () => {
         if (!window.db || !assignTargetStop) return;
@@ -965,7 +962,6 @@ const TransportApp = ({ userProfileData }) => {
         try {
             const batch = writeBatch(window.db);
 
-            // 1) Zmažeme existujúce priradenia pre túto zastávku (všetky miesta, ktoré k nej patrili)
             Object.entries(transportAssignments).forEach(([placeId, a]) => {
                 if (a && a.stopId === assignTargetStop.id) {
                     const ref = doc(window.db, 'transport', placeId);
@@ -973,7 +969,6 @@ const TransportApp = ({ userProfileData }) => {
                 }
             });
 
-            // 2) Pridáme nové priradenia pre všetky zaškrtnuté miesta
             const now = Timestamp.fromDate(new Date());
             const selectedIds = Object.keys(assignSelectedIds).filter((id) => assignSelectedIds[id]);
 
@@ -1033,7 +1028,6 @@ const TransportApp = ({ userProfileData }) => {
             const docRef = doc(window.db, 'transport', place.id);
 
             if (!stop) {
-                // Odstrániť priradenie
                 await deleteDoc(docRef);
                 window.showGlobalNotification(
                     `Priradenie miesta "${place.name}" bolo odstránené.`,
@@ -1063,6 +1057,9 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
+    // ============================================================
+    // ULOŽENIE TRVANIA JÁZDY MEDZI DVOMA ZASTÁVKAMI
+    // ============================================================
     const saveTravelTime = async (fromStop, toStop, rawValue) => {
         if (!window.db || !fromStop || !toStop) return;
     
@@ -1080,7 +1077,6 @@ const TransportApp = ({ userProfileData }) => {
             const docRef = doc(window.db, 'settings', 'transportTravelTimes');
     
             if (minutes == null) {
-                // Vymaž IBA tento konkrétny kľúč (atomicky, bez načítania celého objektu)
                 await setDoc(docRef, {
                     times: {
                         [key]: deleteField(),
@@ -1122,7 +1118,7 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
-    // ZOZNAM ZASTÁVOK S ODSAdeným ZOZNAMOM PRIRADENÝCH MIEST
+    // ZOZNAM ZASTÁVOK S ODSADENÝM ZOZNAMOM PRIRADENÝCH MIEST
     // ============================================================
     const renderStopsWithAssignments = () => {
         if (stopsList.length === 0) {
@@ -1133,7 +1129,6 @@ const TransportApp = ({ userProfileData }) => {
             );
         }
 
-        // Zoskupenie priradení podľa stopId
         const byStop = {};
         Object.entries(transportAssignments).forEach(([placeId, a]) => {
             if (!a || !a.stopId) return;
@@ -1160,7 +1155,6 @@ const TransportApp = ({ userProfileData }) => {
                 return React.createElement(
                     'li',
                     { key: stop.id, className: 'bg-white rounded-lg border border-gray-200 shadow-sm' },
-                    // Hlavička zastávky – klikateľná
                     React.createElement(
                         'button',
                         {
@@ -1181,7 +1175,6 @@ const TransportApp = ({ userProfileData }) => {
                         ),
                         React.createElement('i', { className: 'fa-solid fa-pen-to-square text-gray-400 ml-2' })
                     ),
-                    // Odsadený zoznam priradených miest
                     assigned.length > 0 &&
                         React.createElement(
                             'ul',
@@ -1293,7 +1286,6 @@ const TransportApp = ({ userProfileData }) => {
             const existing = travelTimes[key];
             const existingMinutes = existing ? String(existing.minutes) : '';
 
-            // Ak sa hodnota nezmenila, nič neukladáme
             if (raw === existingMinutes) return;
         
             saveTravelTime(fromStop, toStop, raw);
@@ -1444,6 +1436,8 @@ const TransportApp = ({ userProfileData }) => {
 
     // ============================================================
     // RENDER – PLÁNOVANIE (autobusy + dni turnaja)
+    // POZOR: Tlačidlo „+“ už NIE JE tu – je v hlavnom renderi mimo
+    //        `transform` rodiča, aby bolo skutočne fixné vo viewporte.
     // ============================================================
     const renderPlanning = () => {
         return React.createElement(
@@ -1541,21 +1535,7 @@ const TransportApp = ({ userProfileData }) => {
                                 )
                         )
                     )
-                ),
-
-            // Zelené okrúhle tlačidlo „+“ v pravom dolnom rohu
-            React.createElement(
-                'button',
-                {
-                    onClick: addNewBus,
-                    disabled: busSaving,
-                    className: `fixed bottom-8 right-8 w-14 h-14 rounded-full bg-green-600 text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all duration-200 flex items-center justify-center text-2xl font-bold z-[2000] ${busSaving ? 'opacity-60 cursor-not-allowed' : ''}`,
-                    title: 'Pridať autobus'
-                },
-                React.createElement('i', {
-                    className: busSaving ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-plus'
-                })
-            )
+                )
         );
     };
 
@@ -1933,6 +1913,22 @@ const TransportApp = ({ userProfileData }) => {
             // Modálne okná
             renderAssignModal(),
             renderAssignStopToPlaceModal()
+        ),
+        // ============================================================
+        // Zelené okrúhle tlačidlo „+“ – MIMO `transform` rodiča,
+        // aby bolo skutočne fixné vo viewporte (pravý dolný roh).
+        // ============================================================
+        React.createElement(
+            'button',
+            {
+                onClick: addNewBus,
+                disabled: busSaving,
+                className: `fixed bottom-8 right-8 w-14 h-14 rounded-full bg-green-600 text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all duration-200 flex items-center justify-center text-2xl font-bold z-[9999] ${busSaving ? 'opacity-60 cursor-not-allowed' : ''}`,
+                title: 'Pridať autobus'
+            },
+            React.createElement('i', {
+                className: busSaving ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-plus'
+            })
         )
     );
 };
