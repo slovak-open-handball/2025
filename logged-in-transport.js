@@ -1767,7 +1767,7 @@ const TransportApp = ({ userProfileData }) => {
                     React.createElement(
                         'p',
                         { className: 'text-sm mt-1' },
-                        'Kliknutím na zelené tlačidlo "+" pridáte autobus.'
+                        'Kliknutím na tlačidlo "+" pridáte prvý autobus.'
                     ),
                     React.createElement(
                         'button',
