@@ -1050,8 +1050,18 @@ const TransportApp = ({ userProfileData }) => {
     const renderAssignModal = () => {
         if (!isAssignModalOpen || !assignTargetStop) return null;
 
+        // Vyfiltrujeme len miesta, ktoré:
+        //  1) nie sú zastávky,
+        //  2) sú buď nepriradené, alebo sú priradené práve tejto zastávke,
+        //  3) zodpovedajú vyhľadávaniu.
         const assignable = allPlaces
             .filter((p) => p.type !== 'zastavka')
+            .filter((p) => {
+                const a = transportAssignments[p.id];
+                // ak je miesto priradené k INEJ zastávke → skryť
+                if (a && a.stopId && a.stopId !== assignTargetStop.id) return false;
+                return true;
+            })
             .filter((p) => {
                 if (!assignSearch.trim()) return true;
                 return p.name.toLowerCase().includes(assignSearch.trim().toLowerCase());
