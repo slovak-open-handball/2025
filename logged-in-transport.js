@@ -345,6 +345,35 @@ const TransportApp = ({ userProfileData }) => {
             const y = m[3];
             return `${y}-${mo}-${d}`;
         };
+
+        // Pomocná funkcia: vytvorí timestamp pre daný deň (z referenčného timestampu)
+        // a zadaný čas HH:MM.
+        const timestampOnDay = (dayRefTs, hh, mm) => {
+            if (dayRefTs == null || !isFinite(dayRefTs)) return null;
+            const d = new Date(dayRefTs);
+            if (isNaN(d.getTime())) return null;
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm, 0, 0).getTime();
+        };
+
+        // Pomocná funkcia: naformátuje deň z referenčného timestampu + zadaný čas HH:MM.
+        const formatDayWithTime = (dayRefTs, hh, mm) => {
+            const ts = timestampOnDay(dayRefTs, hh, mm);
+            if (ts == null) return null;
+            return formatDateTime(new Date(ts));
+        };
+
+        // Pomocná funkcia: extrahuje deň z `when` (DD. MM. YYYY) a vráti referenčný timestamp
+        // (polnoc daného dňa), alebo null.
+        const midnightFromWhen = (when) => {
+            if (!when) return null;
+            const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(when);
+            if (!m) return null;
+            const day = Number(m[1]);
+            const month = Number(m[2]) - 1;
+            const year = Number(m[3]);
+            const d = new Date(year, month, day, 0, 0, 0, 0);
+            return isNaN(d.getTime()) ? null : d.getTime();
+        };
     
         // ============================================================
         // Pomocná funkcia: vytvorí text presunu
@@ -418,24 +447,43 @@ const TransportApp = ({ userProfileData }) => {
                             currentDay != null && (next == null || nextDay == null || nextDay !== currentDay);
     
                         // A) Začiatok dňa – presun z ubytovania na prvú udalosť dňa.
-                        //    V `when` zobrazujeme len čas príchodu.
+                        //    Ak nemáme čas odchodu, doplníme 00:00 daného dňa.
+                        //    V `when` zobrazujeme `00:00 – čas prvej udalosti dňa`.
                         if (
                             isFirstEventOfDay &&
                             accommodationName &&
                             current.location &&
                             current.location !== accommodationName
                         ) {
-                            const arrivalStr = formatFullFromTs(current.startTs) || current.when;
+                            const dayRefTs =
+                                current.startTs != null
+                                    ? current.startTs
+                                    : midnightFromWhen(current.when);
+
+                            const arrivalStr =
+                                formatFullFromTs(current.startTs) || current.when;
+
+                            const departureStr = formatDayWithTime(dayRefTs, 0, 0) || '00:00';
+
+                            let whenStr;
+                            if (departureStr && arrivalStr) {
+                                whenStr = `${departureStr} – ${arrivalStr}`;
+                            } else if (arrivalStr) {
+                                whenStr = arrivalStr;
+                            } else {
+                                whenStr = current.when;
+                            }
+
                             enriched.push({
                                 ts: current.ts,
-                                when: arrivalStr,
+                                when: whenStr,
                                 type: 'transfer',
                                 text: buildTransferText(
                                     null,
                                     current,
                                     `ubytovania "${accommodationName}"`,
                                     `"${current.location}"`,
-                                    true // arrivalOnly
+                                    true // arrivalOnly – v texte ostáva len príchod
                                 ),
                                 location: null,
                                 isTransfer: true,
@@ -443,8 +491,6 @@ const TransportApp = ({ userProfileData }) => {
                         }
     
                         // B) Zmena miesta medzi dvoma susednými udalosťami v rámci toho istého dňa.
-                        //    V `when` zobrazujeme odchod (koniec predchádzajúcej udalosti)
-                        //    a príchod (začiatok nasledujúcej udalosti).
                         const currentIsTimedEvent =
                             current.type === 'match' || current.type === 'catering';
 
@@ -490,7 +536,8 @@ const TransportApp = ({ userProfileData }) => {
                         }
     
                         // C) Koniec dňa – presun z poslednej udalosti dňa na ubytovanie.
-                        //    V `when` zobrazujeme len čas odchodu (koniec poslednej udalosti dňa).
+                        //    Ak nemáme čas príchodu, doplníme 23:59 daného dňa.
+                        //    V `when` zobrazujeme `čas poslednej udalosti dňa – 23:59`.
                         if (
                             isLastEventOfDay &&
                             accommodationName &&
@@ -499,10 +546,30 @@ const TransportApp = ({ userProfileData }) => {
                         ) {
                             const departureTs =
                                 current.endTs != null ? current.endTs : current.startTs;
-                            const departureStr = formatFullFromTs(departureTs) || current.when;
+
+                            const dayRefTs =
+                                departureTs != null
+                                    ? departureTs
+                                    : midnightFromWhen(current.when);
+
+                            const departureStr =
+                                formatFullFromTs(departureTs) || current.when;
+
+                            const arrivalStr =
+                                formatDayWithTime(dayRefTs, 23, 59) || '23:59';
+
+                            let whenStr;
+                            if (departureStr && arrivalStr) {
+                                whenStr = `${departureStr} – ${arrivalStr}`;
+                            } else if (departureStr) {
+                                whenStr = departureStr;
+                            } else {
+                                whenStr = current.when;
+                            }
+
                             enriched.push({
                                 ts: current.ts,
-                                when: departureStr,
+                                when: whenStr,
                                 type: 'transfer',
                                 text:
                                     `Presun z "${current.location}" do ubytovania "${accommodationName}" ` +
