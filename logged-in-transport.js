@@ -153,9 +153,21 @@ const TransportApp = ({ userProfileData }) => {
             return grouped[category][teamName];
         };
 
-        // 1) TÍMY – pridáme info o ubytovaní a doprave (bez timestampu → -Infinity, aby boli navrchu)
+        // 1) TÍMY – pridáme info o skupine, ubytovaní a doprave
+        //    (bez timestampu → -Infinity, aby boli navrchu)
         teamsArrivalBufferRef.current.forEach((t) => {
             const arr = ensure(t.category, t.teamName);
+
+            // Skupina (informačný riadok) – zobrazíme len ak je vyplnená
+            if (t.groupName) {
+                const orderStr = t.order != null ? `, poradie ${t.order}` : '';
+                arr.push({
+                    ts: -Infinity,
+                    when: '—',
+                    type: 'group',
+                    text: `Skupina: ${t.groupName}${orderStr}`,
+                });
+            }
 
             // Ubytovanie (informačný riadok)
             if (t.accommodationName) {
@@ -166,7 +178,7 @@ const TransportApp = ({ userProfileData }) => {
                     text: `Ubytovanie: "${t.accommodationName}" (typ: ${t.accommodationType || 'neurčený'})`,
                 });
             }
-
+        
             // Doprava / príchod
             if (t.arrivalDisplay && t.arrivalDisplay !== '---') {
                 arr.push({
@@ -249,6 +261,7 @@ const TransportApp = ({ userProfileData }) => {
                         else if (ev.type === 'catering') icon = '🍽';
                         else if (ev.type === 'arrival') icon = '🚌';
                         else if (ev.type === 'accommodation') icon = '🛏';
+                        else if (ev.type === 'group') icon = '📂';
 
                         const when = ev.when || '—';
                         console.log(`     ${icon} ${when}  |  ${ev.text}`);
