@@ -48,10 +48,10 @@ window.showGlobalNotification = (message, type = 'success') => {
 const TransportApp = ({ userProfileData }) => {
     return React.createElement(
         'div',
-        { className: 'w-full h-full flex justify-center items-center p-4' },
+        { className: 'w-full flex-1 flex flex-col' },
         React.createElement(
             'div',
-            { className: 'w-full h-full bg-white rounded-xl shadow-xl p-8 flex flex-col items-center justify-start transform transition-all duration-500 hover:scale-[1.01]' },
+            { className: 'w-full flex-1 bg-white rounded-xl shadow-xl p-8 flex flex-col items-center justify-start transform transition-all duration-500' },
             React.createElement(
                 'div',
                 { className: 'flex flex-col items-center mb-6' },
