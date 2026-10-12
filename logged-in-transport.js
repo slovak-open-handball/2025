@@ -810,6 +810,14 @@ const TransportApp = ({ userProfileData }) => {
         setStopsList(stops);
     }, [allPlaces]);
 
+    useEffect(() => {
+        const draft = {};
+        Object.entries(travelTimes).forEach(([key, v]) => {
+            draft[key] = v.minutes != null ? String(v.minutes) : '';
+        });
+        setTravelTimesDraft(draft);
+    }, [travelTimes]);
+
     // ============================================================
     // OTVORENIE MODÁLU PRE PRIradenie miest k zastávke
     // ============================================================
