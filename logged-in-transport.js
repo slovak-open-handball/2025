@@ -645,6 +645,82 @@ const handleDataUpdateAndRender = (event) => {
     }
 };
 
+window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) => {
+    if (!window.db) {
+        console.error('[TRANSPORT] Firebase nie je inicializovaný (window.db chýba).');
+        return;
+    }
+    if (!categoryName || !groupName) {
+        console.error('[TRANSPORT] Zadajte dva parametre: názov kategórie a názov skupiny.');
+        console.error('  Príklad: listAccommodationsByCategoryAndGroup("U10 D", "skupina A")');
+        return;
+    }
+
+    const targetCategory = cleanCategory(categoryName);
+    const targetGroup = String(groupName).trim();
+
+    try {
+        const usersRef = collection(window.db, 'users');
+        const usersSnap = await getDocs(usersRef);
+
+        const result = [];
+
+        usersSnap.forEach((userDoc) => {
+            const userData = userDoc.data() || {};
+            const teams = userData.teams;
+            if (!teams || typeof teams !== 'object') return;
+
+            Object.entries(teams).forEach(([category, teamArray]) => {
+                if (!Array.isArray(teamArray)) return;
+                if (cleanCategory(category) !== targetCategory) return;
+
+                teamArray.forEach((team) => {
+                    if (!team || !team.teamName) return;
+
+                    const teamGroup = team.groupName ? String(team.groupName).trim() : null;
+                    if (!teamGroup || teamGroup !== targetGroup) return;
+
+                    const accomName = team.accommodation?.name?.trim?.() || '';
+                    const accomType = team.accommodation?.type?.trim?.() || '';
+                    const order = (typeof team.order === 'number' && team.order > 0) ? team.order : null;
+
+                    result.push({
+                        teamName: team.teamName.trim(),
+                        order,
+                        accommodationName: accomName || '---',
+                        accommodationType: accomType || '---',
+                    });
+                });
+            });
+        });
+
+        // Zoradíme podľa poradia v skupine (order), ak existuje
+        result.sort((a, b) => {
+            const oa = a.order ?? Number.POSITIVE_INFINITY;
+            const ob = b.order ?? Number.POSITIVE_INFINITY;
+            if (oa !== ob) return oa - ob;
+            return a.teamName.localeCompare(b.teamName, 'sk', { sensitivity: 'base' });
+        });
+
+        console.log(`[TRANSPORT] ===== UBYTOVNNE PRE KATEGÓRIU "${targetCategory}" A SKUPINU "${targetGroup}" =====`);
+        if (result.length === 0) {
+            console.log('[TRANSPORT] Žiadne tímy sa nenašli.');
+        } else {
+            result.forEach((t) => {
+                const orderStr = t.order != null ? `${t.order}. ` : '';
+                console.log(`   • ${orderStr}${t.teamName}  →  ubytovňa: "${t.accommodationName}"  (typ: ${t.accommodationType})`);
+            });
+        }
+        console.log(`[TRANSPORT] Spolu: ${result.length} tímov.`);
+        console.log('[TRANSPORT] =========================================================');
+
+        return result;
+    } catch (err) {
+        console.error('[TRANSPORT] Chyba pri načítaní ubytovní pre kategóriu a skupinu:', err);
+        return [];
+    }
+};
+
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
 if (window.globalUserProfileData) {
