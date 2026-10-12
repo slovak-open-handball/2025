@@ -72,10 +72,30 @@ const cleanCategory = (cat) => String(cat || '')
     .replace(/\s+/g, ' ')
     .trim();
 
+// ============================================================
+// Pomocná funkcia: prevedie identifikátor tímu na zobrazovaný názov
+// Najprv sa zavolá teamManager.getTeamNameByDisplayIdSync(identifier)
+// ============================================================
+const resolveTeamName = (identifier) => {
+    if (!identifier) return '---';
+
+    // 1) Skús resolve cez teamManager
+    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+        try {
+            const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifier);
+            if (resolved && typeof resolved === 'string' && resolved.trim() !== '') {
+                return resolved;
+            }
+        } catch (e) {
+            // ticho ignorujeme, použije sa fallback
+        }
+    }
+
+    // 2) Fallback – vrátime pôvodný identifikátor
+    return identifier;
+};
+
 const TransportApp = ({ userProfileData }) => {
-    // ============================================================
-    // NAČÍTANIE DÁTUMOV, TÍMOV, ZÁPASOV A STRAVOVANIA DO KONZOLY
-    // ============================================================
     useEffect(() => {
         if (!window.db) return;
 
@@ -185,12 +205,20 @@ const TransportApp = ({ userProfileData }) => {
                 const category = cleanCategory(data.categoryName || data.categoryId || '(neznáma kategória)');
                 const groupName = data.groupName || '(bez skupiny)';
 
+                // ============================================================
+                // NAJPRV sa identifikátor pošle do teamManager.getTeamNameByDisplayIdSync
+                // ============================================================
+                const homeDisplayName = resolveTeamName(data.homeTeamIdentifier);
+                const awayDisplayName = resolveTeamName(data.awayTeamIdentifier);
+
                 if (!grouped[category]) grouped[category] = {};
                 if (!grouped[category][groupName]) grouped[category][groupName] = [];
                 grouped[category][groupName].push({
                     id: docSnap.id,
-                    home: data.homeTeamIdentifier || '---',
-                    away: data.awayTeamIdentifier || '---',
+                    home: homeDisplayName,
+                    away: awayDisplayName,
+                    homeRaw: data.homeTeamIdentifier || '---',
+                    awayRaw: data.awayTeamIdentifier || '---',
                     hallId: data.hallId || null,
                     scheduledTime: data.scheduledTime ? formatDateTime(data.scheduledTime) : null,
                     status: data.status || 'pending',
@@ -257,7 +285,6 @@ const TransportApp = ({ userProfileData }) => {
                 });
             });
 
-            // Zoskupenie: deň → typ jedla → slot → miesto
             const grouped = {};
             items.forEach((a) => {
                 const dayKey = a.dayKey || '(bez dňa)';
@@ -324,7 +351,6 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na catering:', e);
         }
 
-        // Prvotné načítanie (okrem live listenerov)
         loadTournamentDates();
         loadTeamsWithAccommodation();
 
