@@ -1429,7 +1429,7 @@ const TransportApp = ({ userProfileData }) => {
                             React.createElement(
                                 'span',
                                 { className: 'text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 whitespace-nowrap' },
-                                'Externé tímy'
+                                'Nástupná/Výstupná zastávka pre tímy s verejnou dopravou'
                             ),
                         React.createElement(
                             'span',
@@ -1871,11 +1871,6 @@ const TransportApp = ({ userProfileData }) => {
                             'span',
                             null,
                             'Táto zastávka je nástupná pre tímy s inou ako vlastnou dopravou ',
-                            React.createElement(
-                                'span',
-                                { className: 'text-gray-500' },
-                                '(tímy sa na ňu dostavia pred prvou udalosťou dňa)'
-                            )
                         )
                     )
                 ),
