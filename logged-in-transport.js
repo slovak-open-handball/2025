@@ -1,5 +1,5 @@
 // logged-in-transport.js
-import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, Timestamp, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, Timestamp, setDoc, deleteDoc, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const { useState, useEffect, useRef, useSyncExternalStore } = React;
@@ -1063,52 +1063,56 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
-    // ============================================================
-    // ULOŽENIE TRVANIA JÁZDY MEDZI DVOMA ZASTÁVKAMI
-    // ============================================================
     const saveTravelTime = async (fromStop, toStop, rawValue) => {
         if (!window.db || !fromStop || !toStop) return;
-
+    
         const key = `${fromStop.id}|${toStop.id}`;
-        const minutes = rawValue === '' ? null : parseInt(rawValue, 10);
-
+        const rawStr = rawValue == null ? '' : String(rawValue).trim();
+        const minutes = rawStr === '' ? null : parseInt(rawStr, 10);
+    
         if (minutes != null && (isNaN(minutes) || minutes < 0)) {
             window.showGlobalNotification('Trvanie musí byť nezáporné číslo (minúty).', 'error');
             return;
         }
-
+    
         setTravelTimesSaving(true);
         try {
             const docRef = doc(window.db, 'settings', 'transportTravelTimes');
-            // Načítame aktuálne dáta (aby sme neprepísali ostatné dvojice)
-            const snap = await getDoc(docRef);
-            const data = snap.exists() ? (snap.data() || {}) : {};
-            const times = { ...(data.times || {}) };
-
+    
             if (minutes == null) {
-                delete times[key];
+                // Vymaž IBA tento konkrétny kľúč (atomicky, bez načítania celého objektu)
+                await setDoc(docRef, {
+                    times: {
+                        [key]: deleteField(),
+                    },
+                    updatedAt: Timestamp.fromDate(new Date()),
+                    updatedBy: userProfileData?.email || null,
+                }, { merge: true });
+    
+                window.showGlobalNotification(
+                    `Trvanie ${fromStop.name} → ${toStop.name} bolo odstránené.`,
+                    'success'
+                );
             } else {
-                times[key] = {
-                    fromId: fromStop.id,
-                    fromName: fromStop.name,
-                    toId: toStop.id,
-                    toName: toStop.name,
-                    minutes,
-                };
+                await setDoc(docRef, {
+                    times: {
+                        [key]: {
+                            fromId: fromStop.id,
+                            fromName: fromStop.name,
+                            toId: toStop.id,
+                            toName: toStop.name,
+                            minutes,
+                        },
+                    },
+                    updatedAt: Timestamp.fromDate(new Date()),
+                    updatedBy: userProfileData?.email || null,
+                }, { merge: true });
+    
+                window.showGlobalNotification(
+                    `Trvanie ${fromStop.name} → ${toStop.name} = ${minutes} min.`,
+                    'success'
+                );
             }
-
-            await setDoc(docRef, {
-                times,
-                updatedAt: Timestamp.fromDate(new Date()),
-                updatedBy: userProfileData?.email || null,
-            }, { merge: true });
-
-            window.showGlobalNotification(
-                minutes == null
-                    ? `Trvanie ${fromStop.name} → ${toStop.name} bolo odstránené.`
-                    : `Trvanie ${fromStop.name} → ${toStop.name} = ${minutes} min.`,
-                'success'
-            );
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri ukladaní trvania jazdy:', err);
             window.showGlobalNotification('Nepodarilo sa uložiť trvanie.', 'error');
