@@ -79,29 +79,47 @@ const cleanCategory = (cat) => String(cat || '')
 const resolveTeamName = (identifier) => {
     if (!identifier) return '---';
 
-    // 1) Skús resolve cez teamManager
     if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
         try {
             const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifier);
             if (resolved && typeof resolved === 'string' && resolved.trim() !== '') {
                 return resolved;
             }
-        } catch (e) {
-            // ticho ignorujeme, použije sa fallback
-        }
+        } catch (e) { /* ignore */ }
     }
-
-    // 2) Fallback – vrátime pôvodný identifikátor
     return identifier;
 };
 
 const TransportApp = ({ userProfileData }) => {
+    // Mapa placeId → placeName (aby sme pri zápasoch vedeli zobraziť názov haly)
+    const placesMapRef = useRef({});
+
     useEffect(() => {
         if (!window.db) return;
 
         let unsubscribeRegistration = null;
         let unsubscribeMatches = null;
         let unsubscribeCatering = null;
+        let unsubscribePlaces = null;
+
+        // ============================================================
+        // 0) MIESTO (places) – mapa placeId → názov
+        // ============================================================
+        try {
+            const placesRef = collection(window.db, 'places');
+            unsubscribePlaces = onSnapshot(placesRef, (snapshot) => {
+                const map = {};
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data() || {};
+                    map[docSnap.id] = data.name || '(bez názvu)';
+                });
+                placesMapRef.current = map;
+            }, (err) => {
+                console.error('[TRANSPORT] onSnapshot(places) error:', err);
+            });
+        } catch (e) {
+            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na places:', e);
+        }
 
         // ============================================================
         // 1) DÁTUMY TURNAJA
@@ -205,11 +223,14 @@ const TransportApp = ({ userProfileData }) => {
                 const category = cleanCategory(data.categoryName || data.categoryId || '(neznáma kategória)');
                 const groupName = data.groupName || '(bez skupiny)';
 
-                // ============================================================
-                // NAJPRV sa identifikátor pošle do teamManager.getTeamNameByDisplayIdSync
-                // ============================================================
                 const homeDisplayName = resolveTeamName(data.homeTeamIdentifier);
                 const awayDisplayName = resolveTeamName(data.awayTeamIdentifier);
+
+                // Názov haly cez mapu places
+                const hallId = data.hallId || null;
+                const hallName = hallId
+                    ? (placesMapRef.current[hallId] || `(neznáma hala: ${hallId})`)
+                    : null;
 
                 if (!grouped[category]) grouped[category] = {};
                 if (!grouped[category][groupName]) grouped[category][groupName] = [];
@@ -219,7 +240,8 @@ const TransportApp = ({ userProfileData }) => {
                     away: awayDisplayName,
                     homeRaw: data.homeTeamIdentifier || '---',
                     awayRaw: data.awayTeamIdentifier || '---',
-                    hallId: data.hallId || null,
+                    hallId,
+                    hallName,
                     scheduledTime: data.scheduledTime ? formatDateTime(data.scheduledTime) : null,
                     status: data.status || 'pending',
                     isPlacementMatch: data.isPlacementMatch === true,
@@ -252,7 +274,7 @@ const TransportApp = ({ userProfileData }) => {
                                     ? ` [${m.matchType}]`
                                     : '';
                             const when = m.scheduledTime ? m.scheduledTime : 'nenaplánované';
-                            const hall = m.hallId ? `hala=${m.hallId}` : 'hala=-';
+                            const hall = m.hallName ? `hala="${m.hallName}"` : 'hala=-';
                             console.log(`     • ${m.home} vs ${m.away}${special}  |  ${when}  |  ${hall}  |  status=${m.status}`);
                         });
                     });
@@ -358,6 +380,7 @@ const TransportApp = ({ userProfileData }) => {
             if (unsubscribeRegistration) unsubscribeRegistration();
             if (unsubscribeMatches) unsubscribeMatches();
             if (unsubscribeCatering) unsubscribeCatering();
+            if (unsubscribePlaces) unsubscribePlaces();
         };
     }, []);
 
