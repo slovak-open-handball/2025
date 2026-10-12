@@ -74,7 +74,6 @@ const cleanCategory = (cat) => String(cat || '')
 
 // ============================================================
 // Pomocná funkcia: prevedie identifikátor tímu na zobrazovaný názov
-// Najprv sa zavolá teamManager.getTeamNameByDisplayIdSync(identifier)
 // ============================================================
 const resolveTeamName = (identifier) => {
     if (!identifier) return '---';
@@ -94,6 +93,12 @@ const TransportApp = ({ userProfileData }) => {
     // Mapa placeId → placeName (aby sme pri zápasoch vedeli zobraziť názov haly)
     const placesMapRef = useRef({});
 
+    // ============================================================
+    // Mapa pre rýchle vyhľadanie názvu tímu:
+    //   key = `${userId}|${category}|${teamIndex}` → { teamName, ... }
+    // ============================================================
+    const teamsLookupRef = useRef({});
+
     useEffect(() => {
         if (!window.db) return;
 
@@ -103,7 +108,7 @@ const TransportApp = ({ userProfileData }) => {
         let unsubscribePlaces = null;
 
         // ============================================================
-        // 0) MIESTO (places) – mapa placeId → názov
+        // 0a) MIESTO (places) – mapa placeId → názov
         // ============================================================
         try {
             const placesRef = collection(window.db, 'places');
@@ -120,6 +125,44 @@ const TransportApp = ({ userProfileData }) => {
         } catch (e) {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na places:', e);
         }
+
+        // ============================================================
+        // 0b) POUŽÍVATELIA (users) – lookup pre názvy tímov
+        //     (aby sme pri stravovaní vedeli zobraziť tím v riadku)
+        // ============================================================
+        const loadTeamsLookup = async () => {
+            try {
+                const usersRef = collection(window.db, 'users');
+                const usersSnap = await getDocs(usersRef);
+                const lookup = {};
+
+                usersSnap.forEach((userDoc) => {
+                    const userData = userDoc.data() || {};
+                    const teams = userData.teams;
+                    if (!teams || typeof teams !== 'object') return;
+
+                    Object.entries(teams).forEach(([category, teamArray]) => {
+                        if (!Array.isArray(teamArray)) return;
+                        teamArray.forEach((team, teamIndex) => {
+                            if (!team || !team.teamName) return;
+                            const cat = cleanCategory(category);
+                            const key = `${userDoc.id}|${cat}|${teamIndex}`;
+                            lookup[key] = {
+                                teamName: team.teamName,
+                                category: cat,
+                                teamIndex,
+                                userId: userDoc.id,
+                            };
+                        });
+                    });
+                });
+
+                teamsLookupRef.current = lookup;
+            } catch (err) {
+                console.error('[TRANSPORT] Chyba pri načítaní lookup tímov:', err);
+            }
+        };
+        loadTeamsLookup();
 
         // ============================================================
         // 1) DÁTUMY TURNAJA
@@ -226,7 +269,6 @@ const TransportApp = ({ userProfileData }) => {
                 const homeDisplayName = resolveTeamName(data.homeTeamIdentifier);
                 const awayDisplayName = resolveTeamName(data.awayTeamIdentifier);
 
-                // Názov haly cez mapu places
                 const hallId = data.hallId || null;
                 const hallName = hallId
                     ? (placesMapRef.current[hallId] || `(neznáma hala: ${hallId})`)
@@ -296,7 +338,28 @@ const TransportApp = ({ userProfileData }) => {
 
         // ============================================================
         // 4) VŠETKY NAPLÁNOVANÉ STRAVOVANIA
+        //    – zobrazujeme NÁZOV TÍMU V RIADKU (nie superstructure teamName)
         // ============================================================
+        const getRowTeamName = (a) => {
+            const lookup = teamsLookupRef.current;
+
+            // 1) Superstructure → tím v riadku je v clickedTeam*
+            if (a.isSuperstructure === true) {
+                const cat = cleanCategory(a.clickedTeamCategory || '');
+                const key = `${a.clickedTeamUid}|${cat}|${a.clickedTeamIndex}`;
+                const found = lookup[key];
+                if (found) return found.teamName;
+                return `(row team: ${a.clickedTeamUid || '?'} / ${a.clickedTeamCategory || '?'} / ${a.clickedTeamIndex ?? '?'})`;
+            }
+
+            // 2) Klasické priradenie → tím v riadku je v team*
+            const cat = cleanCategory(a.category || a.categoryName || '');
+            const key = `${a.teamUid}|${cat}|${a.teamIndex}`;
+            const found = lookup[key];
+            if (found) return found.teamName;
+            return a.teamName || '---';
+        };
+
         const buildAndLogCatering = (snapshot) => {
             const items = [];
             snapshot.forEach((docSnap) => {
@@ -313,7 +376,13 @@ const TransportApp = ({ userProfileData }) => {
                 const mealType = a.mealType || '(bez typu)';
                 const slotFrom = a.slotFrom || '--:--';
                 const placeName = a.placeName || a.placeId || '(bez miesta)';
-                const category = cleanCategory(a.category || a.categoryName || '(bez kategórie)');
+                const category = cleanCategory(
+                    a.isSuperstructure === true
+                        ? (a.clickedTeamCategory || a.category || a.categoryName || '(bez kategórie)')
+                        : (a.category || a.categoryName || '(bez kategórie)')
+                );
+
+                const rowTeamName = getRowTeamName(a);
 
                 if (!grouped[dayKey]) grouped[dayKey] = {};
                 if (!grouped[dayKey][mealType]) grouped[dayKey][mealType] = {};
@@ -322,11 +391,10 @@ const TransportApp = ({ userProfileData }) => {
                     grouped[dayKey][mealType][slotFrom][placeName] = [];
                 }
                 grouped[dayKey][mealType][slotFrom][placeName].push({
-                    teamName: a.teamName || '---',
+                    teamName: rowTeamName,
                     category,
                     isSuperstructure: a.isSuperstructure === true,
                     isPriority: a.isPriority === true,
-                    clickedTeamName: a.clickedTeamName || null,
                 });
             });
 
