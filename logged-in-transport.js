@@ -146,7 +146,7 @@ const TransportApp = ({ userProfileData }) => {
     const teamsLoadedRef = useRef(false);
 
     // UI prepínač: 'planovanie' | 'nastavenia'
-    const [activeView, setActiveView] = useState('planovanie');
+    const [activeView, setActiveView] = useState('nastavenia');
 
     // Zoznam všetkých miest (z kolekcie `places`)
     const [allPlaces, setAllPlaces] = useState([]);
@@ -172,7 +172,7 @@ const TransportApp = ({ userProfileData }) => {
 
     // ==== POD-ZÁLOŽKA V NASTAVENIACH ====
     // 'priradenie' | 'trvanie'
-    const [nastaveniaTab, setNastaveniaTab] = useState('priradenie');
+    const [nastaveniaTab, setNastaveniaTab] = useState('trvanie');
 
     // ==== TRVANIA JÁZDY MEDZI ZASTÁVKAMI ====
     // travelTimes[`${fromId}|${toId}`] = { fromId, fromName, toId, toName, minutes }
@@ -1605,19 +1605,6 @@ const TransportApp = ({ userProfileData }) => {
                 React.createElement(
                     'button',
                     {
-                        onClick: () => setActiveView('nastavenia'),
-                        className: `px-5 py-2.5 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
-                            activeView === 'nastavenia'
-                                ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
-                                : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
-                        }`
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-gear' }),
-                    'Nastavenia'
-                ),
-                React.createElement(
-                    'button',
-                    {
                         onClick: () => setActiveView('planovanie'),
                         className: `px-5 py-2.5 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
                             activeView === 'planovanie'
@@ -1627,6 +1614,19 @@ const TransportApp = ({ userProfileData }) => {
                     },
                     React.createElement('i', { className: 'fa-solid fa-calendar-days' }),
                     'Plánovanie'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => setActiveView('nastavenia'),
+                        className: `px-5 py-2.5 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
+                            activeView === 'nastavenia'
+                                ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                                : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
+                        }`
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-gear' }),
+                    'Nastavenia'
                 )
             ),
             // Obsah záložky
@@ -1644,19 +1644,6 @@ const TransportApp = ({ userProfileData }) => {
                             React.createElement(
                                 'button',
                                 {
-                                    onClick: () => setNastaveniaTab('priradenie'),
-                                    className: `px-4 py-2 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
-                                        nastaveniaTab === 'priradenie'
-                                            ? 'bg-blue-600 text-white border-blue-600'
-                                            : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
-                                    }`
-                                },
-                                React.createElement('i', { className: 'fa-solid fa-link' }),
-                                'Priradenie miest k zastávkam'
-                            ),
-                            React.createElement(
-                                'button',
-                                {
                                     onClick: () => setNastaveniaTab('trvanie'),
                                     className: `px-4 py-2 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
                                         nastaveniaTab === 'trvanie'
@@ -1666,6 +1653,19 @@ const TransportApp = ({ userProfileData }) => {
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-clock' }),
                                 'Trvania jazdy medzi zastávkami'
+                            ),
+                            React.createElement(
+                                'button',
+                                {
+                                    onClick: () => setNastaveniaTab('priradenie'),
+                                    className: `px-4 py-2 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
+                                        nastaveniaTab === 'priradenie'
+                                            ? 'bg-blue-600 text-white border-blue-600'
+                                            : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
+                                    }`
+                                },
+                                React.createElement('i', { className: 'fa-solid fa-link' }),
+                                'Priradenie miest k zastávkam'
                             )
                         ),
                         // Obsah pod-záložky
