@@ -742,7 +742,7 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
     }
     if (!categoryName || !groupName) {
         console.error('[TRANSPORT] Zadajte dva parametre: názov kategórie a názov skupiny.');
-        console.error('  Príklad: listAccommodationsByCategoryAndGroup("U10 D", "skupina A")');
+        console.error('  Príklad: listAccommodationsByCategoryAndGroup("U12 D", "skupina D")');
         return;
     }
 
@@ -753,7 +753,8 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
         const usersRef = collection(window.db, 'users');
         const usersSnap = await getDocs(usersRef);
 
-        const result = [];
+        // Množina jedinečných názvov ubytovní (bez poradia, bez duplicít)
+        const uniqueAccommodations = new Set();
 
         usersSnap.forEach((userDoc) => {
             const userData = userDoc.data() || {};
@@ -771,36 +772,28 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
                     if (!teamGroup || teamGroup !== targetGroup) return;
 
                     const accomName = team.accommodation?.name?.trim?.() || '';
-                    const order = (typeof team.order === 'number' && team.order > 0) ? team.order : null;
-
-                    result.push({
-                        order,
-                        accommodationName: accomName || '---',
-                    });
+                    if (accomName) uniqueAccommodations.add(accomName);
                 });
             });
         });
 
-        result.sort((a, b) => {
-            const oa = a.order ?? Number.POSITIVE_INFINITY;
-            const ob = b.order ?? Number.POSITIVE_INFINITY;
-            if (oa !== ob) return oa - ob;
-            return a.accommodationName.localeCompare(b.accommodationName, 'sk', { sensitivity: 'base' });
-        });
+        // Zoradíme abecedne
+        const sortedAccommodations = [...uniqueAccommodations].sort((a, b) =>
+            a.localeCompare(b, 'sk', { sensitivity: 'base' })
+        );
 
         console.log(`[TRANSPORT] ===== UBYTOVNE PRE KATEGÓRIU "${targetCategory}" A SKUPINU "${targetGroup}" =====`);
-        if (result.length === 0) {
-            console.log('[TRANSPORT] Žiadne tímy sa nenašli.');
+        if (sortedAccommodations.length === 0) {
+            console.log('[TRANSPORT] Žiadne priradené ubytovne sa nenašli.');
         } else {
-            result.forEach((t) => {
-                const orderStr = t.order != null ? `${t.order}. ` : '';
-                console.log(`   • ${orderStr}${t.accommodationName}`);
+            sortedAccommodations.forEach((name) => {
+                console.log(`   • ${name}`);
             });
         }
-        console.log(`[TRANSPORT] Spolu: ${result.length} tímov.`);
+        console.log(`[TRANSPORT] Spolu: ${sortedAccommodations.length} jedinečných ubytovní.`);
         console.log('[TRANSPORT] =========================================================');
 
-        return result;
+        return sortedAccommodations;
     } catch (err) {
         console.error('[TRANSPORT] Chyba pri načítaní ubytovní pre kategóriu a skupinu:', err);
         return [];
