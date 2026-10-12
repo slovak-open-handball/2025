@@ -220,7 +220,7 @@ const TransportApp = ({ userProfileData }) => {
         
             // Ak ide o superstructure, zobrazíme názov superstructure tímu namiesto [superstructure]
             const superstructureStr = c.isSuperstructure
-                ? ` (superstructure: ${c.superstructureTeamName || '(neznámy)'})`
+                ? ` ${c.superstructureTeamName}`
                 : '';
 
             const formattedDay = c.dayKey ? (formatDateDDMMYYYY(c.dayKey) || c.dayKey) : '?';
