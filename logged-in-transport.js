@@ -708,9 +708,6 @@ const TransportApp = ({ userProfileData }) => {
         };
     }, []);
 
-    // ============================================================
-    // RENDER ZOZNAMU MIEST (záložka Nastavenia)
-    // ============================================================
     const renderPlacesList = () => {
         if (allPlaces.length === 0) {
             return React.createElement(
@@ -723,71 +720,23 @@ const TransportApp = ({ userProfileData }) => {
         }
 
         return React.createElement(
-            'div',
-            { className: 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4' },
-            allPlaces.map((place) => {
-                const t = placeTypeIcons[place.type] || { icon: 'fa-map-pin', color: '#6b7280', label: place.type };
-                return React.createElement(
-                    'div',
+            'ul',
+            { className: 'space-y-2 max-w-xl' },
+            allPlaces.map((place) =>
+                React.createElement(
+                    'li',
                     {
                         key: place.id,
-                        className: 'bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col gap-3'
+                        className: 'bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow px-4 py-2.5 flex items-center gap-3'
                     },
+                    React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-500' }),
                     React.createElement(
-                        'div',
-                        { className: 'flex items-start gap-3' },
-                        React.createElement(
-                            'div',
-                            {
-                                className: 'w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0',
-                                style: {
-                                    backgroundColor: (t.color || '#6b7280') + '20',
-                                    border: `2px solid ${t.color || '#6b7280'}`,
-                                }
-                            },
-                            React.createElement('i', { className: `fa-solid ${t.icon} text-lg`, style: { color: t.color } })
-                        ),
-                        React.createElement(
-                            'div',
-                            { className: 'flex-1 min-w-0' },
-                            React.createElement('h3', { className: 'font-bold text-gray-800 text-base truncate' }, place.name),
-                            React.createElement(
-                                'span',
-                                {
-                                    className: 'inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full',
-                                    style: {
-                                        backgroundColor: (t.color || '#6b7280') + '20',
-                                        color: t.color || '#6b7280',
-                                    }
-                                },
-                                t.label
-                            )
-                        )
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'text-sm text-gray-600 space-y-1' },
-                        place.accommodationType && React.createElement(
-                            'div',
-                            null,
-                            React.createElement('span', { className: 'font-medium text-gray-700' }, 'Typ ubytovania: '),
-                            place.accommodationType
-                        ),
-                        place.capacity != null && React.createElement(
-                            'div',
-                            null,
-                            React.createElement('span', { className: 'font-medium text-gray-700' }, 'Kapacita: '),
-                            place.capacity
-                        ),
-                        place.note && React.createElement(
-                            'div',
-                            { className: 'text-gray-600 whitespace-pre-line' },
-                            React.createElement('span', { className: 'font-medium text-gray-700' }, 'Poznámka: '),
-                            place.note
-                        )
+                        'span',
+                        { className: 'text-gray-800 font-medium' },
+                        place.name
                     )
-                );
-            })
+                )
+            )
         );
     };
 
