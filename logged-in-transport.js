@@ -499,13 +499,18 @@ const TransportApp = ({ userProfileData }) => {
                 const mealType = data.mealType || null;
                 const slotFrom = data.slotFrom || null;
                 const placeName = data.placeName || data.placeId || '(bez miesta)';
-                const category = cleanCategory(
-                    data.isSuperstructure === true
-                        ? (data.clickedTeamCategory || data.category || data.categoryName || '(bez kategórie)')
-                        : (data.category || data.categoryName || '(bez kategórie)')
-                );
+                let category;
+                let teamName;
 
-                const teamName = getRowTeamName(data);
+                if (data.isSuperstructure === true) {
+                    // Superstructure → udalosť patrí superstructure tímu (nie tímu v riadku)
+                    category = cleanCategory(data.categoryName || data.category || '(bez kategórie)');
+                    teamName = (data.teamName || '').trim() || '(neznámy superstructure tím)';
+                } else {
+                    // Klasické priradenie → tím v riadku
+                    category = cleanCategory(data.category || data.categoryName || '(bez kategórie)');
+                    teamName = getRowTeamName(data);
+                }
 
                 // ts pre chronologické zoradenie
                 const ts = dayKeyAndSlotToTimestamp(dayKey, slotFrom);
