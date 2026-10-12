@@ -1780,7 +1780,7 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     return React.createElement(
         'div',
-        { className: 'w-full flex-1 flex flex-col overflow-x-auto' },
+        { className: 'w-full flex-1 flex flex-col' },
         React.createElement(
             'div',
             {
