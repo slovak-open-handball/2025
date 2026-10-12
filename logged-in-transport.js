@@ -182,12 +182,13 @@ const TransportApp = ({ userProfileData }) => {
     const [travelTimesSaving, setTravelTimesSaving] = useState(false);
 
     // ==== PLÁNOVANIE – AUTOBUSY A DNI TURNAJA ====
-    // Zoznam autobusov: [{ id, name }]
+    // Zoznam autobusov: [{ id, name, number }]
     const [buses, setBuses] = useState([]);
     // Zoznam dní turnaja: [{ dayKey, dateLabel, dayName }]
     const [tournamentDays, setTournamentDays] = useState([]);
     // Načítané? (aby sme pred prvým snapshotom nezobrazovali „žiadne dátumy“)
     const [tournamentDaysLoaded, setTournamentDaysLoaded] = useState(false);
+    const [busSaving, setBusSaving] = useState(false);
 
     // ============================================================
     // ZBUILDÍ A VYPÍŠE ČASOVÚ OS PRE KAŽDÝ TÍM V KAŽDEJ KATEGÓRII
@@ -449,6 +450,33 @@ const TransportApp = ({ userProfileData }) => {
         } catch (e) {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transportTravelTimes:', e);
         }
+
+        // ============================================================
+        // 0a1d) KOLEKCIA `transport` – autobusy (dokumenty typu 'bus')
+        // ============================================================
+        let unsubscribeBuses = null;
+        try {
+            const transportRef = collection(window.db, 'transport');
+            unsubscribeBuses = onSnapshot(transportRef, (snapshot) => {
+                const list = [];
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data() || {};
+                    if (data.type !== 'bus') return;
+                    const num = Number(data.number);
+                    list.push({
+                        id: docSnap.id,
+                        name: data.name || (Number.isFinite(num) ? `Bus ${num}` : 'Bus'),
+                        number: Number.isFinite(num) ? num : 0,
+                    });
+                });
+                list.sort((a, b) => a.number - b.number);
+                setBuses(list);
+            }, (err) => {
+                console.error('[TRANSPORT] onSnapshot(transport – buses) error:', err);
+            });
+        } catch (e) {
+            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport (buses):', e);
+        }        
 
         // ============================================================
         // 0a2) STRAVOVACIA JEDNOTKA (unitMinutes)
@@ -826,6 +854,7 @@ const TransportApp = ({ userProfileData }) => {
             if (unsubscribeCategorySettings) unsubscribeCategorySettings();
             if (unsubscribeTransport) unsubscribeTransport();
             if (unsubscribeTravelTimes) unsubscribeTravelTimes();
+            if (unsubscribeBuses) unsubscribeBuses();
         };
     }, []);
 
@@ -847,20 +876,51 @@ const TransportApp = ({ userProfileData }) => {
         setTravelTimesDraft(draft);
     }, [travelTimes]);
 
+        // ============================================================
+    // PRIDANIE NOVÉHO AUTOBUSU (plánovanie) – uloženie do Firestore
     // ============================================================
-    // PRIDANIE NOVÉHO AUTOBUSU (plánovanie)
+    const addNewBus = async () => {
+        if (!window.db || busSaving) return;
+        setBusSaving(true);
+        try {
+            // 1) Zisti najvyššie existujúce číslo busu
+            const maxNumber = buses.reduce(
+                (max, b) => (b.number > max ? b.number : max),
+                0
+            );
+            const nextNumber = maxNumber + 1;
+
+            // 2) Vytvor dokument v kolekcii `transport`
+            const docRef = doc(collection(window.db, 'transport'));
+            await setDoc(docRef, {
+                type: 'bus',
+                number: nextNumber,
+                name: `Bus ${nextNumber}`,
+                createdAt: Timestamp.fromDate(new Date()),
+                createdBy: userProfileData?.email || null,
+            });
+
+            window.showGlobalNotification(`Pridaný Bus ${nextNumber}.`, 'success');
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri pridávaní autobusu:', err);
+            window.showGlobalNotification('Nepodarilo sa pridať autobus.', 'error');
+        } finally {
+            setBusSaving(false);
+        }
+    };
+
     // ============================================================
-    const addNewBus = () => {
-        setBuses((prev) => {
-            const nextIndex = prev.length + 1;
-            return [
-                ...prev,
-                {
-                    id: `bus-${Date.now()}-${nextIndex}`,
-                    name: `Bus ${nextIndex}`,
-                },
-            ];
-        });
+    // ODSTRÁNENIE AUTOBUSU
+    // ============================================================
+    const removeBus = async (bus) => {
+        if (!window.db || !bus) return;
+        try {
+            await deleteDoc(doc(window.db, 'transport', bus.id));
+            window.showGlobalNotification(`${bus.name} bol odstránený.`, 'info');
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri odstraňovaní autobusu:', err);
+            window.showGlobalNotification('Nepodarilo sa odstrániť autobus.', 'error');
+        }
     };
 
     // ============================================================
@@ -1414,7 +1474,17 @@ const TransportApp = ({ userProfileData }) => {
                                 'div',
                                 { className: 'bg-green-600 text-white px-5 py-3 flex items-center gap-3' },
                                 React.createElement('i', { className: 'fa-solid fa-bus' }),
-                                React.createElement('h3', { className: 'text-lg font-bold' }, bus.name)
+                                React.createElement('h3', { className: 'text-lg font-bold flex-1' }, bus.name),
+                                React.createElement(
+                                    'button',
+                                    {
+                                        type: 'button',
+                                        onClick: () => removeBus(bus),
+                                        className: 'text-white/80 hover:text-white hover:bg-white/10 rounded-full w-8 h-8 flex items-center justify-center transition-colors',
+                                        title: 'Odstrániť autobus'
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-trash' })
+                                )
                             ),
                             // Tabuľka dní
                             tournamentDays.length === 0
@@ -1479,10 +1549,13 @@ const TransportApp = ({ userProfileData }) => {
                 'button',
                 {
                     onClick: addNewBus,
-                    className: 'fixed bottom-8 right-8 w-14 h-14 rounded-full bg-green-600 text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all duration-200 flex items-center justify-center text-2xl font-bold z-[2000]',
+                    disabled: busSaving,
+                    className: `fixed bottom-8 right-8 w-14 h-14 rounded-full bg-green-600 text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all duration-200 flex items-center justify-center text-2xl font-bold z-[2000] ${busSaving ? 'opacity-60 cursor-not-allowed' : ''}`,
                     title: 'Pridať autobus'
                 },
-                React.createElement('i', { className: 'fa-solid fa-plus' })
+                React.createElement('i', {
+                    className: busSaving ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-plus'
+                })
             )
         );
     };
