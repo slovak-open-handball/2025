@@ -181,6 +181,14 @@ const TransportApp = ({ userProfileData }) => {
     const [travelTimesDraft, setTravelTimesDraft] = useState({});
     const [travelTimesSaving, setTravelTimesSaving] = useState(false);
 
+    // ==== PLÁNOVANIE – AUTOBUSY A DNI TURNAJA ====
+    // Zoznam autobusov: [{ id, name }]
+    const [buses, setBuses] = useState([]);
+    // Zoznam dní turnaja: [{ dayKey, dateLabel, dayName }]
+    const [tournamentDays, setTournamentDays] = useState([]);
+    // Načítané? (aby sme pred prvým snapshotom nezobrazovali „žiadne dátumy“)
+    const [tournamentDaysLoaded, setTournamentDaysLoaded] = useState(false);
+
     // ============================================================
     // ZBUILDÍ A VYPÍŠE ČASOVÚ OS PRE KAŽDÝ TÍM V KAŽDEJ KATEGÓRII
     // ============================================================
@@ -533,33 +541,55 @@ const TransportApp = ({ userProfileData }) => {
         loadTeamsLookup();
 
         // ============================================================
-        // 1) DÁTUMY TURNAJA
+        // 1) DÁTUMY TURNAJA + GENEROVANIE DNI PRE PLÁNOVANIE
         // ============================================================
-        const loadTournamentDates = async () => {
-            try {
-                const regRef = doc(window.db, 'settings', 'registration');
-                const snap = await getDoc(regRef);
-                if (!snap.exists()) {
-                    console.log('[TRANSPORT] settings/registration neexistuje.');
-                    return;
-                }
-                const data = snap.data();
-                console.log('[TRANSPORT] ===== DÁTUMY TURNAJA =====');
-                console.log('[TRANSPORT] tournamentStart:', formatDateDDMMYYYY(data.tournamentStart));
-                console.log('[TRANSPORT] tournamentEnd:  ', formatDateDDMMYYYY(data.tournamentEnd));
-                console.log('[TRANSPORT] ============================');
-            } catch (err) {
-                console.error('[TRANSPORT] Chyba pri načítaní dátumov turnaja:', err);
-            }
-        };
-
         try {
             const regRef = doc(window.db, 'settings', 'registration');
             unsubscribeRegistration = onSnapshot(regRef, (snap) => {
-                if (!snap.exists()) return;
-                const data = snap.data();
+                if (!snap.exists()) {
+                    setTournamentDays([]);
+                    setTournamentDaysLoaded(true);
+                    return;
+                }
+                const data = snap.data() || {};
+
                 console.log('[TRANSPORT] (live) tournamentStart:', formatDateDDMMYYYY(data.tournamentStart));
                 console.log('[TRANSPORT] (live) tournamentEnd:  ', formatDateDDMMYYYY(data.tournamentEnd));
+
+                const toDate = (ts) => {
+                    if (!ts) return null;
+                    if (typeof ts.toDate === 'function') return ts.toDate();
+                    if (ts instanceof Date) return ts;
+                    const d = new Date(ts);
+                    return isNaN(d.getTime()) ? null : d;
+                };
+
+                const start = toDate(data.tournamentStart);
+                const end = toDate(data.tournamentEnd);
+
+                if (!start || !end) {
+                    setTournamentDays([]);
+                    setTournamentDaysLoaded(true);
+                    return;
+                }
+
+                const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+                const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+                const days = [];
+                const cursor = new Date(startDay);
+                while (cursor <= endDay) {
+                    const dateObj = new Date(cursor);
+                    const dayKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+                    days.push({
+                        dayKey,
+                        dateLabel: formatDateDDMMYYYY(dateObj),
+                        dayName: dateObj.toLocaleDateString('sk-SK', { weekday: 'long' }),
+                    });
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+                setTournamentDays(days);
+                setTournamentDaysLoaded(true);
             }, (err) => {
                 console.error('[TRANSPORT] onSnapshot(settings/registration) error:', err);
             });
@@ -784,7 +814,6 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na catering:', e);
         }
 
-        loadTournamentDates();
         loadTeamsWithAccommodation();
 
         return () => {
@@ -817,6 +846,22 @@ const TransportApp = ({ userProfileData }) => {
         });
         setTravelTimesDraft(draft);
     }, [travelTimes]);
+
+    // ============================================================
+    // PRIDANIE NOVÉHO AUTOBUSU (plánovanie)
+    // ============================================================
+    const addNewBus = () => {
+        setBuses((prev) => {
+            const nextIndex = prev.length + 1;
+            return [
+                ...prev,
+                {
+                    id: `bus-${Date.now()}-${nextIndex}`,
+                    name: `Bus ${nextIndex}`,
+                },
+            ];
+        });
+    };
 
     // ============================================================
     // OTVORENIE MODÁLU PRE PRIradenie miest k zastávke
@@ -956,7 +1001,7 @@ const TransportApp = ({ userProfileData }) => {
         } finally {
             setPlaceForStopSaving(false);
         }
-    };    
+    };
 
     // ============================================================
     // ULOŽENIE TRVANIA JÁZDY MEDZI DVOMA ZASTÁVKAMI
@@ -1000,8 +1045,8 @@ const TransportApp = ({ userProfileData }) => {
 
             window.showGlobalNotification(
                 minutes == null
-                    ? `Trvanie ${fromStop.name} → ${toStop.name} bolo odstránené.`
-                    : `Trvanie ${fromStop.name} → ${toStop.name} = ${minutes} min.`,
+                    ? `Trvanie "${fromStop.name} → ${toStop.name}" bolo odstránené.`
+                    : `Trvanie "${fromStop.name} → ${toStop.name}" = ${minutes} min.`,
                 'success'
             );
         } catch (err) {
@@ -1010,7 +1055,7 @@ const TransportApp = ({ userProfileData }) => {
         } finally {
             setTravelTimesSaving(false);
         }
-    };    
+    };
 
     // ============================================================
     // ZOZNAM ZASTÁVOK S ODSAdeným ZOZNAMOM PRIRADENÝCH MIEST
@@ -1091,7 +1136,7 @@ const TransportApp = ({ userProfileData }) => {
         );
     };
 
-        // ============================================================
+    // ============================================================
     // ZOZNAM OSTATNÝCH MIEST (bez zastávok)
     // ============================================================
     const renderOtherPlaces = () => {
@@ -1331,7 +1376,116 @@ const TransportApp = ({ userProfileData }) => {
                 'Ukladám...'
             )
         );
-    };    
+    };
+
+    // ============================================================
+    // RENDER – PLÁNOVANIE (autobusy + dni turnaja)
+    // ============================================================
+    const renderPlanning = () => {
+        return React.createElement(
+            'div',
+            { className: 'w-full flex flex-col items-center justify-start py-6 relative min-h-[400px]' },
+
+            // Ak ešte nie je pridaný žiadny autobus
+            buses.length === 0
+                ? React.createElement(
+                    'div',
+                    { className: 'flex flex-col items-center justify-center py-16 text-gray-500' },
+                    React.createElement('i', { className: 'fa-solid fa-bus text-6xl mb-4 opacity-30' }),
+                    React.createElement('p', { className: 'text-lg font-medium' }, 'Plánovanie'),
+                    React.createElement(
+                        'p',
+                        { className: 'text-sm mt-1' },
+                        'Kliknutím na zelené tlačidlo "+" v pravom dolnom rohu pridáte autobus.'
+                    )
+                )
+                : React.createElement(
+                    'div',
+                    { className: 'w-full flex flex-col gap-8 pb-24' },
+                    buses.map((bus) =>
+                        React.createElement(
+                            'div',
+                            {
+                                key: bus.id,
+                                className: 'w-full bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden'
+                            },
+                            // Hlavička autobusu
+                            React.createElement(
+                                'div',
+                                { className: 'bg-green-600 text-white px-5 py-3 flex items-center gap-3' },
+                                React.createElement('i', { className: 'fa-solid fa-bus' }),
+                                React.createElement('h3', { className: 'text-lg font-bold' }, bus.name)
+                            ),
+                            // Tabuľka dní
+                            tournamentDays.length === 0
+                                ? React.createElement(
+                                    'p',
+                                    { className: 'text-center text-gray-500 py-6 text-sm italic' },
+                                    tournamentDaysLoaded
+                                        ? 'Žiadne dátumy turnaja (skontrolujte nastavenie registrácie).'
+                                        : 'Načítavam dátumy turnaja...'
+                                )
+                                : React.createElement(
+                                    'table',
+                                    { className: 'w-full border-collapse text-sm' },
+                                    React.createElement(
+                                        'thead',
+                                        null,
+                                        React.createElement(
+                                            'tr',
+                                            { className: 'bg-gray-100 text-gray-700' },
+                                            React.createElement(
+                                                'th',
+                                                { className: 'border border-gray-200 px-4 py-2 text-left font-semibold' },
+                                                'Dátum'
+                                            ),
+                                            React.createElement(
+                                                'th',
+                                                { className: 'border border-gray-200 px-4 py-2 text-left font-semibold' },
+                                                'Deň'
+                                            )
+                                        )
+                                    ),
+                                    React.createElement(
+                                        'tbody',
+                                        null,
+                                        tournamentDays.map((day, idx) =>
+                                            React.createElement(
+                                                'tr',
+                                                {
+                                                    key: day.dayKey,
+                                                    className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                                },
+                                                React.createElement(
+                                                    'td',
+                                                    { className: 'border border-gray-200 px-4 py-2 text-gray-800' },
+                                                    day.dateLabel
+                                                ),
+                                                React.createElement(
+                                                    'td',
+                                                    { className: 'border border-gray-200 px-4 py-2 text-gray-800 capitalize' },
+                                                    day.dayName
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                        )
+                    )
+                ),
+
+            // Zelené okrúhle tlačidlo „+“ v pravom dolnom rohu
+            React.createElement(
+                'button',
+                {
+                    onClick: addNewBus,
+                    className: 'fixed bottom-8 right-8 w-14 h-14 rounded-full bg-green-600 text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all duration-200 flex items-center justify-center text-2xl font-bold z-[2000]',
+                    title: 'Pridať autobus'
+                },
+                React.createElement('i', { className: 'fa-solid fa-plus' })
+            )
+        );
+    };
 
     // ============================================================
     // MODÁLNE OKNO – priradenie miest k zastávke
@@ -1339,15 +1493,10 @@ const TransportApp = ({ userProfileData }) => {
     const renderAssignModal = () => {
         if (!isAssignModalOpen || !assignTargetStop) return null;
 
-        // Vyfiltrujeme len miesta, ktoré:
-        //  1) nie sú zastávky,
-        //  2) sú buď nepriradené, alebo sú priradené práve tejto zastávke,
-        //  3) zodpovedajú vyhľadávaniu.
         const assignable = allPlaces
             .filter((p) => p.type !== 'zastavka')
             .filter((p) => {
                 const a = transportAssignments[p.id];
-                // ak je miesto priradené k INEJ zastávke → skryť
                 if (a && a.stopId && a.stopId !== assignTargetStop.id) return false;
                 return true;
             })
@@ -1360,9 +1509,7 @@ const TransportApp = ({ userProfileData }) => {
                 const bAssign = transportAssignments[b.id];
                 const aIsAssigned = !!(aAssign && aAssign.stopId === assignTargetStop.id);
                 const bIsAssigned = !!(bAssign && bAssign.stopId === assignTargetStop.id);
-                // Najprv tie, ktoré sú priradené k tejto zastávke
                 if (aIsAssigned !== bIsAssigned) return aIsAssigned ? -1 : 1;
-                // V rámci skupiny abecedne
                 return a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' });
             });
 
@@ -1388,7 +1535,6 @@ const TransportApp = ({ userProfileData }) => {
                     className: 'bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6 max-h-[85vh] flex flex-col',
                     onClick: (e) => e.stopPropagation()
                 },
-                // Hlavička
                 React.createElement(
                     'div',
                     { className: 'mb-4' },
@@ -1402,7 +1548,6 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement('span', { className: 'font-medium' }, assignTargetStop.name)
                     )
                 ),
-                // Vyhľadávanie
                 React.createElement(
                     'div',
                     { className: 'mb-3' },
@@ -1414,7 +1559,6 @@ const TransportApp = ({ userProfileData }) => {
                         className: 'w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                     })
                 ),
-                // Zoznam miest s checkboxmi
                 React.createElement(
                     'div',
                     { className: 'flex-1 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100 mb-4' },
@@ -1453,7 +1597,6 @@ const TransportApp = ({ userProfileData }) => {
                             );
                         })
                 ),
-                // Tlačidlá
                 React.createElement(
                     'div',
                     { className: 'flex items-center justify-between gap-3' },
@@ -1489,7 +1632,7 @@ const TransportApp = ({ userProfileData }) => {
         );
     };
 
-        // ============================================================
+    // ============================================================
     // MODÁLNE OKNO – priradenie zastávky k miestu
     // ============================================================
     const renderAssignStopToPlaceModal = () => {
@@ -1510,7 +1653,6 @@ const TransportApp = ({ userProfileData }) => {
                     className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6',
                     onClick: (e) => e.stopPropagation()
                 },
-                // Hlavička
                 React.createElement(
                     'div',
                     { className: 'mb-5' },
@@ -1530,7 +1672,6 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement('span', { className: 'font-medium' }, place.name)
                     )
                 ),
-                // Výber zastávky
                 React.createElement(
                     'div',
                     { className: 'mb-6' },
@@ -1556,7 +1697,6 @@ const TransportApp = ({ userProfileData }) => {
                             )
                         )
                 ),
-                // Tlačidlá
                 React.createElement(
                     'div',
                     { className: 'flex justify-end gap-3' },
@@ -1716,15 +1856,9 @@ const TransportApp = ({ userProfileData }) => {
                                 renderTravelTimes()
                             )
                     )
-                    : React.createElement(
-                        'div',
-                        { className: 'w-full flex flex-col items-center justify-center py-16 text-gray-500' },
-                        React.createElement('i', { className: 'fa-solid fa-calendar-days text-6xl mb-4 opacity-30' }),
-                        React.createElement('p', { className: 'text-lg font-medium' }, 'Plánovanie'),
-                        React.createElement('p', { className: 'text-sm mt-1' }, 'Táto sekcia je zatiaľ prázdna.')
-                    )
+                    : renderPlanning()
             ),
-            // Modálne okno
+            // Modálne okná
             renderAssignModal(),
             renderAssignStopToPlaceModal()
         )
