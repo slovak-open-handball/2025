@@ -417,20 +417,21 @@ const TransportApp = ({ userProfileData }) => {
                         const isLastEventOfDay =
                             currentDay != null && (next == null || nextDay == null || nextDay !== currentDay);
     
-                        // A) Začiatok dňa – tím sa musí presunúť z ubytovania na miesto prvej udalosti dňa.
-                        //    Zobrazujeme IBA čas príchodu (odchod z ubytovania nevieme presne určiť).
+                        // A) Začiatok dňa – presun z ubytovania na prvú udalosť dňa.
+                        //    V `when` zobrazujeme len čas príchodu.
                         if (
                             isFirstEventOfDay &&
                             accommodationName &&
                             current.location &&
                             current.location !== accommodationName
                         ) {
+                            const arrivalStr = formatFullFromTs(current.startTs) || current.when;
                             enriched.push({
                                 ts: current.ts,
-                                when: current.when,
+                                when: arrivalStr,
                                 type: 'transfer',
                                 text: buildTransferText(
-                                    null, // fromEvent – neznámy (odchod z ubytovania sa nezobrazuje)
+                                    null,
                                     current,
                                     `ubytovania "${accommodationName}"`,
                                     `"${current.location}"`,
@@ -441,12 +442,9 @@ const TransportApp = ({ userProfileData }) => {
                             });
                         }
     
-                        // Vložíme samotnú udalosť
-                        enriched.push(current);
-    
                         // B) Zmena miesta medzi dvoma susednými udalosťami v rámci toho istého dňa.
-                        //    Aplikujeme IBA ak current je reálna časová udalosť (match/catering).
-                        //    Presun z ubytovania na prvú udalosť dňa rieši typ A.
+                        //    V `when` zobrazujeme odchod (koniec predchádzajúcej udalosti)
+                        //    a príchod (začiatok nasledujúcej udalosti).
                         const currentIsTimedEvent =
                             current.type === 'match' || current.type === 'catering';
 
@@ -457,9 +455,28 @@ const TransportApp = ({ userProfileData }) => {
                             next.location &&
                             current.location !== next.location
                         ) {
+                            const departureTs =
+                                current.endTs != null ? current.endTs : current.startTs;
+                            const arrivalTs =
+                                next.startTs != null ? next.startTs : null;
+
+                            const departureStr = formatFullFromTs(departureTs);
+                            const arrivalStr = formatFullFromTs(arrivalTs);
+
+                            let whenStr;
+                            if (departureStr && arrivalStr) {
+                                whenStr = `${departureStr} – ${arrivalStr}`;
+                            } else if (departureStr) {
+                                whenStr = departureStr;
+                            } else if (arrivalStr) {
+                                whenStr = arrivalStr;
+                            } else {
+                                whenStr = current.when;
+                            }
+
                             enriched.push({
                                 ts: current.ts,
-                                when: current.when,
+                                when: whenStr,
                                 type: 'transfer',
                                 text: buildTransferText(
                                     current,
@@ -472,24 +489,24 @@ const TransportApp = ({ userProfileData }) => {
                             });
                         }
     
-                        // C) Koniec dňa – ak je posledná udalosť dňa inde než ubytovanie,
-                        //    vložíme presun do ubytovania. Odchod = endTs poslednej udalosti dňa,
-                        //    príchod = neznámy (nemáme čas ubytovacej udalosti), preto len odchod.
+                        // C) Koniec dňa – presun z poslednej udalosti dňa na ubytovanie.
+                        //    V `when` zobrazujeme len čas odchodu (koniec poslednej udalosti dňa).
                         if (
                             isLastEventOfDay &&
                             accommodationName &&
                             current.location &&
                             current.location !== accommodationName
                         ) {
-                            const departureTs = current.endTs != null ? current.endTs : current.startTs;
-                            const departureStr = formatFullFromTs(departureTs) || '—';
+                            const departureTs =
+                                current.endTs != null ? current.endTs : current.startTs;
+                            const departureStr = formatFullFromTs(departureTs) || current.when;
                             enriched.push({
                                 ts: current.ts,
-                                when: current.when,
+                                when: departureStr,
                                 type: 'transfer',
                                 text:
                                     `Presun z "${current.location}" do ubytovania "${accommodationName}" ` +
-                                    `(odchod: ${departureStr})`,
+                                    `(odchod: ${formatFullFromTs(departureTs) || '—'})`,
                                 location: null,
                                 isTransfer: true,
                             });
