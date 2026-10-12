@@ -1444,13 +1444,13 @@ const TransportApp = ({ userProfileData }) => {
     const renderPlanning = () => {
         return React.createElement(
             'div',
-            { className: 'w-full flex flex-col items-center justify-start py-6 relative min-h-[400px]' },
+            { className: 'w-full flex flex-col items-start justify-start py-6 relative min-h-[400px]' },
 
             // Ak ešte nie je pridaný žiadny autobus
             buses.length === 0
                 ? React.createElement(
                     'div',
-                    { className: 'flex flex-col items-center justify-center py-16 text-gray-500' },
+                    { className: 'w-full flex flex-col items-center justify-center py-16 text-gray-500' },
                     React.createElement('i', { className: 'fa-solid fa-bus text-6xl mb-4 opacity-30' }),
                     React.createElement('p', { className: 'text-lg font-medium' }, 'Plánovanie'),
                     React.createElement(
@@ -1461,13 +1461,14 @@ const TransportApp = ({ userProfileData }) => {
                 )
                 : React.createElement(
                     'div',
-                    { className: 'w-full flex flex-col gap-8 pb-24' },
+                    { className: 'w-full flex flex-row flex-wrap gap-6 pb-24' },
                     buses.map((bus) =>
                         React.createElement(
                             'div',
                             {
                                 key: bus.id,
-                                className: 'w-full bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden'
+                                className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
+                                style: { width: '650px', maxWidth: '100%' }
                             },
                             // Hlavička autobusu
                             React.createElement(
