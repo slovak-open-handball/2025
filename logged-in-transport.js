@@ -210,13 +210,6 @@ const TransportApp = ({ userProfileData }) => {
             return null;
         })();
 
-        console.log(
-            '[TRANSPORT][DEBUG] externalArrivalStop:',
-            externalArrivalStop ? externalArrivalStop.name : 'ŽIADNA (flag nie je nastavený na žiadnej zastávke)',
-            '| allPlacesRef count:', (allPlacesRef.current || []).length,
-            '| stopsList count:', (stopsList || []).length
-        );
-
         const ensure = (category, teamName) => {
             if (!grouped[category]) grouped[category] = {};
             if (!grouped[category][teamName]) grouped[category][teamName] = [];
@@ -487,21 +480,6 @@ const TransportApp = ({ userProfileData }) => {
                                 isExternalTransport &&
                                 externalArrivalStop &&
                                 isGlobalFirstDay;
-
-                            // DEBUG
-                            if (isExternalTransport) {
-                                console.log(
-                                    '[TRANSPORT][DEBUG] externý tím:',
-                                    teamName,
-                                    '| arrivalType:', JSON.stringify(teamArrivalType),
-                                    '| currentDay:', currentDay,
-                                    '| globalFirstDay:', globalFirstDay,
-                                    '| isGlobalFirstDay:', isGlobalFirstDay,
-                                    '| externalArrivalStop:',
-                                    externalArrivalStop ? externalArrivalStop.name : 'NENÁJDENÁ',
-                                    '| accommodation:', accommodationName
-                                );
-                            }
 
                             const fromLabel = useExternalStop
                                 ? `zastávky "${externalArrivalStop.name}"`
