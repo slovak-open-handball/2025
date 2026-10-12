@@ -207,9 +207,10 @@ const TransportApp = ({ userProfileData }) => {
             const flagStr = flags.length ? ` [${flags.join(', ')}]` : '';
             const mealLabel = c.mealType === 'lunch' ? 'Obed' : c.mealType === 'dinner' ? 'Večera' : c.mealType;
 
+            const formattedDay = c.dayKey ? (formatDateDDMMYYYY(c.dayKey) || c.dayKey) : '?';
             ensure(c.category, c.teamName).push({
                 ts: c.ts ?? Number.POSITIVE_INFINITY,
-                when: `${c.dayKey || '?'} ${c.slotFrom || ''}`.trim(),
+                when: `${formattedDay} ${c.slotFrom || ''}`.trim(),
                 type: 'catering',
                 text: `${mealLabel} (${c.slotFrom || '--:--'}) → ${c.placeName}${flagStr}`,
             });
