@@ -401,6 +401,25 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         console.log('[TRANSPORT] ===== ČASOVÁ OS UDALOSTÍ PRE KAŽDÝ TÍM =====');
+
+        // Globálny najskorší deň turnaja (dayKey) zo všetkých udalostí všetkých tímov
+        const globalFirstDay = (() => {
+            const keys = [];
+            Object.values(grouped).forEach((teamsObj) => {
+                Object.values(teamsObj).forEach((events) => {
+                    events.forEach((ev) => {
+                        const dk = extractDayKeyFromWhen(ev.when);
+                        if (dk) keys.push(dk);
+                    });
+                });
+            });
+            if (keys.length === 0) return null;
+            keys.sort();
+            return keys[0];
+        })();
+
+        console.log('[TRANSPORT][DEBUG] globalFirstDay:', globalFirstDay);
+        
         const categories = Object.keys(grouped).sort((a, b) =>
             a.localeCompare(b, 'sk', { sensitivity: 'base' })
         );
@@ -426,13 +445,6 @@ const TransportApp = ({ userProfileData }) => {
                         (accommodationByTeam[category] && accommodationByTeam[category][teamName]) || null;
                     const teamArrivalType =
                         (arrivalTypeByTeam[category] && arrivalTypeByTeam[category][teamName]) || '';
-
-                    // Zisti najskorší deň tímu (dayKey) – pre určenie, kedy použiť nástupnú zastávku
-                    const allDayKeys = events
-                        .map((ev) => extractDayKeyFromWhen(ev.when))
-                        .filter((d) => d != null)
-                        .sort();
-                    const firstDayOfTeam = allDayKeys.length > 0 ? allDayKeys[0] : null;
 
                     const enriched = [];
                     for (let i = 0; i < events.length; i++) {
@@ -465,16 +477,16 @@ const TransportApp = ({ userProfileData }) => {
                                 return true;
                             })();
 
-                            // Nástupnú zastávku použijeme len v prvý deň tímu (turnaja)
-                            const isFirstDayOfTeam =
+                            // Nástupnú zastávku použijeme len v prvý deň turnaja celkovo
+                            const isGlobalFirstDay =
                                 currentDay != null &&
-                                firstDayOfTeam != null &&
-                                currentDay === firstDayOfTeam;
+                                globalFirstDay != null &&
+                                currentDay === globalFirstDay;
 
                             const useExternalStop =
                                 isExternalTransport &&
                                 externalArrivalStop &&
-                                isFirstDayOfTeam;
+                                isGlobalFirstDay;
 
                             // DEBUG
                             if (isExternalTransport) {
@@ -483,8 +495,8 @@ const TransportApp = ({ userProfileData }) => {
                                     teamName,
                                     '| arrivalType:', JSON.stringify(teamArrivalType),
                                     '| currentDay:', currentDay,
-                                    '| firstDayOfTeam:', firstDayOfTeam,
-                                    '| isFirstDayOfTeam:', isFirstDayOfTeam,
+                                    '| globalFirstDay:', globalFirstDay,
+                                    '| isGlobalFirstDay:', isGlobalFirstDay,
                                     '| externalArrivalStop:',
                                     externalArrivalStop ? externalArrivalStop.name : 'NENÁJDENÁ',
                                     '| accommodation:', accommodationName
