@@ -1461,7 +1461,7 @@ const TransportApp = ({ userProfileData }) => {
                 )
                 : React.createElement(
                     'div',
-                    { className: 'w-full flex flex-row flex-wrap gap-6 pb-24' },
+                    { className: 'w-full flex flex-row flex-nowrap gap-6 pb-24 overflow-x-auto' },
                     buses.map((bus) =>
                         React.createElement(
                             'div',
