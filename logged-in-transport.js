@@ -987,7 +987,7 @@ const TransportApp = ({ userProfileData }) => {
         );
     };
 
-    // ============================================================
+        // ============================================================
     // ZOZNAM OSTATNÝCH MIEST (bez zastávok)
     // ============================================================
     const renderOtherPlaces = () => {
@@ -1012,27 +1012,35 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         return React.createElement(
-            'li',
-            {
-                key: place.id,
-                onClick: () => openAssignStopToPlaceModal(place),
-                className: 'bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors',
-                title: 'Kliknutím priradíte zastávku tomuto miestu'
-            },
-            getPlaceIcon(place.type),
-            React.createElement(
-                'span',
-                { className: 'text-gray-800 font-medium truncate flex-1' },
-                place.name
-            ),
-            stopName &&
-                React.createElement(
-                    'span',
-                        { className: 'text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5 whitespace-nowrap' },
-                    React.createElement('i', { className: 'fa-solid fa-bus mr-1' }),
-                    stopName
-                ),
-            React.createElement('i', { className: 'fa-solid fa-pen-to-square text-gray-400 ml-1' })
+            'ul',
+            { className: 'space-y-2' },
+            others.map((place) => {
+                const a = transportAssignments[place.id];
+                const stopName = a?.stopName || null;
+                return React.createElement(
+                    'li',
+                    {
+                        key: place.id,
+                        onClick: () => openAssignStopToPlaceModal(place),
+                        className: 'bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors',
+                        title: 'Kliknutím priradíte zastávku tomuto miestu'
+                    },
+                    getPlaceIcon(place.type),
+                    React.createElement(
+                        'span',
+                        { className: 'text-gray-800 font-medium truncate flex-1' },
+                        place.name
+                    ),
+                    stopName &&
+                        React.createElement(
+                            'span',
+                            { className: 'text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5 whitespace-nowrap' },
+                            React.createElement('i', { className: 'fa-solid fa-bus mr-1' }),
+                            stopName
+                        ),
+                    React.createElement('i', { className: 'fa-solid fa-pen-to-square text-gray-400 ml-1' })
+                );
+            })
         );
     };
 
