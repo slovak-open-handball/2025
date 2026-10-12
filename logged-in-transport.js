@@ -202,8 +202,20 @@ const TransportApp = ({ userProfileData }) => {
         const arrivalTypeByTeam = {};
 
         // Nájdi zastávku označenú ako nástupnú pre externé tímy
-        const externalArrivalStop =
-            (allPlacesRef.current || []).find((p) => p.isExternalArrivalStop === true) || null;
+        const externalArrivalStop = (() => {
+            const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isExternalArrivalStop === true);
+            if (fromAllPlaces) return fromAllPlaces;
+            const fromStops = (stopsList || []).find((p) => p.isExternalArrivalStop === true);
+            if (fromStops) return fromStops;
+            return null;
+        })();
+
+        console.log(
+            '[TRANSPORT][DEBUG] externalArrivalStop:',
+            externalArrivalStop ? externalArrivalStop.name : 'ŽIADNA (flag nie je nastavený na žiadnej zastávke)',
+            '| allPlacesRef count:', (allPlacesRef.current || []).length,
+            '| stopsList count:', (stopsList || []).length
+        );
 
         const ensure = (category, teamName) => {
             if (!grouped[category]) grouped[category] = {};
@@ -432,27 +444,47 @@ const TransportApp = ({ userProfileData }) => {
                             currentDay != null && (next == null || nextDay == null || nextDay !== currentDay);
 
                         // A) Začiatok dňa – presun na prvú udalosť dňa.
-                        //    Ak má tím iný typ dopravy ako "vlastná doprava" a existuje
-                        //    zastávka označená ako nástupná pre externé tímy, použijeme ju.
                         if (isFirstEventOfDay && current.location) {
-                            const isExternalTransport =
-                                teamArrivalType &&
-                                teamArrivalType.toLowerCase() !== 'vlastná doprava';
+                            // Normalizované porovnanie typu dopravy
+                            const isExternalTransport = (() => {
+                                if (!teamArrivalType) return false;
+                                const norm = String(teamArrivalType)
+                                    .toLowerCase()
+                                    .normalize('NFD')
+                                    .replace(/[\u0300-\u036f]/g, '')
+                                    .trim();
+                                if (!norm) return false;
+                                if (norm.includes('vlastn')) return false;
+                                return true;
+                            })();
 
                             const useExternalStop =
                                 isExternalTransport && externalArrivalStop;
+
+                            // DEBUG
+                            if (isExternalTransport) {
+                                console.log(
+                                    '[TRANSPORT][DEBUG] externý tím:',
+                                    teamName,
+                                    '| arrivalType:', JSON.stringify(teamArrivalType),
+                                    '| externalArrivalStop:',
+                                    externalArrivalStop ? externalArrivalStop.name : 'NENÁJDENÁ',
+                                    '| accommodation:', accommodationName
+                                );
+                            }
 
                             const fromLabel = useExternalStop
                                 ? `zastávky "${externalArrivalStop.name}"`
                                 : (accommodationName ? `ubytovania "${accommodationName}"` : null);
 
-                            const currentLocationIsAccommodation =
-                                accommodationName && current.location === accommodationName;
+                            const fromLocationName = useExternalStop
+                                ? externalArrivalStop.name
+                                : accommodationName;
 
                             const shouldGenerateTransfer =
                                 fromLabel &&
-                                !currentLocationIsAccommodation &&
-                                current.location !== (useExternalStop ? externalArrivalStop.name : accommodationName);
+                                fromLocationName &&
+                                current.location !== fromLocationName;
 
                             if (shouldGenerateTransfer) {
                                 const dayRefTs =
@@ -492,7 +524,7 @@ const TransportApp = ({ userProfileData }) => {
                                 });
                             }
                         }
-
+                        
                         // VŽDY: Vložíme samotnú udalosť
                         enriched.push(current);
 
@@ -661,6 +693,12 @@ const TransportApp = ({ userProfileData }) => {
                 });
                 list.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
                 setAllPlaces(list);
+                allPlacesRef.current = list; // okamžite aktualizuj ref
+
+                // Prepočítaj timeline, aby sa nové flagy prejavili
+                if (matchesLoadedRef.current && cateringLoadedRef.current && teamsLoadedRef.current) {
+                    rebuildAndLogTimeline();
+                }
             }, (err) => {
                 console.error('[TRANSPORT] onSnapshot(places) pre záložku Nastavenia error:', err);
             });
@@ -905,13 +943,28 @@ const TransportApp = ({ userProfileData }) => {
                             const accomType = team.accommodation?.type?.trim?.() || '';
                             const accomName = team.accommodation?.name?.trim?.() || '';
 
+                            // arrivalType môže byť buď string alebo objekt { type, time }
+                            let arrivalTypeRaw = '';
+                            let arrivalDisplayRaw = '---';
+                            if (team.arrival) {
+                                if (typeof team.arrival === 'string') {
+                                    arrivalTypeRaw = team.arrival.trim();
+                                    arrivalDisplayRaw = arrivalTypeRaw || '---';
+                                } else if (typeof team.arrival === 'object') {
+                                    if (team.arrival.type) {
+                                        arrivalTypeRaw = String(team.arrival.type).trim();
+                                    }
+                                    arrivalDisplayRaw = formatArrival(team.arrival);
+                                }
+                            }
+
                             buffer.push({
                                 category: cat,
                                 teamName: team.teamName.trim(),
                                 accommodationType: accomType || '(nešpecifikovaný)',
                                 accommodationName: accomName,
-                                arrivalDisplay: formatArrival(team.arrival),
-                                arrivalType: team.arrival?.type ? String(team.arrival.type).trim() : '',
+                                arrivalDisplay: arrivalDisplayRaw,
+                                arrivalType: arrivalTypeRaw,
                                 groupName: team.groupName ? String(team.groupName).trim() : null,
                                 order: (typeof team.order === 'number' && team.order > 0) ? team.order : null,
                             });
