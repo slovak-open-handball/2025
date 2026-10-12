@@ -445,11 +445,14 @@ const TransportApp = ({ userProfileData }) => {
                         enriched.push(current);
     
                         // B) Zmena miesta medzi dvoma susednými udalosťami v rámci toho istého dňa.
-                        //    NEAPLIKUJEME na prechod z ubytovania (typ 'accommodation') na prvú
-                        //    časovú udalosť dňa – to rieši typ A (začiatok dňa, len príchod).
+                        //    Aplikujeme IBA ak current je reálna časová udalosť (match/catering).
+                        //    Presun z ubytovania na prvú udalosť dňa rieši typ A.
+                        const currentIsTimedEvent =
+                            current.type === 'match' || current.type === 'catering';
+
                         if (
                             next &&
-                            current.type !== 'accommodation' &&
+                            currentIsTimedEvent &&
                             current.location &&
                             next.location &&
                             current.location !== next.location
