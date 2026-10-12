@@ -199,7 +199,6 @@ const TransportApp = ({ userProfileData }) => {
         }
     
         const grouped = {};
-        // accommodationByTeam[category][teamName] = accommodationName
         const accommodationByTeam = {};
     
         const ensure = (category, teamName) => {
@@ -208,7 +207,6 @@ const TransportApp = ({ userProfileData }) => {
             return grouped[category][teamName];
         };
     
-        // Pomocná funkcia: skrátený čas "HH:MM" z timestampu (number)
         const formatTimeShort = (ts) => {
             if (ts == null || !isFinite(ts)) return null;
             const d = new Date(ts);
@@ -218,13 +216,12 @@ const TransportApp = ({ userProfileData }) => {
             return `${hh}:${mm}`;
         };
     
-        // Pomocná funkcia: plný dátum+čas z timestampu (number)
         const formatFullFromTs = (ts) => {
             if (ts == null || !isFinite(ts)) return null;
             return formatDateTime(new Date(ts));
         };
     
-        // 1) TÍMY – info o skupine, ubytovaní a doprave
+        // 1) TÍMY
         teamsArrivalBufferRef.current.forEach((t) => {
             const arr = ensure(t.category, t.teamName);
     
@@ -333,9 +330,6 @@ const TransportApp = ({ userProfileData }) => {
             });
         });
     
-        // ============================================================
-        // Pomocná funkcia: z `when` vytiahne dayKey (YYYY-MM-DD) alebo null
-        // ============================================================
         const extractDayKeyFromWhen = (when) => {
             if (!when) return null;
             const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(when);
@@ -346,8 +340,6 @@ const TransportApp = ({ userProfileData }) => {
             return `${y}-${mo}-${d}`;
         };
 
-        // Pomocná funkcia: vytvorí timestamp pre daný deň (z referenčného timestampu)
-        // a zadaný čas HH:MM.
         const timestampOnDay = (dayRefTs, hh, mm) => {
             if (dayRefTs == null || !isFinite(dayRefTs)) return null;
             const d = new Date(dayRefTs);
@@ -355,15 +347,12 @@ const TransportApp = ({ userProfileData }) => {
             return new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm, 0, 0).getTime();
         };
 
-        // Pomocná funkcia: naformátuje deň z referenčného timestampu + zadaný čas HH:MM.
         const formatDayWithTime = (dayRefTs, hh, mm) => {
             const ts = timestampOnDay(dayRefTs, hh, mm);
             if (ts == null) return null;
             return formatDateTime(new Date(ts));
         };
 
-        // Pomocná funkcia: extrahuje deň z `when` (DD. MM. YYYY) a vráti referenčný timestamp
-        // (polnoc daného dňa), alebo null.
         const midnightFromWhen = (when) => {
             if (!when) return null;
             const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(when);
@@ -375,13 +364,6 @@ const TransportApp = ({ userProfileData }) => {
             return isNaN(d.getTime()) ? null : d.getTime();
         };
     
-        // ============================================================
-        // Pomocná funkcia: vytvorí text presunu
-        //   fromEvent – udalosť, z ktorej sa odchádza (použije sa endTs)
-        //   toEvent   – udalosť, na ktorú sa prichádza (použije sa startTs)
-        //   fromLabel / toLabel – textové označenie miest
-        //   arrivalOnly – ak true, zobrazí iba čas príchodu (bez odchodu)
-        // ============================================================
         const buildTransferText = (
             fromEvent,
             toEvent,
@@ -406,9 +388,6 @@ const TransportApp = ({ userProfileData }) => {
             return `Presun z ${fromLabel} do ${toLabel} (odchod: ${departureStr}, príchod: ${arrivalStr})`;
         };
     
-        // ============================================================
-        // VÝPIS
-        // ============================================================
         console.log('[TRANSPORT] ===== ČASOVÁ OS UDALOSTÍ PRE KAŽDÝ TÍM =====');
         const categories = Object.keys(grouped).sort((a, b) =>
             a.localeCompare(b, 'sk', { sensitivity: 'base' })
@@ -426,6 +405,7 @@ const TransportApp = ({ userProfileData }) => {
                 teams.forEach((teamName) => {
                     const events = grouped[category][teamName];
     
+                    // Zoradíme pôvodné udalosti podľa času; meta-udalosti (-Infinity) pôjdu na začiatok
                     events.sort((a, b) => {
                         if (a.ts !== b.ts) return a.ts - b.ts;
                         return String(a.text).localeCompare(String(b.text), 'sk');
@@ -434,12 +414,6 @@ const TransportApp = ({ userProfileData }) => {
                     const accommodationName =
                         (accommodationByTeam[category] && accommodationByTeam[category][teamName]) || null;
     
-                    // ------------------------------------------------------------
-                    // Detekcia zmeny miesta:
-                    //   • medzi dvoma susednými udalosťami
-                    //   • na konci dňa (posledná udalosť dňa ≠ ubytovanie)
-                    //   • na začiatku dňa (prvá udalosť dňa ≠ ubytovanie)
-                    // ------------------------------------------------------------
                     const enriched = [];
                     for (let i = 0; i < events.length; i++) {
                         const current = events[i];
@@ -456,8 +430,9 @@ const TransportApp = ({ userProfileData }) => {
                         const isLastEventOfDay =
                             currentDay != null && (next == null || nextDay == null || nextDay !== currentDay);
     
-                        // A) Začiatok dňa – presun z ubytovania na prvú udalosť dňa.
-                        //    Ak nemáme čas odchodu, doplníme 00:00 daného dňa.
+                        // ------------------------------------------------------------
+                        // A) PRED current: Začiatok dňa – presun z ubytovania na prvú udalosť dňa.
+                        // ------------------------------------------------------------
                         if (
                             isFirstEventOfDay &&
                             accommodationName &&
@@ -484,24 +459,31 @@ const TransportApp = ({ userProfileData }) => {
                             }
 
                             enriched.push({
-                                ts: current.ts,
+                                ts: current.ts - 1,
                                 when: whenStr,
                                 type: 'transfer',
                                 text: buildTransferText(
-                                    null,                  // fromEvent
-                                    current,               // toEvent
+                                    null,
+                                    current,
                                     `ubytovania "${accommodationName}"`,
                                     `"${current.location}"`,
-                                    false,                 // arrivalOnly = false → chceme odchod aj príchod
-                                    departureStr,          // override odchodu (00:00 daného dňa)
-                                    arrivalStr             // override príchodu
+                                    false,
+                                    departureStr,
+                                    arrivalStr
                                 ),
                                 location: null,
                                 isTransfer: true,
                             });
                         }
     
-                        // B) Zmena miesta medzi dvoma susednými udalosťami v rámci toho istého dňa.
+                        // ------------------------------------------------------------
+                        // VŽDY: Vložíme samotnú udalosť (zápas, stravovanie, ubytovanie, ...)
+                        // ------------------------------------------------------------
+                        enriched.push(current);
+    
+                        // ------------------------------------------------------------
+                        // B) PO current: Zmena miesta medzi dvoma susednými udalosťami v rámci dňa.
+                        // ------------------------------------------------------------
                         const currentIsTimedEvent =
                             current.type === 'match' || current.type === 'catering';
 
@@ -532,7 +514,7 @@ const TransportApp = ({ userProfileData }) => {
                             }
 
                             enriched.push({
-                                ts: current.ts,
+                                ts: current.ts + 0.5,
                                 when: whenStr,
                                 type: 'transfer',
                                 text: buildTransferText(
@@ -546,8 +528,9 @@ const TransportApp = ({ userProfileData }) => {
                             });
                         }
     
-                        // C) Koniec dňa – presun z poslednej udalosti dňa na ubytovanie.
-                        //    Ak nemáme čas príchodu, doplníme 23:59 daného dňa.
+                        // ------------------------------------------------------------
+                        // C) PO current: Koniec dňa – presun z poslednej udalosti dňa na ubytovanie.
+                        // ------------------------------------------------------------
                         if (
                             isLastEventOfDay &&
                             accommodationName &&
@@ -578,7 +561,7 @@ const TransportApp = ({ userProfileData }) => {
                             }
 
                             enriched.push({
-                                ts: current.ts,
+                                ts: current.ts + 1,
                                 when: whenStr,
                                 type: 'transfer',
                                 text:
@@ -589,6 +572,13 @@ const TransportApp = ({ userProfileData }) => {
                             });
                         }
                     }
+    
+                    // Pre istotu zoradíme `enriched` ešte raz podľa `ts`,
+                    // aby transfer s ts = current.ts - 1 / +0.5 / +1 sedel presne na svojom mieste.
+                    enriched.sort((a, b) => {
+                        if (a.ts !== b.ts) return a.ts - b.ts;
+                        return String(a.text).localeCompare(String(b.text), 'sk');
+                    });
     
                     console.log(`\n  [TRANSPORT] Tím: ${teamName} (${events.length} udalostí)`);
                     enriched.forEach((ev) => {
