@@ -1105,8 +1105,8 @@ const TransportApp = ({ userProfileData }) => {
 
             window.showGlobalNotification(
                 minutes == null
-                    ? `Trvanie "${fromStop.name} → ${toStop.name}" bolo odstránené.`
-                    : `Trvanie "${fromStop.name} → ${toStop.name}" = ${minutes} min.`,
+                    ? `Trvanie ${fromStop.name} → ${toStop.name} bolo odstránené.`
+                    : `Trvanie ${fromStop.name} → ${toStop.name} = ${minutes} min.`,
                 'success'
             );
         } catch (err) {
