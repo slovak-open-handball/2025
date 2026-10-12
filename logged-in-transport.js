@@ -382,16 +382,26 @@ const TransportApp = ({ userProfileData }) => {
         //   fromLabel / toLabel – textové označenie miest
         //   arrivalOnly – ak true, zobrazí iba čas príchodu (bez odchodu)
         // ============================================================
-        const buildTransferText = (fromEvent, toEvent, fromLabel, toLabel, arrivalOnly = false) => {
+        const buildTransferText = (
+            fromEvent,
+            toEvent,
+            fromLabel,
+            toLabel,
+            arrivalOnly = false,
+            overrideDepartureStr = null,
+            overrideArrivalStr = null
+        ) => {
             const arrivalTs = toEvent && toEvent.startTs != null ? toEvent.startTs : null;
-            const arrivalStr = formatFullFromTs(arrivalTs) || '—';
+            const computedArrivalStr = formatFullFromTs(arrivalTs) || '—';
+            const arrivalStr = overrideArrivalStr != null ? overrideArrivalStr : computedArrivalStr;
     
             if (arrivalOnly) {
                 return `Presun z ${fromLabel} do ${toLabel} (príchod: ${arrivalStr})`;
             }
     
             const departureTs = fromEvent && fromEvent.endTs != null ? fromEvent.endTs : (fromEvent ? fromEvent.startTs : null);
-            const departureStr = formatFullFromTs(departureTs) || '—';
+            const computedDepartureStr = formatFullFromTs(departureTs) || '—';
+            const departureStr = overrideDepartureStr != null ? overrideDepartureStr : computedDepartureStr;
     
             return `Presun z ${fromLabel} do ${toLabel} (odchod: ${departureStr}, príchod: ${arrivalStr})`;
         };
@@ -448,7 +458,6 @@ const TransportApp = ({ userProfileData }) => {
     
                         // A) Začiatok dňa – presun z ubytovania na prvú udalosť dňa.
                         //    Ak nemáme čas odchodu, doplníme 00:00 daného dňa.
-                        //    V `when` zobrazujeme `00:00 – čas prvej udalosti dňa`.
                         if (
                             isFirstEventOfDay &&
                             accommodationName &&
@@ -479,11 +488,13 @@ const TransportApp = ({ userProfileData }) => {
                                 when: whenStr,
                                 type: 'transfer',
                                 text: buildTransferText(
-                                    null,
-                                    current,
+                                    null,                  // fromEvent
+                                    current,               // toEvent
                                     `ubytovania "${accommodationName}"`,
                                     `"${current.location}"`,
-                                    true // arrivalOnly – v texte ostáva len príchod
+                                    false,                 // arrivalOnly = false → chceme odchod aj príchod
+                                    departureStr,          // override odchodu (00:00 daného dňa)
+                                    arrivalStr             // override príchodu
                                 ),
                                 location: null,
                                 isTransfer: true,
@@ -537,7 +548,6 @@ const TransportApp = ({ userProfileData }) => {
     
                         // C) Koniec dňa – presun z poslednej udalosti dňa na ubytovanie.
                         //    Ak nemáme čas príchodu, doplníme 23:59 daného dňa.
-                        //    V `when` zobrazujeme `čas poslednej udalosti dňa – 23:59`.
                         if (
                             isLastEventOfDay &&
                             accommodationName &&
@@ -573,7 +583,7 @@ const TransportApp = ({ userProfileData }) => {
                                 type: 'transfer',
                                 text:
                                     `Presun z "${current.location}" do ubytovania "${accommodationName}" ` +
-                                    `(odchod: ${formatFullFromTs(departureTs) || '—'})`,
+                                    `(odchod: ${departureStr}, príchod: ${arrivalStr})`,
                                 location: null,
                                 isTransfer: true,
                             });
