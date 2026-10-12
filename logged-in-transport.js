@@ -380,13 +380,15 @@ const TransportApp = ({ userProfileData }) => {
                             if (!team || !team.teamName) return;
                             const accomType = team.accommodation?.type?.trim?.() || '';
                             const accomName = team.accommodation?.name?.trim?.() || '';
-
+                        
                             buffer.push({
                                 category: cat,
                                 teamName: team.teamName.trim(),
                                 accommodationType: accomType || '(nešpecifikovaný)',
                                 accommodationName: accomName,
                                 arrivalDisplay: formatArrival(team.arrival),
+                                groupName: team.groupName ? String(team.groupName).trim() : null,
+                                order: (typeof team.order === 'number' && team.order > 0) ? team.order : null,
                             });
                         });
                     });
