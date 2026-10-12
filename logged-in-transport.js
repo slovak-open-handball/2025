@@ -1772,7 +1772,7 @@ const TransportApp = ({ userProfileData }) => {
                 )
                 : React.createElement(
                     'div',
-                    { className: 'w-full flex flex-row flex-nowrap gap-6 pb-24 overflow-visible' },
+                    { className: 'w-full flex flex-row flex-nowrap gap-6 pb-24 overflow-visible items-start' },
                     buses.map((bus) =>
                         React.createElement(
                             'div',
@@ -1781,6 +1781,7 @@ const TransportApp = ({ userProfileData }) => {
                                 className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
                                 style: { width: '650px', maxWidth: '100%' }
                             },
+                            // ... pôvodný obsah boxu autobusu ...
                             React.createElement(
                                 'div',
                                 {
@@ -1845,6 +1846,20 @@ const TransportApp = ({ userProfileData }) => {
                                     )
                                 )
                         )
+                    ),
+                    // NOVÉ: zelené tlačidlo "+" napravo od posledného boxu autobusu
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: addNewBus,
+                            disabled: busSaving,
+                            className: `flex-shrink-0 mt-4 w-14 h-14 rounded-full bg-green-600 text-white shadow-md hover:bg-green-700 active:scale-95 transition-all duration-200 flex items-center justify-center text-2xl font-bold ${busSaving ? 'opacity-60 cursor-not-allowed' : ''}`,
+                            title: 'Pridať ďalší autobus'
+                        },
+                        React.createElement('i', {
+                            className: busSaving ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-plus'
+                        })
                     )
                 )
         );
@@ -2240,13 +2255,14 @@ const TransportApp = ({ userProfileData }) => {
         activeView === 'planovanie' && React.createElement(
             'button',
             {
-                onClick: addNewBus,
-                disabled: busSaving,
-                className: `fixed bottom-8 right-8 w-14 h-14 rounded-full bg-green-600 text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all duration-200 flex items-center justify-center text-2xl font-bold z-[9999] ${busSaving ? 'opacity-60 cursor-not-allowed' : ''}`,
-                title: 'Pridať autobus'
+                onClick: () => {
+                    console.log('[TRANSPORT] Bolo kliknuté na plávajúce zelené tlačidlo "+" v pravom dolnom rohu (bez akcie).');
+                },
+                className: `fixed bottom-8 right-8 w-14 h-14 rounded-full bg-green-600 text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all duration-200 flex items-center justify-center text-2xl font-bold z-[9999]`,
+                title: 'Plávajúce tlačidlo (iba log)'
             },
             React.createElement('i', {
-                className: busSaving ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-plus'
+                className: 'fa-solid fa-plus'
             })
         )
     );
