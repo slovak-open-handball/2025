@@ -119,6 +119,16 @@ const dayKeyAndSlotToTimestamp = (dayKey, slotFrom) => {
     return new Date(year, month, day, hours, minutes, 0, 0).getTime();
 };
 
+// ============================================================
+// Pomocné mapovanie typu miesta na ikonu + farbu
+// ============================================================
+const placeTypeIcons = {
+    sportova_hala: { icon: 'fa-futbol', color: '#dc2626', label: 'Športová hala' },
+    stravovanie:   { icon: 'fa-utensils', color: '#16a34a', label: 'Stravovanie' },
+    ubytovanie:    { icon: 'fa-bed', color: '#6b7280', label: 'Ubytovanie' },
+    zastavka:      { icon: 'fa-bus', color: '#2563eb', label: 'Zastávka' },
+};
+
 const TransportApp = ({ userProfileData }) => {
     // Mapa placeId → placeName
     const placesMapRef = useRef({});
@@ -135,16 +145,20 @@ const TransportApp = ({ userProfileData }) => {
     const cateringLoadedRef = useRef(false);
     const teamsLoadedRef = useRef(false);
 
+    // UI prepínač: 'planovanie' | 'nastavenia'
+    const [activeView, setActiveView] = useState('planovanie');
+
+    // Zoznam všetkých miest (z kolekcie `places`)
+    const [allPlaces, setAllPlaces] = useState([]);
+
     // ============================================================
     // ZBUILDÍ A VYPÍŠE ČASOVÚ OS PRE KAŽDÝ TÍM V KAŽDEJ KATEGÓRII
     // ============================================================
     const rebuildAndLogTimeline = () => {
-        // Počkáme, kým sú načítané všetky tri zdroje
         if (!matchesLoadedRef.current || !cateringLoadedRef.current || !teamsLoadedRef.current) {
             return;
         }
 
-        // grouped[category][teamName] = [ { ts, when, type, text } ]
         const grouped = {};
 
         const ensure = (category, teamName) => {
@@ -283,11 +297,12 @@ const TransportApp = ({ userProfileData }) => {
         let unsubscribeMatches = null;
         let unsubscribeCatering = null;
         let unsubscribePlaces = null;
+        let unsubscribeAllPlaces = null;
         let unsubscribeCateringSettings = null;
         let unsubscribeCategorySettings = null;
 
         // ============================================================
-        // 0a) MIESTO (places) – mapa placeId → názov
+        // 0a) MIESTO (places) – mapa placeId → názov (pre zápasy)
         // ============================================================
         try {
             const placesRef = collection(window.db, 'places');
@@ -306,6 +321,38 @@ const TransportApp = ({ userProfileData }) => {
         }
 
         // ============================================================
+        // 0a1) VŠETKY MIESTA (places) – pre záložku „Nastavenia"
+        // ============================================================
+        try {
+            const placesRef = collection(window.db, 'places');
+            unsubscribeAllPlaces = onSnapshot(placesRef, (snapshot) => {
+                const list = [];
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data() || {};
+                    const loc = data.location;
+                    list.push({
+                        id: docSnap.id,
+                        name: data.name || '(bez názvu)',
+                        type: data.type || '(neznámy typ)',
+                        capacity: data.capacity ?? null,
+                        accommodationType: data.accommodationType || null,
+                        note: data.note || null,
+                        lat: loc?.latitude ?? data.lat ?? null,
+                        lng: loc?.longitude ?? data.lng ?? null,
+                        headerColor: data.headerColor || '#1e40af',
+                        headerTextColor: data.headerTextColor || '#000000',
+                    });
+                });
+                list.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
+                setAllPlaces(list);
+            }, (err) => {
+                console.error('[TRANSPORT] onSnapshot(places) pre záložku Nastavenia error:', err);
+            });
+        } catch (e) {
+            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na places (Nastavenia):', e);
+        }
+
+        // ============================================================
         // 0a2) STRAVOVACIA JEDNOTKA (unitMinutes)
         // ============================================================
         try {
@@ -320,7 +367,6 @@ const TransportApp = ({ userProfileData }) => {
                     ? parseInt(String(data.unitMinutes), 10)
                     : null;
                 window.__transport_unitMinutes = (!isNaN(parsed) && parsed > 0) ? parsed : null;
-                // Ak už máme catering buffer, prekresli
                 if (cateringLoadedRef.current) rebuildAndLogTimeline();
             }, (err) => {
                 console.error('[TRANSPORT] onSnapshot(settings/catering) error:', err);
@@ -351,7 +397,6 @@ const TransportApp = ({ userProfileData }) => {
                     });
                 }
                 window.__transport_categories = map;
-                // Ak už máme matches buffer, prekresli
                 if (matchesLoadedRef.current) rebuildAndLogTimeline();
             }, (err) => {
                 console.error('[TRANSPORT] onSnapshot(settings/categories) error:', err);
@@ -496,7 +541,6 @@ const TransportApp = ({ userProfileData }) => {
                     ? (placesMapRef.current[hallId] || `(neznáma hala: ${hallId})`)
                     : null;
 
-                // scheduledTs pre chronologické zoradenie
                 let scheduledTs = null;
                 if (data.scheduledTime) {
                     try {
@@ -514,7 +558,6 @@ const TransportApp = ({ userProfileData }) => {
                         ? ` [${data.matchType}]`
                         : '';
 
-                // === Výpočet času konca zápasu ===
                 let scheduledEndTs = null;
                 let scheduledEndTime = null;
                 if (scheduledTs != null) {
@@ -594,19 +637,15 @@ const TransportApp = ({ userProfileData }) => {
                 let teamName;
 
                 if (data.isSuperstructure === true) {
-                    // Superstructure → udalosť patrí superstructure tímu (nie tímu v riadku)
                     category = cleanCategory(data.categoryName || data.category || '(bez kategórie)');
                     teamName = (data.teamName || '').trim() || '(neznámy superstructure tím)';
                 } else {
-                    // Klasické priradenie → tím v riadku
                     category = cleanCategory(data.category || data.categoryName || '(bez kategórie)');
                     teamName = getRowTeamName(data);
                 }
 
-                // ts pre chronologické zoradenie
                 const ts = dayKeyAndSlotToTimestamp(dayKey, slotFrom);
 
-                // === Výpočet času konca stravovania (slotFrom + unitMinutes) ===
                 let slotTo = null;
                 let slotToTs = null;
                 const unitMin = window.__transport_unitMinutes;
@@ -663,21 +702,164 @@ const TransportApp = ({ userProfileData }) => {
             if (unsubscribeMatches) unsubscribeMatches();
             if (unsubscribeCatering) unsubscribeCatering();
             if (unsubscribePlaces) unsubscribePlaces();
+            if (unsubscribeAllPlaces) unsubscribeAllPlaces();
             if (unsubscribeCateringSettings) unsubscribeCateringSettings();
             if (unsubscribeCategorySettings) unsubscribeCategorySettings();
         };
     }, []);
 
+    // ============================================================
+    // RENDER ZOZNAMU MIEST (záložka Nastavenia)
+    // ============================================================
+    const renderPlacesList = () => {
+        if (allPlaces.length === 0) {
+            return React.createElement(
+                'div',
+                { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300' },
+                React.createElement('i', { className: 'fa-solid fa-map-pin text-4xl mb-3 opacity-40' }),
+                React.createElement('p', { className: 'text-lg' }, 'Žiadne miesta v databáze'),
+                React.createElement('p', { className: 'text-sm mt-1' }, 'Pridajte prvé miesto v sekcii Mapa.')
+            );
+        }
+
+        return React.createElement(
+            'div',
+            { className: 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4' },
+            allPlaces.map((place) => {
+                const t = placeTypeIcons[place.type] || { icon: 'fa-map-pin', color: '#6b7280', label: place.type };
+                return React.createElement(
+                    'div',
+                    {
+                        key: place.id,
+                        className: 'bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col gap-3'
+                    },
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-start gap-3' },
+                        React.createElement(
+                            'div',
+                            {
+                                className: 'w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0',
+                                style: {
+                                    backgroundColor: (t.color || '#6b7280') + '20',
+                                    border: `2px solid ${t.color || '#6b7280'}`,
+                                }
+                            },
+                            React.createElement('i', { className: `fa-solid ${t.icon} text-lg`, style: { color: t.color } })
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1 min-w-0' },
+                            React.createElement('h3', { className: 'font-bold text-gray-800 text-base truncate' }, place.name),
+                            React.createElement(
+                                'span',
+                                {
+                                    className: 'inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full',
+                                    style: {
+                                        backgroundColor: (t.color || '#6b7280') + '20',
+                                        color: t.color || '#6b7280',
+                                    }
+                                },
+                                t.label
+                            )
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'text-sm text-gray-600 space-y-1' },
+                        place.accommodationType && React.createElement(
+                            'div',
+                            null,
+                            React.createElement('span', { className: 'font-medium text-gray-700' }, 'Typ ubytovania: '),
+                            place.accommodationType
+                        ),
+                        place.capacity != null && React.createElement(
+                            'div',
+                            null,
+                            React.createElement('span', { className: 'font-medium text-gray-700' }, 'Kapacita: '),
+                            place.capacity
+                        ),
+                        place.note && React.createElement(
+                            'div',
+                            { className: 'text-gray-600 whitespace-pre-line' },
+                            React.createElement('span', { className: 'font-medium text-gray-700' }, 'Poznámka: '),
+                            place.note
+                        )
+                    )
+                );
+            })
+        );
+    };
+
+    // ============================================================
+    // HLAVNÝ RENDER
+    // ============================================================
     return React.createElement(
         'div',
         { className: 'w-full flex-1 flex flex-col' },
         React.createElement(
             'div',
-            { className: 'w-full flex-1 bg-white rounded-xl shadow-xl p-8 flex flex-col items-center justify-start transform transition-all duration-500' },
+            { className: 'w-full flex-1 bg-white rounded-xl shadow-xl p-8 flex flex-col items-start justify-start transform transition-all duration-500' },
+            // Nadpis
             React.createElement(
                 'div',
-                { className: 'flex flex-col items-center mb-6' },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Doprava')
+                { className: 'w-full flex flex-col items-center mb-6' },
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-4' }, 'Doprava')
+            ),
+            // Dve tlačidlá
+            React.createElement(
+                'div',
+                { className: 'w-full flex flex-wrap items-center justify-center gap-3 mb-6' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => setActiveView('nastavenia'),
+                        className: `px-5 py-2.5 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
+                            activeView === 'nastavenia'
+                                ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                                : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
+                        }`
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-gear' }),
+                    'Nastavenia'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => setActiveView('planovanie'),
+                        className: `px-5 py-2.5 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
+                            activeView === 'planovanie'
+                                ? 'bg-green-600 text-white border-green-600 hover:bg-green-700'
+                                : 'bg-white text-green-600 border-green-600 hover:bg-green-50'
+                        }`
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-calendar-days' }),
+                    'Plánovanie'
+                )
+            ),
+            // Obsah záložky
+            React.createElement(
+                'div',
+                { className: 'w-full flex-1' },
+                activeView === 'nastavenia'
+                    ? React.createElement(
+                        'div',
+                        { className: 'w-full' },
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center justify-between mb-4 pb-3 border-b border-gray-200' },
+                            React.createElement('h3', { className: 'text-xl font-semibold text-gray-700' }, 'Zoznam všetkých miest'),
+                            React.createElement('span', { className: 'text-sm text-gray-500' }, `Spolu: ${allPlaces.length}`)
+                        ),
+                        renderPlacesList()
+                    )
+                    : React.createElement(
+                        'div',
+                        { className: 'w-full flex flex-col items-center justify-center py-16 text-gray-500' },
+                        React.createElement('i', { className: 'fa-solid fa-calendar-days text-6xl mb-4 opacity-30' }),
+                        React.createElement('p', { className: 'text-lg font-medium' }, 'Plánovanie'),
+                        React.createElement('p', { className: 'text-sm mt-1' }, 'Táto sekcia je zatiaľ prázdna.')
+                    )
             )
         )
     );
@@ -753,7 +935,6 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
         const usersRef = collection(window.db, 'users');
         const usersSnap = await getDocs(usersRef);
 
-        // Množina jedinečných názvov ubytovní (bez poradia, bez duplicít)
         const uniqueAccommodations = new Set();
 
         usersSnap.forEach((userDoc) => {
@@ -777,7 +958,6 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
             });
         });
 
-        // Zoradíme abecedne
         const sortedAccommodations = [...uniqueAccommodations].sort((a, b) =>
             a.localeCompare(b, 'sk', { sensitivity: 'base' })
         );
