@@ -1780,10 +1780,12 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     return React.createElement(
         'div',
-        { className: 'w-full flex-1 flex flex-col' },
+        { className: 'w-full flex-1 flex flex-col overflow-x-auto' },
         React.createElement(
             'div',
-            { className: 'w-full flex-1 bg-white rounded-xl shadow-xl p-8 flex flex-col items-start justify-start transform transition-all duration-500' },
+            {
+                className: 'bg-white rounded-xl shadow-xl p-8 flex flex-col items-start justify-start w-max min-w-full transition-all duration-500'
+            },
             // Nadpis
             React.createElement(
                 'div',
@@ -1914,10 +1916,7 @@ const TransportApp = ({ userProfileData }) => {
             renderAssignModal(),
             renderAssignStopToPlaceModal()
         ),
-        // ============================================================
-        // Zelené okrúhle tlačidlo „+“ – MIMO `transform` rodiča,
-        // aby bolo skutočne fixné vo viewporte (pravý dolný roh).
-        // ============================================================
+        // Zelené okrúhle tlačidlo „+“ – mimo `transform` rodiča
         activeView === 'planovanie' && React.createElement(
             'button',
             {
