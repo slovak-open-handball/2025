@@ -1473,7 +1473,10 @@ const TransportApp = ({ userProfileData }) => {
                             // Hlavička autobusu
                             React.createElement(
                                 'div',
-                                { className: 'bg-green-600 text-white px-5 py-3 flex items-center gap-3' },
+                                {
+                                    className: 'px-5 py-3 flex items-center gap-3 text-gray-900',
+                                    style: { backgroundColor: '#39D4F3' }
+                                },
                                 React.createElement('i', { className: 'fa-solid fa-bus' }),
                                 React.createElement('h3', { className: 'text-lg font-bold flex-1' }, bus.name),
                                 React.createElement(
@@ -1481,7 +1484,7 @@ const TransportApp = ({ userProfileData }) => {
                                     {
                                         type: 'button',
                                         onClick: () => removeBus(bus),
-                                        className: 'text-white/80 hover:text-white hover:bg-white/10 rounded-full w-8 h-8 flex items-center justify-center transition-colors',
+                                        className: 'text-gray-900/70 hover:text-gray-900 hover:bg-black/10 rounded-full w-8 h-8 flex items-center justify-center transition-colors',
                                         title: 'Odstrániť autobus'
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-trash' })
