@@ -718,25 +718,70 @@ const TransportApp = ({ userProfileData }) => {
                 React.createElement('p', { className: 'text-sm mt-1' }, 'Pridajte prvé miesto v sekcii Mapa.')
             );
         }
-
-        return React.createElement(
-            'ul',
-            { className: 'space-y-2 max-w-xl' },
-            allPlaces.map((place) =>
+    
+        // Rozdelenie miest na zastávky a ostatné
+        const stops = allPlaces
+            .filter((p) => p.type === 'zastavka')
+            .sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
+        const others = allPlaces
+            .filter((p) => p.type !== 'zastavka')
+            .sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
+    
+        const renderColumn = (title, items, accentClass) => {
+            return React.createElement(
+                'div',
+                { className: 'flex-1 min-w-0' },
                 React.createElement(
-                    'li',
-                    {
-                        key: place.id,
-                        className: 'bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow px-4 py-2.5 flex items-center gap-3'
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-500' }),
-                    React.createElement(
-                        'span',
-                        { className: 'text-gray-800 font-medium' },
-                        place.name
+                    'h4',
+                    { className: `text-sm font-bold uppercase tracking-wide mb-3 ${accentClass}` },
+                    `${title} (${items.length})`
+                ),
+                items.length === 0
+                    ? React.createElement(
+                        'div',
+                        { className: 'text-gray-400 italic text-sm px-1' },
+                        'Žiadne položky.'
                     )
-                )
-            )
+                    : React.createElement(
+                        'ul',
+                        { className: 'space-y-2' },
+                        items.map((place) =>
+                            React.createElement(
+                                'li',
+                                {
+                                    key: place.id,
+                                    className: 'bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow px-4 py-2.5 flex items-center gap-3'
+                                },
+                                React.createElement('i', {
+                                    className: `fa-solid ${
+                                        place.type === 'zastavka'
+                                            ? 'fa-bus text-blue-600'
+                                            : (placeTypeIcons[place.type]?.icon || 'fa-location-dot') + ' ' +
+                                              (place.type === 'sportova_hala'
+                                                  ? 'text-red-600'
+                                                  : place.type === 'ubytovanie'
+                                                      ? 'text-gray-600'
+                                                      : place.type === 'stravovanie'
+                                                          ? 'text-green-600'
+                                                          : 'text-blue-500')
+                                    }`
+                                }),
+                                React.createElement(
+                                    'span',
+                                    { className: 'text-gray-800 font-medium truncate' },
+                                    place.name
+                                )
+                            )
+                        )
+                    )
+            );
+        };
+    
+        return React.createElement(
+            'div',
+            { className: 'flex flex-col md:flex-row gap-6 w-full' },
+            renderColumn('Zastávky', stops, 'text-blue-700'),
+            renderColumn('Ostatné miesta', others, 'text-gray-700')
         );
     };
 
