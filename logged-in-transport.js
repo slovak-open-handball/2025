@@ -199,6 +199,8 @@ const TransportApp = ({ userProfileData }) => {
         }
     
         const grouped = {};
+        // accommodationByTeam[category][teamName] = accommodationName
+        const accommodationByTeam = {};
     
         const ensure = (category, teamName) => {
             if (!grouped[category]) grouped[category] = {};
@@ -209,6 +211,12 @@ const TransportApp = ({ userProfileData }) => {
         // 1) TÍMY – info o skupine, ubytovaní a doprave
         teamsArrivalBufferRef.current.forEach((t) => {
             const arr = ensure(t.category, t.teamName);
+    
+            // Zapamätaj si ubytovanie pre tím
+            if (t.accommodationName) {
+                if (!accommodationByTeam[t.category]) accommodationByTeam[t.category] = {};
+                accommodationByTeam[t.category][t.teamName] = t.accommodationName;
+            }
     
             if (t.groupName) {
                 const orderStr = t.order != null ? `, poradie ${t.order}` : '';
@@ -293,6 +301,19 @@ const TransportApp = ({ userProfileData }) => {
         });
     
         // ============================================================
+        // Pomocná funkcia: z `when` vytiahne dayKey (YYYY-MM-DD) alebo null
+        // ============================================================
+        const extractDayKeyFromWhen = (when) => {
+            if (!when) return null;
+            const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(when);
+            if (!m) return null;
+            const d = String(m[1]).padStart(2, '0');
+            const mo = String(m[2]).padStart(2, '0');
+            const y = m[3];
+            return `${y}-${mo}-${d}`;
+        };
+    
+        // ============================================================
         // VÝPIS
         // ============================================================
         console.log('[TRANSPORT] ===== ČASOVÁ OS UDALOSTÍ PRE KAŽDÝ TÍM =====');
@@ -317,8 +338,12 @@ const TransportApp = ({ userProfileData }) => {
                         return String(a.text).localeCompare(String(b.text), 'sk');
                     });
     
+                    const accommodationName =
+                        (accommodationByTeam[category] && accommodationByTeam[category][teamName]) || null;
+    
                     // ------------------------------------------------------------
                     // Detekcia zmeny miesta medzi dvoma po sebe idúcimi udalosťami
+                    // + na konci každého dňa kontrola voči ubytovaniu
                     // ------------------------------------------------------------
                     const enriched = [];
                     for (let i = 0; i < events.length; i++) {
@@ -326,11 +351,10 @@ const TransportApp = ({ userProfileData }) => {
                         enriched.push(current);
     
                         const next = events[i + 1];
-                        if (!next) continue;
     
-                        // Ak má aktuálna aj nasledujúca udalosť známu lokáciu a líšia sa,
-                        // vložíme medzi ne „presunový“ riadok.
+                        // 1) Zmena miesta medzi dvoma susednými udalosťami
                         if (
+                            next &&
                             current.location &&
                             next.location &&
                             current.location !== next.location
@@ -343,6 +367,32 @@ const TransportApp = ({ userProfileData }) => {
                                     `Presun z "${current.location}" do "${next.location}" ` +
                                     `(posledná udalosť: ${current.when || '—'}, ` +
                                     `prvá udalosť v novom mieste: ${next.when || '—'})`,
+                                location: null,
+                                isTransfer: true,
+                            });
+                        }
+    
+                        // 2) Koniec dňa – ak je posledná udalosť dňa inde než ubytovanie,
+                        //    vložíme presun do ubytovania.
+                        const currentDay = extractDayKeyFromWhen(current.when);
+                        const nextDay = next ? extractDayKeyFromWhen(next.when) : null;
+    
+                        const isLastEventOfDay =
+                            currentDay != null && (next == null || nextDay == null || nextDay !== currentDay);
+    
+                        if (
+                            isLastEventOfDay &&
+                            accommodationName &&
+                            current.location &&
+                            current.location !== accommodationName
+                        ) {
+                            enriched.push({
+                                ts: current.ts,
+                                when: current.when,
+                                type: 'transfer',
+                                text:
+                                    `Presun z "${current.location}" do ubytovania "${accommodationName}" ` +
+                                    `(posledná udalosť dňa: ${current.when || '—'})`,
                                 location: null,
                                 isTransfer: true,
                             });
