@@ -46,6 +46,136 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 const TransportApp = ({ userProfileData }) => {
+    // ============================================================
+    // NAČÍTANIE DÁTUMOV TURNAJA + TÍMOV S UBYTOVŇOU (do konzoly)
+    // ============================================================
+    useEffect(() => {
+        if (!window.db) return;
+
+        let unsubscribeRegistration = null;
+
+        // 1) Dátumy turnaja zo settings/registration
+        const loadTournamentDates = async () => {
+            try {
+                const regRef = doc(window.db, 'settings', 'registration');
+                const snap = await getDoc(regRef);
+
+                if (!snap.exists()) {
+                    console.log('[TRANSPORT] settings/registration neexistuje – žiadne dátumy turnaja.');
+                    return;
+                }
+
+                const data = snap.data();
+
+                const formatTs = (ts) => {
+                    if (!ts) return null;
+                    if (typeof ts.toDate === 'function') {
+                        return ts.toDate().toISOString();
+                    }
+                    return ts;
+                };
+
+                console.log('[TRANSPORT] ===== DÁTUMY TURNAJA =====');
+                console.log('[TRANSPORT] tournamentStart:      ', formatTs(data.tournamentStart));
+                console.log('[TRANSPORT] tournamentEnd:        ', formatTs(data.tournamentEnd));
+                console.log('[TRANSPORT] arrivalDate:           ', formatTs(data.arrivalDate));
+                console.log('[TRANSPORT] registrationStartDate: ', formatTs(data.registrationStartDate));
+                console.log('[TRANSPORT] registrationEndDate:   ', formatTs(data.registrationEndDate));
+                console.log('[TRANSPORT] dataEditDeadline:      ', formatTs(data.dataEditDeadline));
+                console.log('[TRANSPORT] rosterEditDeadline:    ', formatTs(data.rosterEditDeadline));
+                console.log('[TRANSPORT] ============================');
+            } catch (err) {
+                console.error('[TRANSPORT] Chyba pri načítaní dátumov turnaja:', err);
+            }
+        };
+
+        // Real-time listener na zmeny dátumov turnaja
+        try {
+            const regRef = doc(window.db, 'settings', 'registration');
+            unsubscribeRegistration = onSnapshot(regRef, (snap) => {
+                if (!snap.exists()) return;
+                const data = snap.data();
+                const formatTs = (ts) => (ts && typeof ts.toDate === 'function') ? ts.toDate().toISOString() : ts;
+                console.log('[TRANSPORT] (live) Dátumy turnaja zmenené:');
+                console.log('[TRANSPORT] (live) tournamentStart:', formatTs(data.tournamentStart));
+                console.log('[TRANSPORT] (live) tournamentEnd:  ', formatTs(data.tournamentEnd));
+                console.log('[TRANSPORT] (live) arrivalDate:     ', formatTs(data.arrivalDate));
+            }, (err) => {
+                console.error('[TRANSPORT] onSnapshot(settings/registration) error:', err);
+            });
+        } catch (e) {
+            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na settings/registration:', e);
+        }
+
+        // 2) Tímy s priradenou ubytovňou, zoskupené podľa kategórie
+        const loadTeamsWithAccommodation = async () => {
+            try {
+                const usersRef = collection(window.db, 'users');
+                const usersSnap = await getDocs(usersRef);
+
+                // grouped[category] = [ { teamName, accommodation, userId }, ... ]
+                const grouped = {};
+
+                usersSnap.forEach((userDoc) => {
+                    const userData = userDoc.data() || {};
+                    const teams = userData.teams;
+                    if (!teams || typeof teams !== 'object') return;
+
+                    Object.entries(teams).forEach(([category, teamArray]) => {
+                        if (!Array.isArray(teamArray)) return;
+
+                        teamArray.forEach((team) => {
+                            if (!team || !team.teamName) return;
+
+                            const accomType = team.accommodation?.type?.trim?.() || '';
+                            const accomName = team.accommodation?.name?.trim?.() || '';
+
+                            // Zaujímajú nás len tímy s priradenou ubytovňou (má name)
+                            if (!accomName) return;
+
+                            if (!grouped[category]) grouped[category] = [];
+
+                            grouped[category].push({
+                                teamName: team.teamName.trim(),
+                                accommodationType: accomType || '(nešpecifikovaný)',
+                                accommodationName: accomName,
+                                userId: userDoc.id
+                            });
+                        });
+                    });
+                });
+
+                console.log('[TRANSPORT] ===== TÍMY S PRIRADENOU UBYTOVŇOU PODĽA KATEGÓRIÍ =====');
+                const categories = Object.keys(grouped).sort((a, b) =>
+                    a.localeCompare(b, 'sk', { sensitivity: 'base' })
+                );
+
+                if (categories.length === 0) {
+                    console.log('[TRANSPORT] Žiadne tímy s priradenou ubytovňou.');
+                } else {
+                    categories.forEach((category) => {
+                        console.log(`\n[TRANSPORT] Kategória: ${category} (${grouped[category].length} tímov)`);
+                        grouped[category]
+                            .sort((a, b) => a.teamName.localeCompare(b.teamName, 'sk', { sensitivity: 'base' }))
+                            .forEach((t) => {
+                                console.log(`   • ${t.teamName}  →  ubytovňa: "${t.accommodationName}"  (typ: ${t.accommodationType})`);
+                            });
+                    });
+                }
+                console.log('[TRANSPORT] =====================================================');
+            } catch (err) {
+                console.error('[TRANSPORT] Chyba pri načítaní tímov s ubytovaním:', err);
+            }
+        };
+
+        loadTournamentDates();
+        loadTeamsWithAccommodation();
+
+        return () => {
+            if (unsubscribeRegistration) unsubscribeRegistration();
+        };
+    }, []);
+
     return React.createElement(
         'div',
         { className: 'w-full flex-1 flex flex-col' },
