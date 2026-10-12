@@ -1918,7 +1918,7 @@ const TransportApp = ({ userProfileData }) => {
         // Zelené okrúhle tlačidlo „+“ – MIMO `transform` rodiča,
         // aby bolo skutočne fixné vo viewporte (pravý dolný roh).
         // ============================================================
-        React.createElement(
+        activeView === 'planovanie' && React.createElement(
             'button',
             {
                 onClick: addNewBus,
