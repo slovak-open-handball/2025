@@ -1066,7 +1066,16 @@ const TransportApp = ({ userProfileData }) => {
                 if (!assignSearch.trim()) return true;
                 return p.name.toLowerCase().includes(assignSearch.trim().toLowerCase());
             })
-            .sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
+            .sort((a, b) => {
+                const aAssign = transportAssignments[a.id];
+                const bAssign = transportAssignments[b.id];
+                const aIsAssigned = !!(aAssign && aAssign.stopId === assignTargetStop.id);
+                const bIsAssigned = !!(bAssign && bAssign.stopId === assignTargetStop.id);
+                // Najprv tie, ktoré sú priradené k tejto zastávke
+                if (aIsAssigned !== bIsAssigned) return aIsAssigned ? -1 : 1;
+                // V rámci skupiny abecedne
+                return a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' });
+            });
 
         const selectedCount = Object.keys(assignSelectedIds).filter((id) => assignSelectedIds[id]).length;
 
