@@ -1220,7 +1220,10 @@ const TransportApp = ({ userProfileData }) => {
                                         position: 'relative',
                                         width: '100%',
                                         height: '100%',
-                                        background: 'linear-gradient(to bottom right, transparent calc(50% - 1px), #9ca3af calc(50% - 1px), #9ca3af calc(50% + 1px), transparent calc(50% + 1px))',
+                                        background: `
+                                            linear-gradient(to bottom right, transparent calc(50% - 1px), #9ca3af calc(50% - 1px), #9ca3af calc(50% + 1px), transparent calc(50% + 1px)),
+                                            linear-gradient(to bottom left, transparent calc(50% - 1px), #9ca3af calc(50% - 1px), #9ca3af calc(50% + 1px), transparent calc(50% + 1px))
+                                        `,
                                     }
                                 },
                                 React.createElement(
@@ -1235,7 +1238,7 @@ const TransportApp = ({ userProfileData }) => {
                                             fontSize: '12px',
                                         }
                                     },
-                                    'Z'
+                                    'Odkiaľ'
                                 ),
                                 React.createElement(
                                     'span',
@@ -1249,7 +1252,7 @@ const TransportApp = ({ userProfileData }) => {
                                             fontSize: '12px',
                                         }
                                     },
-                                    'Do'
+                                    'Kam'
                                 )
                             )
                         ),
