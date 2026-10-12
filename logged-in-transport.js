@@ -214,17 +214,21 @@ const TransportApp = ({ userProfileData }) => {
         // 3) STRAVOVANIA
         cateringBufferRef.current.forEach((c) => {
             const flags = [];
-            if (c.isSuperstructure) flags.push('superstructure');
             if (c.isPriority) flags.push('PRIORITA');
             const flagStr = flags.length ? ` [${flags.join(', ')}]` : '';
             const mealLabel = c.mealType === 'lunch' ? 'Obed' : c.mealType === 'dinner' ? 'Večera' : c.mealType;
+        
+            // Ak ide o superstructure, zobrazíme názov superstructure tímu namiesto [superstructure]
+            const superstructureStr = c.isSuperstructure
+                ? ` (superstructure: ${c.superstructureTeamName || '(neznámy)'})`
+                : '';
 
             const formattedDay = c.dayKey ? (formatDateDDMMYYYY(c.dayKey) || c.dayKey) : '?';
             ensure(c.category, c.teamName).push({
                 ts: c.ts ?? Number.POSITIVE_INFINITY,
                 when: `${formattedDay} ${c.slotFrom || ''}`.trim(),
                 type: 'catering',
-                text: `${mealLabel} (${c.slotFrom || '--:--'}) → ${c.placeName}${flagStr}`,
+                text: `${mealLabel} (${c.slotFrom || '--:--'}) → ${c.placeName}${superstructureStr}${flagStr}`,
             });
         });
 
@@ -540,6 +544,9 @@ const TransportApp = ({ userProfileData }) => {
                     placeName,
                     isSuperstructure: data.isSuperstructure === true,
                     isPriority: data.isPriority === true,
+                    superstructureTeamName: data.isSuperstructure === true
+                        ? (data.teamName || '').trim() || null
+                        : null,
                 });
             });
 
