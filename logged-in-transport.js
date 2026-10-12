@@ -1358,11 +1358,6 @@ const TransportApp = ({ userProfileData }) => {
                                     { className: 'text-sm font-bold uppercase tracking-wide mb-3 text-blue-700' },
                                     `Zastávky (${stopsList.length})`
                                 ),
-                                React.createElement(
-                                    'p',
-                                    { className: 'text-xs text-gray-500 mb-2 italic' },
-                                    'Kliknutím na zastávku priradíte miesta.'
-                                ),
                                 renderStopsWithAssignments()
                             ),
                             // PRAVÝ STĹPEC – ostatné miesta
