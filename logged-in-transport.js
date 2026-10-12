@@ -1474,17 +1474,17 @@ const TransportApp = ({ userProfileData }) => {
                             React.createElement(
                                 'div',
                                 {
-                                    className: 'px-5 py-3 flex items-center gap-3 text-gray-900',
+                                    className: 'relative px-5 py-3 flex items-center justify-center text-gray-900',
                                     style: { backgroundColor: '#39D4F3' }
                                 },
-                                React.createElement('i', { className: 'fa-solid fa-bus' }),
-                                React.createElement('h3', { className: 'text-lg font-bold flex-1' }, bus.name),
+                                React.createElement('i', { className: 'fa-solid fa-bus mr-2' }),
+                                React.createElement('h3', { className: 'text-lg font-bold text-center' }, bus.name),
                                 React.createElement(
                                     'button',
                                     {
                                         type: 'button',
                                         onClick: () => removeBus(bus),
-                                        className: 'text-gray-900/70 hover:text-gray-900 hover:bg-black/10 rounded-full w-8 h-8 flex items-center justify-center transition-colors',
+                                        className: 'absolute right-3 text-gray-900/70 hover:text-gray-900 hover:bg-black/10 rounded-full w-8 h-8 flex items-center justify-center transition-colors',
                                         title: 'Odstrániť autobus'
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-trash' })
@@ -1514,7 +1514,7 @@ const TransportApp = ({ userProfileData }) => {
                                                 },
                                                 React.createElement(
                                                     'td',
-                                                    { className: 'border border-gray-200 px-4 py-2 text-gray-800' },
+                                                    { className: 'border border-gray-200 px-4 py-2 text-gray-800 text-center' },
                                                     React.createElement(
                                                         'span',
                                                         { className: 'font-semibold capitalize' },
@@ -1522,12 +1522,12 @@ const TransportApp = ({ userProfileData }) => {
                                                     ),
                                                     React.createElement(
                                                         'span',
-                                                        { className: 'text-gray-500 ml-2' },
+                                                        { className: 'text-gray-500 mx-2' },
                                                         '–'
                                                     ),
                                                     React.createElement(
                                                         'span',
-                                                        { className: 'ml-2' },
+                                                        null,
                                                         day.dateLabel
                                                     )
                                                 )
