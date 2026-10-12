@@ -1486,7 +1486,7 @@ const TransportApp = ({ userProfileData }) => {
                                     React.createElement('i', { className: 'fa-solid fa-trash' })
                                 )
                             ),
-                            // Tabuľka dní
+                            // Tabuľka dní – jeden riadok na deň (dátum + názov dňa v jednom stĺpci)
                             tournamentDays.length === 0
                                 ? React.createElement(
                                     'p',
@@ -1498,24 +1498,6 @@ const TransportApp = ({ userProfileData }) => {
                                 : React.createElement(
                                     'table',
                                     { className: 'w-full border-collapse text-sm' },
-                                    React.createElement(
-                                        'thead',
-                                        null,
-                                        React.createElement(
-                                            'tr',
-                                            { className: 'bg-gray-100 text-gray-700' },
-                                            React.createElement(
-                                                'th',
-                                                { className: 'border border-gray-200 px-4 py-2 text-left font-semibold' },
-                                                'Dátum'
-                                            ),
-                                            React.createElement(
-                                                'th',
-                                                { className: 'border border-gray-200 px-4 py-2 text-left font-semibold' },
-                                                'Deň'
-                                            )
-                                        )
-                                    ),
                                     React.createElement(
                                         'tbody',
                                         null,
@@ -1529,12 +1511,21 @@ const TransportApp = ({ userProfileData }) => {
                                                 React.createElement(
                                                     'td',
                                                     { className: 'border border-gray-200 px-4 py-2 text-gray-800' },
-                                                    day.dateLabel
-                                                ),
-                                                React.createElement(
-                                                    'td',
-                                                    { className: 'border border-gray-200 px-4 py-2 text-gray-800 capitalize' },
-                                                    day.dayName
+                                                    React.createElement(
+                                                        'span',
+                                                        { className: 'font-semibold capitalize' },
+                                                        day.dayName
+                                                    ),
+                                                    React.createElement(
+                                                        'span',
+                                                        { className: 'text-gray-500 ml-2' },
+                                                        '–'
+                                                    ),
+                                                    React.createElement(
+                                                        'span',
+                                                        { className: 'ml-2' },
+                                                        day.dateLabel
+                                                    )
                                                 )
                                             )
                                         )
