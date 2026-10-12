@@ -1196,7 +1196,7 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement(
                 'p',
                 { className: 'text-xs text-gray-500 mb-3 italic' },
-                'Hodnota predstavuje počet minút jazdy z riadkovej zastávky (od) do stĺpcovej zastávky (do). Diagonála je vždy 0. Prázdne pole = nezadané.'
+                'Hodnota predstavuje počet minút jazdy z riadkovej zastávky (z) do stĺpcovej zastávky (do). Prázdne pole = nezadané.'
             ),
             React.createElement(
                 'table',
@@ -1296,7 +1296,7 @@ const TransportApp = ({ userProfileData }) => {
                                             key: `td-${fromStop.id}-${toStop.id}`,
                                             className: 'border border-gray-300 px-2 py-1 text-center text-gray-400 bg-gray-100'
                                         },
-                                        '0'
+                                        ''
                                     );
                                 }
                                 const value = getInputValue(fromStop.id, toStop.id);
