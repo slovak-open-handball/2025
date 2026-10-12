@@ -727,6 +727,15 @@ const TransportApp = ({ userProfileData }) => {
             .filter((p) => p.type !== 'zastavka')
             .sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
     
+        // Pomocná funkcia – ikona podľa typu miesta
+        const getPlaceIcon = (type) => {
+            const config = placeTypeIcons[type] || { icon: 'fa-location-dot', color: '#6b7280' };
+            return React.createElement('i', {
+                className: `fa-solid ${config.icon}`,
+                style: { color: config.color },
+            });
+        };
+    
         const renderColumn = (title, items, accentClass) => {
             return React.createElement(
                 'div',
@@ -752,20 +761,7 @@ const TransportApp = ({ userProfileData }) => {
                                     key: place.id,
                                     className: 'bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow px-4 py-2.5 flex items-center gap-3'
                                 },
-                                React.createElement('i', {
-                                    className: `fa-solid ${
-                                        place.type === 'zastavka'
-                                            ? 'fa-bus text-blue-600'
-                                            : (placeTypeIcons[place.type]?.icon || 'fa-location-dot') + ' ' +
-                                              (place.type === 'sportova_hala'
-                                                  ? 'text-red-600'
-                                                  : place.type === 'ubytovanie'
-                                                      ? 'text-gray-600'
-                                                      : place.type === 'stravovanie'
-                                                          ? 'text-green-600'
-                                                          : 'text-blue-500')
-                                    }`
-                                }),
+                                getPlaceIcon(place.type),
                                 React.createElement(
                                     'span',
                                     { className: 'text-gray-800 font-medium truncate' },
