@@ -127,9 +127,9 @@ const TransportApp = ({ userProfileData }) => {
     const teamsLookupRef = useRef({});
 
     // Buffery pre udalosti z jednotlivých kolekcií
-    const matchesBufferRef = useRef([]);       // { category, home, away, scheduledTs, hallName, status, special }
-    const cateringBufferRef = useRef([]);      // { category, teamName, ts, dayKey, slotFrom, mealType, placeName, flags }
-    const teamsArrivalBufferRef = useRef([]);  // { category, teamName, arrivalDisplay, accomodationDisplay }
+    const matchesBufferRef = useRef([]);
+    const cateringBufferRef = useRef([]);
+    const teamsArrivalBufferRef = useRef([]);
     // Zabráni opakovanému spracovaniu pred prvým načítaním
     const matchesLoadedRef = useRef(false);
     const cateringLoadedRef = useRef(false);
@@ -153,12 +153,10 @@ const TransportApp = ({ userProfileData }) => {
             return grouped[category][teamName];
         };
 
-        // 1) TÍMY – pridáme info o skupine, ubytovaní a doprave
-        //    (bez timestampu → -Infinity, aby boli navrchu)
+        // 1) TÍMY – info o skupine, ubytovaní a doprave
         teamsArrivalBufferRef.current.forEach((t) => {
             const arr = ensure(t.category, t.teamName);
 
-            // Skupina (informačný riadok) – zobrazíme len ak je vyplnená
             if (t.groupName) {
                 const orderStr = t.order != null ? `, poradie ${t.order}` : '';
                 arr.push({
@@ -169,7 +167,6 @@ const TransportApp = ({ userProfileData }) => {
                 });
             }
 
-            // Ubytovanie (informačný riadok)
             if (t.accommodationName) {
                 arr.push({
                     ts: -Infinity,
@@ -178,8 +175,7 @@ const TransportApp = ({ userProfileData }) => {
                     text: `Ubytovanie: "${t.accommodationName}" (typ: ${t.accommodationType || 'neurčený'})`,
                 });
             }
-        
-            // Doprava / príchod
+
             if (t.arrivalDisplay && t.arrivalDisplay !== '---') {
                 arr.push({
                     ts: -Infinity,
@@ -192,19 +188,21 @@ const TransportApp = ({ userProfileData }) => {
 
         // 2) ZÁPASY
         matchesBufferRef.current.forEach((m) => {
+            const timeRange = m.scheduledTime
+                ? (m.scheduledEndTime ? `${m.scheduledTime} – ${m.scheduledEndTime}` : m.scheduledTime)
+                : 'nenaplánované';
             const text = `${m.home} vs ${m.away}${m.special}${m.hallName ? ` | ${m.hallName}` : ''}${m.status ? ` | status=${m.status}` : ''}`;
 
-            // Zápas sa týka oboch tímov → zapíšeme do oboch
             ensure(m.category, m.home).push({
                 ts: m.scheduledTs ?? Number.POSITIVE_INFINITY,
-                when: m.scheduledTime || 'nenaplánované',
+                when: timeRange,
                 type: 'match',
                 text,
             });
             if (m.away !== m.home) {
                 ensure(m.category, m.away).push({
                     ts: m.scheduledTs ?? Number.POSITIVE_INFINITY,
-                    when: m.scheduledTime || 'nenaplánované',
+                    when: timeRange,
                     type: 'match',
                     text,
                 });
@@ -217,18 +215,21 @@ const TransportApp = ({ userProfileData }) => {
             if (c.isPriority) flags.push('PRIORITA');
             const flagStr = flags.length ? ` [${flags.join(', ')}]` : '';
             const mealLabel = c.mealType === 'lunch' ? 'Obed' : c.mealType === 'dinner' ? 'Večera' : c.mealType;
-        
-            // Ak ide o superstructure, zobrazíme názov superstructure tímu namiesto [superstructure]
+
             const superstructureStr = c.isSuperstructure
                 ? ` ${c.superstructureTeamName}`
                 : '';
 
             const formattedDay = c.dayKey ? (formatDateDDMMYYYY(c.dayKey) || c.dayKey) : '?';
+            const timeRange = c.slotFrom
+                ? (c.slotTo ? `${c.slotFrom} – ${c.slotTo}` : c.slotFrom)
+                : '--:--';
+
             ensure(c.category, c.teamName).push({
                 ts: c.ts ?? Number.POSITIVE_INFINITY,
-                when: `${formattedDay} ${c.slotFrom || ''}`.trim(),
+                when: `${formattedDay} ${timeRange}`.trim(),
                 type: 'catering',
-                text: `${mealLabel} (${c.slotFrom || '--:--'}) → ${c.placeName}${superstructureStr}${flagStr}`,
+                text: `${mealLabel} (${timeRange}) → ${c.placeName}${superstructureStr}${flagStr}`,
             });
         });
 
@@ -252,7 +253,6 @@ const TransportApp = ({ userProfileData }) => {
                 teams.forEach((teamName) => {
                     const events = grouped[category][teamName];
 
-                    // Zoradíme chronologicky; ak ts rovnaký, podľa textu
                     events.sort((a, b) => {
                         if (a.ts !== b.ts) return a.ts - b.ts;
                         return String(a.text).localeCompare(String(b.text), 'sk');
@@ -283,6 +283,8 @@ const TransportApp = ({ userProfileData }) => {
         let unsubscribeMatches = null;
         let unsubscribeCatering = null;
         let unsubscribePlaces = null;
+        let unsubscribeCateringSettings = null;
+        let unsubscribeCategorySettings = null;
 
         // ============================================================
         // 0a) MIESTO (places) – mapa placeId → názov
@@ -301,6 +303,61 @@ const TransportApp = ({ userProfileData }) => {
             });
         } catch (e) {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na places:', e);
+        }
+
+        // ============================================================
+        // 0a2) STRAVOVACIA JEDNOTKA (unitMinutes)
+        // ============================================================
+        try {
+            const cateringSettingsRef = doc(window.db, 'settings', 'catering');
+            unsubscribeCateringSettings = onSnapshot(cateringSettingsRef, (snap) => {
+                if (!snap.exists()) {
+                    window.__transport_unitMinutes = null;
+                    return;
+                }
+                const data = snap.data() || {};
+                const parsed = data.unitMinutes != null
+                    ? parseInt(String(data.unitMinutes), 10)
+                    : null;
+                window.__transport_unitMinutes = (!isNaN(parsed) && parsed > 0) ? parsed : null;
+                // Ak už máme catering buffer, prekresli
+                if (cateringLoadedRef.current) rebuildAndLogTimeline();
+            }, (err) => {
+                console.error('[TRANSPORT] onSnapshot(settings/catering) error:', err);
+            });
+        } catch (e) {
+            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na settings/catering:', e);
+        }
+
+        // ============================================================
+        // 0a3) KATEGÓRIE (trvanie zápasu)
+        // ============================================================
+        try {
+            const catRef = doc(window.db, 'settings', 'categories');
+            unsubscribeCategorySettings = onSnapshot(catRef, (snap) => {
+                const map = {};
+                if (snap.exists()) {
+                    const data = snap.data() || {};
+                    Object.entries(data).forEach(([catId, catData]) => {
+                        if (!catData) return;
+                        const periods = catData.periods ?? 2;
+                        const periodDuration = catData.periodDuration ?? 20;
+                        const breakDuration = catData.breakDuration ?? 2;
+                        const matchBreak = catData.matchBreak ?? 5;
+                        const matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                        const info = { matchDuration, matchBreak };
+                        if (catData.name) map[catData.name] = info;
+                        map[catId] = info;
+                    });
+                }
+                window.__transport_categories = map;
+                // Ak už máme matches buffer, prekresli
+                if (matchesLoadedRef.current) rebuildAndLogTimeline();
+            }, (err) => {
+                console.error('[TRANSPORT] onSnapshot(settings/categories) error:', err);
+            });
+        } catch (e) {
+            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na settings/categories:', e);
         }
 
         // ============================================================
@@ -376,7 +433,7 @@ const TransportApp = ({ userProfileData }) => {
         }
 
         // ============================================================
-        // 2) TÍMY – ubytovanie + typ dopravy + čas príchodu
+        // 2) TÍMY – ubytovanie + typ dopravy + čas príchodu + skupina
         // ============================================================
         const loadTeamsWithAccommodation = async () => {
             try {
@@ -397,7 +454,7 @@ const TransportApp = ({ userProfileData }) => {
                             if (!team || !team.teamName) return;
                             const accomType = team.accommodation?.type?.trim?.() || '';
                             const accomName = team.accommodation?.name?.trim?.() || '';
-                        
+
                             buffer.push({
                                 category: cat,
                                 teamName: team.teamName.trim(),
@@ -414,7 +471,6 @@ const TransportApp = ({ userProfileData }) => {
                 teamsArrivalBufferRef.current = buffer;
                 teamsLoadedRef.current = true;
 
-                // Pre istotu prebuild
                 rebuildAndLogTimeline();
 
             } catch (err) {
@@ -458,12 +514,28 @@ const TransportApp = ({ userProfileData }) => {
                         ? ` [${data.matchType}]`
                         : '';
 
+                // === Výpočet času konca zápasu ===
+                let scheduledEndTs = null;
+                let scheduledEndTime = null;
+                if (scheduledTs != null) {
+                    const catInfo = window.__transport_categories
+                        ? (window.__transport_categories[category] || window.__transport_categories[data.categoryId])
+                        : null;
+                    const matchDuration = catInfo?.matchDuration ?? 0;
+                    if (matchDuration > 0) {
+                        scheduledEndTs = scheduledTs + matchDuration * 60000;
+                        scheduledEndTime = formatDateTime(new Date(scheduledEndTs));
+                    }
+                }
+
                 buffer.push({
                     category,
                     home: homeDisplayName,
                     away: awayDisplayName,
                     scheduledTs,
                     scheduledTime: data.scheduledTime ? formatDateTime(data.scheduledTime) : null,
+                    scheduledEndTs,
+                    scheduledEndTime,
                     hallName,
                     status: data.status || 'pending',
                     special,
@@ -534,12 +606,28 @@ const TransportApp = ({ userProfileData }) => {
                 // ts pre chronologické zoradenie
                 const ts = dayKeyAndSlotToTimestamp(dayKey, slotFrom);
 
+                // === Výpočet času konca stravovania (slotFrom + unitMinutes) ===
+                let slotTo = null;
+                let slotToTs = null;
+                const unitMin = window.__transport_unitMinutes;
+                if (slotFrom && unitMin && unitMin > 0) {
+                    const [h, mi] = slotFrom.split(':').map(Number);
+                    const startMin = h * 60 + mi;
+                    const endMin = startMin + unitMin;
+                    const endH = String(Math.floor(endMin / 60)).padStart(2, '0');
+                    const endM = String(endMin % 60).padStart(2, '0');
+                    slotTo = `${endH}:${endM}`;
+                    slotToTs = ts != null ? ts + unitMin * 60000 : null;
+                }
+
                 buffer.push({
                     category,
                     teamName,
                     ts,
                     dayKey,
                     slotFrom,
+                    slotTo,
+                    slotToTs,
                     mealType,
                     placeName,
                     isSuperstructure: data.isSuperstructure === true,
@@ -575,6 +663,8 @@ const TransportApp = ({ userProfileData }) => {
             if (unsubscribeMatches) unsubscribeMatches();
             if (unsubscribeCatering) unsubscribeCatering();
             if (unsubscribePlaces) unsubscribePlaces();
+            if (unsubscribeCateringSettings) unsubscribeCateringSettings();
+            if (unsubscribeCategorySettings) unsubscribeCategorySettings();
         };
     }, []);
 
@@ -691,7 +781,6 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
             });
         });
 
-        // Zoradíme podľa poradia v skupine (order), ak existuje
         result.sort((a, b) => {
             const oa = a.order ?? Number.POSITIVE_INFINITY;
             const ob = b.order ?? Number.POSITIVE_INFINITY;
