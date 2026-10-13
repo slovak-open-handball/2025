@@ -158,9 +158,6 @@ const TransportApp = ({ userProfileData }) => {
     // Uložené zastávky pre select
     const [stopsList, setStopsList] = useState([]);
 
-    // ==== POD-ZÁLOŽKA V NASTAVENIACH ====
-    const [nastaveniaTab, setNastaveniaTab] = useState('trvanie');
-
     // ==== TRVANIA JÁZDY MEDZI ZASTÁVKAMI ====
     const [travelTimes, setTravelTimes] = useState({});
     const [travelTimesDraft, setTravelTimesDraft] = useState({});
@@ -2255,14 +2252,20 @@ const TransportApp = ({ userProfileData }) => {
             ),
             React.createElement(
                 'div',
-                { className: 'w-full' },
-                React.createElement(
-                    'div',
-                    { className: 'flex items-center justify-between mb-4 pb-3 border-b border-gray-200' },
-                    React.createElement('h3', { className: 'text-xl font-semibold text-gray-700' }, 'Trvania jazdy medzi zastávkami'),
-                    React.createElement('span', { className: 'text-sm text-gray-500' }, `Zastávok: ${stopsList.length}`)
-                ),
-                renderTravelTimes()
+                { className: 'w-full flex-1' },
+                activeView === 'nastavenia'
+                    ? React.createElement(
+                        'div',
+                        { className: 'w-full' },
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center justify-between mb-4 pb-3 border-b border-gray-200' },
+                            React.createElement('h3', { className: 'text-xl font-semibold text-gray-700' }, 'Trvania jazdy medzi zastávkami'),
+                            React.createElement('span', { className: 'text-sm text-gray-500' }, `Zastávok: ${stopsList.length}`)
+                        ),
+                        renderTravelTimes()
+                    )
+                    : renderPlanning()
             ),
         ),
         activeView === 'planovanie' && React.createElement(
