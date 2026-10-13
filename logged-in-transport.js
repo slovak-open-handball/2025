@@ -200,6 +200,8 @@ const TransportApp = ({ userProfileData }) => {
         const grouped = {};
         const accommodationByTeam = {};
         const arrivalTypeByTeam = {};
+        const superstructureInfoByTeam = {};
+        const lastMatchOfBaseTeam = {};
 
         // Nájdi zastávku označenú ako nástupnú pre externé tímy
         const externalArrivalStop = (() => {
@@ -224,6 +226,14 @@ const TransportApp = ({ userProfileData }) => {
         // 1) TÍMY
         teamsArrivalBufferRef.current.forEach((t) => {
             const arr = ensure(t.category, t.teamName);
+
+            if (t.isSuperstructure) {
+                if (!superstructureInfoByTeam[t.category]) superstructureInfoByTeam[t.category] = {};
+                superstructureInfoByTeam[t.category][t.teamName] = {
+                    isSuperstructure: true,
+                    baseTeamName: t.baseTeamName,
+                };
+            }
 
             if (t.accommodationName) {
                 if (!accommodationByTeam[t.category]) accommodationByTeam[t.category] = {};
@@ -420,6 +430,39 @@ const TransportApp = ({ userProfileData }) => {
         if (categories.length === 0) {
             console.log('[TRANSPORT] Žiadne udalosti.');
         } else {
+            // NOVÉ: Zisti posledný zápas základného tímu v každom dni
+            // (kľúč: `${category}|${baseTeamName}|${dayKey}`)
+            const lastMatchOfBaseTeamPerDay = {};
+
+            matchesBufferRef.current.forEach((m) => {
+                const dayKey = m.scheduledTs != null
+                    ? (() => {
+                        const d = new Date(m.scheduledTs);
+                        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    })()
+                    : null;
+                if (!dayKey) return;
+
+                const candidates = [m.home, m.away];
+                candidates.forEach((teamName) => {
+                    if (!teamName) return;
+                    const key = `${m.category}|${teamName}|${dayKey}`;
+                    const endTs = m.scheduledEndTs ?? m.scheduledTs;
+                    if (
+                        !lastMatchOfBaseTeamPerDay[key] ||
+                        (endTs != null && endTs > (lastMatchOfBaseTeamPerDay[key].endTs ?? -Infinity))
+                    ) {
+                        lastMatchOfBaseTeamPerDay[key] = {
+                            location: m.hallName || null,
+                            endTs,
+                            dayKey,
+                            category: m.category,
+                            teamName,
+                        };
+                    }
+                });
+            });
+            
             categories.forEach((category) => {
                 console.log(`\n[TRANSPORT] ██ Kategória: ${category} ██`);
                 const teams = Object.keys(grouped[category]).sort((a, b) =>
@@ -440,6 +483,54 @@ const TransportApp = ({ userProfileData }) => {
                         (arrivalTypeByTeam[category] && arrivalTypeByTeam[category][teamName]) || '';
 
                     const enriched = [];
+
+                    // NOVÉ: Superstructure – presun z miesta, kde dohrala základná skupina
+                    const ssInfo = superstructureInfoByTeam[category] && superstructureInfoByTeam[category][teamName];
+                    if (ssInfo && ssInfo.isSuperstructure && ssInfo.baseTeamName) {
+                        // Nájdi prvú udalosť superstructure tímu (najskorší ts, ktorý nie je -Infinity)
+                        const firstRealEvent = events
+                            .filter((ev) => ev.ts != null && isFinite(ev.ts) && ev.ts !== Number.POSITIVE_INFINITY && ev.location)
+                            .sort((a, b) => a.ts - b.ts)[0];
+
+                        if (firstRealEvent) {
+                            const firstDayKey = extractDayKeyFromWhen(firstRealEvent.when);
+                            if (firstDayKey) {
+                                const baseKey = `${category}|${ssInfo.baseTeamName}|${firstDayKey}`;
+                                const lastBase = lastMatchOfBaseTeamPerDay[baseKey];
+                    
+                                if (
+                                    lastBase &&
+                                    lastBase.location &&
+                                    firstRealEvent.location &&
+                                    lastBase.location !== firstRealEvent.location
+                                ) {
+                                    const departureTs = lastBase.endTs;
+                                    const arrivalTs = firstRealEvent.startTs;
+                    
+                                    const departureStr = formatFullFromTs(departureTs);
+                                    const arrivalStr = formatFullFromTs(arrivalTs);
+                    
+                                    let whenStr;
+                                    if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                    else if (departureStr) whenStr = departureStr;
+                                    else if (arrivalStr) whenStr = arrivalStr;
+                                    else whenStr = firstRealEvent.when;
+                    
+                                    enriched.push({
+                                        ts: (firstRealEvent.ts != null ? firstRealEvent.ts : 0) - 1,
+                                        when: whenStr,
+                                        type: 'transfer',
+                                        text:
+                                            `Presun z ${lastBase.location} do ${firstRealEvent.location} ` +
+                                            `(odchod: ${departureStr || '—'}, príchod: ${arrivalStr || '—'})`,
+                                        location: null,
+                                        isTransfer: true,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    
                     for (let i = 0; i < events.length; i++) {
                         const current = events[i];
                         const prev = events[i - 1];
@@ -984,6 +1075,10 @@ const TransportApp = ({ userProfileData }) => {
                                 arrivalType: arrivalTypeRaw,
                                 groupName: team.groupName ? String(team.groupName).trim() : null,
                                 order: (typeof team.order === 'number' && team.order > 0) ? team.order : null,
+                                isSuperstructure: team.isSuperstructure === true,
+                                    baseTeamName: team.isSuperstructure === true && team.teamName
+                                        ? team.teamName.trim().slice(0, -1).trim() 
+                                        : null,
                             });
                         });
                     });
