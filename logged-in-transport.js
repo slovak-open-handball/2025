@@ -2899,7 +2899,6 @@ window.listTeamsByCategoryAndGroup = async (categoryName, groupName) => {
 
     const targetCategory = cleanCategory(categoryName);
     const targetGroup = String(groupName).trim();
-    const targetGroupLastChar = targetGroup.trim().slice(-1).toUpperCase();
 
     try {
         // 1) Registrované tímy z users
@@ -2907,7 +2906,7 @@ window.listTeamsByCategoryAndGroup = async (categoryName, groupName) => {
         const usersSnap = await getDocs(usersRef);
 
         const teamsSet = new Set();
-        const registeredTeamNames = new Set(); // pre neskoršie rozlíšenie superstructure
+        const registeredTeamNames = new Set(); // pre rozlíšenie superstructure
 
         usersSnap.forEach((userDoc) => {
             const userData = userDoc.data() || {};
@@ -2931,7 +2930,7 @@ window.listTeamsByCategoryAndGroup = async (categoryName, groupName) => {
             });
         });
 
-        // 2) Superstructure tímy z matches
+        // 2) Superstructure tímy z matches – IBA ak majú v zápase groupName presne rovný zadanej skupine
         const matchesRef = collection(window.db, 'matches');
         const matchesSnap = await getDocs(matchesRef);
 
@@ -2941,9 +2940,7 @@ window.listTeamsByCategoryAndGroup = async (categoryName, groupName) => {
             if (matchCategory !== targetCategory) return;
 
             const matchGroupName = data.groupName ? String(data.groupName).trim() : null;
-            const matchGroupLastChar = matchGroupName
-                ? matchGroupName.trim().slice(-1).toUpperCase()
-                : null;
+            if (!matchGroupName || matchGroupName !== targetGroup) return;
 
             const candidates = [];
             if (data.homeTeamIdentifier) candidates.push(data.homeTeamIdentifier);
@@ -2958,21 +2955,7 @@ window.listTeamsByCategoryAndGroup = async (categoryName, groupName) => {
                 // Ak je to registrovaný tím, už je v sete
                 if (registeredTeamNames.has(trimmed)) return;
 
-                // Skús priradiť skupinu:
-                // a) podľa groupName v zápase
-                // b) podľa posledného písmena názvu tímu (napr. "U12 CH 5B" → B)
-                const nameLastCharMatch = /([A-ZÁ-Ž])\s*$/.exec(trimmed);
-                const nameLastChar = nameLastCharMatch ? nameLastCharMatch[1].toUpperCase() : null;
-
-                const matchesGroupByField =
-                    matchGroupName && matchGroupName === targetGroup;
-
-                const matchesGroupByLastChar =
-                    nameLastChar && targetGroupLastChar && nameLastChar === targetGroupLastChar;
-
-                if (matchesGroupByField || matchesGroupByLastChar) {
-                    teamsSet.add(trimmed);
-                }
+                teamsSet.add(trimmed);
             });
         });
 
