@@ -805,14 +805,25 @@ const TransportApp = ({ userProfileData }) => {
                             }
                             return accommodationName ? [accommodationName] : [];
                         })();
-                    
-                        // Superstructure tím vždy generuje presuny (ak má aspoň jedno ubytovanie v skupine)
-                        // Bežný tím generuje len ak má vlastné ubytovanie.
-                        const shouldGenerateAccommodationTransfers =
-                            isSuperstructureTeam
-                                ? teamAccommodationsList.length > 0
-                                : !!accommodationName;
-                    
+                        
+                        // ============================================================
+                        // PRAVIDLO: Ak tím z kolekcie `users` NEMÁ ubytovanie,
+                        // nesmú sa mu generovať žiadne ranné ani večerné presuny.
+                        //
+                        // - Superstructure tím (nie je v users): generuj presuny len ak
+                        //   má aspoň jedno ubytovanie v skupinovej cache.
+                        // - Bežný tím z users: generuj presuny LEN ak má vyplnené
+                        //   accommodationName (vlastné ubytovanie).
+                        // ============================================================
+                        const shouldGenerateAccommodationTransfers = (() => {
+                            // Tím z users bez ubytovania → žiadne presuny
+                            if (!isSuperstructureTeam) {
+                                return !!accommodationName && accommodationName.trim() !== '';
+                            }
+                            // Superstructure tím → presuny len ak má ubytovanie v skupine
+                            return teamAccommodationsList.length > 0;
+                        })();                    
+                        
                         // A) Začiatok dňa – presun na prvú udalosť dňa.
                         if (isFirstEventOfDay && current.location) {
                             // ============================================================
