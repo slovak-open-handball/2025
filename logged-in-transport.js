@@ -803,23 +803,35 @@ const TransportApp = ({ userProfileData }) => {
                     
                         // ============================================================
                         // NOVÉ: Pomocná funkcia – zisti, či tím má vôbec nejaké ubytovanie
-                        // (buď vlastné z users, alebo cez skupinovú cache pre superstructure)
                         // ============================================================
-                        const teamHasAnyAccommodation = (() => {
-                            if (!isSuperstructureTeam) {
-                                // Bežný tím z users – má ubytovanie len ak má vyplnené accommodationName
-                                return !!accommodationName;
+                        // Pravidlá:
+                        //  - Superstructure tím: VŽDY generuj presuny (ranné aj večerné),
+                        //    ak existuje aspoň jedno ubytovanie v jeho skupine (cez cache).
+                        //    Ak cache je prázdna, použije sa prázdny zoznam → presuny sa negenerujú
+                        //    (nemá z/do čoho ísť).
+                        //  - Bežný tím z users: generuj len ak má vyplnené accommodationName.
+                        // ============================================================
+                    
+                        // Zoznam ubytovní tímu (pre superstructure zo skupinovej cache, pre users vlastné)
+                        const teamAccommodationsList = (() => {
+                            if (isSuperstructureTeam) {
+                                const lastCharMatch = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+                                const derivedGroupName = lastCharMatch
+                                    ? `skupina ${lastCharMatch[1].toUpperCase()}`
+                                    : teamGroupName;
+                                if (!derivedGroupName) return [];
+                                const cacheKey = `${cleanCategory(category)}|${derivedGroupName}`;
+                                return (window.__transport_accommodationsByGroup || {})[cacheKey] || [];
                             }
-                            // Superstructure tím – skús získať ubytovania zo skupinovej cache
-                            const lastCharMatch = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
-                            const derivedGroupName = lastCharMatch
-                                ? `skupina ${lastCharMatch[1].toUpperCase()}`
-                                : teamGroupName;
-                            if (!derivedGroupName) return false;
-                            const cacheKey = `${cleanCategory(category)}|${derivedGroupName}`;
-                            const accoms = (window.__transport_accommodationsByGroup || {})[cacheKey] || [];
-                            return accoms.length > 0;
+                            return accommodationName ? [accommodationName] : [];
                         })();
+                    
+                        // Superstructure tím vždy generuje presuny (ak má aspoň jedno ubytovanie v skupine)
+                        // Bežný tím generuje len ak má vlastné ubytovanie.
+                        const shouldGenerateAccommodationTransfers =
+                            isSuperstructureTeam
+                                ? teamAccommodationsList.length > 0
+                                : !!accommodationName;
                     
                         // A) Začiatok dňa – presun na prvú udalosť dňa.
                         if (isFirstEventOfDay && current.location) {
@@ -845,26 +857,36 @@ const TransportApp = ({ userProfileData }) => {
                                 externalArrivalStop &&
                                 isGlobalFirstDay;
                     
-                            // NOVÉ: Ak tím nemá ubytovanie a nejde o zastávku externej dopravy,
-                            // negeneruj ranný presun vôbec.
-                            const skipMorningTransferBecauseNoAccommodation =
-                                !useExternalStop && !teamHasAnyAccommodation;
+                            // Ak tím nemá ubytovanie a nejde o zastávku externej dopravy, negeneruj ranný presun.
+                            const skipMorningTransfer =
+                                !useExternalStop && !shouldGenerateAccommodationTransfers;
                     
-                            if (!skipMorningTransferBecauseNoAccommodation) {
-                                const fromLabel = useExternalStop
-                                    ? `zastávky ${externalArrivalStop.name}`
-                                    : (accommodationName ? `ubytovania ${accommodationName}` : null);
+                            if (!skipMorningTransfer) {
+                                // Pre superstructure tímy: ak má skupina VIAC ubytovní, vygeneruj presun z KAŽDÉHO
+                                // (rovnako ako pri večerných presunoch).
+                                // Pre bežné tímy: použije sa klasicky accommodationName.
+                                const morningFromLocations = (() => {
+                                    if (isSuperstructureTeam) {
+                                        return teamAccommodationsList.slice(); // všetky ubytovne v skupine
+                                    }
+                                    if (useExternalStop && externalArrivalStop) {
+                                        // Pre externú zastávku použijeme túto zastávku namiesto ubytovne
+                                        return [externalArrivalStop.name];
+                                    }
+                                    return accommodationName ? [accommodationName] : [];
+                                })();
                     
-                                const fromLocationName = useExternalStop
-                                    ? externalArrivalStop.name
-                                    : accommodationName;
+                                morningFromLocations.forEach((fromLocationName) => {
+                                    if (!fromLocationName) return;
+                                    if (fromLocationName === current.location) return;
                     
-                                const shouldGenerateTransfer =
-                                    fromLabel &&
-                                    fromLocationName &&
-                                    current.location !== fromLocationName;
+                                    const isFromExternalStop =
+                                        useExternalStop && externalArrivalStop && fromLocationName === externalArrivalStop.name;
                     
-                                if (shouldGenerateTransfer) {
+                                    const fromLabel = isFromExternalStop
+                                        ? `zastávky ${fromLocationName}`
+                                        : `ubytovania ${fromLocationName}`;
+                    
                                     const dayRefTs =
                                         current.startTs != null
                                             ? current.startTs
@@ -875,7 +897,7 @@ const TransportApp = ({ userProfileData }) => {
                     
                                     let departureStr;
                                     const teamArrivalTime = (arrivalTimeByTeam[category] && arrivalTimeByTeam[category][teamName]) || '';
-                                    if (useExternalStop && teamArrivalTime && /^\d{1,2}:\d{2}$/.test(teamArrivalTime)) {
+                                    if (isFromExternalStop && teamArrivalTime && /^\d{1,2}:\d{2}$/.test(teamArrivalTime)) {
                                         const [h, mi] = teamArrivalTime.split(':').map(Number);
                                         const departureTs = timestampOnDay(dayRefTs, h, mi);
                                         departureStr = formatFullFromTs(departureTs) || teamArrivalTime;
@@ -908,7 +930,7 @@ const TransportApp = ({ userProfileData }) => {
                                         location: null,
                                         isTransfer: true,
                                     });
-                                }
+                                });
                             }
                         }
                     
@@ -963,26 +985,16 @@ const TransportApp = ({ userProfileData }) => {
                     
                         const isVeryLastEventOfTeam = (next == null);
                     
+                        // B) Koniec dňa – večerné presuny na ubytovanie
                         if (
                             isLastEventOfDay &&
                             !isVeryLastEventOfTeam &&
                             currentDay !== globalLastDay &&
                             current.location
                         ) {
-                            // Zisti zoznam ubytovní – pre superstructure tím použi cache, inak accommodationName
-                            let eveningAccommodations;
-                    
-                            if (isSuperstructureTeam) {
-                                const lastCharMatch = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
-                                const derivedGroupName = lastCharMatch ? `skupina ${lastCharMatch[1].toUpperCase()}` : teamGroupName;
-                                const cacheKey = `${cleanCategory(category)}|${derivedGroupName}`;
-                                eveningAccommodations = (window.__transport_accommodationsByGroup || {})[cacheKey] || [];
-                            } else {
-                                eveningAccommodations = accommodationName ? [accommodationName] : [];
-                            }
-                    
-                            // NOVÉ: Ak tím nemá žiadne ubytovanie, negeneruj večerné presuny vôbec.
-                            if (eveningAccommodations.length > 0) {
+                            // Ak tím nemá ubytovanie (bežný tím z users bez accommodationName),
+                            // negeneruj večerné presuny vôbec.
+                            if (shouldGenerateAccommodationTransfers) {
                                 const departureTs =
                                     current.endTs != null ? current.endTs : current.startTs;
                     
@@ -1006,7 +1018,9 @@ const TransportApp = ({ userProfileData }) => {
                                     whenStr = current.when;
                                 }
                     
-                                eveningAccommodations.forEach((accomName) => {
+                                // Pre superstructure tímy použijeme všetky ubytovne v skupine,
+                                // pre bežné tímy iba vlastné accommodationName.
+                                teamAccommodationsList.forEach((accomName) => {
                                     if (!accomName) return;
                                     if (accomName === current.location) return;
                     
