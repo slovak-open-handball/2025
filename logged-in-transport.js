@@ -939,6 +939,7 @@ const TransportApp = ({ userProfileData }) => {
                         if (
                             isLastEventOfDay &&
                             !isVeryLastEventOfTeam &&
+                            currentDay !== globalLastDay &&
                             current.location
                         ) {
                             // Zisti zoznam ubytovní – pre superstructure tím použi cache, inak accommodationName
