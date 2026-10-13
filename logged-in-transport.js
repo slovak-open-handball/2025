@@ -999,7 +999,22 @@ const TransportApp = ({ userProfileData }) => {
                     });
     
                     console.log(`\n  [TRANSPORT] Tím: ${teamName} (${events.length} udalostí)`);
+
+                    let lastPrintedDayKey = null;
+
                     enriched.forEach((ev) => {
+                        const currentDayKey = extractDayKeyFromWhen(ev.when);
+                    
+                        // Ak sa zmenil deň, vypíš vizuálny oddeľovač
+                        if (currentDayKey && currentDayKey !== lastPrintedDayKey) {
+                            if (lastPrintedDayKey !== null) {
+                                console.log(''); // prázdny riadok pred oddeľovačom
+                            }
+                            const dayLabel = formatDateDDMMYYYY(currentDayKey) || currentDayKey;
+                            console.log(`%c───── ${dayLabel} ─────`, 'color: #16a34a; font-weight: bold;');
+                            lastPrintedDayKey = currentDayKey;
+                        }
+                    
                         let icon = '•';
                         if (ev.type === 'match') icon = '🏑';
                         else if (ev.type === 'catering') icon = '🍽';
@@ -1007,10 +1022,10 @@ const TransportApp = ({ userProfileData }) => {
                         else if (ev.type === 'accommodation') icon = '🛏';
                         else if (ev.type === 'group') icon = '📂';
                         else if (ev.type === 'transfer') icon = '🚐';
-    
+                    
                         const when = ev.when || '—';
                         const line = `     ${icon} ${when}  |  ${ev.text}`;
-    
+                    
                         if (ev.type === 'transfer') {
                             console.log('%c' + line, 'font-weight: bold; color: #2563eb;');
                         } else {
