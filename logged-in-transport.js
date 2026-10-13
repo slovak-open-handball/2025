@@ -1246,6 +1246,15 @@ const TransportApp = ({ userProfileData }) => {
                 console.log(
                     `[TRANSPORT][SS-FALLBACK] Superstructure tímy detegované z názvu (users): ${ssCount}`
                 );
+
+                teamsArrivalBufferRef.current = buffer;
+                teamsLoadedRef.current = true;
+
+                rebuildAndLogTimeline();
+
+            } catch (err) {
+                console.error('[TRANSPORT] Chyba pri načítaní tímov s ubytovaním:', err);
+            }
         };
 
         // 3) VŠETKY ZÁPASY PODĽA KATEGÓRIÍ
