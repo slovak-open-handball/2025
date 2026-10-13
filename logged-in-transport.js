@@ -646,18 +646,20 @@ const TransportApp = ({ userProfileData }) => {
                                             if (globalFirstDay && dayKey === globalFirstDay) return;
                                 
                                             // ============================================================
-                                            // NOVÉ: Skontroluj, či v tento deň hrá nejaký registrovaný tím
-                                            // z tej istej skupiny. Ak áno, ranné presuny pre superstructure
-                                            // tím sa negenerujú (registrovaný tím ho vyzdvihne).
+                                            // Skontroluj, či v tento deň má udalosť NIEKTORÝ registrovaný tím
+                                            // z tej istej skupiny (okrem samotného superstructure tímu).
+                                            // Ak áno → ranné presuny pre superstructure tím sa NEGENERUJÚ.
+                                            // Ak nie → GENERUJÚ sa zo všetkých ubytovní skupiny.
                                             // ============================================================
                                             const registeredTeamsInGroup = teamsByGroup[category]?.[ssGroupName];
-                                            if (registeredTeamsInGroup && registeredTeamsInGroup.size > 0) {
-                                                let registeredTeamPlaysThisDay = false;
+                                            let registeredTeamPlaysThisDay = false;
                                 
-                                                // Prejdi všetky registrované tímy v skupine a zisti, či majú v tento deň udalosť
+                                            if (registeredTeamsInGroup && registeredTeamsInGroup.size > 0) {
                                                 for (const regTeamName of registeredTeamsInGroup) {
                                                     // Preskoč samotný superstructure tím
                                                     if (regTeamName === teamName) continue;
+                                                    // Preskoč iné superstructure tímy (nemajú ubytovanie v users)
+                                                    if (superstructureInfoByTeam[category]?.[regTeamName]?.isSuperstructure) continue;
                                 
                                                     const regTeamEvents = grouped[category]?.[regTeamName];
                                                     if (!regTeamEvents) continue;
@@ -673,10 +675,10 @@ const TransportApp = ({ userProfileData }) => {
                                                         break;
                                                     }
                                                 }
-                                
-                                                // Ak v tento deň hrá registrovaný tím zo skupiny, negeneruj ranné presuny
-                                                if (registeredTeamPlaysThisDay) return;
                                             }
+                                
+                                            // Ak v tento deň hrá registrovaný tím zo skupiny, negeneruj ranné presuny
+                                            if (registeredTeamPlaysThisDay) return;
                                 
                                             // Nájdi prvú udalosť dňa pre tento tím
                                             const dayEvents = events
