@@ -2891,14 +2891,15 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
         }
 
         // 2) FALLBACK: skupina neexistuje v users
-        //    → nájdi tímy v matches pre túto skupinu, zisti ich posledné písmená,
-        //    a nájdi ubytovne pre tímy z existujúcich skupín v users s tými písmenami.
+        //    → nájdi tímy v matches pre túto skupinu, ALE VYLÚČ tie, ktorých názov
+        //    končí na písmeno cieľovej skupiny (tie patria priamo do skupiny D).
         console.log(`[TRANSPORT] Skupina "${targetGroup}" sa nenašla v users – spúšťam fallback cez matches.`);
 
         const matchesRef = collection(window.db, 'matches');
         const matchesSnap = await getDocs(matchesRef);
 
-        // Nájdi všetky jedinečné tímy v cieľovej skupine (z matches)
+        // Nájdi všetky jedinečné tímy v cieľovej skupine (z matches),
+        // ale VYLÚČ tímy, ktorých názov končí na písmeno cieľovej skupiny.
         const teamsInTargetGroup = new Set();
 
         matchesSnap.forEach((docSnap) => {
@@ -2918,18 +2919,22 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
                 const trimmed = String(teamName).trim();
                 if (!trimmed) return;
 
+                // VYLÚČ tímy, ktorých názov končí na písmeno cieľovej skupiny
+                // (tie patria priamo do cieľovej skupiny a nemajú sa použiť na fallback)
+                if (nameEndsWithTargetChar(trimmed)) return;
+
                 const matchesGroupByField =
                     matchGroupName && matchGroupName === targetGroup;
-                const matchesGroupByLastChar = nameEndsWithTargetChar(trimmed);
-
-                if (matchesGroupByField || matchesGroupByLastChar) {
+                // POZOR: nameEndsWithTargetChar už bolo vylúčené vyššie, takže tu sa
+                // použije iba zhoda podľa groupName v zápase
+                if (matchesGroupByField) {
                     teamsInTargetGroup.add(trimmed);
                 }
             });
         });
 
         console.log(
-            `[TRANSPORT] Fallback – tímy v skupine "${targetGroup}" (z matches):`,
+            `[TRANSPORT] Fallback – tímy v skupine "${targetGroup}" (z matches, bez tímov končiacich na "${targetGroupLastChar}"):`,
             [...teamsInTargetGroup]
         );
 
