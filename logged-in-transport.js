@@ -657,7 +657,7 @@ const TransportApp = ({ userProfileData }) => {
                                 })();
                     
                                 // Ak hrá iný registrovaný tím, negeneruj presuny z celej skupiny
-                                if (anyOtherRegisteredTeamPlaying) return;
+                                if (anyOtherRegisteredTeamPlaying && !isSuperstructureTeam) return;
                     
                                 // ============================================================
                                 // Nájdi prvú udalosť dňa pre tento tím
