@@ -536,25 +536,28 @@ const TransportApp = ({ userProfileData }) => {
                         // VŽDY: Vložíme samotnú udalosť
                         enriched.push(current);
 
-                        // B) Zmena miesta medzi dvoma susednými udalosťami v rámci dňa.
+                        // B) Zmena miesta medzi dvoma susednými udalosťami v rámci toho istého dňa.
                         const currentIsTimedEvent =
                             current.type === 'match' || current.type === 'catering';
-
+                        
                         if (
                             next &&
                             currentIsTimedEvent &&
                             current.location &&
                             next.location &&
-                            current.location !== next.location
+                            current.location !== next.location &&
+                            currentDay != null &&
+                            nextDay != null &&
+                            currentDay === nextDay   // <-- NOVÉ: len v rámci toho istého dňa
                         ) {
                             const departureTs =
                                 current.endTs != null ? current.endTs : current.startTs;
                             const arrivalTs =
                                 next.startTs != null ? next.startTs : null;
-
+                        
                             const departureStr = formatFullFromTs(departureTs);
                             const arrivalStr = formatFullFromTs(arrivalTs);
-
+                        
                             let whenStr;
                             if (departureStr && arrivalStr) {
                                 whenStr = `${departureStr} – ${arrivalStr}`;
@@ -565,7 +568,7 @@ const TransportApp = ({ userProfileData }) => {
                             } else {
                                 whenStr = current.when;
                             }
-
+                        
                             enriched.push({
                                 ts: current.ts + 0.5,
                                 when: whenStr,
@@ -580,8 +583,8 @@ const TransportApp = ({ userProfileData }) => {
                                 isTransfer: true,
                             });
                         }
-
-                        // C) Koniec dňa – presun na ubytovanie (ak je posledná udalosť inde).
+                        
+                        // C) Koniec dňa – presun na ubytovanie (len ak posledná udalosť dňa nie je už v ubytovaní).
                         if (
                             isLastEventOfDay &&
                             accommodationName &&
@@ -590,18 +593,18 @@ const TransportApp = ({ userProfileData }) => {
                         ) {
                             const departureTs =
                                 current.endTs != null ? current.endTs : current.startTs;
-
+                        
                             const dayRefTs =
                                 departureTs != null
                                     ? departureTs
                                     : midnightFromWhen(current.when);
-
+                        
                             const departureStr =
                                 formatFullFromTs(departureTs) || current.when;
-
+                        
                             const arrivalStr =
                                 formatDayWithTime(dayRefTs, 23, 59) || '23:59';
-
+                        
                             let whenStr;
                             if (departureStr && arrivalStr) {
                                 whenStr = `${departureStr} – ${arrivalStr}`;
@@ -610,13 +613,13 @@ const TransportApp = ({ userProfileData }) => {
                             } else {
                                 whenStr = current.when;
                             }
-
+                        
                             enriched.push({
                                 ts: current.ts + 1,
                                 when: whenStr,
                                 type: 'transfer',
                                 text:
-                                    `Presun z "${current.location}" do ubytovania "${accommodationName}" ` +
+                                    `Presun z ${current.location} do ubytovania ${accommodationName} ` +
                                     `(odchod: ${departureStr}, príchod: ${arrivalStr})`,
                                 location: null,
                                 isTransfer: true,
