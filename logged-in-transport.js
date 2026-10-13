@@ -369,7 +369,7 @@ const TransportApp = ({ userProfileData }) => {
                 ts: c.ts ?? Number.POSITIVE_INFINITY,
                 startTs,
                 endTs,
-                when: `${formattedDay} ${timeRange}`.trim(),
+                when: ` ${formattedDay} ${timeRange}`.trim(),
                 type: 'catering',
                 text: `${mealLabel} (${timeRange}) → ${c.placeName}${superstructureStr}${flagStr}`,
                 location: c.placeName || null,
