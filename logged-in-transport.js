@@ -283,7 +283,7 @@ const TransportApp = ({ userProfileData }) => {
                     endTs: null,
                     when: '—',
                     type: 'accommodation',
-                    text: `Ubytovanie: "${t.accommodationName}" (typ: ${t.accommodationType || 'neurčený'})`,
+                    text: `Ubytovanie: ${t.accommodationName} (typ: ${t.accommodationType || 'neurčený'})`,
                     location: t.accommodationName,
                 });
             }
@@ -657,8 +657,8 @@ const TransportApp = ({ userProfileData }) => {
                                 isGlobalFirstDay;
 
                             const fromLabel = useExternalStop
-                                ? `zastávky "${externalArrivalStop.name}"`
-                                : (accommodationName ? `ubytovania "${accommodationName}"` : null);
+                                ? `zastávky ${externalArrivalStop.name}`
+                                : (accommodationName ? `ubytovania ${accommodationName}` : null);
 
                             const fromLocationName = useExternalStop
                                 ? externalArrivalStop.name
@@ -708,7 +708,7 @@ const TransportApp = ({ userProfileData }) => {
                                         null,
                                         current,
                                         fromLabel,
-                                        `"${current.location}"`,
+                                        `${current.location}`,
                                         false,
                                         departureStr,
                                         arrivalStr
@@ -762,8 +762,8 @@ const TransportApp = ({ userProfileData }) => {
                                 text: buildTransferText(
                                     current,
                                     next,
-                                    `"${current.location}"`,
-                                    `"${next.location}"`
+                                    `${current.location}`,
+                                    `${next.location}`
                                 ),
                                 location: null,
                                 isTransfer: true,
@@ -1651,7 +1651,7 @@ const TransportApp = ({ userProfileData }) => {
             await batch.commit();
 
             window.showGlobalNotification(
-                `Zastávka "${assignTargetStop.name}" – priradených ${selectedIds.length} miest.`,
+                `Zastávka ${assignTargetStop.name} – priradených ${selectedIds.length} miest.`,
                 'success'
             );
             closeAssignModal();
@@ -1691,7 +1691,7 @@ const TransportApp = ({ userProfileData }) => {
             if (!stop) {
                 await deleteDoc(docRef);
                 window.showGlobalNotification(
-                    `Priradenie miesta "${place.name}" bolo odstránené.`,
+                    `Priradenie miesta ${place.name} bolo odstránené.`,
                     'info'
                 );
             } else {
@@ -1705,7 +1705,7 @@ const TransportApp = ({ userProfileData }) => {
                     updatedBy: userProfileData?.email || null,
                 }, { merge: true });
                 window.showGlobalNotification(
-                    `Miesto "${place.name}" priradené k zastávke "${stop.name}".`,
+                    `Miesto ${place.name} priradené k zastávke ${stop.name}.`,
                     'success'
                 );
             }
@@ -2727,7 +2727,7 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
             a.localeCompare(b, 'sk', { sensitivity: 'base' })
         );
 
-        console.log(`[TRANSPORT] ===== UBYTOVNE PRE KATEGÓRIU "${targetCategory}" A SKUPINU "${targetGroup}" =====`);
+        console.log(`[TRANSPORT] ===== UBYTOVNE PRE KATEGÓRIU ${targetCategory} A SKUPINU ${targetGroup} =====`);
         if (sortedAccommodations.length === 0) {
             console.log('[TRANSPORT] Žiadne priradené ubytovne sa nenašli.');
         } else {
