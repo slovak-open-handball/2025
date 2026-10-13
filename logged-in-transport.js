@@ -792,9 +792,31 @@ const TransportApp = ({ userProfileData }) => {
                         //  - Bežný tím z users: generuj len ak má vyplnené accommodationName.
                         // ============================================================
                     
-                        // Zoznam ubytovní tímu (pre superstructure zo skupinovej cache, pre users vlastné)
+                        // ============================================================
+                        // Zisti, či je tím reálne registrovaný v kolekcii `users`.
+                        // ============================================================
+                        const teamIsInUsers = teamsArrivalBufferRef.current.some(
+                            (t) => cleanCategory(t.category) === cleanCategory(category)
+                                && t.teamName === teamName
+                                && t.isRegistered === true
+                        );
+
+                        // ============================================================
+                        // Zoznam ubytovní tímu:
+                        //  - Ak je tím REÁLNE v users → použijeme LEN jeho vlastné
+                        //    accommodationName (žiadna skupinová cache).
+                        //  - Ak tím NIE JE v users (skutočný superstructure) → použijeme
+                        //    skupinovú cache ubytovní.
+                        // ============================================================
                         const teamAccommodationsList = (() => {
-                            if (isSuperstructureTeam) {
+                            if (teamIsInUsers) {
+                                // Registrovaný tím – vždy len vlastné ubytovanie
+                                return accommodationName && accommodationName.trim() !== ''
+                                    ? [accommodationName]
+                                    : [];
+                            }
+                            // Superstructure tím (nie je v users) – skupinová cache
+                            if (teamGroupName) {
                                 const lastCharMatch = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
                                 const derivedGroupName = lastCharMatch
                                     ? `skupina ${lastCharMatch[1].toUpperCase()}`
@@ -803,26 +825,21 @@ const TransportApp = ({ userProfileData }) => {
                                 const cacheKey = `${cleanCategory(category)}|${derivedGroupName}`;
                                 return (window.__transport_accommodationsByGroup || {})[cacheKey] || [];
                             }
-                            return accommodationName ? [accommodationName] : [];
+                            return [];
                         })();
-                        
+
                         // ============================================================
-                        // PRAVIDLO: Ak tím z kolekcie `users` NEMÁ ubytovanie,
-                        // nesmú sa mu generovať žiadne ranné ani večerné presuny.
+                        // PRAVIDLO: Presuny z/do ubytovania sa generujú LEN ak tím
+                        // má aspoň jedno ubytovanie v `teamAccommodationsList`.
                         //
-                        // - Superstructure tím (nie je v users): generuj presuny len ak
-                        //   má aspoň jedno ubytovanie v skupinovej cache.
-                        // - Bežný tím z users: generuj presuny LEN ak má vyplnené
-                        //   accommodationName (vlastné ubytovanie).
+                        // To znamená:
+                        //  - Registrovaný tím z users bez ubytovania → žiadne presuny.
+                        //  - Registrovaný tím z users s ubytovaním → presuny len z/do
+                        //    svojho vlastného ubytovania.
+                        //  - Superstructure tím (nie je v users) → presuny podľa
+                        //    skupinovej cache (ak je prázdna, žiadne presuny).
                         // ============================================================
-                        const shouldGenerateAccommodationTransfers = (() => {
-                            // Tím z users bez ubytovania → žiadne presuny
-                            if (!isSuperstructureTeam) {
-                                return !!accommodationName && accommodationName.trim() !== '';
-                            }
-                            // Superstructure tím → presuny len ak má ubytovanie v skupine
-                            return teamAccommodationsList.length > 0;
-                        })();                    
+                        const shouldGenerateAccommodationTransfers = teamAccommodationsList.length > 0;  
                         
                         // A) Začiatok dňa – presun na prvú udalosť dňa.
                         if (isFirstEventOfDay && current.location) {
