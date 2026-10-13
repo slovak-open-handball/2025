@@ -203,6 +203,13 @@ const TransportApp = ({ userProfileData }) => {
         const arrivalTimeByTeam = {};
         const superstructureInfoByTeam = {};
         const teamsByGroup = {};
+
+        const registeredTeamsSet = new Set();
+        teamsArrivalBufferRef.current.forEach((t) => {
+            if (t.isRegistered) {
+                registeredTeamsSet.add(`${t.category}|${t.teamName}`);
+            }
+        });
     
         // Nájdi zastávku označenú ako nástupnú pre externé tímy
         const externalArrivalStop = (() => {
@@ -682,11 +689,11 @@ const TransportApp = ({ userProfileData }) => {
                                             if (registeredTeamsInGroup && registeredTeamsInGroup.size > 0) {
                                                 for (const regTeamName of registeredTeamsInGroup) {
                                                     if (regTeamName === teamName) continue;
-
-                                                    // NOVÉ: Preskoč superstructure tímy – nemajú ubytovanie
-                                                    const hasAccommodation = !!accommodationByTeam[category]?.[regTeamName];
-                                                    if (!hasAccommodation) continue;
-
+                                            
+                                                    // NOVÉ: Preskoč superstructure tímy – nie sú registrované v users
+                                                    const isRegistered = registeredTeamsSet.has(`${category}|${regTeamName}`);
+                                                    if (!isRegistered) continue;
+                                            
                                                     const regTeamEvents = grouped[category]?.[regTeamName];
                                                     if (!regTeamEvents) continue;
 
@@ -696,7 +703,7 @@ const TransportApp = ({ userProfileData }) => {
                                                         if (dk !== dayKey) return false;
                                                         return ev.location === firstLocation;
                                                     });
-
+                                            
                                                     if (hasEventAtSameLocationThisDay) {
                                                         registeredTeamPlaysAtSameLocationThisDay = true;
                                                         break;
@@ -1262,7 +1269,7 @@ const TransportApp = ({ userProfileData }) => {
                 const buffer = [];
 
                 // Pomocná funkcia na spracovanie jedného tímu
-                const processTeam = (team, cat, isSuperstructureTeam) => {
+                const processTeam = (team, cat, isSuperstructureTeam, isRegistered = false) => {
                     if (!team || !team.teamName) return;
                     const trimmedName = team.teamName.trim();
                     const accomType = team.accommodation?.type?.trim?.() || '';
@@ -1302,6 +1309,7 @@ const TransportApp = ({ userProfileData }) => {
                         groupName: team.groupName ? String(team.groupName).trim() : null,
                         order: (typeof team.order === 'number' && team.order > 0) ? team.order : null,
                         isSuperstructure: isSS,
+                        isRegistered: isRegistered,
                     });
                 };
 
@@ -1324,7 +1332,7 @@ const TransportApp = ({ userProfileData }) => {
                             if (!team || !team.teamName) return;
                             const trimmed = team.teamName.trim();
                             registeredTeamNamesByCategory[cat].add(trimmed);
-                            processTeam(team, cat, false);
+                            processTeam(team, cat, false, true);
                         });
                     });
                 });
@@ -1420,6 +1428,7 @@ const TransportApp = ({ userProfileData }) => {
                             groupName: null,
                             order: null,
                             isSuperstructure: true,
+                            isRegistered: false,
                         });
                     }
                 });
