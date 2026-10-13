@@ -678,23 +678,25 @@ const TransportApp = ({ userProfileData }) => {
                                             // ============================================================
                                             const registeredTeamsInGroup = teamsByGroup[category]?.[ssGroupName];
                                             let registeredTeamPlaysAtSameLocationThisDay = false;
-                                        
+
                                             if (registeredTeamsInGroup && registeredTeamsInGroup.size > 0) {
                                                 for (const regTeamName of registeredTeamsInGroup) {
                                                     if (regTeamName === teamName) continue;
-                                                    if (superstructureInfoByTeam[category]?.[regTeamName]?.isSuperstructure) continue;
-                                        
+
+                                                    // NOVÉ: Preskoč superstructure tímy – nemajú ubytovanie
+                                                    const hasAccommodation = !!accommodationByTeam[category]?.[regTeamName];
+                                                    if (!hasAccommodation) continue;
+
                                                     const regTeamEvents = grouped[category]?.[regTeamName];
                                                     if (!regTeamEvents) continue;
-                                        
+
                                                     const hasEventAtSameLocationThisDay = regTeamEvents.some((ev) => {
                                                         if (ev.type !== 'match' && ev.type !== 'catering') return false;
                                                         const dk = extractDayKeyFromWhen(ev.when);
                                                         if (dk !== dayKey) return false;
-                                                        // Musí ísť o rovnaké miesto, kde má superstructure tím prvú udalosť dňa
                                                         return ev.location === firstLocation;
                                                     });
-                                        
+
                                                     if (hasEventAtSameLocationThisDay) {
                                                         registeredTeamPlaysAtSameLocationThisDay = true;
                                                         break;
