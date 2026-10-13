@@ -3026,8 +3026,17 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
             [...referencedGroups]
         );
 
-        // Zozbieraj ubytovne zo všetkých tímov v týchto skupinách
         const fallbackAccommodations = new Set();
+
+        teamsInTargetGroup.forEach((teamName) => {
+            const accoms = accommodationByTeamName[teamName];
+            if (accoms) accoms.forEach((a) => fallbackAccommodations.add(a));
+        });
+
+        console.log(
+            `[TRANSPORT] Fallback – priame ubytovne pre tímy v skupine "${targetGroup}":`,
+            [...fallbackAccommodations]
+        );
 
         referencedGroups.forEach((gName) => {
             const teamsInGroup = teamsByGroupName[gName];
