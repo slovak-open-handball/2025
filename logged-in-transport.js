@@ -713,11 +713,7 @@ const TransportApp = ({ userProfileData }) => {
                                                     }
                                                 }
                                             }
-                                        
-                                            // Ak v tento deň hrá registrovaný tím zo skupiny NA ROVNAKOM MIESTE,
-                                            // negeneruj ranné presuny pre superstructure tím.
-                                            if (registeredTeamPlaysAtSameLocationThisDay) return;
-                                        
+                                                                                
                                             // Pre každé ubytovanie v skupine (okrem miesta prvej udalosti)
                                             groupAccommodations.forEach((accomName) => {
                                                 if (accomName === firstLocation) return;
