@@ -2899,12 +2899,15 @@ window.listTeamsByCategoryAndGroup = async (categoryName, groupName) => {
 
     const targetCategory = cleanCategory(categoryName);
     const targetGroup = String(groupName).trim();
+    const targetGroupLastChar = targetGroup.trim().slice(-1).toUpperCase();
 
     try {
+        // 1) Registrované tímy z users
         const usersRef = collection(window.db, 'users');
         const usersSnap = await getDocs(usersRef);
 
         const teamsSet = new Set();
+        const registeredTeamNames = new Set(); // pre neskoršie rozlíšenie superstructure
 
         usersSnap.forEach((userDoc) => {
             const userData = userDoc.data() || {};
@@ -2921,8 +2924,55 @@ window.listTeamsByCategoryAndGroup = async (categoryName, groupName) => {
                     const teamGroup = team.groupName ? String(team.groupName).trim() : null;
                     if (!teamGroup || teamGroup !== targetGroup) return;
 
-                    teamsSet.add(team.teamName.trim());
+                    const trimmed = team.teamName.trim();
+                    teamsSet.add(trimmed);
+                    registeredTeamNames.add(trimmed);
                 });
+            });
+        });
+
+        // 2) Superstructure tímy z matches
+        const matchesRef = collection(window.db, 'matches');
+        const matchesSnap = await getDocs(matchesRef);
+
+        matchesSnap.forEach((docSnap) => {
+            const data = docSnap.data() || {};
+            const matchCategory = cleanCategory(data.categoryName || data.categoryId || '');
+            if (matchCategory !== targetCategory) return;
+
+            const matchGroupName = data.groupName ? String(data.groupName).trim() : null;
+            const matchGroupLastChar = matchGroupName
+                ? matchGroupName.trim().slice(-1).toUpperCase()
+                : null;
+
+            const candidates = [];
+            if (data.homeTeamIdentifier) candidates.push(data.homeTeamIdentifier);
+            if (data.awayTeamIdentifier) candidates.push(data.awayTeamIdentifier);
+
+            candidates.forEach((identifier) => {
+                const teamName = resolveTeamName(identifier);
+                if (!teamName || teamName === '---') return;
+                const trimmed = String(teamName).trim();
+                if (!trimmed) return;
+
+                // Ak je to registrovaný tím, už je v sete
+                if (registeredTeamNames.has(trimmed)) return;
+
+                // Skús priradiť skupinu:
+                // a) podľa groupName v zápase
+                // b) podľa posledného písmena názvu tímu (napr. "U12 CH 5B" → B)
+                const nameLastCharMatch = /([A-ZÁ-Ž])\s*$/.exec(trimmed);
+                const nameLastChar = nameLastCharMatch ? nameLastCharMatch[1].toUpperCase() : null;
+
+                const matchesGroupByField =
+                    matchGroupName && matchGroupName === targetGroup;
+
+                const matchesGroupByLastChar =
+                    nameLastChar && targetGroupLastChar && nameLastChar === targetGroupLastChar;
+
+                if (matchesGroupByField || matchesGroupByLastChar) {
+                    teamsSet.add(trimmed);
+                }
             });
         });
 
@@ -2935,7 +2985,9 @@ window.listTeamsByCategoryAndGroup = async (categoryName, groupName) => {
             console.log('[TRANSPORT] Žiadne tímy sa nenašli.');
         } else {
             sortedTeams.forEach((name) => {
-                console.log(`   • ${name}`);
+                const isRegistered = registeredTeamNames.has(name);
+                const tag = isRegistered ? '' : ' [superstructure]';
+                console.log(`   • ${name}${tag}`);
             });
         }
         console.log(`[TRANSPORT] Spolu: ${sortedTeams.length} tímov.`);
