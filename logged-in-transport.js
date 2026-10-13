@@ -596,6 +596,21 @@ const TransportApp = ({ userProfileData }) => {
                         
                         return null;
                     })();
+
+                    const isSuperstructureTeam = (() => {
+                        if (ssInfo && ssInfo.isSuperstructure) return true;
+                        // Ak tím nie je v users vôbec, je to superstructure
+                        const inUsers = teamsArrivalBufferRef.current.some(
+                            (t) => cleanCategory(t.category) === cleanCategory(category)
+                                && t.teamName === teamName
+                                && t.isRegistered === true
+                        );
+                        if (!inUsers) return true;
+                        // Ak tím je v users, ale má v názve posledné písmeno (napr. "5B"), je to superstructure
+                        // (bol pridaný do users len kvôli ubytovaniu)
+                        if (/([A-ZÁ-Ž])\s*$/.test(String(teamName).trim())) return true;
+                        return false;
+                    })();
                     
                     if (teamGroupName) {
                         const groupAccommodations = getAccommodationsForGroup(category, teamGroupName);
@@ -1302,9 +1317,13 @@ const TransportApp = ({ userProfileData }) => {
                         const cat = m.category;
                         const registeredSet = registeredTeamNamesByCategory[cat];
                         const isRegistered = registeredSet && registeredSet.has(teamName);
-                        if (isRegistered) return; // je to registrovaný tím – nie superstructure
-
-                        // Tím nie je v users → je to superstructure tím
+        
+                        // NOVÉ: Aj registrované tímy, ktoré majú v názve posledné písmeno (napr. "5B"),
+                        // považuj za superstructure (boli pridané do users len kvôli ubytovaniu).
+                        const looksLikeSuperstructure = /([A-ZÁ-Ž])\s*$/.test(String(teamName).trim());
+        
+                        if (isRegistered && !looksLikeSuperstructure) return; // je to skutočný registrovaný tím
+                        
                         const key = `${cat}|${teamName}`;
                         if (!ssTeamsFromMatches.has(key)) {
                             ssTeamsFromMatches.set(key, { category: cat, teamName });
