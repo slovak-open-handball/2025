@@ -200,6 +200,7 @@ const TransportApp = ({ userProfileData }) => {
         const grouped = {};
         const accommodationByTeam = {};
         const arrivalTypeByTeam = {};
+        const arrivalTimeByTeam = {};
         const superstructureInfoByTeam = {};
         const teamsByGroup = {};
 
@@ -254,6 +255,12 @@ const TransportApp = ({ userProfileData }) => {
             if (t.arrivalType) {
                 if (!arrivalTypeByTeam[t.category]) arrivalTypeByTeam[t.category] = {};
                 arrivalTypeByTeam[t.category][t.teamName] = t.arrivalType;
+            }
+
+            // NOVÉ: Ulož aj konkrétny čas príchodu (napr. "10:30") pre použitie pri presune zo zastávky
+            if (t.arrivalTime) {
+                if (!arrivalTimeByTeam[t.category]) arrivalTimeByTeam[t.category] = {};
+                arrivalTimeByTeam[t.category][t.teamName] = t.arrivalTime;
             }
 
             if (t.groupName) {
@@ -673,7 +680,18 @@ const TransportApp = ({ userProfileData }) => {
                                 const arrivalStr =
                                     formatFullFromTs(current.startTs) || current.when;
 
-                                const departureStr = formatDayWithTime(dayRefTs, 0, 0) || '00:00';
+                                // NOVÉ: Ak ide o presun zo zastávky a tím má zadaný čas príchodu,
+                                // použijeme tento čas ako čas odchodu zo zastávky.
+                                let departureStr;
+                                const teamArrivalTime = (arrivalTimeByTeam[category] && arrivalTimeByTeam[category][teamName]) || '';
+                                if (useExternalStop && teamArrivalTime && /^\d{1,2}:\d{2}$/.test(teamArrivalTime)) {
+                                    // Vytvor timestamp na daný deň o zadanom čase
+                                    const [h, mi] = teamArrivalTime.split(':').map(Number);
+                                    const departureTs = timestampOnDay(dayRefTs, h, mi);
+                                    departureStr = formatFullFromTs(departureTs) || teamArrivalTime;
+                                } else {
+                                    departureStr = formatDayWithTime(dayRefTs, 0, 0) || '00:00';
+                                }
 
                                 let whenStr;
                                 if (departureStr && arrivalStr) {
@@ -1134,6 +1152,7 @@ const TransportApp = ({ userProfileData }) => {
                     // arrivalType môže byť buď string alebo objekt { type, time }
                     let arrivalTypeRaw = '';
                     let arrivalDisplayRaw = '---';
+                    let arrivalTimeRaw = '';
                     if (team.arrival) {
                         if (typeof team.arrival === 'string') {
                             arrivalTypeRaw = team.arrival.trim();
@@ -1141,6 +1160,9 @@ const TransportApp = ({ userProfileData }) => {
                         } else if (typeof team.arrival === 'object') {
                             if (team.arrival.type) {
                                 arrivalTypeRaw = String(team.arrival.type).trim();
+                            }
+                            if (team.arrival.time) {
+                                arrivalTimeRaw = String(team.arrival.time).trim();
                             }
                             arrivalDisplayRaw = formatArrival(team.arrival);
                         }
@@ -1157,6 +1179,7 @@ const TransportApp = ({ userProfileData }) => {
                         accommodationName: accomName,
                         arrivalDisplay: arrivalDisplayRaw,
                         arrivalType: arrivalTypeRaw,
+                        arrivalTime: arrivalTimeRaw,
                         groupName: team.groupName ? String(team.groupName).trim() : null,
                         order: (typeof team.order === 'number' && team.order > 0) ? team.order : null,
                         isSuperstructure: isSS,
