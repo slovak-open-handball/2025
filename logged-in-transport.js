@@ -2812,18 +2812,29 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
     }
     if (!categoryName || !groupName) {
         console.error('[TRANSPORT] Zadajte dva parametre: názov kategórie a názov skupiny.');
-        console.error('  Príklad: listAccommodationsByCategoryAndGroup("U12 D", "skupina D")');
+        console.error('  Príklad: listAccommodationsByCategoryAndGroup("U12 D", "skupina F")');
         return;
     }
 
     const targetCategory = cleanCategory(categoryName);
     const targetGroup = String(groupName).trim();
+    const targetGroupLastChar = targetGroup.replace(/\s+/g, '').slice(-1).toUpperCase();
+
+    const nameEndsWithTargetChar = (teamName) => {
+        if (!targetGroupLastChar) return false;
+        const match = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+        if (!match) return false;
+        return match[1].toUpperCase() === targetGroupLastChar;
+    };
 
     try {
         const usersRef = collection(window.db, 'users');
         const usersSnap = await getDocs(usersRef);
 
-        const uniqueAccommodations = new Set();
+        // Mapa: groupName → Set(teamName)
+        const teamsByGroupName = {};
+        // Mapa: teamName → Set(accommodationName)
+        const accommodationByTeamName = {};
 
         usersSnap.forEach((userDoc) => {
             const userData = userDoc.data() || {};
@@ -2836,32 +2847,139 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
 
                 teamArray.forEach((team) => {
                     if (!team || !team.teamName) return;
-
+                    const trimmedName = team.teamName.trim();
                     const teamGroup = team.groupName ? String(team.groupName).trim() : null;
-                    if (!teamGroup || teamGroup !== targetGroup) return;
-
                     const accomName = team.accommodation?.name?.trim?.() || '';
-                    if (accomName) uniqueAccommodations.add(accomName);
+
+                    if (teamGroup) {
+                        if (!teamsByGroupName[teamGroup]) teamsByGroupName[teamGroup] = new Set();
+                        teamsByGroupName[teamGroup].add(trimmedName);
+                    }
+
+                    if (accomName) {
+                        if (!accommodationByTeamName[trimmedName]) {
+                            accommodationByTeamName[trimmedName] = new Set();
+                        }
+                        accommodationByTeamName[trimmedName].add(accomName);
+                    }
                 });
             });
         });
 
-        const sortedAccommodations = [...uniqueAccommodations].sort((a, b) =>
+        // 1) PRIAMA ZHODA: existuje skupina v users?
+        if (teamsByGroupName[targetGroup] && teamsByGroupName[targetGroup].size > 0) {
+            const directAccommodations = new Set();
+            teamsByGroupName[targetGroup].forEach((teamName) => {
+                const accoms = accommodationByTeamName[teamName];
+                if (accoms) accoms.forEach((a) => directAccommodations.add(a));
+            });
+
+            const sorted = [...directAccommodations].sort((a, b) =>
+                a.localeCompare(b, 'sk', { sensitivity: 'base' })
+            );
+
+            console.log(`[TRANSPORT] ===== UBYTOVNE PRE KATEGÓRIU ${targetCategory} A SKUPINU ${targetGroup} =====`);
+            if (sorted.length === 0) {
+                console.log('[TRANSPORT] Žiadne priradené ubytovne sa nenašli.');
+            } else {
+                sorted.forEach((name) => console.log(`   • ${name}`));
+            }
+            console.log(`[TRANSPORT] Spolu: ${sorted.length} jedinečných ubytovní.`);
+            console.log('[TRANSPORT] =========================================================');
+
+            return sorted;
+        }
+
+        // 2) FALLBACK: skupina neexistuje v users
+        //    → nájdi tímy v matches pre túto skupinu, zisti ich posledné písmená,
+        //    a nájdi ubytovne pre tímy z existujúcich skupín v users s tými písmenami.
+        console.log(`[TRANSPORT] Skupina "${targetGroup}" sa nenašla v users – spúšťam fallback cez matches.`);
+
+        const matchesRef = collection(window.db, 'matches');
+        const matchesSnap = await getDocs(matchesRef);
+
+        // Nájdi všetky jedinečné tímy v cieľovej skupine (z matches)
+        const teamsInTargetGroup = new Set();
+
+        matchesSnap.forEach((docSnap) => {
+            const data = docSnap.data() || {};
+            const matchCategory = cleanCategory(data.categoryName || data.categoryId || '');
+            if (matchCategory !== targetCategory) return;
+
+            const matchGroupName = data.groupName ? String(data.groupName).trim() : null;
+
+            const candidates = [];
+            if (data.homeTeamIdentifier) candidates.push(data.homeTeamIdentifier);
+            if (data.awayTeamIdentifier) candidates.push(data.awayTeamIdentifier);
+
+            candidates.forEach((identifier) => {
+                const teamName = resolveTeamName(identifier);
+                if (!teamName || teamName === '---') return;
+                const trimmed = String(teamName).trim();
+                if (!trimmed) return;
+
+                const matchesGroupByField =
+                    matchGroupName && matchGroupName === targetGroup;
+                const matchesGroupByLastChar = nameEndsWithTargetChar(trimmed);
+
+                if (matchesGroupByField || matchesGroupByLastChar) {
+                    teamsInTargetGroup.add(trimmed);
+                }
+            });
+        });
+
+        console.log(
+            `[TRANSPORT] Fallback – tímy v skupine "${targetGroup}" (z matches):`,
+            [...teamsInTargetGroup]
+        );
+
+        // Z názvov týchto tímov odvoď posledné písmená → zodpovedajúce skupiny v users
+        const referencedGroups = new Set();
+
+        teamsInTargetGroup.forEach((teamName) => {
+            const match = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+            if (!match) return;
+            const lastChar = match[1].toUpperCase();
+            // Nájdi všetky skupiny v users, ktoré končia na toto písmeno
+            Object.keys(teamsByGroupName).forEach((gName) => {
+                const gLastChar = gName.trim().slice(-1).toUpperCase();
+                if (gLastChar === lastChar) {
+                    referencedGroups.add(gName);
+                }
+            });
+        });
+
+        console.log(
+            `[TRANSPORT] Fallback – odvodené existujúce skupiny v users:`,
+            [...referencedGroups]
+        );
+
+        // Zozbieraj ubytovne zo všetkých tímov v týchto skupinách
+        const fallbackAccommodations = new Set();
+
+        referencedGroups.forEach((gName) => {
+            const teamsInGroup = teamsByGroupName[gName];
+            if (!teamsInGroup) return;
+            teamsInGroup.forEach((teamName) => {
+                const accoms = accommodationByTeamName[teamName];
+                if (accoms) accoms.forEach((a) => fallbackAccommodations.add(a));
+            });
+        });
+
+        const sorted = [...fallbackAccommodations].sort((a, b) =>
             a.localeCompare(b, 'sk', { sensitivity: 'base' })
         );
 
-        console.log(`[TRANSPORT] ===== UBYTOVNE PRE KATEGÓRIU ${targetCategory} A SKUPINU ${targetGroup} =====`);
-        if (sortedAccommodations.length === 0) {
-            console.log('[TRANSPORT] Žiadne priradené ubytovne sa nenašli.');
+        console.log(`[TRANSPORT] ===== UBYTOVNE PRE KATEGÓRIU ${targetCategory} A SKUPINU ${targetGroup} (fallback) =====`);
+        if (sorted.length === 0) {
+            console.log('[TRANSPORT] Žiadne priradené ubytovne sa nenašli (ani cez fallback).');
         } else {
-            sortedAccommodations.forEach((name) => {
-                console.log(`   • ${name}`);
-            });
+            sorted.forEach((name) => console.log(`   • ${name}`));
         }
-        console.log(`[TRANSPORT] Spolu: ${sortedAccommodations.length} jedinečných ubytovní.`);
+        console.log(`[TRANSPORT] Spolu: ${sorted.length} jedinečných ubytovní.`);
         console.log('[TRANSPORT] =========================================================');
 
-        return sortedAccommodations;
+        return sorted;
     } catch (err) {
         console.error('[TRANSPORT] Chyba pri načítaní ubytovní pre kategóriu a skupinu:', err);
         return [];
