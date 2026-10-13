@@ -190,6 +190,42 @@ const TransportApp = ({ userProfileData }) => {
     const [busSaving, setBusSaving] = useState(false);
 
     // ============================================================
+    // PREDNAČÍTANIE UBYTOVNÍ PRE SUPERSTRUCTURE TÍMY
+    // ============================================================
+    const preloadAccommodationsForSuperstructureTeams = async () => {
+        if (!window.__transport_accommodationsByGroup) {
+            window.__transport_accommodationsByGroup = {};
+        }
+
+        // Zbieraj všetky (category, derivedGroupName) dvojice, ktoré treba prednačítať
+        const toLoad = new Set();
+    
+        (teamsArrivalBufferRef.current || []).forEach((t) => {
+            if (!t.isSuperstructure) return;
+            if (!t.teamName) return;
+            const lastCharMatch = /([A-ZÁ-Ž])\s*$/.exec(String(t.teamName).trim());
+            if (!lastCharMatch) return;
+            const derivedGroupName = `skupina ${lastCharMatch[1].toUpperCase()}`;
+            const key = `${cleanCategory(t.category)}|${derivedGroupName}`;
+            toLoad.add(key);
+        });
+
+        for (const key of toLoad) {
+            if (window.__transport_accommodationsByGroup[key]) continue; // už načítané
+            const [cat, grp] = key.split('|');
+            try {
+                const result = await window.listAccommodationsByCategoryAndGroup(cat, grp);
+                window.__transport_accommodationsByGroup[key] = Array.isArray(result) ? result : [];
+            } catch (err) {
+                console.error(`[TRANSPORT] Chyba pri prednačítaní ubytovní pre ${key}:`, err);
+                window.__transport_accommodationsByGroup[key] = [];
+            }
+        }
+    
+        console.log('[TRANSPORT] Prednačítané ubytovne pre superstructure tímy:', window.__transport_accommodationsByGroup);
+    };
+
+    // ============================================================
     // ZBUILDÍ A VYPÍŠE ČASOVÚ OS PRE KAŽDÝ TÍM V KAŽDEJ KATEGÓRII
     // ============================================================
     const rebuildAndLogTimeline = () => {
@@ -613,7 +649,17 @@ const TransportApp = ({ userProfileData }) => {
                     })();
                     
                     if (teamGroupName) {
-                        const groupAccommodations = getAccommodationsForGroup(category, teamGroupName);
+                        let groupAccommodations;
+
+                        // Ak je to superstructure tím, použi prednačítanú cache cez listAccommodationsByCategoryAndGroup
+                        if (isSuperstructureTeam) {
+                            const lastCharMatch = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+                            const derivedGroupName = lastCharMatch ? `skupina ${lastCharMatch[1].toUpperCase()}` : teamGroupName;
+                            const cacheKey = `${cleanCategory(category)}|${derivedGroupName}`;
+                            groupAccommodations = (window.__transport_accommodationsByGroup || {})[cacheKey] || [];
+                        } else {
+                            groupAccommodations = getAccommodationsForGroup(category, teamGroupName);
+                        }
                     
                         if (groupAccommodations.length > 0) {
                             // Zisti všetky dni, kedy má tento tím udalosti
@@ -941,6 +987,15 @@ const TransportApp = ({ userProfileData }) => {
                 });
             });
         }
+
+        if (!window.__transport_preloadDone) {
+            window.__transport_preloadDone = true;
+            preloadAccommodationsForSuperstructureTeams().then(() => {
+                // Po načítaní cache znova zavolaj rebuild
+                rebuildAndLogTimeline();
+            });
+        }
+        
         console.log('[TRANSPORT] ===============================================');
     };
 
