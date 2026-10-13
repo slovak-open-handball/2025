@@ -2885,3 +2885,65 @@ if (window.globalUserProfileData) {
         );
     }
 }
+
+window.listTeamsByCategoryAndGroup = async (categoryName, groupName) => {
+    if (!window.db) {
+        console.error('[TRANSPORT] Firebase nie je inicializovaný (window.db chýba).');
+        return;
+    }
+    if (!categoryName || !groupName) {
+        console.error('[TRANSPORT] Zadajte dva parametre: názov kategórie a názov skupiny.');
+        console.error('  Príklad: listTeamsByCategoryAndGroup("U12 D", "skupina D")');
+        return;
+    }
+
+    const targetCategory = cleanCategory(categoryName);
+    const targetGroup = String(groupName).trim();
+
+    try {
+        const usersRef = collection(window.db, 'users');
+        const usersSnap = await getDocs(usersRef);
+
+        const teamsSet = new Set();
+
+        usersSnap.forEach((userDoc) => {
+            const userData = userDoc.data() || {};
+            const teams = userData.teams;
+            if (!teams || typeof teams !== 'object') return;
+
+            Object.entries(teams).forEach(([category, teamArray]) => {
+                if (!Array.isArray(teamArray)) return;
+                if (cleanCategory(category) !== targetCategory) return;
+
+                teamArray.forEach((team) => {
+                    if (!team || !team.teamName) return;
+
+                    const teamGroup = team.groupName ? String(team.groupName).trim() : null;
+                    if (!teamGroup || teamGroup !== targetGroup) return;
+
+                    teamsSet.add(team.teamName.trim());
+                });
+            });
+        });
+
+        const sortedTeams = [...teamsSet].sort((a, b) =>
+            a.localeCompare(b, 'sk', { sensitivity: 'base' })
+        );
+
+        console.log(`[TRANSPORT] ===== TÍMY PRE KATEGÓRIU ${targetCategory} A SKUPINU ${targetGroup} =====`);
+        if (sortedTeams.length === 0) {
+            console.log('[TRANSPORT] Žiadne tímy sa nenašli.');
+        } else {
+            sortedTeams.forEach((name) => {
+                console.log(`   • ${name}`);
+            });
+        }
+        console.log(`[TRANSPORT] Spolu: ${sortedTeams.length} tímov.`);
+        console.log('[TRANSPORT] =========================================================');
+
+        return sortedTeams;
+    } catch (err) {
+        console.error('[TRANSPORT] Chyba pri načítaní tímov pre kategóriu a skupinu:', err);
+        return [];
+    }
+};
