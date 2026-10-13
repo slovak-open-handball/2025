@@ -823,7 +823,7 @@ const TransportApp = ({ userProfileData }) => {
 
                         if (ev.type === 'transfer') {
                             // Presun – tučným písmom
-                            console.log('%c' + line, 'font-weight: bold;');
+                            console.log('%c' + line, 'font-weight: bold; color: #2563eb;');
                         } else {
                             console.log(line);
                         }
