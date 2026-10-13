@@ -1187,7 +1187,10 @@ const TransportApp = ({ userProfileData }) => {
                     });
                 };
 
-                // 2a) Používatelia (users) – bežné tímy
+                // 2a) Používatelia (users) – bežné (registrované) tímy
+                //     Zároveň si vytvoríme Set všetkých názvov tímov z users (per kategória),
+                //     aby sme vedeli rozlíšiť, ktoré tímy z matches sú superstructure (nie sú v users).
+                const registeredTeamNamesByCategory = {}; // category → Set(teamName)
                 usersSnap.forEach((userDoc) => {
                     const userData = userDoc.data() || {};
                     const teams = userData.teams;
@@ -1196,27 +1199,38 @@ const TransportApp = ({ userProfileData }) => {
                     Object.entries(teams).forEach(([category, teamArray]) => {
                         if (!Array.isArray(teamArray)) return;
                         const cat = cleanCategory(category);
-                        teamArray.forEach((team) => processTeam(team, cat, false));
+                        if (!registeredTeamNamesByCategory[cat]) {
+                            registeredTeamNamesByCategory[cat] = new Set();
+                        }
+                        teamArray.forEach((team) => {
+                            if (!team || !team.teamName) return;
+                            const trimmed = team.teamName.trim();
+                            registeredTeamNamesByCategory[cat].add(trimmed);
+                            processTeam(team, cat, false);
+                        });
                     });
                 });
 
-                // 2b) Superstructure – kolekcia `superstructure` nie je v rules povolená,
-                //     preto detegujeme superstructure tímy z `matches` podľa formátu názvu.
-                //     Formát superstructure tímu: končí na <číslo><písmeno>, napr. "1A", "3B", "12C".
+                // 2b) Superstructure – z kolekcie `superstructure` (ak je dostupná)
+                //     A ZÁROVEŇ – všetky tímy z `matches`, ktoré NIE SÚ v `users`.
                 //
-                // DÔLEŽITÉ: superstructure tímy (napr. "U12 D 1A") NIE SÚ v kolekcii `users`
-                // (nie sú registrované tímy), objavujú sa iba v zápasoch (`matches`).
-                const ssNameRegex = /[0-9][A-Z]$/i;
+                //     Superstructure tímy sú generované turnajovým systémom (napr. "U12 D 1A",
+                //     "U10 D LSF01", "U12 CH WSF02") a NIE SÚ registrované v `users`.
 
-                // Zozbieraj všetky unikátne superstructure tímy z matches
                 const ssTeamsFromMatches = new Map(); // key: category|teamName → { category, teamName }
+
                 (matchesBufferRef.current || []).forEach((m) => {
                     [m.home, m.away].forEach((teamName) => {
                         if (!teamName) return;
-                        if (!ssNameRegex.test(teamName)) return;
-                        const key = `${m.category}|${teamName}`;
+                        const cat = m.category;
+                        const registeredSet = registeredTeamNamesByCategory[cat];
+                        const isRegistered = registeredSet && registeredSet.has(teamName);
+                        if (isRegistered) return; // je to registrovaný tím – nie superstructure
+
+                        // Tím nie je v users → je to superstructure tím
+                        const key = `${cat}|${teamName}`;
                         if (!ssTeamsFromMatches.has(key)) {
-                            ssTeamsFromMatches.set(key, { category: m.category, teamName });
+                            ssTeamsFromMatches.set(key, { category: cat, teamName });
                         }
                     });
                 });
@@ -1294,7 +1308,7 @@ const TransportApp = ({ userProfileData }) => {
 
                 const ssCount = buffer.filter((b) => b.isSuperstructure).length;
                 console.log(
-                    `[TRANSPORT][SS-FALLBACK] Superstructure tímy detegované z matches: ${ssCount}`
+                    `[TRANSPORT][SS-FALLBACK] Superstructure tímy detegované (nie sú v users): ${ssCount}`
                 );
                 if (ssCount > 0) {
                     console.log(
