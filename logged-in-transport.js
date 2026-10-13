@@ -793,13 +793,11 @@ const TransportApp = ({ userProfileData }) => {
                                         }];
                                     }
                                     if (useAccommodationAsSource) {
-                                        // Ubytovne – pre superstructure všetky v skupine, pre bežné vlastná
-                                        if (isSuperstructureTeam) {
-                                            return teamAccommodationsList.map((n) => ({ name: n, isExternalStop: false }));
-                                        }
-                                        return accommodationName
-                                            ? [{ name: accommodationName, isExternalStop: false }]
-                                            : [];
+                                        // Ubytovne – použijeme presne to, čo je v `teamAccommodationsList`.
+                                        // Tá už rešpektuje pravidlo:
+                                        //   - tím z users → len vlastné ubytovanie (alebo prázdne)
+                                        //   - superstructure tím → skupinová cache
+                                        return teamAccommodationsList.map((n) => ({ name: n, isExternalStop: false }));
                                     }
                                     return [];
                                 })();
