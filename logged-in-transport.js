@@ -441,67 +441,73 @@ const TransportApp = ({ userProfileData }) => {
         if (categories.length === 0) {
             console.log('[TRANSPORT] Žiadne udalosti.');
         } else {
-            // NOVÉ: Zisti posledný zápas skupiny v každom dni
+            // NOVÉ: Zisti POSLEDNÚ UDALOSŤ skupiny v každom dni
+            // Uvažujeme iba udalosti typu 'match' a 'catering' (nie transfery, arrival, accommodation, group).
             // (kľúč: `${category}|${groupName}|${dayKey}`)
-            const lastMatchOfGroupPerDay = {};
-            // NOVÉ: Aj podľa posledného písmena skupiny (napr. "A", "B")
+            const lastEventOfGroupPerDay = {};
+            // Aj podľa posledného písmena skupiny (napr. "A", "B")
             // (kľúč: `${category}|${lastChar}|${dayKey}`)
-            const lastMatchOfGroupByLastCharPerDay = {};
+            const lastEventOfGroupByLastCharPerDay = {};
 
-            matchesBufferRef.current.forEach((m) => {
-                const dayKey = m.scheduledTs != null
-                    ? (() => {
-                        const d = new Date(m.scheduledTs);
-                        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                    })()
-                    : null;
-                if (!dayKey) return;
+            // Prejdi VŠETKY UDALOSTI (grouped) – len match/catering
+            Object.entries(grouped).forEach(([category, teamsObj]) => {
+                Object.entries(teamsObj).forEach(([teamName, events]) => {
+                    // Zisti skupinu tímu z teamsByGroup
+                    const teamGroup = (() => {
+                        const groups = teamsByGroup[category] || {};
+                        for (const [gName, teamSet] of Object.entries(groups)) {
+                            if (teamSet.has(teamName)) return gName;
+                        }
+                        return null;
+                    })();
+                    if (!teamGroup) return;
 
-                // Zisti, do ktorých skupín patria oba tímy
-                const groups = teamsByGroup[m.category] || {};
-                const involvedGroups = new Set();
-                Object.entries(groups).forEach(([groupName, teamSet]) => {
-                    if (teamSet.has(m.home) || teamSet.has(m.away)) {
-                        involvedGroups.add(groupName);
-                    }
-                });
+                    events.forEach((ev) => {
+                        // Iba match a catering
+                        if (ev.type !== 'match' && ev.type !== 'catering') return;
 
-                involvedGroups.forEach((groupName) => {
-                    const endTs = m.scheduledEndTs ?? m.scheduledTs;
+                        const dayKey = extractDayKeyFromWhen(ev.when);
+                        if (!dayKey) return;
 
-                    // Ulož podľa plného názvu skupiny
-                    const key = `${m.category}|${groupName}|${dayKey}`;
-                    if (
-                        !lastMatchOfGroupPerDay[key] ||
-                        (endTs != null && endTs > (lastMatchOfGroupPerDay[key].endTs ?? -Infinity))
-                    ) {
-                        lastMatchOfGroupPerDay[key] = {
-                            location: m.hallName || null,
-                            endTs,
-                            dayKey,
-                            category: m.category,
-                            groupName,
-                        };
-                    }
+                        const endTs =
+                            ev.endTs != null ? ev.endTs :
+                            ev.startTs != null ? ev.startTs :
+                            null;
+                        if (endTs == null) return;
 
-                    // Ulož aj podľa posledného písmena názvu skupiny
-                    // napr. "skupina A" → "A"
-                    const groupLastChar = groupName.trim().slice(-1).toUpperCase();
-                    if (groupLastChar && /[A-ZÁ-Ž]/.test(groupLastChar)) {
-                        const keyChar = `${m.category}|${groupLastChar}|${dayKey}`;
+                        // Ulož podľa plného názvu skupiny
+                        const key = `${category}|${teamGroup}|${dayKey}`;
                         if (
-                            !lastMatchOfGroupByLastCharPerDay[keyChar] ||
-                            (endTs != null && endTs > (lastMatchOfGroupByLastCharPerDay[keyChar].endTs ?? -Infinity))
+                            !lastEventOfGroupPerDay[key] ||
+                            endTs > (lastEventOfGroupPerDay[key].endTs ?? -Infinity)
                         ) {
-                            lastMatchOfGroupByLastCharPerDay[keyChar] = {
-                                location: m.hallName || null,
+                            lastEventOfGroupPerDay[key] = {
+                                location: ev.location || null,
                                 endTs,
                                 dayKey,
-                                category: m.category,
-                                groupName,
+                                category,
+                                groupName: teamGroup,
                             };
                         }
-                    }
+
+                        // Ulož aj podľa posledného písmena názvu skupiny
+                        const groupLastChar = teamGroup.trim().slice(-1).toUpperCase();
+                        if (groupLastChar && /[A-ZÁ-Ž]/.test(groupLastChar)) {
+                            const keyChar = `${category}|${groupLastChar}|${dayKey}`;
+                            if (
+                                !lastEventOfGroupByLastCharPerDay[keyChar] ||
+                                endTs > (lastEventOfGroupByLastCharPerDay[keyChar].endTs ?? -Infinity)
+                            ) {
+                                lastEventOfGroupByLastCharPerDay[keyChar] = {
+                                    location: ev.location || null,
+                                    endTs,
+                                    dayKey,
+                                    category,
+                                    groupName: teamGroup,
+                                };
+                            }
+                        }
+                    });
                 });
             });
             
@@ -526,7 +532,6 @@ const TransportApp = ({ userProfileData }) => {
 
                     const enriched = [];
 
-                    // NOVÉ: Superstructure – presun z miesta, kde dohrala jeho skupina
                     const ssInfo = superstructureInfoByTeam[category] && superstructureInfoByTeam[category][teamName];
                     if (ssInfo && ssInfo.isSuperstructure) {
                         // Nájdi prvú udalosť superstructure tímu (najskorší ts, ktorý nie je -Infinity)
@@ -539,48 +544,45 @@ const TransportApp = ({ userProfileData }) => {
 
                             if (firstDayKey) {
                                 // Skús najprv podľa plného názvu skupiny, potom podľa posledného písmena
-                                let lastGroupMatch = null;
+                                let lastGroupEvent = null;
                                 let usedKey = null;
 
                                 if (ssInfo.groupName) {
                                     const groupKey = `${category}|${ssInfo.groupName}|${firstDayKey}`;
-                                    lastGroupMatch = lastMatchOfGroupPerDay[groupKey] || null;
-                                    if (lastGroupMatch) usedKey = groupKey;
+                                    lastGroupEvent = lastEventOfGroupPerDay[groupKey] || null;
+                                    if (lastGroupEvent) usedKey = groupKey;
                                 }
 
-                                if (!lastGroupMatch && ssInfo.lastChar) {
+                                if (!lastGroupEvent && ssInfo.lastChar) {
                                     const groupKeyChar = `${category}|${ssInfo.lastChar}|${firstDayKey}`;
-                                    lastGroupMatch = lastMatchOfGroupByLastCharPerDay[groupKeyChar] || null;
-                                    if (lastGroupMatch) usedKey = groupKeyChar;
+                                    lastGroupEvent = lastEventOfGroupByLastCharPerDay[groupKeyChar] || null;
+                                    if (lastGroupEvent) usedKey = groupKeyChar;
                                 }
 
-                                // Debug: vypíš všetky dostupné kľúče pre tento deň
-                                const allGroupKeysForDay = Object.keys(lastMatchOfGroupPerDay).filter((k) => k.endsWith(`|${firstDayKey}`));
-                                const allCharKeysForDay = Object.keys(lastMatchOfGroupByLastCharPerDay).filter((k) => k.endsWith(`|${firstDayKey}`));
-                    
                                 if (
-                                    lastGroupMatch &&
-                                    lastGroupMatch.location &&
+                                    lastGroupEvent &&
+                                    lastGroupEvent.location &&
                                     firstRealEvent.location &&
-                                    lastGroupMatch.location !== firstRealEvent.location
-                                ) {                                  const departureTs = lastGroupMatch.endTs;
+                                    lastGroupEvent.location !== firstRealEvent.location
+                                ) {
+                                    const departureTs = lastGroupEvent.endTs;
                                     const arrivalTs = firstRealEvent.startTs;
-                    
+
                                     const departureStr = formatFullFromTs(departureTs);
                                     const arrivalStr = formatFullFromTs(arrivalTs);
-                    
+
                                     let whenStr;
                                     if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
                                     else if (departureStr) whenStr = departureStr;
                                     else if (arrivalStr) whenStr = arrivalStr;
                                     else whenStr = firstRealEvent.when;
-                    
+
                                     enriched.push({
                                         ts: (firstRealEvent.ts != null ? firstRealEvent.ts : 0) - 1,
                                         when: whenStr,
                                         type: 'transfer',
                                         text:
-                                            `Presun z ${lastGroupMatch.location} do ${firstRealEvent.location} ` +
+                                            `Presun z ${lastGroupEvent.location} do ${firstRealEvent.location} ` +
                                             `(odchod: ${departureStr || '—'}, príchod: ${arrivalStr || '—'})`,
                                         location: null,
                                         isTransfer: true,
