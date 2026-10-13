@@ -1389,6 +1389,26 @@ const TransportApp = ({ userProfileData }) => {
                         existing.isRegistered = false;
                     } else {
                         // Tím ešte nie je v bufferi – pridaj ho ako superstructure
+                        // NOVÉ: Skús odvodiť groupName z názvu tímu (napr. "U12 CH 5B" → "skupina B")
+                        let derivedGroupName = null;
+                        const nameMatch = /([A-ZÁ-Ž])\s*$/.exec(String(trimmedName).trim());
+                        if (nameMatch) {
+                            const lastChar = nameMatch[1];
+                            // Prejdi všetky existujúce skupiny v bufferi a nájdi takú, ktorá končí na rovnaké písmeno
+                            const candidateGroups = new Set();
+                            buffer.forEach((b) => {
+                                if (b.category === cat && b.groupName) {
+                                    const gLastChar = String(b.groupName).trim().slice(-1).toUpperCase();
+                                    if (gLastChar === lastChar) candidateGroups.add(b.groupName);
+                                }
+                            });
+                            if (candidateGroups.size > 0) {
+                                derivedGroupName = [...candidateGroups][0];
+                            } else {
+                                derivedGroupName = `skupina ${lastChar}`;
+                            }
+                        }
+                        
                         buffer.push({
                             category: cat,
                             teamName: trimmedName,
@@ -1396,7 +1416,7 @@ const TransportApp = ({ userProfileData }) => {
                             accommodationName: '',
                             arrivalDisplay: '---',
                             arrivalType: '',
-                            groupName: null,
+                            groupName: derivedGroupName,  // ← TOTO JE KĽÚČOVÉ
                             order: null,
                             isSuperstructure: true,
                             isRegistered: false,
