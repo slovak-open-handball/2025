@@ -584,9 +584,15 @@ const TransportApp = ({ userProfileData }) => {
                             });
                         }
                         
-                        // C) Koniec dňa – presun na ubytovanie (len ak posledná udalosť dňa nie je už v ubytovaní).
+                        // C) Koniec dňa – presun na ubytovanie
+                        //    Generuje sa VŽDY, keď je to posledná udalosť dňa a miesto nie je ubytovanie,
+                        //    OKREM prípadu, keď je to zároveň úplne posledná udalosť celého turnaja pre tím
+                        //    (t. j. tím už po tomto dni nemá žiadnu ďalšiu udalosť).
+                        const isVeryLastEventOfTeam = (next == null);
+                        
                         if (
                             isLastEventOfDay &&
+                            !isVeryLastEventOfTeam &&  
                             accommodationName &&
                             current.location &&
                             current.location !== accommodationName
@@ -613,7 +619,7 @@ const TransportApp = ({ userProfileData }) => {
                             } else {
                                 whenStr = current.when;
                             }
-                        
+
                             enriched.push({
                                 ts: current.ts + 1,
                                 when: whenStr,
