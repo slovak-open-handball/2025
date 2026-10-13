@@ -839,15 +839,19 @@ const TransportApp = ({ userProfileData }) => {
                             // Pravidlá pre generovanie ranného presunu:
                             //
                             //  PRVÝ DEŇ TURNAJA:
-                            //  1) Ak tím MÁ typ dopravy (nie "vlastná", nie prázdny) A existuje
-                            //     nástupná zastávka externej dopravy → generuj presun ZO ZASTÁVKY
-                            //     (aj keď má tím ubytovanie).
-                            //  2) Inak, ak tím MÁ ubytovanie → generuj presun Z UBYTOVNE.
-                            //  3) Inak (nemá dopravu a nemá ubytovanie) → NEGENERUJ.
+                            //  1) Ak tím NEMÁ typ dopravy (prázdny alebo "vlastná")
+                            //     → NEGENERUJ ranný presun vôbec (ani z ubytovne, ani zo zastávky).
+                            //  2) Ak tím MÁ typ dopravy:
+                            //     a) Existuje nástupná zastávka externej dopravy
+                            //        → generuj presun ZO ZASTÁVKY.
+                            //     b) Neexistuje zastávka, ale tím MÁ ubytovanie
+                            //        → generuj presun Z UBYTOVNE.
+                            //     c) Neexistuje zastávka a tím NEMÁ ubytovanie
+                            //        → negeneruj.
                             //
                             //  OSTATNÉ DNI:
-                            //  1) Ak tím MÁ ubytovanie → generuj presun Z UBYTOVNE.
-                            //  2) Inak → NEGENERUJ.
+                            //  - Ak tím MÁ ubytovanie → generuj presun Z UBYTOVNE.
+                            //  - Inak → negeneruj.
                             // ============================================================
                             const hasTransportType = (() => {
                                 if (!teamArrivalType) return false;
@@ -866,17 +870,28 @@ const TransportApp = ({ userProfileData }) => {
                                 globalFirstDay != null &&
                                 currentDay === globalFirstDay;
                         
-                            // Na prvom dni turnaja má zastávka externej dopravy prednosť,
-                            // ak tím má typ dopravy a zastávka existuje.
+                            // Na prvom dni turnaja:
+                            //  - ak nemá typ dopravy → negeneruj vôbec
+                            //  - ak má typ dopravy:
+                            //      * zastávka má prednosť (ak existuje)
+                            //      * inak použi ubytovanie (ak ho má)
+                            // Ostatné dni:
+                            //  - použi ubytovanie (ak ho má)
                             const useExternalStopOnFirstDay =
                                 isGlobalFirstDay &&
                                 hasTransportType &&
                                 !!externalArrivalStop;
                         
-                            // Generovať z ubytovne len ak NEpoužívame zastávku externej dopravy
-                            // a tím má nejaké ubytovanie.
-                            const useAccommodationAsSource =
-                                !useExternalStopOnFirstDay && shouldGenerateAccommodationTransfers;
+                            const useAccommodationAsSource = (() => {
+                                // Ostatné dni – vždy z ubytovne (ak ju má)
+                                if (!isGlobalFirstDay) {
+                                    return shouldGenerateAccommodationTransfers;
+                                }
+                                // Prvý deň – iba ak má typ dopravy a nepoužívame zastávku
+                                return hasTransportType
+                                    && !useExternalStopOnFirstDay
+                                    && shouldGenerateAccommodationTransfers;
+                            })();
                         
                             const shouldGenerateMorningTransfer =
                                 useExternalStopOnFirstDay || useAccommodationAsSource;
