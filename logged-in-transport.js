@@ -2805,7 +2805,7 @@ const handleDataUpdateAndRender = (event) => {
     }
 };
 
-window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) => {
+window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName, visitedGroups = new Set()) => {
     if (!window.db) {
         console.error('[TRANSPORT] Firebase nie je inicializovaný (window.db chýba).');
         return;
@@ -2818,6 +2818,15 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
 
     const targetCategory = cleanCategory(categoryName);
     const targetGroup = String(groupName).trim();
+
+    // Ak už bola táto skupina navštívená, vráť prázdne (predídeme cyklu)
+    const groupKey = `${targetCategory}|${targetGroup}`;
+    if (visitedGroups.has(groupKey)) {
+        console.log(`[TRANSPORT] Skupina "${targetGroup}" už bola navštívená – preskakujem.`);
+        return [];
+    }
+    visitedGroups.add(groupKey);
+
     const targetGroupLastChar = targetGroup.replace(/\s+/g, '').slice(-1).toUpperCase();
 
     const nameEndsWithTargetChar = (teamName) => {
@@ -2831,9 +2840,7 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
         const usersRef = collection(window.db, 'users');
         const usersSnap = await getDocs(usersRef);
 
-        // Mapa: groupName → Set(teamName)
         const teamsByGroupName = {};
-        // Mapa: teamName → Set(accommodationName)
         const accommodationByTeamName = {};
 
         usersSnap.forEach((userDoc) => {
@@ -2896,7 +2903,6 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
         const matchesRef = collection(window.db, 'matches');
         const matchesSnap = await getDocs(matchesRef);
 
-        // Zbierka všetkých zápasov pre cieľovú kategóriu
         const allCategoryMatches = [];
         matchesSnap.forEach((docSnap) => {
             const data = docSnap.data() || {};
@@ -2905,8 +2911,6 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
             allCategoryMatches.push(data);
         });
 
-        // Nájdi všetky jedinečné tímy v cieľovej skupine (z matches),
-        // ale VYLÚČ tímy, ktorých názov končí na písmeno cieľovej skupiny.
         const teamsInTargetGroup = new Set();
 
         allCategoryMatches.forEach((data) => {
@@ -2937,7 +2941,6 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
             [...teamsInTargetGroup]
         );
 
-        // Pomocná funkcia: nájdi existujúce skupiny v users pre dané písmeno
         const findGroupsInUsersByChar = (char) => {
             const result = new Set();
             Object.keys(teamsByGroupName).forEach((gName) => {
@@ -2947,37 +2950,20 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
             return result;
         };
 
-        // Pomocná funkcia: nájdi všetky tímy v matches, ktoré končia na dané písmeno
-        // (a nie sú v cieľovej skupine)
-        const findTeamsInMatchesEndingWithChar = (char, excludeGroup) => {
-            const result = new Set();
-            allCategoryMatches.forEach((data) => {
-                const matchGroupName = data.groupName ? String(data.groupName).trim() : null;
-                if (excludeGroup && matchGroupName === excludeGroup) return;
+        const fallbackAccommodations = new Set();
+        const visitedChars = new Set();
 
-                const candidates = [];
-                if (data.homeTeamIdentifier) candidates.push(data.homeTeamIdentifier);
-                if (data.awayTeamIdentifier) candidates.push(data.awayTeamIdentifier);
+        // Priame ubytovne pre tímy v cieľovej skupine
+        teamsInTargetGroup.forEach((teamName) => {
+            const accoms = accommodationByTeamName[teamName];
+            if (accoms) accoms.forEach((a) => fallbackAccommodations.add(a));
+        });
 
-                candidates.forEach((identifier) => {
-                    const teamName = resolveTeamName(identifier);
-                    if (!teamName || teamName === '---') return;
-                    const trimmed = String(teamName).trim();
-                    const m = /([A-ZÁ-Ž])\s*$/.exec(trimmed);
-                    if (!m) return;
-                    if (m[1].toUpperCase() === char) {
-                        result.add(trimmed);
-                    }
-                });
-            });
-            return result;
-        };
+        console.log(
+            `[TRANSPORT] Fallback – priame ubytovne pre tímy v skupine "${targetGroup}":`,
+            [...fallbackAccommodations]
+        );
 
-        // BFS cez písmená
-        const referencedGroups = new Set(); // existujúce skupiny v users
-        const visitedChars = new Set(); // navštívené písmená (aby sme sa nezacyklili)
-
-        // Na začiatok zober písmená z tímov v cieľovej skupine
         const initialChars = new Set();
         teamsInTargetGroup.forEach((teamName) => {
             const m = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
@@ -2996,56 +2982,47 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
             if (visitedChars.has(char)) continue;
             visitedChars.add(char);
 
-            // Skús nájsť existujúce skupiny v users pre toto písmeno
+            // 1) Skús nájsť existujúce skupiny v users pre toto písmeno
             const groupsInUsers = findGroupsInUsersByChar(char);
             if (groupsInUsers.size > 0) {
-                groupsInUsers.forEach((g) => referencedGroups.add(g));
-                continue; // ak existujú, ďalej nehľadaj
+                console.log(
+                    `[TRANSPORT] Fallback – pre písmeno "${char}" existujú skupiny v users:`,
+                    [...groupsInUsers]
+                );
+                groupsInUsers.forEach((gName) => {
+                    const teamsInGroup = teamsByGroupName[gName];
+                    if (!teamsInGroup) return;
+                    teamsInGroup.forEach((teamName) => {
+                        const accoms = accommodationByTeamName[teamName];
+                        if (accoms) accoms.forEach((a) => fallbackAccommodations.add(a));
+                    });
+                });
+                continue;
             }
 
-            // Ak neexistujú, nájdi tímy v matches, ktoré končia na toto písmeno,
-            // a z ich názvov odvoď ďalšie písmená
-            const teamsWithChar = findTeamsInMatchesEndingWithChar(char, targetGroup);
+            // 2) Ak neexistujú skupiny v users, rekurzívne zavolaj tú istú funkciu
+            //    pre skupinu zodpovedajúcu písmenu (napr. "D" → "skupina D")
+            const derivedGroupName = `skupina ${char}`;
             console.log(
-                `[TRANSPORT] Fallback – pre písmeno "${char}" neexistuje skupina v users, hľadám tímy v matches končiace na "${char}":`,
-                [...teamsWithChar]
+                `[TRANSPORT] Fallback – pre písmeno "${char}" neexistuje skupina v users, rekurzívne volám listAccommodationsByCategoryAndGroup("${targetCategory}", "${derivedGroupName}")`
             );
 
-            teamsWithChar.forEach((teamName) => {
-                const m = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
-                if (!m) return;
-                const nextChar = m[1].toUpperCase();
-                if (!visitedChars.has(nextChar)) {
-                    queue.push(nextChar);
+            try {
+                const recursiveResult = await window.listAccommodationsByCategoryAndGroup(
+                    targetCategory,
+                    derivedGroupName,
+                    visitedGroups
+                );
+                if (Array.isArray(recursiveResult)) {
+                    recursiveResult.forEach((a) => fallbackAccommodations.add(a));
                 }
-            });
+            } catch (recursiveErr) {
+                console.error(
+                    `[TRANSPORT] Fallback – chyba pri rekurzívnom volaní pre "${derivedGroupName}":`,
+                    recursiveErr
+                );
+            }
         }
-
-        console.log(
-            `[TRANSPORT] Fallback – odvodené existujúce skupiny v users (po BFS):`,
-            [...referencedGroups]
-        );
-
-        const fallbackAccommodations = new Set();
-
-        teamsInTargetGroup.forEach((teamName) => {
-            const accoms = accommodationByTeamName[teamName];
-            if (accoms) accoms.forEach((a) => fallbackAccommodations.add(a));
-        });
-
-        console.log(
-            `[TRANSPORT] Fallback – priame ubytovne pre tímy v skupine "${targetGroup}":`,
-            [...fallbackAccommodations]
-        );
-
-        referencedGroups.forEach((gName) => {
-            const teamsInGroup = teamsByGroupName[gName];
-            if (!teamsInGroup) return;
-            teamsInGroup.forEach((teamName) => {
-                const accoms = accommodationByTeamName[teamName];
-                if (accoms) accoms.forEach((a) => fallbackAccommodations.add(a));
-            });
-        });
 
         const sorted = [...fallbackAccommodations].sort((a, b) =>
             a.localeCompare(b, 'sk', { sensitivity: 'base' })
