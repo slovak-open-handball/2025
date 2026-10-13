@@ -203,13 +203,6 @@ const TransportApp = ({ userProfileData }) => {
         const arrivalTimeByTeam = {};
         const superstructureInfoByTeam = {};
         const teamsByGroup = {};
-
-        const registeredTeamsSet = new Set();
-        teamsArrivalBufferRef.current.forEach((t) => {
-            if (t.isRegistered) {
-                registeredTeamsSet.add(`${t.category}|${t.teamName}`);
-            }
-        });
     
         // Nájdi zastávku označenú ako nástupnú pre externé tímy
         const externalArrivalStop = (() => {
@@ -678,41 +671,6 @@ const TransportApp = ({ userProfileData }) => {
                                         
                                             const firstEventTs = firstEventOfDay.startTs ?? firstEventOfDay.ts;
                                             const arrivalStr = formatFullFromTs(firstEventTs) || firstEventOfDay.when;
-                                        
-                                            // ============================================================
-                                            // Skontroluj, či v tento deň má udalosť NIEKTORÝ registrovaný tím
-                                            // z tej istej skupiny (okrem samotného superstructure tímu)
-                                            // NA ROVNAKOM MIESTE, kde má superstructure tím prvú udalosť dňa.
-                                            // Ak áno → ranné presuny pre superstructure tím sa NEGENERUJÚ.
-                                            // Ak nie → GENERUJÚ sa zo všetkých ubytovní skupiny.
-                                            // ============================================================
-                                            const registeredTeamsInGroup = teamsByGroup[category]?.[ssGroupName];
-                                            let registeredTeamPlaysAtSameLocationThisDay = false;
-
-                                            if (registeredTeamsInGroup && registeredTeamsInGroup.size > 0) {
-                                                for (const regTeamName of registeredTeamsInGroup) {
-                                                    if (regTeamName === teamName) continue;
-                                            
-                                                    // NOVÉ: Preskoč superstructure tímy – nie sú registrované v users
-                                                    const isRegistered = registeredTeamsSet.has(`${category}|${regTeamName}`);
-                                                    if (!isRegistered) continue;
-                                            
-                                                    const regTeamEvents = grouped[category]?.[regTeamName];
-                                                    if (!regTeamEvents) continue;
-
-                                                    const hasEventAtSameLocationThisDay = regTeamEvents.some((ev) => {
-                                                        if (ev.type !== 'match' && ev.type !== 'catering') return false;
-                                                        const dk = extractDayKeyFromWhen(ev.when);
-                                                        if (dk !== dayKey) return false;
-                                                        return ev.location === firstLocation;
-                                                    });
-                                            
-                                                    if (hasEventAtSameLocationThisDay) {
-                                                        registeredTeamPlaysAtSameLocationThisDay = true;
-                                                        break;
-                                                    }
-                                                }
-                                            }
                                                                                 
                                             // Pre každé ubytovanie v skupine (okrem miesta prvej udalosti)
                                             groupAccommodations.forEach((accomName) => {
