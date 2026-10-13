@@ -480,6 +480,23 @@ const TransportApp = ({ userProfileData }) => {
         })();
     
         console.log('[TRANSPORT][DEBUG] globalFirstDay:', globalFirstDay);
+
+        const globalLastDay = (() => {
+            const keys = [];
+            Object.values(grouped).forEach((teamsObj) => {
+                Object.values(teamsObj).forEach((events) => {
+                    events.forEach((ev) => {
+                        const dk = extractDayKeyFromWhen(ev.when);
+                        if (dk) keys.push(dk);
+                    });
+                });
+            });
+            if (keys.length === 0) return null;
+            keys.sort();
+            return keys[keys.length - 1];
+        })();
+        
+        console.log('[TRANSPORT][DEBUG] globalLastDay:', globalLastDay);
     
         // ============================================================
         // NOVÉ: Pomocná funkcia – získa ubytovania pre danú kategóriu a skupinu
@@ -922,24 +939,34 @@ const TransportApp = ({ userProfileData }) => {
                         if (
                             isLastEventOfDay &&
                             !isVeryLastEventOfTeam &&
-                            accommodationName &&
-                            current.location &&
-                            current.location !== accommodationName
+                            current.location
                         ) {
+                            // Zisti zoznam ubytovní – pre superstructure tím použi cache, inak accommodationName
+                            let eveningAccommodations;
+                        
+                            if (isSuperstructureTeam) {
+                                const lastCharMatch = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+                                const derivedGroupName = lastCharMatch ? `skupina ${lastCharMatch[1].toUpperCase()}` : teamGroupName;
+                                const cacheKey = `${cleanCategory(category)}|${derivedGroupName}`;
+                                eveningAccommodations = (window.__transport_accommodationsByGroup || {})[cacheKey] || [];
+                            } else {
+                                eveningAccommodations = accommodationName ? [accommodationName] : [];
+                            }
+
                             const departureTs =
                                 current.endTs != null ? current.endTs : current.startTs;
-    
+
                             const dayRefTs =
                                 departureTs != null
                                     ? departureTs
                                     : midnightFromWhen(current.when);
-    
+                        
                             const departureStr =
                                 formatFullFromTs(departureTs) || current.when;
-    
+                        
                             const arrivalStr =
                                 formatDayWithTime(dayRefTs, 23, 59) || '23:59';
-    
+                        
                             let whenStr;
                             if (departureStr && arrivalStr) {
                                 whenStr = `${departureStr} – ${arrivalStr}`;
@@ -948,18 +975,23 @@ const TransportApp = ({ userProfileData }) => {
                             } else {
                                 whenStr = current.when;
                             }
-    
-                            enriched.push({
-                                ts: current.ts + 1,
-                                when: whenStr,
-                                type: 'transfer',
-                                text: `Presun z ${current.location} do ubytovania ${accommodationName}`,
-                                location: null,
-                                isTransfer: true,
+
+                            eveningAccommodations.forEach((accomName) => {
+                                if (!accomName) return;
+                                if (accomName === current.location) return;
+                        
+                                enriched.push({
+                                    ts: current.ts + 1,
+                                    when: whenStr,
+                                    type: 'transfer',
+                                    text: `Presun z ${current.location} do ubytovania ${accomName}`,
+                                    location: null,
+                                    isTransfer: true,
+                                });
                             });
                         }
                     }
-    
+
                     enriched.sort((a, b) => {
                         if (a.ts !== b.ts) return a.ts - b.ts;
                         return String(a.text).localeCompare(String(b.text), 'sk');
