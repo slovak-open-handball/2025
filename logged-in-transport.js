@@ -431,7 +431,7 @@ const TransportApp = ({ userProfileData }) => {
             const computedDepartureStr = formatFullFromTs(departureTs) || '—';
             const departureStr = overrideDepartureStr != null ? overrideDepartureStr : computedDepartureStr;
 
-            return `Presun z ${fromLabel} do ${toLabel} (odchod: ${departureStr}, príchod: ${arrivalStr})`;
+            return `Presun z ${fromLabel} do ${toLabel}`;
         };
 
         console.log('[TRANSPORT] ===== ČASOVÁ OS UDALOSTÍ PRE KAŽDÝ TÍM =====');
@@ -605,9 +605,7 @@ const TransportApp = ({ userProfileData }) => {
                                             ts: (firstRealEvent.ts != null ? firstRealEvent.ts : 0) - 1,
                                             when: whenStr,
                                             type: 'transfer',
-                                            text:
-                                                `Presun z ${loc.location} do ${targetLocation} ` +
-                                                `(odchod: ${departureStr || '—'}, príchod: ${arrivalStr || '—'})`,
+                                            text: `Presun z ${loc.location} do ${targetLocation}`,
                                             location: null,
                                             isTransfer: true,
                                         });
@@ -812,9 +810,7 @@ const TransportApp = ({ userProfileData }) => {
                                 ts: current.ts + 1,
                                 when: whenStr,
                                 type: 'transfer',
-                                text:
-                                    `Presun z ${current.location} do ubytovania ${accommodationName} ` +
-                                    `(odchod: ${departureStr}, príchod: ${arrivalStr})`,
+                                text: `Presun z ${current.location} do ubytovania ${accommodationName}`,
                                 location: null,
                                 isTransfer: true,
                             });
