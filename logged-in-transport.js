@@ -237,9 +237,6 @@ const TransportApp = ({ userProfileData }) => {
                     groupName: t.groupName,
                     lastChar,
                 };
-                console.log(
-                    `[TRANSPORT][SS-DEBUG] Superstructure tím nájdený: "${t.teamName}" | kategória="${t.category}" | groupName=${JSON.stringify(t.groupName)} | lastChar="${lastChar}"`
-                );
             }
 
             // Zaeviduj tím do skupiny (aj ne-superstructure, aj superstructure)
@@ -532,13 +529,6 @@ const TransportApp = ({ userProfileData }) => {
                     // NOVÉ: Superstructure – presun z miesta, kde dohrala jeho skupina
                     const ssInfo = superstructureInfoByTeam[category] && superstructureInfoByTeam[category][teamName];
                     if (ssInfo && ssInfo.isSuperstructure) {
-                        console.log(
-                            `\n[TRANSPORT][SS-DEBUG] ===== SUPERSTRUCTURE TÍM: "${teamName}" (kategória="${category}") =====`
-                        );
-                        console.log(
-                            `[TRANSPORT][SS-DEBUG]   ssInfo: isSuperstructure=${ssInfo.isSuperstructure} | groupName=${JSON.stringify(ssInfo.groupName)} | lastChar="${ssInfo.lastChar}"`
-                        );
-
                         // Nájdi prvú udalosť superstructure tímu (najskorší ts, ktorý nie je -Infinity)
                         const firstRealEvent = events
                             .filter((ev) => ev.ts != null && isFinite(ev.ts) && ev.ts !== Number.POSITIVE_INFINITY && ev.location)
@@ -546,9 +536,6 @@ const TransportApp = ({ userProfileData }) => {
 
                         if (firstRealEvent) {
                             const firstDayKey = extractDayKeyFromWhen(firstRealEvent.when);
-                            console.log(
-                                `[TRANSPORT][SS-DEBUG]   Prvá reálna udalosť: "${firstRealEvent.text}" | location="${firstRealEvent.location}" | when="${firstRealEvent.when}" | firstDayKey="${firstDayKey}"`
-                            );
 
                             if (firstDayKey) {
                                 // Skús najprv podľa plného názvu skupiny, potom podľa posledného písmena
@@ -557,55 +544,26 @@ const TransportApp = ({ userProfileData }) => {
 
                                 if (ssInfo.groupName) {
                                     const groupKey = `${category}|${ssInfo.groupName}|${firstDayKey}`;
-                                    console.log(
-                                        `[TRANSPORT][SS-DEBUG]   Skúšam kľúč podľa groupName: "${groupKey}"`
-                                    );
                                     lastGroupMatch = lastMatchOfGroupPerDay[groupKey] || null;
                                     if (lastGroupMatch) usedKey = groupKey;
-                                    console.log(
-                                        `[TRANSPORT][SS-DEBUG]   → výsledok: ${lastGroupMatch ? `NÁJDENÝ (location="${lastGroupMatch.location}", endTs=${lastGroupMatch.endTs})` : 'NENÁJDENÝ'}`
-                                    );
-                                } else {
-                                    console.log(
-                                        `[TRANSPORT][SS-DEBUG]   groupName je prázdne, preskakujem kľúč podľa groupName.`
-                                    );
                                 }
 
                                 if (!lastGroupMatch && ssInfo.lastChar) {
                                     const groupKeyChar = `${category}|${ssInfo.lastChar}|${firstDayKey}`;
-                                    console.log(
-                                        `[TRANSPORT][SS-DEBUG]   Skúšam kľúč podľa lastChar: "${groupKeyChar}"`
-                                    );
                                     lastGroupMatch = lastMatchOfGroupByLastCharPerDay[groupKeyChar] || null;
                                     if (lastGroupMatch) usedKey = groupKeyChar;
-                                    console.log(
-                                        `[TRANSPORT][SS-DEBUG]   → výsledok: ${lastGroupMatch ? `NÁJDENÝ (location="${lastGroupMatch.location}", endTs=${lastGroupMatch.endTs})` : 'NENÁJDENÝ'}`
-                                    );
                                 }
-
-                                console.log(
-                                    `[TRANSPORT][SS-DEBUG]   Použitý kľúč: "${usedKey || '(žiadny)'}"`
-                                );
 
                                 // Debug: vypíš všetky dostupné kľúče pre tento deň
                                 const allGroupKeysForDay = Object.keys(lastMatchOfGroupPerDay).filter((k) => k.endsWith(`|${firstDayKey}`));
                                 const allCharKeysForDay = Object.keys(lastMatchOfGroupByLastCharPerDay).filter((k) => k.endsWith(`|${firstDayKey}`));
-                                console.log(
-                                    `[TRANSPORT][SS-DEBUG]   Dostupné kľúče (groupName) pre ${firstDayKey}: ${JSON.stringify(allGroupKeysForDay)}`
-                                );
-                                console.log(
-                                    `[TRANSPORT][SS-DEBUG]   Dostupné kľúče (lastChar) pre ${firstDayKey}: ${JSON.stringify(allCharKeysForDay)}`
-                                );
                     
                                 if (
                                     lastGroupMatch &&
                                     lastGroupMatch.location &&
                                     firstRealEvent.location &&
                                     lastGroupMatch.location !== firstRealEvent.location
-                                ) {
-                                    console.log(
-                                        `[TRANSPORT][SS-DEBUG]   ✓ GENERUJEM PRESUN: "${lastGroupMatch.location}" → "${firstRealEvent.location}"`
-                                    );                                    const departureTs = lastGroupMatch.endTs;
+                                ) {                                  const departureTs = lastGroupMatch.endTs;
                                     const arrivalTs = firstRealEvent.startTs;
                     
                                     const departureStr = formatFullFromTs(departureTs);
@@ -627,16 +585,7 @@ const TransportApp = ({ userProfileData }) => {
                                         location: null,
                                         isTransfer: true,
                                     });
-                                } else {
-                                    console.log(
-                                        `[TRANSPORT][SS-DEBUG]   ✗ NEGENERUJEM PRESUN. Dôvod: ` +
-                                        `lastGroupMatch=${lastGroupMatch ? 'OK' : 'NULL'}, ` +
-                                        `lastGroupMatch.location="${lastGroupMatch?.location || '—'}", ` +
-                                        `firstRealEvent.location="${firstRealEvent.location || '—'}", ` +
-                                        `rovnaké miesto=${lastGroupMatch && lastGroupMatch.location === firstRealEvent.location}`
-                                    );
                                 }
-                                console.log(`[TRANSPORT][SS-DEBUG] ===== KONIEC SUPERSTRUCTURE TÍMU "${teamName}" =====\n`);
                             }
                         }
                     }
