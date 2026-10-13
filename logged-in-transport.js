@@ -819,7 +819,14 @@ const TransportApp = ({ userProfileData }) => {
                         else if (ev.type === 'transfer') icon = '🚐';
 
                         const when = ev.when || '—';
-                        console.log(`     ${icon} ${when}  |  ${ev.text}`);
+                        const line = `     ${icon} ${when}  |  ${ev.text}`;
+
+                        if (ev.type === 'transfer') {
+                            // Presun – tučným písmom
+                            console.log('%c' + line, 'font-weight: bold;');
+                        } else {
+                            console.log(line);
+                        }
                     });
                 });
             });
