@@ -2866,7 +2866,7 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
             });
         });
 
-        // 1) PRIAMA ZHODA: existuje skupina v users?
+        // 1) PRIAMA ZHODA
         if (teamsByGroupName[targetGroup] && teamsByGroupName[targetGroup].size > 0) {
             const directAccommodations = new Set();
             teamsByGroupName[targetGroup].forEach((teamName) => {
@@ -2890,23 +2890,26 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
             return sorted;
         }
 
-        // 2) FALLBACK: skupina neexistuje v users
-        //    → nájdi tímy v matches pre túto skupinu, ALE VYLÚČ tie, ktorých názov
-        //    končí na písmeno cieľovej skupiny (tie patria priamo do skupiny D).
+        // 2) FALLBACK
         console.log(`[TRANSPORT] Skupina "${targetGroup}" sa nenašla v users – spúšťam fallback cez matches.`);
 
         const matchesRef = collection(window.db, 'matches');
         const matchesSnap = await getDocs(matchesRef);
 
-        // Nájdi všetky jedinečné tímy v cieľovej skupine (z matches),
-        // ale VYLÚČ tímy, ktorých názov končí na písmeno cieľovej skupiny.
-        const teamsInTargetGroup = new Set();
-
+        // Zbierka všetkých zápasov pre cieľovú kategóriu
+        const allCategoryMatches = [];
         matchesSnap.forEach((docSnap) => {
             const data = docSnap.data() || {};
             const matchCategory = cleanCategory(data.categoryName || data.categoryId || '');
             if (matchCategory !== targetCategory) return;
+            allCategoryMatches.push(data);
+        });
 
+        // Nájdi všetky jedinečné tímy v cieľovej skupine (z matches),
+        // ale VYLÚČ tímy, ktorých názov končí na písmeno cieľovej skupiny.
+        const teamsInTargetGroup = new Set();
+
+        allCategoryMatches.forEach((data) => {
             const matchGroupName = data.groupName ? String(data.groupName).trim() : null;
 
             const candidates = [];
@@ -2919,14 +2922,10 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
                 const trimmed = String(teamName).trim();
                 if (!trimmed) return;
 
-                // VYLÚČ tímy, ktorých názov končí na písmeno cieľovej skupiny
-                // (tie patria priamo do cieľovej skupiny a nemajú sa použiť na fallback)
                 if (nameEndsWithTargetChar(trimmed)) return;
 
                 const matchesGroupByField =
                     matchGroupName && matchGroupName === targetGroup;
-                // POZOR: nameEndsWithTargetChar už bolo vylúčené vyššie, takže tu sa
-                // použije iba zhoda podľa groupName v zápase
                 if (matchesGroupByField) {
                     teamsInTargetGroup.add(trimmed);
                 }
@@ -2938,24 +2937,92 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName) =>
             [...teamsInTargetGroup]
         );
 
-        // Z názvov týchto tímov odvoď posledné písmená → zodpovedajúce skupiny v users
-        const referencedGroups = new Set();
-
-        teamsInTargetGroup.forEach((teamName) => {
-            const match = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
-            if (!match) return;
-            const lastChar = match[1].toUpperCase();
-            // Nájdi všetky skupiny v users, ktoré končia na toto písmeno
+        // Pomocná funkcia: nájdi existujúce skupiny v users pre dané písmeno
+        const findGroupsInUsersByChar = (char) => {
+            const result = new Set();
             Object.keys(teamsByGroupName).forEach((gName) => {
                 const gLastChar = gName.trim().slice(-1).toUpperCase();
-                if (gLastChar === lastChar) {
-                    referencedGroups.add(gName);
-                }
+                if (gLastChar === char) result.add(gName);
             });
+            return result;
+        };
+
+        // Pomocná funkcia: nájdi všetky tímy v matches, ktoré končia na dané písmeno
+        // (a nie sú v cieľovej skupine)
+        const findTeamsInMatchesEndingWithChar = (char, excludeGroup) => {
+            const result = new Set();
+            allCategoryMatches.forEach((data) => {
+                const matchGroupName = data.groupName ? String(data.groupName).trim() : null;
+                if (excludeGroup && matchGroupName === excludeGroup) return;
+
+                const candidates = [];
+                if (data.homeTeamIdentifier) candidates.push(data.homeTeamIdentifier);
+                if (data.awayTeamIdentifier) candidates.push(data.awayTeamIdentifier);
+
+                candidates.forEach((identifier) => {
+                    const teamName = resolveTeamName(identifier);
+                    if (!teamName || teamName === '---') return;
+                    const trimmed = String(teamName).trim();
+                    const m = /([A-ZÁ-Ž])\s*$/.exec(trimmed);
+                    if (!m) return;
+                    if (m[1].toUpperCase() === char) {
+                        result.add(trimmed);
+                    }
+                });
+            });
+            return result;
+        };
+
+        // BFS cez písmená
+        const referencedGroups = new Set(); // existujúce skupiny v users
+        const visitedChars = new Set(); // navštívené písmená (aby sme sa nezacyklili)
+
+        // Na začiatok zober písmená z tímov v cieľovej skupine
+        const initialChars = new Set();
+        teamsInTargetGroup.forEach((teamName) => {
+            const m = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+            if (m) initialChars.add(m[1].toUpperCase());
         });
 
         console.log(
-            `[TRANSPORT] Fallback – odvodené existujúce skupiny v users:`,
+            `[TRANSPORT] Fallback – počiatočné písmená z tímov v skupine "${targetGroup}":`,
+            [...initialChars]
+        );
+
+        const queue = [...initialChars];
+
+        while (queue.length > 0) {
+            const char = queue.shift();
+            if (visitedChars.has(char)) continue;
+            visitedChars.add(char);
+
+            // Skús nájsť existujúce skupiny v users pre toto písmeno
+            const groupsInUsers = findGroupsInUsersByChar(char);
+            if (groupsInUsers.size > 0) {
+                groupsInUsers.forEach((g) => referencedGroups.add(g));
+                continue; // ak existujú, ďalej nehľadaj
+            }
+
+            // Ak neexistujú, nájdi tímy v matches, ktoré končia na toto písmeno,
+            // a z ich názvov odvoď ďalšie písmená
+            const teamsWithChar = findTeamsInMatchesEndingWithChar(char, targetGroup);
+            console.log(
+                `[TRANSPORT] Fallback – pre písmeno "${char}" neexistuje skupina v users, hľadám tímy v matches končiace na "${char}":`,
+                [...teamsWithChar]
+            );
+
+            teamsWithChar.forEach((teamName) => {
+                const m = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+                if (!m) return;
+                const nextChar = m[1].toUpperCase();
+                if (!visitedChars.has(nextChar)) {
+                    queue.push(nextChar);
+                }
+            });
+        }
+
+        console.log(
+            `[TRANSPORT] Fallback – odvodené existujúce skupiny v users (po BFS):`,
             [...referencedGroups]
         );
 
