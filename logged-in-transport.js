@@ -570,14 +570,30 @@ const TransportApp = ({ userProfileData }) => {
                     const ssInfo = superstructureInfoByTeam[category] && superstructureInfoByTeam[category][teamName];
 
                     // ============================================================
-                    // Ranné presuny pre tím z ubytovní skupiny
-                    // (v dňoch, kedy nehrá žiadny iný registrovaný tím v tejto kategórii)
+                    // Zisti skupinu tímu – buď z ssInfo, alebo z názvu tímu (posledné písmeno)
                     // ============================================================
                     const teamGroupName = (() => {
                         if (ssInfo && ssInfo.groupName) return ssInfo.groupName;
                         const g = getGroupForSuperstructureTeam(category, teamName);
                         if (g) return g;
                         if (ssInfo && ssInfo.lastChar) return `skupina ${ssInfo.lastChar}`;
+                        
+                        // NOVÉ: Skús odvodiť skupinu z názvu tímu (napr. "U12 CH 5B" → "skupina B")
+                        // Toto je potrebné pre superstructure tímy, ktoré sú v users (majú ubytovanie),
+                        // ale nemajú groupName v DB.
+                        const nameMatch = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+                        if (nameMatch) {
+                            const lastChar = nameMatch[1];
+                            // Over, či existuje skupina s týmto posledným písmenom v tejto kategórii
+                            const groups = teamsByGroup[category] || {};
+                            for (const [gName, teamSet] of Object.entries(groups)) {
+                                const gLastChar = gName.trim().slice(-1).toUpperCase();
+                                if (gLastChar === lastChar) return gName;
+                            }
+                            // Ak neexistuje, použi aspoň "skupina X"
+                            return `skupina ${lastChar}`;
+                        }
+                        
                         return null;
                     })();
                     
