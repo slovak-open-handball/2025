@@ -570,7 +570,8 @@ const TransportApp = ({ userProfileData }) => {
                     const ssInfo = superstructureInfoByTeam[category] && superstructureInfoByTeam[category][teamName];
 
                     // ============================================================
-                    // Zisti skupinu tímu (platí pre superstructure AJ registrované tímy)
+                    // Ranné presuny pre tím z ubytovní skupiny
+                    // (v dňoch, kedy nehrá žiadny iný registrovaný tím v tejto kategórii)
                     // ============================================================
                     const teamGroupName = (() => {
                         if (ssInfo && ssInfo.groupName) return ssInfo.groupName;
@@ -580,10 +581,6 @@ const TransportApp = ({ userProfileData }) => {
                         return null;
                     })();
                     
-                    // ============================================================
-                    // Ak má tím skupinu, vygeneruj ranné presuny z ubytovní skupiny
-                    // (v dňoch, kedy nehrá žiadny registrovaný tím v tejto kategórii)
-                    // ============================================================
                     if (teamGroupName) {
                         const groupAccommodations = getAccommodationsForGroup(category, teamGroupName);
                     
@@ -604,31 +601,9 @@ const TransportApp = ({ userProfileData }) => {
                                 if (globalFirstDay && dayKey === globalFirstDay) return;
                     
                                 // ============================================================
-                                // Zisti, či v tomto dni hrá nejaký registrovaný tím v tejto kategórii
+                                // Zisti, či v tomto dni hrá INÝ registrovaný tím v tejto kategórii
+                                // (seba samého ignorujeme – aj keď sme registrovaný tím)
                                 // ============================================================
-                                const hasRegisteredTeamPlaying = (() => {
-                                    const categoryTeams = grouped[category] || {};
-                                    for (const [tName, tEvents] of Object.entries(categoryTeams)) {
-                                        const isRegistered = teamsArrivalBufferRef.current.some(
-                                            (t) => cleanCategory(t.category) === cleanCategory(category)
-                                                && t.teamName === tName
-                                                && t.isRegistered === true
-                                        );
-                                        if (!isRegistered) continue;
-                    
-                                        const hasEventOnDay = tEvents.some((ev) => {
-                                            if (ev.type !== 'match' && ev.type !== 'catering') return false;
-                                            const dk = extractDayKeyFromWhen(ev.when);
-                                            return dk === dayKey;
-                                        });
-                                        if (hasEventOnDay) return true;
-                                    }
-                                    return false;
-                                })();
-                    
-                                // Ak hrá registrovaný tím (a nie sme ten tím), preskoč
-                                // (t.j. generujeme len vtedy, ak žiadny registrovaný tím nehrá,
-                                //  alebo sme sami ten jediný registrovaný tím čo hrá)
                                 const anyOtherRegisteredTeamPlaying = (() => {
                                     const categoryTeams = grouped[category] || {};
                                     for (const [tName, tEvents] of Object.entries(categoryTeams)) {
@@ -650,7 +625,7 @@ const TransportApp = ({ userProfileData }) => {
                                     return false;
                                 })();
                     
-                                // Ak hrá iný registrovaný tím, negeneruj (pôvodné správanie pre tento deň)
+                                // Ak hrá iný registrovaný tím, negeneruj presuny z celej skupiny
                                 if (anyOtherRegisteredTeamPlaying) return;
                     
                                 // ============================================================
@@ -677,8 +652,10 @@ const TransportApp = ({ userProfileData }) => {
                                 const firstEventTs = firstEventOfDay.startTs ?? firstEventOfDay.ts;
                                 const arrivalStr = formatFullFromTs(firstEventTs) || firstEventOfDay.when;
                     
-                                // Pre každé ubytovanie v skupine (okrem miesta prvej udalosti)
+                                // Pre KAŽDÉ ubytovanie v skupine (vrátane miesta prvej udalosti)
                                 groupAccommodations.forEach((accomName) => {
+                                    // Ak je ubytovanie totožné s miestom prvej udalosti, preskoč
+                                    // (aby nevznikol presun "z Bôrik/Korytnačka do Bôrik/Korytnačka")
                                     if (accomName === firstLocation) return;
                     
                                     const teamArrivalTime = arrivalTimeByTeam[category]?.[teamName] || '';
