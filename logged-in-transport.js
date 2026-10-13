@@ -183,7 +183,7 @@ const TransportApp = ({ userProfileData }) => {
         (teamsArrivalBufferRef.current || []).forEach((t) => {
             if (!t.isSuperstructure) return;
             if (!t.teamName) return;
-            const lastCharMatch = /([A-ZÁ-Ž])\s*$/.exec(String(t.teamName).trim());
+            const lastCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(t.teamName).trim());
             if (!lastCharMatch) return;
             const derivedGroupName = `skupina ${lastCharMatch[1].toUpperCase()}`;
             const key = `${cleanCategory(t.category)}|${derivedGroupName}`;
@@ -614,7 +614,7 @@ const TransportApp = ({ userProfileData }) => {
                         // NOVÉ: Skús odvodiť skupinu z názvu tímu (napr. "U12 CH 5B" → "skupina B")
                         // Toto je potrebné pre superstructure tímy, ktoré sú v users (majú ubytovanie),
                         // ale nemajú groupName v DB.
-                        const nameMatch = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+                        const nameMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
                         if (nameMatch) {
                             const lastChar = nameMatch[1];
                             // Over, či existuje skupina s týmto posledným písmenom v tejto kategórii
@@ -641,7 +641,7 @@ const TransportApp = ({ userProfileData }) => {
                         if (!inUsers) return true;
                         // Ak tím je v users, ale má v názve posledné písmeno (napr. "5B"), je to superstructure
                         // (bol pridaný do users len kvôli ubytovaniu)
-                        if (/([A-ZÁ-Ž])\s*$/.test(String(teamName).trim())) return true;
+                        if (/\d[A-ZÁ-Ž]\s*$/.test(String(teamName).trim())) return true;
                         return false;
                     })();
     
@@ -696,7 +696,7 @@ const TransportApp = ({ userProfileData }) => {
                             }
                             // Superstructure tím (nie je v users) – skupinová cache
                             if (teamGroupName) {
-                                const lastCharMatch = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+                                const lastCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
                                 const derivedGroupName = lastCharMatch
                                     ? `skupina ${lastCharMatch[1].toUpperCase()}`
                                     : teamGroupName;
@@ -1360,7 +1360,7 @@ const TransportApp = ({ userProfileData }) => {
         
                         // NOVÉ: Aj registrované tímy, ktoré majú v názve posledné písmeno (napr. "5B"),
                         // považuj za superstructure (boli pridané do users len kvôli ubytovaniu).
-                        const looksLikeSuperstructure = /([A-ZÁ-Ž])\s*$/.test(String(teamName).trim());
+                        const looksLikeSuperstructure = /\d[A-ZÁ-Ž]\s*$/.test(String(teamName).trim());
         
                         if (isRegistered && !looksLikeSuperstructure) return; // je to skutočný registrovaný tím
                         
@@ -1431,7 +1431,7 @@ const TransportApp = ({ userProfileData }) => {
                         // Tím ešte nie je v bufferi – pridaj ho ako superstructure
                         // NOVÉ: Skús odvodiť groupName z názvu tímu (napr. "U12 CH 5B" → "skupina B")
                         let derivedGroupName = null;
-                        const nameMatch = /([A-ZÁ-Ž])\s*$/.exec(String(trimmedName).trim());
+                        const nameMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(trimmedName).trim());
                         if (nameMatch) {
                             const lastChar = nameMatch[1];
                             // Prejdi všetky existujúce skupiny v bufferi a nájdi takú, ktorá končí na rovnaké písmeno
@@ -2266,7 +2266,7 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName, vi
 
     const nameEndsWithTargetChar = (teamName) => {
         if (!targetGroupLastChar) return false;
-        const match = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+        const match = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
         if (!match) return false;
         return match[1].toUpperCase() === targetGroupLastChar;
     };
@@ -2401,7 +2401,7 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName, vi
 
         const initialChars = new Set();
         teamsInTargetGroup.forEach((teamName) => {
-            const m = /([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+            const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
             if (m) initialChars.add(m[1].toUpperCase());
         });
 
