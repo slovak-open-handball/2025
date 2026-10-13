@@ -1419,6 +1419,7 @@ const TransportApp = ({ userProfileData }) => {
                         // Tím už je v bufferi (napr. z users 2a) – označ ho ako superstructure
                         const existing = existingByKey.get(key);
                         existing.isSuperstructure = true;
+                        existing.isRegistered = false;
                     } else {
                         // Tím ešte nie je v bufferi – pridaj ho ako superstructure
                         buffer.push({
