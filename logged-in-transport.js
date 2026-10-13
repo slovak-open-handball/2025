@@ -627,7 +627,7 @@ const TransportApp = ({ userProfileData }) => {
                                 const ssGroupName = ssInfo.groupName || getGroupForSuperstructureTeam(category, teamName);
                                 if (ssGroupName) {
                                     const groupAccommodations = getAccommodationsForGroup(category, ssGroupName);
-    
+                                
                                     if (groupAccommodations.length > 0) {
                                         // Zisti všetky dni, kedy má superstructure tím udalosti
                                         const daysWithEvents = new Set();
@@ -637,14 +637,47 @@ const TransportApp = ({ userProfileData }) => {
                                                 if (dk) daysWithEvents.add(dk);
                                             }
                                         });
-    
+                                
                                         const sortedDays = [...daysWithEvents].sort();
-    
+                                
                                         // Pre každý deň okrem prvého dňa turnaja vygeneruj ranné presuny
                                         sortedDays.forEach((dayKey) => {
                                             // Preskoč prvý deň turnaja
                                             if (globalFirstDay && dayKey === globalFirstDay) return;
-    
+                                
+                                            // ============================================================
+                                            // NOVÉ: Skontroluj, či v tento deň hrá nejaký registrovaný tím
+                                            // z tej istej skupiny. Ak áno, ranné presuny pre superstructure
+                                            // tím sa negenerujú (registrovaný tím ho vyzdvihne).
+                                            // ============================================================
+                                            const registeredTeamsInGroup = teamsByGroup[category]?.[ssGroupName];
+                                            if (registeredTeamsInGroup && registeredTeamsInGroup.size > 0) {
+                                                let registeredTeamPlaysThisDay = false;
+                                
+                                                // Prejdi všetky registrované tímy v skupine a zisti, či majú v tento deň udalosť
+                                                for (const regTeamName of registeredTeamsInGroup) {
+                                                    // Preskoč samotný superstructure tím
+                                                    if (regTeamName === teamName) continue;
+                                
+                                                    const regTeamEvents = grouped[category]?.[regTeamName];
+                                                    if (!regTeamEvents) continue;
+                                
+                                                    const hasEventThisDay = regTeamEvents.some((ev) => {
+                                                        if (ev.type !== 'match' && ev.type !== 'catering') return false;
+                                                        const dk = extractDayKeyFromWhen(ev.when);
+                                                        return dk === dayKey;
+                                                    });
+                                
+                                                    if (hasEventThisDay) {
+                                                        registeredTeamPlaysThisDay = true;
+                                                        break;
+                                                    }
+                                                }
+                                
+                                                // Ak v tento deň hrá registrovaný tím zo skupiny, negeneruj ranné presuny
+                                                if (registeredTeamPlaysThisDay) return;
+                                            }
+                                
                                             // Nájdi prvú udalosť dňa pre tento tím
                                             const dayEvents = events
                                                 .filter((ev) => {
@@ -657,25 +690,25 @@ const TransportApp = ({ userProfileData }) => {
                                                     const bTs = b.startTs ?? b.ts ?? Number.POSITIVE_INFINITY;
                                                     return aTs - bTs;
                                                 });
-    
+                                
                                             if (dayEvents.length === 0) return;
-    
+                                
                                             const firstEventOfDay = dayEvents[0];
                                             const firstLocation = firstEventOfDay.location;
                                             if (!firstLocation) return;
-    
+                                
                                             const firstEventTs = firstEventOfDay.startTs ?? firstEventOfDay.ts;
                                             const arrivalStr = formatFullFromTs(firstEventTs) || firstEventOfDay.when;
-    
+                                
                                             // Pre každé ubytovanie v skupine (okrem miesta prvej udalosti)
                                             groupAccommodations.forEach((accomName) => {
                                                 if (accomName === firstLocation) return;
-    
+                                
                                                 // Odchod z ubytovania – použijeme čas príchodu tímu, ak je k dispozícii
                                                 const teamArrivalTime = arrivalTimeByTeam[category]?.[teamName] || '';
                                                 let departureStr;
                                                 const dayRefTs = firstEventTs != null ? firstEventTs : midnightFromWhen(firstEventOfDay.when);
-    
+                                
                                                 if (teamArrivalTime && /^\d{1,2}:\d{2}$/.test(teamArrivalTime)) {
                                                     const [h, mi] = teamArrivalTime.split(':').map(Number);
                                                     const departureTs = timestampOnDay(dayRefTs, h, mi);
@@ -683,7 +716,7 @@ const TransportApp = ({ userProfileData }) => {
                                                 } else {
                                                     departureStr = formatDayWithTime(dayRefTs, 0, 0) || '00:00';
                                                 }
-    
+                                
                                                 let whenStr;
                                                 if (departureStr && arrivalStr) {
                                                     whenStr = `${departureStr} – ${arrivalStr}`;
@@ -692,7 +725,7 @@ const TransportApp = ({ userProfileData }) => {
                                                 } else {
                                                     whenStr = firstEventOfDay.when;
                                                 }
-    
+                                
                                                 enriched.push({
                                                     ts: (firstEventTs != null ? firstEventTs : 0) - 1,
                                                     when: whenStr,
