@@ -229,9 +229,13 @@ const TransportApp = ({ userProfileData }) => {
 
             if (t.isSuperstructure) {
                 if (!superstructureInfoByTeam[t.category]) superstructureInfoByTeam[t.category] = {};
+                // Odvodí základné písmeno skupiny z posledného písmena názvu tímu
+                // napr. "U12 D 1A" → "A"
+                const lastChar = t.teamName ? t.teamName.trim().slice(-1).toUpperCase() : null;
                 superstructureInfoByTeam[t.category][t.teamName] = {
                     isSuperstructure: true,
                     groupName: t.groupName,
+                    lastChar,
                 };
             }
 
@@ -440,6 +444,9 @@ const TransportApp = ({ userProfileData }) => {
             // NOVÉ: Zisti posledný zápas skupiny v každom dni
             // (kľúč: `${category}|${groupName}|${dayKey}`)
             const lastMatchOfGroupPerDay = {};
+            // NOVÉ: Aj podľa posledného písmena skupiny (napr. "A", "B")
+            // (kľúč: `${category}|${lastChar}|${dayKey}`)
+            const lastMatchOfGroupByLastCharPerDay = {};
 
             matchesBufferRef.current.forEach((m) => {
                 const dayKey = m.scheduledTs != null
@@ -449,7 +456,7 @@ const TransportApp = ({ userProfileData }) => {
                     })()
                     : null;
                 if (!dayKey) return;
-        
+
                 // Zisti, do ktorých skupín patria oba tímy
                 const groups = teamsByGroup[m.category] || {};
                 const involvedGroups = new Set();
@@ -460,8 +467,10 @@ const TransportApp = ({ userProfileData }) => {
                 });
 
                 involvedGroups.forEach((groupName) => {
-                    const key = `${m.category}|${groupName}|${dayKey}`;
                     const endTs = m.scheduledEndTs ?? m.scheduledTs;
+
+                    // Ulož podľa plného názvu skupiny
+                    const key = `${m.category}|${groupName}|${dayKey}`;
                     if (
                         !lastMatchOfGroupPerDay[key] ||
                         (endTs != null && endTs > (lastMatchOfGroupPerDay[key].endTs ?? -Infinity))
@@ -473,6 +482,25 @@ const TransportApp = ({ userProfileData }) => {
                             category: m.category,
                             groupName,
                         };
+                    }
+
+                    // Ulož aj podľa posledného písmena názvu skupiny
+                    // napr. "skupina A" → "A"
+                    const groupLastChar = groupName.trim().slice(-1).toUpperCase();
+                    if (groupLastChar && /[A-ZÁ-Ž]/.test(groupLastChar)) {
+                        const keyChar = `${m.category}|${groupLastChar}|${dayKey}`;
+                        if (
+                            !lastMatchOfGroupByLastCharPerDay[keyChar] ||
+                            (endTs != null && endTs > (lastMatchOfGroupByLastCharPerDay[keyChar].endTs ?? -Infinity))
+                        ) {
+                            lastMatchOfGroupByLastCharPerDay[keyChar] = {
+                                location: m.hallName || null,
+                                endTs,
+                                dayKey,
+                                category: m.category,
+                                groupName,
+                            };
+                        }
                     }
                 });
             });
@@ -498,9 +526,9 @@ const TransportApp = ({ userProfileData }) => {
 
                     const enriched = [];
 
-                                        // NOVÉ: Superstructure – presun z miesta, kde dohrala jeho skupina
+                    // NOVÉ: Superstructure – presun z miesta, kde dohrala jeho skupina
                     const ssInfo = superstructureInfoByTeam[category] && superstructureInfoByTeam[category][teamName];
-                    if (ssInfo && ssInfo.isSuperstructure && ssInfo.groupName) {
+                    if (ssInfo && ssInfo.isSuperstructure) {
                         // Nájdi prvú udalosť superstructure tímu (najskorší ts, ktorý nie je -Infinity)
                         const firstRealEvent = events
                             .filter((ev) => ev.ts != null && isFinite(ev.ts) && ev.ts !== Number.POSITIVE_INFINITY && ev.location)
@@ -509,8 +537,16 @@ const TransportApp = ({ userProfileData }) => {
                         if (firstRealEvent) {
                             const firstDayKey = extractDayKeyFromWhen(firstRealEvent.when);
                             if (firstDayKey) {
-                                const groupKey = `${category}|${ssInfo.groupName}|${firstDayKey}`;
-                                const lastGroupMatch = lastMatchOfGroupPerDay[groupKey];
+                                // Skús najprv podľa plného názvu skupiny, potom podľa posledného písmena
+                                let lastGroupMatch = null;
+                                if (ssInfo.groupName) {
+                                    const groupKey = `${category}|${ssInfo.groupName}|${firstDayKey}`;
+                                    lastGroupMatch = lastMatchOfGroupPerDay[groupKey] || null;
+                                }
+                                if (!lastGroupMatch && ssInfo.lastChar) {
+                                    const groupKeyChar = `${category}|${ssInfo.lastChar}|${firstDayKey}`;
+                                    lastGroupMatch = lastMatchOfGroupByLastCharPerDay[groupKeyChar] || null;
+                                }
                     
                                 if (
                                     lastGroupMatch &&
