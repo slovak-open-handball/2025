@@ -1148,6 +1148,46 @@ const TransportApp = ({ userProfileData }) => {
 
                 const buffer = [];
 
+                // Pomocná funkcia na spracovanie jedného tímu
+                const processTeam = (team, cat, isSuperstructureTeam) => {
+                    if (!team || !team.teamName) return;
+                    const trimmedName = team.teamName.trim();
+                    const accomType = team.accommodation?.type?.trim?.() || '';
+                    const accomName = team.accommodation?.name?.trim?.() || '';
+
+                    // arrivalType môže byť buď string alebo objekt { type, time }
+                    let arrivalTypeRaw = '';
+                    let arrivalDisplayRaw = '---';
+                    if (team.arrival) {
+                        if (typeof team.arrival === 'string') {
+                            arrivalTypeRaw = team.arrival.trim();
+                            arrivalDisplayRaw = arrivalTypeRaw || '---';
+                        } else if (typeof team.arrival === 'object') {
+                            if (team.arrival.type) {
+                                arrivalTypeRaw = String(team.arrival.type).trim();
+                            }
+                            arrivalDisplayRaw = formatArrival(team.arrival);
+                        }
+                    }
+
+                    // isSuperstructure = true, ak tím pochádza z kolekcie `superstructure`
+                    // ALEBO má explicitný flag v DB
+                    const isSS = isSuperstructureTeam === true || team.isSuperstructure === true;
+
+                    buffer.push({
+                        category: cat,
+                        teamName: trimmedName,
+                        accommodationType: accomType || '(nešpecifikovaný)',
+                        accommodationName: accomName,
+                        arrivalDisplay: arrivalDisplayRaw,
+                        arrivalType: arrivalTypeRaw,
+                        groupName: team.groupName ? String(team.groupName).trim() : null,
+                        order: (typeof team.order === 'number' && team.order > 0) ? team.order : null,
+                        isSuperstructure: isSS,
+                    });
+                };
+
+                // 2a) Používatelia (users) – bežné tímy
                 usersSnap.forEach((userDoc) => {
                     const userData = userDoc.data() || {};
                     const teams = userData.teams;
@@ -1156,40 +1196,43 @@ const TransportApp = ({ userProfileData }) => {
                     Object.entries(teams).forEach(([category, teamArray]) => {
                         if (!Array.isArray(teamArray)) return;
                         const cat = cleanCategory(category);
-                        teamArray.forEach((team) => {
-                            if (!team || !team.teamName) return;
-                            const accomType = team.accommodation?.type?.trim?.() || '';
-                            const accomName = team.accommodation?.name?.trim?.() || '';
-
-                            // arrivalType môže byť buď string alebo objekt { type, time }
-                            let arrivalTypeRaw = '';
-                            let arrivalDisplayRaw = '---';
-                            if (team.arrival) {
-                                if (typeof team.arrival === 'string') {
-                                    arrivalTypeRaw = team.arrival.trim();
-                                    arrivalDisplayRaw = arrivalTypeRaw || '---';
-                                } else if (typeof team.arrival === 'object') {
-                                    if (team.arrival.type) {
-                                        arrivalTypeRaw = String(team.arrival.type).trim();
-                                    }
-                                    arrivalDisplayRaw = formatArrival(team.arrival);
-                                }
-                            }
-
-                            buffer.push({
-                                category: cat,
-                                teamName: team.teamName.trim(),
-                                accommodationType: accomType || '(nešpecifikovaný)',
-                                accommodationName: accomName,
-                                arrivalDisplay: arrivalDisplayRaw,
-                                arrivalType: arrivalTypeRaw,
-                                groupName: team.groupName ? String(team.groupName).trim() : null,
-                                order: (typeof team.order === 'number' && team.order > 0) ? team.order : null,
-                                isSuperstructure: team.isSuperstructure === true,
-                            });
-                        });
+                        teamArray.forEach((team) => processTeam(team, cat, false));
                     });
                 });
+
+                // 2b) Superstructure – tímy z kolekcie `superstructure`
+                try {
+                    const ssRef = collection(window.db, 'superstructure');
+                    const ssSnap = await getDocs(ssRef);
+
+                    ssSnap.forEach((docSnap) => {
+                        const data = docSnap.data() || {};
+
+                        // Superstructure môže byť uložený rôzne – skúsime viac variantov:
+                        // 1) dokument má pole `teams` (objekt kategória → pole tímov)
+                        // 2) dokument má `category` + `teamName` + prípadne ďalšie polia
+                        const cat = cleanCategory(
+                            data.category || data.categoryName || '(bez kategórie)'
+                        );
+
+                        if (Array.isArray(data.teams)) {
+                            // Pole tímov priamo v dokumente
+                            data.teams.forEach((team) => processTeam(team, cat, true));
+                        } else if (data.teams && typeof data.teams === 'object') {
+                            // Objekt kategória → pole tímov
+                            Object.entries(data.teams).forEach(([catKey, teamArray]) => {
+                                if (!Array.isArray(teamArray)) return;
+                                const c = cleanCategory(catKey);
+                                teamArray.forEach((team) => processTeam(team, c, true));
+                            });
+                        } else if (data.teamName) {
+                            // Dokument predstavuje jeden tím
+                            processTeam(data, cat, true);
+                        }
+                    });
+                } catch (ssErr) {
+                    console.error('[TRANSPORT] Chyba pri načítaní superstructure:', ssErr);
+                }
 
                 teamsArrivalBufferRef.current = buffer;
                 teamsLoadedRef.current = true;
