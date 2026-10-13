@@ -647,39 +647,65 @@ const TransportApp = ({ userProfileData }) => {
                                 
                                             // ============================================================
                                             // Skontroluj, či v tento deň má udalosť NIEKTORÝ registrovaný tím
-                                            // z tej istej skupiny (okrem samotného superstructure tímu).
+                                            // z tej istej skupiny (okrem samotného superstructure tímu)
+                                            // NA ROVNAKOM MIESTE, kde má superstructure tím prvú udalosť dňa.
                                             // Ak áno → ranné presuny pre superstructure tím sa NEGENERUJÚ.
                                             // Ak nie → GENERUJÚ sa zo všetkých ubytovní skupiny.
                                             // ============================================================
+                                            
+                                            // Nájdi prvú udalosť dňa pre tento tím (potrebujeme poznať cieľové miesto)
+                                            const dayEvents = events
+                                                .filter((ev) => {
+                                                    if (ev.type !== 'match' && ev.type !== 'catering') return false;
+                                                    const dk = extractDayKeyFromWhen(ev.when);
+                                                    return dk === dayKey && ev.location;
+                                                })
+                                                .sort((a, b) => {
+                                                    const aTs = a.startTs ?? a.ts ?? Number.POSITIVE_INFINITY;
+                                                    const bTs = b.startTs ?? b.ts ?? Number.POSITIVE_INFINITY;
+                                                    return aTs - bTs;
+                                                });
+                                            
+                                            if (dayEvents.length === 0) return;
+                                            
+                                            const firstEventOfDay = dayEvents[0];
+                                            const firstLocation = firstEventOfDay.location;
+                                            if (!firstLocation) return;
+                                            
+                                            const firstEventTs = firstEventOfDay.startTs ?? firstEventOfDay.ts;
+                                            
+                                            // Teraz skontroluj registrované tímy – musia mať udalosť v tento deň
+                                            // NA ROVNAKOM MIESTE, aby mohli superstructure tím vyzdvihnúť.
                                             const registeredTeamsInGroup = teamsByGroup[category]?.[ssGroupName];
-                                            let registeredTeamPlaysThisDay = false;
-                                
+                                            let registeredTeamPlaysAtSameLocationThisDay = false;
+                                            
                                             if (registeredTeamsInGroup && registeredTeamsInGroup.size > 0) {
                                                 for (const regTeamName of registeredTeamsInGroup) {
-                                                    // Preskoč samotný superstructure tím
                                                     if (regTeamName === teamName) continue;
-                                                    // Preskoč iné superstructure tímy (nemajú ubytovanie v users)
                                                     if (superstructureInfoByTeam[category]?.[regTeamName]?.isSuperstructure) continue;
-                                
+                                            
                                                     const regTeamEvents = grouped[category]?.[regTeamName];
                                                     if (!regTeamEvents) continue;
-                                
-                                                    const hasEventThisDay = regTeamEvents.some((ev) => {
+                                            
+                                                    const hasEventAtSameLocationThisDay = regTeamEvents.some((ev) => {
                                                         if (ev.type !== 'match' && ev.type !== 'catering') return false;
                                                         const dk = extractDayKeyFromWhen(ev.when);
-                                                        return dk === dayKey;
+                                                        if (dk !== dayKey) return false;
+                                                        // Musí ísť o rovnaké miesto, kde má superstructure tím prvú udalosť dňa
+                                                        return ev.location === firstLocation;
                                                     });
-                                
-                                                    if (hasEventThisDay) {
-                                                        registeredTeamPlaysThisDay = true;
+                                            
+                                                    if (hasEventAtSameLocationThisDay) {
+                                                        registeredTeamPlaysAtSameLocationThisDay = true;
                                                         break;
                                                     }
                                                 }
                                             }
-                                
-                                            // Ak v tento deň hrá registrovaný tím zo skupiny, negeneruj ranné presuny
-                                            if (registeredTeamPlaysThisDay) return;
-                                
+                                            
+                                            // Ak v tento deň hrá registrovaný tím zo skupiny NA ROVNAKOM MIESTE,
+                                            // negeneruj ranné presuny pre superstructure tím.
+                                            if (registeredTeamPlaysAtSameLocationThisDay) return;
+                                            
                                             // Nájdi prvú udalosť dňa pre tento tím
                                             const dayEvents = events
                                                 .filter((ev) => {
