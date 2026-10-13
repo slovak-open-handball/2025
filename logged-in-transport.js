@@ -1200,48 +1200,52 @@ const TransportApp = ({ userProfileData }) => {
                     });
                 });
 
-                // 2b) Superstructure – tímy z kolekcie `superstructure`
-                try {
-                    const ssRef = collection(window.db, 'superstructure');
-                    const ssSnap = await getDocs(ssRef);
+                // 2b) Superstructure – kolekcia `superstructure` nie je v rules povolená,
+                //     preto detegujeme superstructure tímy z `users` podľa formátu názvu.
+                //     Formát superstructure tímu: končí na <číslo><písmeno>, napr. "1A", "3B", "12C".
+                const ssNameRegex = /[0-9][A-Z]$/i;
 
-                    ssSnap.forEach((docSnap) => {
-                        const data = docSnap.data() || {};
+                // Preindexuj existujúce záznamy v bufferi (kľúč: category|teamName)
+                const existingByKey = new Map();
+                buffer.forEach((b) => {
+                    existingByKey.set(`${b.category}|${b.teamName}`, b);
+                });
 
-                        // Superstructure môže byť uložený rôzne – skúsime viac variantov:
-                        // 1) dokument má pole `teams` (objekt kategória → pole tímov)
-                        // 2) dokument má `category` + `teamName` + prípadne ďalšie polia
-                        const cat = cleanCategory(
-                            data.category || data.categoryName || '(bez kategórie)'
-                        );
+                usersSnap.forEach((userDoc) => {
+                    const userData = userDoc.data() || {};
+                    const teams = userData.teams;
+                    if (!teams || typeof teams !== 'object') return;
 
-                        if (Array.isArray(data.teams)) {
-                            // Pole tímov priamo v dokumente
-                            data.teams.forEach((team) => processTeam(team, cat, true));
-                        } else if (data.teams && typeof data.teams === 'object') {
-                            // Objekt kategória → pole tímov
-                            Object.entries(data.teams).forEach(([catKey, teamArray]) => {
-                                if (!Array.isArray(teamArray)) return;
-                                const c = cleanCategory(catKey);
-                                teamArray.forEach((team) => processTeam(team, c, true));
-                            });
-                        } else if (data.teamName) {
-                            // Dokument predstavuje jeden tím
-                            processTeam(data, cat, true);
-                        }
+                    Object.entries(teams).forEach(([category, teamArray]) => {
+                        if (!Array.isArray(teamArray)) return;
+                        const cat = cleanCategory(category);
+                        teamArray.forEach((team) => {
+                            if (!team || !team.teamName) return;
+                            const trimmedName = team.teamName.trim();
+                            if (!ssNameRegex.test(trimmedName)) return;
+
+                            const key = `${cat}|${trimmedName}`;
+                            if (existingByKey.has(key)) {
+                                // Tím už je v bufferi (napr. z users 2a) – označ ho ako superstructure
+                                const existing = existingByKey.get(key);
+                                existing.isSuperstructure = true;
+                            } else {
+                                // Tím ešte nie je v bufferi – pridaj ho ako superstructure
+                                processTeam(team, cat, true);
+                                existingByKey.set(key, {
+                                    category: cat,
+                                    teamName: trimmedName,
+                                    isSuperstructure: true,
+                                });
+                            }
+                        });
                     });
-                } catch (ssErr) {
-                    console.error('[TRANSPORT] Chyba pri načítaní superstructure:', ssErr);
-                }
+                });
 
-                teamsArrivalBufferRef.current = buffer;
-                teamsLoadedRef.current = true;
-
-                rebuildAndLogTimeline();
-
-            } catch (err) {
-                console.error('[TRANSPORT] Chyba pri načítaní tímov s ubytovaním:', err);
-            }
+                const ssCount = buffer.filter((b) => b.isSuperstructure).length;
+                console.log(
+                    `[TRANSPORT][SS-FALLBACK] Superstructure tímy detegované z názvu (users): ${ssCount}`
+                );
         };
 
         // 3) VŠETKY ZÁPASY PODĽA KATEGÓRIÍ
