@@ -1201,51 +1201,109 @@ const TransportApp = ({ userProfileData }) => {
                 });
 
                 // 2b) Superstructure – kolekcia `superstructure` nie je v rules povolená,
-                //     preto detegujeme superstructure tímy z `users` podľa formátu názvu.
+                //     preto detegujeme superstructure tímy z `matches` podľa formátu názvu.
                 //     Formát superstructure tímu: končí na <číslo><písmeno>, napr. "1A", "3B", "12C".
+                //
+                // DÔLEŽITÉ: superstructure tímy (napr. "U12 D 1A") NIE SÚ v kolekcii `users`
+                // (nie sú registrované tímy), objavujú sa iba v zápasoch (`matches`).
                 const ssNameRegex = /[0-9][A-Z]$/i;
 
-                // Preindexuj existujúce záznamy v bufferi (kľúč: category|teamName)
+                // Zozbieraj všetky unikátne superstructure tímy z matches
+                const ssTeamsFromMatches = new Map(); // key: category|teamName → { category, teamName }
+                (matchesBufferRef.current || []).forEach((m) => {
+                    [m.home, m.away].forEach((teamName) => {
+                        if (!teamName) return;
+                        if (!ssNameRegex.test(teamName)) return;
+                        const key = `${m.category}|${teamName}`;
+                        if (!ssTeamsFromMatches.has(key)) {
+                            ssTeamsFromMatches.set(key, { category: m.category, teamName });
+                        }
+                    });
+                });
+
+                // Skús tiež kolekciu `superstructure` (ak by bola dostupná pre rules)
+                try {
+                    const ssRef = collection(window.db, 'superstructure');
+                    const ssSnap = await getDocs(ssRef);
+                    ssSnap.forEach((docSnap) => {
+                        const data = docSnap.data() || {};
+                        const cat = cleanCategory(
+                            data.category || data.categoryName || '(bez kategórie)'
+                        );
+                        if (Array.isArray(data.teams)) {
+                            data.teams.forEach((team) => {
+                                if (!team || !team.teamName) return;
+                                const trimmedName = team.teamName.trim();
+                                const key = `${cat}|${trimmedName}`;
+                                if (!ssTeamsFromMatches.has(key)) {
+                                    ssTeamsFromMatches.set(key, { category: cat, teamName: trimmedName });
+                                }
+                            });
+                        } else if (data.teams && typeof data.teams === 'object') {
+                            Object.entries(data.teams).forEach(([catKey, teamArray]) => {
+                                if (!Array.isArray(teamArray)) return;
+                                const c = cleanCategory(catKey);
+                                teamArray.forEach((team) => {
+                                    if (!team || !team.teamName) return;
+                                    const trimmedName = team.teamName.trim();
+                                    const key = `${c}|${trimmedName}`;
+                                    if (!ssTeamsFromMatches.has(key)) {
+                                        ssTeamsFromMatches.set(key, { category: c, teamName: trimmedName });
+                                    }
+                                });
+                            });
+                        } else if (data.teamName) {
+                            const trimmedName = data.teamName.trim();
+                            const key = `${cat}|${trimmedName}`;
+                            if (!ssTeamsFromMatches.has(key)) {
+                                ssTeamsFromMatches.set(key, { category: cat, teamName: trimmedName });
+                            }
+                        }
+                    });
+                } catch (ssErr) {
+                    // Ak rules nedovolia prístup, ignorujeme (očakávané)
+                }
+
+                // Zapíš superstructure tímy do bufferu (existujúce označ, nové pridaj)
                 const existingByKey = new Map();
                 buffer.forEach((b) => {
                     existingByKey.set(`${b.category}|${b.teamName}`, b);
                 });
 
-                usersSnap.forEach((userDoc) => {
-                    const userData = userDoc.data() || {};
-                    const teams = userData.teams;
-                    if (!teams || typeof teams !== 'object') return;
-
-                    Object.entries(teams).forEach(([category, teamArray]) => {
-                        if (!Array.isArray(teamArray)) return;
-                        const cat = cleanCategory(category);
-                        teamArray.forEach((team) => {
-                            if (!team || !team.teamName) return;
-                            const trimmedName = team.teamName.trim();
-                            if (!ssNameRegex.test(trimmedName)) return;
-
-                            const key = `${cat}|${trimmedName}`;
-                            if (existingByKey.has(key)) {
-                                // Tím už je v bufferi (napr. z users 2a) – označ ho ako superstructure
-                                const existing = existingByKey.get(key);
-                                existing.isSuperstructure = true;
-                            } else {
-                                // Tím ešte nie je v bufferi – pridaj ho ako superstructure
-                                processTeam(team, cat, true);
-                                existingByKey.set(key, {
-                                    category: cat,
-                                    teamName: trimmedName,
-                                    isSuperstructure: true,
-                                });
-                            }
+                ssTeamsFromMatches.forEach(({ category: cat, teamName: trimmedName }) => {
+                    const key = `${cat}|${trimmedName}`;
+                    if (existingByKey.has(key)) {
+                        // Tím už je v bufferi (napr. z users 2a) – označ ho ako superstructure
+                        const existing = existingByKey.get(key);
+                        existing.isSuperstructure = true;
+                    } else {
+                        // Tím ešte nie je v bufferi – pridaj ho ako superstructure
+                        buffer.push({
+                            category: cat,
+                            teamName: trimmedName,
+                            accommodationType: '(nešpecifikovaný)',
+                            accommodationName: '',
+                            arrivalDisplay: '---',
+                            arrivalType: '',
+                            groupName: null,
+                            order: null,
+                            isSuperstructure: true,
                         });
-                    });
+                    }
                 });
 
                 const ssCount = buffer.filter((b) => b.isSuperstructure).length;
                 console.log(
-                    `[TRANSPORT][SS-FALLBACK] Superstructure tímy detegované z názvu (users): ${ssCount}`
+                    `[TRANSPORT][SS-FALLBACK] Superstructure tímy detegované z matches: ${ssCount}`
                 );
+                if (ssCount > 0) {
+                    console.log(
+                        '[TRANSPORT][SS-FALLBACK] Zoznam:',
+                        buffer
+                            .filter((b) => b.isSuperstructure)
+                            .map((b) => `${b.category} / ${b.teamName}`)
+                    );
+                }
 
                 teamsArrivalBufferRef.current = buffer;
                 teamsLoadedRef.current = true;
@@ -1319,6 +1377,12 @@ const TransportApp = ({ userProfileData }) => {
 
             matchesBufferRef.current = buffer;
             matchesLoadedRef.current = true;
+
+            // DÔLEŽITÉ: Po načítaní matches musia byť znovu načítané aj tímy,
+            // aby sa z matches detegovali superstructure tímy (ktoré nie sú v users).
+            if (typeof loadTeamsWithAccommodation === 'function') {
+                loadTeamsWithAccommodation();
+            }
 
             rebuildAndLogTimeline();
         };
@@ -1423,8 +1487,6 @@ const TransportApp = ({ userProfileData }) => {
         } catch (e) {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na catering:', e);
         }
-
-        loadTeamsWithAccommodation();
 
         return () => {
             if (unsubscribeRegistration) unsubscribeRegistration();
