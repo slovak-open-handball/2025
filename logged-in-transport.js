@@ -324,7 +324,20 @@ const TransportApp = ({ userProfileData }) => {
                     location: m.hallName || null,
                 });
             }
+
+            // DÔLEŽITÉ: Zaeviduj tímy aj do teamsByGroup podľa skupiny ZÁPASU.
+            // Tým sa do teamsByGroup dostanú aj superstructure tímy (napr. "U12 D 1F")
+            // a skupiny F, G, ... ktoré nie sú v users.
+            if (m.groupName) {
+                const cat = m.category;
+                const grp = String(m.groupName).trim();
+                if (!teamsByGroup[cat]) teamsByGroup[cat] = {};
+                if (!teamsByGroup[cat][grp]) teamsByGroup[cat][grp] = new Set();
+                if (m.home) teamsByGroup[cat][grp].add(m.home);
+                if (m.away) teamsByGroup[cat][grp].add(m.away);
+            }
         });
+
 
         // 3) STRAVOVANIA
         cateringBufferRef.current.forEach((c) => {
@@ -1331,6 +1344,8 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 }
 
+                const groupName = cleanCategory(data.groupName || '');
+
                 buffer.push({
                     category,
                     home: homeDisplayName,
@@ -1342,6 +1357,7 @@ const TransportApp = ({ userProfileData }) => {
                     hallName,
                     status: data.status || 'pending',
                     special,
+                    groupName: groupName || null,
                 });
             });
 
