@@ -318,7 +318,7 @@ const TransportApp = ({ userProfileData }) => {
             const timeRange = m.scheduledTime
                 ? (m.scheduledEndTime ? `${m.scheduledTime} – ${m.scheduledEndTime}` : m.scheduledTime)
                 : 'nenaplánované';
-            const text = `${m.home} vs ${m.away}${m.special}${m.hallName ? ` | ${m.hallName}` : ''}${m.status ? ` | status=${m.status}` : ''}`;
+            const text = `${m.home} vs ${m.away}${m.special}${m.hallName ? ` | ${m.hallName}` : ''}`;
     
             const startTs = m.scheduledTs ?? null;
             const endTs = m.scheduledEndTs ?? startTs;
@@ -1639,7 +1639,6 @@ const TransportApp = ({ userProfileData }) => {
                     scheduledEndTs,
                     scheduledEndTime,
                     hallName,
-                    status: data.status || 'pending',
                     special,
                     groupName: groupName || null,
                 });
