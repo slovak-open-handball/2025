@@ -631,7 +631,10 @@ const TransportApp = ({ userProfileData }) => {
                                 // ============================================================
                                 // NOVÉ: Ranné presuny pre superstructure tím z ubytovní skupiny
                                 // ============================================================
-                                const ssGroupName = ssInfo.groupName || getGroupForSuperstructureTeam(category, teamName);
+                                const ssGroupName = ssInfo.groupName 
+                                    || getGroupForSuperstructureTeam(category, teamName)
+                                    || (ssInfo.lastChar ? `skupina ${ssInfo.lastChar}` : null);
+                                
                                 if (ssGroupName) {
                                     const groupAccommodations = getAccommodationsForGroup(category, ssGroupName);
                                 
