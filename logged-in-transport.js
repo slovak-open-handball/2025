@@ -1038,7 +1038,56 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                             }
                         }
-                    
+
+                        enriched.push(current);
+
+                        const currentIsTimedEvent =
+                            current.type === 'match' || current.type === 'catering';
+                        
+                        if (
+                            next &&
+                            currentIsTimedEvent &&
+                            current.location &&
+                            next.location &&
+                            current.location !== next.location &&
+                            currentDay != null &&
+                            nextDay != null &&
+                            currentDay === nextDay
+                        ) {
+                            const departureTs =
+                                current.endTs != null ? current.endTs : current.startTs;
+                            const arrivalTs =
+                                next.startTs != null ? next.startTs : null;
+                        
+                            const departureStr = formatFullFromTs(departureTs);
+                            const arrivalStr = formatFullFromTs(arrivalTs);
+                        
+                            let whenStr;
+                            if (departureStr && arrivalStr) {
+                                whenStr = `${departureStr} – ${arrivalStr}`;
+                            } else if (departureStr) {
+                                whenStr = departureStr;
+                            } else if (arrivalStr) {
+                                whenStr = arrivalStr;
+                            } else {
+                                whenStr = current.when;
+                            }
+
+                            enriched.push({
+                                ts: current.ts + 0.5,
+                                when: whenStr,
+                                type: 'transfer',
+                                text: buildTransferText(
+                                    current,
+                                    next,
+                                    `${current.location}`,
+                                    `${next.location}`
+                                ),
+                                location: null,
+                                isTransfer: true,
+                            });
+                        }
+                                            
                         const isVeryLastEventOfTeam = (next == null);
                     
                         // B) Koniec dňa – večerné presuny na ubytovanie
