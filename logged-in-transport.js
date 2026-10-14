@@ -1821,274 +1821,247 @@ const TransportApp = ({ userProfileData }) => {
             window.showGlobalNotification('Nepodarilo sa zmeniť nástupnú zastávku.', 'error');
         }
     };
-
+    
     // ============================================================
-// NASTAVENIE NÁSTUPNEJ/VÝSTUPNEJ ZASTÁVKY
-// ============================================================
-const setExternalArrivalStop = async (placeId) => {
-    if (!window.db) return;
-    try {
-        const batch = writeBatch(window.db);
+    // RENDER – matica trvania jázd
+    // ============================================================
+    const renderTravelTimes = () => {
+        if (stopsList.length === 0) {
+            return React.createElement(
+                'div',
+                { className: 'text-gray-400 italic text-sm px-1' },
+                'Žiadne zastávky.'
+            );
+        }
 
-        // Najprv zruš flag na všetkých ostatných zastávkach
-        for (const p of allPlaces) {
-            if (p.type !== 'zastavka') continue;
-            const shouldBe = p.id === placeId;
-            if (p.isExternalArrivalStop !== shouldBe) {
-                batch.update(doc(window.db, 'places', p.id), {
-                    isExternalArrivalStop: shouldBe,
-                });
+        if (stopsList.length === 1) {
+            return React.createElement(
+                'div',
+                { className: 'text-gray-500 italic text-sm px-1' },
+                'Pre výpočet trvania jázd sú potrebné aspoň 2 zastávky.'
+            );
+        }
+
+        const getInputValue = (fromId, toId) => {
+            const key = `${fromId}|${toId}`;
+            return travelTimesDraft[key] != null ? travelTimesDraft[key] : '';
+        };
+
+        const handleDraftChange = (fromId, toId, value) => {
+            const key = `${fromId}|${toId}`;
+            setTravelTimesDraft((prev) => ({ ...prev, [key]: value }));
+        };
+
+        const handleBlur = (fromStop, toStop) => {
+            const key = `${fromStop.id}|${toStop.id}`;
+            const raw = travelTimesDraft[key] != null ? travelTimesDraft[key] : '';
+            const existing = travelTimes[key];
+            const existingMinutes = existing ? String(existing.minutes) : '';
+    
+            if (raw === existingMinutes) return;
+    
+            saveTravelTime(fromStop, toStop, raw);
+        };
+
+        // ============================================================
+        // NOVÉ: Kliknutie na hlavičkovú bunku (riadok/stĺpec) zastávky
+        // ============================================================
+        const handleStopHeaderClick = (stop) => {
+            if (stop.isExternalArrivalStop) {
+                // už je nastavená – nič nerob
+                return;
             }
-        }
+            const ok = window.confirm(
+                `Chcete nastaviť zastávku "${stop.name}" ako nástupnú/výstupnú zastávku pre externé tímy?`
+            );
+            if (!ok) return;
+            setExternalArrivalStop(stop.id);
+        };
 
-        await batch.commit();
-        window.showGlobalNotification('Nástupná/výstupná zastávka bola zmenená.', 'success');
-    } catch (err) {
-        console.error('[TRANSPORT] Chyba pri nastavovaní nástupnej zastávky:', err);
-        window.showGlobalNotification('Nepodarilo sa zmeniť nástupnú zastávku.', 'error');
-    }
-};
-
-// ============================================================
-// RENDER – matica trvania jázd
-// ============================================================
-const renderTravelTimes = () => {
-    if (stopsList.length === 0) {
-        return React.createElement(
-            'div',
-            { className: 'text-gray-400 italic text-sm px-1' },
-            'Žiadne zastávky.'
-        );
-    }
-
-    if (stopsList.length === 1) {
-        return React.createElement(
-            'div',
-            { className: 'text-gray-500 italic text-sm px-1' },
-            'Pre výpočet trvania jázd sú potrebné aspoň 2 zastávky.'
-        );
-    }
-
-    const getInputValue = (fromId, toId) => {
-        const key = `${fromId}|${toId}`;
-        return travelTimesDraft[key] != null ? travelTimesDraft[key] : '';
-    };
-
-    const handleDraftChange = (fromId, toId, value) => {
-        const key = `${fromId}|${toId}`;
-        setTravelTimesDraft((prev) => ({ ...prev, [key]: value }));
-    };
-
-    const handleBlur = (fromStop, toStop) => {
-        const key = `${fromStop.id}|${toStop.id}`;
-        const raw = travelTimesDraft[key] != null ? travelTimesDraft[key] : '';
-        const existing = travelTimes[key];
-        const existingMinutes = existing ? String(existing.minutes) : '';
-
-        if (raw === existingMinutes) return;
-
-        saveTravelTime(fromStop, toStop, raw);
-    };
-
-    // ============================================================
-    // NOVÉ: Kliknutie na hlavičkovú bunku (riadok/stĺpec) zastávky
-    // ============================================================
-    const handleStopHeaderClick = (stop) => {
-        if (stop.isExternalArrivalStop) {
-            // už je nastavená – nič nerob
-            return;
-        }
-        const ok = window.confirm(
-            `Chcete nastaviť zastávku "${stop.name}" ako nástupnú/výstupnú zastávku pre externé tímy?`
-        );
-        if (!ok) return;
-        setExternalArrivalStop(stop.id);
-    };
-
-    // ============================================================
-    // NOVÉ: Render štítku s názvom zastávky + prípadný badge
-    // ============================================================
-    const renderStopLabel = (stop) => {
-        const isExternal = stop.isExternalArrivalStop === true;
-        return React.createElement(
-            'span',
-            { className: 'inline-flex flex-col items-center gap-1' },
-            React.createElement(
+        // ============================================================
+        // NOVÉ: Render štítku s názvom zastávky + prípadný badge
+        // ============================================================
+        const renderStopLabel = (stop) => {
+            const isExternal = stop.isExternalArrivalStop === true;
+            return React.createElement(
                 'span',
-                { className: 'inline-flex items-center' },
-                React.createElement('i', { className: 'fa-solid fa-bus text-blue-600 mr-1' }),
-                stop.name
-            ),
-            isExternal &&
+                { className: 'inline-flex flex-col items-center gap-1' },
                 React.createElement(
                     'span',
-                    {
-                        className:
-                            'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-300',
-                        title: 'Nástupná/výstupná zastávka pre externé tímy'
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-right-to-bracket' }),
-                    'NÁSTUPNÁ/VÝSTUPNÁ'
-                )
-        );
-    };
-
-    return React.createElement(
-        'div',
-        { className: 'w-full overflow-x-auto' },
-        React.createElement(
-            'p',
-            { className: 'text-xs text-gray-500 mb-3 italic' },
-            'Hodnota predstavuje počet minút jazdy z riadkovej zastávky (z) do stĺpcovej zastávky (do). Prázdne pole = nezadané. Kliknutím na názov zastávky v hlavičke ju označíte ako nástupnú/výstupnú.'
-        ),
-        React.createElement(
-            'table',
-            { className: 'min-w-max border-collapse text-sm' },
-            React.createElement(
-                'thead',
-                null,
-                React.createElement(
-                    'tr',
-                    null,
+                    { className: 'inline-flex items-center' },
+                    React.createElement('i', { className: 'fa-solid fa-bus text-blue-600 mr-1' }),
+                    stop.name
+                ),
+                isExternal &&
                     React.createElement(
-                        'th',
+                        'span',
                         {
-                            className: 'border border-gray-300 bg-gray-100 p-0 whitespace-nowrap sticky left-0 z-10',
-                            style: { width: '90px', minWidth: '90px', height: '48px', position: 'relative' }
+                            className:
+                                'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-300',
+                            title: 'Nástupná/výstupná zastávka pre externé tímy'
                         },
-                        React.createElement(
-                            'div',
-                            {
-                                style: {
-                                    position: 'relative',
-                                    width: '100%',
-                                    height: '100%',
-                                    background: `linear-gradient(to bottom left, transparent calc(50% - 1px), #9ca3af calc(50% - 1px), #9ca3af calc(50% + 1px), transparent calc(50% + 1px))`,
-                                }
-                            },
-                            React.createElement(
-                                'span',
-                                {
-                                    style: {
-                                        position: 'absolute',
-                                        bottom: '4px',
-                                        left: '6px',
-                                        fontWeight: 'bold',
-                                        color: '#374151',
-                                        fontSize: '12px',
-                                    }
-                                },
-                                'Odkiaľ'
-                            ),
-                            React.createElement(
-                                'span',
-                                {
-                                    style: {
-                                        position: 'absolute',
-                                        top: '4px',
-                                        right: '6px',
-                                        fontWeight: 'bold',
-                                        color: '#374151',
-                                        fontSize: '12px',
-                                    }
-                                },
-                                'Kam'
-                            )
-                        )
-                    ),
-                    stopsList.map((toStop) =>
-                        React.createElement(
-                            'th',
-                            {
-                                key: `th-${toStop.id}`,
-                                onClick: () => handleStopHeaderClick(toStop),
-                                className: `border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap min-w-[110px] ${
-                                    toStop.isExternalArrivalStop
-                                        ? 'ring-2 ring-amber-400'
-                                        : 'cursor-pointer hover:bg-gray-200'
-                                }`,
-                                title: toStop.isExternalArrivalStop
-                                    ? 'Táto zastávka je nástupná/výstupná'
-                                    : 'Kliknutím nastaviť ako nástupnú/výstupnú zastávku'
-                            },
-                            renderStopLabel(toStop)
-                        )
+                        React.createElement('i', { className: 'fa-solid fa-right-to-bracket' }),
+                        'NÁSTUPNÁ/VÝSTUPNÁ'
                     )
-                )
+            );
+        };
+    
+        return React.createElement(
+            'div',
+            { className: 'w-full overflow-x-auto' },
+            React.createElement(
+                'p',
+                { className: 'text-xs text-gray-500 mb-3 italic' },
+                'Hodnota predstavuje počet minút jazdy z riadkovej zastávky (z) do stĺpcovej zastávky (do). Prázdne pole = nezadané. Kliknutím na názov zastávky v hlavičke ju označíte ako nástupnú/výstupnú.'
             ),
             React.createElement(
-                'tbody',
-                null,
-                stopsList.map((fromStop, rowIdx) =>
+                'table',
+                { className: 'min-w-max border-collapse text-sm' },
+                React.createElement(
+                    'thead',
+                    null,
                     React.createElement(
                         'tr',
-                        {
-                            key: `tr-${fromStop.id}`,
-                            className: rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                        },
+                        null,
                         React.createElement(
                             'th',
                             {
-                                onClick: () => handleStopHeaderClick(fromStop),
-                                className: `border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap sticky left-0 z-10 ${
-                                    fromStop.isExternalArrivalStop
-                                        ? 'ring-2 ring-amber-400'
-                                        : 'cursor-pointer hover:bg-gray-200'
-                                }`,
-                                title: fromStop.isExternalArrivalStop
-                                    ? 'Táto zastávka je nástupná/výstupná'
-                                    : 'Kliknutím nastaviť ako nástupnú/výstupnú zastávku'
+                                className: 'border border-gray-300 bg-gray-100 p-0 whitespace-nowrap sticky left-0 z-10',
+                                style: { width: '90px', minWidth: '90px', height: '48px', position: 'relative' }
                             },
-                            renderStopLabel(fromStop)
+                            React.createElement(
+                                'div',
+                                {
+                                    style: {
+                                        position: 'relative',
+                                        width: '100%',
+                                        height: '100%',
+                                        background: `linear-gradient(to bottom left, transparent calc(50% - 1px), #9ca3af calc(50% - 1px), #9ca3af calc(50% + 1px), transparent calc(50% + 1px))`,
+                                    }
+                                },
+                                React.createElement(
+                                    'span',
+                                    {
+                                        style: {
+                                            position: 'absolute',
+                                            bottom: '4px',
+                                            left: '6px',
+                                            fontWeight: 'bold',
+                                            color: '#374151',
+                                            fontSize: '12px',
+                                        }    
+                                    },
+                                    'Odkiaľ'
+                                ),
+                                React.createElement(
+                                    'span',
+                                    {
+                                        style: {
+                                            position: 'absolute',
+                                            top: '4px',
+                                            right: '6px',
+                                            fontWeight: 'bold',
+                                            color: '#374151',
+                                            fontSize: '12px',
+                                        }
+                                    },
+                                    'Kam'
+                                )
+                            )
                         ),
-                        stopsList.map((toStop) => {
-                            const isDiagonal = fromStop.id === toStop.id;
-                            if (isDiagonal) {
+                        stopsList.map((toStop) =>
+                            React.createElement(
+                                'th',
+                                {
+                                    key: `th-${toStop.id}`,
+                                    onClick: () => handleStopHeaderClick(toStop),
+                                    className: `border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap min-w-[110px] ${
+                                        toStop.isExternalArrivalStop
+                                            ? 'ring-2 ring-amber-400'
+                                            : 'cursor-pointer hover:bg-gray-200'
+                                    }`,
+                                    title: toStop.isExternalArrivalStop
+                                        ? 'Táto zastávka je nástupná/výstupná'
+                                        : 'Kliknutím nastaviť ako nástupnú/výstupnú zastávku'
+                                },
+                                renderStopLabel(toStop)
+                            )
+                        )
+                    )
+                ),
+                React.createElement(
+                    'tbody',
+                    null,
+                    stopsList.map((fromStop, rowIdx) =>
+                        React.createElement(
+                            'tr',
+                            {
+                                key: `tr-${fromStop.id}`,
+                                className: rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                            },
+                            React.createElement(
+                                'th',
+                                {
+                                    onClick: () => handleStopHeaderClick(fromStop),
+                                    className: `border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap sticky left-0 z-10 ${
+                                        fromStop.isExternalArrivalStop
+                                            ? 'ring-2 ring-amber-400'
+                                            : 'cursor-pointer hover:bg-gray-200'
+                                    }`,
+                                    title: fromStop.isExternalArrivalStop
+                                        ? 'Táto zastávka je nástupná/výstupná'
+                                        : 'Kliknutím nastaviť ako nástupnú/výstupnú zastávku'
+                                },
+                                renderStopLabel(fromStop)
+                            ),
+                            stopsList.map((toStop) => {
+                                const isDiagonal = fromStop.id === toStop.id;
+                                if (isDiagonal) {
+                                    return React.createElement(
+                                        'td',
+                                        {
+                                            key: `td-${fromStop.id}-${toStop.id}`,
+                                            className: 'border border-gray-300 px-2 py-1 text-center text-gray-400 bg-gray-100'
+                                        },
+                                        ''
+                                    );
+                                }
+                                const value = getInputValue(fromStop.id, toStop.id);
+                                const key = `${fromStop.id}|${toStop.id}`;
+                                const existing = travelTimes[key];
+                                const changed = (value || '') !== (existing ? String(existing.minutes) : '');
                                 return React.createElement(
                                     'td',
                                     {
                                         key: `td-${fromStop.id}-${toStop.id}`,
-                                        className: 'border border-gray-300 px-2 py-1 text-center text-gray-400 bg-gray-100'
+                                        className: 'border border-gray-300 px-1 py-1 text-center'
                                     },
-                                    ''
+                                    React.createElement('input', {
+                                        type: 'number',
+                                        min: '0',
+                                        step: '1',
+                                        value: value,
+                                        onChange: (e) => handleDraftChange(fromStop.id, toStop.id, e.target.value),
+                                        onBlur: () => handleBlur(fromStop, toStop),
+                                        onKeyDown: (e) => { if (e.key === 'Enter') e.target.blur(); },
+                                        placeholder: '—',
+                                        className: `w-24 px-2 py-1 border rounded text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                                            changed ? 'border-amber-400 bg-amber-50' : 'border-gray-300 bg-white'
+                                        }`
+                                    })
                                 );
-                            }
-                            const value = getInputValue(fromStop.id, toStop.id);
-                            const key = `${fromStop.id}|${toStop.id}`;
-                            const existing = travelTimes[key];
-                            const changed = (value || '') !== (existing ? String(existing.minutes) : '');
-                            return React.createElement(
-                                'td',
-                                {
-                                    key: `td-${fromStop.id}-${toStop.id}`,
-                                    className: 'border border-gray-300 px-1 py-1 text-center'
-                                },
-                                React.createElement('input', {
-                                    type: 'number',
-                                    min: '0',
-                                    step: '1',
-                                    value: value,
-                                    onChange: (e) => handleDraftChange(fromStop.id, toStop.id, e.target.value),
-                                    onBlur: () => handleBlur(fromStop, toStop),
-                                    onKeyDown: (e) => { if (e.key === 'Enter') e.target.blur(); },
-                                    placeholder: '—',
-                                    className: `w-24 px-2 py-1 border rounded text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
-                                        changed ? 'border-amber-400 bg-amber-50' : 'border-gray-300 bg-white'
-                                    }`
-                                })
-                            );
-                        })
+                            })
+                        )
                     )
                 )
+            ),
+            travelTimesSaving && React.createElement(
+                'div',
+                { className: 'text-xs text-blue-600 mt-2 italic' },
+                'Ukladám...'
             )
-        ),
-        travelTimesSaving && React.createElement(
-            'div',
-            { className: 'text-xs text-blue-600 mt-2 italic' },
-            'Ukladám...'
-        )
-    );
-};
+        );
+    };
 
     // ============================================================
     // RENDER – plánovanie
