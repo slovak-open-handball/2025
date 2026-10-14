@@ -559,8 +559,11 @@ const TransportApp = ({ userProfileData }) => {
                         }
                         return null;
                     })();
-                    if (!teamGroup) return;
-    
+
+                    // POZOR: teamGroup môže byť null (tím nemá skupinu).
+                    // Stále chceme spracovať jeho udalosti, ale "end locations per group"
+                    // logiku preskočíme.
+
                     const lastEventsByDay = {};
                     events.forEach((ev) => {
                         if (ev.type !== 'match' && ev.type !== 'catering') return;
@@ -583,7 +586,8 @@ const TransportApp = ({ userProfileData }) => {
                     Object.entries(lastEventsByDay).forEach(([dayKey, { ev, endTs }]) => {
                         const location = ev.location || null;
                         if (!location) return;
-    
+                        if (!teamGroup) return;   // ← NOVÉ: bez skupiny nerob "end locations" logiku
+
                         const key = `${category}|${teamGroup}|${dayKey}`;
                         if (!groupEndLocationsPerDay[key]) {
                             groupEndLocationsPerDay[key] = new Map();
