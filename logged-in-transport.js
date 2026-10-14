@@ -638,31 +638,10 @@ const TransportApp = ({ userProfileData }) => {
                 matchesBufferRef.current.forEach((m) => {
                     if (cleanCategory(m.category) !== cleanCategory(cat)) return;
 
-                    let belongs = false;
+                    // IBA zápasy, ktoré sú priradené priamo do skupiny s daným písmenom.
                     const matchGroup = m.groupName ? String(m.groupName).trim() : null;
-                    if (matchGroup && groupBelongsToChar(matchGroup, char)) {
-                        belongs = true;
-                    } else {
-                        const homeGroup = (() => {
-                            for (const [gName, teamSet] of Object.entries(teamsByGroup[cat] || {})) {
-                                if (teamSet.has(m.home)) return gName;
-                            }
-                            return null;
-                        })();
-                        const awayGroup = (() => {
-                            for (const [gName, teamSet] of Object.entries(teamsByGroup[cat] || {})) {
-                                if (teamSet.has(m.away)) return gName;
-                            }
-                            return null;
-                        })();
-                        if (
-                            (homeGroup && groupBelongsToChar(homeGroup, char)) ||
-                            (awayGroup && groupBelongsToChar(awayGroup, char))
-                        ) {
-                            belongs = true;
-                        }
-                    }
-                    if (!belongs) return;
+                    if (!matchGroup) return;
+                    if (!groupBelongsToChar(matchGroup, char)) return;
 
                     let dayKey = null;
                     if (m.scheduledTime) {
@@ -855,35 +834,14 @@ const TransportApp = ({ userProfileData }) => {
                                 matchesBufferRef.current.forEach((m) => {
                                     if (cleanCategory(m.category) !== cleanCategory(category)) return;
 
-                                    // Zisti, či zápas patrí do skupiny s daným písmenom
-                                    let belongs = false;
+                                    // IBA zápasy priradené priamo do skupiny s daným písmenom.
                                     const matchGroup = m.groupName ? String(m.groupName).trim() : null;
-                                    if (matchGroup && groupBelongsToChar(matchGroup, groupChar)) {
-                                        belongs = true;
-                                    } else {
-                                        const homeGroup = (() => {
-                                            for (const [gName, teamSet] of Object.entries(teamsByGroup[category] || {})) {
-                                                if (teamSet.has(m.home)) return gName;
-                                            }
-                                            return null;
-                                        })();
-                                        const awayGroup = (() => {
-                                            for (const [gName, teamSet] of Object.entries(teamsByGroup[category] || {})) {
-                                                if (teamSet.has(m.away)) return gName;
-                                            }
-                                            return null;
-                                        })();
-                                        if (
-                                            (homeGroup && groupBelongsToChar(homeGroup, groupChar)) ||
-                                            (awayGroup && groupBelongsToChar(awayGroup, groupChar))
-                                        ) {
-                                            belongs = true;
-                                        }
-                                    }
-                                    if (!belongs) return;
+                                    if (!matchGroup) return;
+                                    if (!groupBelongsToChar(matchGroup, groupChar)) return;
 
                                     // Zisti dayKey zápasu
                                     let dayKey = null;
+                                    
                                     if (m.scheduledTime) {
                                         const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
                                         if (mm) {
@@ -1154,35 +1112,13 @@ const TransportApp = ({ userProfileData }) => {
                             matchesBufferRef.current.forEach((m) => {
                                 if (cleanCategory(m.category) !== cleanCategory(category)) return;
 
-                                let belongs = false;
-
+                                // IBA zápasy priradené priamo do skupiny s daným písmenom.
                                 const matchGroup = m.groupName ? String(m.groupName).trim() : null;
-                                if (matchGroup && groupBelongsToChar(matchGroup, groupChar)) {
-                                    belongs = true;
-                                } else {
-                                    const homeGroup = (() => {
-                                        for (const [gName, teamSet] of Object.entries(teamsByGroup[category] || {})) {
-                                            if (teamSet.has(m.home)) return gName;
-                                        }
-                                        return null;
-                                    })();
-                                    const awayGroup = (() => {
-                                        for (const [gName, teamSet] of Object.entries(teamsByGroup[category] || {})) {
-                                            if (teamSet.has(m.away)) return gName;
-                                        }
-                                        return null;
-                                    })();
-                                    if (
-                                        (homeGroup && groupBelongsToChar(homeGroup, groupChar)) ||
-                                        (awayGroup && groupBelongsToChar(awayGroup, groupChar))
-                                    ) {
-                                        belongs = true;
-                                    }
-                                }
-
-                                if (!belongs) return;
+                                if (!matchGroup) return;
+                                if (!groupBelongsToChar(matchGroup, groupChar)) return;
 
                                 let dayKey = null;
+                                
                                 if (m.scheduledTime) {
                                     const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
                                     if (mm) {
