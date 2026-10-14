@@ -509,7 +509,8 @@ const TransportApp = ({ userProfileData }) => {
 
         // ============================================================
         // Pre každý superstructure tím zisti písmeno skupiny a vypíš
-        // všetky dátumy, kedy sa hrá akýkoľvek zápas v skupinách s týmto písmenom.
+        // IBA JEDINEČNÉ DÁTUMY, kedy sa hrá akýkoľvek zápas v skupinách
+        // s týmto písmenom.
         // ============================================================
         (() => {
             // Zoznam superstructure tímov
@@ -519,55 +520,45 @@ const TransportApp = ({ userProfileData }) => {
             if (superstructureTeams.length === 0) return;
 
             console.log('');
-            console.log('%c[TRANSPORT][SS-DATES] === DÁTUMY ZÁPASOV PRE SUPERSTRUCTURE TÍMY (podľa písmena skupiny) ===', 'color:#7c3aed;font-weight:bold;');
+            console.log('%c[TRANSPORT][SS-DATES] === JEDINEČNÉ DÁTUMY ZÁPASOV PRE SUPERSTRUCTURE TÍMY (podľa písmena skupiny) ===', 'color:#7c3aed;font-weight:bold;');
 
-            // Pre každý superstructure tím zisti písmeno skupiny
-            superstructureTeams.forEach((t) => {
-                // 1) Zisti písmeno skupiny – buď z groupName, alebo z názvu tímu
-                let groupChar = getGroupLastChar(t.groupName);
-                if (!groupChar) {
-                    // Skús odvodiť z názvu tímu (napr. "U12 CH 5B" → "B")
-                    groupChar = getGroupLastChar(t.teamName);
+            // Cache pre písmeno → dátumy (aby sme nepočítali viackrát pre rovnaké písmeno v tej istej kategórii)
+            const datesByCategoryAndChar = {};
+
+            // Pomocná funkcia – zisti jedinečné dátumy zápasov pre danú kategóriu a písmeno
+            const getDatesForCategoryAndChar = (category, char) => {
+                const cacheKey = `${cleanCategory(category)}|${char}`;
+                if (datesByCategoryAndChar[cacheKey]) {
+                    return datesByCategoryAndChar[cacheKey];
                 }
-                if (!groupChar) return;
 
-                // 2) Nájdi všetky skupiny v rovnakej kategórii, ktoré patria pod toto písmeno
-                const categoryGroups = Object.keys(teamsByGroup[t.category] || {});
-                const matchingGroups = categoryGroups.filter((g) =>
-                    groupBelongsToChar(g, groupChar)
-                );
-
-                // 3) Zozbieraj všetky zápasy z matchesBufferRef, ktoré patria do týchto skupín
-                const matchDatesSet = new Set();
-                const matchDetails = [];
+                const datesSet = new Set();
 
                 matchesBufferRef.current.forEach((m) => {
-                    if (cleanCategory(m.category) !== cleanCategory(t.category)) return;
-                    const matchGroup = m.groupName ? String(m.groupName).trim() : null;
+                    if (cleanCategory(m.category) !== cleanCategory(category)) return;
 
-                    // Zápas patrí pod písmeno, ak:
-                    //  - jeho groupName patrí pod dané písmeno, ALEBO
-                    //  - aspoň jeden z tímov má groupName (t.j. patrí do skupiny s daným písmenom)
+                    // Zisti, či zápas patrí pod dané písmeno
                     let belongs = false;
-                    if (matchGroup && groupBelongsToChar(matchGroup, groupChar)) {
+
+                    const matchGroup = m.groupName ? String(m.groupName).trim() : null;
+                    if (matchGroup && groupBelongsToChar(matchGroup, char)) {
                         belongs = true;
                     } else {
-                        // Skús podľa tímov v zápase
                         const homeGroup = (() => {
-                            for (const [gName, teamSet] of Object.entries(teamsByGroup[t.category] || {})) {
+                            for (const [gName, teamSet] of Object.entries(teamsByGroup[category] || {})) {
                                 if (teamSet.has(m.home)) return gName;
                             }
                             return null;
                         })();
                         const awayGroup = (() => {
-                            for (const [gName, teamSet] of Object.entries(teamsByGroup[t.category] || {})) {
+                            for (const [gName, teamSet] of Object.entries(teamsByGroup[category] || {})) {
                                 if (teamSet.has(m.away)) return gName;
                             }
                             return null;
                         })();
                         if (
-                            (homeGroup && groupBelongsToChar(homeGroup, groupChar)) ||
-                            (awayGroup && groupBelongsToChar(awayGroup, groupChar))
+                            (homeGroup && groupBelongsToChar(homeGroup, char)) ||
+                            (awayGroup && groupBelongsToChar(awayGroup, char))
                         ) {
                             belongs = true;
                         }
@@ -575,7 +566,7 @@ const TransportApp = ({ userProfileData }) => {
 
                     if (!belongs) return;
 
-                    // Zisti dayKey zo scheduledTime (formát "DD. MM. YYYY HH:MM")
+                    // Zisti dayKey zo scheduledTime
                     let dayKey = null;
                     if (m.scheduledTime) {
                         const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
@@ -586,55 +577,43 @@ const TransportApp = ({ userProfileData }) => {
                             dayKey = `${y}-${mo}-${d}`;
                         }
                     }
-                    if (!dayKey) {
-                        // fallback – použi scheduledTs
-                        if (m.scheduledTs != null) {
-                            const dt = new Date(m.scheduledTs);
-                            dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-                        }
+                    if (!dayKey && m.scheduledTs != null) {
+                        const dt = new Date(m.scheduledTs);
+                        dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
                     }
                     if (!dayKey) return;
 
-                    matchDatesSet.add(dayKey);
-                    matchDetails.push({
-                        dayKey,
-                        when: m.scheduledTime || '—',
-                        text: `${m.home} vs ${m.away}${m.hallName ? ` | ${m.hallName}` : ''}`,
-                    });
+                    datesSet.add(dayKey);
                 });
 
-                const sortedDates = [...matchDatesSet].sort();
-                const formattedDates = sortedDates.map(
-                    (dk) => formatDateDDMMYYYY(dk) || dk
-                );
+                const sorted = [...datesSet].sort();
+                datesByCategoryAndChar[cacheKey] = sorted;
+                return sorted;
+            };
 
-                console.log('');
+            superstructureTeams.forEach((t) => {
+                // 1) Zisti písmeno skupiny – buď z groupName, alebo z názvu tímu
+                let groupChar = getGroupLastChar(t.groupName);
+                if (!groupChar) {
+                    groupChar = getGroupLastChar(t.teamName);
+                }
+                if (!groupChar) return;
+
+                // 2) Zisti jedinečné dátumy pre danú kategóriu a písmeno
+                const dates = getDatesForCategoryAndChar(t.category, groupChar);
+                const formattedDates = dates.map((dk) => formatDateDDMMYYYY(dk) || dk);
+
                 console.log(
-                    `%c[TRANSPORT][SS-DATES] Tím: ${t.teamName} (kategória: ${t.category}) – písmeno skupiny: "${groupChar}"`,
+                    `%c[TRANSPORT][SS-DATES] Tím: ${t.teamName} (kategória: ${t.category}, písmeno: "${groupChar}")`,
                     'color:#7c3aed;font-weight:bold;'
                 );
-                console.log(
-                    `   Skupiny v kategórii s písmenom "${groupChar}":`,
-                    matchingGroups.length ? matchingGroups : '(žiadne)'
-                );
                 if (formattedDates.length === 0) {
-                    console.log('   Žiadne zápasy sa nenašli.');
+                    console.log('   (žiadne dátumy)');
                 } else {
-                    console.log(`   Dátumy zápasov (${formattedDates.length}):`);
-                    formattedDates.forEach((d) => console.log(`     • ${d}`));
-                    console.log('   Detaily:');
-                    matchDetails
-                        .sort((a, b) => {
-                            if (a.dayKey !== b.dayKey) return a.dayKey.localeCompare(b.dayKey);
-                            return String(a.when).localeCompare(String(b.when), 'sk');
-                        })
-                        .forEach((d) => {
-                            const dayLabel = formatDateDDMMYYYY(d.dayKey) || d.dayKey;
-                            console.log(`     • ${dayLabel} | ${d.when} | ${d.text}`);
-                        });
+                    formattedDates.forEach((d) => console.log(`   • ${d}`));
                 }
             });
-            console.log('%c[TRANSPORT][SS-DATES] === KONIEC DÁTUMOV PRE SUPERSTRUCTURE TÍMY ===', 'color:#7c3aed;font-weight:bold;');
+            console.log('%c[TRANSPORT][SS-DATES] === KONIEC ===', 'color:#7c3aed;font-weight:bold;');
         })();
     
         // ============================================================
