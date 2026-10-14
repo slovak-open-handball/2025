@@ -954,6 +954,10 @@ const TransportApp = ({ userProfileData }) => {
                                         .trim();
                                     if (!norm) return false;
                                     if (norm.includes('vlastn')) return false;
+                                    // NOVÉ: "bez dopravy" alebo "ziadna doprava" → žiadny presun z nástupnej zastávky
+                                    if (norm.includes('bez dopravy')) return false;
+                                    if (norm.includes('ziadna')) return false;
+                                    if (norm.includes('žiadna')) return false;
                                     return true;
                                 })();
 
