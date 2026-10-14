@@ -1185,6 +1185,7 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                             }
                         }
+                    }
 
                     enriched.sort((a, b) => {
                         if (a.ts !== b.ts) return a.ts - b.ts;
