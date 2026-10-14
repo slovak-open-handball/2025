@@ -508,115 +508,6 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         // ============================================================
-        // Pre každý superstructure tím zisti písmeno skupiny a vypíš
-        // IBA JEDINEČNÉ DÁTUMY, kedy sa hrá akýkoľvek zápas v skupinách
-        // s týmto písmenom.
-        // ============================================================
-        (() => {
-            // Zoznam superstructure tímov
-            const superstructureTeams = (teamsArrivalBufferRef.current || []).filter(
-                (t) => t.isSuperstructure && t.teamName
-            );
-            if (superstructureTeams.length === 0) return;
-
-            console.log('');
-            console.log('%c[TRANSPORT][SS-DATES] === JEDINEČNÉ DÁTUMY ZÁPASOV PRE SUPERSTRUCTURE TÍMY (podľa písmena skupiny) ===', 'color:#7c3aed;font-weight:bold;');
-
-            // Cache pre písmeno → dátumy (aby sme nepočítali viackrát pre rovnaké písmeno v tej istej kategórii)
-            const datesByCategoryAndChar = {};
-
-            // Pomocná funkcia – zisti jedinečné dátumy zápasov pre danú kategóriu a písmeno
-            const getDatesForCategoryAndChar = (category, char) => {
-                const cacheKey = `${cleanCategory(category)}|${char}`;
-                if (datesByCategoryAndChar[cacheKey]) {
-                    return datesByCategoryAndChar[cacheKey];
-                }
-
-                const datesSet = new Set();
-
-                matchesBufferRef.current.forEach((m) => {
-                    if (cleanCategory(m.category) !== cleanCategory(category)) return;
-
-                    // Zisti, či zápas patrí pod dané písmeno
-                    let belongs = false;
-
-                    const matchGroup = m.groupName ? String(m.groupName).trim() : null;
-                    if (matchGroup && groupBelongsToChar(matchGroup, char)) {
-                        belongs = true;
-                    } else {
-                        const homeGroup = (() => {
-                            for (const [gName, teamSet] of Object.entries(teamsByGroup[category] || {})) {
-                                if (teamSet.has(m.home)) return gName;
-                            }
-                            return null;
-                        })();
-                        const awayGroup = (() => {
-                            for (const [gName, teamSet] of Object.entries(teamsByGroup[category] || {})) {
-                                if (teamSet.has(m.away)) return gName;
-                            }
-                            return null;
-                        })();
-                        if (
-                            (homeGroup && groupBelongsToChar(homeGroup, char)) ||
-                            (awayGroup && groupBelongsToChar(awayGroup, char))
-                        ) {
-                            belongs = true;
-                        }
-                    }
-
-                    if (!belongs) return;
-
-                    // Zisti dayKey zo scheduledTime
-                    let dayKey = null;
-                    if (m.scheduledTime) {
-                        const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
-                        if (mm) {
-                            const d = String(mm[1]).padStart(2, '0');
-                            const mo = String(mm[2]).padStart(2, '0');
-                            const y = mm[3];
-                            dayKey = `${y}-${mo}-${d}`;
-                        }
-                    }
-                    if (!dayKey && m.scheduledTs != null) {
-                        const dt = new Date(m.scheduledTs);
-                        dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-                    }
-                    if (!dayKey) return;
-
-                    datesSet.add(dayKey);
-                });
-
-                const sorted = [...datesSet].sort();
-                datesByCategoryAndChar[cacheKey] = sorted;
-                return sorted;
-            };
-
-            superstructureTeams.forEach((t) => {
-                // 1) Zisti písmeno skupiny – buď z groupName, alebo z názvu tímu
-                let groupChar = getGroupLastChar(t.groupName);
-                if (!groupChar) {
-                    groupChar = getGroupLastChar(t.teamName);
-                }
-                if (!groupChar) return;
-
-                // 2) Zisti jedinečné dátumy pre danú kategóriu a písmeno
-                const dates = getDatesForCategoryAndChar(t.category, groupChar);
-                const formattedDates = dates.map((dk) => formatDateDDMMYYYY(dk) || dk);
-
-                console.log(
-                    `%c[TRANSPORT][SS-DATES] Tím: ${t.teamName} (kategória: ${t.category}, písmeno: "${groupChar}")`,
-                    'color:#7c3aed;font-weight:bold;'
-                );
-                if (formattedDates.length === 0) {
-                    console.log('   (žiadne dátumy)');
-                } else {
-                    formattedDates.forEach((d) => console.log(`   • ${d}`));
-                }
-            });
-            console.log('%c[TRANSPORT][SS-DATES] === KONIEC ===', 'color:#7c3aed;font-weight:bold;');
-        })();
-    
-        // ============================================================
         // NOVÉ: Pomocná funkcia – získa ubytovania pre danú kategóriu a skupinu
         // ============================================================
         const getAccommodationsForGroup = (category, groupName) => {
@@ -1105,8 +996,86 @@ const TransportApp = ({ userProfileData }) => {
     
                     console.log(`\n  [TRANSPORT] Tím: ${teamName} (${events.length} udalostí)`);
 
-                    let lastPrintedDayKey = null;
+                    // ============================================================
+                    // Ak je tím superstructure, vypíš iba jedinečné dátumy,
+                    // kedy sa hrá akýkoľvek zápas v skupinách s rovnakým písmenom.
+                    // ============================================================
+                    if (isSuperstructureTeam) {
+                        let groupChar = getGroupLastChar(teamGroupName);
+                        if (!groupChar) {
+                            groupChar = getGroupLastChar(teamName);
+                        }
 
+                        if (groupChar) {
+                            const datesSet = new Set();
+
+                            matchesBufferRef.current.forEach((m) => {
+                                if (cleanCategory(m.category) !== cleanCategory(category)) return;
+
+                                let belongs = false;
+
+                                const matchGroup = m.groupName ? String(m.groupName).trim() : null;
+                                if (matchGroup && groupBelongsToChar(matchGroup, groupChar)) {
+                                    belongs = true;
+                                } else {
+                                    const homeGroup = (() => {
+                                        for (const [gName, teamSet] of Object.entries(teamsByGroup[category] || {})) {
+                                            if (teamSet.has(m.home)) return gName;
+                                        }
+                                        return null;
+                                    })();
+                                    const awayGroup = (() => {
+                                        for (const [gName, teamSet] of Object.entries(teamsByGroup[category] || {})) {
+                                            if (teamSet.has(m.away)) return gName;
+                                        }
+                                        return null;
+                                    })();
+                                    if (
+                                        (homeGroup && groupBelongsToChar(homeGroup, groupChar)) ||
+                                        (awayGroup && groupBelongsToChar(awayGroup, groupChar))
+                                    ) {
+                                        belongs = true;
+                                    }
+                                }
+
+                                if (!belongs) return;
+
+                                let dayKey = null;
+                                if (m.scheduledTime) {
+                                    const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                    if (mm) {
+                                        const d = String(mm[1]).padStart(2, '0');
+                                        const mo = String(mm[2]).padStart(2, '0');
+                                        const y = mm[3];
+                                        dayKey = `${y}-${mo}-${d}`;
+                                    }
+                                }
+                                if (!dayKey && m.scheduledTs != null) {
+                                    const dt = new Date(m.scheduledTs);
+                                    dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                }
+                                if (!dayKey) return;
+
+                                datesSet.add(dayKey);
+                            });
+
+                            const formattedDates = [...datesSet]
+                                .sort()
+                                .map((dk) => formatDateDDMMYYYY(dk) || dk);
+
+                            console.log(
+                                `     %c[superstructure] Písmeno skupiny: "${groupChar}" – jedinečné dátumy zápasov v skupinách s týmto písmenom:`,
+                                'color:#7c3aed;font-weight:bold;'
+                            );
+                            if (formattedDates.length === 0) {
+                                console.log('       (žiadne dátumy)');
+                            } else {
+                                formattedDates.forEach((d) => console.log(`       • ${d}`));
+                            }
+                        }
+                    }
+
+                    let lastPrintedDayKey = null;
                     enriched.forEach((ev) => {
                         const currentDayKey = extractDayKeyFromWhen(ev.when);
                     
