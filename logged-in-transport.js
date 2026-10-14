@@ -168,6 +168,7 @@ const TransportApp = ({ userProfileData }) => {
     const [tournamentDays, setTournamentDays] = useState([]);
     const [tournamentDaysLoaded, setTournamentDaysLoaded] = useState(false);
     const [busSaving, setBusSaving] = useState(false);
+    const [confirmModal, setConfirmModal] = useState(null);
 
     // ============================================================
     // PREDNAČÍTANIE UBYTOVNÍ PRE SUPERSTRUCTURE TÍMY
@@ -1797,6 +1798,22 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // VLASTNÉ MODÁLNE POTVRDENIE (Promise-based)
+    // ============================================================
+    const askConfirm = (message) => {
+        return new Promise((resolve) => {
+            setConfirmModal({ message, resolve });
+        });
+    };
+
+    const closeConfirmModal = (result) => {
+        if (confirmModal && typeof confirmModal.resolve === 'function') {
+            confirmModal.resolve(result);
+        }
+        setConfirmModal(null);
+    };
+
+    // ============================================================
     // NASTAVENIE NÁSTUPNEJ/VÝSTUPNEJ ZASTÁVKY
     // ============================================================
     const setExternalArrivalStop = async (placeId) => {
@@ -1866,12 +1883,12 @@ const TransportApp = ({ userProfileData }) => {
         // ============================================================
         // NOVÉ: Kliknutie na hlavičkovú bunku (riadok/stĺpec) zastávky
         // ============================================================
-        const handleStopHeaderClick = (stop) => {
+        const handleStopHeaderClick = async (stop) => {
             if (stop.isExternalArrivalStop) {
                 // už je nastavená – nič nerob
                 return;
             }
-            const ok = window.confirm(
+            const ok = await askConfirm(
                 `Chcete nastaviť zastávku "${stop.name}" ako nástupnú/výstupnú zastávku pre externé tímy?`
             );
             if (!ok) return;
@@ -2267,7 +2284,60 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement('i', {
                 className: 'fa-solid fa-plus'
             })
-        )
+        ),
+        confirmModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
+                onClick: () => closeConfirmModal(false)
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-circle-question text-blue-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-800' },
+                        'Potvrdenie'
+                    )
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-700 mb-6 whitespace-pre-line' },
+                    confirmModal.message
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => closeConfirmModal(false),
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => closeConfirmModal(true),
+                            className: 'px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors'
+                        },
+                        'Potvrdiť'
+                    )
+                )
+            )
+        )        
     );
 };
 
