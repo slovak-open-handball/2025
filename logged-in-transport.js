@@ -478,6 +478,164 @@ const TransportApp = ({ userProfileData }) => {
         })();
         
         console.log('[TRANSPORT][DEBUG] globalLastDay:', globalLastDay);
+
+        // ============================================================
+        // Pomocná funkcia – zisti písmeno skupiny (posledné A-Z písmeno)
+        // Príklady:
+        //   "skupina B"  → "B"
+        //   "skupina 1B" → "B"
+        //   "CH B"       → "B"
+        //   "U12 D 5B"   → "B"
+        // ============================================================
+        const getGroupLastChar = (groupNameOrTeamName) => {
+            if (!groupNameOrTeamName) return null;
+            const s = String(groupNameOrTeamName).trim();
+            if (!s) return null;
+            // Nájdi posledné veľké písmeno A-Z / Á-Ž
+            const m = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(s.toUpperCase());
+            if (m) return m[1];
+            return null;
+        };
+
+        // ============================================================
+        // Pomocná funkcia – zisti, či skupina patrí pod dané písmeno
+        // (napr. skupina "skupina 1B" patrí pod písmeno "B")
+        // ============================================================
+        const groupBelongsToChar = (groupName, char) => {
+            if (!groupName || !char) return false;
+            const gChar = getGroupLastChar(groupName);
+            return gChar === char;
+        };
+
+        // ============================================================
+        // Pre každý superstructure tím zisti písmeno skupiny a vypíš
+        // všetky dátumy, kedy sa hrá akýkoľvek zápas v skupinách s týmto písmenom.
+        // ============================================================
+        (() => {
+            // Zoznam superstructure tímov
+            const superstructureTeams = (teamsArrivalBufferRef.current || []).filter(
+                (t) => t.isSuperstructure && t.teamName
+            );
+            if (superstructureTeams.length === 0) return;
+
+            console.log('');
+            console.log('%c[TRANSPORT][SS-DATES] === DÁTUMY ZÁPASOV PRE SUPERSTRUCTURE TÍMY (podľa písmena skupiny) ===', 'color:#7c3aed;font-weight:bold;');
+
+            // Pre každý superstructure tím zisti písmeno skupiny
+            superstructureTeams.forEach((t) => {
+                // 1) Zisti písmeno skupiny – buď z groupName, alebo z názvu tímu
+                let groupChar = getGroupLastChar(t.groupName);
+                if (!groupChar) {
+                    // Skús odvodiť z názvu tímu (napr. "U12 CH 5B" → "B")
+                    groupChar = getGroupLastChar(t.teamName);
+                }
+                if (!groupChar) return;
+
+                // 2) Nájdi všetky skupiny v rovnakej kategórii, ktoré patria pod toto písmeno
+                const categoryGroups = Object.keys(teamsByGroup[t.category] || {});
+                const matchingGroups = categoryGroups.filter((g) =>
+                    groupBelongsToChar(g, groupChar)
+                );
+
+                // 3) Zozbieraj všetky zápasy z matchesBufferRef, ktoré patria do týchto skupín
+                const matchDatesSet = new Set();
+                const matchDetails = [];
+
+                matchesBufferRef.current.forEach((m) => {
+                    if (cleanCategory(m.category) !== cleanCategory(t.category)) return;
+                    const matchGroup = m.groupName ? String(m.groupName).trim() : null;
+
+                    // Zápas patrí pod písmeno, ak:
+                    //  - jeho groupName patrí pod dané písmeno, ALEBO
+                    //  - aspoň jeden z tímov má groupName (t.j. patrí do skupiny s daným písmenom)
+                    let belongs = false;
+                    if (matchGroup && groupBelongsToChar(matchGroup, groupChar)) {
+                        belongs = true;
+                    } else {
+                        // Skús podľa tímov v zápase
+                        const homeGroup = (() => {
+                            for (const [gName, teamSet] of Object.entries(teamsByGroup[t.category] || {})) {
+                                if (teamSet.has(m.home)) return gName;
+                            }
+                            return null;
+                        })();
+                        const awayGroup = (() => {
+                            for (const [gName, teamSet] of Object.entries(teamsByGroup[t.category] || {})) {
+                                if (teamSet.has(m.away)) return gName;
+                            }
+                            return null;
+                        })();
+                        if (
+                            (homeGroup && groupBelongsToChar(homeGroup, groupChar)) ||
+                            (awayGroup && groupBelongsToChar(awayGroup, groupChar))
+                        ) {
+                            belongs = true;
+                        }
+                    }
+
+                    if (!belongs) return;
+
+                    // Zisti dayKey zo scheduledTime (formát "DD. MM. YYYY HH:MM")
+                    let dayKey = null;
+                    if (m.scheduledTime) {
+                        const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                        if (mm) {
+                            const d = String(mm[1]).padStart(2, '0');
+                            const mo = String(mm[2]).padStart(2, '0');
+                            const y = mm[3];
+                            dayKey = `${y}-${mo}-${d}`;
+                        }
+                    }
+                    if (!dayKey) {
+                        // fallback – použi scheduledTs
+                        if (m.scheduledTs != null) {
+                            const dt = new Date(m.scheduledTs);
+                            dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                        }
+                    }
+                    if (!dayKey) return;
+
+                    matchDatesSet.add(dayKey);
+                    matchDetails.push({
+                        dayKey,
+                        when: m.scheduledTime || '—',
+                        text: `${m.home} vs ${m.away}${m.hallName ? ` | ${m.hallName}` : ''}`,
+                    });
+                });
+
+                const sortedDates = [...matchDatesSet].sort();
+                const formattedDates = sortedDates.map(
+                    (dk) => formatDateDDMMYYYY(dk) || dk
+                );
+
+                console.log('');
+                console.log(
+                    `%c[TRANSPORT][SS-DATES] Tím: ${t.teamName} (kategória: ${t.category}) – písmeno skupiny: "${groupChar}"`,
+                    'color:#7c3aed;font-weight:bold;'
+                );
+                console.log(
+                    `   Skupiny v kategórii s písmenom "${groupChar}":`,
+                    matchingGroups.length ? matchingGroups : '(žiadne)'
+                );
+                if (formattedDates.length === 0) {
+                    console.log('   Žiadne zápasy sa nenašli.');
+                } else {
+                    console.log(`   Dátumy zápasov (${formattedDates.length}):`);
+                    formattedDates.forEach((d) => console.log(`     • ${d}`));
+                    console.log('   Detaily:');
+                    matchDetails
+                        .sort((a, b) => {
+                            if (a.dayKey !== b.dayKey) return a.dayKey.localeCompare(b.dayKey);
+                            return String(a.when).localeCompare(String(b.when), 'sk');
+                        })
+                        .forEach((d) => {
+                            const dayLabel = formatDateDDMMYYYY(d.dayKey) || d.dayKey;
+                            console.log(`     • ${dayLabel} | ${d.when} | ${d.text}`);
+                        });
+                }
+            });
+            console.log('%c[TRANSPORT][SS-DATES] === KONIEC DÁTUMOV PRE SUPERSTRUCTURE TÍMY ===', 'color:#7c3aed;font-weight:bold;');
+        })();
     
         // ============================================================
         // NOVÉ: Pomocná funkcia – získa ubytovania pre danú kategóriu a skupinu
