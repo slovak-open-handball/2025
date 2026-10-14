@@ -1977,7 +1977,7 @@ const TransportApp = ({ userProfileData }) => {
                                     onClick: () => handleStopHeaderClick(toStop),
                                     className: `border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap min-w-[110px] ${
                                         toStop.isExternalArrivalStop
-                                            ? 'ring-2 ring-amber-400'
+                                            ? ''
                                             : 'cursor-pointer hover:bg-gray-200'
                                     }`,
                                     title: toStop.isExternalArrivalStop
@@ -2005,7 +2005,7 @@ const TransportApp = ({ userProfileData }) => {
                                     onClick: () => handleStopHeaderClick(fromStop),
                                     className: `border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap sticky left-0 z-10 ${
                                         fromStop.isExternalArrivalStop
-                                            ? 'ring-2 ring-amber-400'
+                                            ? ''
                                             : 'cursor-pointer hover:bg-gray-200'
                                     }`,
                                     title: fromStop.isExternalArrivalStop
