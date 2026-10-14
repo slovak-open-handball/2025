@@ -607,6 +607,82 @@ const TransportApp = ({ userProfileData }) => {
                     });
                 });
             });
+
+            // ============================================================
+            // Pre každý superstructure tím zisti zoznam jeho "hráčských"
+            // dátumov (dni, kedy sa hrá akýkoľvek zápas v skupinách s jeho
+            // písmenom). Použije sa neskôr pri generovaní ranných presunov.
+            // ============================================================
+            const ssPlayDatesByTeam = {}; // key: category|teamName → Set(dayKey)
+            const ssGroupCharByTeam = {}; // key: category|teamName → char
+
+            (teamsArrivalBufferRef.current || []).forEach((t) => {
+                if (!t.isSuperstructure) return;
+                if (!t.teamName) return;
+
+                let char = getGroupLastChar(t.groupName);
+                if (!char) char = getGroupLastChar(t.teamName);
+                if (!char) return;
+
+                const key = `${cleanCategory(t.category)}|${t.teamName}`;
+                ssGroupCharByTeam[key] = char;
+                if (!ssPlayDatesByTeam[key]) ssPlayDatesByTeam[key] = new Set();
+            });
+
+            // Naplň dátumy
+            Object.keys(ssGroupCharByTeam).forEach((key) => {
+                const [cat, teamName] = key.split('|');
+                const char = ssGroupCharByTeam[key];
+                const set = ssPlayDatesByTeam[key];
+
+                matchesBufferRef.current.forEach((m) => {
+                    if (cleanCategory(m.category) !== cleanCategory(cat)) return;
+
+                    let belongs = false;
+                    const matchGroup = m.groupName ? String(m.groupName).trim() : null;
+                    if (matchGroup && groupBelongsToChar(matchGroup, char)) {
+                        belongs = true;
+                    } else {
+                        const homeGroup = (() => {
+                            for (const [gName, teamSet] of Object.entries(teamsByGroup[cat] || {})) {
+                                if (teamSet.has(m.home)) return gName;
+                            }
+                            return null;
+                        })();
+                        const awayGroup = (() => {
+                            for (const [gName, teamSet] of Object.entries(teamsByGroup[cat] || {})) {
+                                if (teamSet.has(m.away)) return gName;
+                            }
+                            return null;
+                        })();
+                        if (
+                            (homeGroup && groupBelongsToChar(homeGroup, char)) ||
+                            (awayGroup && groupBelongsToChar(awayGroup, char))
+                        ) {
+                            belongs = true;
+                        }
+                    }
+                    if (!belongs) return;
+
+                    let dayKey = null;
+                    if (m.scheduledTime) {
+                        const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                        if (mm) {
+                            const d = String(mm[1]).padStart(2, '0');
+                            const mo = String(mm[2]).padStart(2, '0');
+                            const y = mm[3];
+                            dayKey = `${y}-${mo}-${d}`;
+                        }
+                    }
+                    if (!dayKey && m.scheduledTs != null) {
+                        const dt = new Date(m.scheduledTs);
+                        dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                    }
+                    if (!dayKey) return;
+
+                    set.add(dayKey);
+                });
+            });
     
             categories.forEach((category) => {
                 console.log(`\n[TRANSPORT] ██ Kategória: ${category} ██`);
@@ -752,187 +828,253 @@ const TransportApp = ({ userProfileData }) => {
                         // A) Začiatok dňa – presun na prvú udalosť dňa.
                         if (isFirstEventOfDay && current.location) {
                             // ============================================================
-                            // Pravidlá pre generovanie ranného presunu:
-                            //
-                            //  PRVÝ DEŇ TURNAJA:
-                            //  1) Ak tím NEMÁ typ dopravy (prázdny alebo "vlastná")
-                            //     → NEGENERUJ ranný presun vôbec (ani z ubytovne, ani zo zastávky).
-                            //  2) Ak tím MÁ typ dopravy:
-                            //     a) Existuje nástupná zastávka externej dopravy
-                            //        → generuj presun ZO ZASTÁVKY.
-                            //     b) Neexistuje zastávka, ale tím MÁ ubytovanie
-                            //        → generuj presun Z UBYTOVNE.
-                            //     c) Neexistuje zastávka a tím NEMÁ ubytovanie
-                            //        → negeneruj.
-                            //
-                            //  OSTATNÉ DNI:
-                            //  - Ak tím MÁ ubytovanie → generuj presun Z UBYTOVNE.
-                            //  - Inak → negeneruj.
+                            // NOVÉ PRAVIDLO PRE SUPERSTRUCTURE TÍMY:
+                            // Ak je tím superstructure a aktuálny deň je v jeho "hráčských"
+                            // dňoch (t.j. deň, kedy hrá nejaký zápas v skupinách s jeho
+                            // písmenom), negeneruj klasické ranné presuny z ubytovní.
+                            // Namiesto toho vygeneruj presuny zo VŠETKÝCH miest, kde
+                            // v tento deň končí akýkoľvek tím z tej istej skupiny (podľa
+                            // písmena), na miesto prvej udalosti tohto tímu v danom dni.
                             // ============================================================
-                            const hasTransportType = (() => {
-                                if (!teamArrivalType) return false;
-                                const norm = String(teamArrivalType)
-                                    .toLowerCase()
-                                    .normalize('NFD')
-                                    .replace(/[\u0300-\u036f]/g, '')
-                                    .trim();
-                                if (!norm) return false;
-                                if (norm.includes('vlastn')) return false; // "vlastná doprava" = nemá dopravu
-                                return true;
-                            })();
-                        
-                            const isGlobalFirstDay =
+                            const ssTeamKey = `${cleanCategory(category)}|${teamName}`;
+                            const isSSPlayDay =
+                                isSuperstructureTeam &&
+                                ssPlayDatesByTeam[ssTeamKey] &&
                                 currentDay != null &&
-                                globalFirstDay != null &&
-                                currentDay === globalFirstDay;
-                        
-                            // Na prvom dni turnaja:
-                            //  - ak nemá typ dopravy → negeneruj vôbec
-                            //  - ak má typ dopravy:
-                            //      * zastávka má prednosť (ak existuje)
-                            //      * inak použi ubytovanie (ak ho má)
-                            // Ostatné dni:
-                            //  - použi ubytovanie (ak ho má)
-                            const useExternalStopOnFirstDay =
-                                isGlobalFirstDay &&
-                                hasTransportType &&
-                                !!externalArrivalStop;
-                        
-                            const useAccommodationAsSource = (() => {
-                                // Ostatné dni – vždy z ubytovne (ak ju má)
-                                if (!isGlobalFirstDay) {
-                                    return shouldGenerateAccommodationTransfers;
-                                }
-                                // Prvý deň – iba ak má typ dopravy a nepoužívame zastávku
-                                return hasTransportType
-                                    && !useExternalStopOnFirstDay
-                                    && shouldGenerateAccommodationTransfers;
-                            })();
-                        
-                            const shouldGenerateMorningTransfer =
-                                useExternalStopOnFirstDay || useAccommodationAsSource;
-                        
-                            if (shouldGenerateMorningTransfer) {
-                                const morningFromLocations = (() => {
-                                    if (useExternalStopOnFirstDay) {
-                                        // Prvý deň + typ dopravy + zastávka → iba zastávka
-                                        return [{
-                                            name: externalArrivalStop.name,
-                                            isExternalStop: true,
-                                        }];
-                                    }
-                                    if (useAccommodationAsSource) {
-                                        // Ubytovne – použijeme presne to, čo je v `teamAccommodationsList`.
-                                        // Tá už rešpektuje pravidlo:
-                                        //   - tím z users → len vlastné ubytovanie (alebo prázdne)
-                                        //   - superstructure tím → skupinová cache
-                                        return teamAccommodationsList.map((n) => ({ name: n, isExternalStop: false }));
-                                    }
-                                    return [];
-                                })();
-                        
-                                morningFromLocations.forEach(({ name: fromLocationName, isExternalStop }) => {
-                                    if (!fromLocationName) return;
-                                    if (fromLocationName === current.location) return;
-                        
-                                    const fromLabel = isExternalStop
-                                        ? `zastávky ${fromLocationName}`
-                                        : `ubytovania ${fromLocationName}`;
-                        
-                                    const dayRefTs =
-                                        current.startTs != null
-                                            ? current.startTs
-                                            : midnightFromWhen(current.when);
-                        
-                                    const arrivalStr =
-                                        formatFullFromTs(current.startTs) || current.when;
-                        
-                                    let departureStr;
-                                    const teamArrivalTime = (arrivalTimeByTeam[category] && arrivalTimeByTeam[category][teamName]) || '';
-                                    if (isExternalStop && teamArrivalTime && /^\d{1,2}:\d{2}$/.test(teamArrivalTime)) {
-                                        const [h, mi] = teamArrivalTime.split(':').map(Number);
-                                        const departureTs = timestampOnDay(dayRefTs, h, mi);
-                                        departureStr = formatFullFromTs(departureTs) || teamArrivalTime;
+                                ssPlayDatesByTeam[ssTeamKey].has(currentDay);
+
+                            if (isSSPlayDay) {
+                                const groupChar = ssGroupCharByTeam[ssTeamKey];
+                                const destination = current.location;
+
+                                // Nájdi pre každý tím z rovnakých skupín (rovnaké písmeno)
+                                // miesto, kde v tento deň končí (posledná timed udalosť).
+                                // Key: `${teamName}` → { location, endTs }
+                                const teamLastLocationByDay = {};
+
+                                matchesBufferRef.current.forEach((m) => {
+                                    if (cleanCategory(m.category) !== cleanCategory(category)) return;
+
+                                    // Zisti, či zápas patrí do skupiny s daným písmenom
+                                    let belongs = false;
+                                    const matchGroup = m.groupName ? String(m.groupName).trim() : null;
+                                    if (matchGroup && groupBelongsToChar(matchGroup, groupChar)) {
+                                        belongs = true;
                                     } else {
-                                        departureStr = formatDayWithTime(dayRefTs, 0, 0) || '00:00';
+                                        const homeGroup = (() => {
+                                            for (const [gName, teamSet] of Object.entries(teamsByGroup[category] || {})) {
+                                                if (teamSet.has(m.home)) return gName;
+                                            }
+                                            return null;
+                                        })();
+                                        const awayGroup = (() => {
+                                            for (const [gName, teamSet] of Object.entries(teamsByGroup[category] || {})) {
+                                                if (teamSet.has(m.away)) return gName;
+                                            }
+                                            return null;
+                                        })();
+                                        if (
+                                            (homeGroup && groupBelongsToChar(homeGroup, groupChar)) ||
+                                            (awayGroup && groupBelongsToChar(awayGroup, groupChar))
+                                        ) {
+                                            belongs = true;
+                                        }
                                     }
-                        
-                                    let whenStr;
-                                    if (departureStr && arrivalStr) {
-                                        whenStr = `${departureStr} – ${arrivalStr}`;
-                                    } else if (arrivalStr) {
-                                        whenStr = arrivalStr;
-                                    } else {
-                                        whenStr = current.when;
+                                    if (!belongs) return;
+
+                                    // Zisti dayKey zápasu
+                                    let dayKey = null;
+                                    if (m.scheduledTime) {
+                                        const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                        if (mm) {
+                                            const d = String(mm[1]).padStart(2, '0');
+                                            const mo = String(mm[2]).padStart(2, '0');
+                                            const y = mm[3];
+                                            dayKey = `${y}-${mo}-${d}`;
+                                        }
                                     }
-                        
-                                    enriched.push({
-                                        ts: current.ts - 1,
-                                        when: whenStr,
-                                        type: 'transfer',
-                                        text: buildTransferText(
-                                            null,
-                                            current,
-                                            fromLabel,
-                                            `${current.location}`,
-                                            false,
-                                            departureStr,
-                                            arrivalStr
-                                        ),
-                                        location: null,
-                                        isTransfer: true,
+                                    if (!dayKey && m.scheduledTs != null) {
+                                        const dt = new Date(m.scheduledTs);
+                                        dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                    }
+                                    if (!dayKey || dayKey !== currentDay) return;
+
+                                    // EndTs zápasu
+                                    const endTs = m.scheduledEndTs != null
+                                        ? m.scheduledEndTs
+                                        : (m.scheduledTs != null ? m.scheduledTs : null);
+                                    if (endTs == null) return;
+
+                                    // Pre oba tímy zápasu: ak je to neskorší koniec v danom dni,
+                                    // zapíš si miesto a čas konca.
+                                    [m.home, m.away].forEach((tn) => {
+                                        if (!tn) return;
+                                        if (
+                                            !teamLastLocationByDay[tn] ||
+                                            endTs > teamLastLocationByDay[tn].endTs
+                                        ) {
+                                            teamLastLocationByDay[tn] = {
+                                                location: m.hallName || null,
+                                                endTs,
+                                            };
+                                        }
                                     });
                                 });
-                            }
-                        }
-                    
-                        enriched.push(current);
-                    
-                        const currentIsTimedEvent =
-                            current.type === 'match' || current.type === 'catering';
-                    
-                        if (
-                            next &&
-                            currentIsTimedEvent &&
-                            current.location &&
-                            next.location &&
-                            current.location !== next.location &&
-                            currentDay != null &&
-                            nextDay != null &&
-                            currentDay === nextDay
-                        ) {
-                            const departureTs =
-                                current.endTs != null ? current.endTs : current.startTs;
-                            const arrivalTs =
-                                next.startTs != null ? next.startTs : null;
-                    
-                            const departureStr = formatFullFromTs(departureTs);
-                            const arrivalStr = formatFullFromTs(arrivalTs);
-                    
-                            let whenStr;
-                            if (departureStr && arrivalStr) {
-                                whenStr = `${departureStr} – ${arrivalStr}`;
-                            } else if (departureStr) {
-                                whenStr = departureStr;
-                            } else if (arrivalStr) {
-                                whenStr = arrivalStr;
+
+                                // Vytvor presuny zo všetkých miest, kde v tento deň
+                                // končí nejaký tím z tejto skupiny, na destination.
+                                // Vynechaj:
+                                //  - miesta, ktoré sú zhodné s destination,
+                                //  - vlastný tím (aby sa negeneroval presun z miesta,
+                                //    kde končí tento tím – tam už bude).
+                                const uniqueSources = new Map(); // location → max endTs
+                                Object.entries(teamLastLocationByDay).forEach(([tn, info]) => {
+                                    if (!info || !info.location) return;
+                                    if (tn === teamName) return;
+                                    if (info.location === destination) return;
+
+                                    const existing = uniqueSources.get(info.location);
+                                    if (!existing || info.endTs > existing.endTs) {
+                                        uniqueSources.set(info.location, info);
+                                    }
+                                });
+
+                                const destinationArrivalStr =
+                                    formatFullFromTs(current.startTs) || current.when;
+
+                                Array.from(uniqueSources.values())
+                                    .sort((a, b) => a.endTs - b.endTs)
+                                    .forEach((info) => {
+                                        const departureStr = formatFullFromTs(info.endTs) || '—';
+
+                                        let whenStr;
+                                        if (departureStr && destinationArrivalStr) {
+                                            whenStr = `${departureStr} – ${destinationArrivalStr}`;
+                                        } else if (destinationArrivalStr) {
+                                            whenStr = destinationArrivalStr;
+                                        } else {
+                                            whenStr = current.when;
+                                        }
+
+                                        enriched.push({
+                                            ts: current.ts - 1,
+                                            when: whenStr,
+                                            type: 'transfer',
+                                            text: `Presun z ${info.location} do ${destination}`,
+                                            location: null,
+                                            isTransfer: true,
+                                        });
+                                    });
+
+                                // DÔLEŽITÉ: V tomto prípade NEgenerujeme klasické
+                                // ranné presuny z ubytovní – preskočíme zvyšok bloku.
                             } else {
-                                whenStr = current.when;
+                                // ============================================================
+                                // PÔVODNÁ LOGIKA pre bežné (ne-superstructure) tímy
+                                // alebo superstructure tímy v deň, kedy nehrajú.
+                                // ============================================================
+                                const hasTransportType = (() => {
+                                    if (!teamArrivalType) return false;
+                                    const norm = String(teamArrivalType)
+                                        .toLowerCase()
+                                        .normalize('NFD')
+                                        .replace(/[\u0300-\u036f]/g, '')
+                                        .trim();
+                                    if (!norm) return false;
+                                    if (norm.includes('vlastn')) return false;
+                                    return true;
+                                })();
+
+                                const isGlobalFirstDay =
+                                    currentDay != null &&
+                                    globalFirstDay != null &&
+                                    currentDay === globalFirstDay;
+
+                                const useExternalStopOnFirstDay =
+                                    isGlobalFirstDay &&
+                                    hasTransportType &&
+                                    !!externalArrivalStop;
+
+                                const useAccommodationAsSource = (() => {
+                                    if (!isGlobalFirstDay) {
+                                        return shouldGenerateAccommodationTransfers;
+                                    }
+                                    return hasTransportType
+                                        && !useExternalStopOnFirstDay
+                                        && shouldGenerateAccommodationTransfers;
+                                })();
+
+                                const shouldGenerateMorningTransfer =
+                                    useExternalStopOnFirstDay || useAccommodationAsSource;
+
+                                if (shouldGenerateMorningTransfer) {
+                                    const morningFromLocations = (() => {
+                                        if (useExternalStopOnFirstDay) {
+                                            return [{
+                                                name: externalArrivalStop.name,
+                                                isExternalStop: true,
+                                            }];
+                                        }
+                                        if (useAccommodationAsSource) {
+                                            return teamAccommodationsList.map((n) => ({ name: n, isExternalStop: false }));
+                                        }
+                                        return [];
+                                    })();
+
+                                    morningFromLocations.forEach(({ name: fromLocationName, isExternalStop }) => {
+                                        if (!fromLocationName) return;
+                                        if (fromLocationName === current.location) return;
+
+                                        const fromLabel = isExternalStop
+                                            ? `zastávky ${fromLocationName}`
+                                            : `ubytovania ${fromLocationName}`;
+
+                                        const dayRefTs =
+                                            current.startTs != null
+                                                ? current.startTs
+                                                : midnightFromWhen(current.when);
+
+                                        const arrivalStr =
+                                            formatFullFromTs(current.startTs) || current.when;
+
+                                        let departureStr;
+                                        const teamArrivalTime = (arrivalTimeByTeam[category] && arrivalTimeByTeam[category][teamName]) || '';
+                                        if (isExternalStop && teamArrivalTime && /^\d{1,2}:\d{2}$/.test(teamArrivalTime)) {
+                                            const [h, mi] = teamArrivalTime.split(':').map(Number);
+                                            const departureTs = timestampOnDay(dayRefTs, h, mi);
+                                            departureStr = formatFullFromTs(departureTs) || teamArrivalTime;
+                                        } else {
+                                            departureStr = formatDayWithTime(dayRefTs, 0, 0) || '00:00';
+                                        }
+
+                                        let whenStr;
+                                        if (departureStr && arrivalStr) {
+                                            whenStr = `${departureStr} – ${arrivalStr}`;
+                                        } else if (arrivalStr) {
+                                            whenStr = arrivalStr;
+                                        } else {
+                                            whenStr = current.when;
+                                        }
+
+                                        enriched.push({
+                                            ts: current.ts - 1,
+                                            when: whenStr,
+                                            type: 'transfer',
+                                            text: buildTransferText(
+                                                null,
+                                                current,
+                                                fromLabel,
+                                                `${current.location}`,
+                                                false,
+                                                departureStr,
+                                                arrivalStr
+                                            ),
+                                            location: null,
+                                            isTransfer: true,
+                                        });
+                                    });
+                                }
                             }
-                    
-                            enriched.push({
-                                ts: current.ts + 0.5,
-                                when: whenStr,
-                                type: 'transfer',
-                                text: buildTransferText(
-                                    current,
-                                    next,
-                                    `${current.location}`,
-                                    `${next.location}`
-                                ),
-                                location: null,
-                                isTransfer: true,
-                            });
                         }
                     
                         const isVeryLastEventOfTeam = (next == null);
