@@ -878,12 +878,12 @@ const TransportApp = ({ userProfileData }) => {
                             if (isSSPlayDay) {
                                 const groupChar = ssGroupCharByTeam[ssTeamKey];
                                 const destination = current.location;
-
+                            
                                 // Nájdi pre každý tím z rovnakých skupín (rovnaké písmeno)
                                 // miesto, kde v tento deň končí jeho POSLEDNÁ UDALOSŤ (zápas alebo stravovanie).
                                 // Key: `${teamName}` → { location, endTs }
                                 const teamLastLocationByDay = {};
-
+                            
                                 // Pomocná funkcia na aktualizáciu posledného miesta tímu
                                 const updateTeamLastLocation = (teamName, location, endTs) => {
                                     if (!teamName || !location || endTs == null) return;
@@ -895,12 +895,34 @@ const TransportApp = ({ userProfileData }) => {
                                     }
                                 };
                             
+                                // Pomocná funkcia: zisti, či daný tím patrí do skupiny s daným písmenom
+                                // (buď podľa groupName, alebo podľa posledného písmena v názve tímu)
+                                const teamBelongsToChar = (tn, category) => {
+                                    if (!tn) return false;
+                                    // 1) Skús groupName z teamsArrivalBufferRef
+                                    const teamInfo = (teamsArrivalBufferRef.current || []).find(
+                                        (t) => cleanCategory(t.category) === cleanCategory(category) && t.teamName === tn
+                                    );
+                                    if (teamInfo && teamInfo.groupName) {
+                                        if (groupBelongsToChar(teamInfo.groupName, groupChar)) return true;
+                                    }
+                                    // 2) Skús posledné písmeno v názve tímu
+                                    const nameChar = getGroupLastChar(tn);
+                                    if (nameChar === groupChar) return true;
+                                    // 3) Skús, či tím patrí do niektorej skupiny podľa teamsByGroup
+                                    const groups = teamsByGroup[category] || {};
+                                    for (const [gName, teamSet] of Object.entries(groups)) {
+                                        if (teamSet.has(tn) && groupBelongsToChar(gName, groupChar)) return true;
+                                    }
+                                    return false;
+                                };
+                            
                                 // 1) ZÁPASY
                                 const currentTeamIsPavuk = /W16F|W8F|WQF|WSF|LSF/.test(String(teamName).toUpperCase());
-
+                            
                                 matchesBufferRef.current.forEach((m) => {
                                     if (cleanCategory(m.category) !== cleanCategory(category)) return;
-                                
+                            
                                     // Ak je aktuálny tím pavúkový, berieme len pavúkové zápasy
                                     if (currentTeamIsPavuk) {
                                         const mIsPavuk = m.matchType && (
@@ -913,16 +935,7 @@ const TransportApp = ({ userProfileData }) => {
                                         );
                                         if (!mIsPavuk) return;
                                     }
-
-                                    // IBA zápasy priradené priamo do skupiny s daným písmenom
-                                    // (pri pavúkových zápasoch groupName zvyčajne nie je, takže toto
-                                    //  by ich vyradilo — preto pre pavúkový tím tento filter preskočíme)
-                                    const matchGroup = m.groupName ? String(m.groupName).trim() : null;
-                                    if (!currentTeamIsPavuk) {
-                                        if (!matchGroup) return;
-                                        if (!groupBelongsToChar(matchGroup, groupChar)) return;
-                                    }
-                                
+                            
                                     // Zisti dayKey zápasu
                                     let dayKey = null;
                                     if (m.scheduledTime) {
@@ -939,12 +952,12 @@ const TransportApp = ({ userProfileData }) => {
                                         dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
                                     }
                                     if (!dayKey || dayKey !== currentDay) return;
-                                
+                            
                                     // EndTs zápasu
                                     const endTs = m.scheduledEndTs != null
                                         ? m.scheduledEndTs
                                         : (m.scheduledTs != null ? m.scheduledTs : null);
-                                
+                            
                                     // Pre oba tímy zápasu zapíš posledné miesto (ak je neskoršie),
                                     // ALE LEN AK TÍM NEPOSTUPUJE DO ĎALŠIEHO PAVÚKOVÉHO ZÁPASU
                                     // NA TOM ISTOM MIESTE.
@@ -953,7 +966,19 @@ const TransportApp = ({ userProfileData }) => {
                                         { name: m.away, identifier: m.awayTeamIdentifier },
                                     ].forEach(({ name: tn, identifier }) => {
                                         if (!tn) return;
-                                
+                            
+                                        // Ak je aktuálny tím pavúkový, uvažujeme len tímy, ktoré patria do rovnakej skupiny
+                                        // podľa písmena (buď groupName alebo posledné písmeno v názve).
+                                        if (currentTeamIsPavuk) {
+                                            if (!teamBelongsToChar(tn, category)) return;
+                                        } else {
+                                            // Pôvodná logika: pre ne-pavúkový tím berieme len zápasy s groupName
+                                            // patriacim pod dané písmeno.
+                                            const matchGroup = m.groupName ? String(m.groupName).trim() : null;
+                                            if (!matchGroup) return;
+                                            if (!groupBelongsToChar(matchGroup, groupChar)) return;
+                                        }
+                            
                                         if (identifier) {
                                             const nextInfo = pavukTeamNextMatchInfo(identifier, category);
                                             if (nextInfo && nextInfo.hasNext) {
@@ -969,36 +994,37 @@ const TransportApp = ({ userProfileData }) => {
                                                 }
                                             }
                                         }
-                                
+                            
                                         updateTeamLastLocation(tn, m.hallName || null, endTs);
                                     });
                                 });
-                                                            
+                            
                                 // 2) STRAVOVANIA
-                                // Ak je aktuálny tím pavúkový, stravovania skupinových tímov nás nezaujímajú.
-                                if (!currentTeamIsPavuk) {
-                                    cateringBufferRef.current.forEach((c) => {
-                                        if (cleanCategory(c.category) !== cleanCategory(category)) return;
-                                
-                                        // Zisti dayKey stravovania
-                                        const dayKey = c.dayKey || null;
-                                        if (!dayKey || dayKey !== currentDay) return;
-                                
-                                        // EndTs stravovania (slotToTs alebo ts)
-                                        const endTs = c.slotToTs != null
-                                            ? c.slotToTs
-                                            : (c.ts != null ? c.ts : null);
-
-                                        updateTeamLastLocation(c.teamName, c.placeName || null, endTs);
-                                    });
-                                }
+                                // Pre pavúkový tím stravovania skupinových tímov tiež berieme do úvahy,
+                                // ak patria do rovnakej skupiny podľa písmena.
+                                cateringBufferRef.current.forEach((c) => {
+                                    if (cleanCategory(c.category) !== cleanCategory(category)) return;
+                            
+                                    // Zisti dayKey stravovania
+                                    const dayKey = c.dayKey || null;
+                                    if (!dayKey || dayKey !== currentDay) return;
+                            
+                                    // EndTs stravovania (slotToTs alebo ts)
+                                    const endTs = c.slotToTs != null
+                                        ? c.slotToTs
+                                        : (c.ts != null ? c.ts : null);
+                            
+                                    // Pre pavúkový tím uvažujeme len stravovania tímov, ktoré patria
+                                    // do rovnakej skupiny podľa písmena.
+                                    if (currentTeamIsPavuk) {
+                                        if (!teamBelongsToChar(c.teamName, category)) return;
+                                    }
+                            
+                                    updateTeamLastLocation(c.teamName, c.placeName || null, endTs);
+                                });
                             
                                 // Vytvor presuny zo všetkých miest, kde v tento deň
                                 // končí nejaký tím z tejto skupiny, na destination.
-                                // Vynechaj:
-                                //  - miesta, ktoré sú zhodné s destination,
-                                //  - vlastný tím (aby sa negeneroval presun z miesta,
-                                //    kde končí tento tím – tam už bude).
                                 const uniqueSources = new Map(); // location → max endTs
                                 Object.entries(teamLastLocationByDay).forEach(([tn, info]) => {
                                     if (!info || !info.location) return;
@@ -1017,8 +1043,6 @@ const TransportApp = ({ userProfileData }) => {
                                 Array.from(uniqueSources.values())
                                     .sort((a, b) => a.endTs - b.endTs)
                                     .forEach((info) => {
-                                        // Ak je začiatok presunu (endTs zdroja) neskorší alebo rovnaký
-                                        // ako príchod na cieľ (current.startTs), presun sa nesmie vygenerovať.
                                         if (
                                             info.endTs != null &&
                                             current.startTs != null &&
