@@ -826,6 +826,60 @@ const TransportApp = ({ userProfileData }) => {
                                 currentDay != null &&
                                 ssPlayDatesByTeam[ssTeamKey].has(currentDay);
 
+                            // ============================================================
+                            // Pomocná funkcia: Zisti, či pavúkový tím (identifier obsahujúci WSF/LSF/WQF/...)
+                            // má nadväzujúci zápas v pavúku. Ak áno, vráti true (t.j. tím pokračuje inde).
+                            // ============================================================
+                            const pavukTeamHasNextMatch = (teamIdentifier, category) => {
+                                if (!teamIdentifier || typeof teamIdentifier !== 'string') return false;
+                                if (cleanCategory(category) !== cleanCategory(category)) return false;
+                            
+                                const s = teamIdentifier.toUpperCase();
+                            
+                                // Rozpoznaj typ pavúkového identifieru
+                                // W16F01..W16F16 → postupuje do osemfinále (W8F0X)
+                                // W8F01..W8F08 → postupuje do štvrťfinále (WQF0X)
+                                // WQF01..WQF04 → postupuje do semifinále (WSF0X)
+                                // WSF01, WSF02 → postupuje do finále (finále)
+                                // LSF01, LSF02 → postupuje do zápasu o 3. miesto
+                                // Finále a o 3. miesto → už nemajú nadväzujúci zápas
+                            
+                                let targetMatchType = null;
+                            
+                                const w16 = /W16F(\d{1,2})/.exec(s);
+                                const w8 = /W8F(\d{1,2})/.exec(s);
+                                const wqf = /WQF(\d{1,2})/.exec(s);
+                                const wsf = /WSF(\d{1,2})/.exec(s);
+                                const lsf = /LSF(\d{1,2})/.exec(s);
+                            
+                                if (w16) {
+                                    const num = parseInt(w16[1], 10);
+                                    const efNum = Math.ceil(num / 2);
+                                    targetMatchType = `osemfinále ${efNum}`;
+                                } else if (w8) {
+                                    const num = parseInt(w8[1], 10);
+                                    const qfNum = Math.ceil(num / 2);
+                                    targetMatchType = `štvrťfinále ${qfNum}`;
+                                } else if (wqf) {
+                                    const num = parseInt(wqf[1], 10);
+                                    const sfNum = num <= 2 ? 1 : 2;
+                                    targetMatchType = `semifinále ${sfNum}`;
+                                } else if (wsf) {
+                                    targetMatchType = 'finále';
+                                } else if (lsf) {
+                                    targetMatchType = 'o 3. miesto';
+                                } else {
+                                    // Nie je pavúkový identifier
+                                    return false;
+                                }
+                            
+                                // Skontroluj, či v danej kategórii existuje zápas daného typu
+                                return matchesBufferRef.current.some((m) => {
+                                    if (cleanCategory(m.category) !== cleanCategory(category)) return false;
+                                    return m.matchType === targetMatchType;
+                                });
+                            };
+                            
                             if (isSSPlayDay) {
                                 const groupChar = ssGroupCharByTeam[ssTeamKey];
                                 const destination = current.location;
@@ -849,12 +903,12 @@ const TransportApp = ({ userProfileData }) => {
                                 // 1) ZÁPASY
                                 matchesBufferRef.current.forEach((m) => {
                                     if (cleanCategory(m.category) !== cleanCategory(category)) return;
-                            
+
                                     // IBA zápasy priradené priamo do skupiny s daným písmenom.
                                     const matchGroup = m.groupName ? String(m.groupName).trim() : null;
                                     if (!matchGroup) return;
                                     if (!groupBelongsToChar(matchGroup, groupChar)) return;
-                            
+
                                     // Zisti dayKey zápasu
                                     let dayKey = null;
                                     if (m.scheduledTime) {
@@ -871,18 +925,27 @@ const TransportApp = ({ userProfileData }) => {
                                         dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
                                     }
                                     if (!dayKey || dayKey !== currentDay) return;
-                            
+                                
                                     // EndTs zápasu
                                     const endTs = m.scheduledEndTs != null
                                         ? m.scheduledEndTs
                                         : (m.scheduledTs != null ? m.scheduledTs : null);
-
-                                    // Pre oba tímy zápasu zapíš posledné miesto (ak je neskoršie)
-                                    [m.home, m.away].forEach((tn) => {
+                                
+                                    // Pre oba tímy zápasu zapíš posledné miesto (ak je neskoršie),
+                                    // ALE LEN AK TÍM NEPOSTUPUJE DO ĎALŠIEHO PAVÚKOVÉHO ZÁPASU.
+                                    [
+                                        { name: m.home, identifier: m.homeTeamIdentifier },
+                                        { name: m.away, identifier: m.awayTeamIdentifier },
+                                    ].forEach(({ name: tn, identifier }) => {
+                                        if (!tn) return;
+                                        // Ak má tím pavúkový identifier a ten postupuje ďalej → preskoč
+                                        if (identifier && pavukTeamHasNextMatch(identifier, category)) {
+                                            return;
+                                        }
                                         updateTeamLastLocation(tn, m.hallName || null, endTs);
                                     });
                                 });
-                            
+                                                            
                                 // 2) STRAVOVANIA
                                 cateringBufferRef.current.forEach((c) => {
                                     if (cleanCategory(c.category) !== cleanCategory(category)) return;
@@ -1849,6 +1912,9 @@ const TransportApp = ({ userProfileData }) => {
                     hallName,
                     special,
                     groupName: groupName || null,
+                    matchType: data.matchType || null,
+                    homeTeamIdentifier: data.homeTeamIdentifier || null,
+                    awayTeamIdentifier: data.awayTeamIdentifier || null,
                 });
             });
 
