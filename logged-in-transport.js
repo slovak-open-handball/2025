@@ -831,21 +831,32 @@ const TransportApp = ({ userProfileData }) => {
                                 const destination = current.location;
 
                                 // Nájdi pre každý tím z rovnakých skupín (rovnaké písmeno)
-                                // miesto, kde v tento deň končí (posledná timed udalosť).
+                                // miesto, kde v tento deň končí jeho POSLEDNÁ UDALOSŤ (zápas alebo stravovanie).
                                 // Key: `${teamName}` → { location, endTs }
                                 const teamLastLocationByDay = {};
 
+                                // Pomocná funkcia na aktualizáciu posledného miesta tímu
+                                const updateTeamLastLocation = (teamName, location, endTs) => {
+                                    if (!teamName || !location || endTs == null) return;
+                                    if (
+                                        !teamLastLocationByDay[teamName] ||
+                                        endTs > teamLastLocationByDay[teamName].endTs
+                                    ) {
+                                        teamLastLocationByDay[teamName] = { location, endTs };
+                                    }
+                                };
+                            
+                                // 1) ZÁPASY
                                 matchesBufferRef.current.forEach((m) => {
                                     if (cleanCategory(m.category) !== cleanCategory(category)) return;
-
+                            
                                     // IBA zápasy priradené priamo do skupiny s daným písmenom.
                                     const matchGroup = m.groupName ? String(m.groupName).trim() : null;
                                     if (!matchGroup) return;
                                     if (!groupBelongsToChar(matchGroup, groupChar)) return;
-
+                            
                                     // Zisti dayKey zápasu
                                     let dayKey = null;
-                                    
                                     if (m.scheduledTime) {
                                         const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
                                         if (mm) {
@@ -860,29 +871,34 @@ const TransportApp = ({ userProfileData }) => {
                                         dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
                                     }
                                     if (!dayKey || dayKey !== currentDay) return;
-
+                            
                                     // EndTs zápasu
                                     const endTs = m.scheduledEndTs != null
                                         ? m.scheduledEndTs
                                         : (m.scheduledTs != null ? m.scheduledTs : null);
-                                    if (endTs == null) return;
 
-                                    // Pre oba tímy zápasu: ak je to neskorší koniec v danom dni,
-                                    // zapíš si miesto a čas konca.
+                                    // Pre oba tímy zápasu zapíš posledné miesto (ak je neskoršie)
                                     [m.home, m.away].forEach((tn) => {
-                                        if (!tn) return;
-                                        if (
-                                            !teamLastLocationByDay[tn] ||
-                                            endTs > teamLastLocationByDay[tn].endTs
-                                        ) {
-                                            teamLastLocationByDay[tn] = {
-                                                location: m.hallName || null,
-                                                endTs,
-                                            };
-                                        }
+                                        updateTeamLastLocation(tn, m.hallName || null, endTs);
                                     });
                                 });
-
+                            
+                                // 2) STRAVOVANIA
+                                cateringBufferRef.current.forEach((c) => {
+                                    if (cleanCategory(c.category) !== cleanCategory(category)) return;
+                            
+                                    // Zisti dayKey stravovania
+                                    const dayKey = c.dayKey || null;
+                                    if (!dayKey || dayKey !== currentDay) return;
+                            
+                                    // EndTs stravovania (slotToTs alebo ts)
+                                    const endTs = c.slotToTs != null
+                                        ? c.slotToTs
+                                        : (c.ts != null ? c.ts : null);
+                            
+                                    updateTeamLastLocation(c.teamName, c.placeName || null, endTs);
+                                });
+                            
                                 // Vytvor presuny zo všetkých miest, kde v tento deň
                                 // končí nejaký tím z tejto skupiny, na destination.
                                 // Vynechaj:
@@ -894,20 +910,20 @@ const TransportApp = ({ userProfileData }) => {
                                     if (!info || !info.location) return;
                                     if (tn === teamName) return;
                                     if (info.location === destination) return;
-
+                            
                                     const existing = uniqueSources.get(info.location);
                                     if (!existing || info.endTs > existing.endTs) {
                                         uniqueSources.set(info.location, info);
                                     }
                                 });
-
+                            
                                 const destinationArrivalStr =
                                     formatFullFromTs(current.startTs) || current.when;
-
+                            
                                 Array.from(uniqueSources.values())
                                     .sort((a, b) => a.endTs - b.endTs)
                                     .forEach((info) => {
-                                        // NOVÉ: Ak je začiatok presunu (endTs zdroja) neskorší alebo rovnaký
+                                        // Ak je začiatok presunu (endTs zdroja) neskorší alebo rovnaký
                                         // ako príchod na cieľ (current.startTs), presun sa nesmie vygenerovať.
                                         if (
                                             info.endTs != null &&
@@ -916,9 +932,9 @@ const TransportApp = ({ userProfileData }) => {
                                         ) {
                                             return;
                                         }
-                                
+                            
                                         const departureStr = formatFullFromTs(info.endTs) || '—';
-                                
+                            
                                         let whenStr;
                                         if (departureStr && destinationArrivalStr) {
                                             whenStr = `${departureStr} – ${destinationArrivalStr}`;
@@ -927,7 +943,7 @@ const TransportApp = ({ userProfileData }) => {
                                         } else {
                                             whenStr = current.when;
                                         }
-
+                            
                                         enriched.push({
                                             ts: current.ts - 1,
                                             when: whenStr,
@@ -937,7 +953,7 @@ const TransportApp = ({ userProfileData }) => {
                                             isTransfer: true,
                                         });
                                     });
-
+                            
                                 // DÔLEŽITÉ: V tomto prípade NEgenerujeme klasické
                                 // ranné presuny z ubytovní – preskočíme zvyšok bloku.
                             } else {
