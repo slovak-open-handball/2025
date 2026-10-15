@@ -975,20 +975,23 @@ const TransportApp = ({ userProfileData }) => {
                                 });
                                                             
                                 // 2) STRAVOVANIA
-                                cateringBufferRef.current.forEach((c) => {
-                                    if (cleanCategory(c.category) !== cleanCategory(category)) return;
-                            
-                                    // Zisti dayKey stravovania
-                                    const dayKey = c.dayKey || null;
-                                    if (!dayKey || dayKey !== currentDay) return;
-                            
-                                    // EndTs stravovania (slotToTs alebo ts)
-                                    const endTs = c.slotToTs != null
-                                        ? c.slotToTs
-                                        : (c.ts != null ? c.ts : null);
-                            
-                                    updateTeamLastLocation(c.teamName, c.placeName || null, endTs);
-                                });
+                                // Ak je aktuálny tím pavúkový, stravovania skupinových tímov nás nezaujímajú.
+                                if (!currentTeamIsPavuk) {
+                                    cateringBufferRef.current.forEach((c) => {
+                                        if (cleanCategory(c.category) !== cleanCategory(category)) return;
+                                
+                                        // Zisti dayKey stravovania
+                                        const dayKey = c.dayKey || null;
+                                        if (!dayKey || dayKey !== currentDay) return;
+                                
+                                        // EndTs stravovania (slotToTs alebo ts)
+                                        const endTs = c.slotToTs != null
+                                            ? c.slotToTs
+                                            : (c.ts != null ? c.ts : null);
+
+                                        updateTeamLastLocation(c.teamName, c.placeName || null, endTs);
+                                    });
+                                }
                             
                                 // Vytvor presuny zo všetkých miest, kde v tento deň
                                 // končí nejaký tím z tejto skupiny, na destination.
