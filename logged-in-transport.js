@@ -916,28 +916,6 @@ const TransportApp = ({ userProfileData }) => {
                                     return true;
                                 };
                             
-                                // ============================================================
-                                // Pomocná funkcia: zisti, či daný tím patrí do skupiny s daným písmenom.
-                                // Berieme len SKUTOČNÉ (users) tímy.
-                                // ============================================================
-                                const teamBelongsToChar = (tn, category) => {
-                                    if (!tn) return false;
-                                    if (!isRealRegisteredTeam(tn, category)) return false;
-                            
-                                    // 1) Skús groupName z teamsArrivalBufferRef
-                                    const teamInfo = (teamsArrivalBufferRef.current || []).find(
-                                        (t) => cleanCategory(t.category) === cleanCategory(category) && t.teamName === tn
-                                    );
-                                    if (teamInfo && teamInfo.groupName) {
-                                        if (groupBelongsToChar(teamInfo.groupName, groupChar)) return true;
-                                    }
-                                    // 2) Skús posledné písmeno v názve tímu
-                                    const nameChar = getGroupLastChar(tn);
-                                    if (nameChar === groupChar) return true;
-                            
-                                    return false;
-                                };
-                            
                                 // Mapa: teamName → { location, endTs }
                                 const teamLastEnd = new Map();
                             
