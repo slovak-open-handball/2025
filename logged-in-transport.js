@@ -278,13 +278,64 @@ const TransportApp = ({ userProfileData }) => {
     
             if (t.groupName) {
                 const orderStr = t.order != null ? `, poradie ${t.order}` : '';
+
+                // Zisti posledné písmeno skupiny
+                const groupChar = (() => {
+                    const s = String(t.groupName).trim();
+                    if (!s) return null;
+                    const m = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(s.toUpperCase());
+                    return m ? m[1] : null;
+                })();
+            
+                // Nájdi všetky tímy v tej istej skupine (rovnaké posledné písmeno skupiny,
+                // alebo odvodené z názvu tímu).
+                const teamsInThisGroup = (() => {
+                    if (!groupChar) return [];
+                    const result = new Set();
+            
+                    (teamsArrivalBufferRef.current || []).forEach((other) => {
+                        if (cleanCategory(other.category) !== cleanCategory(t.category)) return;
+                        if (!other.teamName) return;
+            
+                        // 1) Má groupName s rovnakým posledným písmenom?
+                        if (other.groupName) {
+                            const otherChar = (() => {
+                                const s = String(other.groupName).trim();
+                                if (!s) return null;
+                                const m = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(s.toUpperCase());
+                                return m ? m[1] : null;
+                            })();
+                            if (otherChar === groupChar) {
+                                result.add(other.teamName);
+                                return;
+                            }
+                        }
+            
+                        // 2) Ak nemá groupName (alebo nesedí), skús odvodiť z názvu tímu
+                        //    (napr. "U12 D 2F" → "F")
+                        const nameMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(other.teamName).trim());
+                        if (nameMatch && nameMatch[1].toUpperCase() === groupChar) {
+                            result.add(other.teamName);
+                        }
+                    });
+            
+                    return [...result].sort((a, b) =>
+                        a.localeCompare(b, 'sk', { sensitivity: 'base' })
+                    );
+                })();
+            
+                // Pridaj zoznam tímov do textu
+                const teamsListStr = teamsInThisGroup.length > 0
+                    ? `\n       • ${teamsInThisGroup.join('\n       • ')}`
+                    : '\n       (žiadne tímy)';
+            
                 arr.push({
                     ts: -Infinity,
                     startTs: null,
                     endTs: null,
                     when: '—',
                     type: 'group',
-                    text: `Kategória: ${t.category}, Skupina: ${t.groupName}${orderStr}`,
+                    text: `Kategória: ${t.category}, Skupina: ${t.groupName}${orderStr}${teamsListStr}`,
                     location: null,
                 });
             }
