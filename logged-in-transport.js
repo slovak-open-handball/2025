@@ -144,6 +144,9 @@ const TransportApp = ({ userProfileData }) => {
     // Zrkadlo `allPlaces` pre použitie v `rebuildAndLogTimeline`
     const allPlacesRef = useRef([]);
 
+    // Mapa: category|groupName → Set(teamName) – reálne priradenie zo settings/superstructureGroups
+    const superstructureGroupsRef = useRef({});
+
     // Zabráni opakovanému spracovaniu pred prvým načítaním
     const matchesLoadedRef = useRef(false);
     const cateringLoadedRef = useRef(false);
@@ -279,56 +282,22 @@ const TransportApp = ({ userProfileData }) => {
             if (t.groupName) {
                 const orderStr = t.order != null ? `, poradie ${t.order}` : '';
 
-                // Zisti posledné písmeno skupiny
-                const groupChar = (() => {
-                    const s = String(t.groupName).trim();
-                    if (!s) return null;
-                    const m = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(s.toUpperCase());
-                    return m ? m[1] : null;
-                })();
-            
-                // Nájdi všetky tímy v tej istej skupine (rovnaké posledné písmeno skupiny,
-                // alebo odvodené z názvu tímu).
+                // Reálne tímy v tejto skupine zo settings/superstructureGroups
+                const groupKey = `${cleanCategory(t.category)}|${String(t.groupName).trim()}`;
                 const teamsInThisGroup = (() => {
-                    if (!groupChar) return [];
-                    const result = new Set();
-            
-                    (teamsArrivalBufferRef.current || []).forEach((other) => {
-                        if (cleanCategory(other.category) !== cleanCategory(t.category)) return;
-                        if (!other.teamName) return;
-            
-                        // 1) Má groupName s rovnakým posledným písmenom?
-                        if (other.groupName) {
-                            const otherChar = (() => {
-                                const s = String(other.groupName).trim();
-                                if (!s) return null;
-                                const m = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(s.toUpperCase());
-                                return m ? m[1] : null;
-                            })();
-                            if (otherChar === groupChar) {
-                                result.add(other.teamName);
-                                return;
-                            }
-                        }
-            
-                        // 2) Ak nemá groupName (alebo nesedí), skús odvodiť z názvu tímu
-                        //    (napr. "U12 D 2F" → "F")
-                        const nameMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(other.teamName).trim());
-                        if (nameMatch && nameMatch[1].toUpperCase() === groupChar) {
-                            result.add(other.teamName);
-                        }
-                    });
-            
-                    return [...result].sort((a, b) =>
-                        a.localeCompare(b, 'sk', { sensitivity: 'base' })
-                    );
+                    const fromSuperstructure = superstructureGroupsRef.current[groupKey];
+                    if (fromSuperstructure && fromSuperstructure.size > 0) {
+                        return [...fromSuperstructure].sort((a, b) =>
+                            a.localeCompare(b, 'sk', { sensitivity: 'base' })
+                        );
+                    }
+                    return [];
                 })();
-            
-                // Pridaj zoznam tímov do textu
+
                 const teamsListStr = teamsInThisGroup.length > 0
                     ? `\n       • ${teamsInThisGroup.join('\n       • ')}`
                     : '\n       (žiadne tímy)';
-            
+
                 arr.push({
                     ts: -Infinity,
                     startTs: null,
@@ -1967,6 +1936,38 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na settings/catering:', e);
         }
 
+        // 0a1e) SUPERSTRUCTURE GROUPS – reálne priradenie tímov do skupín
+        let unsubscribeSuperstructureGroups = null;
+        try {
+            const ssgRef = doc(window.db, 'settings', 'superstructureGroups');
+            unsubscribeSuperstructureGroups = onSnapshot(ssgRef, (snap) => {
+                const map = {};
+                if (snap.exists()) {
+                    const data = snap.data() || {};
+                    Object.entries(data).forEach(([categoryName, teamArray]) => {
+                        if (!Array.isArray(teamArray)) return;
+                        teamArray.forEach((team) => {
+                            if (!team || !team.teamName) return;
+                            if (!team.groupName) return;
+                            const cat = cleanCategory(categoryName);
+                            const grp = String(team.groupName).trim();
+                            const key = `${cat}|${grp}`;
+                            if (!map[key]) map[key] = new Set();
+                            map[key].add(String(team.teamName).trim());
+                        });
+                    });
+                }
+                superstructureGroupsRef.current = map;
+                if (matchesLoadedRef.current && cateringLoadedRef.current && teamsLoadedRef.current) {
+                    rebuildAndLogTimeline();
+                }
+            }, (err) => {
+                console.error('[TRANSPORT] onSnapshot(settings/superstructureGroups) error:', err);
+            });
+        } catch (e) {
+            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na superstructureGroups:', e);
+        }
+
         // 0a3) KATEGÓRIE (trvanie zápasu)
         try {
             const catRef = doc(window.db, 'settings', 'categories');
@@ -2491,6 +2492,7 @@ const TransportApp = ({ userProfileData }) => {
             if (unsubscribeCateringSettings) unsubscribeCateringSettings();
             if (unsubscribeCategorySettings) unsubscribeCategorySettings();
             if (unsubscribeTravelTimes) unsubscribeTravelTimes();
+            if (unsubscribeSuperstructureGroups) unsubscribeSuperstructureGroups();
             if (unsubscribeBuses) unsubscribeBuses();
         };
     }, []);
