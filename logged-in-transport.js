@@ -828,11 +828,78 @@ const TransportApp = ({ userProfileData }) => {
                             // písmena), na miesto prvej udalosti tohto tímu v danom dni.
                             // ============================================================
                             const ssTeamKey = `${cleanCategory(category)}|${teamName}`;
+
+                            // Pomocná: zisti, či v danom dni existuje aspoň jeden users tím v rovnakej skupine
+                            // (podľa posledného písmena) s nejakou udalosťou.
+                            const groupCharForSS = ssGroupCharByTeam[ssTeamKey];
+                            
+                            const usersTeamHasEventsOnDay = (() => {
+                                if (!groupCharForSS) return false;
+                                if (!currentDay) return false;
+                            
+                                // Zisti, či aspoň jeden users tím v tejto kategórii a s týmto písmenom má v daný deň udalosť.
+                                return (teamsArrivalBufferRef.current || []).some((t) => {
+                                    if (cleanCategory(t.category) !== cleanCategory(category)) return false;
+                                    if (t.isRegistered !== true) return false;
+                                    if (t.isSuperstructure === true) return false;
+                                    if (!t.groupName) return false;
+                                    if (!groupBelongsToChar(t.groupName, groupCharForSS)) return false;
+                            
+                                    // Skontroluj, či má tím v tento deň nejakú udalosť (zápas alebo stravovanie).
+                                    const hasMatch = (matchesBufferRef.current || []).some((m) => {
+                                        if (cleanCategory(m.category) !== cleanCategory(category)) return false;
+                                        if (m.home !== t.teamName && m.away !== t.teamName) return false;
+                            
+                                        let dayKey = null;
+                                        if (m.scheduledTime) {
+                                            const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                            if (mm) {
+                                                const d = String(mm[1]).padStart(2, '0');
+                                                const mo = String(mm[2]).padStart(2, '0');
+                                                const y = mm[3];
+                                                dayKey = `${y}-${mo}-${d}`;
+                                            }
+                                        }
+                                        if (!dayKey && m.scheduledTs != null) {
+                                            const dt = new Date(m.scheduledTs);
+                                            dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                        }
+                                        return dayKey === currentDay;
+                                    });
+                            
+                                    if (hasMatch) return true;
+                            
+                                    const hasCatering = (cateringBufferRef.current || []).some((c) => {
+                                        if (cleanCategory(c.category) !== cleanCategory(category)) return false;
+                                        if (c.isSuperstructure === true) return false;
+                                        if (c.teamName !== t.teamName) return false;
+                                        return c.dayKey === currentDay;
+                                    });
+                            
+                                    return hasCatering;
+                                });
+                            })();
+                            
                             const isSSPlayDay =
                                 isSuperstructureTeam &&
                                 ssPlayDatesByTeam[ssTeamKey] &&
                                 currentDay != null &&
                                 ssPlayDatesByTeam[ssTeamKey].has(currentDay);
+                            
+                            // NOVÉ: superstructure tím v posledný deň turnaja – ak hrá a v jeho skupine
+                            // sú users tímy, ktoré majú v ten deň udalosť, použijeme rovnakú logiku
+                            // (ranné presuny zo skupinových miest).
+                            const isSSLastDayWithUsers = 
+                                !isSSPlayDay &&
+                                isSuperstructureTeam &&
+                                currentDay != null &&
+                                globalLastDay != null &&
+                                currentDay === globalLastDay &&
+                                groupCharForSS != null &&
+                                usersTeamHasEventsOnDay;
+                            
+                            // Zjednotená podmienka – použijeme skupinovú logiku v oboch prípadoch.
+                            const useGroupBasedMorningTransfers = isSSPlayDay || isSSLastDayWithUsers;
 
                             // ============================================================
                             // Pomocná funkcia: Zisti, či pavúkový tím (identifier obsahujúci WSF/LSF/WQF/...)
@@ -883,7 +950,7 @@ const TransportApp = ({ userProfileData }) => {
                                 };
                             };
                             
-                            if (isSSPlayDay) {
+                            if (useGroupBasedMorningTransfers) {
                                 const groupChar = ssGroupCharByTeam[ssTeamKey];
                                 const destination = current.location;
                             
