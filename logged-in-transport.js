@@ -1956,6 +1956,7 @@ const TransportApp = ({ userProfileData }) => {
                 const map = {};
                 if (snap.exists()) {
                     const data = snap.data() || {};
+                    console.log('[TRANSPORT][SSG-RAW] Raw data zo settings/superstructureGroups:', data);
                     Object.entries(data).forEach(([categoryName, teamArray]) => {
                         if (!Array.isArray(teamArray)) return;
                         teamArray.forEach((team) => {
@@ -1968,8 +1969,13 @@ const TransportApp = ({ userProfileData }) => {
                             map[key].add(String(team.teamName).trim());
                         });
                     });
+                } else {
+                    console.warn('[TRANSPORT][SSG-RAW] Dokument settings/superstructureGroups NEEXISTUJE!');
                 }
                 superstructureGroupsRef.current = map;
+                console.log('[TRANSPORT][SSG-MAP] Vytvorená mapa:', 
+                    Object.fromEntries(Object.entries(map).map(([k, v]) => [k, [...v]]))
+                );
                 if (matchesLoadedRef.current && cateringLoadedRef.current && teamsLoadedRef.current) {
                     rebuildAndLogTimeline();
                 }
