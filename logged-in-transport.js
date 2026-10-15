@@ -891,7 +891,6 @@ const TransportApp = ({ userProfileData }) => {
                                             && t.teamName === tn
                                     );
                                     if (!info) return false;
-                                    // Musí byť registrovaný v users A zároveň nesmie byť superstructure.
                                     return info.isRegistered === true && info.isSuperstructure !== true;
                                 };
                             
@@ -920,15 +919,17 @@ const TransportApp = ({ userProfileData }) => {
                                 // Mapa: teamName → { location, endTs }
                                 const teamLastEnd = new Map();
                             
-                                const updateTeamLastEnd = (teamName, location, endTs) => {
-                                    if (!teamName || !location || endTs == null) return;
-                                    const existing = teamLastEnd.get(teamName);
+                                const updateTeamLastEnd = (tn, location, endTs) => {
+                                    if (!tn || !location || endTs == null) return;
+                                    const existing = teamLastEnd.get(tn);
                                     if (!existing || endTs > existing.endTs) {
-                                        teamLastEnd.set(teamName, { location, endTs });
+                                        teamLastEnd.set(tn, { location, endTs });
                                     }
                                 };
                             
+                                // ============================================================
                                 // 1) ZÁPASY
+                                // ============================================================
                                 const currentTeamIsPavuk = /W16F|W8F|WQF|WSF|LSF/.test(String(teamName).toUpperCase());
                             
                                 matchesBufferRef.current.forEach((m) => {
@@ -974,7 +975,7 @@ const TransportApp = ({ userProfileData }) => {
                                     ].forEach(({ name: tn, identifier }) => {
                                         if (!tn) return;
                             
-                                        // !!! KĹÚČOVÉ: berieme len SKUTOČNÉ (users) tímy.
+                                        // Berieme len SKUTOČNÉ (users) tímy.
                                         if (!isRealRegisteredTeam(tn, category)) return;
                             
                                         // Musí patriť do skupiny podľa písmena.
@@ -1000,7 +1001,9 @@ const TransportApp = ({ userProfileData }) => {
                                     });
                                 });
                             
+                                // ============================================================
                                 // 2) STRAVOVANIA – berieme len SKUTOČNÉ (users) tímy
+                                // ============================================================
                                 cateringBufferRef.current.forEach((c) => {
                                     if (cleanCategory(c.category) !== cleanCategory(category)) return;
                             
@@ -1026,7 +1029,9 @@ const TransportApp = ({ userProfileData }) => {
                                     updateTeamLastEnd(tn, c.placeName || null, endTs);
                                 });
                             
-                                // Z teamLastEnd vytvor uniqueSourceLocations
+                                // ============================================================
+                                // Vytvor uniqueSourceLocations a vygeneruj presuny
+                                // ============================================================
                                 const uniqueSourceLocations = new Map();
                                 teamLastEnd.forEach((info, tn) => {
                                     if (!info || !info.location) return;
@@ -1073,81 +1078,9 @@ const TransportApp = ({ userProfileData }) => {
                                             isTransfer: true,
                                         });
                                     });
-                            }
                             
-                                // 2) STRAVOVANIA
-                                // Pre pavúkový tím stravovania skupinových tímov tiež berieme do úvahy,
-                                // ak patria do rovnakej skupiny podľa písmena.
-                                cateringBufferRef.current.forEach((c) => {
-                                    if (cleanCategory(c.category) !== cleanCategory(category)) return;
-                            
-                                    // Zisti dayKey stravovania
-                                    const dayKey = c.dayKey || null;
-                                    if (!dayKey || dayKey !== currentDay) return;
-                            
-                                    // EndTs stravovania (slotToTs alebo ts)
-                                    const endTs = c.slotToTs != null
-                                        ? c.slotToTs
-                                        : (c.ts != null ? c.ts : null);
-                            
-                                    // Pre pavúkový tím uvažujeme len stravovania tímov, ktoré patria
-                                    // do rovnakej skupiny podľa písmena.
-                                    if (currentTeamIsPavuk) {
-                                        if (!teamBelongsToChar(c.teamName, category)) return;
-                                    }
-                            
-                                    updateTeamLastEnd(c.teamName, c.placeName || null, endTs);
-                                });
-                            
-                                // Z teamLastEnd vytvor uniqueSourceLocations
-                                teamLastEnd.forEach((info, tn) => {
-                                    if (!info || !info.location) return;
-                                    if (tn === teamName) return; // preskoč seba
-                                    if (info.location === destination) return; // preskoč, ak je to rovnaké miesto
-                            
-                                    const existing = uniqueSourceLocations.get(info.location);
-                                    if (!existing || info.endTs > existing.endTs) {
-                                        uniqueSourceLocations.set(info.location, info);
-                                    }
-                                });
-                            
-                                const destinationArrivalStr =
-                                    formatFullFromTs(current.startTs) || current.when;
-                            
-                                Array.from(uniqueSourceLocations.values())
-                                    .sort((a, b) => a.endTs - b.endTs)
-                                    .forEach((info) => {
-                                        if (
-                                            info.endTs != null &&
-                                            current.startTs != null &&
-                                            info.endTs >= current.startTs
-                                        ) {
-                                            return;
-                                        }
-                            
-                                        const departureStr = formatFullFromTs(info.endTs) || '—';
-                            
-                                        let whenStr;
-                                        if (departureStr && destinationArrivalStr) {
-                                            whenStr = `${departureStr} – ${destinationArrivalStr}`;
-                                        } else if (destinationArrivalStr) {
-                                            whenStr = destinationArrivalStr;
-                                        } else {
-                                            whenStr = current.when;
-                                        }
-                            
-                                        enriched.push({
-                                            ts: current.ts - 1,
-                                            when: whenStr,
-                                            type: 'transfer',
-                                            text: `Presun z ${info.location} do ${destination}`,
-                                            location: null,
-                                            isTransfer: true,
-                                        });
-                                    });
-                            
-                                // DÔLEŽITÉ: V tomto prípade NEgenerujeme klasické
-                                // ranné presuny z ubytovní – preskočíme zvyšok bloku.
+                                // DÔLEŽITÉ: V tomto prípade NEgenerujeme klasické ranné presuny
+                                // z ubytovní – preskočíme zvyšok bloku.
                             } else {
                                 // ============================================================
                                 // PÔVODNÁ LOGIKA pre bežné (ne-superstructure) tímy
@@ -1162,23 +1095,22 @@ const TransportApp = ({ userProfileData }) => {
                                         .trim();
                                     if (!norm) return false;
                                     if (norm.includes('vlastn')) return false;
-                                    // NOVÉ: "bez dopravy" alebo "ziadna doprava" → žiadny presun z nástupnej zastávky
                                     if (norm.includes('bez dopravy')) return false;
                                     if (norm.includes('ziadna')) return false;
                                     if (norm.includes('žiadna')) return false;
                                     return true;
                                 })();
-
+                            
                                 const isGlobalFirstDay =
                                     currentDay != null &&
                                     globalFirstDay != null &&
                                     currentDay === globalFirstDay;
-
+                            
                                 const useExternalStopOnFirstDay =
                                     isGlobalFirstDay &&
                                     hasTransportType &&
                                     !!externalArrivalStop;
-
+                            
                                 const useAccommodationAsSource = (() => {
                                     if (!isGlobalFirstDay) {
                                         return shouldGenerateAccommodationTransfers;
@@ -1187,10 +1119,10 @@ const TransportApp = ({ userProfileData }) => {
                                         && !useExternalStopOnFirstDay
                                         && shouldGenerateAccommodationTransfers;
                                 })();
-
+                            
                                 const shouldGenerateMorningTransfer =
                                     useExternalStopOnFirstDay || useAccommodationAsSource;
-
+                            
                                 if (shouldGenerateMorningTransfer) {
                                     const morningFromLocations = (() => {
                                         if (useExternalStopOnFirstDay) {
@@ -1204,24 +1136,24 @@ const TransportApp = ({ userProfileData }) => {
                                         }
                                         return [];
                                     })();
-
+                            
                                     morningFromLocations.forEach(({ name: fromLocationName, isExternalStop }) => {
                                         if (!fromLocationName) return;
                                         if (fromLocationName === current.location) return;
-
+                            
                                         const fromLabel = isExternalStop
                                             ? `zastávky ${fromLocationName}`
                                             : `ubytovania ${fromLocationName}`;
-
+                            
                                         const dayRefTs =
                                             current.startTs != null
                                                 ? current.startTs
                                                 : midnightFromWhen(current.when);
-
+                            
                                         const arrivalTs = current.startTs != null ? current.startTs : null;
                                         const arrivalStr =
                                             formatFullFromTs(arrivalTs) || current.when;
-
+                            
                                         let departureTs;
                                         let departureStr;
                                         const teamArrivalTime = (arrivalTimeByTeam[category] && arrivalTimeByTeam[category][teamName]) || '';
@@ -1233,8 +1165,8 @@ const TransportApp = ({ userProfileData }) => {
                                             departureTs = timestampOnDay(dayRefTs, 0, 0);
                                             departureStr = formatFullFromTs(departureTs) || '00:00';
                                         }
-                                    
-                                        // NOVÉ: Ak je začiatok presunu neskorší alebo rovnaký ako príchod,
+                            
+                                        // Ak je začiatok presunu neskorší alebo rovnaký ako príchod,
                                         // presun sa nesmie vygenerovať.
                                         if (
                                             departureTs != null &&
@@ -1243,7 +1175,7 @@ const TransportApp = ({ userProfileData }) => {
                                         ) {
                                             return;
                                         }
-                                    
+                            
                                         let whenStr;
                                         if (departureStr && arrivalStr) {
                                             whenStr = `${departureStr} – ${arrivalStr}`;
@@ -1252,7 +1184,7 @@ const TransportApp = ({ userProfileData }) => {
                                         } else {
                                             whenStr = current.when;
                                         }
-                                    
+                            
                                         enriched.push({
                                             ts: current.ts - 1,
                                             when: whenStr,
