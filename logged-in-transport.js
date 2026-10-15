@@ -284,7 +284,7 @@ const TransportApp = ({ userProfileData }) => {
                     endTs: null,
                     when: '—',
                     type: 'group',
-                    text: `Skupina: ${t.groupName}${orderStr}`,
+                    text: `Skupina: ${t.groupName}${orderStr} (kategória: ${t.category})`,
                     location: null,
                 });
             }
