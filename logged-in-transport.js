@@ -879,24 +879,11 @@ const TransportApp = ({ userProfileData }) => {
                                 const groupChar = ssGroupCharByTeam[ssTeamKey];
                                 const destination = current.location;
                             
-                                // Nájdi pre každý tím z rovnakých skupín (rovnaké písmeno)
-                                // miesto, kde v tento deň končí jeho POSLEDNÁ UDALOSŤ (zápas alebo stravovanie).
-                                // Key: `${teamName}` → { location, endTs }
-                                const teamLastLocationByDay = {};
-                            
-                                // Pomocná funkcia na aktualizáciu posledného miesta tímu
-                                const updateTeamLastLocation = (teamName, location, endTs) => {
-                                    if (!teamName || !location || endTs == null) return;
-                                    if (
-                                        !teamLastLocationByDay[teamName] ||
-                                        endTs > teamLastLocationByDay[teamName].endTs
-                                    ) {
-                                        teamLastLocationByDay[teamName] = { location, endTs };
-                                    }
-                                };
+                                // Nájdi unikátne miesta, kde v tento deň končí POSLEDNÁ UDALOSŤ (zápas alebo stravovanie)
+                                // pre všetky tímy, ktoré patria do rovnakej skupiny (podľa písmena).
+                                const uniqueSourceLocations = new Map(); // location → { location, endTs }
                             
                                 // Pomocná funkcia: zisti, či daný tím patrí do skupiny s daným písmenom
-                                // (buď podľa groupName, alebo podľa posledného písmena v názve tímu)
                                 const teamBelongsToChar = (tn, category) => {
                                     if (!tn) return false;
                                     // 1) Skús groupName z teamsArrivalBufferRef
@@ -915,6 +902,18 @@ const TransportApp = ({ userProfileData }) => {
                                         if (teamSet.has(tn) && groupBelongsToChar(gName, groupChar)) return true;
                                     }
                                     return false;
+                                };
+                            
+                                // Pomocná funkcia na aktualizáciu posledného miesta pre daný tím.
+                                // Ukladáme len najneskorší koniec pre každý tím.
+                                const teamLastEnd = new Map(); // teamName → { location, endTs }
+                            
+                                const updateTeamLastEnd = (teamName, location, endTs) => {
+                                    if (!teamName || !location || endTs == null) return;
+                                    const existing = teamLastEnd.get(teamName);
+                                    if (!existing || endTs > existing.endTs) {
+                                        teamLastEnd.set(teamName, { location, endTs });
+                                    }
                                 };
                             
                                 // 1) ZÁPASY
@@ -995,7 +994,7 @@ const TransportApp = ({ userProfileData }) => {
                                             }
                                         }
                             
-                                        updateTeamLastLocation(tn, m.hallName || null, endTs);
+                                        updateTeamLastEnd(tn, m.hallName || null, endTs);
                                     });
                                 });
                             
@@ -1020,27 +1019,25 @@ const TransportApp = ({ userProfileData }) => {
                                         if (!teamBelongsToChar(c.teamName, category)) return;
                                     }
                             
-                                    updateTeamLastLocation(c.teamName, c.placeName || null, endTs);
+                                    updateTeamLastEnd(c.teamName, c.placeName || null, endTs);
                                 });
                             
-                                // Vytvor presuny zo všetkých miest, kde v tento deň
-                                // končí nejaký tím z tejto skupiny, na destination.
-                                const uniqueSources = new Map(); // location → max endTs
-                                Object.entries(teamLastLocationByDay).forEach(([tn, info]) => {
+                                // Z teamLastEnd vytvor uniqueSourceLocations
+                                teamLastEnd.forEach((info, tn) => {
                                     if (!info || !info.location) return;
-                                    if (tn === teamName) return;
-                                    if (info.location === destination) return;
+                                    if (tn === teamName) return; // preskoč seba
+                                    if (info.location === destination) return; // preskoč, ak je to rovnaké miesto
                             
-                                    const existing = uniqueSources.get(info.location);
+                                    const existing = uniqueSourceLocations.get(info.location);
                                     if (!existing || info.endTs > existing.endTs) {
-                                        uniqueSources.set(info.location, info);
+                                        uniqueSourceLocations.set(info.location, info);
                                     }
                                 });
                             
                                 const destinationArrivalStr =
                                     formatFullFromTs(current.startTs) || current.when;
                             
-                                Array.from(uniqueSources.values())
+                                Array.from(uniqueSourceLocations.values())
                                     .sort((a, b) => a.endTs - b.endTs)
                                     .forEach((info) => {
                                         if (
