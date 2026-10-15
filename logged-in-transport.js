@@ -281,11 +281,20 @@ const TransportApp = ({ userProfileData }) => {
     
             if (t.groupName) {
                 const orderStr = t.order != null ? `, poradie ${t.order}` : '';
-            
-                // Reálne tímy v tejto skupine zo settings/superstructureGroups
+
                 const groupKey = `${cleanCategory(t.category)}|${String(t.groupName).trim()}`;
+                const fromSuperstructure = superstructureGroupsRef.current[groupKey];
+
+                // DEBUG
+                console.log('[TRANSPORT][DEBUG-GROUP]', {
+                    groupKey,
+                    hasData: !!fromSuperstructure,
+                    size: fromSuperstructure ? fromSuperstructure.size : 0,
+                    teams: fromSuperstructure ? [...fromSuperstructure] : [],
+                    allKeys: Object.keys(superstructureGroupsRef.current),
+                });
+            
                 const teamsInThisGroup = (() => {
-                    const fromSuperstructure = superstructureGroupsRef.current[groupKey];
                     if (fromSuperstructure && fromSuperstructure.size > 0) {
                         return [...fromSuperstructure].sort((a, b) =>
                             a.localeCompare(b, 'sk', { sensitivity: 'base' })
@@ -293,76 +302,14 @@ const TransportApp = ({ userProfileData }) => {
                     }
                     return [];
                 })();
-            
-                // ============================================================
-                // NOVÉ: Pre každý tím zo skupiny zisti, kde skončil v daný deň
-                // (posledná udalosť dňa – zápas alebo stravovanie).
-                // ============================================================
-                // Daný deň = deň aktuálnej udalosti `current`? Nie – tu sme v sekcii
-                // tímov, kde ešte nevieme o `current`. Preto vypíšeme "end locations"
-                // pre VŠETKY dni, ktoré má tím v udalostiach.
-                const teamsWithEndLocations = teamsInThisGroup.map((tn) => {
-                    // Zisti všetky udalosti tohto tímu v `grouped`
-                    const teamEvents = (grouped[t.category] && grouped[t.category][tn]) || [];
-            
-                    // Pre každý deň zisti poslednú udalosť (match/catering) a jej miesto
-                    const lastEventsByDay = {};
-                    teamEvents.forEach((ev) => {
-                        if (ev.type !== 'match' && ev.type !== 'catering') return;
-                        const dayKey = extractDayKeyFromWhen(ev.when);
-                        if (!dayKey) return;
-                        const endTs =
-                            ev.endTs != null ? ev.endTs :
-                            ev.startTs != null ? ev.startTs :
-                            null;
-                        if (endTs == null) return;
-            
-                        if (
-                            !lastEventsByDay[dayKey] ||
-                            endTs > (lastEventsByDay[dayKey].endTs ?? -Infinity)
-                        ) {
-                            lastEventsByDay[dayKey] = { ev, endTs };
-                        }
-                    });
-            
-                    const endLocationsByDay = {};
-                    Object.entries(lastEventsByDay).forEach(([dayKey, { ev }]) => {
-                        const loc = ev.location || null;
-                        if (!loc) return;
-                        const timeStr = ev.endTs != null
-                            ? formatFullFromTs(ev.endTs)
-                            : (ev.startTs != null ? formatFullFromTs(ev.startTs) : null);
-                        endLocationsByDay[dayKey] = { location: loc, timeStr };
-                    });
-            
-                    return { teamName: tn, endLocationsByDay };
-                });
-            
-                // Pridaj zoznam tímov + ich end locations do textu
+
                 let teamsListStr = '';
                 if (teamsInThisGroup.length > 0) {
                     teamsListStr = '\n       • ' + teamsInThisGroup.join('\n       • ');
-            
-                    // Pridaj end locations pre každý tím
-                    const endLocationsLines = [];
-                    teamsWithEndLocations.forEach(({ teamName: tn, endLocationsByDay }) => {
-                        const dayKeys = Object.keys(endLocationsByDay).sort();
-                        if (dayKeys.length === 0) return;
-                        const parts = dayKeys.map((dk) => {
-                            const { location, timeStr } = endLocationsByDay[dk];
-                            const dayLabel = formatDateDDMMYYYY(dk) || dk;
-                            return `${dayLabel}: ${location}${timeStr ? ` (${timeStr})` : ''}`;
-                        });
-                        endLocationsLines.push(`         - ${tn}: ${parts.join(' | ')}`);
-                    });
-            
-                    if (endLocationsLines.length > 0) {
-                        teamsListStr += '\n       ── Kde tímy skončili ──\n' + endLocationsLines.join('\n');
-                    }
                 } else {
                     teamsListStr = '\n       (žiadne tímy)';
                 }
-            
+
                 arr.push({
                     ts: -Infinity,
                     startTs: null,
