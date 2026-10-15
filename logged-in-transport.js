@@ -633,6 +633,14 @@ const TransportApp = ({ userProfileData }) => {
                 if (!ssPlayDatesByTeam[key]) ssPlayDatesByTeam[key] = new Set();
             });
 
+            // NOVÉ: množina názvov superstructure tímov (celý názov) → rýchle vyhľadanie
+            const superstructureTeamNames = new Set();
+            (teamsArrivalBufferRef.current || []).forEach((t) => {
+                if (t.isSuperstructure && t.teamName) {
+                    superstructureTeamNames.add(t.teamName);
+                }
+            });
+
             // Naplň dátumy
             Object.keys(ssGroupCharByTeam).forEach((key) => {
                 const [cat, teamName] = key.split('|');
@@ -886,12 +894,26 @@ const TransportApp = ({ userProfileData }) => {
                                 // ============================================================
                                 const isRealRegisteredTeam = (tn, category) => {
                                     if (!tn) return false;
+                                
+                                    // Preskoč záznamy, ktoré nie sú skutočné mená tímov
+                                    if (String(tn).startsWith('(row team:')) return false;
+                                
+                                    // NOVÉ: presné porovnanie s množinou superstructure tímov
+                                    if (superstructureTeamNames.has(tn)) return false;
+                                
                                     const info = (teamsArrivalBufferRef.current || []).find(
                                         (t) => cleanCategory(t.category) === cleanCategory(category)
                                             && t.teamName === tn
                                     );
                                     if (!info) return false;
-                                    return info.isRegistered === true && info.isSuperstructure !== true;
+                                
+                                    // Musí byť registrovaný v users
+                                    if (info.isRegistered !== true) return false;
+                                
+                                    // Nesmie byť superstructure
+                                    if (info.isSuperstructure === true) return false;
+                                
+                                    return true;
                                 };
                             
                                 // ============================================================
