@@ -830,7 +830,7 @@ const TransportApp = ({ userProfileData }) => {
                             // Pomocná funkcia: Zisti, či pavúkový tím (identifier obsahujúci WSF/LSF/WQF/...)
                             // má nadväzujúci zápas v pavúku. Ak áno, vráti true (t.j. tím pokračuje inde).
                             // ============================================================
-                            const pavukTeamHasNextMatch = (teamIdentifier, category) => {
+                            const pavukTeamNextMatchInfo = (teamIdentifier, category) => {
                                 if (!teamIdentifier || typeof teamIdentifier !== 'string') return null;
                                 const s = teamIdentifier.toUpperCase();
 
