@@ -896,13 +896,32 @@ const TransportApp = ({ userProfileData }) => {
                                 };
                             
                                 // 1) ZÁPASY
+                                const currentTeamIsPavuk = /W16F|W8F|WQF|WSF|LSF/.test(String(teamName).toUpperCase());
+
                                 matchesBufferRef.current.forEach((m) => {
                                     if (cleanCategory(m.category) !== cleanCategory(category)) return;
+                                
+                                    // Ak je aktuálny tím pavúkový, berieme len pavúkové zápasy
+                                    if (currentTeamIsPavuk) {
+                                        const mIsPavuk = m.matchType && (
+                                            m.matchType === 'finále' ||
+                                            m.matchType === 'o 3. miesto' ||
+                                            m.matchType.startsWith('semifinále') ||
+                                            m.matchType.startsWith('štvrťfinále') ||
+                                            m.matchType.startsWith('osemfinále') ||
+                                            m.matchType.startsWith('šestnásťfinále')
+                                        );
+                                        if (!mIsPavuk) return;
+                                    }
 
-                                    // IBA zápasy priradené priamo do skupiny s daným písmenom.
+                                    // IBA zápasy priradené priamo do skupiny s daným písmenom
+                                    // (pri pavúkových zápasoch groupName zvyčajne nie je, takže toto
+                                    //  by ich vyradilo — preto pre pavúkový tím tento filter preskočíme)
                                     const matchGroup = m.groupName ? String(m.groupName).trim() : null;
-                                    if (!matchGroup) return;
-                                    if (!groupBelongsToChar(matchGroup, groupChar)) return;
+                                    if (!currentTeamIsPavuk) {
+                                        if (!matchGroup) return;
+                                        if (!groupBelongsToChar(matchGroup, groupChar)) return;
+                                    }
                                 
                                     // Zisti dayKey zápasu
                                     let dayKey = null;
@@ -920,7 +939,7 @@ const TransportApp = ({ userProfileData }) => {
                                         dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
                                     }
                                     if (!dayKey || dayKey !== currentDay) return;
-
+                                
                                     // EndTs zápasu
                                     const endTs = m.scheduledEndTs != null
                                         ? m.scheduledEndTs
@@ -938,8 +957,6 @@ const TransportApp = ({ userProfileData }) => {
                                         if (identifier) {
                                             const nextInfo = pavukTeamNextMatchInfo(identifier, category);
                                             if (nextInfo && nextInfo.hasNext) {
-                                                // Ak je nadväzujúci zápas na tom istom mieste → tím zostáva,
-                                                // negeneruj presun z tohto miesta.
                                                 if (
                                                     nextInfo.nextHallId != null &&
                                                     m.hallId != null &&
@@ -947,8 +964,6 @@ const TransportApp = ({ userProfileData }) => {
                                                 ) {
                                                     return;
                                                 }
-                                                // Ak nadväzujúci zápas nemá miesto (hallId null), tiež preskoč
-                                                // (nedá sa určiť, či ide o to isté miesto → radšej negeneruj).
                                                 if (nextInfo.nextHallId == null) {
                                                     return;
                                                 }
