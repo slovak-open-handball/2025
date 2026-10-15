@@ -293,7 +293,7 @@ const TransportApp = ({ userProfileData }) => {
                     teams: fromSuperstructure ? [...fromSuperstructure] : [],
                     allKeys: Object.keys(superstructureGroupsRef.current),
                 });
-            
+
                 const teamsInThisGroup = (() => {
                     if (fromSuperstructure && fromSuperstructure.size > 0) {
                         return [...fromSuperstructure].sort((a, b) =>
@@ -302,14 +302,14 @@ const TransportApp = ({ userProfileData }) => {
                     }
                     return [];
                 })();
-
+            
                 let teamsListStr = '';
                 if (teamsInThisGroup.length > 0) {
                     teamsListStr = '\n       • ' + teamsInThisGroup.join('\n       • ');
                 } else {
                     teamsListStr = '\n       (žiadne tímy)';
                 }
-
+            
                 arr.push({
                     ts: -Infinity,
                     startTs: null,
