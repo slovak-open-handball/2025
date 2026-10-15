@@ -899,7 +899,11 @@ const TransportApp = ({ userProfileData }) => {
                                 usersTeamHasEventsOnDay;
                             
                             // Zjednotená podmienka – použijeme skupinovú logiku v oboch prípadoch.
-                            const useGroupBasedMorningTransfers = isSSPlayDay || isSSLastDayWithUsers;
+                            const useGroupBasedMorningTransfers =
+                                isSuperstructureTeam &&
+                                currentDay != null &&
+                                groupCharForSS != null &&
+                                usersTeamHasEventsOnDay;
 
                             // ============================================================
                             // Pomocná funkcia: Zisti, či pavúkový tím (identifier obsahujúci WSF/LSF/WQF/...)
