@@ -889,31 +889,47 @@ const TransportApp = ({ userProfileData }) => {
                             
                                 // ============================================================
                                 // Pomocná funkcia: zisti, či je tím SKUTOČNÝ (users) tím.
-                                // Superstructure tímy nás pri hľadaní zdrojových miest nezaujímajú,
-                                // pretože nemajú reálne ubytovanie ani reálne miesta.
                                 // ============================================================
                                 const isRealRegisteredTeam = (tn, category) => {
                                     if (!tn) return false;
-                                
+                            
                                     // Preskoč záznamy, ktoré nie sú skutočné mená tímov
                                     if (String(tn).startsWith('(row team:')) return false;
-                                
-                                    // NOVÉ: presné porovnanie s množinou superstructure tímov
+                            
+                                    // Presné porovnanie s množinou superstructure tímov
                                     if (superstructureTeamNames.has(tn)) return false;
-                                
+                            
                                     const info = (teamsArrivalBufferRef.current || []).find(
                                         (t) => cleanCategory(t.category) === cleanCategory(category)
                                             && t.teamName === tn
                                     );
                                     if (!info) return false;
-                                
+                            
                                     // Musí byť registrovaný v users
                                     if (info.isRegistered !== true) return false;
-                                
+                            
                                     // Nesmie byť superstructure
                                     if (info.isSuperstructure === true) return false;
-                                
+                            
                                     return true;
+                                };
+                            
+                                // ============================================================
+                                // Pomocná funkcia: zisti, či daný tím patrí do skupiny s daným písmenom.
+                                // Berieme len SKUTOČNÉ (users) tímy.
+                                // ============================================================
+                                const teamBelongsToChar = (tn, category) => {
+                                    if (!tn) return false;
+                                    if (!isRealRegisteredTeam(tn, category)) return false;
+                            
+                                    // Použi len groupName z teamsArrivalBufferRef
+                                    const teamInfo = (teamsArrivalBufferRef.current || []).find(
+                                        (t) => cleanCategory(t.category) === cleanCategory(category) && t.teamName === tn
+                                    );
+                                    if (teamInfo && teamInfo.groupName) {
+                                        return groupBelongsToChar(teamInfo.groupName, groupChar);
+                                    }
+                                    return false;
                                 };
                             
                                 // Mapa: teamName → { location, endTs }
@@ -926,7 +942,7 @@ const TransportApp = ({ userProfileData }) => {
                                         teamLastEnd.set(tn, { location, endTs });
                                     }
                                 };
-                            
+                                                        
                                 // ============================================================
                                 // 1) ZÁPASY
                                 // ============================================================
