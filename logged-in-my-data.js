@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { countryDialCodes } from "./countryDialCodes.js";
 import { ChangeProfileModal } from "./logged-in-my-data-change-profile-modal.js";
@@ -434,15 +434,18 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
         const unsubscribeUsers = onSnapshot(userDocRef, async (docSnap) => {
             if (docSnap.exists()) {
                 const updatedUserData = docSnap.data();
-                
-                // Zlúčime dáta - zachováme existujúce private dáta
+        
+                // E-mail z users NEPOUŽÍVAME – berieme ho z usersprivate
+                delete updatedUserData.email;
+        
                 setUserProfileData(prevData => {
                     const mergedData = {
                         ...prevData,
                         ...updatedUserData,
                         id: userId,
                         uid: userId,
-                        // Zachováme private dáta
+                        // E-mail nechávame z private dát
+                        email: prevData?.email || '',
                         address: prevData?.address || {},
                         billingAddress: prevData?.billingAddress || {},
                         birthDate: prevData?.birthDate || '',
@@ -451,10 +454,10 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
                     
                     return mergedData;
                 });
-                
             }
         }, (error) => {
         });
+
         
         return () => {
             unsubscribeUsers();
@@ -476,20 +479,15 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
             if (docSnap.exists()) {
                 const privateDataFromFirestore = docSnap.data();
                 setPrivateData(privateDataFromFirestore);
-                
-                // Aktualizujeme userProfileData s private dátami
+        
                 setUserProfileData(prevData => {
                     const mergedData = {
                         ...prevData,
-                        // Adresa pre dobrovoľníka z usersprivate
+                        email: privateDataFromFirestore.email || prevData?.email || '',
                         address: privateDataFromFirestore.address || {},
-                        // Adresa pre fakturáciu (môže byť samostatná)
                         billingAddress: privateDataFromFirestore.billingAddress || privateDataFromFirestore.address || {},
-                        // Dátum narodenia pre dobrovoľníka z usersprivate
                         birthDate: privateDataFromFirestore.birthDate || prevData?.birthDate || '',
-                        // Ostatné private dáta
                         persons: privateDataFromFirestore.persons || {},
-                        // Priame polia pre jednoduchší prístup (pre kompatibilitu)
                         street: privateDataFromFirestore.address?.street || prevData?.street || '',
                         houseNumber: privateDataFromFirestore.address?.houseNumber || prevData?.houseNumber || '',
                         city: privateDataFromFirestore.address?.city || prevData?.city || '',
@@ -499,7 +497,6 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
                     
                     return mergedData;
                 });
-                
             }
         }, (error) => {
         });
@@ -785,6 +782,7 @@ const processUserData = async (userProfileData) => {
     const mergedData = {
         ...userProfileData,
         uid: userId,
+        email: privateData.email || userProfileData.email || '',
         // Adresa pre dobrovoľníka z usersprivate
         address: privateData.address || {},
         // Adresa pre fakturáciu z usersprivate (alebo rovnaká)
@@ -808,23 +806,29 @@ const processUserData = async (userProfileData) => {
         onAuthStateChanged(window.auth, async (user) => {
             if (user) {
                 try {
-                    const userProfileRef = doc(window.db, 'users', user.uid);
-                    const docSnap = await getDoc(userProfileRef);
-        
-                    if (docSnap.exists()) {
-                        const firestoreEmail = docSnap.data().email;
-                        if (user.email !== firestoreEmail) {                                
-                            await updateDoc(userProfileRef, {
+                    // E-MAIL SYNCHRONIZUJEME DO usersprivate, NIE DO users
+                    const userPrivateRef = doc(window.db, 'usersprivate', user.uid);
+                    const privateSnap = await getDoc(userPrivateRef);
+                    
+                    if (privateSnap.exists()) {
+                        const privateFirestoreEmail = privateSnap.data().email;
+                        if (user.email !== privateFirestoreEmail) {
+                            await updateDoc(userPrivateRef, {
                                 email: user.email
-                            });            
+                            });
+                    
                             const notificationsCollectionRef = collection(window.db, 'notifications');
                             await addDoc(notificationsCollectionRef, {
                                 userEmail: user.email,
-                                changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
+                                changes: `Zmena e-mailovej adresy z '${privateFirestoreEmail || '-'}' na '${user.email}'.`,
                                 timestamp: new Date(),
-                            });                                
-                            window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');            
+                            });
+                    
+                            window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná v usersprivate.', 'success');
                         }
+                    } else {
+                        // Ak usersprivate dokument neexistuje, vytvoríme ho s e-mailom
+                        await setDoc(userPrivateRef, { email: user.email }, { merge: true });
                     }
                 } catch (error) {
                     window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
