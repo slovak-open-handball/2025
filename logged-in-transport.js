@@ -3191,20 +3191,24 @@ const handleDataUpdateAndRender = (event) => {
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
                     try {
-                        const userProfileRef = doc(window.db, 'users', user.uid);
-                        const docSnap = await getDoc(userProfileRef);
-                        if (docSnap.exists()) {
-                            const firestoreEmail = docSnap.data().email;
-                            if (user.email !== firestoreEmail) {
-                                await updateDoc(userProfileRef, { email: user.email });
+                        // E-MAIL SYNCHRONIZUJEME DO usersprivate, NIE DO users
+                        const userPrivateRef = doc(window.db, 'usersprivate', user.uid);
+                        const privateSnap = await getDoc(userPrivateRef);
+                        if (privateSnap.exists()) {
+                            const privateFirestoreEmail = privateSnap.data().email;
+                            if (user.email !== privateFirestoreEmail) {
+                                await updateDoc(userPrivateRef, { email: user.email });
                                 const notificationsCollectionRef = collection(window.db, 'notifications');
                                 await addDoc(notificationsCollectionRef, {
                                     userEmail: user.email,
-                                    changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
+                                    changes: `Zmena e-mailovej adresy z '${privateFirestoreEmail || '-'}' na '${user.email}'.`,
                                     timestamp: new Date(),
                                 });
-                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
+                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná v usersprivate.', 'success');
                             }
+                        } else {
+                            // Ak usersprivate dokument neexistuje, vytvoríme ho s e-mailom
+                            await setDoc(userPrivateRef, { email: user.email }, { merge: true });
                         }
                     } catch (error) {
                         window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
