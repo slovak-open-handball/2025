@@ -4074,68 +4074,112 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         const [memberDataCache, setMemberDataCache] = React.useState({});        
         const isMatchCompleted = currentMatchStatus === 'completed';        
         const loadMemberDetails = async (userId, categoryName, teamName, memberTypeKey, memberIndex, eventId) => {
-            if (!userId || !memberTypeKey || memberIndex === undefined) {
+            if (!memberTypeKey || memberIndex === undefined) {
                 return { name: 'Neznámy hráč', jerseyNumber: '', jerseyNumber2: '' };
             }            
-            const cacheKey = `${userId}_${memberTypeKey}_${memberIndex}`;
+            const cacheKey = `${userId || 'noid'}_${memberTypeKey}_${memberIndex}_${categoryName || ''}_${teamName || ''}`;
             if (memberDataCache[cacheKey]) {
                 return memberDataCache[cacheKey];
             }            
+            
+            const extractMember = (team) => {
+                if (!team) return null;
+                if (memberTypeKey === 'playerDetails' && team.playerDetails && team.playerDetails[memberIndex]) {
+                    return team.playerDetails[memberIndex];
+                }
+                if (memberTypeKey === 'menTeamMemberDetails' && team.menTeamMemberDetails && team.menTeamMemberDetails[memberIndex]) {
+                    return team.menTeamMemberDetails[memberIndex];
+                }
+                if (memberTypeKey === 'womenTeamMemberDetails' && team.womenTeamMemberDetails && team.womenTeamMemberDetails[memberIndex]) {
+                    return team.womenTeamMemberDetails[memberIndex];
+                }
+                return null;
+            };
+            
+            const buildResult = (member) => {
+                const data = {
+                    name: `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy hráč',
+                    jerseyNumber: member.jerseyNumber || '',
+                    jerseyNumber2: member.jerseyNumber2 || ''
+                };
+                setMemberDataCache(prev => ({ ...prev, [cacheKey]: data }));
+                return data;
+            };
+            
             try {
-                const userRef = doc(window.db, 'users', userId);
-                const userSnap = await getDoc(userRef);
-                
-                if (userSnap.exists()) {
-                    const userData = userSnap.data();
-                    const teams = userData.teams || {};
-                    
-                    // 🔥 Prejdeme VŠETKY kategórie a tímy – nezávisle od názvu.
-                    // memberTypeKey + memberIndex je jedinečná kombinácia v rámci tímu,
-                    // ale aby sme sa vyhli kolízii medzi tímami, preferujeme zhodu categoryName/teamName ak sú dostupné.
-                    const candidates = [];
-                    
-                    for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                        for (const team of (teamsArray || [])) {
-                            let member = null;
-                            
-                            if (memberTypeKey === 'playerDetails' && team.playerDetails && team.playerDetails[memberIndex]) {
-                                member = team.playerDetails[memberIndex];
-                            } else if (memberTypeKey === 'menTeamMemberDetails' && team.menTeamMemberDetails && team.menTeamMemberDetails[memberIndex]) {
-                                member = team.menTeamMemberDetails[memberIndex];
-                            } else if (memberTypeKey === 'womenTeamMemberDetails' && team.womenTeamMemberDetails && team.womenTeamMemberDetails[memberIndex]) {
-                                member = team.womenTeamMemberDetails[memberIndex];
+                // 🔥 KROK 1: Skús pôvodného používateľa z event.userId
+                if (userId) {
+                    const userSnap = await getDoc(doc(window.db, 'users', userId));
+                    if (userSnap.exists()) {
+                        const teams = userSnap.data().teams || {};
+                        
+                        // Preferuj zhodu categoryName + teamName, inak categoryName, inak prvý nájdený
+                        const candidates = [];
+                        for (const [categoryKey, teamsArray] of Object.entries(teams)) {
+                            for (const team of (teamsArray || [])) {
+                                const member = extractMember(team);
+                                if (member) {
+                                    candidates.push({ categoryKey, teamName: team.teamName, member });
+                                }
                             }
-                            
-                            if (member) {
-                                candidates.push({ categoryKey, teamName: team.teamName, member });
+                        }
+                        
+                        if (candidates.length > 0) {
+                            let chosen = candidates.find(c => 
+                                c.categoryKey === categoryName && c.teamName === teamName
+                            );
+                            if (!chosen) chosen = candidates.find(c => c.categoryKey === categoryName);
+                            if (!chosen) chosen = candidates[0];
+                            return buildResult(chosen.member);
+                        }
+                    }
+                }
+                
+                // 🔥 KROK 2: Prejdi VŠETKÝCH používateľov a nájdi tím podľa teamName + categoryName
+                // (pre prípad, že sa zmenilo userId alebo tím prešiel pod iný účet)
+                const usersSnapshot = await getDocs(collection(window.db, 'users'));
+                
+                // 2a) Najprv presná zhoda categoryName + teamName
+                if (categoryName && teamName) {
+                    for (const userDoc of usersSnapshot.docs) {
+                        const teams = userDoc.data().teams || {};
+                        for (const [categoryKey, teamsArray] of Object.entries(teams)) {
+                            if (categoryKey !== categoryName) continue;
+                            const team = (teamsArray || []).find(t => t.teamName === teamName);
+                            if (team) {
+                                const member = extractMember(team);
+                                if (member) return buildResult(member);
                             }
                         }
                     }
-                    
-                    if (candidates.length > 0) {
-                        // Priorita: 1) zhoda categoryName aj teamName, 2) zhoda categoryName, 3) prvý kandidát
-                        let chosen = candidates.find(c => 
-                            c.categoryKey === categoryName && c.teamName === teamName
-                        );
-                        if (!chosen) {
-                            chosen = candidates.find(c => c.categoryKey === categoryName);
+                }
+                
+                // 2b) Potom zhoda len podľa categoryName (teamName sa mohol premenovať)
+                if (categoryName) {
+                    for (const userDoc of usersSnapshot.docs) {
+                        const teams = userDoc.data().teams || {};
+                        for (const [categoryKey, teamsArray] of Object.entries(teams)) {
+                            if (categoryKey !== categoryName) continue;
+                            for (const team of (teamsArray || [])) {
+                                const member = extractMember(team);
+                                if (member) return buildResult(member);
+                            }
                         }
-                        if (!chosen) {
-                            chosen = candidates[0];
+                    }
+                }
+                
+                // 2c) Posledný fallback – hľadaj podľa memberTypeKey + memberIndex vo všetkých tímoch
+                for (const userDoc of usersSnapshot.docs) {
+                    const teams = userDoc.data().teams || {};
+                    for (const teamsArray of Object.values(teams)) {
+                        for (const team of (teamsArray || [])) {
+                            const member = extractMember(team);
+                            if (member) return buildResult(member);
                         }
-                        
-                        const member = chosen.member;
-                        const memberData = {
-                            name: `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy hráč',
-                            jerseyNumber: member.jerseyNumber || '',
-                            jerseyNumber2: member.jerseyNumber2 || ''
-                        };
-                        
-                        setMemberDataCache(prev => ({ ...prev, [cacheKey]: memberData }));
-                        return memberData;
                     }
                 }
             } catch (err) {
+                console.error('loadMemberDetails error:', err);
             }
             
             return { name: 'Neznámy hráč', jerseyNumber: '', jerseyNumber2: '' };
