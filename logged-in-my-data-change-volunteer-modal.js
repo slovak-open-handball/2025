@@ -203,7 +203,7 @@ const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor, priva
                 phone: restNumber,
             });
         }
-    }, [show, userProfileData]);
+    }, [show, userProfileData, privateData]);
 
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
