@@ -2,9 +2,24 @@ import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, getD
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef, useSyncExternalStore, useCallback } = React;
 const createGroupChangeNotification = async (actionType, changesArray, groupData) => {
-    if (!window.db || !changesArray?.length) return;    
+    if (!window.db || !changesArray?.length) return;
+
     try {
-        const currentUserEmail = window.globalUserProfileData?.email || null;        
+        // E-MAIL VÝHRADNE Z usersprivate
+        const auth = window.auth;
+        const currentUser = auth?.currentUser;
+
+        let currentUserEmail = null;
+
+        if (currentUser) {
+            const userPrivateRef = doc(window.db, 'usersprivate', currentUser.uid);
+            const privateSnap = await getDoc(userPrivateRef);
+
+            if (privateSnap.exists()) {
+                currentUserEmail = privateSnap.data().email || null;
+            }
+        }
+
         await addDoc(collection(window.db, 'notifications'), {
             userEmail: currentUserEmail || "",
             performedBy: currentUserEmail || null,
@@ -990,7 +1005,8 @@ const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
     if (userProfileData) {
-        if (window.auth && window.db && !isEmailSyncListenerSetup) {            
+        if (window.auth && window.db && !isEmailSyncListenerSetup) {
+            isEmailSyncListenerSetup = true;
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
                     try {
@@ -1009,7 +1025,7 @@ const handleDataUpdateAndRender = (event) => {
                                 await addDoc(notificationsCollectionRef, {
                                     userEmail: user.email,
                                     changes: `Zmena e-mailovej adresy z '${privateFirestoreEmail || '-'}' na '${user.email}'.`,
-                                    timestamp: new Date(),
+                                    timestamp: Timestamp.now(),
                                 });
 
                                 window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná v usersprivate.', 'success');
