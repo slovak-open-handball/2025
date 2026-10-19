@@ -388,8 +388,6 @@ const App = () => {
             const userData = {
                 firstName: formData.firstName,
                 lastName: formData.lastName,
-                email: formData.email,
-                contactPhoneNumber: contactPhoneNumber,
                 role: 'volunteer',
                 approved: true,
                 gender: formData.gender,
@@ -406,6 +404,8 @@ const App = () => {
             const privateData = {
                 role: 'volunteer',
                 approved: true,
+                email: formData.email,
+                contactPhoneNumber: contactPhoneNumber,
                 // Adresa používateľa
                 address: {
                     street: formData.street || '',
