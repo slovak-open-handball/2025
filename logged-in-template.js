@@ -79,7 +79,7 @@ const handleDataUpdateAndRender = (event) => {
                                 await addDoc(notificationsCollectionRef, {
                                     userEmail: user.email,
                                     changes: `Zmena e-mailovej adresy z '${privateFirestoreEmail || '-'}' na '${user.email}'.`,
-                                    timestamp: new Date(),
+                                    timestamp: Timestamp.now(),
                                 });
                                 window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná v usersprivate.', 'success');
                             }
