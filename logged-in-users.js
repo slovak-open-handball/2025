@@ -17,7 +17,9 @@ import {
   serverTimestamp,
   deleteField,
   getDocs,
-  addDoc
+  addDoc,
+  documentId,
+  where  
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // NotificationModal Component
@@ -652,6 +654,11 @@ function UsersManagementApp() {
               id: docSnapshot.id,
               ...docSnapshot.data()
             };
+
+            if (userData.hasOwnProperty('email')) {
+                await updateDoc(doc(db, 'users', userData.id), { email: deleteField() });
+                delete userData.email;
+              }
   
             // === SPRÁVNE SPRACOVANIE DEADLINOV ===
             if (userData.role === 'admin' || userData.role === 'hall') {
@@ -700,6 +707,15 @@ function UsersManagementApp() {
             }
   
             return userData;
+          }));
+
+          await Promise.all(usersList.map(async (u) => {
+            try {
+              const privateDoc = await getDoc(doc(db, 'usersprivate', u.id));
+              u.email = privateDoc.exists() ? (privateDoc.data().email || '') : '';
+            } catch (e) {
+              u.email = '';
+            }
           }));
   
           // Nastavenie najstaršieho admina
