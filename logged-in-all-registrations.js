@@ -3945,6 +3945,8 @@ function AllRegistrationsApp() {
     
                 const mergedUser = {
                     ...user,
+                    email: privateData.email || user.email || '',
+                    contactPhoneNumber: privateData.contactPhoneNumber || user.contactPhoneNumber || '',
                     street: privateData.address?.street || '',
                     houseNumber: privateData.address?.houseNumber || '',
                     city: privateData.address?.city || '',
@@ -4411,6 +4413,8 @@ function AllRegistrationsApp() {
     
                 // 1. ULOŽENIE CITLIVÝCH ÚDAJOV DO usersprivate
                 const privateData = {
+                    email: updatedDataFromModal.email || '',
+                    contactPhoneNumber: updatedDataFromModal.contactPhoneNumber || '',
                     address: {
                         street: updatedDataFromModal.street || '',
                         houseNumber: updatedDataFromModal.houseNumber || '',
@@ -4436,7 +4440,6 @@ function AllRegistrationsApp() {
                 const userData = {
                     firstName: updatedDataFromModal.firstName,
                     lastName: updatedDataFromModal.lastName,
-                    contactPhoneNumber: updatedDataFromModal.contactPhoneNumber,
                     volunteerRoles: updatedDataFromModal.volunteerRoles || [],
                     selectedDates: updatedDataFromModal.selectedDates || [],
                     tshirtSize: updatedDataFromModal.tshirtSize || '',
@@ -4664,7 +4667,7 @@ function AllRegistrationsApp() {
                 const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
                             
                 // POLIA, KTORÉ PATRIA DO PRIVATE DATA
-                const privateFields = ['street', 'houseNumber', 'city', 'postalCode', 'country', 'birthDate', 'dateOfBirth'];
+                const privateFields = ['street', 'houseNumber', 'city', 'postalCode', 'country', 'birthDate', 'dateOfBirth', 'email', 'contactPhoneNumber'];
                 
                 let finalDataToSave = { ...currentDocData };
                 delete finalDataToSave._privateData;
@@ -4786,6 +4789,14 @@ function AllRegistrationsApp() {
                 if (updatedBirthDate) {
                     privateData.birthDate = updatedBirthDate;
                 }
+
+                privateData.email = updatedDataFromModal.email !== undefined
+                    ? updatedDataFromModal.email
+                    : (currentDocData.email || '');
+
+                privateData.contactPhoneNumber = updatedDataFromModal.contactPhoneNumber !== undefined
+                    ? updatedDataFromModal.contactPhoneNumber
+                    : (currentDocData.contactPhoneNumber || '');
             
                 // ULOŽENIE BILLING ADRESY DO PRIVATE DATA (oddelené od billing polí)
                 privateData.billingAddress = {
