@@ -4792,11 +4792,11 @@ function AllRegistrationsApp() {
 
                 privateData.email = updatedDataFromModal.email !== undefined
                     ? updatedDataFromModal.email
-                    : (currentDocData.email || '');
+                    : (privateData.email || currentDocData.email || '');
 
                 privateData.contactPhoneNumber = updatedDataFromModal.contactPhoneNumber !== undefined
                     ? updatedDataFromModal.contactPhoneNumber
-                    : (currentDocData.contactPhoneNumber || '');
+                    : (privateData.contactPhoneNumber || currentDocData.contactPhoneNumber || '');
             
                 // ULOŽENIE BILLING ADRESY DO PRIVATE DATA (oddelené od billing polí)
                 privateData.billingAddress = {
