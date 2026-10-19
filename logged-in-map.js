@@ -3475,7 +3475,8 @@ const handleDataUpdateAndRender = (event) => {
             onAuthStateChanged(window.auth, async user => {
                 if (user) {
                     try {
-                        const ref = doc(window.db, 'users', user.uid);
+                        // E-MAIL SYNCHRONIZUJEME DO usersprivate, NIE DO users
+                        const ref = doc(window.db, 'usersprivate', user.uid);
                         const snap = await getDoc(ref);
                         if (snap.exists()) {
                             const oldEmail = snap.data().email;
@@ -3483,11 +3484,14 @@ const handleDataUpdateAndRender = (event) => {
                                 await updateDoc(ref, { email: user.email });
                                 await addDoc(collection(window.db, 'notifications'), {
                                     userEmail: user.email,
-                                    changes: `Zmena e-mailu z '${oldEmail}' na '${user.email}'`,
+                                    changes: `Zmena e-mailu z '${oldEmail || '-'}' na '${user.email}'`,
                                     timestamp: new Date(),
                                 });
-                                window.showGlobalNotification('E-mail aktualizovaný', 'success');
+                                window.showGlobalNotification('E-mail aktualizovaný v usersprivate', 'success');
                             }
+                        } else {
+                            // Ak usersprivate dokument neexistuje, vytvoríme ho s e-mailom
+                            await setDoc(ref, { email: user.email }, { merge: true });
                         }
                     } catch (err) {
                         window.showGlobalNotification('Chyba pri aktualizácii e-mailu', 'error');
