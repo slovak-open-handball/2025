@@ -1026,8 +1026,6 @@ function App() {
         const userData = {
           firstName: formData.firstName,
           lastName: formData.lastName,
-          email: formData.email,
-          contactPhoneNumber: fullPhoneNumber,
           billing: {
             clubName: formData.billing.clubName || '',
             ico: formData.billing.ico || '',
