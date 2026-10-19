@@ -580,7 +580,7 @@ function AddCategoriesApp() {
     }
     try {
       const notificationsCollectionRef = collection(db, 'notifications');
-      const userEmail = privateData?.email || user.email || ''; // Používame priamo user.email, ktorý by mal byť dostupný
+      const userEmail = privateData?.email || '';
       const currentTimestamp = new Date().toISOString(); 
       const changesToAdd = []; 
 
