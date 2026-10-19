@@ -1049,6 +1049,8 @@ function App() {
         const privateData = {
             role: 'club', 
             approved: true,
+            email: formData.email,
+            contactPhoneNumber: fullPhoneNumber,
             persons: {}
         };
   
