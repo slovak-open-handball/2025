@@ -305,7 +305,6 @@ function AddCategoriesApp() {
   const [user, setUser] = React.useState(null); 
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false); 
-
   const [loading, setLoading] = React.useState(true); 
   const [categories, setCategories] = React.useState([]); 
   const [showAddCategoryModal, setShowAddCategoryModal] = React.useState(false); 
@@ -313,8 +312,8 @@ function AddCategoriesApp() {
   const [categoryToEdit, setCategoryToEdit] = React.useState(null); 
   const [showConfirmDeleteModal, setShowConfirmDeleteModal] = React.useState(false); 
   const [categoryToDelete, setCategoryToDelete] = React.useState(null); 
-
   const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
+  const [privateData, setPrivateData] = React.useState({});
 
   // NOVINKA: Stav pre aktuálny čas, ktorý sa bude aktualizovať každú sekundu
   const [currentTime, setCurrentTime] = React.useState(new Date());
@@ -420,6 +419,26 @@ function AddCategoriesApp() {
       }
     };
   }, [user, db, isAuthReady, auth]);
+
+  React.useEffect(() => {
+    let unsubscribePrivate;
+    if (user && db && isAuthReady) {
+        const privateDocRef = doc(db, 'usersprivate', user.uid);
+        unsubscribePrivate = onSnapshot(privateDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setPrivateData(docSnap.data());
+            } else {
+                setPrivateData({});
+            }
+        }, (error) => {
+            console.error("AddCategoriesApp: Chyba pri načítaní usersprivate:", error);
+            setPrivateData({});
+        });
+    }
+    return () => {
+        if (unsubscribePrivate) unsubscribePrivate();
+    };
+  }, [user, db, isAuthReady]);
 
   React.useEffect(() => {
     let unsubscribeRegistration;
@@ -561,7 +580,7 @@ function AddCategoriesApp() {
     }
     try {
       const notificationsCollectionRef = collection(db, 'notifications');
-      const userEmail = user.email; // Používame priamo user.email, ktorý by mal byť dostupný
+      const userEmail = privateData?.email || user.email || ''; // Používame priamo user.email, ktorý by mal byť dostupný
       const currentTimestamp = new Date().toISOString(); 
       const changesToAdd = []; 
 
@@ -656,7 +675,7 @@ function AddCategoriesApp() {
         showLocalNotification(`Kategória s názvom ${trimmedCategoryName} pridaná.`, 'success');
       }
 
-      const userEmail = user.email;
+      const userEmail = privateData?.email || user.email || '';
       await sendAdminNotification({ type: 'create', data: { newCategoryName: trimmedCategoryName, userEmail: userEmail } });
 
       return true; 
@@ -723,7 +742,7 @@ function AddCategoriesApp() {
       setShowEditCategoryModal(false); 
       setCategoryToEdit(null);
 
-      const userEmail = user.email;
+      const userEmail = privateData?.email || user.email || '';
       await sendAdminNotification({ 
           type: 'edit', 
           data: { 
@@ -772,7 +791,7 @@ function AddCategoriesApp() {
       }
       setCategoryToDelete(null);
 
-      const userEmail = user.email;
+      const userEmail = privateData?.email || user.email || '';
       await sendAdminNotification({ type: 'delete', data: { categoryName: categoryToDelete.name, userEmail: userEmail } });
 
     } catch (e) {
