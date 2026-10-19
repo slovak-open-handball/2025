@@ -92,7 +92,7 @@ const DialCodeModal = ({ isOpen, onClose, onSelect, selectedDialCode, unlockedBu
     );
 };
 
-const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor }) => {
+const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor, privateData }) => {
     const [formData, setFormData] = React.useState({
         street: '',
         houseNumber: '',
@@ -168,7 +168,7 @@ const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor }) => 
     React.useEffect(() => {
         if (show && userProfileData) {
             // Extrahovanie telefónneho čísla a predvoľby
-            let phone = userProfileData.contactPhoneNumber || '';
+            let phone = (privateData && privateData.contactPhoneNumber) || userProfileData.contactPhoneNumber || '';
             let dialCode = '+421';
             let restNumber = '';
             const sortedDialCodes = [...countryDialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
@@ -425,8 +425,7 @@ const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor }) => 
                 tshirtSize: formData.tshirtSize,
                 volunteerRoles: formData.volunteerRoles,
                 selectedDates: formData.selectedDates,
-                note: formData.note,
-                contactPhoneNumber: contactPhoneNumber,
+                note: formData.note
             });
             
             // 2. UPDATE V KOLEKCII 'usersprivate' - ADRESA A DÁTUM NARODENIA
@@ -439,6 +438,7 @@ const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor }) => 
                     country: formData.country
                 },
                 birthDate: formData.birthDate,
+                contactPhoneNumber: contactPhoneNumber,
             });
             
             // --- VYTVORENIE NOTIFIKÁCIE PRE SPRÁVCU ---
