@@ -1853,19 +1853,22 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                         'div',
                                         { 
                                             key: place.id,
-                                            className: `p-4 rounded-lg border cursor-pointer transition-all ${
+                                            className: `p-4 rounded-lg border transition-all ${
                                                 selectedAccommodationId === place.id
                                                     ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                                                    : 'border-gray-300 hover:bg-gray-50'
+                                                    : 'border-gray-300'
                                             } ${
-                                                !canAccommodate ? 'opacity-60 cursor-not-allowed' : ''
+                                                !canAccommodate 
+                                                    ? 'opacity-60 cursor-not-allowed' 
+                                                    : 'cursor-pointer hover:bg-gray-50'
                                             }`
                                         },
                                         React.createElement(
                                             'div',
                                             { 
                                                 className: 'flex items-start gap-3',
-                                                onClick: () => canAccommodate && setSelectedAccommodationId(place.id)
+                                                onClick: () => canAccommodate && setSelectedAccommodationId(place.id),
+                                                style: !canAccommodate ? { cursor: 'not-allowed' } : {}
                                             },
                                             React.createElement(
                                                 'div',
