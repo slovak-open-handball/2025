@@ -3945,7 +3945,7 @@ function AllRegistrationsApp() {
     
                 const mergedUser = {
                     ...user,
-                    email: privateData.email || user.email || '',
+                    email: privateData.email || '',
                     contactPhoneNumber: privateData.contactPhoneNumber || user.contactPhoneNumber || '',
                     street: privateData.address?.street || '',
                     houseNumber: privateData.address?.houseNumber || '',
