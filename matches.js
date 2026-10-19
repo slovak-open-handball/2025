@@ -2302,6 +2302,19 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 return memberDataCache[cacheKey];
             }            
             try {
+                // 🔥 Preklad zobrazovaného názvu tímu na pôvodný názov v users
+                let actualTeamName = teamName;
+                if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                    try {
+                        const convertedName = await resolveTeamNameViaTeamManager(teamName);
+                        if (convertedName && convertedName !== teamName && convertedName !== 'null') {
+                            actualTeamName = convertedName;
+                        }
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+                
                 const userRef = doc(window.db, 'users', userId);
                 const userSnap = await getDoc(userRef);
                 
@@ -2312,7 +2325,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     for (const [categoryKey, teamsArray] of Object.entries(teams)) {
                         if (categoryKey !== categoryName) continue;
                         
-                        const foundTeam = (teamsArray || []).find(t => t.teamName === teamName);
+                        // 🔥 Skúsime najprv actualTeamName, potom pôvodný teamName (fallback)
+                        const foundTeam = (teamsArray || []).find(t => 
+                            t.teamName === actualTeamName || t.teamName === teamName
+                        );
                         
                         if (foundTeam) {
                             let member = null;
