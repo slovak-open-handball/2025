@@ -2297,24 +2297,11 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             if (!userId || !memberTypeKey || memberIndex === undefined) {
                 return { name: 'Neznámy hráč', jerseyNumber: '', jerseyNumber2: '' };
             }            
-            const cacheKey = `${userId}_${categoryName}_${teamName}_${memberTypeKey}_${memberIndex}`;
+            const cacheKey = `${userId}_${memberTypeKey}_${memberIndex}`;
             if (memberDataCache[cacheKey]) {
                 return memberDataCache[cacheKey];
             }            
             try {
-                // 🔥 Preklad zobrazovaného názvu tímu na pôvodný názov v users
-                let actualTeamName = teamName;
-                if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                    try {
-                        const convertedName = await resolveTeamNameViaTeamManager(teamName);
-                        if (convertedName && convertedName !== teamName && convertedName !== 'null') {
-                            actualTeamName = convertedName;
-                        }
-                    } catch (e) {
-                        // ignore
-                    }
-                }
-                
                 const userRef = doc(window.db, 'users', userId);
                 const userSnap = await getDoc(userRef);
                 
@@ -2322,36 +2309,50 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     const userData = userSnap.data();
                     const teams = userData.teams || {};
                     
+                    // 🔥 Prejdeme VŠETKY kategórie a tímy – nezávisle od názvu.
+                    // memberTypeKey + memberIndex je jedinečná kombinácia v rámci tímu,
+                    // ale aby sme sa vyhli kolízii medzi tímami, preferujeme zhodu categoryName/teamName ak sú dostupné.
+                    const candidates = [];
+                    
                     for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                        if (categoryKey !== categoryName) continue;
-                        
-                        // 🔥 Skúsime najprv actualTeamName, potom pôvodný teamName (fallback)
-                        const foundTeam = (teamsArray || []).find(t => 
-                            t.teamName === actualTeamName || t.teamName === teamName
-                        );
-                        
-                        if (foundTeam) {
+                        for (const team of (teamsArray || [])) {
                             let member = null;
                             
-                            if (memberTypeKey === 'playerDetails' && foundTeam.playerDetails && foundTeam.playerDetails[memberIndex]) {
-                                member = foundTeam.playerDetails[memberIndex];
-                            } else if (memberTypeKey === 'menTeamMemberDetails' && foundTeam.menTeamMemberDetails && foundTeam.menTeamMemberDetails[memberIndex]) {
-                                member = foundTeam.menTeamMemberDetails[memberIndex];
-                            } else if (memberTypeKey === 'womenTeamMemberDetails' && foundTeam.womenTeamMemberDetails && foundTeam.womenTeamMemberDetails[memberIndex]) {
-                                member = foundTeam.womenTeamMemberDetails[memberIndex];
+                            if (memberTypeKey === 'playerDetails' && team.playerDetails && team.playerDetails[memberIndex]) {
+                                member = team.playerDetails[memberIndex];
+                            } else if (memberTypeKey === 'menTeamMemberDetails' && team.menTeamMemberDetails && team.menTeamMemberDetails[memberIndex]) {
+                                member = team.menTeamMemberDetails[memberIndex];
+                            } else if (memberTypeKey === 'womenTeamMemberDetails' && team.womenTeamMemberDetails && team.womenTeamMemberDetails[memberIndex]) {
+                                member = team.womenTeamMemberDetails[memberIndex];
                             }
                             
                             if (member) {
-                                const memberData = {
-                                    name: `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy hráč',
-                                    jerseyNumber: member.jerseyNumber || '',
-                                    jerseyNumber2: member.jerseyNumber2 || ''
-                                };
-                                
-                                setMemberDataCache(prev => ({ ...prev, [cacheKey]: memberData }));
-                                return memberData;
+                                candidates.push({ categoryKey, teamName: team.teamName, member });
                             }
                         }
+                    }
+                    
+                    if (candidates.length > 0) {
+                        // Priorita: 1) zhoda categoryName aj teamName, 2) zhoda categoryName, 3) prvý kandidát
+                        let chosen = candidates.find(c => 
+                            c.categoryKey === categoryName && c.teamName === teamName
+                        );
+                        if (!chosen) {
+                            chosen = candidates.find(c => c.categoryKey === categoryName);
+                        }
+                        if (!chosen) {
+                            chosen = candidates[0];
+                        }
+                        
+                        const member = chosen.member;
+                        const memberData = {
+                            name: `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy hráč',
+                            jerseyNumber: member.jerseyNumber || '',
+                            jerseyNumber2: member.jerseyNumber2 || ''
+                        };
+                        
+                        setMemberDataCache(prev => ({ ...prev, [cacheKey]: memberData }));
+                        return memberData;
                     }
                 }
             } catch (err) {
