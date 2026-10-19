@@ -178,7 +178,9 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             userProfileData.role !== 'admin' && userProfileData.role !== 'hall' && 
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, phoneLabel),
-                React.createElement('div', { className: 'font-normal' }, formatPhoneNumber(userProfileData.contactPhoneNumber))
+                React.createElement('div', { className: 'font-normal' }, 
+                    formatPhoneNumber(userProfileData.contactPhoneNumber)
+                )
             ),
             userProfileData.club && userProfileData.club !== '' &&
             React.createElement('div', null,
@@ -484,6 +486,7 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
                     const mergedData = {
                         ...prevData,
                         email: privateDataFromFirestore.email || prevData?.email || '',
+                        contactPhoneNumber: privateDataFromFirestore.contactPhoneNumber || prevData?.contactPhoneNumber || '',
                         address: privateDataFromFirestore.address || {},
                         billingAddress: privateDataFromFirestore.billingAddress || privateDataFromFirestore.address || {},
                         birthDate: privateDataFromFirestore.birthDate || prevData?.birthDate || '',
@@ -783,6 +786,7 @@ const processUserData = async (userProfileData) => {
         ...userProfileData,
         uid: userId,
         email: privateData.email || userProfileData.email || '',
+        contactPhoneNumber: privateData.contactPhoneNumber || userProfileData.contactPhoneNumber || '',
         // Adresa pre dobrovoľníka z usersprivate
         address: privateData.address || {},
         // Adresa pre fakturáciu z usersprivate (alebo rovnaká)
