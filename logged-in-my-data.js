@@ -828,7 +828,7 @@ const processUserData = async (userProfileData) => {
                                 timestamp: new Date(),
                             });
                     
-                            window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná v usersprivate.', 'success');
+                            window.showGlobalNotification('E-mailová adresa bola aktualizovaná.', 'success');
                         }
                     } else {
                         // Ak usersprivate dokument neexistuje, vytvoríme ho s e-mailom
