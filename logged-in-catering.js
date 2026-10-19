@@ -3204,6 +3204,7 @@ const handleDataUpdateAndRender = (event) => {
 
     if (userProfileData) {
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
+            isEmailSyncListenerSetup = true;
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
                     try {
