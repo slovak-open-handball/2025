@@ -1,5 +1,5 @@
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, updatePassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, getFirestore, updateDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getFirestore, updateDoc, setDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { countryDialCodes } from "./countryDialCodes.js";
 
@@ -209,7 +209,7 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
 /**
  * Hlavný komponent modálneho okna pre zmenu profilu.
  */
-export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, onlyAllowPasswordChange }) => {
+export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, onlyAllowPasswordChange, privateData }) => {
     // Definícia stavov pre polia formulára
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -330,7 +330,8 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
             setEmail('');
             setPhoneNumber('');
 
-            const { foundDialCode, numberWithoutDialCode } = extractDialCodeAndNumber(userProfileData.contactPhoneNumber);
+            const effectivePhoneNumber = (privateData && privateData.contactPhoneNumber) || userProfileData.contactPhoneNumber || '';
+            const { foundDialCode, numberWithoutDialCode } = extractDialCodeAndNumber(effectivePhoneNumber);
             setSelectedDialCode(foundDialCode);
 
             setNewPassword('');
@@ -352,14 +353,14 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
             originalData.current = {
                 firstName: userProfileData.firstName || '',
                 lastName: userProfileData.lastName || '',
-                email: userProfileData.email || '',
-                contactPhoneNumber: userProfileData.contactPhoneNumber || '',
+                email: (privateData && privateData.email) || userProfileData.email || '',
+                contactPhoneNumber: effectivePhoneNumber,
                 phoneNumberWithoutDialCode: numberWithoutDialCode
             };
 
              isInitialLoad.current = true;
         }
-    }, [show, userProfileData]);
+    }, [show, userProfileData, privateData]);
 
     // useEffect pre validáciu nového hesla
     useEffect(() => {
@@ -564,41 +565,58 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
 
         let profileUpdateSuccess = true;
 
-        const updatedData = {};
-        const changes = []; // Premenované pole pre formátované notifikácie
+        const updatedDataUsers = {};        // ide do kolekcie 'users'
+        const updatedDataUsersPrivate = {}; // ide do kolekcie 'usersprivate'
+        const changes = [];
 
-        // Kontrola zmien a príprava dát
+        // Meno a priezvisko → users
         if (firstName !== '' && firstName !== originalData.current.firstName) {
-            updatedData.firstName = firstName;
+            updatedDataUsers.firstName = firstName;
             changes.push(`Zmena mena: z '${originalData.current.firstName}' na '${firstName}'`);
         }
         if (lastName !== '' && lastName !== originalData.current.lastName) {
-            updatedData.lastName = lastName;
+            updatedDataUsers.lastName = lastName;
             changes.push(`Zmena priezviska: z '${originalData.current.lastName}' na '${lastName}'`);
         }
-
-        // Upravená logika pre telefónne číslo: platí len pre roly, ktoré nie sú 'admin' ani 'hall'.
+        
+        // Telefónne číslo → usersprivate (platí len pre roly, ktoré nie sú 'admin' ani 'hall')
         if (userProfileData.role !== 'admin' && userProfileData.role !== 'hall') {
-            const currentPhoneNumberWithoutDialCode = phoneNumber === '' ? originalData.current.phoneNumberWithoutDialCode : phoneNumber.replace(/\s/g, '');
+            const currentPhoneNumberWithoutDialCode = phoneNumber === ''
+                ? originalData.current.phoneNumberWithoutDialCode
+                : phoneNumber.replace(/\s/g, '');
             const fullPhoneNumber = selectedDialCode + currentPhoneNumberWithoutDialCode;
             if (fullPhoneNumber !== originalData.current.contactPhoneNumber) {
-                updatedData.contactPhoneNumber = fullPhoneNumber;
+                updatedDataUsersPrivate.contactPhoneNumber = fullPhoneNumber;
                 changes.push(`Zmena telefónneho čísla: z '${originalData.current.contactPhoneNumber}' na '${fullPhoneNumber}'`);
             }
         }
-
-        if (Object.keys(updatedData).length > 0) {
+        
+        const hasUsersChanges = Object.keys(updatedDataUsers).length > 0;
+        const hasPrivateChanges = Object.keys(updatedDataUsersPrivate).length > 0;
+        
+        if (hasUsersChanges || hasPrivateChanges) {
             try {
                 const db = getFirestore();
-                const userDocRef = doc(db, 'users', user.uid);
-                await updateDoc(userDocRef, updatedData);
+        
+                // Zápis do users (meno, priezvisko)
+                if (hasUsersChanges) {
+                    const userDocRef = doc(db, 'users', user.uid);
+                    await updateDoc(userDocRef, updatedDataUsers);
+                }
 
-                // Vytvorenie notifikácie pre správcu, ak došlo k zmenám
+                // Zápis do usersprivate (telefónne číslo)
+                if (hasPrivateChanges) {
+                    const privateDocRef = doc(db, 'usersprivate', user.uid);
+                    // Použijeme setDoc s merge, aby dokument vznikol, ak neexistuje
+                    await setDoc(privateDocRef, updatedDataUsersPrivate, { merge: true });
+                }
+        
+                // Notifikácia
                 if (changes.length > 0) {
                     await addDoc(collection(db, 'notifications'), {
-                        userEmail: userProfileData.email, // Používame userEmail namiesto userId a userName
-                        changes: changes, // Pole správ
-                        timestamp: new Date(), // Používame timestamp namiesto createdAt
+                        userEmail: userProfileData.email,
+                        changes: changes,
+                        timestamp: new Date(),
                     });
                 }
 
@@ -609,7 +627,6 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
                 profileUpdateSuccess = false;
             }
         }
-
         // Zmena hesla
         let passwordUpdateSuccess = true;
         if (passwordChanged) {
