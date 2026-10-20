@@ -1585,30 +1585,61 @@ const TransportApp = ({ userProfileData }) => {
                                     // 3) Ubytovania tímov zo skupiny s rovnakým písmenom.
                                     //
                                     // PRAVIDLO:
-                                    //  - PRVÝ hrací deň tímu (deň, kedy má tím svoju PRVÚ udalosť
-                                    //    v turnaji) → zdrojom presunov sú IBA miesta posledných
-                                    //    udalostí tímov zo skupiny (napr. Javorku). Ubytovania sa
-                                    //    NESMÚ použiť.
-                                    //  - DRUHÝ a ďalší hrací deň tímu (deň, kedy už tím mal
-                                    //    predchádzajúci deň udalosť) → zdrojom presunov sú
-                                    //    ubytovania tímov zo skupiny (napr. Slovakia, SOŠ Stavebná,
-                                    //    UNIZA).
+                                    //  - Ak v daný deň (referenceDay) má ASPOŇ JEDEN iný tím zo skupiny
+                                    //    s rovnakým písmenom udalosť (zápas/stravovanie), zdrojom presunov
+                                    //    sú IBA miesta posledných udalostí týchto tímov (napr. Javorku).
+                                    //    Ubytovania sa NESMÚ použiť.
+                                    //  - Ak v daný deň NEMÁ žiadny iný tím zo skupiny udalosť (skupina
+                                    //    v ten deň nehrá), zdrojom presunov sú ubytovania tímov zo skupiny
+                                    //    (napr. Slovakia, SOŠ Stavebná, UNIZA).
                                     // ============================================================
-                                    const isFirstPlayDayOfTeam = (() => {
-                                        const teamEvents = grouped[category][teamName] || [];
-                                        let firstDayKey = null;
-                                        teamEvents.forEach((ev) => {
-                                            const evDay = extractDayKeyFromWhen(ev.when);
-                                            if (!evDay) return;
-                                            if (firstDayKey == null || evDay < firstDayKey) {
-                                                firstDayKey = evDay;
+                                    const groupHasAnyEventOnReferenceDay = (() => {
+                                        // Zápasy
+                                        const hasMatch = (matchesBufferRef.current || []).some((m) => {
+                                            if (cleanCategory(m.category) !== cleanCategory(category)) return false;
+                                            let dayKey = null;
+                                            if (m.scheduledTime) {
+                                                const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                                if (mm) {
+                                                    const d = String(mm[1]).padStart(2, '0');
+                                                    const mo = String(mm[2]).padStart(2, '0');
+                                                    const y = mm[3];
+                                                    dayKey = `${y}-${mo}-${d}`;
+                                                }
                                             }
+                                            if (!dayKey && m.scheduledTs != null) {
+                                                const dt = new Date(m.scheduledTs);
+                                                dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                            }
+                                            if (!dayKey || dayKey !== referenceDay) return false;
+                                    
+                                            // Musí ísť o tím zo skupiny s rovnakým písmenom
+                                            const teamsInMatch = [m.home, m.away];
+                                            return teamsInMatch.some((tn) => {
+                                                if (!tn) return false;
+                                                if (!isRealRegisteredTeam(tn, category)) return false;
+                                                if (!teamBelongsToChar(tn, category)) return false;
+                                                return true;
+                                            });
                                         });
-                                        if (firstDayKey == null) return false;
-                                        return currentDay === firstDayKey;
+                                        if (hasMatch) return true;
+                                    
+                                        // Stravovania
+                                        const hasCatering = (cateringBufferRef.current || []).some((c) => {
+                                            if (cleanCategory(c.category) !== cleanCategory(category)) return false;
+                                            if (c.isSuperstructure === true) return false;
+                                            const dayKey = c.dayKey || null;
+                                            if (!dayKey || dayKey !== referenceDay) return false;
+                                            const tn = c.teamName;
+                                            if (!tn) return false;
+                                            if (!isRealRegisteredTeam(tn, category)) return false;
+                                            if (!teamBelongsToChar(tn, category)) return false;
+                                            return true;
+                                        });
+                                        return hasCatering;
                                     })();
                                     
-                                    if (!isFirstPlayDayOfTeam) {
+                                    if (!groupHasAnyEventOnReferenceDay) {
                                         (teamsArrivalBufferRef.current || []).forEach((t) => {
                                             if (cleanCategory(t.category) !== cleanCategory(category)) return;
                                             if (!t.teamName) return;
