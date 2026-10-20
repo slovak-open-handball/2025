@@ -1388,17 +1388,34 @@ const TransportApp = ({ userProfileData }) => {
                                         updateUniqueSource(c.placeName || null, endTs);
                                     });
                             
+                                    // ============================================================
                                     // 3) Ubytovania tímov zo skupiny s rovnakým písmenom.
                                     //
                                     // PRAVIDLO:
-                                    //  - Ak má aktuálny tím v daný deň VLASTNÚ udalosť (currentTeamHasOwnEventOnThisDay = true),
-                                    //    zdrojom presunov sú miesta posledných udalostí tímov zo skupiny (napr. Javorku)
-                                    //    a ubytovania sa NESMÚ použiť.
-                                    //  - Ak aktuálny tím v daný deň NEMÁ vlastnú udalosť (napr. 4E dňa 26.12.2026 –
-                                    //    skupina E hrá, ale 4E nie), zdrojom presunov sú ubytovania tímov zo skupiny
-                                    //    (napr. Slovakia, SOŠ Stavebná, UNIZA) – bez ohľadu na to, či je deň
-                                    //    v zozname hracích dní skupiny.
-                                    if (!currentTeamHasOwnEventOnThisDay) {
+                                    //  - PRVÝ hrací deň tímu (deň, kedy má tím svoju PRVÚ udalosť
+                                    //    v turnaji) → zdrojom presunov sú IBA miesta posledných
+                                    //    udalostí tímov zo skupiny (napr. Javorku). Ubytovania sa
+                                    //    NESMÚ použiť.
+                                    //  - DRUHÝ a ďalší hrací deň tímu (deň, kedy už tím mal
+                                    //    predchádzajúci deň udalosť) → zdrojom presunov sú
+                                    //    ubytovania tímov zo skupiny (napr. Slovakia, SOŠ Stavebná,
+                                    //    UNIZA).
+                                    // ============================================================
+                                    const isFirstPlayDayOfTeam = (() => {
+                                        const teamEvents = grouped[category][teamName] || [];
+                                        let firstDayKey = null;
+                                        teamEvents.forEach((ev) => {
+                                            const evDay = extractDayKeyFromWhen(ev.when);
+                                            if (!evDay) return;
+                                            if (firstDayKey == null || evDay < firstDayKey) {
+                                                firstDayKey = evDay;
+                                            }
+                                        });
+                                        if (firstDayKey == null) return false;
+                                        return currentDay === firstDayKey;
+                                    })();
+                                    
+                                    if (!isFirstPlayDayOfTeam) {
                                         (teamsArrivalBufferRef.current || []).forEach((t) => {
                                             if (cleanCategory(t.category) !== cleanCategory(category)) return;
                                             if (!t.teamName) return;
