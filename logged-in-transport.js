@@ -300,19 +300,33 @@ const TransportApp = ({ userProfileData }) => {
         const originalLog = console.log;
         const captured = [];
         let found = false;
+        let captureDone = false;
 
         console.log = (...args) => {
-            const line = args.map(String).join(' ');
-            if (!found && line.includes(`Tím: ${targetTeam} `)) {
+            // Zistí, či je prvý argument %c formátovaný reťazec
+            const firstArg = args[0];
+            let cleanLine;
+
+            if (typeof firstArg === 'string' && firstArg.startsWith('%c')) {
+                // Odstráň %c a použijeme len text (druhý argument je CSS, ten ignorujeme)
+                cleanLine = firstArg.replace(/^%c/, '');
+            } else {
+                cleanLine = args.map(String).join(' ');
+            }
+    
+            if (!found && cleanLine.includes(`Tím: ${targetTeam} `)) {
                 found = true;
-                captured.push({ type: 'teamStart', line });
-            } else if (found) {
-                // Zastav zachytávanie, keď narazíme na ďalší tím
-                if (line.includes('[TRANSPORT] Tím: ')) {
-                    console.log = originalLog;
+                captured.push(cleanLine);
+                return;
+            }
+
+            if (found && !captureDone) {
+                // Ak narazíme na ďalší tím, ukončíme zachytávanie
+                if (cleanLine.includes('[TRANSPORT] Tím: ') || cleanLine.includes('[TRANSPORT] ██ Kategória:')) {
+                    captureDone = true;
                     return;
                 }
-                captured.push({ type: 'line', line });
+                captured.push(cleanLine);
             }
         };
 
@@ -327,7 +341,8 @@ const TransportApp = ({ userProfileData }) => {
             return;
         }
 
-        captured.forEach((item) => console.log(item.line));
+        // Vypíšeme zachytené riadky pekne do konzoly
+        captured.forEach((line) => console.log(line));
     };
 
     // ============================================================
