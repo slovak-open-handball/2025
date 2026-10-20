@@ -1388,12 +1388,17 @@ const TransportApp = ({ userProfileData }) => {
                                         updateUniqueSource(c.placeName || null, endTs);
                                     });
                             
-                                    // 3) Ubytovania tímov zo skupiny s rovnakým písmenom – LEN ak deň
-                                    //    NIE JE v zozname hracích dní skupiny (t.j. skupina v tento deň nehrá).
-                                    //    Ak deň JE v zozname hracích dní skupiny (napr. pre 5B je to 25.12.
-                                    //    a 26.12.), ubytovania sa NESMÚ použiť ako zdroj presunov – zdrojom
-                                    //    sú len miesta posledných udalostí tímov zo skupiny (napr. Javorku).
-                                    if (!isSSPlayDay) {
+                                    // 3) Ubytovania tímov zo skupiny s rovnakým písmenom.
+                                    //
+                                    // PRAVIDLO:
+                                    //  - Ak má aktuálny tím v daný deň VLASTNÚ udalosť (currentTeamHasOwnEventOnThisDay = true),
+                                    //    zdrojom presunov sú miesta posledných udalostí tímov zo skupiny (napr. Javorku)
+                                    //    a ubytovania sa NESMÚ použiť.
+                                    //  - Ak aktuálny tím v daný deň NEMÁ vlastnú udalosť (napr. 4E dňa 26.12.2026 –
+                                    //    skupina E hrá, ale 4E nie), zdrojom presunov sú ubytovania tímov zo skupiny
+                                    //    (napr. Slovakia, SOŠ Stavebná, UNIZA) – bez ohľadu na to, či je deň
+                                    //    v zozname hracích dní skupiny.
+                                    if (!currentTeamHasOwnEventOnThisDay) {
                                         (teamsArrivalBufferRef.current || []).forEach((t) => {
                                             if (cleanCategory(t.category) !== cleanCategory(category)) return;
                                             if (!t.teamName) return;
