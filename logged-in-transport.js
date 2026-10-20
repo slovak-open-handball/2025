@@ -1080,6 +1080,7 @@ const TransportApp = ({ userProfileData }) => {
                                 usersTeamHasEventsOnDay;
                             
                             // Zjednotená podmienka – použijeme skupinovú logiku v oboch prípadoch.
+                            // POZOR: Toto je teraz hlavná podmienka pre generovanie presunov.
                             const useGroupBasedMorningTransfers =
                                 isSuperstructureTeam &&
                                 currentDay != null &&
@@ -1135,6 +1136,14 @@ const TransportApp = ({ userProfileData }) => {
                                 };
                             };
                             
+                            // ============================================================
+                            // NOVÉ PRAVIDLO PRE GENEROVANIE RANNÝCH PRESUNOV
+                            // ============================================================
+                            // Podmienka `useGroupBasedMorningTransfers` je teraz hlavná.
+                            // Ak je splnená, vygenerujeme presuny zo skupinových miest.
+                            // V opačnom prípade (pre bežné tímy alebo superstructure tímy v iné dni)
+                            // sa použije pôvodná logika s ubytovaniami.
+                            // ============================================================
                             if (useGroupBasedMorningTransfers) {
                                 const groupChar = ssGroupCharByTeam[ssTeamKey];
                                 const destination = current.location;
