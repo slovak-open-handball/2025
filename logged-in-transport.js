@@ -1594,6 +1594,23 @@ const TransportApp = ({ userProfileData }) => {
                                     //    (napr. Slovakia, SOŠ Stavebná, UNIZA).
                                     // ============================================================
                                     const groupHasAnyEventOnReferenceDay = (() => {
+                                        // Pomocná: zisti, či tím patrí do skupiny s daným písmenom
+                                        // (kontrola cez groupName alebo cez názov tímu)
+                                        const teamBelongsToCharLocal = (tn) => {
+                                            if (!tn) return false;
+                                            if (!isRealRegisteredTeam(tn, category)) return false;
+                                            const teamInfo = (teamsArrivalBufferRef.current || []).find(
+                                                (t) => cleanCategory(t.category) === cleanCategory(category) && t.teamName === tn
+                                            );
+                                            if (teamInfo && teamInfo.groupName) {
+                                                return groupBelongsToChar(teamInfo.groupName, groupChar);
+                                            }
+                                            // Fallback: skús odvodiť z názvu tímu
+                                            const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(tn).trim());
+                                            if (m && m[1].toUpperCase() === groupChar) return true;
+                                            return false;
+                                        };
+                                    
                                         // Zápasy
                                         const hasMatch = (matchesBufferRef.current || []).some((m) => {
                                             if (cleanCategory(m.category) !== cleanCategory(category)) return false;
@@ -1614,13 +1631,7 @@ const TransportApp = ({ userProfileData }) => {
                                             if (!dayKey || dayKey !== referenceDay) return false;
                                     
                                             // Musí ísť o tím zo skupiny s rovnakým písmenom
-                                            const teamsInMatch = [m.home, m.away];
-                                            return teamsInMatch.some((tn) => {
-                                                if (!tn) return false;
-                                                if (!isRealRegisteredTeam(tn, category)) return false;
-                                                if (!teamBelongsToChar(tn, category)) return false;
-                                                return true;
-                                            });
+                                            return [m.home, m.away].some((tn) => teamBelongsToCharLocal(tn));
                                         });
                                         if (hasMatch) return true;
                                     
@@ -1632,9 +1643,7 @@ const TransportApp = ({ userProfileData }) => {
                                             if (!dayKey || dayKey !== referenceDay) return false;
                                             const tn = c.teamName;
                                             if (!tn) return false;
-                                            if (!isRealRegisteredTeam(tn, category)) return false;
-                                            if (!teamBelongsToChar(tn, category)) return false;
-                                            return true;
+                                            return teamBelongsToCharLocal(tn);
                                         });
                                         return hasCatering;
                                     })();
