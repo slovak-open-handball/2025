@@ -1094,7 +1094,7 @@ const TransportApp = ({ userProfileData }) => {
                                 ssPlayDatesByTeam[ssTeamKey] &&
                                 currentDay != null &&
                                 ssPlayDatesByTeam[ssTeamKey].has(currentDay);
-                            
+
                             const isSSLastDayWithUsers =
                                 !isSSPlayDay &&
                                 isSuperstructureTeam &&
@@ -1103,17 +1103,32 @@ const TransportApp = ({ userProfileData }) => {
                                 currentDay === globalLastDay &&
                                 groupCharForSS != null &&
                                 usersTeamHasEventsOnDay;
-                            
-                            // Hlavná podmienka pre generovanie presunov zo skupinových miest.
-                            // POZOR: Ak má aktuálny tím v daný deň VLASTNÚ udalosť (zápas/stravovanie),
-                            // presuny zo skupinových miest sa NESMÚ generovať – použije sa pôvodná
-                            // logika (ranný presun len z vlastného ubytovania).
+
+                            // ============================================================
+                            // NOVÉ PRAVIDLO:
+                            // Ak je aktuálny deň v zozname hracích dní skupiny (t.j. deň,
+                            // kedy hrá akýkoľvek tím zo skupiny s daným písmenom – bez ohľadu
+                            // na to, či aktuálny tím má vlastnú udalosť), MUSÍ sa použiť
+                            // skupinová logika (presuny z miest posledných udalostí tímov
+                            // zo skupiny). NEgenerujeme ranný presun z ubytovní.
+                            //
+                            // Tým sa zabezpečí, že pre tím "U12 CH 5A" dňa 26.12.2026
+                            // (kedy skupina A hrá) sa nevygeneruje "Presun z ubytovania
+                            // Rosinská do UNIZA", ale presuny z miest posledných udalostí
+                            // tímov zo skupiny A (napr. Javorku, SOŠ Stavebná, UNIZA).
+                            // ============================================================
                             const useGroupBasedMorningTransfers =
                                 isSuperstructureTeam &&
                                 currentDay != null &&
                                 groupCharForSS != null &&
-                                !currentTeamHasOwnEventOnDay &&
-                                (usersTeamHasEventsOnDay || isSSPlayDay || isSSLastDayWithUsers);
+                                (
+                                    // Hlavná podmienka: deň je v zozname hracích dní skupiny
+                                    isSSPlayDay ||
+                                    // Alebo posledný deň turnaja s users tímami
+                                    isSSLastDayWithUsers ||
+                                    // Alebo existuje aspoň jeden users tím v skupine s udalosťou
+                                    usersTeamHasEventsOnDay
+                                );
                         
                             // ============================================================
                             // Pomocná funkcia: Zisti, či pavúkový tím (identifier obsahujúci WSF/LSF/WQF/...)
