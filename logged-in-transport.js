@@ -1388,17 +1388,22 @@ const TransportApp = ({ userProfileData }) => {
                                         updateUniqueSource(c.placeName || null, endTs);
                                     });
                             
-                                    // 3) Doplnkovo – ubytovania tímov zo skupiny s rovnakým písmenom
-                                    //    (pre prípad, že niektorý tím zo skupiny má poslednú udalosť v ubytovni)
-                                    (teamsArrivalBufferRef.current || []).forEach((t) => {
-                                        if (cleanCategory(t.category) !== cleanCategory(category)) return;
-                                        if (!t.teamName) return;
-                                        if (t.teamName === teamName) return;
-                                        if (!t.accommodationName || t.accommodationName.trim() === '') return;
-                                        if (!isRealRegisteredTeam(t.teamName, category)) return;
-                                        if (!teamBelongsToChar(t.teamName, category)) return;
-                                        updateUniqueSource(t.accommodationName.trim(), null);
-                                    });
+                                    // 3) Ubytovania tímov zo skupiny s rovnakým písmenom – LEN ak deň
+                                    //    NIE JE v zozname hracích dní skupiny (t.j. skupina v tento deň nehrá).
+                                    //    Ak deň JE v zozname hracích dní skupiny (napr. pre 5B je to 25.12.
+                                    //    a 26.12.), ubytovania sa NESMÚ použiť ako zdroj presunov – zdrojom
+                                    //    sú len miesta posledných udalostí tímov zo skupiny (napr. Javorku).
+                                    if (!isSSPlayDay) {
+                                        (teamsArrivalBufferRef.current || []).forEach((t) => {
+                                            if (cleanCategory(t.category) !== cleanCategory(category)) return;
+                                            if (!t.teamName) return;
+                                            if (t.teamName === teamName) return;
+                                            if (!t.accommodationName || t.accommodationName.trim() === '') return;
+                                            if (!isRealRegisteredTeam(t.teamName, category)) return;
+                                            if (!teamBelongsToChar(t.teamName, category)) return;
+                                            updateUniqueSource(t.accommodationName.trim(), null);
+                                        });
+                                    }
                             
                                     const destinationArrivalStr =
                                         formatFullFromTs(destinationEvent.startTs) || destinationEvent.when;
