@@ -968,23 +968,19 @@ const TransportApp = ({ userProfileData }) => {
                                 const destination = destEvent.location;
                     
                                 // Pomocné funkcie
-                                const isRealRegisteredTeamPre = (tn) => {
-                                    if (!tn) return false;
-                                    if (String(tn).startsWith('(row team:')) return false;
-                                    if (superstructureTeamNames.has(tn)) return false;
-                                    const info = (teamsArrivalBufferRef.current || []).find(
-                                        (t) => cleanCategory(t.category) === cleanCategory(category)
-                                            && t.teamName === tn
-                                    );
-                                    if (!info) return false;
-                                    if (info.isRegistered !== true) return false;
-                                    if (info.isSuperstructure === true) return false;
-                                    return true;
-                                };
-                    
+                                // ============================================================
+                                // Pomocná: zisti, či tím patrí do skupiny s daným písmenom.
+                                // Kontrola cez groupName, alebo fallback cez názov tímu.
+                                // ============================================================
                                 const teamBelongsToCharPre = (tn) => {
                                     if (!tn) return false;
-                                    if (!isRealRegisteredTeamPre(tn)) return false;
+                                    if (String(tn).startsWith('(row team:')) return false;
+                                    // Fallback: odvoď z názvu tímu (napr. "U12 CH 2B" → "B")
+                                    const nameMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(tn).trim());
+                                    if (nameMatch && nameMatch[1].toUpperCase() === groupCharPre) {
+                                        return true;
+                                    }
+                                    // Skús cez groupName v teamsArrivalBufferRef
                                     const teamInfo = (teamsArrivalBufferRef.current || []).find(
                                         (t) => cleanCategory(t.category) === cleanCategory(category) && t.teamName === tn
                                     );
@@ -992,6 +988,17 @@ const TransportApp = ({ userProfileData }) => {
                                         return groupBelongsToChar(teamInfo.groupName, groupCharPre);
                                     }
                                     return false;
+                                };
+
+                                // Pomocná: zisti, či tím má ubytovanie (alebo je to tím zo skupiny s ubytovaním)
+                                const getTeamAccommodationPre = (tn) => {
+                                    if (!tn) return null;
+                                    const info = (teamsArrivalBufferRef.current || []).find(
+                                        (t) => cleanCategory(t.category) === cleanCategory(category) && t.teamName === tn
+                                    );
+                                    if (!info) return null;
+                                    if (!info.accommodationName || info.accommodationName.trim() === '') return null;
+                                    return info.accommodationName.trim();
                                 };
                     
                                 // Zisti, či je to prvý hrací deň tímu
@@ -1066,13 +1073,13 @@ const TransportApp = ({ userProfileData }) => {
                                         updateUniqueSourcePre(c.placeName || null, endTs);
                                     });
                                 } else {
-                                    // DRUHÝ a ďalší hrací deň tímu → ubytovania tímov zo skupiny
+                                    // Deň, kedy skupina hrá, ale tím nemá udalosť → ubytovania
+                                    // tímov zo skupiny s rovnakým písmenom (z posledného písmena názvu tímu).
                                     (teamsArrivalBufferRef.current || []).forEach((t) => {
                                         if (cleanCategory(t.category) !== cleanCategory(category)) return;
                                         if (!t.teamName) return;
                                         if (t.teamName === teamName) return;
                                         if (!t.accommodationName || t.accommodationName.trim() === '') return;
-                                        if (!isRealRegisteredTeamPre(t.teamName)) return;
                                         if (!teamBelongsToCharPre(t.teamName)) return;
                                         updateUniqueSourcePre(t.accommodationName.trim(), null);
                                     });
