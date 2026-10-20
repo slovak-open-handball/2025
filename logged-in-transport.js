@@ -210,6 +210,127 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // POMOCNÁ FUNKCIA – vykreslí časovú os pre jeden tím
+    // ============================================================
+    const renderTeamTimeline = (category, teamName, events, options) => {
+        const {
+            isSuperstructureTeam,
+            teamGroupName,
+            getGroupLastChar,
+            groupBelongsToChar,
+            formatDateDDMMYYYY,
+            extractDayKeyFromWhen,
+        } = options;
+
+        const lines = [];
+        lines.push(`\n  [TRANSPORT] Tím: ${teamName} (${events.length} udalostí)`);
+
+        if (isSuperstructureTeam) {
+            let groupChar = getGroupLastChar(teamGroupName);
+            if (!groupChar) groupChar = getGroupLastChar(teamName);
+
+            if (groupChar) {
+                const datesSet = new Set();
+                (matchesBufferRef.current || []).forEach((m) => {
+                    if (cleanCategory(m.category) !== cleanCategory(category)) return;
+                    const matchGroup = m.groupName ? String(m.groupName).trim() : null;
+                    if (!matchGroup) return;
+                    if (!groupBelongsToChar(matchGroup, groupChar)) return;
+
+                    let dayKey = null;
+                    if (m.scheduledTime) {
+                        const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                        if (mm) {
+                            const d = String(mm[1]).padStart(2, '0');
+                            const mo = String(mm[2]).padStart(2, '0');
+                            const y = mm[3];
+                            dayKey = `${y}-${mo}-${d}`;
+                        }
+                    }
+                    if (!dayKey && m.scheduledTs != null) {
+                        const dt = new Date(m.scheduledTs);
+                        dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                    }
+                    if (!dayKey) return;
+                    datesSet.add(dayKey);
+                });
+
+                const formattedDates = [...datesSet].sort().map((dk) => formatDateDDMMYYYY(dk) || dk);
+                lines.push(`     [superstructure] Písmeno skupiny: "${groupChar}" – jedinečné dátumy zápasov v skupinách s týmto písmenom:`);
+                if (formattedDates.length === 0) lines.push('       (žiadne dátumy)');
+                else formattedDates.forEach((d) => lines.push(`       • ${d}`));
+            }
+        }
+
+        let lastPrintedDayKey = null;
+        events.forEach((ev) => {
+            const currentDayKey = extractDayKeyFromWhen(ev.when);
+            if (currentDayKey && currentDayKey !== lastPrintedDayKey) {
+                lines.push('');
+                const dayLabel = formatDateDDMMYYYY(currentDayKey) || currentDayKey;
+                lines.push(`───── ${dayLabel} ─────`);
+                lastPrintedDayKey = currentDayKey;
+            }
+
+            let icon = '•';
+            if (ev.type === 'match') icon = '🏑';
+            else if (ev.type === 'catering') icon = '🍽';
+            else if (ev.type === 'arrival') icon = '🚌';
+            else if (ev.type === 'accommodation') icon = '🛏';
+            else if (ev.type === 'group') icon = '📂';
+            else if (ev.type === 'transfer') icon = '🚐';
+
+            const when = ev.when || '—';
+            lines.push(`     ${icon} ${when}  |  ${ev.text}`);
+        });
+
+        return lines;
+    };
+
+    // ============================================================
+    // GLOBÁLNA FUNKCIA – výpis časovej osi konkrétneho tímu do konzoly
+    // ============================================================
+    window.printTeamTimeline = (teamName) => {
+        if (!teamName || typeof teamName !== 'string') {
+            console.warn('[TRANSPORT] printTeamTimeline: Zadajte názov tímu, napr. "U12 CH 1C".');
+            return;
+        }
+
+        const targetTeam = teamName.trim();
+        const originalLog = console.log;
+        const captured = [];
+        let found = false;
+
+        console.log = (...args) => {
+            const line = args.map(String).join(' ');
+            if (!found && line.includes(`Tím: ${targetTeam} `)) {
+                found = true;
+                captured.push({ type: 'teamStart', line });
+            } else if (found) {
+                // Zastav zachytávanie, keď narazíme na ďalší tím
+                if (line.includes('[TRANSPORT] Tím: ')) {
+                    console.log = originalLog;
+                    return;
+                }
+                captured.push({ type: 'line', line });
+            }
+        };
+
+        try {
+            rebuildAndLogTimeline();
+        } finally {
+            console.log = originalLog;
+        }
+
+        if (!found) {
+            console.warn(`[TRANSPORT] Tím "${targetTeam}" sa nenašiel v časovej osi.`);
+            return;
+        }
+
+        captured.forEach((item) => console.log(item.line));
+    };
+
+    // ============================================================
     // ZBUILDÍ A VYPÍŠE ČASOVÚ OS PRE KAŽDÝ TÍM V KAŽDEJ KATEGÓRII
     // ============================================================
     const rebuildAndLogTimeline = () => {
@@ -1706,90 +1827,23 @@ const TransportApp = ({ userProfileData }) => {
                         return String(a.text).localeCompare(String(b.text), 'sk');
                     });
     
-                    console.log(`\n  [TRANSPORT] Tím: ${teamName} (${events.length} udalostí)`);
+                    const timelineLines = renderTeamTimeline(category, teamName, enriched, {
+                        isSuperstructureTeam,
+                        teamGroupName,
+                        getGroupLastChar,
+                        groupBelongsToChar,
+                        formatDateDDMMYYYY,
+                        extractDayKeyFromWhen,
+                    });
 
-                    // ============================================================
-                    // Ak je tím superstructure, vypíš iba jedinečné dátumy,
-                    // kedy sa hrá akýkoľvek zápas v skupinách s rovnakým písmenom.
-                    // ============================================================
-                    if (isSuperstructureTeam) {
-                        let groupChar = getGroupLastChar(teamGroupName);
-                        if (!groupChar) {
-                            groupChar = getGroupLastChar(teamName);
-                        }
-
-                        if (groupChar) {
-                            const datesSet = new Set();
-
-                            matchesBufferRef.current.forEach((m) => {
-                                if (cleanCategory(m.category) !== cleanCategory(category)) return;
-
-                                // IBA zápasy priradené priamo do skupiny s daným písmenom.
-                                const matchGroup = m.groupName ? String(m.groupName).trim() : null;
-                                if (!matchGroup) return;
-                                if (!groupBelongsToChar(matchGroup, groupChar)) return;
-
-                                let dayKey = null;
-                                
-                                if (m.scheduledTime) {
-                                    const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
-                                    if (mm) {
-                                        const d = String(mm[1]).padStart(2, '0');
-                                        const mo = String(mm[2]).padStart(2, '0');
-                                        const y = mm[3];
-                                        dayKey = `${y}-${mo}-${d}`;
-                                    }
-                                }
-                                if (!dayKey && m.scheduledTs != null) {
-                                    const dt = new Date(m.scheduledTs);
-                                    dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-                                }
-                                if (!dayKey) return;
-
-                                datesSet.add(dayKey);
-                            });
-
-                            const formattedDates = [...datesSet]
-                                .sort()
-                                .map((dk) => formatDateDDMMYYYY(dk) || dk);
-
-                            console.log(
-                                `     %c[superstructure] Písmeno skupiny: "${groupChar}" – jedinečné dátumy zápasov v skupinách s týmto písmenom:`,
-                                'color:#7c3aed;font-weight:bold;'
-                            );
-                            if (formattedDates.length === 0) {
-                                console.log('       (žiadne dátumy)');
-                            } else {
-                                formattedDates.forEach((d) => console.log(`       • ${d}`));
-                            }
-                        }
-                    }
-
-                    let lastPrintedDayKey = null;
-                    enriched.forEach((ev) => {
-                        const currentDayKey = extractDayKeyFromWhen(ev.when);
-                    
-                        // Ak sa zmenil deň, vypíš vizuálny oddeľovač
-                        if (currentDayKey && currentDayKey !== lastPrintedDayKey) {
-                            console.log(''); // prázdny riadok pred oddeľovačom
-                            const dayLabel = formatDateDDMMYYYY(currentDayKey) || currentDayKey;
-                            console.log(`%c───── ${dayLabel} ─────`, 'color: #16a34a; font-weight: bold;');
-                            lastPrintedDayKey = currentDayKey;
-                        }
-                    
-                        let icon = '•';
-                        if (ev.type === 'match') icon = '🏑';
-                        else if (ev.type === 'catering') icon = '🍽';
-                        else if (ev.type === 'arrival') icon = '🚌';
-                        else if (ev.type === 'accommodation') icon = '🛏';
-                        else if (ev.type === 'group') icon = '📂';
-                        else if (ev.type === 'transfer') icon = '🚐';
-                    
-                        const when = ev.when || '—';
-                        const line = `     ${icon} ${when}  |  ${ev.text}`;
-                    
-                        if (ev.type === 'transfer') {
+                    timelineLines.forEach((line) => {
+                        // Zachovaj farebné zvýraznenie pre transfery
+                        if (line.includes('🚐')) {
                             console.log('%c' + line, 'font-weight: bold; color: #2563eb;');
+                        } else if (line.startsWith('─────')) {
+                            console.log('%c' + line, 'color: #16a34a; font-weight: bold;');
+                        } else if (line.includes('[superstructure]')) {
+                            console.log('%c' + line, 'color:#7c3aed;font-weight:bold;');
                         } else {
                             console.log(line);
                         }
