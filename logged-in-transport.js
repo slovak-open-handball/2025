@@ -298,35 +298,42 @@ const TransportApp = ({ userProfileData }) => {
 
         const targetTeam = teamName.trim();
         const originalLog = console.log;
-        const captured = [];
+        const captured = []; // { text, css } – css môže byť null
         let found = false;
         let captureDone = false;
 
         console.log = (...args) => {
-            // Zistí, či je prvý argument %c formátovaný reťazec
-            const firstArg = args[0];
-            let cleanLine;
+            // Zisti, či ide o %c formátovaný výpis
+            let cleanText;
+            let css = null;
 
+            const firstArg = args[0];
             if (typeof firstArg === 'string' && firstArg.startsWith('%c')) {
-                // Odstráň %c a použijeme len text (druhý argument je CSS, ten ignorujeme)
-                cleanLine = firstArg.replace(/^%c/, '');
+                cleanText = firstArg.replace(/^%c/, '');
+                // Druhý argument je CSS štýl
+                if (args.length > 1 && typeof args[1] === 'string') {
+                    css = args[1];
+                }
             } else {
-                cleanLine = args.map(String).join(' ');
+                cleanText = args.map(String).join(' ');
             }
-    
-            if (!found && cleanLine.includes(`Tím: ${targetTeam} `)) {
+
+            if (!found && cleanText.includes(`Tím: ${targetTeam} `)) {
                 found = true;
-                captured.push(cleanLine);
+                captured.push({ text: cleanText, css });
                 return;
             }
 
             if (found && !captureDone) {
-                // Ak narazíme na ďalší tím, ukončíme zachytávanie
-                if (cleanLine.includes('[TRANSPORT] Tím: ') || cleanLine.includes('[TRANSPORT] ██ Kategória:')) {
+                // Ak narazíme na ďalší tím alebo kategóriu, ukončíme zachytávanie
+                if (
+                    cleanText.includes('[TRANSPORT] Tím: ') ||
+                    cleanText.includes('[TRANSPORT] ██ Kategória:')
+                ) {
                     captureDone = true;
                     return;
                 }
-                captured.push(cleanLine);
+                captured.push({ text: cleanText, css });
             }
         };
 
@@ -341,8 +348,14 @@ const TransportApp = ({ userProfileData }) => {
             return;
         }
 
-        // Vypíšeme zachytené riadky pekne do konzoly
-        captured.forEach((line) => console.log(line));
+        // Vypíšeme zachytené riadky s pôvodnými farbami
+        captured.forEach(({ text, css }) => {
+            if (css) {
+                console.log('%c' + text, css);
+            } else {
+                console.log(text);
+            }
+        });
     };
 
     // ============================================================
