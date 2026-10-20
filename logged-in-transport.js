@@ -1052,12 +1052,49 @@ const TransportApp = ({ userProfileData }) => {
                                 });
                             })();
                         
+                            const currentTeamHasOwnEventOnDay = (() => {
+                                if (!currentDay) return false;
+                            
+                                // 1) Zápasy aktuálneho tímu v daný deň
+                                const hasMatch = (matchesBufferRef.current || []).some((m) => {
+                                    if (cleanCategory(m.category) !== cleanCategory(category)) return false;
+                                    if (m.home !== teamName && m.away !== teamName) return false;
+                            
+                                    let dayKey = null;
+                                    if (m.scheduledTime) {
+                                        const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                        if (mm) {
+                                            const d = String(mm[1]).padStart(2, '0');
+                                            const mo = String(mm[2]).padStart(2, '0');
+                                            const y = mm[3];
+                                            dayKey = `${y}-${mo}-${d}`;
+                                        }
+                                    }
+                                    if (!dayKey && m.scheduledTs != null) {
+                                        const dt = new Date(m.scheduledTs);
+                                        dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                    }
+                                    return dayKey === currentDay;
+                                });
+                            
+                                if (hasMatch) return true;
+                            
+                                // 2) Stravovania aktuálneho tímu v daný deň
+                                const hasCatering = (cateringBufferRef.current || []).some((c) => {
+                                    if (cleanCategory(c.category) !== cleanCategory(category)) return false;
+                                    if (c.teamName !== teamName) return false;
+                                    return c.dayKey === currentDay;
+                                });
+                            
+                                return hasCatering;
+                            })();
+                            
                             const isSSPlayDay =
                                 isSuperstructureTeam &&
                                 ssPlayDatesByTeam[ssTeamKey] &&
                                 currentDay != null &&
                                 ssPlayDatesByTeam[ssTeamKey].has(currentDay);
-                        
+                            
                             const isSSLastDayWithUsers =
                                 !isSSPlayDay &&
                                 isSuperstructureTeam &&
@@ -1066,12 +1103,16 @@ const TransportApp = ({ userProfileData }) => {
                                 currentDay === globalLastDay &&
                                 groupCharForSS != null &&
                                 usersTeamHasEventsOnDay;
-                        
+                            
                             // Hlavná podmienka pre generovanie presunov zo skupinových miest.
+                            // POZOR: Ak má aktuálny tím v daný deň VLASTNÚ udalosť (zápas/stravovanie),
+                            // presuny zo skupinových miest sa NESMÚ generovať – použije sa pôvodná
+                            // logika (ranný presun len z vlastného ubytovania).
                             const useGroupBasedMorningTransfers =
                                 isSuperstructureTeam &&
                                 currentDay != null &&
                                 groupCharForSS != null &&
+                                !currentTeamHasOwnEventOnDay &&
                                 (usersTeamHasEventsOnDay || isSSPlayDay || isSSLastDayWithUsers);
                         
                             // ============================================================
