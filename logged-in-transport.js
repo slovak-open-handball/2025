@@ -1499,7 +1499,7 @@ const TransportApp = ({ userProfileData }) => {
                                             ts: current.ts - 1,
                                             when: whenStr,
                                             type: 'transfer',
-                                            text: `Presun z ubytovania ${info.location} do ${destination}`,
+                                            text: `Presun z ${info.location} do ${destination}`,
                                             location: null,
                                             isTransfer: true,
                                         });
