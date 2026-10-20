@@ -1327,44 +1327,121 @@ const TransportApp = ({ userProfileData }) => {
                                 });
                         
                                 // ============================================================
-                                // NOVÉ: Zber ubytovní pre tímy zo skupín s rovnakým písmenom.
+                                // NOVÉ: Zber MIEST POSLEDNÝCH UDALOSTÍ tímov zo skupín
+                                // s rovnakým písmenom (podľa posledného písmena názvu tímu).
+                                //
+                                // Pre tím "U12 CH 5B" (písmeno B) to znamená: zober miesta,
+                                // kde skončili posledné udalosti tímov zo skupiny B (napr.
+                                // Bôrik/Korytnačka z 25.12.2026) a vygeneruj presuny z týchto
+                                // miest na prvú udalosť tímu 5B v daný deň (napr. UNIZA 12:30).
+                                //
+                                // NEpoužívame ubytovania tímov – tie sú len pre vlastné ubytovanie.
                                 // ============================================================
                                 const uniqueSourceLocations = new Map();
-                        
-                                (teamsArrivalBufferRef.current || []).forEach((t) => {
-                                    if (cleanCategory(t.category) !== cleanCategory(category)) return;
-                                    if (!t.teamName) return;
-                                    if (!t.accommodationName || t.accommodationName.trim() === '') return;
-                        
-                                    // Zisti, či tím patrí do skupiny s rovnakým písmenom
-                                    let belongsToChar = false;
-                                    if (t.groupName) {
-                                        belongsToChar = groupBelongsToChar(t.groupName, groupChar);
-                                    } else {
-                                        const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(t.teamName).trim());
-                                        if (m && m[1].toUpperCase() === groupChar) {
-                                            belongsToChar = true;
+                                
+                                // 1) Zápasy tímov zo skupiny s rovnakým písmenom – berieme
+                                //    posledný zápas KAŽDÉHO tímu v daný deň (nie len aktuálneho).
+                                matchesBufferRef.current.forEach((m) => {
+                                    if (cleanCategory(m.category) !== cleanCategory(category)) return;
+                                
+                                    // Zisti dayKey zápasu
+                                    let dayKey = null;
+                                    if (m.scheduledTime) {
+                                        const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                        if (mm) {
+                                            const d = String(mm[1]).padStart(2, '0');
+                                            const mo = String(mm[2]).padStart(2, '0');
+                                            const y = mm[3];
+                                            dayKey = `${y}-${mo}-${d}`;
                                         }
                                     }
-                                    if (!belongsToChar) return;
-                        
-                                    const accomName = t.accommodationName.trim();
-                                    if (accomName === destination) return;
-                        
-                                    if (!uniqueSourceLocations.has(accomName)) {
-                                        uniqueSourceLocations.set(accomName, {
-                                            location: accomName,
-                                            endTs: null,
-                                        });
+                                    if (!dayKey && m.scheduledTs != null) {
+                                        const dt = new Date(m.scheduledTs);
+                                        dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                    }
+                                    if (!dayKey || dayKey !== currentDay) return;
+                                
+                                    const endTs = m.scheduledEndTs != null
+                                        ? m.scheduledEndTs
+                                        : (m.scheduledTs != null ? m.scheduledTs : null);
+                                
+                                    [
+                                        { name: m.home, identifier: m.homeTeamIdentifier },
+                                        { name: m.away, identifier: m.awayTeamIdentifier },
+                                    ].forEach(({ name: tn, identifier }) => {
+                                        if (!tn) return;
+                                        if (tn === teamName) return; // seba preskoč
+                                
+                                        if (!isRealRegisteredTeam(tn, category)) return;
+                                
+                                        if (!teamBelongsToChar(tn, category)) return;
+                                
+                                        // Ak má tím nadväzujúci pavúkový zápas inde, preskoč
+                                        if (identifier) {
+                                            const nextInfo = pavukTeamNextMatchInfo(identifier, category);
+                                            if (nextInfo && nextInfo.hasNext) {
+                                                if (
+                                                    nextInfo.nextHallId != null &&
+                                                    m.hallId != null &&
+                                                    nextInfo.nextHallId === m.hallId
+                                                ) {
+                                                    return;
+                                                }
+                                                if (nextInfo.nextHallId == null) {
+                                                    return;
+                                                }
+                                            }
+                                        }
+                                
+                                        const loc = m.hallName || null;
+                                        if (!loc) return;
+                                        if (loc === destination) return;
+                                
+                                        const existing = uniqueSourceLocations.get(loc);
+                                        if (!existing || endTs > existing.endTs) {
+                                            uniqueSourceLocations.set(loc, { location: loc, endTs });
+                                        }
+                                    });
+                                });
+                                
+                                // 2) Stravovania tímov zo skupiny s rovnakým písmenom – berieme
+                                //    posledné stravovanie KAŽDÉHO tímu v daný deň.
+                                cateringBufferRef.current.forEach((c) => {
+                                    if (cleanCategory(c.category) !== cleanCategory(category)) return;
+                                    if (c.isSuperstructure === true) return;
+                                
+                                    const dayKey = c.dayKey || null;
+                                    if (!dayKey || dayKey !== currentDay) return;
+                                
+                                    const tn = c.teamName;
+                                    if (!tn) return;
+                                    if (tn === teamName) return; // seba preskoč
+                                
+                                    if (!isRealRegisteredTeam(tn, category)) return;
+                                
+                                    if (!teamBelongsToChar(tn, category)) return;
+                                
+                                    const endTs = c.slotToTs != null
+                                        ? c.slotToTs
+                                        : (c.ts != null ? c.ts : null);
+                                
+                                    const loc = c.placeName || null;
+                                    if (!loc) return;
+                                    if (loc === destination) return;
+                                
+                                    const existing = uniqueSourceLocations.get(loc);
+                                    if (!existing || endTs > existing.endTs) {
+                                        uniqueSourceLocations.set(loc, { location: loc, endTs });
                                     }
                                 });
-                        
-                                // Pridaj aj ubytovania z teamLastEnd (ak ešte nie sú)
+                                
+                                // 3) Pridaj aj ubytovania z teamLastEnd (ak ešte nie sú) – pre prípad,
+                                //    že niektorý tím zo skupiny B má poslednú udalosť práve v ubytovni.
                                 teamLastEnd.forEach((info, tn) => {
                                     if (!info || !info.location) return;
                                     if (tn === teamName) return;
                                     if (info.location === destination) return;
-                        
+                                
                                     if (!uniqueSourceLocations.has(info.location)) {
                                         uniqueSourceLocations.set(info.location, info);
                                     }
