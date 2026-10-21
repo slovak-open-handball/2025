@@ -3973,10 +3973,10 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         // ============================================================
-        // NOVÉ: Pomocná – z `when` vytiahne číselný kľúč pre zoradenie:
+        // Pomocná: z `when` vytiahne číselný kľúč pre začiatok:
         //   YYYYMMDD + HHMM (ak chýba čas, berie sa 00:00)
         // ============================================================
-        const buildChronologySortKey = (t) => {
+        const buildStartSortKey = (t) => {
             const r = parseWhenRange(t.when);
             const dayKey = r ? r.startDayKey : (t.dayKey || '');
             const time = r && r.startTime ? r.startTime : '00:00';
@@ -3986,16 +3986,38 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         // ============================================================
-        // Zoradenie: chronologicky podľa dátumu a času začiatku presunu
-        // (a ako sekundárne podľa kategórie a názvu tímu)
+        // Pomocná: z `when` vytiahne číselný kľúč pre koniec:
+        //   YYYYMMDD + HHMM (ak chýba čas, berie sa 23:59)
+        // ============================================================
+        const buildEndSortKey = (t) => {
+            const r = parseWhenRange(t.when);
+            const dayKey = r ? r.endDayKey : (t.dayKey || '');
+            const time = r && r.endTime ? r.endTime : '23:59';
+            const datePart = String(dayKey || '').replace(/-/g, '');
+            const timePart = String(time || '').replace(':', '');
+            return `${datePart}${timePart}`;
+        };
+
+        // ============================================================
+        // Zoradenie:
+        //   1) primárne podľa dátumu a času ZAČIATKU presunu
+        //   2) ak je začiatok rovnaký → podľa dátumu a času KONCA presunu
+        //   3) ak aj koniec rovnaký → podľa kategórie
+        //   4) ak aj kategória rovnaká → podľa názvu tímu
         // ============================================================
         const sortedTransfers = [...filtered].sort((a, b) => {
-            const ka = buildChronologySortKey(a);
-            const kb = buildChronologySortKey(b);
-            if (ka !== kb) return ka.localeCompare(kb);
+            const startA = buildStartSortKey(a);
+            const startB = buildStartSortKey(b);
+            if (startA !== startB) return startA.localeCompare(startB);
+
+            const endA = buildEndSortKey(a);
+            const endB = buildEndSortKey(b);
+            if (endA !== endB) return endA.localeCompare(endB);
+
             const ca = cleanCategory(a.category) || '';
             const cb = cleanCategory(b.category) || '';
             if (ca !== cb) return ca.localeCompare(cb, 'sk', { sensitivity: 'base' });
+
             const ta = String(a.teamName || '');
             const tb = String(b.teamName || '');
             return ta.localeCompare(tb, 'sk', { sensitivity: 'base' });
