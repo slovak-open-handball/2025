@@ -5314,15 +5314,34 @@ const TransportApp = ({ userProfileData }) => {
                 if (boardIdx == null || alightIdx == null) return;
                 if (alightIdx < boardIdx) return;
 
-                // Prejdi riadky od boardIdx po alightIdx a vytvor segmenty
-                // (placeFrom → placeTo pre každý riadok, vrátane medzizastávok)
+                const boardRow = sorted[boardIdx];
+                const alightRow = sorted[alightIdx];
+                const boardFrom = normalizePlaceName(boardRow.placeFrom);
+                const alightTo = normalizePlaceName(alightRow.placeTo);
+
+                // ============================================================
+                // 1) Celkový segment od miesta nástupu po miesto výstupu
+                //    (napr. A → B), aby sa skryl aj celkový vygenerovaný
+                //    presun, ktorý autobus pokrýva v jednom alebo viacerých
+                //    riadkoch.
+                // ============================================================
+                if (boardFrom && alightTo) {
+                    assignedSegmentKeys.add(
+                        `${dayKey}|${tn}|${cat}|${boardFrom}→${alightTo}`
+                    );
+                }
+
+                // ============================================================
+                // 2) Jednotlivé segmenty z riadkov (medzizastávky)
+                //    (napr. A → X, X → B), aby sa skryli aj rozdelené
+                //    segmenty vygenerovaného presunu, ktoré autobus pokrýva.
+                // ============================================================
                 for (let k = boardIdx; k <= alightIdx; k++) {
                     const row = sorted[k];
                     const rowFrom = normalizePlaceName(row.placeFrom);
                     const rowTo = normalizePlaceName(row.placeTo);
                     if (!rowFrom || !rowTo) continue;
 
-                    // Kľúč segmentu: dayKey|tím|kat|from→to
                     assignedSegmentKeys.add(
                         `${dayKey}|${tn}|${cat}|${rowFrom}→${rowTo}`
                     );
