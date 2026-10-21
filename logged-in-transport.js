@@ -3733,7 +3733,11 @@ const TransportApp = ({ userProfileData }) => {
                         'div',
                         { className: 'flex flex-wrap gap-1' },
                         (row.teamsIn || []).map((tn, i) => {
-                            const colors = getCategoryBadgeColors(tn);
+                            // tn môže byť "Názov tímu" alebo "Názov tímu|Kategória"
+                            const parts = String(tn).split('|');
+                            const teamLabel = parts[0] || tn;
+                            const teamCategory = parts[1] || '';
+                            const colors = getCategoryBadgeColors(teamCategory);
                             return React.createElement(
                                 'span',
                                 {
@@ -3751,7 +3755,7 @@ const TransportApp = ({ userProfileData }) => {
                                     }
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-right-to-bracket text-[9px]' }),
-                                tn
+                                teamLabel
                             );
                         })
                     )
@@ -3764,7 +3768,10 @@ const TransportApp = ({ userProfileData }) => {
                         'div',
                         { className: 'flex flex-wrap gap-1' },
                         (row.teamsOut || []).map((tn, i) => {
-                            const colors = getCategoryBadgeColors(tn);
+                            const parts = String(tn).split('|');
+                            const teamLabel = parts[0] || tn;
+                            const teamCategory = parts[1] || '';
+                            const colors = getCategoryBadgeColors(teamCategory);
                             return React.createElement(
                                 'span',
                                 {
@@ -3782,7 +3789,7 @@ const TransportApp = ({ userProfileData }) => {
                                     }
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-right-from-bracket text-[9px]' }),
-                                tn
+                                teamLabel
                             );
                         })
                     )
@@ -4257,11 +4264,12 @@ const TransportApp = ({ userProfileData }) => {
 
         setAssignBusSaving(true);
         try {
+            const teamKey = `${teamName}|${transfer.category || ''}`;
             if (side === 'in') {
-                const newTeamsIn = Array.from(new Set([...(currentRow.teamsIn || []), teamName]));
+                const newTeamsIn = Array.from(new Set([...(currentRow.teamsIn || []), teamKey]));
                 await updateDoc(doc(window.db, 'transport', rowId), { teamsIn: newTeamsIn });
             } else {
-                const newTeamsOut = Array.from(new Set([...(currentRow.teamsOut || []), teamName]));
+                const newTeamsOut = Array.from(new Set([...(currentRow.teamsOut || []), teamKey]));
                 await updateDoc(doc(window.db, 'transport', rowId), { teamsOut: newTeamsOut });
             }
 
