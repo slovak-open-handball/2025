@@ -3901,7 +3901,7 @@ const TransportApp = ({ userProfileData }) => {
         const filtered = selectedDayKey
             ? savedTransfers.filter((t) => t.dayKey === selectedDayKey)
             : savedTransfers;
-    
+
         // Zoskupenie podľa kategórie
         const byCategory = {};
         filtered.forEach((t) => {
@@ -3909,11 +3909,64 @@ const TransportApp = ({ userProfileData }) => {
             if (!byCategory[cat]) byCategory[cat] = [];
             byCategory[cat].push(t);
         });
-    
+
         const categories = Object.keys(byCategory).sort((a, b) =>
             a.localeCompare(b, 'sk', { sensitivity: 'base' })
         );
-    
+
+        // ============================================================
+        // Pomocná: z `when` (napr. "26. 12. 2026 08:00 – 26. 12. 2026 09:15")
+        // vytiahne dátum začiatku a dátum konca.
+        // Vráti { startDayKey, endDayKey, startLabel, endLabel } alebo null.
+        // ============================================================
+        const parseWhenRange = (when) => {
+            if (!when) return null;
+            const s = String(when);
+            // Nájdi všetky výskyty "D. M. YYYY"
+            const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/g;
+            const found = [];
+            let m;
+            while ((m = regex.exec(s)) !== null) {
+                const d = String(m[1]).padStart(2, '0');
+                const mo = String(m[2]).padStart(2, '0');
+                const y = m[3];
+                found.push({
+                    dayKey: `${y}-${mo}-${d}`,
+                    label: `${d}. ${mo}. ${y}`,
+                });
+            }
+            if (found.length === 0) return null;
+            if (found.length === 1) {
+                return {
+                    startDayKey: found[0].dayKey,
+                    endDayKey: found[0].dayKey,
+                    startLabel: found[0].label,
+                    endLabel: found[0].label,
+                };
+            }
+            return {
+                startDayKey: found[0].dayKey,
+                endDayKey: found[1].dayKey,
+                startLabel: found[0].label,
+                endLabel: found[1].label,
+            };
+        };
+
+        // ============================================================
+        // Pomocná: z textu "Presun z X do Y" alebo "Presun z X do ubytovania Y"
+        // vytiahne { from, to }. Ak sa nedá parsovať, vráti null.
+        // ============================================================
+        const parseTransferText = (text) => {
+            if (!text) return null;
+            const s = String(text).trim();
+            const m = /^Presun z (.+?) do (.+)$/.exec(s);
+            if (!m) return null;
+            return {
+                from: m[1].trim(),
+                to: m[2].trim(),
+            };
+        };
+
         return React.createElement(
             'div',
             {
@@ -3978,9 +4031,28 @@ const TransportApp = ({ userProfileData }) => {
                                         ),
                                         React.createElement(
                                             'ul',
-                                            { className: 'space-y-1 pl-2' },
-                                            byTeam[teamName].map((t) =>
-                                                React.createElement(
+                                            { className: 'space-y-1.5 pl-2' },
+                                            byTeam[teamName].map((t) => {
+                                                const rangeInfo = parseWhenRange(t.when);
+                                                const transferInfo = parseTransferText(t.text);
+
+                                                // Prvý riadok – dátum (ak je začiatok == koniec, len raz)
+                                                let dateLabel = null;
+                                                if (rangeInfo) {
+                                                    dateLabel = (rangeInfo.startDayKey === rangeInfo.endDayKey)
+                                                        ? rangeInfo.startLabel
+                                                        : `${rangeInfo.startLabel} – ${rangeInfo.endLabel}`;
+                                                } else if (t.dayKey) {
+                                                    dateLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
+                                                }
+
+                                                // Druhý riadok – miesto odkiaľ → miesto kam
+                                                let routeLabel = null;
+                                                if (transferInfo) {
+                                                    routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
+                                                }
+
+                                                return React.createElement(
                                                     'li',
                                                     {
                                                         key: t.key,
@@ -3991,16 +4063,31 @@ const TransportApp = ({ userProfileData }) => {
                                                     }),
                                                     React.createElement(
                                                         'span',
-                                                        null,
-                                                        React.createElement(
-                                                            'span',
-                                                            { className: 'font-mono text-[11px] text-gray-500 mr-1' },
-                                                            t.when
-                                                        ),
-                                                        t.text.replace(/^Presun z /, '')
+                                                        { className: 'flex flex-col' },
+                                                        // 1. riadok – dátum
+                                                        dateLabel &&
+                                                            React.createElement(
+                                                                'span',
+                                                                { className: 'font-mono text-[11px] text-gray-500' },
+                                                                dateLabel
+                                                            ),
+                                                        // 2. riadok – miesto odkiaľ → miesto kam
+                                                        routeLabel &&
+                                                            React.createElement(
+                                                                'span',
+                                                                { className: 'text-gray-800' },
+                                                                routeLabel
+                                                            ),
+                                                        // Fallback – ak sa nepodarilo parsovať, zobraz pôvodný text
+                                                        (!dateLabel && !routeLabel) &&
+                                                            React.createElement(
+                                                                'span',
+                                                                { className: 'text-gray-800' },
+                                                                t.text.replace(/^Presun z /, '')
+                                                            )
                                                     )
-                                                )
-                                            )
+                                                );
+                                            })
                                         )
                                     )
                                 );
