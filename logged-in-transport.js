@@ -174,6 +174,10 @@ const TransportApp = ({ userProfileData }) => {
     const [busSaving, setBusSaving] = useState(false);
     const [confirmModal, setConfirmModal] = useState(null);    
     const [selectedDayKey, setSelectedDayKey] = useState('');
+    // ==== MODÁLNE OKNO PRE VÝBER KATEGÓRIE (tlačidlo "+") ====
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
+    const [selectedCategoryForTimeline, setSelectedCategoryForTimeline] = useState('');
+
     // ============================================================
     // PREDNAČÍTANIE UBYTOVNÍ PRE SUPERSTRUCTURE TÍMY
     // ============================================================
@@ -365,7 +369,7 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     // ZBUILDÍ A VYPÍŠE ČASOVÚ OS PRE KAŽDÝ TÍM V KAŽDEJ KATEGÓRII
     // ============================================================
-    const rebuildAndLogTimeline = (force = false) => {
+    const rebuildAndLogTimeline = (force = false, categoryFilter = null) => {
         // Ak používateľ ešte neklikol na tlačidlo "+", negeneruj časovú os
         // (pokiaľ nie je volanie vynútené cez force=true, napr. z printTeamTimeline)
         if (!force && !timelineGenerationRequestedRef.current) {
@@ -373,7 +377,9 @@ const TransportApp = ({ userProfileData }) => {
         }
         if (!matchesLoadedRef.current || !cateringLoadedRef.current || !teamsLoadedRef.current) {
             return;
-        }
+        }  
+
+        const normalizedFilter = categoryFilter ? cleanCategory(categoryFilter) : null;
     
         const grouped = {};
         const accommodationByTeam = {};
@@ -864,6 +870,7 @@ const TransportApp = ({ userProfileData }) => {
             });
     
             categories.forEach((category) => {
+                if (normalizedFilter && cleanCategory(category) !== normalizedFilter) return;
                 console.log(`\n[TRANSPORT] ██ Kategória: ${category} ██`);
                 const teams = Object.keys(grouped[category]).sort((a, b) =>
                     a.localeCompare(b, 'sk', { sensitivity: 'base' })
@@ -3529,7 +3536,28 @@ const TransportApp = ({ userProfileData }) => {
         );
     };
 
-        // ============================================================
+    // ============================================================
+    // Zoznam dostupných kategórií (z tímov + zápasov + stravovania)
+    // ============================================================
+    const getAvailableCategories = () => {
+        const set = new Set();
+
+        (teamsArrivalBufferRef.current || []).forEach((t) => {
+            if (t.category) set.add(cleanCategory(t.category));
+        });
+        (matchesBufferRef.current || []).forEach((m) => {
+            if (m.category) set.add(cleanCategory(m.category));
+        });
+        (cateringBufferRef.current || []).forEach((c) => {
+            if (c.category) set.add(cleanCategory(c.category));
+        });
+
+        return [...set]
+            .filter(Boolean)
+            .sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
+    };
+
+    // ============================================================
     // RENDER – plánovanie
     // ============================================================
     const renderPlanning = () => {
@@ -3768,10 +3796,13 @@ const TransportApp = ({ userProfileData }) => {
             'button',
             {
                 onClick: () => {
-                    // Povol generovanie časovej osi a spusti ho
-                    timelineGenerationRequestedRef.current = true;
-                    rebuildAndLogTimeline(true);
-                    window.showGlobalNotification('Časová os bola vygenerovaná do konzoly.', 'success');
+                    const cats = getAvailableCategories();
+                    if (cats.length === 0) {
+                        window.showGlobalNotification('Nie sú dostupné žiadne kategórie.', 'error');
+                        return;
+                    }
+                    setSelectedCategoryForTimeline(cats[0]);
+                    setShowCategoryModal(true);
                 },
                 className: `fixed bottom-8 right-8 w-14 h-14 rounded-full bg-green-600 text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all duration-200 flex items-center justify-center text-2xl font-bold z-[9999]`,
                 title: 'Vygenerovať časovú os do konzoly'
@@ -3832,7 +3863,93 @@ const TransportApp = ({ userProfileData }) => {
                     )
                 )
             )
-        )        
+        ),
+        showCategoryModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
+                onClick: () => setShowCategoryModal(false)
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-list-check text-green-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-800' },
+                        'Vygenerovať časovú os'
+                    )
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-700 mb-4 text-sm' },
+                    'Vyberte kategóriu, pre ktorú sa má vygenerovať časová os do konzoly.'
+                ),
+                React.createElement(
+                    'label',
+                    { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Kategória'
+                ),
+                React.createElement(
+                    'select',
+                    {
+                        value: selectedCategoryForTimeline,
+                        onChange: (e) => setSelectedCategoryForTimeline(e.target.value),
+                        className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors mb-6'
+                    },
+                    getAvailableCategories().map((cat) =>
+                        React.createElement(
+                            'option',
+                            { key: cat, value: cat },
+                            cat
+                        )
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setShowCategoryModal(false),
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => {
+                                const cat = selectedCategoryForTimeline;
+                                if (!cat) {
+                                    window.showGlobalNotification('Najprv vyberte kategóriu.', 'error');
+                                    return;
+                                }
+                                timelineGenerationRequestedRef.current = true;
+                                rebuildAndLogTimeline(true, cat);
+                                setShowCategoryModal(false);
+                                window.showGlobalNotification(
+                                    `Časová os pre kategóriu "${cat}" bola vygenerovaná do konzoly.`,
+                                    'success'
+                                );
+                            },
+                            className: 'px-4 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-colors'
+                        },
+                        'Vygenerovať'
+                    )
+                )
+            )
+        ),
     );
 };
 
