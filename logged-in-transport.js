@@ -2477,13 +2477,17 @@ const TransportApp = ({ userProfileData }) => {
             });
         }
 
-        if (!window.__transport_preloadDone) {
-            window.__transport_preloadDone = true;
-            preloadAccommodationsForSuperstructureTeams().then(() => {
-                // Po načítaní cache znova zavolaj rebuild
-                rebuildAndLogTimeline();
-            });
-        }
+        preloadAccommodationsForSuperstructureTeams().then(() => {
+            rebuildAndLogTimeline();
+        });
+
+//        if (!window.__transport_preloadDone) {
+//            window.__transport_preloadDone = true;
+//            preloadAccommodationsForSuperstructureTeams().then(() => {
+//                // Po načítaní cache znova zavolaj rebuild
+//                rebuildAndLogTimeline();
+//            });
+//        }
         
         console.log('[TRANSPORT] ===============================================');
     };
