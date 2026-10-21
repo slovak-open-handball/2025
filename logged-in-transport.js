@@ -3864,6 +3864,7 @@ const TransportApp = ({ userProfileData }) => {
 
     // ============================================================
     // ULOŽENIE UPRAVENÉHO PRESUNU (s medzizastávkami)
+    // + ROVNOMERNÉ ROZDELENIE CELKOVÉHO ČASU MEDZI SEGMENTY
     // ============================================================
     const saveEditedTransfer = async () => {
         if (!window.db || !editingTransfer) return;
@@ -3879,6 +3880,79 @@ const TransportApp = ({ userProfileData }) => {
             return;
         }
 
+        // ============================================================
+        // Zisti celkový časový interval pôvodného presunu z `when`
+        // Formát: "DD. MM. YYYY HH:MM – DD. MM. YYYY HH:MM"
+        // ============================================================
+        const parseWhenRangeToTs = (when) => {
+            if (!when) return null;
+            const s = String(when);
+            const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
+            const found = [];
+            let m;
+            while ((m = regex.exec(s)) !== null) {
+                const d = Number(m[1]);
+                const mo = Number(m[2]) - 1;
+                const y = Number(m[3]);
+                const hh = m[4] != null ? Number(m[4]) : 0;
+                const mi = m[5] != null ? Number(m[5]) : 0;
+                const ts = new Date(y, mo, d, hh, mi, 0, 0).getTime();
+                if (isFinite(ts)) found.push(ts);
+            }
+            if (found.length === 0) return null;
+            const startTs = found[0];
+            const endTs = found.length > 1 ? found[1] : found[0];
+            return { startTs, endTs };
+        };
+
+        const timeRange = parseWhenRangeToTs(original.when);
+        const segmentsCount = route.length - 1;
+
+        // ============================================================
+        // Pomocná: naformátuje timestamp na "DD. MM. YYYY HH:MM"
+        // ============================================================
+        const formatTs = (ts) => {
+            if (ts == null || !isFinite(ts)) return null;
+            const d = new Date(ts);
+            if (isNaN(d.getTime())) return null;
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            return `${day}. ${month}. ${year} ${hours}:${minutes}`;
+        };
+
+        // ============================================================
+        // Vypočítaj časové intervaly pre jednotlivé segmenty
+        // ============================================================
+        let segmentTimes = [];
+
+        if (timeRange && timeRange.startTs != null && timeRange.endTs != null && timeRange.endTs > timeRange.startTs) {
+            // Máme platný interval → rozdeľ rovnomerne
+            const totalMs = timeRange.endTs - timeRange.startTs;
+            const segmentMs = totalMs / segmentsCount;
+
+            for (let i = 0; i < segmentsCount; i++) {
+                const segStartTs = timeRange.startTs + Math.round(segmentMs * i);
+                const segEndTs = timeRange.startTs + Math.round(segmentMs * (i + 1));
+                segmentTimes.push({
+                    startTs: segStartTs,
+                    endTs: segEndTs,
+                    whenStr: `${formatTs(segStartTs)} – ${formatTs(segEndTs)}`,
+                });
+            }
+        } else {
+            // Nemáme platný interval → všetky segmenty dostanú pôvodný `when`
+            for (let i = 0; i < segmentsCount; i++) {
+                segmentTimes.push({
+                    startTs: null,
+                    endTs: null,
+                    whenStr: original.when,
+                });
+            }
+        }
+
         setEditingTransferSaving(true);
         try {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
@@ -3888,13 +3962,12 @@ const TransportApp = ({ userProfileData }) => {
 
             // 2) Vytvoriť nové záznamy pre každý segment trasy
             const newTransfersPatch = {};
-            for (let i = 0; i < route.length - 1; i++) {
+            for (let i = 0; i < segmentsCount; i++) {
                 const from = route[i];
                 const to = route[i + 1];
                 const text = `Presun z ${from} do ${to}`;
+                const when = segmentTimes[i].whenStr;
 
-                // Zachovaj pôvodný `when` pre všetky segmenty
-                const when = original.when;
                 const key = buildTransferKey(original.category, original.teamName, when, text);
 
                 newTransfersPatch[key] = {
@@ -3923,7 +3996,10 @@ const TransportApp = ({ userProfileData }) => {
                 { merge: true }
             );
 
-            window.showGlobalNotification('Presun bol upravený.', 'success');
+            window.showGlobalNotification(
+                `Presun bol upravený (${segmentsCount} ${segmentsCount === 1 ? 'segment' : segmentsCount < 5 ? 'segmenty' : 'segmentov'}).`,
+                'success'
+            );
             setEditingTransfer(null);
             setEditingTransferStops([]);
         } catch (err) {
