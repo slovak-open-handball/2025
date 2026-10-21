@@ -1433,6 +1433,24 @@ const TransportApp = ({ userProfileData }) => {
                                 // zo skupiny s rovnakým písmenom, ktorý má udalosť (zápas/stravovanie).
                                 // ============================================================
                                 const groupHasAnyEventOnCurrentDay = (() => {
+                                    // Pomocná: zisti, či tím patrí do skupiny s daným písmenom
+                                    // (bez požiadavky na isRegistered – berieme aj superstructure tímy)
+                                    const teamBelongsToCharLocal = (tn) => {
+                                        if (!tn) return false;
+                                        if (String(tn).startsWith('(row team:')) return false;
+                                        // 1) Skús cez groupName v teamsArrivalBufferRef
+                                        const teamInfo = (teamsArrivalBufferRef.current || []).find(
+                                            (t) => cleanCategory(t.category) === cleanCategory(category) && t.teamName === tn
+                                        );
+                                        if (teamInfo && teamInfo.groupName) {
+                                            return groupBelongsToChar(teamInfo.groupName, groupChar);
+                                        }
+                                        // 2) Fallback: odvoď z názvu tímu (napr. "U12 CH 2B" → "B")
+                                        const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(tn).trim());
+                                        if (m && m[1].toUpperCase() === groupChar) return true;
+                                        return false;
+                                    };
+
                                     // Zápasy
                                     const hasMatch = (matchesBufferRef.current || []).some((m) => {
                                         if (cleanCategory(m.category) !== cleanCategory(category)) return false;
@@ -1451,10 +1469,10 @@ const TransportApp = ({ userProfileData }) => {
                                             dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
                                         }
                                         if (!dayKey || dayKey !== currentDay) return false;
-                                        return [m.home, m.away].some((tn) => teamBelongsToChar(tn, category));
+                                        return [m.home, m.away].some((tn) => teamBelongsToCharLocal(tn));
                                     });
                                     if (hasMatch) return true;
-                            
+                                
                                     // Stravovania
                                     const hasCatering = (cateringBufferRef.current || []).some((c) => {
                                         if (cleanCategory(c.category) !== cleanCategory(category)) return false;
@@ -1463,7 +1481,7 @@ const TransportApp = ({ userProfileData }) => {
                                         if (!dayKey || dayKey !== currentDay) return false;
                                         const tn = c.teamName;
                                         if (!tn) return false;
-                                        return teamBelongsToChar(tn, category);
+                                        return teamBelongsToCharLocal(tn);
                                     });
                                     return hasCatering;
                                 })();
