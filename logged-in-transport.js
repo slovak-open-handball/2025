@@ -3916,38 +3916,51 @@ const TransportApp = ({ userProfileData }) => {
 
         // ============================================================
         // Pomocná: z `when` (napr. "26. 12. 2026 08:00 – 26. 12. 2026 09:15")
-        // vytiahne dátum začiatku/konca.
-        // Vráti { startDayKey, endDayKey, startLabel, endLabel } alebo null.
+        // vytiahne dátum začiatku/konca + čas začiatku/konca.
+        // Vráti { startDayKey, endDayKey, startLabel, endLabel,
+        //         startTime, endTime } alebo null.
         // ============================================================
         const parseWhenRange = (when) => {
             if (!when) return null;
             const s = String(when);
-            const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/g;
+
+            // Nájdi všetky výskyty "D. M. YYYY HH:MM" alebo len "D. M. YYYY"
+            const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
             const found = [];
             let m;
             while ((m = regex.exec(s)) !== null) {
                 const d = String(m[1]).padStart(2, '0');
                 const mo = String(m[2]).padStart(2, '0');
                 const y = m[3];
+                const hh = m[4] != null ? String(m[4]).padStart(2, '0') : null;
+                const mi = m[5] != null ? String(m[5]).padStart(2, '0') : null;
                 found.push({
                     dayKey: `${y}-${mo}-${d}`,
                     label: `${d}. ${mo}. ${y}`,
+                    time: (hh != null && mi != null) ? `${hh}:${mi}` : null,
                 });
             }
+
             if (found.length === 0) return null;
+
             if (found.length === 1) {
                 return {
                     startDayKey: found[0].dayKey,
                     endDayKey: found[0].dayKey,
                     startLabel: found[0].label,
                     endLabel: found[0].label,
+                    startTime: found[0].time,
+                    endTime: found[0].time,
                 };
             }
+
             return {
                 startDayKey: found[0].dayKey,
                 endDayKey: found[1].dayKey,
                 startLabel: found[0].label,
                 endLabel: found[1].label,
+                startTime: found[0].time,
+                endTime: found[1].time,
             };
         };
 
@@ -4035,7 +4048,7 @@ const TransportApp = ({ userProfileData }) => {
                                                 const rangeInfo = parseWhenRange(t.when);
                                                 const transferInfo = parseTransferText(t.text);
 
-                                                // Prvý riadok – dátum (ak je začiatok == koniec, len raz)
+                                                // 1. riadok – dátum (ak je začiatok == koniec, len raz)
                                                 let dateLabel = null;
                                                 if (rangeInfo) {
                                                     dateLabel = (rangeInfo.startDayKey === rangeInfo.endDayKey)
@@ -4045,7 +4058,17 @@ const TransportApp = ({ userProfileData }) => {
                                                     dateLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
                                                 }
 
-                                                // Druhý riadok – IBA trasa odkiaľ → kam
+                                                // 2. riadok – čas (odkedy – dokedy)
+                                                let timeLabel = null;
+                                                if (rangeInfo) {
+                                                    const st = rangeInfo.startTime;
+                                                    const et = rangeInfo.endTime;
+                                                    if (st && et) timeLabel = `${st} – ${et}`;
+                                                    else if (st) timeLabel = st;
+                                                    else if (et) timeLabel = et;
+                                                }
+
+                                                // 3. riadok – miesta (odkiaľ → kam)
                                                 let routeLabel = null;
                                                 if (transferInfo) {
                                                     routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
@@ -4070,7 +4093,14 @@ const TransportApp = ({ userProfileData }) => {
                                                                 { className: 'font-mono text-[11px] text-gray-500' },
                                                                 dateLabel
                                                             ),
-                                                        // 2. riadok – trasa odkiaľ → kam
+                                                        // 2. riadok – čas
+                                                        timeLabel &&
+                                                            React.createElement(
+                                                                'span',
+                                                                { className: 'font-mono text-[11px] text-gray-600' },
+                                                                timeLabel
+                                                            ),
+                                                        // 3. riadok – miesta
                                                         routeLabel &&
                                                             React.createElement(
                                                                 'span',
@@ -4078,7 +4108,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                 routeLabel
                                                             ),
                                                         // Fallback – ak sa nepodarilo parsovať, zobraz pôvodný text
-                                                        (!dateLabel && !routeLabel) &&
+                                                        (!dateLabel && !timeLabel && !routeLabel) &&
                                                             React.createElement(
                                                                 'span',
                                                                 { className: 'text-gray-800' },
