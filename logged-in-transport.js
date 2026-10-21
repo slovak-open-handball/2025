@@ -172,8 +172,8 @@ const TransportApp = ({ userProfileData }) => {
     const [tournamentDays, setTournamentDays] = useState([]);
     const [tournamentDaysLoaded, setTournamentDaysLoaded] = useState(false);
     const [busSaving, setBusSaving] = useState(false);
-    const [confirmModal, setConfirmModal] = useState(null);
-
+    const [confirmModal, setConfirmModal] = useState(null);    
+    const [selectedDayKey, setSelectedDayKey] = useState('');
     // ============================================================
     // PREDNAČÍTANIE UBYTOVNÍ PRE SUPERSTRUCTURE TÍMY
     // ============================================================
@@ -3529,10 +3529,15 @@ const TransportApp = ({ userProfileData }) => {
         );
     };
 
-    // ============================================================
+        // ============================================================
     // RENDER – plánovanie
     // ============================================================
     const renderPlanning = () => {
+        // Filtrovanie dní podľa vybraného dňa v selectboxe
+        const daysToRender = selectedDayKey
+            ? tournamentDays.filter((d) => d.dayKey === selectedDayKey)
+            : tournamentDays;
+
         return React.createElement(
             'div',
             { className: 'w-full flex flex-col items-start justify-start py-6 relative min-h-[400px]' },
@@ -3573,7 +3578,7 @@ const TransportApp = ({ userProfileData }) => {
                                 className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
                                 style: { width: '650px', maxWidth: '100%' }
                             },
-                            // ... pôvodný obsah boxu autobusu ...
+                            // Hlavička autobusu
                             React.createElement(
                                 'div',
                                 {
@@ -3601,45 +3606,51 @@ const TransportApp = ({ userProfileData }) => {
                                         ? 'Žiadne dátumy turnaja (skontrolujte nastavenie registrácie).'
                                         : 'Načítavam dátumy turnaja...'
                                 )
-                                : React.createElement(
-                                    'table',
-                                    { className: 'w-full border-collapse text-sm' },
-                                    React.createElement(
-                                        'tbody',
-                                        null,
-                                        tournamentDays.map((day, idx) =>
-                                            React.createElement(
-                                                'tr',
-                                                {
-                                                    key: day.dayKey,
-                                                    className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                                                },
+                                : daysToRender.length === 0
+                                    ? React.createElement(
+                                        'p',
+                                        { className: 'text-center text-gray-500 py-6 text-sm italic' },
+                                        'Pre zvolený deň nie sú žiadne dátumy.'
+                                    )
+                                    : React.createElement(
+                                        'table',
+                                        { className: 'w-full border-collapse text-sm' },
+                                        React.createElement(
+                                            'tbody',
+                                            null,
+                                            daysToRender.map((day, idx) =>
                                                 React.createElement(
-                                                    'td',
-                                                    { className: 'border border-gray-200 px-4 py-2 text-gray-800 text-center' },
+                                                    'tr',
+                                                    {
+                                                        key: day.dayKey,
+                                                        className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                                    },
                                                     React.createElement(
-                                                        'span',
-                                                        { className: 'font-semibold capitalize' },
-                                                        day.dayName
-                                                    ),
-                                                    React.createElement(
-                                                        'span',
-                                                        { className: 'text-gray-500 mx-2' },
-                                                        '–'
-                                                    ),
-                                                    React.createElement(
-                                                        'span',
-                                                        null,
-                                                        day.dateLabel
+                                                        'td',
+                                                        { className: 'border border-gray-200 px-4 py-2 text-gray-800 text-center' },
+                                                        React.createElement(
+                                                            'span',
+                                                            { className: 'font-semibold capitalize' },
+                                                            day.dayName
+                                                        ),
+                                                        React.createElement(
+                                                            'span',
+                                                            { className: 'text-gray-500 mx-2' },
+                                                            '–'
+                                                        ),
+                                                        React.createElement(
+                                                            'span',
+                                                            null,
+                                                            day.dateLabel
+                                                        )
                                                     )
                                                 )
                                             )
                                         )
                                     )
-                                )
                         )
                     ),
-                    // NOVÉ: zelené tlačidlo "+" napravo od posledného boxu autobusu
+                    // Zelené tlačidlo "+" napravo od posledného boxu autobusu
                     React.createElement(
                         'button',
                         {
@@ -3701,6 +3712,37 @@ const TransportApp = ({ userProfileData }) => {
                     },
                     React.createElement('i', { className: 'fa-solid fa-gear' }),
                     'Nastavenia'
+                )
+            ),
+            activeView === 'planovanie' && React.createElement(
+                'div',
+                { className: 'w-full flex flex-wrap items-center justify-center gap-3 mb-6' },
+                React.createElement(
+                    'label',
+                    { className: 'flex items-center gap-2 text-sm font-medium text-gray-700' },
+                    React.createElement('i', { className: 'fa-solid fa-filter text-gray-500' }),
+                    'Zobraziť deň:'
+                ),
+                React.createElement(
+                    'select',
+                    {
+                        value: selectedDayKey,
+                        onChange: (e) => setSelectedDayKey(e.target.value),
+                        disabled: tournamentDays.length === 0,
+                        className: 'px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
+                    },
+                    React.createElement(
+                        'option',
+                        { value: '' },
+                        'Všetky dni'
+                    ),
+                    tournamentDays.map((day) =>
+                        React.createElement(
+                            'option',
+                            { key: day.dayKey, value: day.dayKey },
+                            `${day.dayName.charAt(0).toUpperCase() + day.dayName.slice(1)} – ${day.dateLabel}`
+                        )
+                    )
                 )
             ),
             React.createElement(
