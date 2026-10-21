@@ -1609,48 +1609,6 @@ const TransportApp = ({ userProfileData }) => {
                                 // ============================================================
                                 const useGroupEndLocationsAsSource = groupHasAnyEventOnCurrentDay;
 
-                                // ============================================================
-                                // LOGOVANIE ROZHODNUTIA
-                                // ============================================================
-                                console.log(
-                                    '%c[TRANSPORT][DECISION] ' + teamName + ' @ ' + currentDay,
-                                    'font-weight:bold;color:#7c3aed;',
-                                    {
-                                        groupChar,
-                                        isSSPlayDay,
-                                        isSSLastDayWithUsers,
-                                        usersTeamHasEventsOnDay,
-                                        groupHasAnyEventOnCurrentDay,
-                                        currentTeamHasOwnEventOnThisDay,
-                                        useGroupEndLocationsAsSource,
-                                        useGroupBasedMorningTransfers,
-                                        destinationEventLocation: destinationEvent ? destinationEvent.location : null,
-                                        destinationEventWhen: destinationEvent ? destinationEvent.when : null,
-                                        matchesOnDay: (matchesBufferRef.current || [])
-                                            .filter((m) => {
-                                                if (cleanCategory(m.category) !== cleanCategory(category)) return false;
-                                                let dk = null;
-                                                if (m.scheduledTime) {
-                                                    const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
-                                                    if (mm) dk = `${mm[3]}-${String(mm[2]).padStart(2,'0')}-${String(mm[1]).padStart(2,'0')}`;
-                                                }
-                                                if (!dk && m.scheduledTs != null) {
-                                                    const dt = new Date(m.scheduledTs);
-                                                    dk = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
-                                                }
-                                                return dk === currentDay;
-                                            })
-                                            .map((m) => ({
-                                                home: m.home,
-                                                away: m.away,
-                                                groupName: m.groupName,
-                                                homeBelongs: groupHasAnyEventOnCurrentDay
-                                                    ? undefined
-                                                    : undefined,
-                                            })),
-                                    }
-                                );
-
                                 if (useGroupEndLocationsAsSource) {
                                     // ============================================================
                                     // SKUPINOVÁ LOGIKA: presuny z miest posledných udalostí
