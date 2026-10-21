@@ -3724,7 +3724,6 @@ const TransportApp = ({ userProfileData }) => {
                                     className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
                                     style: { color: textColor }
                                 },
-                                React.createElement('i', { className: 'fa-solid fa-right-to-bracket text-[9px]' }),
                                 teamLabel
                             );
                         })
@@ -3754,7 +3753,6 @@ const TransportApp = ({ userProfileData }) => {
                                     className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
                                     style: { color: textColor }
                                 },
-                                React.createElement('i', { className: 'fa-solid fa-right-from-bracket text-[9px]' }),
                                 teamLabel
                             );
                         })
