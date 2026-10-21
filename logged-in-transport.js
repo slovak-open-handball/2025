@@ -129,6 +129,24 @@ const placeTypeIcons = {
     zastavka:      { icon: 'fa-bus', color: '#2563eb', label: 'Zastávka' },
 };
 
+// ============================================================
+// KOLEKCIA PRE ULOŽENÉ VYGENEROVANÉ PRESUNY
+// (rovnaká kolekcia ako nastavenia časov medzi zastávkami)
+// ============================================================
+const TRANSPORT_SETTINGS_COLLECTION = 'settings';
+const TRANSPORT_SETTINGS_DOC = 'transportTravelTimes';
+const TRANSPORT_TRANSFERS_FIELD = 'transfers';
+
+// Pomocná: stabilný kľúč pre presun (aby sme vedeli identifikovať duplicitný)
+const buildTransferKey = (category, teamName, when, text) => {
+    return [
+        cleanCategory(category || ''),
+        String(teamName || '').trim(),
+        String(when || '').trim(),
+        String(text || '').trim(),
+    ].join('||');
+};
+
 const TransportApp = ({ userProfileData }) => {
     const timelineGenerationRequestedRef = useRef(false);
     // Mapa placeId → placeName
@@ -174,6 +192,7 @@ const TransportApp = ({ userProfileData }) => {
     const [busSaving, setBusSaving] = useState(false);
     const [confirmModal, setConfirmModal] = useState(null);    
     const [selectedDayKey, setSelectedDayKey] = useState('');
+    const [savedTransfers, setSavedTransfers] = useState([]);
     // ==== MODÁLNE OKNO PRE VÝBER KATEGÓRIE (tlačidlo "+") ====
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [selectedCategoryForTimeline, setSelectedCategoryForTimeline] = useState('');
@@ -2399,6 +2418,54 @@ const TransportApp = ({ userProfileData }) => {
                         if (a.ts !== b.ts) return a.ts - b.ts;
                         return String(a.text).localeCompare(String(b.text), 'sk');
                     });
+
+                    // ============================================================
+                    // NOVÉ: Uloženie vygenerovaných presunov pre tento tím do DB
+                    // ============================================================
+                    try {
+                        const transfersForTeam = enriched.filter((ev) => ev.isTransfer === true);
+                        if (transfersForTeam.length > 0 && window.db) {
+                            const transfersPatch = {};
+                            transfersForTeam.forEach((ev) => {
+                                const key = buildTransferKey(category, teamName, ev.when, ev.text);
+                                // Zisti from/to z textu "Presun z X do Y"
+                                let fromLocation = '';
+                                let toLocation = '';
+                                const m = /^Presun z (.+?) do (.+)$/.exec(String(ev.text || ''));
+                                if (m) {
+                                    fromLocation = m[1].trim();
+                                    toLocation = m[2].trim();
+                                }
+                                transfersPatch[key] = {
+                                    category: cleanCategory(category),
+                                    teamName: String(teamName).trim(),
+                                    when: String(ev.when || '').trim(),
+                                    text: String(ev.text || '').trim(),
+                                    fromLocation,
+                                    toLocation,
+                                    dayKey: extractDayKeyFromWhen(ev.when) || null,
+                                    generatedAt: Timestamp.fromDate(new Date()),
+                                    generatedBy: (userProfileData && userProfileData.email) || null,
+                                };
+                            });
+                    
+                            if (Object.keys(transfersPatch).length > 0) {
+                                setDoc(
+                                    doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC),
+                                    {
+                                        [TRANSPORT_TRANSFERS_FIELD]: transfersPatch,
+                                        updatedAt: Timestamp.fromDate(new Date()),
+                                        updatedBy: (userProfileData && userProfileData.email) || null,
+                                    },
+                                    { merge: true }
+                                ).catch((err) => {
+                                    console.error('[TRANSPORT] Chyba pri ukladaní presunov do DB:', err);
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        console.error('[TRANSPORT] Chyba pri príprave presunov na uloženie:', e);
+                    }
     
                     const timelineLines = renderTeamTimeline(category, teamName, enriched, {
                         isSuperstructureTeam,
@@ -2423,6 +2490,35 @@ const TransportApp = ({ userProfileData }) => {
                     });
                 });
             });
+        }
+
+        // ============================================================
+        // NOVÉ: Uloženie vygenerovaných presunov do DB
+        // (rovnaký dokument ako trvania jázd)
+        // ============================================================
+        try {
+            if (window.db) {
+                const transfersToSave = {}; // key → objekt
+                const nowTs = Timestamp.fromDate(new Date());
+        
+                Object.entries(grouped).forEach(([category, teamsObj]) => {
+                    Object.entries(teamsObj).forEach(([teamName, events]) => {
+                        // Prejdi enriched eventy – potrebujeme tie isté ako v renderi.
+                        // Keďže `enriched` sa vytvára až nižšie v renderi, tu si
+                        // prejdeme `events` a označíme tie, ktoré sú typu 'transfer'
+                        // (tie sa do `enriched` dostávajú počas renderu).
+                        //
+                        // POZOR: `enriched` nie je dostupné v tejto časti kódu.
+                        // Preto ukladanie robíme cez pomocnú funkciu nižšie,
+                        // ktorá sa volá priamo z renderu pre každý tím.
+                    });
+                });
+        
+                // Uloženie presunov sa deje cez `persistTeamTransfers`
+                // volanú z renderu pre každý tím (viď nižšie).
+            }
+        } catch (e) {
+            console.error('[TRANSPORT] Chyba pri ukladaní presunov:', e);
         }
         
         console.log('[TRANSPORT] ===============================================');
@@ -2499,6 +2595,7 @@ const TransportApp = ({ userProfileData }) => {
             const ttRef = doc(window.db, 'settings', 'transportTravelTimes');
             unsubscribeTravelTimes = onSnapshot(ttRef, (snap) => {
                 const map = {};
+                const transfers = [];
                 if (snap.exists()) {
                     const data = snap.data() || {};
                     const raw = data.times || {};
@@ -2512,14 +2609,39 @@ const TransportApp = ({ userProfileData }) => {
                             minutes: Number(v.minutes) || 0,
                         };
                     });
+
+                    // NOVÉ: načítaj uložené vygenerované presuny
+                    const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
+                    Object.entries(rawTransfers).forEach(([key, v]) => {
+                        if (!v) return;
+                        transfers.push({
+                            key,
+                            category: v.category || '',
+                            teamName: v.teamName || '',
+                            when: v.when || '',
+                            text: v.text || '',
+                            fromLocation: v.fromLocation || '',
+                            toLocation: v.toLocation || '',
+                            dayKey: v.dayKey || null,
+                            generatedAt: v.generatedAt || null,
+                            generatedBy: v.generatedBy || null,
+                        });
+                    });
+                    transfers.sort((a, b) => {
+                        if (a.category !== b.category) {
+                            return a.category.localeCompare(b.category, 'sk', { sensitivity: 'base' });
+                        }
+                        if (a.teamName !== b.teamName) {
+                            return a.teamName.localeCompare(b.teamName, 'sk', { sensitivity: 'base' });
+                        }
+                        return String(a.when).localeCompare(String(b.when), 'sk');
+                    });
                 }
                 setTravelTimes(map);
+                setSavedTransfers(transfers);
             }, (err) => {
                 console.error('[TRANSPORT] onSnapshot(settings/transportTravelTimes) error:', err);
             });
-        } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transportTravelTimes:', e);
-        }
 
         // 0a1d) KOLEKCIA `transport` – autobusy (dokumenty typu 'bus')
         let unsubscribeBuses = null;
@@ -3598,6 +3720,11 @@ const TransportApp = ({ userProfileData }) => {
                 : React.createElement(
                     'div',
                     { className: 'w-full flex flex-row flex-nowrap gap-6 pb-24 overflow-visible items-start' },
+                
+                    // === NOVÉ: ĽAVÝ STĹPEC – uložené vygenerované presuny ===
+                    renderSavedTransfers(),
+                
+                    // === PÔVODNÉ: boxy autobusov ===
                     buses.map((bus) =>
                         React.createElement(
                             'div',
@@ -3678,6 +3805,7 @@ const TransportApp = ({ userProfileData }) => {
                                     )
                         )
                     ),
+                
                     // Zelené tlačidlo "+" napravo od posledného boxu autobusu
                     React.createElement(
                         'button',
@@ -3691,6 +3819,124 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement('i', {
                             className: busSaving ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-plus'
                         })
+                    )
+                )
+        );
+    };
+
+    // ============================================================
+    // RENDER – ľavý stĺpec s uloženými vygenerovanými presunmi
+    // ============================================================
+    const renderSavedTransfers = () => {
+        // Filtrovanie podľa zvoleného dňa (ak je vybraný)
+        const filtered = selectedDayKey
+            ? savedTransfers.filter((t) => t.dayKey === selectedDayKey)
+            : savedTransfers;
+    
+        // Zoskupenie podľa kategórie
+        const byCategory = {};
+        filtered.forEach((t) => {
+            const cat = cleanCategory(t.category) || '(bez kategórie)';
+            if (!byCategory[cat]) byCategory[cat] = [];
+            byCategory[cat].push(t);
+        });
+    
+        const categories = Object.keys(byCategory).sort((a, b) =>
+            a.localeCompare(b, 'sk', { sensitivity: 'base' })
+        );
+    
+        return React.createElement(
+            'div',
+            {
+                className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
+                style: { width: '420px', maxWidth: '100%' }
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'relative px-5 py-3 flex items-center justify-center text-white',
+                    style: { backgroundColor: '#7c3aed' }
+                },
+                React.createElement('i', { className: 'fa-solid fa-van-shuttle mr-2' }),
+                React.createElement(
+                    'h3',
+                    { className: 'text-lg font-bold text-center' },
+                    'Vygenerované presuny'
+                ),
+                React.createElement(
+                    'span',
+                    { className: 'absolute right-3 text-xs bg-white/20 rounded-full px-2 py-0.5' },
+                    `${filtered.length}`
+                )
+            ),
+            filtered.length === 0
+                ? React.createElement(
+                    'p',
+                    { className: 'text-center text-gray-500 py-6 text-sm italic px-3' },
+                    'Zatiaľ žiadne vygenerované presuny. Kliknite na "+" vpravo dole a vygenerujte časovú os.'
+                )
+                : React.createElement(
+                    'div',
+                    { className: 'max-h-[70vh] overflow-y-auto p-3 space-y-4' },
+                    categories.map((cat) =>
+                        React.createElement(
+                            'div',
+                            { key: `cat-${cat}` },
+                            React.createElement(
+                                'div',
+                                { className: 'text-xs font-bold uppercase tracking-wide text-violet-700 mb-2 pb-1 border-b border-violet-200' },
+                                cat
+                            ),
+                            (() => {
+                                // Zoskup podľa tímu
+                                const byTeam = {};
+                                byCategory[cat].forEach((t) => {
+                                    if (!byTeam[t.teamName]) byTeam[t.teamName] = [];
+                                    byTeam[t.teamName].push(t);
+                                });
+                                const teams = Object.keys(byTeam).sort((a, b) =>
+                                    a.localeCompare(b, 'sk', { sensitivity: 'base' })
+                                );
+                                return teams.map((teamName) =>
+                                    React.createElement(
+                                        'div',
+                                        { key: `team-${cat}-${teamName}`, className: 'mb-3' },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'text-sm font-semibold text-gray-800 mb-1 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-people-group text-gray-400 text-xs' }),
+                                            teamName
+                                        ),
+                                        React.createElement(
+                                            'ul',
+                                            { className: 'space-y-1 pl-2' },
+                                            byTeam[teamName].map((t) =>
+                                                React.createElement(
+                                                    'li',
+                                                    {
+                                                        key: t.key,
+                                                        className: 'text-xs text-gray-700 flex items-start gap-1.5 leading-snug'
+                                                    },
+                                                    React.createElement('i', {
+                                                        className: 'fa-solid fa-van-shuttle text-blue-600 mt-0.5'
+                                                    }),
+                                                    React.createElement(
+                                                        'span',
+                                                        null,
+                                                        React.createElement(
+                                                            'span',
+                                                            { className: 'font-mono text-[11px] text-gray-500 mr-1' },
+                                                            t.when
+                                                        ),
+                                                        t.text.replace(/^Presun z /, '')
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                );
+                            })()
+                        )
                     )
                 )
         );
