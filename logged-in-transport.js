@@ -4109,41 +4109,33 @@ const TransportApp = ({ userProfileData }) => {
         const results = [];
     
         Object.entries(busRows || {}).forEach(([key, rows]) => {
-            // key = busId|dayKey
             const [busId, dayKey] = key.split('|');
             if (dayKey !== trDayKey) return;
     
             const bus = buses.find((b) => b.id === busId);
             if (!bus) return;
     
-            // Pre každý autobus v danom dni nájdeme:
-            //  - riadok pre NÁSTUP (placeFrom === trFrom)
-            //  - riadok pre VÝSTUP (placeTo === trTo)
-            // Môžu to byť rôzne riadky!
-    
-            let boardingRow = null;   // riadok, kde tím nastupuje
-            let alightingRow = null;  // riadok, kde tím vystupuje
+            let boardingRow = null;
+            let alightingRow = null;
     
             (rows || []).forEach((row) => {
                 const rowFrom = String(row.placeFrom || '').trim();
                 const rowTo = String(row.placeTo || '').trim();
     
-                // Časový interval riadku
                 const rowStartTs = timeOnDayKeyToTs(dayKey, row.timeFrom);
                 const rowEndTs = timeOnDayKeyToTs(dayKey, row.timeTo);
     
                 if (rowStartTs == null && rowEndTs == null) return;
     
-                // Prekryv intervalov: trRange.startTs < rowEndTs && trRange.endTs > rowStartTs
                 const overlap =
                     (rowEndTs == null || trRange.startTs < rowEndTs) &&
                     (rowStartTs == null || trRange.endTs > rowStartTs);
     
                 if (!overlap) return;
     
-                // NÁSTUP: riadok začína na mieste, odkiaľ presun začína
+                // NÁSTUP: Hľadáme riadok, ktorý začína na mieste odchodu presunu.
                 if (rowFrom && rowFrom === trFrom) {
-                    // Preferuj riadok s najskorším začiatkom (najbližšie k času odchodu presunu)
+                    // Preferujeme riadok s najskorším začiatkom.
                     if (!boardingRow || (rowStartTs != null && boardingRow.startTs != null && rowStartTs < boardingRow.startTs)) {
                         boardingRow = { row, startTs: rowStartTs };
                     } else if (!boardingRow) {
@@ -4151,9 +4143,9 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 }
     
-                // VÝSTUP: riadok končí na mieste, kam presun smeruje
+                // VÝSTUP: Hľadáme riadok, ktorý končí na mieste príchodu presunu.
                 if (rowTo && rowTo === trTo) {
-                    // Preferuj riadok s najneskorším koncom (najbližšie k času príchodu presunu)
+                    // Preferujeme riadok s najneskorším koncom.
                     if (!alightingRow || (rowEndTs != null && alightingRow.endTs != null && rowEndTs > alightingRow.endTs)) {
                         alightingRow = { row, endTs: rowEndTs };
                     } else if (!alightingRow) {
@@ -4162,7 +4154,8 @@ const TransportApp = ({ userProfileData }) => {
                 }
             });
     
-            // Pridaj výsledky – nástup a výstup môžu byť rôzne riadky
+            // DÔLEŽITÉ: Pridáme výsledky nezávisle na sebe.
+            // Ak sa našiel len nástup alebo len výstup, stále ho zobrazíme.
             if (boardingRow) {
                 results.push({ bus, row: boardingRow.row, side: 'in' });
             }
@@ -4171,7 +4164,7 @@ const TransportApp = ({ userProfileData }) => {
             }
         });
     
-        // Deduplikácia (rovnaký bus+row+side)
+        // Deduplikácia
         const seen = new Set();
         return results.filter((r) => {
             const k = `${r.bus.id}|${r.row.id}|${r.side}`;
@@ -4217,11 +4210,6 @@ const TransportApp = ({ userProfileData }) => {
     //
     // Tím môže nastupovať v jednom riadku a vystupovať v inom riadku
     // (trasa autobusu je rozdelená na segmenty).
-    //
-    // Preto:
-    //  1) Nájdeme riadok pre NÁSTUP (placeFrom === transfer.fromLocation)
-    //  2) Nájdeme riadok pre VÝSTUP (placeTo === transfer.toLocation)
-    //  3) Pridáme tím do teamsIn prvého a teamsOut druhého
     // ============================================================
     const assignTransferToBus = async () => {
         if (!window.db || !transferActionModal?.transfer) return;
@@ -4249,7 +4237,6 @@ const TransportApp = ({ userProfileData }) => {
         const trTo = String(transfer.toLocation || '').trim();
         const trDayKey = transfer.dayKey || null;
     
-        // Nájdi všetky riadky daného autobusu v danom dni
         const busRowsKey = `${busId}|${trDayKey}`;
         const rows = busRows[busRowsKey] || [];
         if (rows.length === 0) {
@@ -4257,54 +4244,36 @@ const TransportApp = ({ userProfileData }) => {
             return;
         }
     
-        // Nájdi riadok pre NÁSTUP (placeFrom === trFrom)
         let boardingRow = null;
-        // Nájdi riadok pre VÝSTUP (placeTo === trTo)
         let alightingRow = null;
     
         rows.forEach((row) => {
             const rowFrom = String(row.placeFrom || '').trim();
             const rowTo = String(row.placeTo || '').trim();
-    
-            if (rowFrom && rowFrom === trFrom) {
-                if (!boardingRow) boardingRow = row;
-            }
-            if (rowTo && rowTo === trTo) {
-                if (!alightingRow) alightingRow = row;
-            }
+            if (rowFrom && rowFrom === trFrom) boardingRow = row;
+            if (rowTo && rowTo === trTo) alightingRow = row;
         });
     
         setAssignBusSaving(true);
         try {
             const updates = {};
     
-            // 1) Pridaj tím do teamsIn riadku pre nástup
             if (boardingRow) {
                 const newTeamsIn = Array.from(new Set([...(boardingRow.teamsIn || []), teamKey]));
-                updates[boardingRow.id] = {
-                    ...(updates[boardingRow.id] || {}),
-                    teamsIn: newTeamsIn,
-                };
+                updates[boardingRow.id] = { ...(updates[boardingRow.id] || {}), teamsIn: newTeamsIn };
             }
     
-            // 2) Pridaj tím do teamsOut riadku pre výstup
             if (alightingRow) {
                 const newTeamsOut = Array.from(new Set([...(alightingRow.teamsOut || []), teamKey]));
-                updates[alightingRow.id] = {
-                    ...(updates[alightingRow.id] || {}),
-                    teamsOut: newTeamsOut,
-                };
+                updates[alightingRow.id] = { ...(updates[alightingRow.id] || {}), teamsOut: newTeamsOut };
             }
     
-            // Ak nenájdeme ani jeden riadok, použijeme fallback – vybraný riadok
+            // Ak sa nenašiel ani nástupný ani výstupný riadok, použijeme fallback
             if (!boardingRow && !alightingRow) {
-                // Fallback: použi vybraný riadok podľa side
-                let currentRow = null;
-                rows.forEach((r) => {
-                    if (r.id === rowId) currentRow = r;
-                });
+                let currentRow = rows.find(r => r.id === rowId);
                 if (!currentRow) {
-                    window.showGlobalNotification('Riadok autobusu sa nenašiel.', 'error');
+                    window.showGlobalNotification('Vybraný riadok autobusu sa nenašiel.', 'error');
+                    setAssignBusSaving(false);
                     return;
                 }
                 if (side === 'in') {
@@ -4316,13 +4285,11 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
     
-            // Aplikuj všetky zmeny
             const promises = Object.entries(updates).map(([rid, data]) =>
                 updateDoc(doc(window.db, 'transport', rid), data)
             );
             await Promise.all(promises);
     
-            // Notifikácia
             const parts = [];
             if (boardingRow) parts.push('nástup');
             if (alightingRow) parts.push('výstup');
