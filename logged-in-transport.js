@@ -4968,9 +4968,6 @@ const TransportApp = ({ userProfileData }) => {
         // NOVÉ: Filtrovanie – skry presuny, ktoré sú už priradené
         // (buď ako "peši", alebo ako tím v niektorom busRow)
         // ============================================================
-        // Zoznam všetkých tímov, ktoré sú priradené k autobusom.
-        // Kľúč: `${busId}|${dayKey}|${teamKey}` – aby sme vedeli, v ktorom
-        // dni a v ktorom aute je tím priradený.
         const assignedTeamKeys = new Set();
         Object.entries(busRows || {}).forEach(([busKey, rows]) => {
             const [busId, dayKey] = busKey.split('|');
@@ -4987,14 +4984,10 @@ const TransportApp = ({ userProfileData }) => {
         });
 
         const filtered = filteredByDay.filter((t) => {
-            // 1) Ak je presun označený ako "peši", skry ho
             if (t.isWalking === true) return false;
-    
-            // 2) Ak je tím priradený k autobusu v danom dni, skry ho
             const teamKey = `${String(t.teamName || '').trim()}|${cleanCategory(t.category || '')}`;
             const key = `${t.dayKey || ''}|${teamKey}`;
             if (assignedTeamKeys.has(key)) return false;
-    
             return true;
         });
 
