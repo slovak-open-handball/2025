@@ -3885,13 +3885,13 @@ const TransportApp = ({ userProfileData }) => {
                     React.createElement(
                         'h3',
                         { className: 'text-lg font-semibold text-gray-800' },
-                        'Vygenerovať časovú os'
+                        'Vygenerovať presuny'
                     )
                 ),
                 React.createElement(
                     'p',
                     { className: 'text-gray-700 mb-4 text-sm' },
-                    'Vyberte kategóriu, pre ktorú sa má vygenerovať časová os do konzoly.'
+                    'Vyberte kategóriu, pre ktorú sa majú vygenerovať presuny.'
                 ),
                 React.createElement(
                     'label',
