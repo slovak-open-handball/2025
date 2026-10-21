@@ -3860,11 +3860,11 @@ const TransportApp = ({ userProfileData }) => {
                         })
                     )
             ),
-            // 7. počet (AUTOMATICKY – súčet členov tímov v autobuse)
+            // 7. počet (AUTOMATICKY – súčet členov tímov v autobuse, s fallbackom na priemer kategórie)
             React.createElement('td', {
                 className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold',
                 style: { color: '#1d4ed8' },
-                title: 'Automaticky vypočítaný počet členov tímov, ktoré sú práve v autobuse (medzi zastávkami)',
+                title: 'Automaticky vypočítaný počet členov tímov, ktoré sú práve v autobuse (medzi zastávkami). Ak tím nie je v users, použije sa priemer kategórie.',
             },
                 (() => {
                     const teamsInBus = getTeamsInBusAfterRow(busId, dayKey, row.id);
