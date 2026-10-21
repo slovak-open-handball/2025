@@ -4036,6 +4036,7 @@ const TransportApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'div',
                                         { key: `team-${cat}-${teamName}`, className: 'mb-3' },
+                                        // Hlavička tímu (zostáva)
                                         React.createElement(
                                             'div',
                                             { className: 'text-base font-semibold text-gray-800 mb-1.5 flex items-center gap-1.5' },
@@ -4079,23 +4080,30 @@ const TransportApp = ({ userProfileData }) => {
                                                     'li',
                                                     {
                                                         key: t.key,
-                                                        className: 'text-sm text-gray-700 flex flex-col leading-snug'
+                                                        className: 'text-sm text-gray-700 flex flex-col leading-snug bg-violet-50/40 rounded-md px-2 py-1.5 border-l-2 border-violet-300'
                                                     },
-                                                    // 1. riadok – dátum
+                                                    // 1. riadok – názov tímu
+                                                    React.createElement(
+                                                        'span',
+                                                        { className: 'text-sm font-semibold text-violet-800 flex items-center gap-1' },
+                                                        React.createElement('i', { className: 'fa-solid fa-people-group text-violet-500 text-[11px]' }),
+                                                        t.teamName || '(neznámy tím)'
+                                                    ),
+                                                    // 2. riadok – dátum
                                                     dateLabel &&
                                                         React.createElement(
                                                             'span',
                                                             { className: 'text-sm text-gray-500' },
                                                             dateLabel
                                                         ),
-                                                    // 2. riadok – čas
+                                                    // 3. riadok – čas
                                                     timeLabel &&
                                                         React.createElement(
                                                             'span',
                                                             { className: 'text-sm text-gray-600' },
                                                             timeLabel
                                                         ),
-                                                    // 3. riadok – miesta
+                                                    // 4. riadok – miesta
                                                     routeLabel &&
                                                         React.createElement(
                                                             'span',
