@@ -247,6 +247,10 @@ const TransportApp = ({ userProfileData }) => {
     const [mergeTransfersModal, setMergeTransfersModal] = useState(null); // { first, second }
     const [mergeTransfersSaving, setMergeTransfersSaving] = useState(false);
 
+    // ==== MODÁLNE OKNO PRE ODSTRÁNENIE "PEŠI" PRÍZNAKU ====
+    const [removeWalkingModal, setRemoveWalkingModal] = useState(null); // { transfer }
+    const [removeWalkingSaving, setRemoveWalkingSaving] = useState(false);
+
     // ============================================================
     // PREDNAČÍTANIE UBYTOVNÍ PRE SUPERSTRUCTURE TÍMY
     // ============================================================
@@ -4568,6 +4572,42 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // ODSTRÁNENIE PRÍZNAKU "PEŠI" – presun sa vráti medzi vygenerované
+    // ============================================================
+    const removeWalkingFlag = async () => {
+        if (!window.db || !removeWalkingModal?.transfer) return;
+        const transfer = removeWalkingModal.transfer;
+    
+        setRemoveWalkingSaving(true);
+        try {
+            const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+            await setDoc(
+                docRef,
+                {
+                    [TRANSPORT_TRANSFERS_FIELD]: {
+                        [transfer.key]: {
+                            ...transfer,
+                            isWalking: false,
+                            walkingSetAt: deleteField(),
+                            walkingSetBy: deleteField(),
+                        },
+                    },
+                    updatedAt: Timestamp.fromDate(new Date()),
+                    updatedBy: (userProfileData && userProfileData.email) || null,
+                },
+                { merge: true }
+            );
+            window.showGlobalNotification('Príznak „peši" bol odstránený.', 'success');
+            setRemoveWalkingModal(null);
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri odstraňovaní príznaku peši:', err);
+            window.showGlobalNotification('Nepodarilo sa odstrániť príznak peši.', 'error');
+        } finally {
+            setRemoveWalkingSaving(false);
+        }
+    };
+
+    // ============================================================
     // PRIRADENIE PRESUNU K AUTOBUSU
     // ============================================================
     const assignTransferToBus = async () => {
@@ -6001,33 +6041,29 @@ const TransportApp = ({ userProfileData }) => {
                                 return React.createElement(
                                     'tr',
                                     { key: t.key, className: 'hover:bg-gray-50' },
+                                    React.createElement('td', { className: 'border border-gray-300 px-2 py-1 text-center font-semibold text-blue-700' }, timeFrom || '—'),
+                                    React.createElement('td', { className: 'border border-gray-300 px-2 py-1 text-center font-semibold text-blue-700' }, timeTo || '—'),
+                                    React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, placeFrom || '—'),
+                                    React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, placeTo || '—'),
                                     React.createElement(
                                         'td',
-                                        { className: 'border border-gray-300 px-2 py-1 text-center font-semibold text-blue-700' },
-                                        timeFrom || '—'
-                                    ),
-                                    React.createElement(
-                                        'td',
-                                        { className: 'border border-gray-300 px-2 py-1 text-center font-semibold text-blue-700' },
-                                        timeTo || '—'
-                                    ),
-                                    React.createElement(
-                                        'td',
-                                        { className: 'border border-gray-300 px-2 py-1' },
-                                        placeFrom || '—'
-                                    ),
-                                    React.createElement(
-                                        'td',
-                                        { className: 'border border-gray-300 px-2 py-1' },
-                                        placeTo || '—'
-                                    ),
-                                    React.createElement(
-                                        'td',
-                                        {
-                                            className: 'border border-gray-300 px-2 py-1 font-semibold',
-                                            style: { color: textColor }
-                                        },
+                                        { className: 'border border-gray-300 px-2 py-1 font-semibold', style: { color: textColor } },
                                         t.teamName || '(neznámy tím)'
+                                    ),
+                                    // NOVÉ: tlačidlo na odstránenie príznaku "peši"
+                                    React.createElement(
+                                        'td',
+                                        { className: 'border border-gray-300 px-2 py-1 text-center' },
+                                        React.createElement(
+                                            'button',
+                                            {
+                                                type: 'button',
+                                                onClick: () => setRemoveWalkingModal({ transfer: t }),
+                                                title: 'Odstrániť príznak „peši" (presun sa vráti medzi vygenerované)',
+                                                className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 inline-flex items-center justify-center'
+                                            },
+                                            React.createElement('i', { className: 'fa-solid fa-xmark' })
+                                        )
                                     )
                                 );
                             })
@@ -7126,6 +7162,73 @@ const TransportApp = ({ userProfileData }) => {
                         },
                         assignBusSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
                         'Priradiť'
+                    )
+                )
+            )
+        ),
+        // ============================================================
+        // MODÁLNE OKNO – Odstrániť príznak "peši"
+        // ============================================================
+        removeWalkingModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100001] p-4',
+                onClick: () => setRemoveWalkingModal(null)
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-person-walking text-emerald-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-800' },
+                        'Odstrániť príznak „peši"'
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700' },
+                    React.createElement('div', { className: 'font-medium' },
+                        `${removeWalkingModal.transfer.fromLocation} → ${removeWalkingModal.transfer.toLocation}`),
+                    React.createElement('div', { className: 'text-xs text-gray-500 mt-1' },
+                        `${removeWalkingModal.transfer.teamName || ''}${removeWalkingModal.transfer.when ? ' • ' + removeWalkingModal.transfer.when : ''}`)
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-gray-600 mb-4' },
+                    'Presun sa tým vráti späť medzi vygenerované presuny a bude ho možné znova upraviť, priradiť autobusu alebo označiť ako peši.'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setRemoveWalkingModal(null),
+                            disabled: removeWalkingSaving,
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: removeWalkingFlag,
+                            disabled: removeWalkingSaving,
+                            className: 'px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-60 flex items-center gap-2'
+                        },
+                        removeWalkingSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                        'Odstrániť'
                     )
                 )
             )
