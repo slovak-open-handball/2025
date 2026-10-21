@@ -2994,6 +2994,10 @@ const TransportApp = ({ userProfileData }) => {
                 teamsArrivalBufferRef.current = buffer;
                 teamsLoadedRef.current = true;
 
+                preloadAccommodationsForSuperstructureTeams().then(() => {
+                    rebuildAndLogTimeline();
+                });
+
                 rebuildAndLogTimeline();
 
             } catch (err) {
