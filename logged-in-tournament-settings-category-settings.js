@@ -67,6 +67,9 @@ export function CategorySettings({
 
     // State pre existujúce zápasy
     const [existingMatches, setExistingMatches] = React.useState({});
+
+    // State pre existujúce vygenerované presuny (podľa kategórie)
+    const [existingTransfers, setExistingTransfers] = React.useState({});
     
     // State pre dátum začiatku registrácie
     const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
@@ -161,6 +164,48 @@ export function CategorySettings({
         }
     };
 
+    // Sledovanie vygenerovaných presunov v reálnom čase
+    const subscribeToTransfers = () => {
+        if (!db) return null;
+    
+        try {
+            const transfersRef = doc(db, 'settings', 'transportTravelTimes');
+    
+            const unsubscribe = onSnapshot(transfersRef, (docSnapshot) => {
+                const transfersByCategory = {};
+    
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data() || {};
+                    const rawTransfers = data.transfers || {};
+    
+                    Object.values(rawTransfers).forEach((v) => {
+                        if (!v || !v.category) return;
+                        const cat = String(v.category).trim();
+                        if (!cat) return;
+                        if (!transfersByCategory[cat]) {
+                            transfersByCategory[cat] = [];
+                        }
+                        transfersByCategory[cat].push(v);
+                    });
+                }
+
+                setExistingTransfers(transfersByCategory);
+                console.log("[CategorySettings] Aktualizované vygenerované presuny:", 
+                    Object.keys(transfersByCategory).map(cat => 
+                        `${cat}: ${transfersByCategory[cat].length} presunov`
+                    ).join(', ')
+                );
+            }, (err) => {
+                console.error("[CategorySettings] Chyba pri sledovaní presunov:", err);
+            });
+    
+            return unsubscribe;
+        } catch (err) {
+            console.error("[CategorySettings] Chyba pri nastavovaní sledovania presunov:", err);
+            return null;
+        }
+    };
+
     // Sledovanie registračných nastavení
     const subscribeToRegistrationSettings = () => {
         if (!db) return null;
@@ -201,6 +246,7 @@ export function CategorySettings({
 
         const unsubscribeMatches = subscribeToMatches();
         const unsubscribeRegistration = subscribeToRegistrationSettings();
+        const unsubscribeTransfers = subscribeToTransfers();
 
         const catRef = doc(db, 'settings', 'categories');
 
@@ -529,6 +575,9 @@ export function CategorySettings({
             }
             if (unsubscribeRegistration) {
                 unsubscribeRegistration();
+            }
+            if (unsubscribeTransfers) {
+                unsubscribeTransfers();
             }
         };
     }, [db, userProfileData, showNotification]);
@@ -1209,6 +1258,16 @@ export function CategorySettings({
         return existingMatches[catId] && existingMatches[catId].length > 0;
     };
 
+    // Kontrola, či má kategória vygenerované presuny
+    const hasExistingTransfersForCategory = (catId) => {
+        if (!catId) return false;
+        const cat = categories.find(c => c.id === catId);
+        if (!cat) return false;
+        const key = cat.name ? String(cat.name).trim() : '';
+        if (!key) return false;
+        return !!(existingTransfers[key] && existingTransfers[key].length > 0);
+    };
+
     if (isInitialLoad) {
         return React.createElement(
             React.Fragment,
@@ -1795,30 +1854,45 @@ export function CategorySettings({
                                         )
                                     ),
 
-                                    // Farba pre dopravu - NIE JE ZABLOKOVANÁ (môže sa meniť)
-                                    React.createElement(
-                                        'div',
-                                        { className: 'space-y-1' },
-                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                            'Farba pre dopravu:'
-                                        ),
-                                        React.createElement(
+                                    // Farba pre dopravu - ZABLOKOVANÁ ak existujú vygenerované presuny
+                                    (() => {
+                                        const hasTransfers = hasExistingTransfersForCategory(selectedCategory.id);
+                                        return React.createElement(
                                             'div',
-                                            { className: 'flex gap-2' },
-                                            React.createElement('input', {
-                                                type: 'color',
-                                                value: editedTransportColor[selectedCategory.id] ?? selectedCategory.transportColor,
-                                                onChange: e => handleTransportColorChange(selectedCategory.id, e.target.value),
-                                                className: 'w-12 h-10 border border-gray-300 rounded-lg cursor-pointer'
-                                            }),
-                                            React.createElement('input', {
-                                                type: 'text',
-                                                value: editedTransportColor[selectedCategory.id] ?? selectedCategory.transportColor,
-                                                onChange: e => handleTransportColorChange(selectedCategory.id, e.target.value),
-                                                className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono'
-                                            })
-                                        )
-                                    )
+                                            { className: 'space-y-1' },
+                                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                                'Farba pre dopravu:'
+                                            ),
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex gap-2' },
+                                                React.createElement('input', {
+                                                    type: 'color',
+                                                    value: editedTransportColor[selectedCategory.id] ?? selectedCategory.transportColor,
+                                                    onChange: e => handleTransportColorChange(selectedCategory.id, e.target.value),
+                                                    disabled: hasTransfers,
+                                                    className: `w-12 h-10 border border-gray-300 rounded-lg ${
+                                                        hasTransfers ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'
+                                                    }`
+                                                }),
+                                                React.createElement('input', {
+                                                    type: 'text',
+                                                    value: editedTransportColor[selectedCategory.id] ?? selectedCategory.transportColor,
+                                                    onChange: e => handleTransportColorChange(selectedCategory.id, e.target.value),
+                                                    disabled: hasTransfers,
+                                                    className: `flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono ${
+                                                        hasTransfers ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
+                                                    }`
+                                                })
+                                            ),
+                                            hasTransfers && React.createElement(
+                                                'p',
+                                                { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
+                                                React.createElement('i', { className: 'fa-solid fa-lock' }),
+                                                'Farbu pre dopravu nie je možné meniť, pretože pre túto kategóriu už existujú vygenerované presuny.'
+                                            )
+                                        );
+                                    })()
                                 );
                             })(),
 
