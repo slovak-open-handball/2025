@@ -3436,16 +3436,39 @@ const TransportApp = ({ userProfileData }) => {
             const nextOrder = existing.length > 0
                 ? Math.max(...existing.map(r => r.order || 0)) + 1
                 : 1;
-
+    
+            // Predvyplnenie z posledného riadku
+            let initialPlaceFrom = '';
+            let initialTimeFrom = '';
+    
+            if (existing.length > 0) {
+                // Zober riadok s najvyšším order (posledný)
+                const lastRow = existing.reduce((a, b) => (a.order > b.order ? a : b));
+    
+                // Miesto od = miesto do predchádzajúceho riadku
+                if (lastRow.placeTo) {
+                    initialPlaceFrom = lastRow.placeTo;
+                }
+    
+                // Čas od = čas do predchádzajúceho riadku + 2 minúty
+                if (lastRow.timeTo && /^\d{1,2}:\d{2}$/.test(lastRow.timeTo)) {
+                    const [h, m] = lastRow.timeTo.split(':').map(Number);
+                    const total = h * 60 + m + 2;
+                    const endH = Math.floor(total / 60) % 24;
+                    const endM = total % 60;
+                    initialTimeFrom = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+                }
+            }
+    
             await addDoc(collection(window.db, 'transport'), {
                 type: 'busRow',
                 busId: bus.id,
                 busName: bus.name,
                 dayKey,
                 order: nextOrder,
-                timeFrom: '',
+                timeFrom: initialTimeFrom,
                 timeTo: '',
-                placeFrom: '',
+                placeFrom: initialPlaceFrom,
                 placeTo: '',
                 teamsIn: [],
                 teamsOut: [],
