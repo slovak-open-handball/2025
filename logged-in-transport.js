@@ -1680,7 +1680,7 @@ const TransportApp = ({ userProfileData }) => {
                                 // DÔLEŽITÉ: V tomto prípade NEgenerujeme klasické ranné presuny
                                 // z ubytovní – preskočíme zvyšok bloku.
                             } else {
-                                // ============================================================
+                                                            // ============================================================
                                 // PÔVODNÁ LOGIKA pre bežné (ne-superstructure) tímy
                                 // alebo superstructure tímy v deň, kedy nehrajú.
                                 // ============================================================
