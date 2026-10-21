@@ -3917,14 +3917,10 @@ const TransportApp = ({ userProfileData }) => {
         // ============================================================
         // Pomocná: z `when` (napr. "26. 12. 2026 08:00 – 26. 12. 2026 09:15")
         // vytiahne dátum začiatku/konca + čas začiatku/konca.
-        // Vráti { startDayKey, endDayKey, startLabel, endLabel,
-        //         startTime, endTime } alebo null.
         // ============================================================
         const parseWhenRange = (when) => {
             if (!when) return null;
             const s = String(when);
-
-            // Nájdi všetky výskyty "D. M. YYYY HH:MM" alebo len "D. M. YYYY"
             const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
             const found = [];
             let m;
@@ -3965,8 +3961,7 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         // ============================================================
-        // Pomocná: z textu "Presun z X do Y" alebo "Presun z X do ubytovania Y"
-        // vytiahne { from, to }. Ak sa nedá parsovať, vráti null.
+        // Pomocná: z textu "Presun z X do Y" vytiahne { from, to }.
         // ============================================================
         const parseTransferText = (text) => {
             if (!text) return null;
@@ -4018,7 +4013,7 @@ const TransportApp = ({ userProfileData }) => {
                             { key: `cat-${cat}` },
                             React.createElement(
                                 'div',
-                                { className: 'text-xs font-bold uppercase tracking-wide text-violet-700 mb-2 pb-1 border-b border-violet-200' },
+                                { className: 'text-sm font-bold uppercase tracking-wide text-violet-700 mb-2 pb-1 border-b border-violet-200' },
                                 cat
                             ),
                             (() => {
@@ -4037,18 +4032,18 @@ const TransportApp = ({ userProfileData }) => {
                                         { key: `team-${cat}-${teamName}`, className: 'mb-3' },
                                         React.createElement(
                                             'div',
-                                            { className: 'text-sm font-semibold text-gray-800 mb-1 flex items-center gap-1' },
-                                            React.createElement('i', { className: 'fa-solid fa-people-group text-gray-400 text-xs' }),
+                                            { className: 'text-base font-semibold text-gray-800 mb-1.5 flex items-center gap-1.5' },
+                                            React.createElement('i', { className: 'fa-solid fa-people-group text-gray-400 text-sm' }),
                                             teamName
                                         ),
                                         React.createElement(
                                             'ul',
-                                            { className: 'space-y-1.5 pl-2' },
+                                            { className: 'space-y-2 pl-1' },
                                             byTeam[teamName].map((t) => {
                                                 const rangeInfo = parseWhenRange(t.when);
                                                 const transferInfo = parseTransferText(t.text);
 
-                                                // 1. riadok – dátum (ak je začiatok == koniec, len raz)
+                                                // 1. riadok – dátum
                                                 let dateLabel = null;
                                                 if (rangeInfo) {
                                                     dateLabel = (rangeInfo.startDayKey === rangeInfo.endDayKey)
@@ -4058,7 +4053,7 @@ const TransportApp = ({ userProfileData }) => {
                                                     dateLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
                                                 }
 
-                                                // 2. riadok – čas (odkedy – dokedy)
+                                                // 2. riadok – čas
                                                 let timeLabel = null;
                                                 if (rangeInfo) {
                                                     const st = rangeInfo.startTime;
@@ -4068,7 +4063,7 @@ const TransportApp = ({ userProfileData }) => {
                                                     else if (et) timeLabel = et;
                                                 }
 
-                                                // 3. riadok – miesta (odkiaľ → kam)
+                                                // 3. riadok – miesta
                                                 let routeLabel = null;
                                                 if (transferInfo) {
                                                     routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
@@ -4078,43 +4073,36 @@ const TransportApp = ({ userProfileData }) => {
                                                     'li',
                                                     {
                                                         key: t.key,
-                                                        className: 'text-xs text-gray-700 flex items-start gap-1.5 leading-snug'
+                                                        className: 'text-sm text-gray-700 flex flex-col leading-snug'
                                                     },
-                                                    React.createElement('i', {
-                                                        className: 'fa-solid fa-van-shuttle text-blue-600 mt-0.5'
-                                                    }),
-                                                    React.createElement(
-                                                        'span',
-                                                        { className: 'flex flex-col' },
-                                                        // 1. riadok – dátum
-                                                        dateLabel &&
-                                                            React.createElement(
-                                                                'span',
-                                                                { className: 'font-mono text-[11px] text-gray-500' },
-                                                                dateLabel
-                                                            ),
-                                                        // 2. riadok – čas
-                                                        timeLabel &&
-                                                            React.createElement(
-                                                                'span',
-                                                                { className: 'font-mono text-[11px] text-gray-600' },
-                                                                timeLabel
-                                                            ),
-                                                        // 3. riadok – miesta
-                                                        routeLabel &&
-                                                            React.createElement(
-                                                                'span',
-                                                                { className: 'text-gray-800' },
-                                                                routeLabel
-                                                            ),
-                                                        // Fallback – ak sa nepodarilo parsovať, zobraz pôvodný text
-                                                        (!dateLabel && !timeLabel && !routeLabel) &&
-                                                            React.createElement(
-                                                                'span',
-                                                                { className: 'text-gray-800' },
-                                                                t.text.replace(/^Presun z /, '')
-                                                            )
-                                                    )
+                                                    // 1. riadok – dátum
+                                                    dateLabel &&
+                                                        React.createElement(
+                                                            'span',
+                                                            { className: 'font-mono text-[13px] text-gray-500' },
+                                                            dateLabel
+                                                        ),
+                                                    // 2. riadok – čas
+                                                    timeLabel &&
+                                                        React.createElement(
+                                                            'span',
+                                                            { className: 'font-mono text-[13px] text-gray-600' },
+                                                            timeLabel
+                                                        ),
+                                                    // 3. riadok – miesta
+                                                    routeLabel &&
+                                                        React.createElement(
+                                                            'span',
+                                                            { className: 'text-gray-900 font-medium' },
+                                                            routeLabel
+                                                        ),
+                                                    // Fallback – ak sa nepodarilo parsovať, zobraz pôvodný text
+                                                    (!dateLabel && !timeLabel && !routeLabel) &&
+                                                        React.createElement(
+                                                            'span',
+                                                            { className: 'text-gray-800' },
+                                                            t.text.replace(/^Presun z /, '')
+                                                        )
                                                 );
                                             })
                                         )
