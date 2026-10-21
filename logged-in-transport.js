@@ -4990,30 +4990,31 @@ const TransportApp = ({ userProfileData }) => {
             (rows || []).forEach((row) => {
                 const rowFrom = normalizePlaceName(row.placeFrom);
                 const rowTo = normalizePlaceName(row.placeTo);
-    
+        
                 const inList = Array.isArray(row.teamsIn) ? row.teamsIn : [];
                 const outList = Array.isArray(row.teamsOut) ? row.teamsOut : [];
-    
+        
                 // teamsIn / teamsOut obsahujú "Názov tímu|Kategória"
                 inList.forEach((teamKey) => {
                     const [teamName, category] = String(teamKey).split('|');
-                    // Tím nastupuje v tomto riadku → segment končí v rowTo (miesto do)
-                    // Alebo ak rowTo chýba, použijeme rowFrom
-                    const toLoc = rowTo || rowFrom;
-                    if (toLoc) {
-                        assignedSegmentKeys.add(
-                            `${dayKey}|${String(teamName).trim()}|${cleanCategory(category || '')}|${toLoc}`
-                        );
-                    }
-                });
-    
-                outList.forEach((teamKey) => {
-                    const [teamName, category] = String(teamKey).split('|');
-                    // Tím vystupuje v tomto riadku → segment začína v rowFrom (miesto od)
+                    // Tím NASTUPUJE v tomto riadku → segment ZAČÍNA v rowFrom (miesto od)
+                    // (podľa assignTransferToBus sa boardingRow hľadá ako rowFrom === trFrom)
                     const fromLoc = rowFrom || rowTo;
                     if (fromLoc) {
                         assignedSegmentKeys.add(
                             `${dayKey}|${String(teamName).trim()}|${cleanCategory(category || '')}|${fromLoc}`
+                        );
+                    }
+                });
+        
+                outList.forEach((teamKey) => {
+                    const [teamName, category] = String(teamKey).split('|');
+                    // Tím VYSTUPUJE v tomto riadku → segment KONČÍ v rowTo (miesto do)
+                    // (podľa assignTransferToBus sa alightingRow hľadá ako rowTo === trTo)
+                    const toLoc = rowTo || rowFrom;
+                    if (toLoc) {
+                        assignedSegmentKeys.add(
+                            `${dayKey}|${String(teamName).trim()}|${cleanCategory(category || '')}|${toLoc}`
                         );
                     }
                 });
@@ -5041,21 +5042,20 @@ const TransportApp = ({ userProfileData }) => {
             const dayKey = t.dayKey || '';
             const fromLoc = normalizePlaceName(t.fromLocation || '');
             const toLoc = normalizePlaceName(t.toLocation || '');
-    
+
             // Pešia verzia – presná zhoda from→to
             if (assignedSegmentKeys.has(`${dayKey}|${teamName}|${category}|${fromLoc}→${toLoc}`)) {
                 return true;
             }
-    
-            // Autobusová verzia – tím je priradený buď na nástup (toLoc) alebo výstup (fromLoc)
-            // Skontroluj obe strany segmentu
+
+            // Autobusová verzia – tím je priradený buď na nástup (fromLoc) alebo výstup (toLoc)
             if (fromLoc && assignedSegmentKeys.has(`${dayKey}|${teamName}|${category}|${fromLoc}`)) {
                 return true;
             }
             if (toLoc && assignedSegmentKeys.has(`${dayKey}|${teamName}|${category}|${toLoc}`)) {
                 return true;
             }
-    
+
             return false;
         };
     
