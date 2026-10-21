@@ -3802,6 +3802,24 @@ const TransportApp = ({ userProfileData }) => {
         return null;
     };
 
+    // ============================================================
+    // Pomocná: z hex farby (#rrggbb) vytvorí bledý variant zmiešaný s bielou
+    // (ratio = 0 → biela, ratio = 1 → pôvodná farba)
+    // ============================================================
+    const lightenHex = (hex, ratio = 0.15) => {
+        if (!hex) return null;
+        let h = String(hex).trim().replace(/^#/, '');
+        if (h.length === 3) {
+            h = h.split('').map((c) => c + c).join('');
+        }
+        if (!/^[0-9a-fA-F]{6}$/.test(h)) return null;
+        const r = parseInt(h.slice(0, 2), 16);
+        const g = parseInt(h.slice(2, 4), 16);
+        const b = parseInt(h.slice(4, 6), 16);
+        const mix = (c) => Math.round(c * ratio + 255 * (1 - ratio));
+        const toHex = (c) => c.toString(16).padStart(2, '0');
+        return `#${toHex(mix(r))}${toHex(mix(g))}${toHex(mix(b))}`;
+    };
 
     // ============================================================
     // RENDER – plánovanie
@@ -4067,7 +4085,13 @@ const TransportApp = ({ userProfileData }) => {
             const ta = String(a.teamName || '');
             const tb = String(b.teamName || '');
             return ta.localeCompare(tb, 'sk', { sensitivity: 'base' });
-        });
+        });    
+
+        // Farby pre box
+        const transportColor = getTransportColorForCategory(t.category);
+        const boxBg = transportColor
+            ? lightenHex(transportColor, 0.15)
+            : null;
 
         return React.createElement(
             'div',
@@ -4141,35 +4165,41 @@ const TransportApp = ({ userProfileData }) => {
                                 'li',
                                 {
                                     key: t.key,
-                                    className: 'text-sm text-gray-700 flex flex-col leading-snug bg-violet-50/40 rounded-md px-2 py-1.5',
+                                    className: 'text-sm text-gray-700 flex flex-col leading-snug rounded-md px-2 py-1.5' +
+                                        (boxBg ? '' : ' bg-violet-50/40'),
                                     style: {
                                         borderLeft: transportColor
                                             ? `6px solid ${transportColor}`
                                             : '2px solid #c4b5fd',
+                                        ...(boxBg ? { backgroundColor: boxBg } : {}),
                                     }
                                 },
-                                // 1. riadok – KATEGÓRIA • TÍM
+                                // 1. riadok – KATEGÓRIA • TÍM (bez ikon)
                                 React.createElement(
                                     'span',
                                     { className: 'text-sm flex flex-wrap items-center gap-1' },
-                                    React.createElement('i', {
-                                        className: 'fa-solid fa-layer-group text-[11px]',
-                                        style: { color: transportColor || '#8b5cf6' }
-                                    }),
                                     React.createElement(
                                         'span',
-                                        { className: 'font-bold text-violet-900' },
+                                        {
+                                            className: 'font-bold',
+                                            style: { color: transportColor || '#4c1d95' }
+                                        },
                                         categoryLabel
                                     ),
                                     React.createElement(
                                         'span',
-                                        { className: 'text-violet-400 mx-0.5' },
+                                        {
+                                            className: 'mx-0.5',
+                                            style: { color: transportColor || '#a78bfa' }
+                                        },
                                         '•'
                                     ),
-                                    React.createElement('i', { className: 'fa-solid fa-people-group text-violet-500 text-[11px]' }),
                                     React.createElement(
                                         'span',
-                                        { className: 'font-semibold text-violet-800' },
+                                        {
+                                            className: 'font-semibold',
+                                            style: { color: transportColor || '#5b21b6' }
+                                        },
                                         t.teamName || '(neznámy tím)'
                                     )
                                 ),
