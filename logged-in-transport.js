@@ -3736,11 +3736,24 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 {
                                     key: `in-${i}`,
-                                    onClick: () => {
-                                        const newList = (row.teamsIn || []).filter((_, idx) => idx !== i);
-                                        updateBusRowField(row.id, 'teamsIn', newList);
+                                    onClick: async () => {
+                                        // NOVÉ: odstráň tím z teamsIn AJ teamsOut v tomto riadku
+                                        const teamKeyToRemove = String(tn);
+                                        const newTeamsIn = (row.teamsIn || []).filter((t) => String(t) !== teamKeyToRemove);
+                                        const newTeamsOut = (row.teamsOut || []).filter((t) => String(t) !== teamKeyToRemove);
+            
+                                        if (!window.db || !row.id) return;
+                                        try {
+                                            await updateDoc(doc(window.db, 'transport', row.id), {
+                                                teamsIn: newTeamsIn,
+                                                teamsOut: newTeamsOut,
+                                            });
+                                        } catch (err) {
+                                            console.error('[TRANSPORT] Chyba pri odstraňovaní tímu z riadku:', err);
+                                            window.showGlobalNotification('Nepodarilo sa odstrániť tím z riadku.', 'error');
+                                        }
                                     },
-                                    title: 'Kliknutím odstrániť tím',
+                                    title: 'Kliknutím odstrániť tím z tohto autobusu (nástup aj výstup)',
                                     className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
                                     style: { color: textColor }
                                 },
@@ -3765,11 +3778,24 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 {
                                     key: `out-${i}`,
-                                    onClick: () => {
-                                        const newList = (row.teamsOut || []).filter((_, idx) => idx !== i);
-                                        updateBusRowField(row.id, 'teamsOut', newList);
+                                    onClick: async () => {
+                                        // NOVÉ: odstráň tím z teamsIn AJ teamsOut v tomto riadku
+                                        const teamKeyToRemove = String(tn);
+                                        const newTeamsIn = (row.teamsIn || []).filter((t) => String(t) !== teamKeyToRemove);
+                                        const newTeamsOut = (row.teamsOut || []).filter((t) => String(t) !== teamKeyToRemove);
+            
+                                        if (!window.db || !row.id) return;
+                                        try {
+                                            await updateDoc(doc(window.db, 'transport', row.id), {
+                                                teamsIn: newTeamsIn,
+                                                teamsOut: newTeamsOut,
+                                            });
+                                        } catch (err) {
+                                            console.error('[TRANSPORT] Chyba pri odstraňovaní tímu z riadku:', err);
+                                            window.showGlobalNotification('Nepodarilo sa odstrániť tím z riadku.', 'error');
+                                        }
                                     },
-                                    title: 'Kliknutím odstrániť tím',
+                                    title: 'Kliknutím odstrániť tím z tohto autobusu (nástup aj výstup)',
                                     className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
                                     style: { color: textColor }
                                 },
