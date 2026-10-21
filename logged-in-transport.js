@@ -1568,7 +1568,49 @@ const TransportApp = ({ userProfileData }) => {
                                 //  - Inak → generuj ranné presuny z ubytovní (pôvodná logika).
                                 // ============================================================
                                 const useGroupEndLocationsAsSource = groupHasAnyEventOnCurrentDay;
-                            
+
+                                // ============================================================
+                                // LOGOVANIE ROZHODNUTIA
+                                // ============================================================
+                                console.log(
+                                    '%c[TRANSPORT][DECISION] ' + teamName + ' @ ' + currentDay,
+                                    'font-weight:bold;color:#7c3aed;',
+                                    {
+                                        groupChar,
+                                        isSSPlayDay,
+                                        isSSLastDayWithUsers,
+                                        usersTeamHasEventsOnDay,
+                                        groupHasAnyEventOnCurrentDay,
+                                        currentTeamHasOwnEventOnThisDay,
+                                        useGroupEndLocationsAsSource,
+                                        useGroupBasedMorningTransfers,
+                                        destinationEventLocation: destinationEvent ? destinationEvent.location : null,
+                                        destinationEventWhen: destinationEvent ? destinationEvent.when : null,
+                                        matchesOnDay: (matchesBufferRef.current || [])
+                                            .filter((m) => {
+                                                if (cleanCategory(m.category) !== cleanCategory(category)) return false;
+                                                let dk = null;
+                                                if (m.scheduledTime) {
+                                                    const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                                    if (mm) dk = `${mm[3]}-${String(mm[2]).padStart(2,'0')}-${String(mm[1]).padStart(2,'0')}`;
+                                                }
+                                                if (!dk && m.scheduledTs != null) {
+                                                    const dt = new Date(m.scheduledTs);
+                                                    dk = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+                                                }
+                                                return dk === currentDay;
+                                            })
+                                            .map((m) => ({
+                                                home: m.home,
+                                                away: m.away,
+                                                groupName: m.groupName,
+                                                homeBelongs: groupHasAnyEventOnCurrentDay
+                                                    ? undefined
+                                                    : undefined,
+                                            })),
+                                    }
+                                );
+
                                 if (useGroupEndLocationsAsSource) {
                                     // ============================================================
                                     // SKUPINOVÁ LOGIKA: presuny z miest posledných udalostí
@@ -1635,6 +1677,11 @@ const TransportApp = ({ userProfileData }) => {
                                                         }
                                                     }
                                                 }
+                                                console.log(
+                                                    '%c[TRANSPORT][GROUP-SRC-MATCH] ' + teamName + ' @ ' + currentDay + ' → zdroj: ' + (m.hallName || '?'),
+                                                    'color:#2563eb;',
+                                                    { match: `${m.home} vs ${m.away}`, tn, hallName: m.hallName, endTs }
+                                                );
                                                 updateUniqueSource(m.hallName || null, endTs);
                                             });
                                         });
@@ -1653,12 +1700,21 @@ const TransportApp = ({ userProfileData }) => {
                                             if (!teamBelongsToChar(tn, category)) return;
                             
                                             const endTs = c.slotToTs != null ? c.slotToTs : (c.ts != null ? c.ts : null);
+                                            console.log(
+                                                '%c[TRANSPORT][GROUP-SRC-CATERING] ' + teamName + ' @ ' + currentDay + ' → zdroj: ' + (c.placeName || '?'),
+                                                'color:#16a34a;',
+                                                { tn, placeName: c.placeName, slotFrom: c.slotFrom, slotTo: c.slotTo, endTs }
+                                            );
                                             updateUniqueSource(c.placeName || null, endTs);
                                         });
                             
                                         // 3) Ubytovania tímov zo skupiny – LEN ak v daný deň NEMÁ
                                         //    žiadny iný tím zo skupiny udalosť (skupina v ten deň nehrá).
                                         if (!groupHasAnyEventOnCurrentDay) {
+                                            console.log(
+                                                '%c[TRANSPORT][GROUP-SRC-ACCOM] ' + teamName + ' @ ' + currentDay + ' → skupina nemá udalosť, pridávam ubytovania',
+                                                'color:#f59e0b;'
+                                            );
                                             (teamsArrivalBufferRef.current || []).forEach((t) => {
                                                 if (cleanCategory(t.category) !== cleanCategory(category)) return;
                                                 if (!t.teamName) return;
@@ -1666,6 +1722,11 @@ const TransportApp = ({ userProfileData }) => {
                                                 if (!t.accommodationName || t.accommodationName.trim() === '') return;
                                                 if (!isRealRegisteredTeam(t.teamName, category)) return;
                                                 if (!teamBelongsToChar(t.teamName, category)) return;
+                                                console.log(
+                                                    '%c[TRANSPORT][GROUP-SRC-ACCOM-ITEM] ' + teamName + ' @ ' + currentDay + ' → ' + t.accommodationName,
+                                                    'color:#f59e0b;',
+                                                    { team: t.teamName, accommodation: t.accommodationName }
+                                                );
                                                 updateUniqueSource(t.accommodationName.trim(), null);
                                             });
                                         }
@@ -1716,6 +1777,10 @@ const TransportApp = ({ userProfileData }) => {
                                     // Deň NIE JE hrací deň skupiny a žiadny tím zo skupiny nemá
                                     // udalosť → použijeme pôvodnú logiku ranných presunov z ubytovní.
                                     // ============================================================
+                                    console.log(
+                                        '%c[TRANSPORT][FALLBACK-ACCOM] ' + teamName + ' @ ' + currentDay + ' → groupHasAnyEventOnCurrentDay=false, generujem ranné presuny z ubytovní',
+                                        'color:#dc2626;font-weight:bold;'
+                                    );
                                     if (!destinationEvent || !destinationEvent.location) {
                                         // Nemáme cieľovú udalosť – nič negenerujeme
                                     } else {
@@ -1739,6 +1804,11 @@ const TransportApp = ({ userProfileData }) => {
                                             if (!t.accommodationName || t.accommodationName.trim() === '') return;
                                             if (!isRealRegisteredTeam(t.teamName, category)) return;
                                             if (!teamBelongsToChar(t.teamName, category)) return;
+                                            console.log(
+                                                '%c[TRANSPORT][FALLBACK-ACCOM-ITEM] ' + teamName + ' @ ' + currentDay + ' → ubytovanie: ' + t.accommodationName,
+                                                'color:#dc2626;',
+                                                { team: t.teamName, accommodation: t.accommodationName }
+                                            );
                                             updateUniqueSource(t.accommodationName.trim(), null);
                                         });
                             
