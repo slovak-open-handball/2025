@@ -4768,7 +4768,7 @@ const TransportApp = ({ userProfileData }) => {
     
     // ============================================================
     // HLAVNÝ RENDER
-    // ============================================================    
+    // ============================================================
     return React.createElement(
         'div',
         { className: 'w-full flex-1 flex flex-col' },
@@ -4809,450 +4809,446 @@ const TransportApp = ({ userProfileData }) => {
                     )
                 )
             ),
-            // === PÔVODNÝ OBSAH ===
-            React.createElement(
+        // === PÔVODNÝ OBSAH (bez ďalšieho obalenia) ===
+        React.createElement(
             'div',
-            { className: 'w-full flex-1 flex flex-col' },
+            {
+                className: 'bg-white rounded-xl shadow-xl p-8 flex flex-col items-start justify-start w-max min-w-full transition-all duration-500'
+            },
             React.createElement(
                 'div',
-                {
-                    className: 'bg-white rounded-xl shadow-xl p-8 flex flex-col items-start justify-start w-max min-w-full transition-all duration-500'
-                },
-                React.createElement(
-                    'div',
-                    { className: 'w-full flex flex-col items-center mb-6' },
-                    React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-4' }, 'Doprava')
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'w-full flex flex-wrap items-center justify-center gap-3 mb-6' },
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: () => setActiveView('planovanie'),
-                            className: `px-5 py-2.5 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
-                                activeView === 'planovanie'
-                                    ? 'bg-green-600 text-white border-green-600 hover:bg-green-700'
-                                    : 'bg-white text-green-600 border-green-600 hover:bg-green-50'
-                            }`
-                        },
-                        React.createElement('i', { className: 'fa-solid fa-calendar-days' }),
-                        'Plánovanie'
-                    ),
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: () => setActiveView('nastavenia'),
-                            className: `px-5 py-2.5 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
-                                activeView === 'nastavenia'
-                                    ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
-                                    : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
-                            }`
-                        },
-                        React.createElement('i', { className: 'fa-solid fa-gear' }),
-                        'Nastavenia'
-                    )
-                ),
-                // === SELECTBOX S DŇAMI TURNAJA (len v režime Plánovanie) ===
-                activeView === 'planovanie' && React.createElement(
-                    'div',
-                    { className: 'w-full flex flex-wrap items-center justify-center gap-3 mb-6' },
-                    React.createElement(
-                        'label',
-                        { className: 'flex items-center gap-2 text-sm font-medium text-gray-700' },
-                        React.createElement('i', { className: 'fa-solid fa-filter text-gray-500' }),
-                        'Zobraziť deň:'
-                    ),
-                    React.createElement(
-                        'select',
-                        {
-                            value: selectedDayKey,
-                            onChange: (e) => setSelectedDayKey(e.target.value),
-                            disabled: tournamentDays.length === 0,
-                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
-                        },
-                        React.createElement(
-                            'option',
-                            { value: '' },
-                            'Všetky dni'
-                        ),
-                        tournamentDays.map((day) =>
-                            React.createElement(
-                                'option',
-                                { key: day.dayKey, value: day.dayKey },
-                                `${day.dayName.charAt(0).toUpperCase() + day.dayName.slice(1)} – ${day.dateLabel}`
-                            )
-                        )
-                    )
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'w-full flex-1' },
-                    activeView === 'nastavenia'
-                        ? React.createElement(
-                            'div',
-                            { className: 'w-full' },
-                            React.createElement(
-                                'div',
-                                { className: 'flex items-center justify-between mb-4 pb-3 border-b border-gray-200' },
-                                React.createElement('h3', { className: 'text-xl font-semibold text-gray-700' }, 'Trvania jazdy medzi zastávkami'),
-                                React.createElement('span', { className: 'text-sm text-gray-500' }, `Zastávok: ${stopsList.length}`)
-                            ),
-                            renderTravelTimes()
-                        )
-                        : renderPlanning()
-                ),
+                { className: 'w-full flex flex-col items-center mb-6' },
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-4' }, 'Doprava')
             ),
+            React.createElement(
+                'div',
+                { className: 'w-full flex flex-wrap items-center justify-center gap-3 mb-6' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => setActiveView('planovanie'),
+                        className: `px-5 py-2.5 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
+                            activeView === 'planovanie'
+                                ? 'bg-green-600 text-white border-green-600 hover:bg-green-700'
+                                : 'bg-white text-green-600 border-green-600 hover:bg-green-50'
+                        }`
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-calendar-days' }),
+                    'Plánovanie'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => setActiveView('nastavenia'),
+                        className: `px-5 py-2.5 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
+                            activeView === 'nastavenia'
+                                ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                                : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
+                        }`
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-gear' }),
+                    'Nastavenia'
+                )
+            ),
+            // === SELECTBOX S DŇAMI TURNAJA (len v režime Plánovanie) ===
             activeView === 'planovanie' && React.createElement(
                 'div',
+                { className: 'w-full flex flex-wrap items-center justify-center gap-3 mb-6' },
+                React.createElement(
+                    'label',
+                    { className: 'flex items-center gap-2 text-sm font-medium text-gray-700' },
+                    React.createElement('i', { className: 'fa-solid fa-filter text-gray-500' }),
+                    'Zobraziť deň:'
+                ),
+                React.createElement(
+                    'select',
+                    {
+                        value: selectedDayKey,
+                        onChange: (e) => setSelectedDayKey(e.target.value),
+                        disabled: tournamentDays.length === 0,
+                        className: 'px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
+                    },
+                    React.createElement(
+                        'option',
+                        { value: '' },
+                        'Všetky dni'
+                    ),
+                    tournamentDays.map((day) =>
+                        React.createElement(
+                            'option',
+                            { key: day.dayKey, value: day.dayKey },
+                            `${day.dayName.charAt(0).toUpperCase() + day.dayName.slice(1)} – ${day.dateLabel}`
+                        )
+                    )
+                )
+            ),
+            React.createElement(
+                'div',
+                { className: 'w-full flex-1' },
+                activeView === 'nastavenia'
+                    ? React.createElement(
+                        'div',
+                        { className: 'w-full' },
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center justify-between mb-4 pb-3 border-b border-gray-200' },
+                            React.createElement('h3', { className: 'text-xl font-semibold text-gray-700' }, 'Trvania jazdy medzi zastávkami'),
+                            React.createElement('span', { className: 'text-sm text-gray-500' }, `Zastávok: ${stopsList.length}`)
+                        ),
+                        renderTravelTimes()
+                    )
+                    : renderPlanning()
+            ),
+        ),
+        activeView === 'planovanie' && React.createElement(
+            'div',
+            {
+                className: 'fixed bottom-8 right-8 z-[9999]',
+                style: {
+                    filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))',
+                    width: '64px',
+                    height: '64px'
+                }
+            },
+            // === ZELENÁ POLOVICA (hore/ľavá) – Vygenerovať presuny ===
+            React.createElement(
+                'div',
                 {
-                    className: 'fixed bottom-8 right-8 z-[9999]',
+                    className: 'absolute rounded-full overflow-hidden',
                     style: {
-                        filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))',
                         width: '64px',
-                        height: '64px'
+                        height: '64px',
+                        clipPath: 'polygon(0 0, 100% 0, 0 100%)',
+                        top: 0,
+                        left: 0
                     }
                 },
-                // === ZELENÁ POLOVICA (hore/ľavá) – Vygenerovať presuny ===
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            const cats = getAvailableCategories();
+                            if (cats.length === 0) {
+                                window.showGlobalNotification('Nie sú dostupné žiadne kategórie.', 'error');
+                                return;
+                            }
+                            setSelectedCategoryForTimeline(cats[0]);
+                            setShowCategoryModal(true);
+                        },
+                        className: 'w-full h-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0',
+                        title: 'Vygenerovať presuny'
+                    },
+                    React.createElement(
+                        'div',
+                        {
+                            style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '100%',
+                                height: '100%',
+                                position: 'relative'
+                            }
+                        },
+                        React.createElement('i', {
+                            className: 'fa-solid fa-plus text-2xl text-white',
+                            style: {
+                                position: 'absolute',
+                                top: '30%',
+                                left: '30%',
+                                transform: 'translate(-50%, -50%)'
+                            }
+                        })
+                    )
+                )
+            ),
+            // === ČERVENÁ POLOVICA (dole/pravá) – Zmazať presuny ===
+            React.createElement(
+                'div',
+                {
+                    className: 'absolute rounded-full overflow-hidden',
+                    style: {
+                        width: '64px',
+                        height: '64px',
+                        clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
+                        top: 0,
+                        left: 0
+                    }
+                },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            const cats = getAvailableCategories();
+                            if (cats.length === 0) {
+                                window.showGlobalNotification('Nie sú dostupné žiadne kategórie.', 'error');
+                                return;
+                            }
+                            setSelectedCategoryForDelete(cats[0]);
+                            setShowDeleteTransfersModal(true);
+                        },
+                        className: 'w-full h-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0',
+                        title: 'Zmazať presuny'
+                    },
+                    React.createElement(
+                        'div',
+                        {
+                            style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '100%',
+                                height: '100%',
+                                position: 'relative'
+                            }
+                        },
+                        React.createElement('i', {
+                            className: 'fa-solid fa-minus text-2xl text-white',
+                            style: {
+                                position: 'absolute',
+                                bottom: '30%',
+                                right: '30%',
+                                transform: 'translate(50%, 50%)'
+                            }
+                        })
+                    )
+                )
+            )
+        ),
+        confirmModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
+                onClick: () => closeConfirmModal(false)
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
                 React.createElement(
                     'div',
-                    {
-                        className: 'absolute rounded-full overflow-hidden',
-                        style: {
-                            width: '64px',
-                            height: '64px',
-                            clipPath: 'polygon(0 0, 100% 0, 0 100%)',
-                            top: 0,
-                            left: 0
-                        }
-                    },
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-circle-question text-blue-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-800' },
+                        'Potvrdenie'
+                    )
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-700 mb-6 whitespace-pre-line' },
+                    confirmModal.message
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
                     React.createElement(
                         'button',
                         {
-                            onClick: () => {
-                                const cats = getAvailableCategories();
-                                if (cats.length === 0) {
-                                    window.showGlobalNotification('Nie sú dostupné žiadne kategórie.', 'error');
-                                    return;
-                                }
-                                setSelectedCategoryForTimeline(cats[0]);
-                                setShowCategoryModal(true);
-                            },
-                            className: 'w-full h-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0',
-                            title: 'Vygenerovať presuny'
+                            type: 'button',
+                            onClick: () => closeConfirmModal(false),
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
                         },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => closeConfirmModal(true),
+                            className: 'px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors'
+                        },
+                        'Potvrdiť'
+                    )
+                )
+            )
+        ),
+        // ============================================================
+        // MODÁLNE OKNO – Zmazať presuny pre kategóriu
+        // ============================================================
+        showDeleteTransfersModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
+                onClick: () => setShowDeleteTransfersModal(false)
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-trash-can text-red-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-800' },
+                        'Zmazať presuny'
+                    )
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-700 mb-4 text-sm' },
+                    'Vyberte kategóriu, pre ktorú sa majú zmazať všetky vygenerované presuny z databázy.'
+                ),
+                React.createElement(
+                    'label',
+                    { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Kategória'
+                ),
+                React.createElement(
+                    'select',
+                    {
+                        value: selectedCategoryForDelete,
+                        onChange: (e) => setSelectedCategoryForDelete(e.target.value),
+                        className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors mb-4'
+                    },
+                    getAvailableCategories().map((cat) =>
                         React.createElement(
-                            'div',
-                            {
-                                style: {
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    width: '100%',
-                                    height: '100%',
-                                    position: 'relative'
-                                }
-                            },
-                            React.createElement('i', {
-                                className: 'fa-solid fa-plus text-2xl text-white',
-                                style: {
-                                    position: 'absolute',
-                                    top: '30%',
-                                    left: '30%',
-                                    transform: 'translate(-50%, -50%)'
-                                }
-                            })
+                            'option',
+                            { key: cat, value: cat },
+                            cat
                         )
                     )
                 ),
-                // === ČERVENÁ POLOVICA (dole/pravá) – Zmazať presuny ===
                 React.createElement(
                     'div',
-                    {
-                        className: 'absolute rounded-full overflow-hidden',
-                        style: {
-                            width: '64px',
-                            height: '64px',
-                            clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
-                            top: 0,
-                            left: 0
-                        }
-                    },
+                    { className: 'mb-4 p-3 bg-red-50 border border-red-200 rounded-lg' },
+                    React.createElement(
+                        'p',
+                        { className: 'text-xs text-red-600 flex items-center gap-2' },
+                        React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
+                        'Táto akcia je nenávratná. Všetky presuny pre vybranú kategóriu budú natrvalo odstránené z databázy.'
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
                     React.createElement(
                         'button',
                         {
-                            onClick: () => {
-                                const cats = getAvailableCategories();
-                                if (cats.length === 0) {
-                                    window.showGlobalNotification('Nie sú dostupné žiadne kategórie.', 'error');
+                            type: 'button',
+                            onClick: () => setShowDeleteTransfersModal(false),
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: async () => {
+                                const cat = selectedCategoryForDelete;
+                                if (!cat) {
+                                    window.showGlobalNotification('Najprv vyberte kategóriu.', 'error');
                                     return;
                                 }
-                                setSelectedCategoryForDelete(cats[0]);
-                                setShowDeleteTransfersModal(true);
+                                await deleteTransfers({ categoryName: cat });
+                                setShowDeleteTransfersModal(false);
                             },
-                            className: 'w-full h-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0',
-                            title: 'Zmazať presuny'
+                            className: 'px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors'
                         },
-                        React.createElement(
-                            'div',
-                            {
-                                style: {
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    width: '100%',
-                                    height: '100%',
-                                    position: 'relative'
-                                }
-                            },
-                            React.createElement('i', {
-                                className: 'fa-solid fa-minus text-2xl text-white',
-                                style: {
-                                    position: 'absolute',
-                                    bottom: '30%',
-                                    right: '30%',
-                                    transform: 'translate(50%, 50%)'
-                                }
-                            })
-                        )
+                        'Zmazať presuny'
                     )
                 )
-            ),
-            confirmModal && React.createElement(
+            )
+        ),
+        showCategoryModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
+                onClick: () => setShowCategoryModal(false)
+            },
+            React.createElement(
                 'div',
                 {
-                    className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
-                    onClick: () => closeConfirmModal(false)
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
                 },
                 React.createElement(
                     'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-list-check text-green-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-800' },
+                        'Vygenerovať presuny'
+                    )
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-700 mb-4 text-sm' },
+                    'Vyberte kategóriu, pre ktorú sa majú vygenerovať presuny.'
+                ),
+                React.createElement(
+                    'label',
+                    { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Kategória'
+                ),
+                React.createElement(
+                    'select',
                     {
-                        className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
-                        onClick: (e) => e.stopPropagation()
+                        value: selectedCategoryForTimeline,
+                        onChange: (e) => setSelectedCategoryForTimeline(e.target.value),
+                        className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors mb-6'
                     },
-                    React.createElement(
-                        'div',
-                        { className: 'flex items-start gap-3 mb-4' },
-                        React.createElement('i', {
-                            className: 'fa-solid fa-circle-question text-blue-600 text-2xl mt-0.5'
-                        }),
+                    getAvailableCategories().map((cat) =>
                         React.createElement(
-                            'h3',
-                            { className: 'text-lg font-semibold text-gray-800' },
-                            'Potvrdenie'
-                        )
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-700 mb-6 whitespace-pre-line' },
-                        confirmModal.message
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-end gap-3' },
-                        React.createElement(
-                            'button',
-                            {
-                                type: 'button',
-                                onClick: () => closeConfirmModal(false),
-                                className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
-                            },
-                            'Zrušiť'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                type: 'button',
-                                onClick: () => closeConfirmModal(true),
-                                className: 'px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors'
-                            },
-                            'Potvrdiť'
+                            'option',
+                            { key: cat, value: cat },
+                            cat
                         )
                     )
-                )
-            ),
-            // ============================================================
-            // MODÁLNE OKNO – Zmazať presuny pre kategóriu
-            // ============================================================
-            showDeleteTransfersModal && React.createElement(
-                'div',
-                {
-                    className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
-                    onClick: () => setShowDeleteTransfersModal(false)
-                },
+                ),
                 React.createElement(
                     'div',
-                    {
-                        className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
-                        onClick: (e) => e.stopPropagation()
-                    },
+                    { className: 'flex justify-end gap-3' },
                     React.createElement(
-                        'div',
-                        { className: 'flex items-start gap-3 mb-4' },
-                        React.createElement('i', {
-                            className: 'fa-solid fa-trash-can text-red-600 text-2xl mt-0.5'
-                        }),
-                        React.createElement(
-                            'h3',
-                            { className: 'text-lg font-semibold text-gray-800' },
-                            'Zmazať presuny'
-                        )
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-700 mb-4 text-sm' },
-                        'Vyberte kategóriu, pre ktorú sa majú zmazať všetky vygenerované presuny z databázy.'
-                    ),
-                    React.createElement(
-                        'label',
-                        { className: 'block text-sm font-medium text-gray-700 mb-1' },
-                        'Kategória'
-                    ),
-                    React.createElement(
-                        'select',
+                        'button',
                         {
-                            value: selectedCategoryForDelete,
-                            onChange: (e) => setSelectedCategoryForDelete(e.target.value),
-                            className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors mb-4'
+                            type: 'button',
+                            onClick: () => setShowCategoryModal(false),
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
                         },
-                        getAvailableCategories().map((cat) =>
-                            React.createElement(
-                                'option',
-                                { key: cat, value: cat },
-                                cat
-                            )
-                        )
+                        'Zrušiť'
                     ),
                     React.createElement(
-                        'div',
-                        { className: 'mb-4 p-3 bg-red-50 border border-red-200 rounded-lg' },
-                        React.createElement(
-                            'p',
-                            { className: 'text-xs text-red-600 flex items-center gap-2' },
-                            React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
-                            'Táto akcia je nenávratná. Všetky presuny pre vybranú kategóriu budú natrvalo odstránené z databázy.'
-                        )
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-end gap-3' },
-                        React.createElement(
-                            'button',
-                            {
-                                type: 'button',
-                                onClick: () => setShowDeleteTransfersModal(false),
-                                className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
-                            },
-                            'Zrušiť'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                type: 'button',
-                                onClick: async () => {
-                                    const cat = selectedCategoryForDelete;
-                                    if (!cat) {
-                                        window.showGlobalNotification('Najprv vyberte kategóriu.', 'error');
-                                        return;
-                                    }
-                                    await deleteTransfers({ categoryName: cat });
-                                    setShowDeleteTransfersModal(false);
-                                },
-                                className: 'px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors'
-                            },
-                            'Zmazať presuny'
-                        )
-                    )
-                )
-            ),
-            showCategoryModal && React.createElement(
-                'div',
-                {
-                    className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
-                    onClick: () => setShowCategoryModal(false)
-                },
-                React.createElement(
-                    'div',
-                    {
-                        className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
-                        onClick: (e) => e.stopPropagation()
-                    },
-                    React.createElement(
-                        'div',
-                        { className: 'flex items-start gap-3 mb-4' },
-                        React.createElement('i', {
-                            className: 'fa-solid fa-list-check text-green-600 text-2xl mt-0.5'
-                        }),
-                        React.createElement(
-                            'h3',
-                            { className: 'text-lg font-semibold text-gray-800' },
-                            'Vygenerovať presuny'
-                        )
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-700 mb-4 text-sm' },
-                        'Vyberte kategóriu, pre ktorú sa majú vygenerovať presuny.'
-                    ),
-                    React.createElement(
-                        'label',
-                        { className: 'block text-sm font-medium text-gray-700 mb-1' },
-                        'Kategória'
-                    ),
-                    React.createElement(
-                        'select',
+                        'button',
                         {
-                            value: selectedCategoryForTimeline,
-                            onChange: (e) => setSelectedCategoryForTimeline(e.target.value),
-                            className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors mb-6'
+                            type: 'button',
+                            onClick: () => {
+                                const cat = selectedCategoryForTimeline;
+                                if (!cat) {
+                                    window.showGlobalNotification('Najprv vyberte kategóriu.', 'error');
+                                    return;
+                                }
+                                timelineGenerationRequestedRef.current = true;
+                                rebuildAndLogTimeline(true, cat);
+                                setShowCategoryModal(false);
+                                window.showGlobalNotification(
+                                    `Časová os pre kategóriu ${cat} bola vygenerovaná.`,
+                                    'success'
+                                );
+                            },
+                            className: 'px-4 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-colors'
                         },
-                        getAvailableCategories().map((cat) =>
-                            React.createElement(
-                                'option',
-                                { key: cat, value: cat },
-                                cat
-                            )
-                        )
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-end gap-3' },
-                        React.createElement(
-                            'button',
-                            {
-                                type: 'button',
-                                onClick: () => setShowCategoryModal(false),
-                                className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
-                            },
-                            'Zrušiť'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                type: 'button',
-                                onClick: () => {
-                                    const cat = selectedCategoryForTimeline;
-                                    if (!cat) {
-                                        window.showGlobalNotification('Najprv vyberte kategóriu.', 'error');
-                                        return;
-                                    }
-                                    timelineGenerationRequestedRef.current = true;
-                                    rebuildAndLogTimeline(true, cat);
-                                    setShowCategoryModal(false);
-                                    window.showGlobalNotification(
-                                        `Časová os pre kategóriu ${cat} bola vygenerovaná.`,
-                                        'success'
-                                    );
-                                },
-                                className: 'px-4 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-colors'
-                            },
-                            'Vygenerovať'
-                        )
+                        'Vygenerovať'
                     )
                 )
-            ),
-        );
-    )
+            )
+        )
+    );
 };
 
 let isEmailSyncListenerSetup = false;
