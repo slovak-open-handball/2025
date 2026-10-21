@@ -1206,10 +1206,12 @@ function UsersManagementApp() {
             const isOnline = getLoginStatus(user);
             const lastLoginDate = toDateSafe(user.lastLoginAt);
             const lastLogoutDate = toDateSafe(user.lastLogoutAt);
-            const statusTitle = [
-              `Posledné prihlásenie: ${lastLoginDate ? lastLoginDate.toLocaleString('sk-SK') : '—'}`,
-              `Posledné odhlásenie: ${lastLogoutDate ? lastLogoutDate.toLocaleString('sk-SK') : '—'}`
-            ].join('\n');
+            const statusTitle = isOnline
+              ? `Posledné prihlásenie: ${lastLoginDate ? lastLoginDate.toLocaleString('sk-SK') : '—'}`
+              : [
+                  `Posledné prihlásenie: ${lastLoginDate ? lastLoginDate.toLocaleString('sk-SK') : '—'}`,
+                  `Posledné odhlásenie: ${lastLogoutDate ? lastLogoutDate.toLocaleString('sk-SK') : '—'}`
+                ].join('\n');
             
             // Logika na skrytie riadku pre ostatných používateľov
             if (isUserOldestAdmin && !isCurrentUserOldestAdmin) {
