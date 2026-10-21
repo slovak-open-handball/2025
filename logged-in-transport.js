@@ -4101,73 +4101,103 @@ const TransportApp = ({ userProfileData }) => {
         return new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
     };
 
+        // ============================================================
+    // Pomocná: Z riadkov autobusu pre daný deň vytvorí zhrnutie
+    // celej trasy: začiatočná zastávka, koncová zastávka a časy.
     // ============================================================
+    const buildBusTripSummary = (bus, dayKey, rows) => {
+        if (!rows || rows.length === 0) return null;
+
+        // Zoraď riadky podľa order
+        const sorted = [...rows].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        const firstRow = sorted[0];
+        const lastRow = sorted[sorted.length - 1];
+
+        const fromPlace = normalizePlaceName(firstRow.placeFrom);
+        const toPlace = normalizePlaceName(lastRow.placeTo);
+
+        // Ak chýba začiatočná alebo koncová zastávka, trasu nemôžeme použiť
+        if (!fromPlace || !toPlace) return null;
+
+        return {
+            bus,
+            dayKey,
+            fromPlace,
+            toPlace,
+            timeFrom: firstRow.timeFrom || '',
+            timeTo: lastRow.timeTo || '',
+            firstRowId: firstRow.id,
+            lastRowId: lastRow.id,
+            rows: sorted,
+        };
+    };
+
+        // ============================================================
     // NÁJDI VHODNÉ AUTOBUSY PRE PRESUN
+    // Vracia zhrnutie celej trasy autobusu pre daný deň
+    // (začiatočná a koncová zastávka + časy).
     // ============================================================
     const findMatchingBusRows = (transfer) => {
         if (!transfer) return [];
-    
+
         const trRange = parseTransferWhenToRange(transfer.when);
-        // NOVÉ: Normalizujeme názvy miest (odstránime predpony "zastávka ", "ubytovanie ", ...)
         const trFrom = normalizePlaceName(transfer.fromLocation);
         const trTo = normalizePlaceName(transfer.toLocation);
         const trDayKey = transfer.dayKey || null;
-    
+
         if (!trRange || !trFrom || !trTo || !trDayKey) return [];
-    
+
         const results = [];
-    
+
         Object.entries(busRows || {}).forEach(([key, rows]) => {
             const [busId, dayKey] = key.split('|');
             if (dayKey !== trDayKey) return;
-    
+
             const bus = buses.find((b) => b.id === busId);
             if (!bus) return;
-    
+
+            const trip = buildBusTripSummary(bus, dayKey, rows);
+            if (!trip) return;
+
+            // Zisti, či trasa presunu sedí s trasou autobusu
+            const matchesFrom = trip.fromPlace === trFrom;
+            const matchesTo = trip.toPlace === trTo;
+
+            // Ak ani jedno miesto nesedí, autobus nie je vhodný
+            if (!matchesFrom && !matchesTo) return;
+
+            // Časový prekryv celkovej trasy autobusu s časom presunu
+            const tripStartTs = timeOnDayKeyToTs(dayKey, trip.timeFrom);
+            const tripEndTs = timeOnDayKeyToTs(dayKey, trip.timeTo);
+
+            const overlap =
+                (tripEndTs == null || trRange.startTs < tripEndTs) &&
+                (tripStartTs == null || trRange.endTs > tripStartTs);
+
+            if (!overlap) return;
+
+            // Nájdi konkrétne riadky pre nástup a výstup
             let boardingRow = null;
             let alightingRow = null;
-    
-            (rows || []).forEach((row) => {
-                // NOVÉ: Normalizujeme aj názvy v riadku autobusu
+
+            trip.rows.forEach((row) => {
                 const rowFrom = normalizePlaceName(row.placeFrom);
                 const rowTo = normalizePlaceName(row.placeTo);
-    
-                const rowStartTs = timeOnDayKeyToTs(dayKey, row.timeFrom);
-                const rowEndTs = timeOnDayKeyToTs(dayKey, row.timeTo);
-    
-                const overlap =
-                    (rowEndTs == null || trRange.startTs < rowEndTs) &&
-                    (rowStartTs == null || trRange.endTs > rowStartTs);
-    
-                if (!overlap) return;
-    
-                // NÁSTUP
-                if (rowFrom && rowFrom === trFrom) {
-                    if (!boardingRow || (rowStartTs != null && boardingRow.startTs != null && rowStartTs < boardingRow.startTs)) {
-                        boardingRow = { row, startTs: rowStartTs };
-                    }
-                }
-    
-                // VÝSTUP
-                if (rowTo && rowTo === trTo) {
-                    if (!alightingRow || (rowEndTs != null && alightingRow.endTs != null && rowEndTs > alightingRow.endTs)) {
-                        alightingRow = { row, endTs: rowEndTs };
-                    }
-                }
+                if (rowFrom && rowFrom === trFrom && !boardingRow) boardingRow = row;
+                if (rowTo && rowTo === trTo && !alightingRow) alightingRow = row;
             });
-    
-            if (boardingRow) results.push({ bus, row: boardingRow.row, side: 'in' });
-            if (alightingRow) results.push({ bus, row: alightingRow.row, side: 'out' });
+
+            results.push({
+                bus,
+                trip,
+                boardingRow,
+                alightingRow,
+                side: matchesFrom ? 'in' : 'out',
+            });
         });
-    
-        // Deduplikácia
-        const seen = new Set();
-        return results.filter((r) => {
-            const k = `${r.bus.id}|${r.row.id}|${r.side}`;
-            if (seen.has(k)) return false;
-            seen.add(k);
-            return true;
-        });
+
+        return results;
     };
 
     // ============================================================
@@ -4207,48 +4237,46 @@ const TransportApp = ({ userProfileData }) => {
     const assignTransferToBus = async () => {
         if (!window.db || !transferActionModal?.transfer) return;
         const transfer = transferActionModal.transfer;
-    
+
         if (!assignBusSelectedKey) {
             window.showGlobalNotification('Vyberte autobus/riadok.', 'error');
             return;
         }
-    
+
         const [busId, rowId, side] = assignBusSelectedKey.split('|');
-    
+
         const teamKey = `${transfer.teamName}|${transfer.category || ''}`;
-        // NOVÉ: Normalizujeme názvy miest
         const trFrom = normalizePlaceName(transfer.fromLocation);
         const trTo = normalizePlaceName(transfer.toLocation);
         const trDayKey = transfer.dayKey || null;
-    
+
         const busRowsKey = `${busId}|${trDayKey}`;
         const rows = busRows[busRowsKey] || [];
-    
+
         let boardingRow = null;
         let alightingRow = null;
-    
+
         rows.forEach((row) => {
-            // NOVÉ: Normalizujeme aj názvy v riadku autobusu
             const rowFrom = normalizePlaceName(row.placeFrom);
             const rowTo = normalizePlaceName(row.placeTo);
-            if (rowFrom && rowFrom === trFrom) boardingRow = row;
-            if (rowTo && rowTo === trTo) alightingRow = row;
+            if (rowFrom && rowFrom === trFrom && !boardingRow) boardingRow = row;
+            if (rowTo && rowTo === trTo && !alightingRow) alightingRow = row;
         });
-    
+
         setAssignBusSaving(true);
         try {
             const updates = {};
-    
+
             if (boardingRow) {
                 const newTeamsIn = Array.from(new Set([...(boardingRow.teamsIn || []), teamKey]));
                 updates[boardingRow.id] = { ...(updates[boardingRow.id] || {}), teamsIn: newTeamsIn };
             }
-    
+
             if (alightingRow) {
                 const newTeamsOut = Array.from(new Set([...(alightingRow.teamsOut || []), teamKey]));
                 updates[alightingRow.id] = { ...(updates[alightingRow.id] || {}), teamsOut: newTeamsOut };
             }
-    
+
             // Fallback – ak sa nenašiel ani nástup ani výstup
             if (!boardingRow && !alightingRow) {
                 let currentRow = rows.find(r => r.id === rowId);
@@ -4262,22 +4290,22 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 }
             }
-    
+
             const promises = Object.entries(updates).map(([rid, data]) =>
                 updateDoc(doc(window.db, 'transport', rid), data)
             );
             await Promise.all(promises);
-    
+
             const parts = [];
             if (boardingRow) parts.push('nástup');
             if (alightingRow) parts.push('výstup');
             if (parts.length === 0) parts.push(side === 'in' ? 'nástup' : 'výstup');
-    
+
             window.showGlobalNotification(
                 `Tím "${transfer.teamName}" bol priradený (${parts.join(' + ')}).`,
                 'success'
             );
-    
+
             setShowAssignBusModal(false);
             setTransferActionModal(null);
             setAssignBusMatches([]);
@@ -6076,10 +6104,8 @@ const TransportApp = ({ userProfileData }) => {
                 
                 // DYNAMICKÝ VÝPOČET ZOZNAMU AUTOBUSOV
                 (() => {
-                    console.log('%c[TRANSPORT-DEBUG] Modálne okno – počítam currentMatches...', 'color: #0891b2;');
                     const currentMatches = findMatchingBusRows(transferActionModal.transfer);
-                    console.log('[TRANSPORT-DEBUG] Modálne okno – currentMatches:', currentMatches);
-                    
+
                     if (currentMatches.length === 0) {
                         return React.createElement(
                             'div',
@@ -6091,30 +6117,31 @@ const TransportApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'span',
                                     null,
-                                    'Pre tento presun neexistuje žiadny autobus s riadkom, ktorý by zodpovedal trase aj času. ',
-                                    'Najprv pridajte riadok do autobusu (v Plánovaní) s rovnakým miestom od/do a časom, ktorý sa prekrýva s časom presunu.'
+                                    'Pre tento presun neexistuje žiadny autobus s trasou, ktorá by zodpovedala miestam a času presunu. ',
+                                    'Najprv pridajte riadky do autobusu (v Plánovaní) tak, aby trasa autobusu obsahovala miesto odchodu a príchodu presunu.'
                                 )
                             )
                         );
                     }
-                
+
                     return React.createElement(
                         'div',
                         { className: 'mb-4' },
                         React.createElement(
                             'label',
                             { className: 'block text-sm font-medium text-gray-700 mb-2' },
-                            'Vyberte autobus / riadok:'
+                            'Vyberte autobus / trasu:'
                         ),
                         React.createElement(
                             'ul',
                             { className: 'space-y-2' },
                             currentMatches.map((m) => {
-                                const key = `${m.bus.id}|${m.row.id}|${m.side}`;
+                                const key = `${m.bus.id}|${m.trip.firstRowId}|${m.side}`;
                                 const isSelected = assignBusSelectedKey === key;
-                                const sideLabel = m.side === 'in' ? 'Nástup' : 'Výstup';
-                                const sideIcon = m.side === 'in' ? 'fa-right-to-bracket' : 'fa-right-from-bracket';
-                                const sideColor = m.side === 'in' ? 'text-emerald-600' : 'text-red-600';
+
+                                const hasBoarding = !!m.boardingRow;
+                                const hasAlighting = !!m.alightingRow;
+
                                 return React.createElement(
                                     'li',
                                     { key },
@@ -6143,19 +6170,29 @@ const TransportApp = ({ userProfileData }) => {
                                                 React.createElement(
                                                     'div',
                                                     { className: 'text-xs text-gray-600 mt-0.5' },
-                                                    `${m.row.placeFrom || '?'} → ${m.row.placeTo || '?'}`
+                                                    `${m.trip.fromPlace} → ${m.trip.toPlace}`
                                                 ),
                                                 React.createElement(
                                                     'div',
                                                     { className: 'text-xs text-gray-500 mt-0.5' },
-                                                    `${m.row.timeFrom || '—'} – ${m.row.timeTo || '—'}`
+                                                    `${m.trip.timeFrom || '—'} – ${m.trip.timeTo || '—'}`
                                                 )
                                             ),
                                             React.createElement(
                                                 'div',
-                                                { className: `flex items-center gap-1 text-xs font-semibold ${sideColor}` },
-                                                React.createElement('i', { className: `fa-solid ${sideIcon}` }),
-                                                sideLabel
+                                                { className: 'flex flex-col items-end gap-1 text-xs font-semibold' },
+                                                hasBoarding && React.createElement(
+                                                    'span',
+                                                    { className: 'flex items-center gap-1 text-emerald-600' },
+                                                    React.createElement('i', { className: 'fa-solid fa-right-to-bracket' }),
+                                                    'Nástup'
+                                                ),
+                                                hasAlighting && React.createElement(
+                                                    'span',
+                                                    { className: 'flex items-center gap-1 text-red-600' },
+                                                    React.createElement('i', { className: 'fa-solid fa-right-from-bracket' }),
+                                                    'Výstup'
+                                                )
                                             )
                                         )
                                     )
