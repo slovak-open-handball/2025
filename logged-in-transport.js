@@ -3660,7 +3660,7 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     // RENDER JEDNÉHO RIADKU (upravený – Do read-only, miesta selectboxy)
     // ============================================================
-    const renderBusRow = (row) => {
+    const renderBusRow = (row, busId, dayKey) => {
         const travelMinutes = getTravelMinutes(row.placeFrom, row.placeTo);
         const computedTimeTo = addMinutesToTime(row.timeFrom, travelMinutes);
     
@@ -3670,6 +3670,46 @@ const TransportApp = ({ userProfileData }) => {
         const stopOptions = stopsList.map((s) =>
             React.createElement('option', { key: s.id, value: s.name }, s.name)
         );
+    
+        // ============================================================
+        // NOVÉ: Odstráni tím zo VŠETKÝCH riadkov daného autobusu a dňa
+        // (z teamsIn aj teamsOut), aby sa tím úplne odstránil z busu.
+        // ============================================================
+        const removeTeamFromWholeBus = async (teamKeyToRemove) => {
+            if (!window.db || !busId || !dayKey) return;
+            const rowsKey = `${busId}|${dayKey}`;
+            const allRows = busRows[rowsKey] || [];
+    
+            const updates = [];
+            allRows.forEach((r) => {
+                const teamsIn = Array.isArray(r.teamsIn) ? r.teamsIn : [];
+                const teamsOut = Array.isArray(r.teamsOut) ? r.teamsOut : [];
+    
+                const newTeamsIn = teamsIn.filter((t) => String(t) !== String(teamKeyToRemove));
+                const newTeamsOut = teamsOut.filter((t) => String(t) !== String(teamKeyToRemove));
+    
+                const inChanged = newTeamsIn.length !== teamsIn.length;
+                const outChanged = newTeamsOut.length !== teamsOut.length;
+    
+                if (inChanged || outChanged) {
+                    updates.push(
+                        updateDoc(doc(window.db, 'transport', r.id), {
+                            ...(inChanged ? { teamsIn: newTeamsIn } : {}),
+                            ...(outChanged ? { teamsOut: newTeamsOut } : {}),
+                        })
+                    );
+                }
+            });
+    
+            if (updates.length === 0) return;
+            try {
+                await Promise.all(updates);
+                window.showGlobalNotification('Tím bol odstránený z autobusu.', 'info');
+            } catch (err) {
+                console.error('[TRANSPORT] Chyba pri odstraňovaní tímu z autobusu:', err);
+                window.showGlobalNotification('Nepodarilo sa odstrániť tím z autobusu.', 'error');
+            }
+        };
     
         return React.createElement(
             'tr',
@@ -3727,7 +3767,6 @@ const TransportApp = ({ userProfileData }) => {
                         'div',
                         { className: 'flex flex-wrap gap-2' },
                         (row.teamsIn || []).map((tn, i) => {
-                            // tn môže byť "Názov tímu" alebo "Názov tímu|Kategória"
                             const parts = String(tn).split('|');
                             const teamLabel = parts[0] || tn;
                             const teamCategory = parts[1] || '';
@@ -3736,24 +3775,8 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 {
                                     key: `in-${i}`,
-                                    onClick: async () => {
-                                        // NOVÉ: odstráň tím z teamsIn AJ teamsOut v tomto riadku
-                                        const teamKeyToRemove = String(tn);
-                                        const newTeamsIn = (row.teamsIn || []).filter((t) => String(t) !== teamKeyToRemove);
-                                        const newTeamsOut = (row.teamsOut || []).filter((t) => String(t) !== teamKeyToRemove);
-            
-                                        if (!window.db || !row.id) return;
-                                        try {
-                                            await updateDoc(doc(window.db, 'transport', row.id), {
-                                                teamsIn: newTeamsIn,
-                                                teamsOut: newTeamsOut,
-                                            });
-                                        } catch (err) {
-                                            console.error('[TRANSPORT] Chyba pri odstraňovaní tímu z riadku:', err);
-                                            window.showGlobalNotification('Nepodarilo sa odstrániť tím z riadku.', 'error');
-                                        }
-                                    },
-                                    title: 'Kliknutím odstrániť tím z tohto autobusu (nástup aj výstup)',
+                                    onClick: () => removeTeamFromWholeBus(tn),
+                                    title: 'Kliknutím odstrániť tím z celého autobusu (nástup aj výstup, všetky riadky)',
                                     className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
                                     style: { color: textColor }
                                 },
@@ -3778,24 +3801,8 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 {
                                     key: `out-${i}`,
-                                    onClick: async () => {
-                                        // NOVÉ: odstráň tím z teamsIn AJ teamsOut v tomto riadku
-                                        const teamKeyToRemove = String(tn);
-                                        const newTeamsIn = (row.teamsIn || []).filter((t) => String(t) !== teamKeyToRemove);
-                                        const newTeamsOut = (row.teamsOut || []).filter((t) => String(t) !== teamKeyToRemove);
-            
-                                        if (!window.db || !row.id) return;
-                                        try {
-                                            await updateDoc(doc(window.db, 'transport', row.id), {
-                                                teamsIn: newTeamsIn,
-                                                teamsOut: newTeamsOut,
-                                            });
-                                        } catch (err) {
-                                            console.error('[TRANSPORT] Chyba pri odstraňovaní tímu z riadku:', err);
-                                            window.showGlobalNotification('Nepodarilo sa odstrániť tím z riadku.', 'error');
-                                        }
-                                    },
-                                    title: 'Kliknutím odstrániť tím z tohto autobusu (nástup aj výstup)',
+                                    onClick: () => removeTeamFromWholeBus(tn),
+                                    title: 'Kliknutím odstrániť tím z celého autobusu (nástup aj výstup, všetky riadky)',
                                     className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
                                     style: { color: textColor }
                                 },
@@ -4939,7 +4946,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                     'table',
                                                                     { className: 'w-full border-collapse text-xs' },
                                                                     renderBusRowsHeader(),
-                                                                    React.createElement('tbody', null, rows.map(renderBusRow))
+                                                                    React.createElement('tbody', null, rows.map((r) => renderBusRow(r, bus.id, day.dayKey)))
                                                                 )
                                                             )
                                                         );
