@@ -2477,6 +2477,11 @@ const TransportApp = ({ userProfileData }) => {
             });
         }
 
+        // V loadTeamsWithAccommodation, po teamsArrivalBufferRef.current = buffer:
+        teamsArrivalBufferRef.current = buffer;
+        teamsLoadedRef.current = true;
+
+        // Načítaj cache pre superstructure tímy
         preloadAccommodationsForSuperstructureTeams().then(() => {
             rebuildAndLogTimeline();
         });
