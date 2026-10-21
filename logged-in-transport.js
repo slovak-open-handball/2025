@@ -3145,11 +3145,19 @@ const TransportApp = ({ userProfileData }) => {
         if (!window.db || busSaving) return;
         setBusSaving(true);
         try {
-            const maxNumber = buses.reduce(
-                (max, b) => (b.number > max ? b.number : max),
-                0
+            // Zoznam existujúcich čísel autobusov (kladné celé čísla)
+            const existingNumbers = new Set(
+                buses
+                    .map((b) => Number(b.number))
+                    .filter((n) => Number.isFinite(n) && n > 0)
+                    .map((n) => Math.floor(n))
             );
-            const nextNumber = maxNumber + 1;
+    
+            // Nájdi najnižšie voľné číslo začínajúc od 1
+            let nextNumber = 1;
+            while (existingNumbers.has(nextNumber)) {
+                nextNumber += 1;
+            }
 
             const docRef = doc(collection(window.db, 'transport'));
             await setDoc(docRef, {
@@ -3159,7 +3167,7 @@ const TransportApp = ({ userProfileData }) => {
                 createdAt: Timestamp.fromDate(new Date()),
                 createdBy: userProfileData?.email || null,
             });
-
+    
             window.showGlobalNotification(`Pridaný Bus ${nextNumber}.`, 'success');
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri pridávaní autobusu:', err);
