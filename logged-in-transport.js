@@ -4326,38 +4326,44 @@ const TransportApp = ({ userProfileData }) => {
                                                 React.createElement(
                                                     React.Fragment,
                                                     { key: day.dayKey },
-                                                    // Pôvodný riadok s dátumom
+                                                    // 1) Riadok s dátumom
                                                     React.createElement(
                                                         'tr',
-                                                        {
-                                                            className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                                                        },
+                                                        { className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50' },
                                                         React.createElement(
                                                             'td',
                                                             { className: 'border border-gray-200 px-4 py-2 text-gray-800 text-center' },
-                                                            React.createElement(
-                                                                'span',
-                                                                { className: 'font-semibold capitalize' },
-                                                                day.dayName
-                                                            ),
-                                                            React.createElement(
-                                                                'span',
-                                                                { className: 'text-gray-500 mx-2' },
-                                                                '–'
-                                                            ),
-                                                            React.createElement(
-                                                                'span',
-                                                                null,
-                                                                day.dateLabel
-                                                            )
+                                                            React.createElement('span', { className: 'font-semibold capitalize' }, day.dayName),
+                                                            React.createElement('span', { className: 'text-gray-500 mx-2' }, '–'),
+                                                            React.createElement('span', null, day.dateLabel)
                                                         )
                                                     ),
-                                                    // NOVÝ riadok s tlačidlom "+"
+                                            
+                                                    // 2) Tabuľka s riadkami (ak existujú)
+                                                    (() => {
+                                                        const key = `${bus.id}|${day.dayKey}`;
+                                                        const rows = (busRows[key] || []);
+                                                        if (rows.length === 0) return null;
+                                                        return React.createElement(
+                                                            'tr',
+                                                            null,
+                                                            React.createElement(
+                                                                'td',
+                                                                { colSpan: 1, className: 'border border-gray-200 p-0' },
+                                                                React.createElement(
+                                                                    'table',
+                                                                    { className: 'w-full border-collapse text-xs' },
+                                                                    renderBusRowsHeader(),
+                                                                    React.createElement('tbody', null, rows.map(renderBusRow))
+                                                                )
+                                                            )
+                                                        );
+                                                    })(),
+                                            
+                                                    // 3) Riadok s tlačidlom "+" – AŽ POD posledným riadkom udalosti
                                                     React.createElement(
                                                         'tr',
-                                                        {
-                                                            className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                                                        },
+                                                        { className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50' },
                                                         React.createElement(
                                                             'td',
                                                             { className: 'border border-gray-200 px-4 py-2 text-center' },
@@ -4372,35 +4378,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                 React.createElement('i', { className: 'fa-solid fa-plus' })
                                                             )
                                                         )
-                                                    ),
-
-                                                    // NOVÉ: tabuľka s riadkami pre tento bus+deň
-                                                    (() => {
-                                                        const key = `${bus.id}|${day.dayKey}`;
-                                                        const rows = (busRows[key] || []);
-                                                        if (rows.length === 0) return null;
-                                                        return React.createElement(
-                                                            'tr',
-                                                            null,
-                                                            React.createElement(
-                                                                'td',
-                                                                {
-                                                                    colSpan: 1,
-                                                                    className: 'border border-gray-200 p-0'
-                                                                },
-                                                                React.createElement(
-                                                                    'table',
-                                                                    { className: 'w-full border-collapse text-xs' },
-                                                                    renderBusRowsHeader(),
-                                                                    React.createElement(
-                                                                        'tbody',
-                                                                        null,
-                                                                        rows.map(renderBusRow)
-                                                                    )
-                                                                )
-                                                            )
-                                                        );
-                                                    })()
+                                                    )
                                                 )
                                             )
                                         )
