@@ -159,7 +159,7 @@ function NotificationsApp() {
   React.useEffect(() => {
     let unsubscribePrivate;
     if (db && user) {
-      const privateDocRef = doc(db, 'usersPrivate', user.uid);
+      const privateDocRef = doc(db, 'usersprivate', user.uid);
       unsubscribePrivate = onSnapshot(privateDocRef, (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
