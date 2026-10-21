@@ -1952,7 +1952,7 @@ const TransportApp = ({ userProfileData }) => {
                                     });
                                 })();
                         
-                                if (isPureSuperstructureGroup && anySSGroupTeamPlaysToday && current.location) {
+                                if (isPureSuperstructureGroup && anySSGroupTeamPlaysToday && current.location && isSSPlayDay) {
                                     const destination = current.location;
                         
                                     const ssTeamLastEnd = new Map();
@@ -2094,7 +2094,7 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                         
                                 const skipClassicMorningTransfers =
-                                    isPureSuperstructureGroup && anySSGroupTeamPlaysToday;
+                                    isPureSuperstructureGroup && anySSGroupTeamPlaysToday && isSSPlayDay;
                                 
                                 // ============================================================
                                 // NOVÉ: Ak je aktuálny deň v zozname hracích dní skupiny (t.j.
