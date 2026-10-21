@@ -454,7 +454,43 @@ const TransportApp = ({ userProfileData }) => {
             
                 let teamsListStr = '';
                 if (teamsInThisGroup.length > 0) {
-                    teamsListStr = '\n       • ' + teamsInThisGroup.join('\n       • ');
+                    // Pre každý tím v skupine vygeneruj aj jeho časovú os (menším sivým písmom)
+                    const teamLines = teamsInThisGroup.map((tm) => {
+                        // Zisti, či tím má vôbec nejaké udalosti v `grouped`
+                        const teamEvents = grouped[t.category] && grouped[t.category][tm];
+                        if (!teamEvents || teamEvents.length === 0) {
+                            return `       • ${tm}\n         (žiadne udalosti)`;
+                        }
+
+                        // Zoraď udalosti rovnako ako v hlavnom cykle
+                        const sortedEvents = [...teamEvents].sort((a, b) => {
+                            if (a.ts !== b.ts) return a.ts - b.ts;
+                            return String(a.text).localeCompare(String(b.text), 'sk');
+                        });
+
+                        // Vygeneruj riadky časovej osi (rovnaký formát ako renderTeamTimeline)
+                        const lines = [];
+                        let lastPrintedDayKey = null;
+                        sortedEvents.forEach((ev) => {
+                            const dayKey = extractDayKeyFromWhen(ev.when);
+                            if (dayKey && dayKey !== lastPrintedDayKey) {
+                                const dayLabel = formatDateDDMMYYYY(dayKey) || dayKey;
+                                lines.push(`         ───── ${dayLabel} ─────`);
+                                lastPrintedDayKey = dayKey;
+                            }
+                            let icon = '•';
+                            if (ev.type === 'match') icon = '🏑';
+                            else if (ev.type === 'catering') icon = '🍽';
+                            else if (ev.type === 'arrival') icon = '🚌';
+                            else if (ev.type === 'accommodation') icon = '🛏';
+                            else if (ev.type === 'group') icon = '📂';
+                            else if (ev.type === 'transfer') icon = '🚐';
+                            lines.push(`         ${icon} ${ev.when || '—'}  |  ${ev.text}`);
+                        });
+                
+                        return `       • ${tm}\n${lines.join('\n')}`;
+                    });
+                    teamsListStr = '\n' + teamLines.join('\n');
                 } else {
                     teamsListStr = '\n       (žiadne tímy)';
                 }
