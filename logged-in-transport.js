@@ -3650,32 +3650,6 @@ const TransportApp = ({ userProfileData }) => {
         const stopOptions = stopsList.map((s) =>
             React.createElement('option', { key: s.id, value: s.name }, s.name)
         );
-
-        // Pomocná: získa farby pre badge tímu podľa kategórie
-        // (background + text + border) – na základe transportColorsRef
-        const getCategoryBadgeColors = (categoryName) => {
-            const hex = getTransportColorForCategory(categoryName);
-            if (!hex) {
-                return {
-                    bg: '#dcfce7',   // fallback zelená
-                    text: '#166534',
-                    border: '#86efac',
-                };
-            }
-            const light = lightenHex(hex, 0.2) || hex;
-            // tmavý text – vypočítame podľa jasu
-            let h = String(hex).trim().replace(/^#/, '');
-            if (h.length === 3) h = h.split('').map((c) => c + c).join('');
-            let text = '#111827';
-            if (/^[0-9a-fA-F]{6}$/.test(h)) {
-                const r = parseInt(h.slice(0, 2), 16);
-                const g = parseInt(h.slice(2, 4), 16);
-                const b = parseInt(h.slice(4, 6), 16);
-                const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-                text = brightness > 160 ? '#111827' : '#ffffff';
-            }
-            return { bg: light, text, border: hex };
-        };
     
         return React.createElement(
             'tr',
@@ -4740,6 +4714,32 @@ const TransportApp = ({ userProfileData }) => {
         const mix = (c) => Math.round(c * ratio + 255 * (1 - ratio));
         const toHex = (c) => c.toString(16).padStart(2, '0');
         return `#${toHex(mix(r))}${toHex(mix(g))}${toHex(mix(b))}`;
+    };
+
+    // ============================================================
+    // Pomocná: farby pre badge tímu podľa kategórie
+    // ============================================================
+    const getCategoryBadgeColors = (categoryName) => {
+        const hex = getTransportColorForCategory(categoryName);
+        if (!hex) {
+            return {
+                bg: '#dcfce7',
+                text: '#166534',
+                border: '#86efac',
+            };
+        }
+        const light = lightenHex(hex, 0.2) || hex;
+        let h = String(hex).trim().replace(/^#/, '');
+        if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+        let text = '#111827';
+        if (/^[0-9a-fA-F]{6}$/.test(h)) {
+            const r = parseInt(h.slice(0, 2), 16);
+            const g = parseInt(h.slice(2, 4), 16);
+            const b = parseInt(h.slice(4, 6), 16);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            text = brightness > 160 ? '#111827' : '#ffffff';
+        }
+        return { bg: light, text, border: hex };
     };
 
     // ============================================================
