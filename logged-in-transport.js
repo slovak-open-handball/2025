@@ -2183,8 +2183,8 @@ const TransportApp = ({ userProfileData }) => {
                                             if (fromLocationName === current.location) return;
                                 
                                             const fromLabel = isExternalStop
-                                                ? `zastávky ${fromLocationName}`
-                                                : `ubytovania ${fromLocationName}`;
+                                                ? `zastávka ${fromLocationName}`
+                                                : `ubytovanie ${fromLocationName}`;
                                 
                                             const dayRefTs =
                                                 current.startTs != null
@@ -2408,7 +2408,7 @@ const TransportApp = ({ userProfileData }) => {
                                             ts: current.ts + 1,
                                             when: whenStr,
                                             type: 'transfer',
-                                            text: `Presun z ${current.location} do ubytovania ${accomName}`,
+                                            text: `Presun z ${current.location} do ubytovanie ${accomName}`,
                                             location: null,
                                             isTransfer: true,
                                         });
