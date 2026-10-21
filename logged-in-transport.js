@@ -3716,7 +3716,6 @@ const TransportApp = ({ userProfileData }) => {
             const avg = getCategoryAverageForTransfer(category);
             if (avg != null) {
                 membersText = `${avg}`;
-                membersTitle = ` (priemer kategórie ${category})`;
             }
         }
     
