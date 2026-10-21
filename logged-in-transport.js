@@ -1734,12 +1734,20 @@ const TransportApp = ({ userProfileData }) => {
                             
                                 // ============================================================
                                 // ROZHODNUTIE:
-                                //  - Ak deň JE hrací deň skupiny (groupHasAnyEventOnCurrentDay) →
-                                //    generuj presuny z MIEST POSLEDNÝCH UDALOSTÍ tímov zo skupiny
+                                //  - Ak deň JE hrací deň skupiny (isSSPlayDay) → generuj
+                                //    presuny z MIEST POSLEDNÝCH UDALOSTÍ tímov zo skupiny
                                 //    (NIE z ubytovní).
-                                //  - Inak → generuj ranné presuny z ubytovní (pôvodná logika).
+                                //  - Inak (deň NIE JE v zozname hracích dní skupiny,
+                                //    ale tím má v ten deň udalosť, napr. pavúkový zápas)
+                                //    → generuj ranné presuny z ubytovní.
+                                //
+                                // POZOR: Predtým sa používalo `groupHasAnyEventOnCurrentDay`,
+                                // čo spôsobovalo, že ak mal iný tím zo skupiny udalosť v ten
+                                // deň, negenerovali sa ranné presuny z ubytovní pre aktuálny
+                                // tím, aj keď jeho deň nebol v zozname hracích dní skupiny.
+                                // Rozhodujúce je, či deň je v zozname `ssPlayDatesByTeam`.
                                 // ============================================================
-                                const useGroupEndLocationsAsSource = groupHasAnyEventOnCurrentDay;
+                                const useGroupEndLocationsAsSource = isSSPlayDay;
 
                                 if (useGroupEndLocationsAsSource) {
                                     // ============================================================
