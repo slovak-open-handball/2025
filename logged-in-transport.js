@@ -6008,7 +6008,7 @@ const TransportApp = ({ userProfileData }) => {
                                 setAssignBusMatches(matches);
                                 setAssignBusSelectedKey(
                                     matches.length > 0
-                                        ? `${matches[0].bus.id}|${matches[0].row.id}|${matches[0].side}`
+                                        ? `${matches[0].bus.id}|${matches[0].trip.firstRowId}|${matches[0].side}`
                                         : ''
                                 );
                                 setShowAssignBusModal(true);
