@@ -3594,6 +3594,82 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // POSUN ČASOV RIADKOV PO ZMENE "timeFrom" V JEDNOM RIADKU
+    // Posunie len riadky medzi aktuálnym riadkom a najbližším
+    // "červeným" riadkom (medzera > 2 min). Za červeným riadkom
+    // sa už nič neposúva.
+    // ============================================================
+    const shiftBusRowsAfterChange = async (busId, dayKey, currentRowId, deltaMinutes) => {
+        if (!window.db || !busId || !dayKey) return;
+        if (!deltaMinutes || isNaN(deltaMinutes) || deltaMinutes === 0) return;
+    
+        const rowsKey = `${busId}|${dayKey}`;
+        const allRows = (busRows[rowsKey] || [])
+            .slice()
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+        const currentIdx = allRows.findIndex((r) => r.id === currentRowId);
+        if (currentIdx === -1) return;
+    
+        // Pomocná: posun "HH:MM" o daný počet minút
+        const shiftTime = (timeStr, delta) => {
+            if (!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr)) return timeStr;
+            const [h, m] = timeStr.split(':').map(Number);
+            let total = h * 60 + m + Number(delta);
+            // Normalizácia do 0..1439
+            total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
+            const endH = Math.floor(total / 60);
+            const endM = total % 60;
+            return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+        };
+    
+        // Zisti, ktoré nasledujúce riadky treba posunúť:
+        // postupné od aktuálneho riadku ďalej, ale zastav pri prvom
+        // "červenom" riadku (medzera > 2 min medzi prev.timeTo a next.timeFrom).
+        const updates = [];
+    
+        for (let i = currentIdx + 1; i < allRows.length; i++) {
+            const prev = allRows[i - 1];
+            const curr = allRows[i];
+    
+            // Ak je medzi predchádzajúcim a aktuálnym riadkom medzera > 2 min,
+            // aktuálny riadok je už ZA červeným riadkom → stop.
+            const gap = getGapMinutes(prev.timeTo, curr.timeFrom);
+            if (gap != null && gap > 2) {
+                break;
+            }
+    
+            const newTimeFrom = shiftTime(curr.timeFrom, deltaMinutes);
+            const newTimeTo = shiftTime(curr.timeTo, deltaMinutes);
+    
+            const patch = {};
+            if (newTimeFrom !== curr.timeFrom) patch.timeFrom = newTimeFrom;
+            if (newTimeTo !== curr.timeTo) patch.timeTo = newTimeTo;
+    
+            if (Object.keys(patch).length > 0) {
+                updates.push({ id: curr.id, patch });
+            }
+        }
+    
+        if (updates.length === 0) return;
+    
+        try {
+            await Promise.all(
+                updates.map(({ id, patch }) =>
+                    updateDoc(doc(window.db, 'transport', id), patch)
+                )
+            );
+            window.showGlobalNotification(
+                `Posunutých ${updates.length} nasledujúcich riadkov o ${deltaMinutes} min.`,
+                'info'
+            );
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri posune nasledujúcich riadkov:', err);
+            window.showGlobalNotification('Nepodarilo sa posunúť nasledujúce riadky.', 'error');
+        }
+    };
+
+    // ============================================================
     // ODSTRÁNENIE RIADKU
     // ============================================================
     const removeBusRow = async (rowId) => {
@@ -3878,7 +3954,32 @@ const TransportApp = ({ userProfileData }) => {
                 React.createElement('input', {
                     type: 'time',
                     value: row.timeFrom || '',
-                    onChange: (e) => updateBusRowField(row.id, 'timeFrom', e.target.value),
+                    onChange: async (e) => {
+                        const newValue = e.target.value;
+                        const oldValue = row.timeFrom || '';
+
+                        if (!newValue) {
+                            // Prázdnu hodnotu len ulož, nič neposúvaj
+                            await updateBusRowField(row.id, 'timeFrom', newValue);
+                            return;
+                        }
+
+                        // Ak je stará aj nová hodnota platný čas, spočítaj rozdiel v minútach
+                        let deltaMinutes = 0;
+                        if (oldValue && /^\d{1,2}:\d{2}$/.test(oldValue) && /^\d{1,2}:\d{2}$/.test(newValue)) {
+                            const [oh, om] = oldValue.split(':').map(Number);
+                            const [nh, nm] = newValue.split(':').map(Number);
+                            deltaMinutes = (nh * 60 + nm) - (oh * 60 + om);
+                        }
+            
+                        // Najprv ulož novú hodnotu aktuálneho riadku
+                        await updateBusRowField(row.id, 'timeFrom', newValue);
+
+                        // Potom posuň nasledujúce riadky (len po najbližší červený)
+                        if (deltaMinutes !== 0) {
+                            await shiftBusRowsAfterChange(busId, dayKey, row.id, deltaMinutes);
+                        }
+                    },
                     className: inputCls,
                 })
             ),
