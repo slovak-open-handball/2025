@@ -1943,9 +1943,24 @@ const TransportApp = ({ userProfileData }) => {
                         
                                 const skipClassicMorningTransfers =
                                     isPureSuperstructureGroup && anySSGroupTeamPlaysToday;
-                        
-                                if (!skipClassicMorningTransfers) {
-                        
+                                
+                                // ============================================================
+                                // NOVÉ: Ak je aktuálny deň v zozname hracích dní skupiny (t.j.
+                                // deň, ktorý sa vypisuje v odrážkovom zozname "Písmeno skupiny:
+                                // ... – jedinečné dátumy zápasov v skupinách s týmto písmenom"),
+                                // NESMÚ sa generovať klasické ranné presuny z ubytovní pre
+                                // superstructure tím – bez ohľadu na to, či tím má vlastnú
+                                // udalosť alebo nie. Namiesto toho sa má použiť skupinová logika
+                                // (ktorá sa spustila vyššie v bloku useGroupBasedMorningTransfers).
+                                // ============================================================
+                                const isSSPlayDayForSkip =
+                                    isSuperstructureTeam &&
+                                    ssPlayDatesByTeam[ssTeamKey] &&
+                                    currentDay != null &&
+                                    ssPlayDatesByTeam[ssTeamKey].has(currentDay);
+                                
+                                if (!skipClassicMorningTransfers && !isSSPlayDayForSkip) {
+                                
                                     const hasTransportType = (() => {
                                         if (!teamArrivalType) return false;
                                         const norm = String(teamArrivalType)
@@ -1960,17 +1975,17 @@ const TransportApp = ({ userProfileData }) => {
                                         if (norm.includes('žiadna')) return false;
                                         return true;
                                     })();
-                        
+                                
                                     const isGlobalFirstDay =
                                         currentDay != null &&
                                         globalFirstDay != null &&
                                         currentDay === globalFirstDay;
-                        
+                                
                                     const useExternalStopOnFirstDay =
                                         isGlobalFirstDay &&
                                         hasTransportType &&
                                         !!externalArrivalStop;
-                        
+                                
                                     const useAccommodationAsSource = (() => {
                                         if (!isGlobalFirstDay) {
                                             return shouldGenerateAccommodationTransfers;
@@ -1979,10 +1994,10 @@ const TransportApp = ({ userProfileData }) => {
                                             && !useExternalStopOnFirstDay
                                             && shouldGenerateAccommodationTransfers;
                                     })();
-                        
+                                
                                     const shouldGenerateMorningTransfer =
                                         useExternalStopOnFirstDay || useAccommodationAsSource;
-                        
+                                
                                     if (shouldGenerateMorningTransfer) {
                                         const morningFromLocations = (() => {
                                             if (useExternalStopOnFirstDay) {
@@ -1996,24 +2011,24 @@ const TransportApp = ({ userProfileData }) => {
                                             }
                                             return [];
                                         })();
-                        
+                                
                                         morningFromLocations.forEach(({ name: fromLocationName, isExternalStop }) => {
                                             if (!fromLocationName) return;
                                             if (fromLocationName === current.location) return;
-                        
+                                
                                             const fromLabel = isExternalStop
                                                 ? `zastávky ${fromLocationName}`
                                                 : `ubytovania ${fromLocationName}`;
-                        
+                                
                                             const dayRefTs =
                                                 current.startTs != null
                                                     ? current.startTs
                                                     : midnightFromWhen(current.when);
-                        
+                                
                                             const arrivalTs = current.startTs != null ? current.startTs : null;
                                             const arrivalStr =
                                                 formatFullFromTs(arrivalTs) || current.when;
-                        
+                                
                                             let departureTs;
                                             let departureStr;
                                             const teamArrivalTime = (arrivalTimeByTeam[category] && arrivalTimeByTeam[category][teamName]) || '';
@@ -2025,7 +2040,7 @@ const TransportApp = ({ userProfileData }) => {
                                                 departureTs = timestampOnDay(dayRefTs, 0, 0);
                                                 departureStr = formatFullFromTs(departureTs) || '00:00';
                                             }
-                        
+                                
                                             if (
                                                 departureTs != null &&
                                                 arrivalTs != null &&
@@ -2033,7 +2048,7 @@ const TransportApp = ({ userProfileData }) => {
                                             ) {
                                                 return;
                                             }
-                        
+                                
                                             let whenStr;
                                             if (departureStr && arrivalStr) {
                                                 whenStr = `${departureStr} – ${arrivalStr}`;
@@ -2042,7 +2057,7 @@ const TransportApp = ({ userProfileData }) => {
                                             } else {
                                                 whenStr = current.when;
                                             }
-                        
+                                
                                             enriched.push({
                                                 ts: current.ts - 1,
                                                 when: whenStr,
