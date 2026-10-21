@@ -3916,13 +3916,12 @@ const TransportApp = ({ userProfileData }) => {
 
         // ============================================================
         // Pomocná: z `when` (napr. "26. 12. 2026 08:00 – 26. 12. 2026 09:15")
-        // vytiahne dátum začiatku a dátum konca.
+        // vytiahne dátum začiatku/konca.
         // Vráti { startDayKey, endDayKey, startLabel, endLabel } alebo null.
         // ============================================================
         const parseWhenRange = (when) => {
             if (!when) return null;
             const s = String(when);
-            // Nájdi všetky výskyty "D. M. YYYY"
             const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/g;
             const found = [];
             let m;
@@ -4046,7 +4045,7 @@ const TransportApp = ({ userProfileData }) => {
                                                     dateLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
                                                 }
 
-                                                // Druhý riadok – miesto odkiaľ → miesto kam
+                                                // Druhý riadok – IBA trasa odkiaľ → kam
                                                 let routeLabel = null;
                                                 if (transferInfo) {
                                                     routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
@@ -4071,7 +4070,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                 { className: 'font-mono text-[11px] text-gray-500' },
                                                                 dateLabel
                                                             ),
-                                                        // 2. riadok – miesto odkiaľ → miesto kam
+                                                        // 2. riadok – trasa odkiaľ → kam
                                                         routeLabel &&
                                                             React.createElement(
                                                                 'span',
