@@ -3078,8 +3078,6 @@ const TransportApp = ({ userProfileData }) => {
             if (typeof loadTeamsWithAccommodation === 'function') {
                 loadTeamsWithAccommodation();
             }
-
-            rebuildAndLogTimeline();
         };
 
         try {
