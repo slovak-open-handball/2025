@@ -961,6 +961,98 @@ const TransportApp = ({ userProfileData }) => {
                             });
                     
                             const groupPlayDays = [...ssPlayDatesByTeam[ssTeamKeyPre]].sort();
+
+                            const teamDaysNotInGroupPlayDates = [...teamEventDays]
+                                .filter((dayKey) => !ssPlayDatesByTeam[ssTeamKeyPre].has(dayKey))
+                                .sort();
+                            
+                            teamDaysNotInGroupPlayDates.forEach((teamDay) => {
+                                // Nájdi prvú udalosť tímu v tento deň s location
+                                const sortedTeamEvents = [...events].sort((a, b) => {
+                                    if (a.ts !== b.ts) return a.ts - b.ts;
+                                    return String(a.text).localeCompare(String(b.text), 'sk');
+                                });
+                                const destEvent = sortedTeamEvents.find(
+                                    (ev) => extractDayKeyFromWhen(ev.when) === teamDay && ev.location
+                                );
+                                if (!destEvent || !destEvent.location) return;
+                            
+                                const destination = destEvent.location;
+                            
+                                const uniqueSourceLocations = new Map();
+                                const updateUniqueSource = (loc, endTs) => {
+                                    if (!loc) return;
+                                    if (loc === destination) return;
+                                    const existing = uniqueSourceLocations.get(loc);
+                                    if (!existing || (endTs != null && endTs > (existing.endTs ?? -Infinity))) {
+                                        uniqueSourceLocations.set(loc, { location: loc, endTs });
+                                    }
+                                };
+                            
+                                // Ubytovania tímov zo skupiny s rovnakým písmenom
+                                (teamsArrivalBufferRef.current || []).forEach((t) => {
+                                    if (cleanCategory(t.category) !== cleanCategory(category)) return;
+                                    if (!t.teamName) return;
+                                    if (t.teamName === teamName) return;
+                                    if (!t.accommodationName || t.accommodationName.trim() === '') return;
+                                    if (!t.isRegistered) return; // len registrované tímy (majú reálne ubytovanie)
+                            
+                                    // Zisti, či tím patrí do skupiny s rovnakým písmenom
+                                    let belongsToChar = false;
+                                    if (t.groupName) {
+                                        belongsToChar = groupBelongsToChar(t.groupName, groupCharPre);
+                                    } else {
+                                        const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(t.teamName).trim());
+                                        if (m && m[1].toUpperCase() === groupCharPre) {
+                                            belongsToChar = true;
+                                        }
+                                    }
+                                    if (!belongsToChar) return;
+                            
+                                    updateUniqueSource(t.accommodationName.trim(), null);
+                                });
+                            
+                                if (uniqueSourceLocations.size === 0) return;
+                            
+                                const destinationArrivalStr =
+                                    formatFullFromTs(destEvent.startTs) || destEvent.when;
+                                const dayRefTs = destEvent.startTs != null
+                                    ? destEvent.startTs
+                                    : midnightFromWhen(destEvent.when);
+                                const departureTs = timestampOnDay(dayRefTs, 0, 0);
+                                const departureStr = formatFullFromTs(departureTs) || '00:00';
+                            
+                                Array.from(uniqueSourceLocations.values())
+                                    .sort((a, b) => {
+                                        if (a.endTs != null && b.endTs != null) return a.endTs - b.endTs;
+                                        return String(a.location).localeCompare(String(b.location), 'sk');
+                                    })
+                                    .forEach((info) => {
+                                        let whenStr;
+                                        if (departureStr && destinationArrivalStr) {
+                                            whenStr = `${departureStr} – ${destinationArrivalStr}`;
+                                        } else if (destinationArrivalStr) {
+                                            whenStr = destinationArrivalStr;
+                                        } else {
+                                            whenStr = destEvent.when;
+                                        }
+                                        enriched.push({
+                                            ts: destEvent.ts - 1,
+                                            when: whenStr,
+                                            type: 'transfer',
+                                            text: `Presun z ${info.location} do ${destination}`,
+                                            location: null,
+                                            isTransfer: true,
+                                        });
+                                    });
+                            
+                                console.log(
+                                    '%c[TRANSPORT][TEAM-DAY-NOT-IN-GROUP] ' + teamName + ' @ ' + teamDay +
+                                    ' → generujem ranné presuny z ubytovní skupiny ' + groupCharPre,
+                                    'color:#0891b2;font-weight:bold;',
+                                    { sources: [...uniqueSourceLocations.values()], destination }
+                                );
+                            });
                     
                             groupPlayDays.forEach((groupPlayDay) => {
                                 // Zisti, či tím má udalosť v daný deň (z events AJ z matches/catering)
