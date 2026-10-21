@@ -3375,7 +3375,7 @@ const TransportApp = ({ userProfileData }) => {
     
             if (keysToDelete.length === 0) {
                 window.showGlobalNotification(
-                    `Pre kategóriu "${categoryName}" neexistujú žiadne presuny na zmazanie.`,
+                    `Pre kategóriu ${categoryName} neexistujú žiadne presuny na zmazanie.`,
                     'info'
                 );
                 return;
@@ -3398,7 +3398,7 @@ const TransportApp = ({ userProfileData }) => {
             );
     
             window.showGlobalNotification(
-                `Zmazaných ${keysToDelete.length} presunov pre kategóriu "${categoryName}".`,
+                `Zmazaných ${keysToDelete.length} presunov pre kategóriu ${categoryName}.`,
                 'success'
             );
         } catch (err) {
@@ -4675,7 +4675,7 @@ const TransportApp = ({ userProfileData }) => {
                                 rebuildAndLogTimeline(true, cat);
                                 setShowCategoryModal(false);
                                 window.showGlobalNotification(
-                                    `Časová os pre kategóriu "${cat}" bola vygenerovaná do konzoly.`,
+                                    `Časová os pre kategóriu ${cat} bola vygenerovaná.`,
                                     'success'
                                 );
                             },
