@@ -3714,6 +3714,7 @@ const TransportApp = ({ userProfileData }) => {
                     'Nastavenia'
                 )
             ),
+            // === SELECTBOX S DŇAMI TURNAJA (len v režime Plánovanie) ===
             activeView === 'planovanie' && React.createElement(
                 'div',
                 { className: 'w-full flex flex-wrap items-center justify-center gap-3 mb-6' },
