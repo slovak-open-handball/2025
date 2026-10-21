@@ -4301,22 +4301,41 @@ const TransportApp = ({ userProfileData }) => {
                 const rowTimeFromTs = timeOnDayKeyToTs(dayKey, row.timeFrom);
                 const rowTimeToTs = timeOnDayKeyToTs(dayKey, row.timeTo);
 
-                // Nástupný kandidát: placeFrom === trFrom a timeFrom <= trRange.endTs
+                // ============================================================
+                // Nástupný kandidát:
+                //  - placeFrom === trFrom
+                //  - timeFrom musí byť V ČASOVOM OKNE PRESUNU:
+                //      timeFrom >= trRange.startTs  (tím už je na mieste)
+                //      timeFrom <= trRange.endTs    (tím ešte stíha nastúpiť)
+                //
+                // Tým sa vylúči odchod, ktorý je PRED začiatkom presunu
+                // (napr. 09:45 pri presune 10:15 – 12:27).
+                // ============================================================
                 if (
                     rowFrom &&
                     rowFrom === trFrom &&
                     rowTimeFromTs != null &&
+                    rowTimeFromTs >= trRange.startTs &&
                     rowTimeFromTs <= trRange.endTs
                 ) {
                     boardingCandidates.push({ row, timeTs: rowTimeFromTs });
                 }
 
-                // Výstupný kandidát: placeTo === trTo a timeTo >= trRange.startTs
+                // ============================================================
+                // Výstupný kandidát:
+                //  - placeTo === trTo
+                //  - timeTo musí byť po začiatku presunu (tím vystúpi až počas
+                //    alebo po presune) a zároveň nesmie byť príliš neskoro
+                //    (timeTo <= trRange.endTs + tolerancia 30 min).
+                //
+                // Ak nechcete toleranciu, odstráňte druhú podmienku.
+                // ============================================================
                 if (
                     rowTo &&
                     rowTo === trTo &&
                     rowTimeToTs != null &&
-                    rowTimeToTs >= trRange.startTs
+                    rowTimeToTs >= trRange.startTs &&
+                    rowTimeToTs <= trRange.endTs + 30 * 60 * 1000
                 ) {
                     alightingCandidates.push({ row, timeTs: rowTimeToTs });
                 }
