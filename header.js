@@ -1007,6 +1007,10 @@ const updateHeaderLinks = (userProfileData) => {
     const logoutButton = document.getElementById('logout-button');
     const headerElement = document.querySelector('header');
     const navLinks = document.querySelectorAll('nav a');
+
+    if (headerElement) {
+        headerElement.style.zIndex = '60';
+    }
     
     if (!authLink || !profileLink || !logoutButton || !headerElement) {
         return;
