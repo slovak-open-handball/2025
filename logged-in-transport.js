@@ -831,26 +831,21 @@ const TransportApp = ({ userProfileData }) => {
                 matchesBufferRef.current.forEach((m) => {
                     if (cleanCategory(m.category) !== cleanCategory(cat)) return;
             
-                    // NOVÉ: Zápas patrí do skupiny s daným písmenom, ak aspoň jeden z tímov
-                    // patrí do skupiny s daným písmenom (cez groupName alebo posledné písmeno).
-                    const teamBelongsToCharForPlayDates = (tn) => {
-                        if (!tn) return false;
-                        if (String(tn).startsWith('(row team:')) return false;
-                        const teamInfo = (teamsArrivalBufferRef.current || []).find(
-                            (t) => cleanCategory(t.category) === cleanCategory(cat) && t.teamName === tn
-                        );
-                        if (teamInfo && teamInfo.groupName) {
-                            return groupBelongsToChar(teamInfo.groupName, char);
-                        }
-                        const mm = /\d([A-ZÁ-Ž])\s*$/.exec(String(tn).trim());
-                        if (mm && mm[1].toUpperCase() === char) return true;
-                        return false;
-                    };
-            
-                    const matchBelongsToChar =
-                        teamBelongsToCharForPlayDates(m.home) ||
-                        teamBelongsToCharForPlayDates(m.away);
-                    if (!matchBelongsToChar) return;
+                    // ============================================================
+                    // NOVÉ: Zápas patrí do skupiny s daným písmenom LEN ak:
+                    //  1) Má vyplnené `groupName` (t.j. je to skupinový zápas, NIE pavúkový)
+                    //  2) A zároveň to `groupName` patrí pod dané písmeno
+                    //     (napr. "skupina B" → "B", "skupina 1B" → "B")
+                    //
+                    // Tým sa zabezpečí, že pavúkové zápasy (bez groupName) sa
+                    // NEPOČÍTAJÚ do hracích dní skupiny. To je dôležité pre
+                    // generovanie ranných presunov z ubytovní – tie sa majú
+                    // generovať pre dni, kedy tím hrá LEN skupinový zápas,
+                    // nie pavúkový.
+                    // ============================================================
+                    const matchGroupName = m.groupName ? String(m.groupName).trim() : null;
+                    if (!matchGroupName) return; // pavúkový zápas – nepočítaj
+                    if (!groupBelongsToChar(matchGroupName, char)) return;
             
                     let dayKey = null;
                     if (m.scheduledTime) {
