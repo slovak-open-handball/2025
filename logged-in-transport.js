@@ -3917,28 +3917,62 @@ const TransportApp = ({ userProfileData }) => {
                                             null,
                                             daysToRender.map((day, idx) =>
                                                 React.createElement(
-                                                    'tr',
-                                                    {
-                                                        key: day.dayKey,
-                                                        className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                                                    },
+                                                    React.Fragment,
+                                                    { key: day.dayKey },
+                                                    // Pôvodný riadok s dátumom
                                                     React.createElement(
-                                                        'td',
-                                                        { className: 'border border-gray-200 px-4 py-2 text-gray-800 text-center' },
+                                                        'tr',
+                                                        {
+                                                            className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                                        },
                                                         React.createElement(
-                                                            'span',
-                                                            { className: 'font-semibold capitalize' },
-                                                            day.dayName
-                                                        ),
+                                                            'td',
+                                                            { className: 'border border-gray-200 px-4 py-2 text-gray-800 text-center' },
+                                                            React.createElement(
+                                                                'span',
+                                                                { className: 'font-semibold capitalize' },
+                                                                day.dayName
+                                                            ),
+                                                            React.createElement(
+                                                                'span',
+                                                                { className: 'text-gray-500 mx-2' },
+                                                                '–'
+                                                            ),
+                                                            React.createElement(
+                                                                'span',
+                                                                null,
+                                                                day.dateLabel
+                                                            )
+                                                        )
+                                                    ),
+                                                    // NOVÝ riadok s tlačidlom "+"
+                                                    React.createElement(
+                                                        'tr',
+                                                        {
+                                                            className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                                        },
                                                         React.createElement(
-                                                            'span',
-                                                            { className: 'text-gray-500 mx-2' },
-                                                            '–'
-                                                        ),
-                                                        React.createElement(
-                                                            'span',
-                                                            null,
-                                                            day.dateLabel
+                                                            'td',
+                                                            { className: 'border border-gray-200 px-4 py-2 text-center' },
+                                                            React.createElement(
+                                                                'button',
+                                                                {
+                                                                    type: 'button',
+                                                                    onClick: () => {
+                                                                        // TODO: sem neskôr doplníme funkciu
+                                                                        console.log('[TRANSPORT] Kliknuté "+" pre deň:', {
+                                                                            busId: bus.id,
+                                                                            busName: bus.name,
+                                                                            dayKey: day.dayKey,
+                                                                            dateLabel: day.dateLabel,
+                                                                            dayName: day.dayName,
+                                                                        });
+                                                                    },
+                                                                    className: 'w-9 h-9 rounded-full bg-green-600 text-white shadow hover:bg-green-700 active:scale-95 transition-all duration-150 flex items-center justify-center text-lg font-bold mx-auto',
+                                                                    title: `Pridať pre deň ${day.dateLabel}`
+                                                                },
+                                                                React.createElement('i', { className: 'fa-solid fa-plus' })
+                                                            )
                                                         )
                                                     )
                                                 )
