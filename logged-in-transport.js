@@ -3962,15 +3962,21 @@ const TransportApp = ({ userProfileData }) => {
 
         // ============================================================
         // Pomocná: z textu "Presun z X do Y" vytiahne { from, to }.
+        // Zároveň nahradí "ubytovania" → "ubytovňa".
         // ============================================================
         const parseTransferText = (text) => {
             if (!text) return null;
             const s = String(text).trim();
             const m = /^Presun z (.+?) do (.+)$/.exec(s);
             if (!m) return null;
+
+            const normalizePlace = (str) => String(str)
+                .replace(/\bubytovania\b/gi, 'ubytovňa')
+                .replace(/\bubytovanie\b/gi, 'ubytovňa');
+
             return {
-                from: m[1].trim(),
-                to: m[2].trim(),
+                from: normalizePlace(m[1].trim()),
+                to: normalizePlace(m[2].trim()),
             };
         };
 
@@ -4063,7 +4069,7 @@ const TransportApp = ({ userProfileData }) => {
                                                     else if (et) timeLabel = et;
                                                 }
 
-                                                // 3. riadok – miesta
+                                                // 3. riadok – miesta (s "ubytovňa" namiesto "ubytovania")
                                                 let routeLabel = null;
                                                 if (transferInfo) {
                                                     routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
@@ -4075,21 +4081,21 @@ const TransportApp = ({ userProfileData }) => {
                                                         key: t.key,
                                                         className: 'text-sm text-gray-700 flex flex-col leading-snug'
                                                     },
-                                                    // 1. riadok – dátum (rovnaký font a veľkosť ako trasa)
+                                                    // 1. riadok – dátum
                                                     dateLabel &&
                                                         React.createElement(
                                                             'span',
                                                             { className: 'text-sm text-gray-500' },
                                                             dateLabel
                                                         ),
-                                                    // 2. riadok – čas (rovnaký font a veľkosť ako trasa)
+                                                    // 2. riadok – čas
                                                     timeLabel &&
                                                         React.createElement(
                                                             'span',
                                                             { className: 'text-sm text-gray-600' },
                                                             timeLabel
                                                         ),
-                                                    // 3. riadok – miesta (rovnaký font a veľkosť ako dátum a čas)
+                                                    // 3. riadok – miesta
                                                     routeLabel &&
                                                         React.createElement(
                                                             'span',
@@ -4101,7 +4107,10 @@ const TransportApp = ({ userProfileData }) => {
                                                         React.createElement(
                                                             'span',
                                                             { className: 'text-sm text-gray-800' },
-                                                            t.text.replace(/^Presun z /, '')
+                                                            String(t.text || '')
+                                                                .replace(/^Presun z /, '')
+                                                                .replace(/\bubytovania\b/gi, 'ubytovňa')
+                                                                .replace(/\bubytovanie\b/gi, 'ubytovňa')
                                                         )
                                                 );
                                             })
