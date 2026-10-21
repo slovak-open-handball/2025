@@ -6135,13 +6135,19 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement(
                             'ul',
                             { className: 'space-y-2' },
-                            currentMatches.map((m) => {
+                            currentMatches.map((m, idx) => {
+                                // Ochrana proti undefined
+                                if (!m || !m.bus || !m.trip) {
+                                    console.warn('[TRANSPORT] Neplatný výsledok v currentMatches:', m);
+                                    return null;
+                                }
+                            
                                 const key = `${m.bus.id}|${m.trip.firstRowId}|${m.side}`;
                                 const isSelected = assignBusSelectedKey === key;
-
+                            
                                 const hasBoarding = !!m.boardingRow;
                                 const hasAlighting = !!m.alightingRow;
-
+                            
                                 return React.createElement(
                                     'li',
                                     { key },
@@ -6197,7 +6203,7 @@ const TransportApp = ({ userProfileData }) => {
                                         )
                                     )
                                 );
-                            })
+                            }).filter(Boolean) // ← odstráni null hodnoty
                         )
                     );
                 })(),
