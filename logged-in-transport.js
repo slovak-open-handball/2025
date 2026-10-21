@@ -3563,7 +3563,6 @@ const TransportApp = ({ userProfileData }) => {
                 placeTo: '',
                 teamsIn: [],
                 teamsOut: [],
-                count: null,
             });
             window.showGlobalNotification('Riadok pridaný.', 'success');
         } catch (err) {
