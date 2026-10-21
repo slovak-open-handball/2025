@@ -4960,9 +4960,43 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     const renderSavedTransfers = () => {
         // Filtrovanie podľa zvoleného dňa (ak je vybraný)
-        const filtered = selectedDayKey
+        const filteredByDay = selectedDayKey
             ? savedTransfers.filter((t) => t.dayKey === selectedDayKey)
             : savedTransfers;
+
+        // ============================================================
+        // NOVÉ: Filtrovanie – skry presuny, ktoré sú už priradené
+        // (buď ako "peši", alebo ako tím v niektorom busRow)
+        // ============================================================
+        // Zoznam všetkých tímov, ktoré sú priradené k autobusom.
+        // Kľúč: `${busId}|${dayKey}|${teamKey}` – aby sme vedeli, v ktorom
+        // dni a v ktorom aute je tím priradený.
+        const assignedTeamKeys = new Set();
+        Object.entries(busRows || {}).forEach(([busKey, rows]) => {
+            const [busId, dayKey] = busKey.split('|');
+            (rows || []).forEach((row) => {
+                const inList = Array.isArray(row.teamsIn) ? row.teamsIn : [];
+                const outList = Array.isArray(row.teamsOut) ? row.teamsOut : [];
+                inList.forEach((teamKey) => {
+                    assignedTeamKeys.add(`${dayKey}|${teamKey}`);
+                });
+                outList.forEach((teamKey) => {
+                    assignedTeamKeys.add(`${dayKey}|${teamKey}`);
+                });
+            });
+        });
+
+        const filtered = filteredByDay.filter((t) => {
+            // 1) Ak je presun označený ako "peši", skry ho
+            if (t.isWalking === true) return false;
+    
+            // 2) Ak je tím priradený k autobusu v danom dni, skry ho
+            const teamKey = `${String(t.teamName || '').trim()}|${cleanCategory(t.category || '')}`;
+            const key = `${t.dayKey || ''}|${teamKey}`;
+            if (assignedTeamKeys.has(key)) return false;
+    
+            return true;
+        });
 
         // ============================================================
         // Pomocná: z `when` (napr. "26. 12. 2026 08:00 – 26. 12. 2026 09:15")
