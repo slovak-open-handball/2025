@@ -1881,20 +1881,40 @@ const TransportApp = ({ userProfileData }) => {
                                         };
                             
                                         // Ubytovania tímov zo skupiny s rovnakým písmenom
-                                        (teamsArrivalBufferRef.current || []).forEach((t) => {
-                                            if (cleanCategory(t.category) !== cleanCategory(category)) return;
-                                            if (!t.teamName) return;
-                                            if (t.teamName === teamName) return;
-                                            if (!t.accommodationName || t.accommodationName.trim() === '') return;
-                                            if (!isRealRegisteredTeam(t.teamName, category)) return;
-                                            if (!teamBelongsToChar(t.teamName, category)) return;
-                                            console.log(
-                                                '%c[TRANSPORT][FALLBACK-ACCOM-ITEM] ' + teamName + ' @ ' + currentDay + ' → ubytovanie: ' + t.accommodationName,
-                                                'color:#dc2626;',
-                                                { team: t.teamName, accommodation: t.accommodationName }
-                                            );
-                                            updateUniqueSource(t.accommodationName.trim(), null);
-                                        });
+                                        // Prednostne použi skupinovú cache (rovnako ako pri večerných presunoch)
+                                        const derivedGroupName = `skupina ${groupCharPre}`;
+                                        const cacheKey = `${cleanCategory(category)}|${derivedGroupName}`;
+                                        const cacheAccoms = (window.__transport_accommodationsByGroup || {})[cacheKey] || [];
+
+                                        if (cacheAccoms.length > 0) {
+                                            // Máme cache – použi ju
+                                            cacheAccoms.forEach((accomName) => {
+                                                if (!accomName) return;
+                                                updateUniqueSource(accomName.trim(), null);
+                                            });
+                                        } else {
+                                            // Fallback – skús teamsArrivalBufferRef (pre prípad, že cache ešte nie je načítaná)
+                                            (teamsArrivalBufferRef.current || []).forEach((t) => {
+                                                if (cleanCategory(t.category) !== cleanCategory(category)) return;
+                                                if (!t.teamName) return;
+                                                if (t.teamName === teamName) return;
+                                                if (!t.accommodationName || t.accommodationName.trim() === '') return;
+                                                // NEvyžaduj isRegistered – berieme aj superstructure tímy s ubytovaním
+                                        
+                                                let belongsToChar = false;
+                                                if (t.groupName) {
+                                                    belongsToChar = groupBelongsToChar(t.groupName, groupCharPre);
+                                                } else {
+                                                    const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(t.teamName).trim());
+                                                    if (m && m[1].toUpperCase() === groupCharPre) {
+                                                        belongsToChar = true;
+                                                    }
+                                                }
+                                                if (!belongsToChar) return;
+
+                                                updateUniqueSource(t.accommodationName.trim(), null);
+                                            });
+                                        }
                             
                                         const destinationArrivalStr =
                                             formatFullFromTs(destinationEvent.startTs) || destinationEvent.when;
