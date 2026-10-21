@@ -2,6 +2,7 @@
 // Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
 // sú globálne definované v <head> logged-in-users.html.
 // Všetky komponenty a logika pre správu používateľov sú teraz v tomto súbore.
+// NOVINKA: Nový stĺpec "Stav" so zeleným/červeným kruhom podľa lastLoginAt vs lastLogoutAt.
 
 // Imports for necessary Firebase functions
 import {
@@ -85,6 +86,34 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 const { useState, useEffect, useRef } = React;
+
+// Pomocná funkcia: bezpečný prevod Timestamp/Date/seconds na Date
+const toDateSafe = (value) => {
+  if (!value) return null;
+  if (typeof value.toDate === 'function') {
+    try { return value.toDate(); } catch (e) { return null; }
+  }
+  if (value instanceof Date) return value;
+  if (typeof value.seconds === 'number') return new Date(value.seconds * 1000);
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+// Pomocná funkcia: vráti true, ak je používateľ aktuálne prihlásený
+// (lastLoginAt existuje a je novší ako lastLogoutAt, alebo lastLogoutAt chýba)
+const getLoginStatus = (user) => {
+  const login = toDateSafe(user?.lastLoginAt);
+  const logout = toDateSafe(user?.lastLogoutAt);
+
+  // Ak nikdy nebol prihlásený -> červený
+  if (!login) return false;
+
+  // Ak sa ešte nikdy neodhlásil a má login -> zelený
+  if (!logout) return true;
+
+  // Zelený len ak je login striktne neskôr ako logout
+  return login.getTime() > logout.getTime();
+};
 
 // Funkcia na kopírovanie textu do schránky
 const copyToClipboard = (text) => {
@@ -1152,6 +1181,8 @@ function UsersManagementApp() {
           React.createElement(
             'tr',
             null,
+            // NOVINKA: Stĺpec "Stav" pred menom
+            React.createElement('th', { className: 'px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Stav'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Meno'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'E-mail'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer', onClick: () => setShowFilterModal(true) }, 'Rola'),
@@ -1171,6 +1202,15 @@ function UsersManagementApp() {
             const canEditRosterDeadline = ['club'].includes(user.role);
             const isHall = user.role === 'hall'; // Zistenie, či ide o používateľa s rolou hall
             
+            // NOVINKA: Výpočet stavu prihlásenia
+            const isOnline = getLoginStatus(user);
+            const lastLoginDate = toDateSafe(user.lastLoginAt);
+            const lastLogoutDate = toDateSafe(user.lastLogoutAt);
+            const statusTitle = [
+              `Posledné prihlásenie: ${lastLoginDate ? lastLoginDate.toLocaleString('sk-SK') : '—'}`,
+              `Posledné odhlásenie: ${lastLogoutDate ? lastLogoutDate.toLocaleString('sk-SK') : '—'}`
+            ].join('\n');
+            
             // Logika na skrytie riadku pre ostatných používateľov
             if (isUserOldestAdmin && !isCurrentUserOldestAdmin) {
               return null;
@@ -1179,6 +1219,19 @@ function UsersManagementApp() {
             return React.createElement(
               'tr',
               { key: user.id },
+              // NOVINKA: Bunka so stavovým kruhom
+              React.createElement(
+                'td',
+                { className: 'px-3 py-4 whitespace-nowrap' },
+                React.createElement(
+                  'span',
+                  {
+                    title: statusTitle,
+                    className: 'inline-block w-3 h-3 rounded-full',
+                    style: { backgroundColor: isOnline ? '#22c55e' : '#ef4444' }
+                  }
+                )
+              ),
               React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900' }, `${user.firstName} ${user.lastName}`),
               React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500' }, user.email),
               React.createElement(
