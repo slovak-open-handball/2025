@@ -3962,7 +3962,9 @@ const TransportApp = ({ userProfileData }) => {
 
         // ============================================================
         // Pomocná: z textu "Presun z X do Y" vytiahne { from, to }.
-        // Zároveň nahradí "ubytovania" → "ubytovňa".
+        // Nahrádza:
+        //   "ubytovania" / "ubytovanie" → "ubytovňa"
+        //   "zastávky" / "zastávka"     → "zastávka"
         // ============================================================
         const parseTransferText = (text) => {
             if (!text) return null;
@@ -3972,7 +3974,9 @@ const TransportApp = ({ userProfileData }) => {
 
             const normalizePlace = (str) => String(str)
                 .replace(/\bubytovania\b/gi, 'ubytovňa')
-                .replace(/\bubytovanie\b/gi, 'ubytovňa');
+                .replace(/\bubytovanie\b/gi, 'ubytovňa')
+                .replace(/\bzastávky\b/gi, 'zastávka')
+                .replace(/\bzastávok\b/gi, 'zastávka');
 
             return {
                 from: normalizePlace(m[1].trim()),
@@ -4070,7 +4074,7 @@ const TransportApp = ({ userProfileData }) => {
                                                     else if (et) timeLabel = et;
                                                 }
 
-                                                // 3. riadok – miesta (s "ubytovňa" namiesto "ubytovania")
+                                                // 3. riadok – miesta (s normalizáciou "ubytovňa" a "zastávka")
                                                 let routeLabel = null;
                                                 if (transferInfo) {
                                                     routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
@@ -4119,6 +4123,8 @@ const TransportApp = ({ userProfileData }) => {
                                                                 .replace(/^Presun z /, '')
                                                                 .replace(/\bubytovania\b/gi, 'ubytovňa')
                                                                 .replace(/\bubytovanie\b/gi, 'ubytovňa')
+                                                                .replace(/\bzastávky\b/gi, 'zastávka')
+                                                                .replace(/\bzastávok\b/gi, 'zastávka')
                                                         )
                                                 );
                                             })
