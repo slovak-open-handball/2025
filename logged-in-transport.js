@@ -951,6 +951,18 @@ const TransportApp = ({ userProfileData }) => {
                     if (isSuperstructureTeam) {
                         const ssTeamKeyPre = `${cleanCategory(category)}|${teamName}`;
                         const groupCharPre = ssGroupCharByTeam[ssTeamKeyPre];
+
+                        console.log(
+                                '%c[TRANSPORT][SS-PRE-CHECK] ' + teamName,
+                                'color:#9333ea;font-weight:bold;',
+                                {
+                                    ssTeamKeyPre,
+                                    groupCharPre,
+                                    hasPlayDates: !!ssPlayDatesByTeam[ssTeamKeyPre],
+                                    playDates: ssPlayDatesByTeam[ssTeamKeyPre] ? [...ssPlayDatesByTeam[ssTeamKeyPre]] : null,
+                                    eventCount: events.length,
+                                }
+                            );
                     
                         if (groupCharPre && ssPlayDatesByTeam[ssTeamKeyPre]) {
                             // Nájdi všetky hracie dni skupiny, kedy tím NEMÁ udalosť
