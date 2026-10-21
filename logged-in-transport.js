@@ -2374,25 +2374,6 @@ const TransportApp = ({ userProfileData }) => {
                 });
             });
         }
-
-//        if (!window.__transport_preloadDone) {
-//            window.__transport_preloadDone = true;
-//            preloadAccommodationsForSuperstructureTeams().then(() => {
-//                // Po načítaní cache znova zavolaj rebuild
-//                rebuildAndLogTimeline();
-//            });
-//        }
-
-        console.log('[DEBUG-27-12]', matchesBufferRef.current
-            .filter(m => m.category === 'U12 CH' && m.scheduledTime && m.scheduledTime.includes('27. 12.'))
-            .map(m => ({ 
-                home: m.home, 
-                away: m.away, 
-                groupName: m.groupName, 
-                matchType: m.matchType, 
-                special: m.special 
-            }))
-        );
         
         console.log('[TRANSPORT] ===============================================');
     };
