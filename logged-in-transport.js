@@ -4796,7 +4796,7 @@ const TransportApp = ({ userProfileData }) => {
             'div',
             { className: 'w-full flex flex-col items-start justify-start py-6 relative min-h-[400px]' },
 
-            hasAnythingToRender
+            !hasAnythingToRender
                 ? React.createElement(
                     'div',
                     { className: 'w-full flex flex-col items-center justify-center py-16 text-gray-500' },
