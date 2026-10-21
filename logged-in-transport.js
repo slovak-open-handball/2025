@@ -130,6 +130,7 @@ const placeTypeIcons = {
 };
 
 const TransportApp = ({ userProfileData }) => {
+    const timelineGenerationRequestedRef = useRef(false);
     // Mapa placeId → placeName
     const placesMapRef = useRef({});
 
@@ -341,7 +342,7 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         try {
-            rebuildAndLogTimeline();
+            rebuildAndLogTimeline(true);
         } finally {
             console.log = originalLog;
         }
@@ -364,7 +365,12 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     // ZBUILDÍ A VYPÍŠE ČASOVÚ OS PRE KAŽDÝ TÍM V KAŽDEJ KATEGÓRII
     // ============================================================
-    const rebuildAndLogTimeline = () => {
+    const rebuildAndLogTimeline = (force = false) => {
+        // Ak používateľ ešte neklikol na tlačidlo "+", negeneruj časovú os
+        // (pokiaľ nie je volanie vynútené cez force=true, napr. z printTeamTimeline)
+        if (!force && !timelineGenerationRequestedRef.current) {
+            return;
+        }
         if (!matchesLoadedRef.current || !cateringLoadedRef.current || !teamsLoadedRef.current) {
             return;
         }
@@ -3711,10 +3717,13 @@ const TransportApp = ({ userProfileData }) => {
             'button',
             {
                 onClick: () => {
-                    console.log('[TRANSPORT] Bolo kliknuté na plávajúce zelené tlačidlo "+" v pravom dolnom rohu (bez akcie).');
+                    // Povol generovanie časovej osi a spusti ho
+                    timelineGenerationRequestedRef.current = true;
+                    rebuildAndLogTimeline(true);
+                    window.showGlobalNotification('Časová os bola vygenerovaná do konzoly.', 'success');
                 },
                 className: `fixed bottom-8 right-8 w-14 h-14 rounded-full bg-green-600 text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all duration-200 flex items-center justify-center text-2xl font-bold z-[9999]`,
-                title: 'Plávajúce tlačidlo (iba log)'
+                title: 'Vygenerovať časovú os do konzoly'
             },
             React.createElement('i', {
                 className: 'fa-solid fa-plus'
