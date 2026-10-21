@@ -4087,12 +4087,6 @@ const TransportApp = ({ userProfileData }) => {
             return ta.localeCompare(tb, 'sk', { sensitivity: 'base' });
         });    
 
-        // Farby pre box
-        const transportColor = getTransportColorForCategory(t.category);
-        const boxBg = transportColor
-            ? lightenHex(transportColor, 0.15)
-            : null;
-
         return React.createElement(
             'div',
             {
@@ -4133,8 +4127,13 @@ const TransportApp = ({ userProfileData }) => {
                             const rangeInfo = parseWhenRange(t.when);
                             const transferInfo = parseTransferText(t.text);
                             const categoryLabel = cleanCategory(t.category) || '(bez kategórie)';
-                            const transportColor = getTransportColorForCategory(t.category);
 
+                            // Farby pre box
+                            const transportColor = getTransportColorForCategory(t.category);
+                            const boxBg = transportColor
+                                ? lightenHex(transportColor, 0.15)
+                                : null;
+                        
                             // 1. riadok – dátum
                             let dateLabel = null;
                             if (rangeInfo) {
