@@ -6056,24 +6056,30 @@ const TransportApp = ({ userProfileData }) => {
                     React.createElement('div', { className: 'text-xs text-gray-500 mt-1' },
                         `${transferActionModal.transfer.teamName || ''}${transferActionModal.transfer.when ? ' • ' + transferActionModal.transfer.when : ''}`)
                 ),
-                // Zoznam vhodných autobusov
-                assignBusMatches.length === 0
-                    ? React.createElement(
-                        'div',
-                        { className: 'mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm' },
-                        React.createElement(
-                            'p',
-                            { className: 'text-red-700 flex items-start gap-2' },
-                            React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
+                
+                // DYNAMICKÝ VÝPOČET ZOZNAMU AUTOBUSOV
+                (() => {
+                    const currentMatches = findMatchingBusRows(transferActionModal.transfer);
+                    
+                    if (currentMatches.length === 0) {
+                        return React.createElement(
+                            'div',
+                            { className: 'mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm' },
                             React.createElement(
-                                'span',
-                                null,
-                                'Pre tento presun neexistuje žiadny autobus s riadkom, ktorý by zodpovedal trase aj času. ',
-                                'Najprv pridajte riadok do autobusu (v Plánovaní) s rovnakým miestom od/do a časom, ktorý sa prekrýva s časom presunu.'
+                                'p',
+                                { className: 'text-red-700 flex items-start gap-2' },
+                                React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
+                                React.createElement(
+                                    'span',
+                                    null,
+                                    'Pre tento presun neexistuje žiadny autobus s riadkom, ktorý by zodpovedal trase aj času. ',
+                                    'Najprv pridajte riadok do autobusu (v Plánovaní) s rovnakým miestom od/do a časom, ktorý sa prekrýva s časom presunu.'
+                                )
                             )
-                        )
-                    )
-                    : React.createElement(
+                        );
+                    }
+                
+                    return React.createElement(
                         'div',
                         { className: 'mb-4' },
                         React.createElement(
@@ -6084,7 +6090,7 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement(
                             'ul',
                             { className: 'space-y-2' },
-                            assignBusMatches.map((m) => {
+                            currentMatches.map((m) => {
                                 const key = `${m.bus.id}|${m.row.id}|${m.side}`;
                                 const isSelected = assignBusSelectedKey === key;
                                 const sideLabel = m.side === 'in' ? 'Nástup' : 'Výstup';
@@ -6137,7 +6143,9 @@ const TransportApp = ({ userProfileData }) => {
                                 );
                             })
                         )
-                    ),
+                    );
+                })(),
+                
                 // Tlačidlá
                 React.createElement(
                     'div',
