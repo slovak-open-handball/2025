@@ -4297,12 +4297,12 @@ const TransportApp = ({ userProfileData }) => {
                                     let displayTitle = null;
 
                                     if (totalMembers != null) {
-                                        valueText = `Spolu: ${totalMembers}`;
+                                        valueText = `${totalMembers}`;
                                         displayTitle = 'Celkový počet členov tímu (hráči + RT muži + RT ženy + šoféri muži + šoféri ženy)';
                                     } else {
                                         const avg = getCategoryAverageForTransfer(t.category);
                                         if (avg != null) {
-                                            valueText = `Priemer: ${avg}`;
+                                            valueText = `${avg}`;
                                             displayTitle = `Priemer členov tímu v kategórii ${t.category} (zaokrúhlené nahor)`;
                                         }
                                     }
