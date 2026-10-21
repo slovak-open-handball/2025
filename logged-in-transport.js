@@ -990,27 +990,40 @@ const TransportApp = ({ userProfileData }) => {
                                 };
                             
                                 // Ubytovania tímov zo skupiny s rovnakým písmenom
-                                (teamsArrivalBufferRef.current || []).forEach((t) => {
-                                    if (cleanCategory(t.category) !== cleanCategory(category)) return;
-                                    if (!t.teamName) return;
-                                    if (t.teamName === teamName) return;
-                                    if (!t.accommodationName || t.accommodationName.trim() === '') return;
-                                    if (!t.isRegistered) return; // len registrované tímy (majú reálne ubytovanie)
-                            
-                                    // Zisti, či tím patrí do skupiny s rovnakým písmenom
-                                    let belongsToChar = false;
-                                    if (t.groupName) {
-                                        belongsToChar = groupBelongsToChar(t.groupName, groupCharPre);
-                                    } else {
-                                        const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(t.teamName).trim());
-                                        if (m && m[1].toUpperCase() === groupCharPre) {
-                                            belongsToChar = true;
+                                // Prednostne použi skupinovú cache (rovnako ako pri večerných presunoch)
+                                const derivedGroupName = `skupina ${groupCharPre}`;
+                                const cacheKey = `${cleanCategory(category)}|${derivedGroupName}`;
+                                const cacheAccoms = (window.__transport_accommodationsByGroup || {})[cacheKey] || [];
+                                
+                                if (cacheAccoms.length > 0) {
+                                    // Máme cache – použi ju
+                                    cacheAccoms.forEach((accomName) => {
+                                        if (!accomName) return;
+                                        updateUniqueSource(accomName.trim(), null);
+                                    });
+                                } else {
+                                    // Fallback – skús teamsArrivalBufferRef (pre prípad, že cache ešte nie je načítaná)
+                                    (teamsArrivalBufferRef.current || []).forEach((t) => {
+                                        if (cleanCategory(t.category) !== cleanCategory(category)) return;
+                                        if (!t.teamName) return;
+                                        if (t.teamName === teamName) return;
+                                        if (!t.accommodationName || t.accommodationName.trim() === '') return;
+                                        // NEvyžaduj isRegistered – berieme aj superstructure tímy s ubytovaním
+                                
+                                        let belongsToChar = false;
+                                        if (t.groupName) {
+                                            belongsToChar = groupBelongsToChar(t.groupName, groupCharPre);
+                                        } else {
+                                            const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(t.teamName).trim());
+                                            if (m && m[1].toUpperCase() === groupCharPre) {
+                                                belongsToChar = true;
+                                            }
                                         }
-                                    }
-                                    if (!belongsToChar) return;
-                            
-                                    updateUniqueSource(t.accommodationName.trim(), null);
-                                });
+                                        if (!belongsToChar) return;
+                                
+                                        updateUniqueSource(t.accommodationName.trim(), null);
+                                    });
+                                }
                             
                                 if (uniqueSourceLocations.size === 0) return;
                             
