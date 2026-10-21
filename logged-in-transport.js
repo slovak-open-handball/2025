@@ -3840,6 +3840,35 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // Pomocná: celočíselný priemer členov tímu v kategórii
+    // (rovnaký štýl ako "Spolu", len pre tímy, ktoré nie sú v users)
+    // ============================================================
+    const getCategoryAverageForTransfer = (category) => {
+        const cat = cleanCategory(category);
+        if (!cat) return null;
+
+        // Prejdi všetky tímy v teamCounts pre danú kategóriu
+        let total = 0;
+        let count = 0;
+        Object.entries(teamCounts || {}).forEach(([key, counts]) => {
+            const [kCat] = key.split('|');
+            if (cleanCategory(kCat) !== cat) return;
+            if (!counts) return;
+            const sum =
+                (counts.players || 0) +
+                (counts.menRT || 0) +
+                (counts.womenRT || 0) +
+                (counts.menDrivers || 0) +
+                (counts.womenDrivers || 0);
+            total += sum;
+            count += 1;
+        });
+    
+        if (count === 0) return null;
+        return Math.ceil(total / count);
+    };
+
+    // ============================================================
     // NOVÉ: Pomocná – získa farbu pre rozlosovanie (drawColor)
     // ============================================================
     const getDrawColorForCategory = (categoryName) => {
@@ -4263,6 +4292,21 @@ const TransportApp = ({ userProfileData }) => {
                                     const totalMembers = counts
                                         ? counts.players + counts.menRT + counts.womenRT + counts.menDrivers + counts.womenDrivers
                                         : null;
+                                
+                                    let displayLabel = null;
+                                    let displayTitle = null;
+
+                                    if (totalMembers != null) {
+                                        displayLabel = `(Spolu: ${totalMembers})`;
+                                        displayTitle = 'Celkový počet členov tímu (hráči + RT muži + RT ženy + šoféri muži + šoféri ženy)';
+                                    } else {
+                                        const avg = getCategoryAverageForTransfer(t.category);
+                                        if (avg != null) {
+                                            displayLabel = `(Priemer: ${avg})`;
+                                            displayTitle = `Priemer členov tímu v kategórii ${t.category} (zaokrúhlené nahor)`;
+                                        }
+                                    }
+
                                     return React.createElement(
                                         'span',
                                         { className: 'flex flex-wrap items-baseline gap-1' },
@@ -4274,13 +4318,13 @@ const TransportApp = ({ userProfileData }) => {
                                             },
                                             t.teamName || '(neznámy tím)'
                                         ),
-                                        totalMembers != null && React.createElement(
+                                        displayLabel != null && React.createElement(
                                             'span',
                                             {
                                                 className: 'text-[11px] font-normal text-gray-600 ml-1',
-                                                title: 'Celkový počet členov tímu (hráči + RT muži + RT ženy + šoféri muži + šoféri ženy)'
+                                                title: displayTitle || ''
                                             },
-                                            `(Spolu: ${totalMembers})`
+                                            displayLabel
                                         )
                                     );
                                 })(),
