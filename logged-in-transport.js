@@ -4293,39 +4293,31 @@ const TransportApp = ({ userProfileData }) => {
                                         ? counts.players + counts.menRT + counts.womenRT + counts.menDrivers + counts.womenDrivers
                                         : null;
                                 
-                                    let displayLabel = null;
+                                    let valueText = null;
                                     let displayTitle = null;
 
                                     if (totalMembers != null) {
-                                        displayLabel = `(Spolu: ${totalMembers})`;
+                                        valueText = `Spolu: ${totalMembers}`;
                                         displayTitle = 'Celkový počet členov tímu (hráči + RT muži + RT ženy + šoféri muži + šoféri ženy)';
                                     } else {
                                         const avg = getCategoryAverageForTransfer(t.category);
                                         if (avg != null) {
-                                            displayLabel = `(Priemer: ${avg})`;
+                                            valueText = `Priemer: ${avg}`;
                                             displayTitle = `Priemer členov tímu v kategórii ${t.category} (zaokrúhlené nahor)`;
                                         }
                                     }
-
+                                
+                                    const teamLabel = t.teamName || '(neznámy tím)';
+                                    const fullText = valueText ? `${teamLabel} ● ${valueText}` : teamLabel;
+                                
                                     return React.createElement(
                                         'span',
-                                        { className: 'flex flex-wrap items-baseline gap-1' },
-                                        React.createElement(
-                                            'span',
-                                            {
-                                                className: 'font-semibold',
-                                                style: { color: transportColor || '#5b21b6' }
-                                            },
-                                            t.teamName || '(neznámy tím)'
-                                        ),
-                                        displayLabel != null && React.createElement(
-                                            'span',
-                                            {
-                                                className: 'text-[11px] font-normal text-gray-600 ml-1',
-                                                title: displayTitle || ''
-                                            },
-                                            displayLabel
-                                        )
+                                        {
+                                            className: 'font-semibold',
+                                            style: { color: transportColor || '#5b21b6' },
+                                            title: displayTitle || ''
+                                        },
+                                        fullText
                                     );
                                 })(),
                                 // 2. riadok – dátum
