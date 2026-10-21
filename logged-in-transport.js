@@ -4001,18 +4001,6 @@ const TransportApp = ({ userProfileData }) => {
             return ta.localeCompare(tb, 'sk', { sensitivity: 'base' });
         });
 
-        // Zoskupenie podľa kategórie (zo zoradeného zoznamu)
-        const byCategory = {};
-        sortedTransfers.forEach((t) => {
-            const cat = cleanCategory(t.category) || '(bez kategórie)';
-            if (!byCategory[cat]) byCategory[cat] = [];
-            byCategory[cat].push(t);
-        });
-
-        const categories = Object.keys(byCategory).sort((a, b) =>
-            a.localeCompare(b, 'sk', { sensitivity: 'base' })
-        );
-
         return React.createElement(
             'div',
             {
@@ -4045,101 +4033,106 @@ const TransportApp = ({ userProfileData }) => {
                 )
                 : React.createElement(
                     'div',
-                    { className: 'max-h-[70vh] overflow-y-auto p-3 space-y-4' },
-                    categories.map((cat) =>
-                        React.createElement(
-                            'div',
-                            { key: `cat-${cat}` },
-                            React.createElement(
-                                'div',
-                                { className: 'text-sm font-bold uppercase tracking-wide text-violet-700 mb-2 pb-1 border-b border-violet-200' },
-                                cat
-                            ),
-                            // Presuny v kategórii už sú zoradené chronologicky
-                            // (byCategory[cat] je vytvorené zo sortedTransfers)
-                            React.createElement(
-                                'ul',
-                                { className: 'space-y-2 pl-1' },
-                                byCategory[cat].map((t) => {
-                                    const rangeInfo = parseWhenRange(t.when);
-                                    const transferInfo = parseTransferText(t.text);
+                    { className: 'max-h-[70vh] overflow-y-auto p-3' },
+                    // Jeden zoznam presunov, zoradený chronologicky (bez zoskupovania
+                    // podľa kategórie v hlavičke – kategória je v každom boxe).
+                    React.createElement(
+                        'ul',
+                        { className: 'space-y-2' },
+                        sortedTransfers.map((t) => {
+                            const rangeInfo = parseWhenRange(t.when);
+                            const transferInfo = parseTransferText(t.text);
+                            const categoryLabel = cleanCategory(t.category) || '(bez kategórie)';
 
-                                    // 1. riadok – dátum
-                                    let dateLabel = null;
-                                    if (rangeInfo) {
-                                        dateLabel = (rangeInfo.startDayKey === rangeInfo.endDayKey)
-                                            ? rangeInfo.startLabel
-                                            : `${rangeInfo.startLabel} – ${rangeInfo.endLabel}`;
-                                    } else if (t.dayKey) {
-                                        dateLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
-                                    }
+                            // 1. riadok – dátum
+                            let dateLabel = null;
+                            if (rangeInfo) {
+                                dateLabel = (rangeInfo.startDayKey === rangeInfo.endDayKey)
+                                    ? rangeInfo.startLabel
+                                    : `${rangeInfo.startLabel} – ${rangeInfo.endLabel}`;
+                            } else if (t.dayKey) {
+                                dateLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
+                            }
 
-                                    // 2. riadok – čas
-                                    let timeLabel = null;
-                                    if (rangeInfo) {
-                                        const st = rangeInfo.startTime;
-                                        const et = rangeInfo.endTime;
-                                        if (st && et) timeLabel = `${st} – ${et}`;
-                                        else if (st) timeLabel = st;
-                                        else if (et) timeLabel = et;
-                                    }
+                            // 2. riadok – čas
+                            let timeLabel = null;
+                            if (rangeInfo) {
+                                const st = rangeInfo.startTime;
+                                const et = rangeInfo.endTime;
+                                if (st && et) timeLabel = `${st} – ${et}`;
+                                else if (st) timeLabel = st;
+                                else if (et) timeLabel = et;
+                            }
 
-                                    // 3. riadok – miesta (s normalizáciou "ubytovňa" a "zastávka")
-                                    let routeLabel = null;
-                                    if (transferInfo) {
-                                        routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
-                                    }
+                            // 3. riadok – miesta (s normalizáciou "ubytovňa" a "zastávka")
+                            let routeLabel = null;
+                            if (transferInfo) {
+                                routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
+                            }
 
-                                    return React.createElement(
-                                        'li',
-                                        {
-                                            key: t.key,
-                                            className: 'text-sm text-gray-700 flex flex-col leading-snug bg-violet-50/40 rounded-md px-2 py-1.5 border-l-2 border-violet-300'
-                                        },
-                                        // 1. riadok – názov tímu (v každom boxe presunu)
-                                        React.createElement(
-                                            'span',
-                                            { className: 'text-sm font-semibold text-violet-800 flex items-center gap-1' },
-                                            React.createElement('i', { className: 'fa-solid fa-people-group text-violet-500 text-[11px]' }),
-                                            t.teamName || '(neznámy tím)'
-                                        ),
-                                        // 2. riadok – dátum
-                                        dateLabel &&
-                                            React.createElement(
-                                                'span',
-                                                { className: 'text-sm text-gray-500' },
-                                                dateLabel
-                                            ),
-                                        // 3. riadok – čas
-                                        timeLabel &&
-                                            React.createElement(
-                                                'span',
-                                                { className: 'text-sm text-gray-600' },
-                                                timeLabel
-                                            ),
-                                        // 4. riadok – miesta
-                                        routeLabel &&
-                                            React.createElement(
-                                                'span',
-                                                { className: 'text-sm text-gray-900 font-medium' },
-                                                routeLabel
-                                            ),
-                                        // Fallback – ak sa nepodarilo parsovať, zobraz pôvodný text
-                                        (!dateLabel && !timeLabel && !routeLabel) &&
-                                            React.createElement(
-                                                'span',
-                                                { className: 'text-sm text-gray-800' },
-                                                String(t.text || '')
-                                                    .replace(/^Presun z /, '')
-                                                    .replace(/\bubytovania\b/gi, 'ubytovňa')
-                                                    .replace(/\bubytovanie\b/gi, 'ubytovňa')
-                                                    .replace(/\bzastávky\b/gi, 'zastávka')
-                                                    .replace(/\bzastávok\b/gi, 'zastávka')
-                                            )
-                                    );
-                                })
-                            )
-                        )
+                            return React.createElement(
+                                'li',
+                                {
+                                    key: t.key,
+                                    className: 'text-sm text-gray-700 flex flex-col leading-snug bg-violet-50/40 rounded-md px-2 py-1.5 border-l-2 border-violet-300'
+                                },
+                                // 1. riadok – KATEGÓRIA • TÍM (kategória je pred tímom)
+                                React.createElement(
+                                    'span',
+                                    { className: 'text-sm flex flex-wrap items-center gap-1' },
+                                    React.createElement('i', { className: 'fa-solid fa-layer-group text-violet-500 text-[11px]' }),
+                                    React.createElement(
+                                        'span',
+                                        { className: 'font-bold text-violet-900' },
+                                        categoryLabel
+                                    ),
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-violet-400 mx-0.5' },
+                                        '•'
+                                    ),
+                                    React.createElement('i', { className: 'fa-solid fa-people-group text-violet-500 text-[11px]' }),
+                                    React.createElement(
+                                        'span',
+                                        { className: 'font-semibold text-violet-800' },
+                                        t.teamName || '(neznámy tím)'
+                                    )
+                                ),
+                                // 2. riadok – dátum
+                                dateLabel &&
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-sm text-gray-500' },
+                                        dateLabel
+                                    ),
+                                // 3. riadok – čas
+                                timeLabel &&
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-sm text-gray-600' },
+                                        timeLabel
+                                    ),
+                                // 4. riadok – miesta
+                                routeLabel &&
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-sm text-gray-900 font-medium' },
+                                        routeLabel
+                                    ),
+                                // Fallback – ak sa nepodarilo parsovať, zobraz pôvodný text
+                                (!dateLabel && !timeLabel && !routeLabel) &&
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-sm text-gray-800' },
+                                        String(t.text || '')
+                                            .replace(/^Presun z /, '')
+                                            .replace(/\bubytovania\b/gi, 'ubytovňa')
+                                            .replace(/\bubytovanie\b/gi, 'ubytovňa')
+                                            .replace(/\bzastávky\b/gi, 'zastávka')
+                                            .replace(/\bzastávok\b/gi, 'zastávka')
+                                    )
+                            );
+                        })
                     )
                 )
         );
