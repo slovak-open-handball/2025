@@ -960,7 +960,7 @@ const TransportApp = ({ userProfileData }) => {
                                 if (evDay) teamEventDays.add(evDay);
                             });
                     
-                            const groupPlayDays = [...ssPlayDatesByTeam[ssTeamKeyPre]].sort();
+                            const groupPlayDays = [...ssPlayDatesByTeam[ssTeamKeyPre]].sort();                            
 
                             const teamDaysNotInGroupPlayDates = [...teamEventDays]
                                 .filter((dayKey) => !ssPlayDatesByTeam[ssTeamKeyPre].has(dayKey))
@@ -1024,6 +1024,21 @@ const TransportApp = ({ userProfileData }) => {
                                         updateUniqueSource(t.accommodationName.trim(), null);
                                     });
                                 }
+
+                                console.log(
+                                    '%c[TRANSPORT][TEAM-DAY-DEBUG] ' + teamName + ' @ ' + teamDay,
+                                    'color:#f59e0b;',
+                                    {
+                                        teamEventDays: [...teamEventDays],
+                                        ssPlayDates: [...ssPlayDatesByTeam[ssTeamKeyPre]],
+                                        teamDaysNotInGroupPlayDates,
+                                        destEventLocation: destEvent ? destEvent.location : null,
+                                        destEventWhen: destEvent ? destEvent.when : null,
+                                        cacheKey,
+                                        cacheAccoms,
+                                        uniqueSourceLocationsSize: uniqueSourceLocations.size,
+                                    }
+                                );
                             
                                 if (uniqueSourceLocations.size === 0) return;
                             
