@@ -4359,7 +4359,7 @@ const TransportApp = ({ userProfileData }) => {
 
                 alightingCandidates.forEach((alight) => {
                     // Výstup musí byť po nástupe
-                    if ((alight.row.order || 0) <= (board.row.order || 0)) return;
+                    if ((alight.row.order || 0) < (board.row.order || 0)) return;
 
                     results.push({
                         bus,
