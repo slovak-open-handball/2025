@@ -5321,7 +5321,7 @@ const TransportApp = ({ userProfileData }) => {
                                 t.isWalking === true &&
                                     React.createElement(
                                         'span',
-                                        { className: 'text-xs font-semibold text-emerald-700 mt-0.5 inline-flex items-center gap-1' },sv
+                                        { className: 'text-xs font-semibold text-emerald-700 mt-0.5 inline-flex items-center gap-1' },
                                         React.createElement('i', { className: 'fa-solid fa-person-walking' }),
                                         'PEŠI'
                                     ),
