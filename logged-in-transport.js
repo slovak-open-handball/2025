@@ -1399,16 +1399,6 @@ const TransportApp = ({ userProfileData }) => {
                             if (useGroupBasedMorningTransfers) {
                                 const groupChar = ssGroupCharByTeam[ssTeamKey];
                                 
-                                // ============================================================
-                                // NOVÉ: Zisti, či aktuálny deň je v zozname hracích dní skupiny.
-                                // Ak áno, NEGENERUJ ranné presuny z ubytovní – namiesto toho
-                                // sa použije skupinová logika (presuny z miest posledných udalostí).
-                                // ============================================================
-                                const isPlayDayForGroup = 
-                                    ssPlayDatesByTeam[ssTeamKey] &&
-                                    currentDay != null &&
-                                    ssPlayDatesByTeam[ssTeamKey].has(currentDay);
-                            
                                 // Pomocné funkcie pre zber zdrojov (definované vždy, aby boli dostupné v oboch vetvách)
                                 const isRealRegisteredTeam = (tn, category) => {
                                     if (!tn) return false;
@@ -1538,14 +1528,12 @@ const TransportApp = ({ userProfileData }) => {
                             
                                 // ============================================================
                                 // ROZHODNUTIE:
-                                //  - Ak deň JE hrací deň skupiny (isPlayDayForGroup) ALEBO
-                                //    v daný deň má ASPOŇ JEDEN tím zo skupiny udalosť
-                                //    (groupHasAnyEventOnCurrentDay) → generuj presuny z MIEST
-                                //    POSLEDNÝCH UDALOSTÍ tímov zo skupiny (NIE z ubytovní).
+                                //  - Ak deň JE hrací deň skupiny (groupHasAnyEventOnCurrentDay) →
+                                //    generuj presuny z MIEST POSLEDNÝCH UDALOSTÍ tímov zo skupiny
+                                //    (NIE z ubytovní).
                                 //  - Inak → generuj ranné presuny z ubytovní (pôvodná logika).
                                 // ============================================================
-                                const useGroupEndLocationsAsSource =
-                                    isPlayDayForGroup || groupHasAnyEventOnCurrentDay;
+                                const useGroupEndLocationsAsSource = groupHasAnyEventOnCurrentDay;
                             
                                 if (useGroupEndLocationsAsSource) {
                                     // ============================================================
@@ -1691,6 +1679,75 @@ const TransportApp = ({ userProfileData }) => {
                                     }
                                 } else {
                                     // ============================================================
+                                    // Deň NIE JE hrací deň skupiny a žiadny tím zo skupiny nemá
+                                    // udalosť → použijeme pôvodnú logiku ranných presunov z ubytovní.
+                                    // ============================================================
+                                    if (!destinationEvent || !destinationEvent.location) {
+                                        // Nemáme cieľovú udalosť – nič negenerujeme
+                                    } else {
+                                        const destination = destinationEvent.location;
+                            
+                                        const uniqueSourceLocations = new Map();
+                                        const updateUniqueSource = (loc, endTs) => {
+                                            if (!loc) return;
+                                            if (loc === destination) return;
+                                            const existing = uniqueSourceLocations.get(loc);
+                                            if (!existing || (endTs != null && endTs > (existing.endTs ?? -Infinity))) {
+                                                uniqueSourceLocations.set(loc, { location: loc, endTs });
+                                            }
+                                        };
+                            
+                                        // Ubytovania tímov zo skupiny s rovnakým písmenom
+                                        (teamsArrivalBufferRef.current || []).forEach((t) => {
+                                            if (cleanCategory(t.category) !== cleanCategory(category)) return;
+                                            if (!t.teamName) return;
+                                            if (t.teamName === teamName) return;
+                                            if (!t.accommodationName || t.accommodationName.trim() === '') return;
+                                            if (!isRealRegisteredTeam(t.teamName, category)) return;
+                                            if (!teamBelongsToChar(t.teamName, category)) return;
+                                            updateUniqueSource(t.accommodationName.trim(), null);
+                                        });
+                            
+                                        const destinationArrivalStr =
+                                            formatFullFromTs(destinationEvent.startTs) || destinationEvent.when;
+                            
+                                        const dayRefTs = destinationEvent.startTs != null
+                                            ? destinationEvent.startTs
+                                            : midnightFromWhen(destinationEvent.when);
+                            
+                                        Array.from(uniqueSourceLocations.values())
+                                            .sort((a, b) => {
+                                                if (a.endTs != null && b.endTs != null) return a.endTs - b.endTs;
+                                                return String(a.location).localeCompare(String(b.location), 'sk');
+                                            })
+                                            .forEach((info) => {
+                                                const departureTs = timestampOnDay(dayRefTs, 0, 0);
+                                                const departureStr = formatFullFromTs(departureTs) || '00:00';
+                            
+                                                let whenStr;
+                                                if (departureStr && destinationArrivalStr) {
+                                                    whenStr = `${departureStr} – ${destinationArrivalStr}`;
+                                                } else if (destinationArrivalStr) {
+                                                    whenStr = destinationArrivalStr;
+                                                } else {
+                                                    whenStr = destinationEvent.when;
+                                                }
+                            
+                                                enriched.push({
+                                                    ts: destinationEvent.ts - 1,
+                                                    when: whenStr,
+                                                    type: 'transfer',
+                                                    text: `Presun z ${info.location} do ${destination}`,
+                                                    location: null,
+                                                    isTransfer: true,
+                                                });
+                                            });
+                                    }
+                                }
+                                // DÔLEŽITÉ: V tomto prípade NEgenerujeme klasické ranné presuny
+                                // z ubytovní – preskočíme zvyšok bloku.
+                            } else {
+                                                                // ============================================================
                                     // Deň NIE JE hrací deň skupiny a žiadny tím zo skupiny nemá
                                     // udalosť → použijeme pôvodnú logiku ranných presunov z ubytovní.
                                     // ============================================================
