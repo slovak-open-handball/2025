@@ -629,42 +629,28 @@ const showDatabaseNotification = (message, type = 'info') => {
 const handleLogout = async () => {
     try {
         const auth = getAuth();
-        const user = auth.currentUser;
-
-        // Zápis času odhlásenia do dokumentu používateľa (pred signOut, kým máme uid)
-        if (user && window.db) {
-            try {
-                const userDocRef = doc(window.db, 'users', user.uid);
-                await updateDoc(userDocRef, {
-                    lastLogoutAt: new Date()
-                });
-            } catch (e) {
-                // Ak zápis zlyhá, odhlásenie aj tak pokračuje
-            }
-        }
-
         await signOut(auth);
-
+        
         if (unsubscribeFromNotifications) {
             unsubscribeFromNotifications();
             unsubscribeFromNotifications = null;
         }
-
+        
         if (unsubscribeFromUserSettings) {
             unsubscribeFromUserSettings();
             unsubscribeFromUserSettings = null;
         }
-
+        
         if (unsubscribeFromPagesVisibility) {
             unsubscribeFromPagesVisibility();
             unsubscribeFromPagesVisibility = null;
         }
-
+        
         shownNotificationIds.clear();
-
+        
         currentUserId = null;
         currentDisplayNotifications = false;
-
+        
         window.location.href = 'login.html';
     } catch (error) {
         window.showGlobalNotification('Chyba pri odhlásení. Skúste to znova.', 'error');
@@ -1007,10 +993,6 @@ const updateHeaderLinks = (userProfileData) => {
     const logoutButton = document.getElementById('logout-button');
     const headerElement = document.querySelector('header');
     const navLinks = document.querySelectorAll('nav a');
-
-    if (headerElement) {
-        headerElement.style.zIndex = '60';
-    }
     
     if (!authLink || !profileLink || !logoutButton || !headerElement) {
         return;
