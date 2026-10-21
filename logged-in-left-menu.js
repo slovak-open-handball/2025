@@ -216,8 +216,6 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
     const applyMenuState = () => {
         const role = userProfileData?.role || 'default';
         const roleColor = getColorForRole(role);
-        leftMenu.classList.add('z-50');
-        menuSpacer.classList.add('relative', 'z-50');
         if (isMenuToggled) {
             leftMenu.classList.remove('w-16'); leftMenu.classList.add('w-64');
             menuSpacer.classList.remove('w-16'); menuSpacer.classList.add('w-64');
