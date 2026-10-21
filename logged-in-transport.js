@@ -4406,7 +4406,7 @@ const TransportApp = ({ userProfileData }) => {
             return;
         }
 
-        const [busId, rowId, side] = assignBusSelectedKey.split('|');
+        const [busId, boardingRowId, alightingRowId, side] = assignBusSelectedKey.split('|');
 
         const teamKey = `${transfer.teamName}|${transfer.category || ''}`;
         const trFrom = normalizePlaceName(transfer.fromLocation);
@@ -4418,6 +4418,24 @@ const TransportApp = ({ userProfileData }) => {
 
         let boardingRow = null;
         let alightingRow = null;
+        
+        // Najprv skús priamo podľa ID z výberu
+        if (boardingRowId) {
+            boardingRow = rows.find((r) => r.id === boardingRowId) || null;
+        }
+        if (alightingRowId) {
+            alightingRow = rows.find((r) => r.id === alightingRowId) || null;
+        }
+
+        // Fallback – ak sa nenašli, skús podľa miest
+        if (!boardingRow || !alightingRow) {
+            rows.forEach((row) => {
+                const rowFrom = normalizePlaceName(row.placeFrom);
+                const rowTo = normalizePlaceName(row.placeTo);
+                if (!boardingRow && rowFrom && rowFrom === trFrom) boardingRow = row;
+                if (!alightingRow && rowTo && rowTo === trTo) alightingRow = row;
+            });
+        }
 
         rows.forEach((row) => {
             const rowFrom = normalizePlaceName(row.placeFrom);
@@ -6439,7 +6457,7 @@ const TransportApp = ({ userProfileData }) => {
                                 setAssignBusMatches(matches);
                                 setAssignBusSelectedKey(
                                     matches.length > 0
-                                        ? `${matches[0].bus.id}|${matches[0].trip.firstRowId}|${matches[0].side}`
+                                        ? `${matches[0].bus.id}|${matches[0].boardingRow?.id || ''}|${matches[0].alightingRow?.id || ''}|${matches[0].side}`
                                         : ''
                                 );
                                 setShowAssignBusModal(true);
@@ -6573,7 +6591,7 @@ const TransportApp = ({ userProfileData }) => {
                                     return null;
                                 }
                             
-                                const key = `${m.bus.id}|${m.trip.firstRowId}|${m.side}`;
+                                const key = `${m.bus.id}|${m.boardingRow?.id || ''}|${m.alightingRow?.id || ''}|${m.side}`;
                                 const isSelected = assignBusSelectedKey === key;
                             
                                 const hasBoarding = !!m.boardingRow;
@@ -6612,7 +6630,7 @@ const TransportApp = ({ userProfileData }) => {
                                                 React.createElement(
                                                     'div',
                                                     { className: 'text-xs text-gray-500 mt-0.5' },
-                                                    `${m.trip.timeFrom || '—'} – ${m.trip.timeTo || '—'}`
+                                                    `Odchod: ${m.boardingTime || '—'}${m.alightingTime ? ` · Príchod: ${m.alightingTime}` : ''}`
                                                 )
                                             ),
                                             React.createElement(
