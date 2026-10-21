@@ -3404,8 +3404,6 @@ const TransportApp = ({ userProfileData }) => {
                 teamsIn: [],
                 teamsOut: [],
                 count: null,
-                createdAt: Timestamp.fromDate(new Date()),
-                createdBy: userProfileData?.email || null,
             });
             window.showGlobalNotification('Riadok pridaný.', 'success');
         } catch (err) {
@@ -3596,8 +3594,6 @@ const TransportApp = ({ userProfileData }) => {
                 type: 'bus',
                 number: nextNumber,
                 name: `Bus ${nextNumber}`,
-                createdAt: Timestamp.fromDate(new Date()),
-                createdBy: userProfileData?.email || null,
             });
     
             window.showGlobalNotification(`Pridaný Bus ${nextNumber}.`, 'success');
