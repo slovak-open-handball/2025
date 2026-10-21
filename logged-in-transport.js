@@ -4005,9 +4005,6 @@ const TransportApp = ({ userProfileData }) => {
 
         // ============================================================
         // Pomocná: z textu "Presun z X do Y" vytiahne { from, to }.
-        // Nahrádza:
-        //   "ubytovania" / "ubytovanie" → "ubytovňa"
-        //   "zastávky" / "zastávka"     → "zastávka"
         // ============================================================
         const parseTransferText = (text) => {
             if (!text) return null;
@@ -4028,8 +4025,7 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         // ============================================================
-        // Pomocná: z `when` vytiahne číselný kľúč pre začiatok:
-        //   YYYYMMDD + HHMM (ak chýba čas, berie sa 00:00)
+        // Pomocná: z `when` vytiahne číselný kľúč pre začiatok
         // ============================================================
         const buildStartSortKey = (t) => {
             const r = parseWhenRange(t.when);
@@ -4041,8 +4037,7 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         // ============================================================
-        // Pomocná: z `when` vytiahne číselný kľúč pre koniec:
-        //   YYYYMMDD + HHMM (ak chýba čas, berie sa 23:59)
+        // Pomocná: z `when` vytiahne číselný kľúč pre koniec
         // ============================================================
         const buildEndSortKey = (t) => {
             const r = parseWhenRange(t.when);
@@ -4054,11 +4049,7 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         // ============================================================
-        // Zoradenie:
-        //   1) primárne podľa dátumu a času ZAČIATKU presunu
-        //   2) ak je začiatok rovnaký → podľa dátumu a času KONCA presunu
-        //   3) ak aj koniec rovnaký → podľa kategórie
-        //   4) ak aj kategória rovnaká → podľa názvu tímu
+        // Zoradenie: začiatok → koniec → kategória → tím
         // ============================================================
         const sortedTransfers = [...filtered].sort((a, b) => {
             const startA = buildStartSortKey(a);
@@ -4109,6 +4100,9 @@ const TransportApp = ({ userProfileData }) => {
                     'Zatiaľ žiadne vygenerované presuny. Kliknite na "+" vpravo dole a vygenerujte časovú os.'
                 )
                 : React.createElement(
+                    'div',
+                    { className: 'max-h-[70vh] overflow-y-auto p-3' },
+                    React.createElement(
                         'ul',
                         { className: 'space-y-2' },
                         sortedTransfers.map((t) => {
@@ -4137,7 +4131,7 @@ const TransportApp = ({ userProfileData }) => {
                                 else if (et) timeLabel = et;
                             }
 
-                            // 3. riadok – miesta (s normalizáciou "ubytovňa" a "zastávka")
+                            // 3. riadok – miesta
                             let routeLabel = null;
                             if (transferInfo) {
                                 routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
@@ -4151,10 +4145,10 @@ const TransportApp = ({ userProfileData }) => {
                                     style: {
                                         borderLeft: transportColor
                                             ? `6px solid ${transportColor}`
-                                            : '2px solid #c4b5fd', // fallback – pôvodná violet-300
+                                            : '2px solid #c4b5fd',
                                     }
                                 },
-                                // 1. riadok – KATEGÓRIA • TÍM (kategória je pred tímom)
+                                // 1. riadok – KATEGÓRIA • TÍM
                                 React.createElement(
                                     'span',
                                     { className: 'text-sm flex flex-wrap items-center gap-1' },
@@ -4200,7 +4194,7 @@ const TransportApp = ({ userProfileData }) => {
                                         { className: 'text-sm text-gray-900 font-medium' },
                                         routeLabel
                                     ),
-                                // Fallback – ak sa nepodarilo parsovať, zobraz pôvodný text
+                                // Fallback
                                 (!dateLabel && !timeLabel && !routeLabel) &&
                                     React.createElement(
                                         'span',
