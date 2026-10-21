@@ -3658,15 +3658,28 @@ const TransportApp = ({ userProfileData }) => {
 
     // ============================================================
     // POMOCNÁ: vypočíta počet členov tímu z teamKey "Názov|Kategória"
+    // Ak tím nie je v users (nemá známe počty), použije sa priemer
+    // kategórie (rovnaká logika ako getCategoryAverageForTransfer).
     // ============================================================
     const getTeamMembersCount = (teamKey) => {
         const parts = String(teamKey).split('|');
         const teamName = parts[0] || '';
         const category = parts[1] || '';
+
         const counts = getTeamCountsForTransfer(category, teamName);
-        if (!counts) return 0;
-        return (counts.players || 0) + (counts.menRT || 0) + (counts.womenRT || 0)
-            + (counts.menDrivers || 0) + (counts.womenDrivers || 0);
+        if (counts) {
+            return (counts.players || 0)
+                + (counts.menRT || 0)
+                + (counts.womenRT || 0)
+                + (counts.menDrivers || 0)
+                + (counts.womenDrivers || 0);
+        }
+
+        // Fallback: tím nie je v users (napr. superstructure) → priemer kategórie
+        const avg = getCategoryAverageForTransfer(category);
+        if (avg != null) return avg;
+
+        return 0;
     };
 
     // ============================================================
