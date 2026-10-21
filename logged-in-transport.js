@@ -3699,19 +3699,19 @@ const TransportApp = ({ userProfileData }) => {
                     stopOptions
                 )
             ),
-            // 5. tímy nástup (len badge, bez inputu, s farbou kategórie)
+            // 5. tímy nástup (len text vo farbe kategórie, bez pozadia a rámčeka)
             React.createElement('td', { className: 'border border-gray-300 p-1 align-top' },
                 (row.teamsIn || []).length === 0
                     ? React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—')
                     : React.createElement(
                         'div',
-                        { className: 'flex flex-wrap gap-1' },
+                        { className: 'flex flex-wrap gap-2' },
                         (row.teamsIn || []).map((tn, i) => {
                             // tn môže byť "Názov tímu" alebo "Názov tímu|Kategória"
                             const parts = String(tn).split('|');
                             const teamLabel = parts[0] || tn;
                             const teamCategory = parts[1] || '';
-                            const colors = getCategoryBadgeColors(teamCategory);
+                            const textColor = getCategoryTextColor(teamCategory);
                             return React.createElement(
                                 'span',
                                 {
@@ -3721,12 +3721,8 @@ const TransportApp = ({ userProfileData }) => {
                                         updateBusRowField(row.id, 'teamsIn', newList);
                                     },
                                     title: 'Kliknutím odstrániť tím',
-                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold border cursor-pointer hover:opacity-80',
-                                    style: {
-                                        backgroundColor: colors.bg,
-                                        color: colors.text,
-                                        borderColor: colors.border,
-                                    }
+                                    className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
+                                    style: { color: textColor }
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-right-to-bracket text-[9px]' }),
                                 teamLabel
@@ -3734,18 +3730,18 @@ const TransportApp = ({ userProfileData }) => {
                         })
                     )
             ),
-            // 6. tímy výstup (len badge, bez inputu, s farbou kategórie)
+            // 6. tímy výstup (len text vo farbe kategórie, bez pozadia a rámčeka)
             React.createElement('td', { className: 'border border-gray-300 p-1 align-top' },
                 (row.teamsOut || []).length === 0
                     ? React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—')
                     : React.createElement(
                         'div',
-                        { className: 'flex flex-wrap gap-1' },
+                        { className: 'flex flex-wrap gap-2' },
                         (row.teamsOut || []).map((tn, i) => {
                             const parts = String(tn).split('|');
                             const teamLabel = parts[0] || tn;
                             const teamCategory = parts[1] || '';
-                            const colors = getCategoryBadgeColors(teamCategory);
+                            const textColor = getCategoryTextColor(teamCategory);
                             return React.createElement(
                                 'span',
                                 {
@@ -3755,12 +3751,8 @@ const TransportApp = ({ userProfileData }) => {
                                         updateBusRowField(row.id, 'teamsOut', newList);
                                     },
                                     title: 'Kliknutím odstrániť tím',
-                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold border cursor-pointer hover:opacity-80',
-                                    style: {
-                                        backgroundColor: colors.bg,
-                                        color: colors.text,
-                                        borderColor: colors.border,
-                                    }
+                                    className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
+                                    style: { color: textColor }
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-right-from-bracket text-[9px]' }),
                                 teamLabel
@@ -4715,31 +4707,13 @@ const TransportApp = ({ userProfileData }) => {
         const toHex = (c) => c.toString(16).padStart(2, '0');
         return `#${toHex(mix(r))}${toHex(mix(g))}${toHex(mix(b))}`;
     };
-
+    
     // ============================================================
-    // Pomocná: farby pre badge tímu podľa kategórie
+    // Pomocná: farba textu pre tím podľa kategórie
     // ============================================================
-    const getCategoryBadgeColors = (categoryName) => {
+    const getCategoryTextColor = (categoryName) => {
         const hex = getTransportColorForCategory(categoryName);
-        if (!hex) {
-            return {
-                bg: '#dcfce7',
-                text: '#166534',
-                border: '#86efac',
-            };
-        }
-        const light = lightenHex(hex, 0.2) || hex;
-        let h = String(hex).trim().replace(/^#/, '');
-        if (h.length === 3) h = h.split('').map((c) => c + c).join('');
-        let text = '#111827';
-        if (/^[0-9a-fA-F]{6}$/.test(h)) {
-            const r = parseInt(h.slice(0, 2), 16);
-            const g = parseInt(h.slice(2, 4), 16);
-            const b = parseInt(h.slice(4, 6), 16);
-            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-            text = brightness > 160 ? '#111827' : '#ffffff';
-        }
-        return { bg: light, text, border: hex };
+        return hex || '#374151'; // fallback tmavosivá
     };
 
     // ============================================================
