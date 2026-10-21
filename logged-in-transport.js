@@ -212,7 +212,12 @@ const TransportApp = ({ userProfileData }) => {
     const [selectedCategoryForDelete, setSelectedCategoryForDelete] = useState('');
     
     // ==== VAROVANIE: CHÝBAJÚCE TRVANIE JÁZDY ====
-    const [missingTravelTimeWarning, setMissingTravelTimeWarning] = useState([]);    
+    const [missingTravelTimeWarning, setMissingTravelTimeWarning] = useState([]);
+
+    // ==== MODÁLNE OKNO PRE ÚPRAVU VYGENEROVANÉHO PRESUNU ====
+    const [editingTransfer, setEditingTransfer] = useState(null);
+    const [editingTransferStops, setEditingTransferStops] = useState([]); // medzizastávky medzi from a to
+    const [editingTransferSaving, setEditingTransferSaving] = useState(false);
 
     // ============================================================
     // PREDNAČÍTANIE UBYTOVNÍ PRE SUPERSTRUCTURE TÍMY
@@ -3858,6 +3863,78 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // ULOŽENIE UPRAVENÉHO PRESUNU (s medzizastávkami)
+    // ============================================================
+    const saveEditedTransfer = async () => {
+        if (!window.db || !editingTransfer) return;
+
+        const original = editingTransfer;
+        const stops = (editingTransferStops || []).map((s) => String(s || '').trim()).filter(Boolean);
+
+        // Zlož trasu: from → stop1 → stop2 → ... → to
+        const route = [original.fromLocation, ...stops, original.toLocation].filter(Boolean);
+
+        if (route.length < 2) {
+            window.showGlobalNotification('Trasa musí mať aspoň dve zastávky.', 'error');
+            return;
+        }
+
+        setEditingTransferSaving(true);
+        try {
+            const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+
+            // 1) Zmazať pôvodný záznam
+            const deletePatch = { [original.key]: deleteField() };
+
+            // 2) Vytvoriť nové záznamy pre každý segment trasy
+            const newTransfersPatch = {};
+            for (let i = 0; i < route.length - 1; i++) {
+                const from = route[i];
+                const to = route[i + 1];
+                const text = `Presun z ${from} do ${to}`;
+
+                // Zachovaj pôvodný `when` pre všetky segmenty
+                const when = original.when;
+                const key = buildTransferKey(original.category, original.teamName, when, text);
+
+                newTransfersPatch[key] = {
+                    category: original.category,
+                    teamName: original.teamName,
+                    when,
+                    text,
+                    fromLocation: from,
+                    toLocation: to,
+                    dayKey: original.dayKey,
+                    generatedAt: Timestamp.fromDate(new Date()),
+                    generatedBy: (userProfileData && userProfileData.email) || null,
+                };
+            }
+
+            await setDoc(
+                docRef,
+                {
+                    [TRANSPORT_TRANSFERS_FIELD]: {
+                        ...deletePatch,
+                        ...newTransfersPatch,
+                    },
+                    updatedAt: Timestamp.fromDate(new Date()),
+                    updatedBy: (userProfileData && userProfileData.email) || null,
+                },
+                { merge: true }
+            );
+
+            window.showGlobalNotification('Presun bol upravený.', 'success');
+            setEditingTransfer(null);
+            setEditingTransferStops([]);
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri ukladaní upraveného presunu:', err);
+            window.showGlobalNotification('Nepodarilo sa uložiť úpravu presunu.', 'error');
+        } finally {
+            setEditingTransferSaving(false);
+        }
+    };
+
+    // ============================================================
     // TRVANIA JÁZDY
     // ============================================================
     const saveTravelTime = async (fromStop, toStop, rawValue) => {
@@ -4684,7 +4761,11 @@ const TransportApp = ({ userProfileData }) => {
                                 'li',
                                 {
                                     key: t.key,
-                                    className: 'text-sm text-gray-700 flex flex-col leading-snug rounded-md px-2 py-1.5' +
+                                    onClick: () => {
+                                        setEditingTransfer(t);
+                                        setEditingTransferStops([]);
+                                    },
+                                    className: 'text-sm text-gray-700 flex flex-col leading-snug rounded-md px-2 py-1.5 cursor-pointer hover:shadow-md transition-shadow' +
                                         (boxBg ? '' : ' bg-violet-50/40'),
                                     style: {
                                         borderLeft: transportColor
@@ -5244,6 +5325,200 @@ const TransportApp = ({ userProfileData }) => {
                             className: 'px-4 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-colors'
                         },
                         'Vygenerovať'
+                    )
+                )
+            )
+        ),
+        // ============================================================
+        // MODÁLNE OKNO – Úprava vygenerovaného presunu (medzizastávky)
+        // ============================================================
+        editingTransfer && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
+                onClick: () => {
+                    setEditingTransfer(null);
+                    setEditingTransferStops([]);
+                }
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto',
+                    onClick: (e) => e.stopPropagation()
+                },
+                // Hlavička
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-route text-blue-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'div',
+                        { className: 'flex-1' },
+                        React.createElement(
+                            'h3',
+                            { className: 'text-lg font-semibold text-gray-800' },
+                            'Upraviť presun'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-xs text-gray-500 mt-0.5' },
+                            `${editingTransfer.teamName} • ${editingTransfer.category}`
+                        )
+                    )
+                ),
+                // Info o pôvodnom presune
+                React.createElement(
+                    'div',
+                    { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm' },
+                    React.createElement(
+                        'div',
+                        { className: 'font-medium text-gray-700 mb-1' },
+                        'Pôvodná trasa:'
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'text-gray-600' },
+                        `${editingTransfer.fromLocation} → ${editingTransfer.toLocation}`
+                    ),
+                    editingTransfer.when &&
+                        React.createElement(
+                            'div',
+                            { className: 'text-xs text-gray-500 mt-1' },
+                            editingTransfer.when
+                        )
+                ),
+                // Medzizastávky
+                React.createElement(
+                    'div',
+                    { className: 'mb-4' },
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center justify-between mb-2' },
+                        React.createElement(
+                            'label',
+                            { className: 'block text-sm font-medium text-gray-700' },
+                            'Medzizastávky (voliteľné)'
+                        ),
+                        React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: () => setEditingTransferStops((prev) => [...prev, '']),
+                                className: 'text-sm px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1'
+                            },
+                            React.createElement('i', { className: 'fa-solid fa-plus' }),
+                            'Pridať'
+                        )
+                    ),
+                    editingTransferStops.length === 0 &&
+                        React.createElement(
+                            'p',
+                            { className: 'text-xs text-gray-400 italic' },
+                            'Žiadne medzizastávky. Presun pôjde priamo z „' + editingTransfer.fromLocation + '" do „' + editingTransfer.toLocation + '".'
+                        ),
+                    editingTransferStops.length > 0 &&
+                        React.createElement(
+                            'ul',
+                            { className: 'space-y-2' },
+                            editingTransferStops.map((stopValue, idx) =>
+                                React.createElement(
+                                    'li',
+                                    {
+                                        key: `stop-${idx}`,
+                                        className: 'flex items-center gap-2'
+                                    },
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-xs text-gray-500 w-6 text-right' },
+                                        `${idx + 1}.`
+                                    ),
+                                    React.createElement(
+                                        'select',
+                                        {
+                                            value: stopValue,
+                                            onChange: (e) => {
+                                                const v = e.target.value;
+                                                setEditingTransferStops((prev) => {
+                                                    const copy = [...prev];
+                                                    copy[idx] = v;
+                                                    return copy;
+                                                });
+                                            },
+                                            className: 'flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                                        },
+                                        React.createElement('option', { value: '' }, '— vyber zastávku —'),
+                                        stopsList.map((s) =>
+                                            React.createElement(
+                                                'option',
+                                                { key: s.id, value: s.name },
+                                                s.name
+                                            )
+                                        )
+                                    ),
+                                    React.createElement(
+                                        'button',
+                                        {
+                                            type: 'button',
+                                            onClick: () => {
+                                                setEditingTransferStops((prev) => prev.filter((_, i) => i !== idx));
+                                            },
+                                            className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 flex items-center justify-center',
+                                            title: 'Odstrániť medzizastávku'
+                                        },
+                                        React.createElement('i', { className: 'fa-solid fa-xmark' })
+                                    )
+                                )
+                            )
+                        )
+                ),
+                // Náhľad novej trasy
+                React.createElement(
+                    'div',
+                    { className: 'mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm' },
+                    React.createElement(
+                        'div',
+                        { className: 'font-medium text-blue-700 mb-1' },
+                        'Nová trasa:'
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'text-blue-800' },
+                        [editingTransfer.fromLocation, ...(editingTransferStops || []).filter(Boolean), editingTransfer.toLocation]
+                            .filter(Boolean)
+                            .join(' → ')
+                    )
+                ),
+                // Tlačidlá
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => {
+                                setEditingTransfer(null);
+                                setEditingTransferStops([]);
+                            },
+                            disabled: editingTransferSaving,
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: saveEditedTransfer,
+                            disabled: editingTransferSaving,
+                            className: 'px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-60 flex items-center gap-2'
+                        },
+                        editingTransferSaving &&
+                            React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                        'Uložiť'
                     )
                 )
             )
