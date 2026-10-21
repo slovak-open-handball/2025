@@ -193,6 +193,8 @@ const TransportApp = ({ userProfileData }) => {
 
     // ==== PLÁNOVANIE – AUTOBUSY A DNI TURNAJA ====
     const [buses, setBuses] = useState([]);
+    // Mapa: busId|dayKey → [ { id, order, timeFrom, timeTo, placeFrom, placeTo, teamsIn, teamsOut, count } ]
+    const [busRows, setBusRows] = useState({});
     const [tournamentDays, setTournamentDays] = useState([]);
     const [tournamentDaysLoaded, setTournamentDaysLoaded] = useState(false);
     const [busSaving, setBusSaving] = useState(false);
@@ -2658,30 +2660,58 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transportTravelTimes:', e);
         }
 
-        // 0a1d) KOLEKCIA `transport` – autobusy (dokumenty typu 'bus')
+        // 0a1d) KOLEKCIA `transport` – autobusy (type='bus') + riadky (type='busRow')
         let unsubscribeBuses = null;
         try {
             const transportRef = collection(window.db, 'transport');
             unsubscribeBuses = onSnapshot(transportRef, (snapshot) => {
-                const list = [];
+                const busesList = [];
+                const rowsGrouped = {};
+
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data() || {};
-                    if (data.type !== 'bus') return;
-                    const num = Number(data.number);
-                    list.push({
-                        id: docSnap.id,
-                        name: data.name || (Number.isFinite(num) ? `Bus ${num}` : 'Bus'),
-                        number: Number.isFinite(num) ? num : 0,
-                    });
+
+                    // --- AUTOBUSY ---
+                    if (data.type === 'bus') {
+                        const num = Number(data.number);
+                        busesList.push({
+                            id: docSnap.id,
+                            name: data.name || (Number.isFinite(num) ? `Bus ${num}` : 'Bus'),
+                            number: Number.isFinite(num) ? num : 0,
+                        });
+                        return;
+                    }
+
+                    // --- RIADKY AUTOBUSOV ---
+                    if (data.type === 'busRow') {
+                        if (!data.busId || !data.dayKey) return;
+                        const key = `${data.busId}|${data.dayKey}`;
+                        if (!rowsGrouped[key]) rowsGrouped[key] = [];
+                        rowsGrouped[key].push({
+                            id: docSnap.id,
+                            order: Number(data.order) || 0,
+                            timeFrom: data.timeFrom || '',
+                            timeTo: data.timeTo || '',
+                            placeFrom: data.placeFrom || '',
+                            placeTo: data.placeTo || '',
+                            teamsIn: Array.isArray(data.teamsIn) ? data.teamsIn : [],
+                            teamsOut: Array.isArray(data.teamsOut) ? data.teamsOut : [],
+                            count: data.count ?? null,
+                        });
+                    }
                 });
-                list.sort((a, b) => a.number - b.number);
-                setBuses(list);
+
+                busesList.sort((a, b) => a.number - b.number);
+                Object.values(rowsGrouped).forEach(arr => arr.sort((a, b) => a.order - b.order));
+
+                setBuses(busesList);
+                setBusRows(rowsGrouped);
             }, (err) => {
-                console.error('[TRANSPORT] onSnapshot(transport – buses) error:', err);
+                console.error('[TRANSPORT] onSnapshot(transport) error:', err);
             });
         } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport (buses):', e);
-        }
+            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport:', e);
+        }   
 
         // 0a2) STRAVOVACIA JEDNOTKA (unitMinutes)
         try {
@@ -3334,6 +3364,211 @@ const TransportApp = ({ userProfileData }) => {
         });
         setTravelTimesDraft(draft);
     }, [travelTimes]);
+
+    // ============================================================
+    // POMOCNÁ: výpočet trvania v minútach z "HH:MM" – "HH:MM"
+    // ============================================================
+    const computeDurationMinutes = (timeFrom, timeTo) => {
+        if (!timeFrom || !timeTo) return null;
+        const re = /^(\d{1,2}):(\d{2})$/;
+        const a = re.exec(String(timeFrom));
+        const b = re.exec(String(timeTo));
+        if (!a || !b) return null;
+        const fromMin = Number(a[1]) * 60 + Number(a[2]);
+        const toMin = Number(b[1]) * 60 + Number(b[2]);
+        const diff = toMin - fromMin;
+        return diff >= 0 ? diff : null;
+    };
+
+    // ============================================================
+    // PRIDANIE RIADKU DO AUTOBUSU PRE DANÝ DEŇ
+    // ============================================================
+    const addBusRow = async (bus, dayKey) => {
+        if (!window.db || !bus || !dayKey) return;
+        try {
+            const existing = busRows[`${bus.id}|${dayKey}`] || [];
+            const nextOrder = existing.length > 0
+                ? Math.max(...existing.map(r => r.order || 0)) + 1
+                : 1;
+
+            await addDoc(collection(window.db, 'transport'), {
+                type: 'busRow',
+                busId: bus.id,
+                busName: bus.name,
+                dayKey,
+                order: nextOrder,
+                timeFrom: '',
+                timeTo: '',
+                placeFrom: '',
+                placeTo: '',
+                teamsIn: [],
+                teamsOut: [],
+                count: null,
+                createdAt: Timestamp.fromDate(new Date()),
+                createdBy: userProfileData?.email || null,
+            });
+            window.showGlobalNotification('Riadok pridaný.', 'success');
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri pridávaní riadku:', err);
+            window.showGlobalNotification('Nepodarilo sa pridať riadok.', 'error');
+        }
+    };
+
+    // ============================================================
+    // AKTUALIZÁCIA POĽA RIADKU
+    // ============================================================
+    const updateBusRowField = async (rowId, field, value) => {
+        if (!window.db || !rowId) return;
+        try {
+            await updateDoc(doc(window.db, 'transport', rowId), { [field]: value });
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri aktualizácii riadku:', err);
+            window.showGlobalNotification('Nepodarilo sa uložiť zmenu.', 'error');
+        }
+    };
+
+    // ============================================================
+    // ODSTRÁNENIE RIADKU
+    // ============================================================
+    const removeBusRow = async (rowId) => {
+        if (!window.db || !rowId) return;
+        try {
+            await deleteDoc(doc(window.db, 'transport', rowId));
+            window.showGlobalNotification('Riadok odstránený.', 'info');
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri odstraňovaní riadku:', err);
+            window.showGlobalNotification('Nepodarilo sa odstrániť riadok.', 'error');
+        }
+    };
+
+    // ============================================================
+    // RENDER HLAVIČKY RIADKOV (8 stĺpcov)
+    // ============================================================
+    const renderBusRowsHeader = () => React.createElement(
+        'thead',
+        null,
+        React.createElement(
+            'tr',
+            { className: 'bg-gray-100 text-xs font-semibold text-gray-700' },
+            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '70px' } }, 'Od'),
+            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '70px' } }, 'Do'),
+            React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Miesto od'),
+            React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Miesto do'),
+            React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Nástup'),
+            React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Výstup'),
+            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '60px' } }, 'Počet'),
+            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '60px' } }, 'Min'),
+            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '36px' } }, '')
+        )
+    );
+
+    // ============================================================
+    // RENDER JEDNÉHO RIADKU (8 stĺpcov + mazanie)
+    // ============================================================
+    const renderBusRow = (row) => {
+        const duration = computeDurationMinutes(row.timeFrom, row.timeTo);
+
+        const inputCls = 'w-full px-1 py-1 text-sm border border-gray-300 rounded text-black focus:outline-none focus:ring-2 focus:ring-green-500';
+
+        return React.createElement(
+            'tr',
+            { key: row.id, className: 'hover:bg-gray-50' },
+            // 1. čas začiatok
+            React.createElement('td', { className: 'border border-gray-300 p-1' },
+                React.createElement('input', {
+                    type: 'time',
+                    value: row.timeFrom || '',
+                    onChange: (e) => updateBusRowField(row.id, 'timeFrom', e.target.value),
+                    className: inputCls,
+                })
+            ),
+            // 2. čas koniec
+            React.createElement('td', { className: 'border border-gray-300 p-1' },
+                React.createElement('input', {
+                    type: 'time',
+                    value: row.timeTo || '',
+                    onChange: (e) => updateBusRowField(row.id, 'timeTo', e.target.value),
+                    className: inputCls,
+                })
+            ),
+            // 3. miesto začiatok
+            React.createElement('td', { className: 'border border-gray-300 p-1' },
+                React.createElement('input', {
+                    type: 'text',
+                    value: row.placeFrom || '',
+                    onChange: (e) => updateBusRowField(row.id, 'placeFrom', e.target.value),
+                    placeholder: 'miesto...',
+                    className: inputCls,
+                })
+            ),
+            // 4. miesto koniec
+            React.createElement('td', { className: 'border border-gray-300 p-1' },
+                React.createElement('input', {
+                    type: 'text',
+                    value: row.placeTo || '',
+                    onChange: (e) => updateBusRowField(row.id, 'placeTo', e.target.value),
+                    placeholder: 'miesto...',
+                    className: inputCls,
+                })
+            ),
+            // 5. tímy nástup
+            React.createElement('td', { className: 'border border-gray-300 p-1' },
+                React.createElement('input', {
+                    type: 'text',
+                    value: (row.teamsIn || []).join(', '),
+                    onChange: (e) => updateBusRowField(
+                        row.id,
+                        'teamsIn',
+                        e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                    ),
+                    placeholder: 'tím A, tím B',
+                    className: inputCls,
+                })
+            ),
+            // 6. tímy výstup
+            React.createElement('td', { className: 'border border-gray-300 p-1' },
+                React.createElement('input', {
+                    type: 'text',
+                    value: (row.teamsOut || []).join(', '),
+                    onChange: (e) => updateBusRowField(
+                        row.id,
+                        'teamsOut',
+                        e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                    ),
+                    placeholder: 'tím C',
+                    className: inputCls,
+                })
+            ),
+            // 7. počet (manuálne)
+            React.createElement('td', { className: 'border border-gray-300 p-1' },
+                React.createElement('input', {
+                    type: 'number',
+                    min: '0',
+                    value: row.count ?? '',
+                    onChange: (e) => updateBusRowField(
+                        row.id,
+                        'count',
+                        e.target.value === '' ? null : Number(e.target.value)
+                    ),
+                    className: inputCls + ' text-center',
+                })
+            ),
+            // 8. trvanie v min (read-only, vypočítané)
+            React.createElement('td', {
+                className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold',
+                style: { color: duration != null ? '#1d4ed8' : '#9ca3af' },
+            }, duration != null ? duration : '—'),
+            // 9. mazanie riadku
+            React.createElement('td', { className: 'border border-gray-300 p-1 text-center' },
+                React.createElement('button', {
+                    type: 'button',
+                    onClick: () => removeBusRow(row.id),
+                    className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 flex items-center justify-center mx-auto',
+                    title: 'Odstrániť riadok',
+                }, React.createElement('i', { className: 'fa-solid fa-xmark' }))
+            )
+        );
+    };
 
     // ============================================================
     // PRIDANIE NOVÉHO AUTOBUSU
@@ -4037,23 +4272,42 @@ const TransportApp = ({ userProfileData }) => {
                                                                 'button',
                                                                 {
                                                                     type: 'button',
-                                                                    onClick: () => {
-                                                                        // TODO: sem neskôr doplníme funkciu
-                                                                        console.log('[TRANSPORT] Kliknuté "+" pre deň:', {
-                                                                            busId: bus.id,
-                                                                            busName: bus.name,
-                                                                            dayKey: day.dayKey,
-                                                                            dateLabel: day.dateLabel,
-                                                                            dayName: day.dayName,
-                                                                        });
-                                                                    },
+                                                                    onClick: () => addBusRow(bus, day.dayKey),
                                                                     className: 'w-9 h-9 rounded-full bg-green-600 text-white shadow hover:bg-green-700 active:scale-95 transition-all duration-150 flex items-center justify-center text-lg font-bold mx-auto',
-                                                                    title: `Pridať pre deň ${day.dateLabel}`
+                                                                    title: `Pridať riadok pre deň ${day.dateLabel}`
                                                                 },
                                                                 React.createElement('i', { className: 'fa-solid fa-plus' })
                                                             )
                                                         )
-                                                    )
+                                                    ),
+
+                                                    // NOVÉ: tabuľka s riadkami pre tento bus+deň
+                                                    (() => {
+                                                        const key = `${bus.id}|${day.dayKey}`;
+                                                        const rows = (busRows[key] || []);
+                                                        if (rows.length === 0) return null;
+                                                        return React.createElement(
+                                                            'tr',
+                                                            null,
+                                                            React.createElement(
+                                                                'td',
+                                                                {
+                                                                    colSpan: 1,
+                                                                    className: 'border border-gray-200 p-0'
+                                                                },
+                                                                React.createElement(
+                                                                    'table',
+                                                                    { className: 'w-full border-collapse text-xs' },
+                                                                    renderBusRowsHeader(),
+                                                                    React.createElement(
+                                                                        'tbody',
+                                                                        null,
+                                                                        rows.map(renderBusRow)
+                                                                    )
+                                                                )
+                                                            )
+                                                        );
+                                                    })()
                                                 )
                                             )
                                         )
