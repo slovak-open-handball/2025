@@ -4195,24 +4195,24 @@ const TransportApp = ({ userProfileData }) => {
     const assignTransferToBus = async () => {
         if (!window.db || !transferActionModal?.transfer) return;
         const transfer = transferActionModal.transfer;
-
+    
         if (!assignBusSelectedKey) {
             window.showGlobalNotification('Vyberte autobus/riadok.', 'error');
             return;
         }
-
+    
         const [busId, rowId, side] = assignBusSelectedKey.split('|');
         if (!busId || !rowId || !side) {
             window.showGlobalNotification('Neplatný výber.', 'error');
             return;
         }
-
+    
         const teamName = String(transfer.teamName || '').trim();
         if (!teamName) {
             window.showGlobalNotification('Presun nemá názov tímu.', 'error');
             return;
         }
-
+    
         // Nájdi aktuálny riadok
         let currentRow = null;
         Object.values(busRows || {}).forEach((rows) => {
@@ -4220,27 +4220,54 @@ const TransportApp = ({ userProfileData }) => {
                 if (r.id === rowId) currentRow = r;
             });
         });
-
+    
         if (!currentRow) {
             window.showGlobalNotification('Riadok autobusu sa nenašiel.', 'error');
             return;
         }
-
+    
         setAssignBusSaving(true);
         try {
             const teamKey = `${teamName}|${transfer.category || ''}`;
-            if (side === 'in') {
+            
+            // NOVÉ: Zisti, či riadok sedí s OD aj DO súčasne
+            const rowFrom = String(currentRow.placeFrom || '').trim();
+            const rowTo = String(currentRow.placeTo || '').trim();
+            const trFrom = String(transfer.fromLocation || '').trim();
+            const trTo = String(transfer.toLocation || '').trim();
+            
+            const matchesFrom = rowFrom && rowFrom === trFrom;
+            const matchesTo = rowTo && rowTo === trTo;
+            const matchesBoth = matchesFrom && matchesTo;
+    
+            // Ak sedí oboje, pridaj tím do OBIDVOCH zoznamov
+            if (matchesBoth) {
+                const newTeamsIn = Array.from(new Set([...(currentRow.teamsIn || []), teamKey]));
+                const newTeamsOut = Array.from(new Set([...(currentRow.teamsOut || []), teamKey]));
+                await updateDoc(doc(window.db, 'transport', rowId), { 
+                    teamsIn: newTeamsIn,
+                    teamsOut: newTeamsOut 
+                });
+                window.showGlobalNotification(
+                    `Tím "${teamName}" bol priradený (nástup aj výstup).`,
+                    'success'
+                );
+            } else if (side === 'in') {
                 const newTeamsIn = Array.from(new Set([...(currentRow.teamsIn || []), teamKey]));
                 await updateDoc(doc(window.db, 'transport', rowId), { teamsIn: newTeamsIn });
+                window.showGlobalNotification(
+                    `Tím "${teamName}" bol priradený (nástup).`,
+                    'success'
+                );
             } else {
                 const newTeamsOut = Array.from(new Set([...(currentRow.teamsOut || []), teamKey]));
                 await updateDoc(doc(window.db, 'transport', rowId), { teamsOut: newTeamsOut });
+                window.showGlobalNotification(
+                    `Tím "${teamName}" bol priradený (výstup).`,
+                    'success'
+                );
             }
-
-            window.showGlobalNotification(
-                `Tím "${teamName}" bol priradený (${side === 'in' ? 'nástup' : 'výstup'}).`,
-                'success'
-            );
+    
             setShowAssignBusModal(false);
             setTransferActionModal(null);
             setAssignBusMatches([]);
