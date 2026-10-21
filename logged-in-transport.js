@@ -3392,7 +3392,7 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement(
                             'th',
                             {
-                                className: 'border border-gray-300 bg-gray-100 p-0 whitespace-nowrap sticky left-0 z-10',
+                                className: 'border border-gray-300 bg-gray-100 p-0 whitespace-nowrap sticky left-0 z-5',
                                 style: { width: '90px', minWidth: '90px', height: '48px', position: 'relative' }
                             },
                             React.createElement(
