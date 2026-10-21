@@ -3692,6 +3692,42 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // POMOCNÁ: vytvorí tooltip pre tím v autobuse
+    // ("Tím • 15 členov — kliknutím odstrániť z autobusu")
+    // ============================================================
+    const getTeamTooltipLabel = (teamKey) => {
+        const parts = String(teamKey).split('|');
+        const teamName = (parts[0] || '').trim();
+        const category = (parts[1] || '').trim();
+    
+        const counts = getTeamCountsForTransfer(category, teamName);
+        let membersText = null;
+        let membersTitle = '';
+    
+        if (counts) {
+            const total =
+                (counts.players || 0) +
+                (counts.menRT || 0) +
+                (counts.womenRT || 0) +
+                (counts.menDrivers || 0) +
+                (counts.womenDrivers || 0);
+            membersText = `${total}`;
+        } else {
+            const avg = getCategoryAverageForTransfer(category);
+            if (avg != null) {
+                membersText = `${avg}`;
+                membersTitle = ` (priemer kategórie ${category})`;
+            }
+        }
+    
+        if (membersText != null) {
+            return `${teamName} • ${membersText} členov${membersTitle}\nKliknutím odstrániť tím z celého autobusu (nástup aj výstup, všetky riadky)`;
+        }
+    
+        return `${teamName}\nKliknutím odstrániť tím z celého autobusu (nástup aj výstup, všetky riadky)`;
+    };
+
+    // ============================================================
     // POMOCNÁ: zistí, ktoré tímy sú "v autobuse" po tomto riadku
     // (nastúpili v tomto alebo skoršom riadku a ešte nevystúpili)
     // ============================================================
@@ -3900,7 +3936,7 @@ const TransportApp = ({ userProfileData }) => {
                                 {
                                     key: `in-${i}`,
                                     onClick: () => removeTeamFromWholeBus(tn),
-                                    title: 'Kliknutím odstrániť tím z celého autobusu (nástup aj výstup, všetky riadky)',
+                                    title: getTeamTooltipLabel(tn),
                                     className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
                                     style: { color: textColor }
                                 },
@@ -3926,7 +3962,7 @@ const TransportApp = ({ userProfileData }) => {
                                 {
                                     key: `out-${i}`,
                                     onClick: () => removeTeamFromWholeBus(tn),
-                                    title: 'Kliknutím odstrániť tím z celého autobusu (nástup aj výstup, všetky riadky)',
+                                    title: getTeamTooltipLabel(tn),
                                     className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
                                     style: { color: textColor }
                                 },
