@@ -4787,15 +4787,15 @@ const TransportApp = ({ userProfileData }) => {
         const daysToRender = selectedDayKey
             ? tournamentDays.filter((d) => d.dayKey === selectedDayKey)
             : tournamentDays;
-
+    
         const hasAnythingToRender =
             buses.length > 0 ||
             savedTransfers.some((t) => t.isWalking === true && (!selectedDayKey || t.dayKey === selectedDayKey));
-
+    
         return React.createElement(
             'div',
             { className: 'w-full flex flex-col items-start justify-start py-6 relative min-h-[400px]' },
-
+    
             !hasAnythingToRender
                 ? React.createElement(
                     'div',
@@ -4825,12 +4825,10 @@ const TransportApp = ({ userProfileData }) => {
                     'div',
                     { className: 'w-full flex flex-row flex-nowrap gap-6 pb-24 overflow-visible items-start' },
                 
-                    // === NOVÉ: ĽAVÝ STĹPEC – uložené vygenerované presuny ===
+                    // === ĽAVÝ STĹPEC – uložené vygenerované presuny ===
                     renderSavedTransfers(),
-
-                    renderWalkingTransfersBox(),
-                
-                    // === PÔVODNÉ: boxy autobusov ===
+    
+                    // === BOXY AUTOBUSOV ===
                     buses.map((bus) =>
                         React.createElement(
                             'div',
@@ -4942,8 +4940,11 @@ const TransportApp = ({ userProfileData }) => {
                                     )
                         )
                     ),
+    
+                    // === NOVÉ: PEŠIE PRESUNY – ZA BOXOM POSLEDNÉHO AUTOBUSU ===
+                    renderWalkingTransfersBox(),
                 
-                    // Zelené tlačidlo "+" napravo od posledného boxu autobusu
+                    // Zelené tlačidlo "+" napravo od posledného boxu
                     React.createElement(
                         'button',
                         {
