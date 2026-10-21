@@ -188,6 +188,9 @@ const TransportApp = ({ userProfileData }) => {
     const [travelTimesDraft, setTravelTimesDraft] = useState({});
     const [travelTimesSaving, setTravelTimesSaving] = useState(false);
 
+    // Mapa: category|teamName → { players, menRT, womenRT, menDrivers, womenDrivers }
+    const [teamCounts, setTeamCounts] = useState({});
+
     // ==== PLÁNOVANIE – AUTOBUSY A DNI TURNAJA ====
     const [buses, setBuses] = useState([]);
     const [tournamentDays, setTournamentDays] = useState([]);
@@ -2818,6 +2821,42 @@ const TransportApp = ({ userProfileData }) => {
         };
         loadTeamsLookup();
 
+        // 0b2) VEĽKOSTI POLÍ TÍMOV (počty členov) – pre zobrazenie za názvom tímu v presunoch
+        let unsubscribeTeamCounts = null;
+        try {
+            const usersRef = collection(window.db, 'users');
+            unsubscribeTeamCounts = onSnapshot(usersRef, (snapshot) => {
+                const map = {};
+                snapshot.forEach((userDoc) => {
+                    const userData = userDoc.data() || {};
+                    const teams = userData.teams;
+                    if (!teams || typeof teams !== 'object') return;
+        
+                    Object.entries(teams).forEach(([category, teamArray]) => {
+                        if (!Array.isArray(teamArray)) return;
+                        const cat = cleanCategory(category);
+                        teamArray.forEach((team) => {
+                            if (!team || !team.teamName) return;
+                            const teamName = String(team.teamName).trim();
+                            const key = `${cat}|${teamName}`;
+                            map[key] = {
+                                players: Array.isArray(team.playerDetails) ? team.playerDetails.length : 0,
+                                menRT: Array.isArray(team.menTeamMemberDetails) ? team.menTeamMemberDetails.length : 0,
+                                womenRT: Array.isArray(team.womenTeamMemberDetails) ? team.womenTeamMemberDetails.length : 0,
+                                menDrivers: Array.isArray(team.driverDetailsMale) ? team.driverDetailsMale.length : 0,
+                                womenDrivers: Array.isArray(team.driverDetailsFemale) ? team.driverDetailsFemale.length : 0,
+                            };
+                        });
+                    });
+                });
+                setTeamCounts(map);
+            }, (err) => {
+                console.error('[TRANSPORT] onSnapshot(users – team counts) error:', err);
+            });
+        } catch (e) {
+            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na users (team counts):', e);
+        }
+
         // 1) DÁTUMY TURNAJA + GENEROVANIE DNI PRE PLÁNOVANIE
         try {
             const regRef = doc(window.db, 'settings', 'registration');
@@ -3271,6 +3310,7 @@ const TransportApp = ({ userProfileData }) => {
             if (unsubscribeTravelTimes) unsubscribeTravelTimes();
             if (unsubscribeSuperstructureGroups) unsubscribeSuperstructureGroups();
             if (unsubscribeBuses) unsubscribeBuses();
+            if (unsubscribeTeamCounts) unsubscribeTeamCounts();
         };
     }, []);
 
@@ -3790,6 +3830,16 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // Pomocná: získa počty členov pre daný tím z `users`
+    // ============================================================
+    const getTeamCountsForTransfer = (category, teamName) => {
+        const cat = cleanCategory(category);
+        const name = String(teamName || '').trim();
+        if (!cat || !name) return null;
+        return teamCounts[`${cat}|${name}`] || null;
+    };
+
+    // ============================================================
     // NOVÉ: Pomocná – získa farbu pre rozlosovanie (drawColor)
     // ============================================================
     const getDrawColorForCategory = (categoryName) => {
@@ -4208,34 +4258,32 @@ const TransportApp = ({ userProfileData }) => {
                                     }
                                 },
                                 // 1. riadok – KATEGÓRIA • TÍM (bez ikon)
-                                React.createElement(
-                                    'span',
-                                    { className: 'text-sm flex flex-wrap items-center gap-1' },
-                                    React.createElement(
+                                (() => {
+                                    const counts = getTeamCountsForTransfer(t.category, t.teamName);
+                                    const totalMembers = counts
+                                        ? counts.players + counts.menRT + counts.womenRT + counts.menDrivers + counts.womenDrivers
+                                        : null;
+                                    return React.createElement(
                                         'span',
-                                        {
-                                            className: 'font-bold',
-                                            style: { color: transportColor || '#4c1d95' }
-                                        },
-                                        categoryLabel
-                                    ),
-                                    React.createElement(
-                                        'span',
-                                        {
-                                            className: 'mx-0.5',
-                                            style: { color: transportColor || '#a78bfa' }
-                                        },
-                                        '•'
-                                    ),
-                                    React.createElement(
-                                        'span',
-                                        {
-                                            className: 'font-semibold',
-                                            style: { color: transportColor || '#5b21b6' }
-                                        },
-                                        t.teamName || '(neznámy tím)'
-                                    )
-                                ),
+                                        { className: 'flex flex-wrap items-baseline gap-1' },
+                                        React.createElement(
+                                            'span',
+                                            {
+                                                className: 'font-semibold',
+                                                style: { color: transportColor || '#5b21b6' }
+                                            },
+                                            t.teamName || '(neznámy tím)'
+                                        ),
+                                        totalMembers != null && React.createElement(
+                                            'span',
+                                            {
+                                                className: 'text-[11px] font-normal text-gray-600 ml-1',
+                                                title: 'Celkový počet členov tímu (hráči + RT muži + RT ženy + šoféri muži + šoféri ženy)'
+                                            },
+                                            `(Spolu: ${totalMembers})`
+                                        )
+                                    );
+                                })(),
                                 // 2. riadok – dátum
                                 dateLabel &&
                                     React.createElement(
