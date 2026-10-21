@@ -3366,6 +3366,52 @@ const TransportApp = ({ userProfileData }) => {
     }, [travelTimes]);
 
     // ============================================================
+    // AUTOMATICKÝ PREPOČET timeTo PRE VŠETKY RIADKY AUTOBUSOV
+    // (spustí sa pri zmene busRows alebo travelTimes)
+    // ============================================================
+    useEffect(() => {
+        if (!window.db) return;
+        if (!busRows || Object.keys(busRows).length === 0) return;
+    
+        Object.values(busRows).forEach((rows) => {
+            (rows || []).forEach((row) => {
+                // Použiť rovnakú logiku ako v renderBusRow
+                const placeFrom = row.placeFrom;
+                const placeTo = row.placeTo;
+                if (!placeFrom || !placeTo) return;
+    
+                let minutes = null;
+                const keyId = `${placeFrom}|${placeTo}`;
+                if (travelTimes[keyId] && travelTimes[keyId].minutes != null) {
+                    minutes = Number(travelTimes[keyId].minutes);
+                } else {
+                    const fromStop = stopsList.find((s) => s.name === placeFrom || s.id === placeFrom);
+                    const toStop = stopsList.find((s) => s.name === placeTo || s.id === placeTo);
+                    if (fromStop && toStop) {
+                        const key = `${fromStop.id}|${toStop.id}`;
+                        if (travelTimes[key] && travelTimes[key].minutes != null) {
+                            minutes = Number(travelTimes[key].minutes);
+                        }
+                    }
+                }
+    
+                if (minutes == null) return;
+                if (!row.timeFrom || !/^\d{1,2}:\d{2}$/.test(row.timeFrom)) return;
+    
+                const [h, m] = row.timeFrom.split(':').map(Number);
+                const total = h * 60 + m + minutes;
+                const endH = Math.floor(total / 60) % 24;
+                const endM = total % 60;
+                const computed = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+    
+                if (computed !== (row.timeTo || '')) {
+                    updateBusRowField(row.id, 'timeTo', computed);
+                }
+            });
+        });
+    }, [busRows, travelTimes, stopsList]);
+
+    // ============================================================
     // POMOCNÁ: výpočet trvania v minútach z "HH:MM" – "HH:MM"
     // ============================================================
     const computeDurationMinutes = (timeFrom, timeTo) => {
@@ -3440,6 +3486,43 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // POMOCNÁ: pripočíta minúty k "HH:MM" a vráti "HH:MM"
+    // ============================================================
+    const addMinutesToTime = (timeStr, minutes) => {
+        if (!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr)) return '';
+        if (minutes == null || isNaN(minutes)) return '';
+        const [h, m] = timeStr.split(':').map(Number);
+        const total = h * 60 + m + Number(minutes);
+        const endH = Math.floor(total / 60) % 24;
+        const endM = total % 60;
+        return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+    };
+    
+    // ============================================================
+    // POMOCNÁ: nájde trvanie jazdy medzi dvoma zastávkami
+    // ============================================================
+    const getTravelMinutes = (placeFrom, placeTo) => {
+        if (!placeFrom || !placeTo) return null;
+    
+        // 1) Skús priamo ID
+        const keyId = `${placeFrom}|${placeTo}`;
+        if (travelTimes[keyId] && travelTimes[keyId].minutes != null) {
+            return Number(travelTimes[keyId].minutes);
+        }
+    
+        // 2) Skús nájsť zastávky podľa názvu → ID
+        const fromStop = stopsList.find((s) => s.name === placeFrom || s.id === placeFrom);
+        const toStop = stopsList.find((s) => s.name === placeTo || s.id === placeTo);
+        if (fromStop && toStop) {
+            const key = `${fromStop.id}|${toStop.id}`;
+            if (travelTimes[key] && travelTimes[key].minutes != null) {
+                return Number(travelTimes[key].minutes);
+            }
+        }
+        return null;
+    };
+
+    // ============================================================
     // RENDER HLAVIČKY RIADKOV (8 stĺpcov)
     // ============================================================
     const renderBusRowsHeader = () => React.createElement(
@@ -3461,13 +3544,19 @@ const TransportApp = ({ userProfileData }) => {
     );
 
     // ============================================================
-    // RENDER JEDNÉHO RIADKU (8 stĺpcov + mazanie)
+    // RENDER JEDNÉHO RIADKU (upravený – Do read-only, miesta selectboxy)
     // ============================================================
     const renderBusRow = (row) => {
-        const duration = computeDurationMinutes(row.timeFrom, row.timeTo);
-
+        const travelMinutes = getTravelMinutes(row.placeFrom, row.placeTo);
+        const computedTimeTo = addMinutesToTime(row.timeFrom, travelMinutes);
+    
         const inputCls = 'w-full px-1 py-1 text-sm border border-gray-300 rounded text-black focus:outline-none focus:ring-2 focus:ring-green-500';
-
+        const selectCls = 'w-full px-1 py-1 text-sm border border-gray-300 rounded text-black bg-white focus:outline-none focus:ring-2 focus:ring-green-500';
+    
+        const stopOptions = stopsList.map((s) =>
+            React.createElement('option', { key: s.id, value: s.name }, s.name)
+        );
+    
         return React.createElement(
             'tr',
             { key: row.id, className: 'hover:bg-gray-50' },
@@ -3480,34 +3569,41 @@ const TransportApp = ({ userProfileData }) => {
                     className: inputCls,
                 })
             ),
-            // 2. čas koniec
+            // 2. čas koniec (READ-ONLY, vypočítaný)
             React.createElement('td', { className: 'border border-gray-300 p-1' },
                 React.createElement('input', {
                     type: 'time',
-                    value: row.timeTo || '',
-                    onChange: (e) => updateBusRowField(row.id, 'timeTo', e.target.value),
-                    className: inputCls,
+                    value: computedTimeTo || '',
+                    readOnly: true,
+                    disabled: true,
+                    title: travelMinutes != null
+                        ? `Vypočítané: ${row.timeFrom || '—'} + ${travelMinutes} min`
+                        : 'Chýba trvanie jazdy medzi zastávkami',
+                    className: inputCls + ' bg-gray-100 cursor-not-allowed text-center font-semibold',
+                    style: { color: computedTimeTo ? '#1d4ed8' : '#9ca3af' },
                 })
             ),
-            // 3. miesto začiatok
+            // 3. miesto od (SELECT)
             React.createElement('td', { className: 'border border-gray-300 p-1' },
-                React.createElement('input', {
-                    type: 'text',
+                React.createElement('select', {
                     value: row.placeFrom || '',
                     onChange: (e) => updateBusRowField(row.id, 'placeFrom', e.target.value),
-                    placeholder: 'miesto...',
-                    className: inputCls,
-                })
+                    className: selectCls,
+                },
+                    React.createElement('option', { value: '' }, '— vyber zastávku —'),
+                    stopOptions
+                )
             ),
-            // 4. miesto koniec
+            // 4. miesto do (SELECT)
             React.createElement('td', { className: 'border border-gray-300 p-1' },
-                React.createElement('input', {
-                    type: 'text',
+                React.createElement('select', {
                     value: row.placeTo || '',
                     onChange: (e) => updateBusRowField(row.id, 'placeTo', e.target.value),
-                    placeholder: 'miesto...',
-                    className: inputCls,
-                })
+                    className: selectCls,
+                },
+                    React.createElement('option', { value: '' }, '— vyber zastávku —'),
+                    stopOptions
+                )
             ),
             // 5. tímy nástup
             React.createElement('td', { className: 'border border-gray-300 p-1' },
@@ -3551,11 +3647,12 @@ const TransportApp = ({ userProfileData }) => {
                     className: inputCls + ' text-center',
                 })
             ),
-            // 8. trvanie v min (read-only, vypočítané)
+            // 8. trvanie v min (read-only, z travelTimes)
             React.createElement('td', {
                 className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold',
-                style: { color: duration != null ? '#1d4ed8' : '#9ca3af' },
-            }, duration != null ? duration : '—'),
+                style: { color: travelMinutes != null ? '#1d4ed8' : '#9ca3af' },
+                title: travelMinutes != null ? 'Trvanie z Nastavení' : 'Trvanie nie je nastavené',
+            }, travelMinutes != null ? travelMinutes : '—'),
             // 9. mazanie riadku
             React.createElement('td', { className: 'border border-gray-300 p-1 text-center' },
                 React.createElement('button', {
