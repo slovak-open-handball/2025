@@ -4969,34 +4969,98 @@ const TransportApp = ({ userProfileData }) => {
         const filteredByDay = selectedDayKey
             ? savedTransfers.filter((t) => t.dayKey === selectedDayKey)
             : savedTransfers;
-
+    
         // ============================================================
-        // NOVÉ: Filtrovanie – skry presuny, ktoré sú už priradené
-        // (buď ako "peši", alebo ako tím v niektorom busRow)
+        // NOVÉ: Filtrovanie – skry LEN tie konkrétne segmenty presunu,
+        // ktoré sú už priradené (buď ako "peši", alebo ako tím v niektorom busRow).
+        //
+        // Kľúč segmentu = dayKey | teamName | category | fromLocation | toLocation
+        // (aby sme rozlíšili jednotlivé časti rozdeleného presunu)
         // ============================================================
-        const assignedTeamKeys = new Set();
+        const assignedSegmentKeys = new Set();
+    
+        // 1) Autobusy – prejdi všetky riadky a ich teamsIn / teamsOut
         Object.entries(busRows || {}).forEach(([busKey, rows]) => {
             const [busId, dayKey] = busKey.split('|');
             (rows || []).forEach((row) => {
+                const rowFrom = normalizePlaceName(row.placeFrom);
+                const rowTo = normalizePlaceName(row.placeTo);
+    
                 const inList = Array.isArray(row.teamsIn) ? row.teamsIn : [];
                 const outList = Array.isArray(row.teamsOut) ? row.teamsOut : [];
+    
+                // teamsIn / teamsOut obsahujú "Názov tímu|Kategória"
                 inList.forEach((teamKey) => {
-                    assignedTeamKeys.add(`${dayKey}|${teamKey}`);
+                    const [teamName, category] = String(teamKey).split('|');
+                    // Tím nastupuje v tomto riadku → segment končí v rowTo (miesto do)
+                    // Alebo ak rowTo chýba, použijeme rowFrom
+                    const toLoc = rowTo || rowFrom;
+                    if (toLoc) {
+                        assignedSegmentKeys.add(
+                            `${dayKey}|${String(teamName).trim()}|${cleanCategory(category || '')}|${toLoc}`
+                        );
+                    }
                 });
+    
                 outList.forEach((teamKey) => {
-                    assignedTeamKeys.add(`${dayKey}|${teamKey}`);
+                    const [teamName, category] = String(teamKey).split('|');
+                    // Tím vystupuje v tomto riadku → segment začína v rowFrom (miesto od)
+                    const fromLoc = rowFrom || rowTo;
+                    if (fromLoc) {
+                        assignedSegmentKeys.add(
+                            `${dayKey}|${String(teamName).trim()}|${cleanCategory(category || '')}|${fromLoc}`
+                        );
+                    }
                 });
             });
         });
-
-        const filtered = filteredByDay.filter((t) => {
-            if (t.isWalking === true) return false;
-            const teamKey = `${String(t.teamName || '').trim()}|${cleanCategory(t.category || '')}`;
-            const key = `${t.dayKey || ''}|${teamKey}`;
-            if (assignedTeamKeys.has(key)) return false;
-            return true;
+    
+        // 2) Pešie presuny – označ konkrétny segment ako priradený
+        savedTransfers.forEach((t) => {
+            if (t.isWalking !== true) return;
+            const fromLoc = normalizePlaceName(t.fromLocation || '');
+            const toLoc = normalizePlaceName(t.toLocation || '');
+            if (!fromLoc || !toLoc) return;
+            // Peši znamená, že celý segment from → to je vyriešený peši
+            assignedSegmentKeys.add(
+                `${t.dayKey || ''}|${String(t.teamName || '').trim()}|${cleanCategory(t.category || '')}|${fromLoc}→${toLoc}`
+            );
         });
-
+    
+        // ============================================================
+        // Pomocná: zistí, či je konkrétny segment presunu už priradený
+        // ============================================================
+        const isSegmentAssigned = (t) => {
+            const teamName = String(t.teamName || '').trim();
+            const category = cleanCategory(t.category || '');
+            const dayKey = t.dayKey || '';
+            const fromLoc = normalizePlaceName(t.fromLocation || '');
+            const toLoc = normalizePlaceName(t.toLocation || '');
+    
+            // Pešia verzia – presná zhoda from→to
+            if (assignedSegmentKeys.has(`${dayKey}|${teamName}|${category}|${fromLoc}→${toLoc}`)) {
+                return true;
+            }
+    
+            // Autobusová verzia – tím je priradený buď na nástup (toLoc) alebo výstup (fromLoc)
+            // Skontroluj obe strany segmentu
+            if (fromLoc && assignedSegmentKeys.has(`${dayKey}|${teamName}|${category}|${fromLoc}`)) {
+                return true;
+            }
+            if (toLoc && assignedSegmentKeys.has(`${dayKey}|${teamName}|${category}|${toLoc}`)) {
+                return true;
+            }
+    
+            return false;
+        };
+    
+        const filtered = filteredByDay.filter((t) => {
+            // Ak je celý presun označený ako peši, skry ho (je vyriešený)
+            if (t.isWalking === true) return false;
+            // Skry len konkrétne priradené segmenty
+            return !isSegmentAssigned(t);
+        });
+    
         // ============================================================
         // Pomocná: z `when` (napr. "26. 12. 2026 08:00 – 26. 12. 2026 09:15")
         // vytiahne dátum začiatku/konca + čas začiatku/konca.
@@ -5019,9 +5083,9 @@ const TransportApp = ({ userProfileData }) => {
                     time: (hh != null && mi != null) ? `${hh}:${mi}` : null,
                 });
             }
-
+    
             if (found.length === 0) return null;
-
+    
             if (found.length === 1) {
                 return {
                     startDayKey: found[0].dayKey,
@@ -5032,7 +5096,7 @@ const TransportApp = ({ userProfileData }) => {
                     endTime: found[0].time,
                 };
             }
-
+    
             return {
                 startDayKey: found[0].dayKey,
                 endDayKey: found[1].dayKey,
@@ -5042,7 +5106,7 @@ const TransportApp = ({ userProfileData }) => {
                 endTime: found[1].time,
             };
         };
-
+    
         // ============================================================
         // Pomocná: z textu "Presun z X do Y" vytiahne { from, to }.
         // ============================================================
@@ -5051,19 +5115,19 @@ const TransportApp = ({ userProfileData }) => {
             const s = String(text).trim();
             const m = /^Presun z (.+?) do (.+)$/.exec(s);
             if (!m) return null;
-
+    
             const normalizePlace = (str) => String(str)
                 .replace(/\bubytovania\b/gi, 'ubytovňa')
                 .replace(/\bubytovanie\b/gi, 'ubytovňa')
                 .replace(/\bzastávky\b/gi, 'zastávka')
                 .replace(/\bzastávok\b/gi, 'zastávka');
-
+    
             return {
                 from: normalizePlace(m[1].trim()),
                 to: normalizePlace(m[2].trim()),
             };
         };
-
+    
         // ============================================================
         // Pomocná: z `when` vytiahne číselný kľúč pre začiatok
         // ============================================================
@@ -5075,7 +5139,7 @@ const TransportApp = ({ userProfileData }) => {
             const timePart = String(time || '').replace(':', '');
             return `${datePart}${timePart}`;
         };
-
+    
         // ============================================================
         // Pomocná: z `when` vytiahne číselný kľúč pre koniec
         // ============================================================
@@ -5087,7 +5151,7 @@ const TransportApp = ({ userProfileData }) => {
             const timePart = String(time || '').replace(':', '');
             return `${datePart}${timePart}`;
         };
-
+    
         // ============================================================
         // Zoradenie: začiatok → koniec → kategória → tím
         // ============================================================
@@ -5095,20 +5159,20 @@ const TransportApp = ({ userProfileData }) => {
             const startA = buildStartSortKey(a);
             const startB = buildStartSortKey(b);
             if (startA !== startB) return startA.localeCompare(startB);
-
+    
             const endA = buildEndSortKey(a);
             const endB = buildEndSortKey(b);
             if (endA !== endB) return endA.localeCompare(endB);
-
+    
             const ca = cleanCategory(a.category) || '';
             const cb = cleanCategory(b.category) || '';
             if (ca !== cb) return ca.localeCompare(cb, 'sk', { sensitivity: 'base' });
-
+    
             const ta = String(a.teamName || '');
             const tb = String(b.teamName || '');
             return ta.localeCompare(tb, 'sk', { sensitivity: 'base' });
-        });    
-
+        });
+    
         return React.createElement(
             'div',
             {
@@ -5149,13 +5213,13 @@ const TransportApp = ({ userProfileData }) => {
                             const rangeInfo = parseWhenRange(t.when);
                             const transferInfo = parseTransferText(t.text);
                             const categoryLabel = cleanCategory(t.category) || '(bez kategórie)';
-
+    
                             // Farby pre box
                             const transportColor = getTransportColorForCategory(t.category);
                             const boxBg = transportColor
                                 ? lightenHex(transportColor, 0.15)
                                 : null;
-                        
+    
                             // 1. riadok – dátum
                             let dateLabel = null;
                             if (rangeInfo) {
@@ -5165,7 +5229,7 @@ const TransportApp = ({ userProfileData }) => {
                             } else if (t.dayKey) {
                                 dateLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
                             }
-
+    
                             // 2. riadok – čas
                             let timeLabel = null;
                             if (rangeInfo) {
@@ -5175,13 +5239,13 @@ const TransportApp = ({ userProfileData }) => {
                                 else if (st) timeLabel = st;
                                 else if (et) timeLabel = et;
                             }
-
+    
                             // 3. riadok – miesta
                             let routeLabel = null;
                             if (transferInfo) {
                                 routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
                             }
-
+    
                             return React.createElement(
                                 'li',
                                 {
@@ -5204,10 +5268,10 @@ const TransportApp = ({ userProfileData }) => {
                                     const totalMembers = counts
                                         ? counts.players + counts.menRT + counts.womenRT + counts.menDrivers + counts.womenDrivers
                                         : null;
-                                
+    
                                     let valueText = null;
                                     let displayTitle = null;
-
+    
                                     if (totalMembers != null) {
                                         valueText = `${totalMembers}`;
                                     } else {
@@ -5217,10 +5281,10 @@ const TransportApp = ({ userProfileData }) => {
                                             displayTitle = `Priemer členov tímu v kategórii ${t.category} (zaokrúhlené nahor)`;
                                         }
                                     }
-                                
+    
                                     const teamLabel = t.teamName || '(neznámy tím)';
                                     const fullText = valueText ? `${teamLabel} ● ${valueText}` : teamLabel;
-                                
+    
                                     return React.createElement(
                                         'span',
                                         {
@@ -5256,7 +5320,7 @@ const TransportApp = ({ userProfileData }) => {
                                 t.isWalking === true &&
                                     React.createElement(
                                         'span',
-                                        { className: 'text-xs font-semibold text-emerald-700 mt-0.5 inline-flex items-center gap-1' },
+                                        { className: 'text-xs font-semibold text-emerald-700 mt-0.5 inline-flex items-center gap-1' },sv
                                         React.createElement('i', { className: 'fa-solid fa-person-walking' }),
                                         'PEŠI'
                                     ),
