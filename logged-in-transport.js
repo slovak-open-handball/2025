@@ -5833,7 +5833,7 @@ const TransportApp = ({ userProfileData }) => {
                                             .replace(/\bubytovanie\b/gi, 'ubytovňa')
                                             .replace(/\bzastávky\b/gi, 'zastávka')
                                             .replace(/\bzastávok\b/gi, 'zastávka')
-                                    )
+                                    ),
                                 // === TLAČIDLO "ZLÚČIŤ" (len v režime zlučovania) ===
                                 mergeMode &&
                                     (() => {
