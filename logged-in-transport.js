@@ -4335,7 +4335,7 @@ const TransportApp = ({ userProfileData }) => {
                     rowTo === trTo &&
                     rowTimeToTs != null &&
                     rowTimeToTs >= trRange.startTs &&
-                    rowTimeToTs <= trRange.endTs + 30 * 60 * 1000
+                    rowTimeToTs <= trRange.endTs + 0
                 ) {
                     alightingCandidates.push({ row, timeTs: rowTimeToTs });
                 }
