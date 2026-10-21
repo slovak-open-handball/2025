@@ -4280,7 +4280,7 @@ const TransportApp = ({ userProfileData }) => {
                             {
                                 key: bus.id,
                                 className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
-                                style: { width: '650px', maxWidth: '100%' }
+                                style: { width: '1000px', maxWidth: '100%' }
                             },
                             // Hlavička autobusu
                             React.createElement(
