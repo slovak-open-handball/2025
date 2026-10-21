@@ -3695,13 +3695,19 @@ const TransportApp = ({ userProfileData }) => {
         const currentIdx = allRows.findIndex((r) => r.id === rowId);
         if (currentIdx === -1) return [];
 
-        const rowsUpToCurrent = allRows.slice(0, currentIdx + 1);
-
         const inBus = new Set();
-        rowsUpToCurrent.forEach((r) => {
+
+        // 1) Predchádzajúce riadky – plná logika (in pridaj, out odober)
+        for (let i = 0; i < currentIdx; i++) {
+            const r = allRows[i];
             (r.teamsIn || []).forEach((t) => inBus.add(String(t)));
             (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
-        });
+        }
+
+        // 2) Aktuálny riadok – pridaj teamsIn, ale NEODOBERAJ teamsOut
+        //    (tím ešte sedí v buse počas jazdy z placeFrom do placeTo)
+        const currentRow = allRows[currentIdx];
+        (currentRow.teamsIn || []).forEach((t) => inBus.add(String(t)));
 
         return [...inBus];
     };
