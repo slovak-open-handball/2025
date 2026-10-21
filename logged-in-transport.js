@@ -219,6 +219,13 @@ const TransportApp = ({ userProfileData }) => {
     const [editingTransferStops, setEditingTransferStops] = useState([]); // medzizastávky medzi from a to
     const [editingTransferSaving, setEditingTransferSaving] = useState(false);
 
+    // ==== ROZHODOVACIE MODÁLNE OKNO PO KLIKNUTÍ NA PRESUN ====
+    const [transferActionModal, setTransferActionModal] = useState(null); // { transfer }
+    const [showAssignBusModal, setShowAssignBusModal] = useState(false);
+    const [assignBusSelectedBusId, setAssignBusSelectedBusId] = useState('');
+    const [assignBusSelectedDayKey, setAssignBusSelectedDayKey] = useState('');
+    const [assignBusSaving, setAssignBusSaving] = useState(false);
+
     // ============================================================
     // PREDNAČÍTANIE UBYTOVNÍ PRE SUPERSTRUCTURE TÍMY
     // ============================================================
@@ -4011,6 +4018,106 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // NASTAVENIE PRESUNU AKO "PEŠI"
+    // ============================================================
+    const setTransferAsWalking = async (transfer) => {
+        if (!window.db || !transfer) return;
+        try {
+            const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+            await setDoc(
+                docRef,
+                {
+                    [TRANSPORT_TRANSFERS_FIELD]: {
+                        [transfer.key]: {
+                            ...transfer,
+                            isWalking: true,
+                            walkingSetAt: Timestamp.fromDate(new Date()),
+                            walkingSetBy: (userProfileData && userProfileData.email) || null,
+                        },
+                    },
+                    updatedAt: Timestamp.fromDate(new Date()),
+                    updatedBy: (userProfileData && userProfileData.email) || null,
+                },
+                { merge: true }
+            );
+            window.showGlobalNotification('Presun bol označený ako „peši".', 'success');
+            setTransferActionModal(null);
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri označení presunu ako peši:', err);
+            window.showGlobalNotification('Nepodarilo sa označiť presun ako peši.', 'error');
+        }
+    };
+
+    // ============================================================
+    // PRIRADENIE PRESUNU K AUTOBUSU
+    // Vytvorí nový riadok v `transport` pre vybraný autobus a deň.
+    // ============================================================
+    const assignTransferToBus = async () => {
+        if (!window.db || !transferActionModal?.transfer) return;
+        const transfer = transferActionModal.transfer;
+        const busId = assignBusSelectedBusId;
+        const dayKey = assignBusSelectedDayKey;
+
+        if (!busId || !dayKey) {
+            window.showGlobalNotification('Vyberte autobus a deň.', 'error');
+            return;
+        }
+
+        setAssignBusSaving(true);
+        try {
+            // Zisti posledný order pre daný bus+day
+            const existing = busRows[`${busId}|${dayKey}`] || [];
+            const nextOrder = existing.length > 0
+                ? Math.max(...existing.map(r => r.order || 0)) + 1
+                : 1;
+
+            // Vytiahni from/to z transferu
+            const fromLocation = transfer.fromLocation || '';
+            const toLocation = transfer.toLocation || '';
+
+            // Vytiahni časť "HH:MM" z `when` pre timeFrom
+            let timeFrom = '';
+            if (transfer.when) {
+                const m = /(\d{1,2}):(\d{2})/.exec(String(transfer.when));
+                if (m) {
+                    timeFrom = `${String(m[1]).padStart(2, '0')}:${String(m[2]).padStart(2, '0')}`;
+                }
+            }
+
+            const newRow = {
+                type: 'busRow',
+                busId,
+                busName: (buses.find(b => b.id === busId) || {}).name || 'Bus',
+                dayKey,
+                order: nextOrder,
+                timeFrom,
+                timeTo: '',
+                placeFrom: fromLocation,
+                placeTo: toLocation,
+                teamsIn: [transfer.teamName].filter(Boolean),
+                teamsOut: [],
+                count: null,
+            };
+
+            await addDoc(collection(window.db, 'transport'), newRow);
+
+            window.showGlobalNotification(
+                `Presun priradený k autobusu (${newRow.busName}, ${dayKey}).`,
+                'success'
+            );
+            setShowAssignBusModal(false);
+            setTransferActionModal(null);
+            setAssignBusSelectedBusId('');
+            setAssignBusSelectedDayKey('');
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri priraďovaní presunu k autobusu:', err);
+            window.showGlobalNotification('Nepodarilo sa priradiť presun k autobusu.', 'error');
+        } finally {
+            setAssignBusSaving(false);
+        }
+    };
+
+    // ============================================================
     // TRVANIA JÁZDY
     // ============================================================
     const saveTravelTime = async (fromStop, toStop, rawValue) => {
@@ -4838,8 +4945,7 @@ const TransportApp = ({ userProfileData }) => {
                                 {
                                     key: t.key,
                                     onClick: () => {
-                                        setEditingTransfer(t);
-                                        setEditingTransferStops([]);
+                                        setTransferActionModal({ transfer: t });
                                     },
                                     className: 'text-sm text-gray-700 flex flex-col leading-snug rounded-md px-2 py-1.5 cursor-pointer hover:shadow-md transition-shadow' +
                                         (boxBg ? '' : ' bg-violet-50/40'),
@@ -4903,6 +5009,14 @@ const TransportApp = ({ userProfileData }) => {
                                         'span',
                                         { className: 'text-sm text-gray-900 font-medium' },
                                         routeLabel
+                                    ),
+                                // 5. riadok – príznak "peši"
+                                t.isWalking === true &&
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-xs font-semibold text-emerald-700 mt-0.5 inline-flex items-center gap-1' },
+                                        React.createElement('i', { className: 'fa-solid fa-person-walking' }),
+                                        'PEŠI'
                                     ),
                                 // Fallback
                                 (!dateLabel && !timeLabel && !routeLabel) &&
@@ -5595,6 +5709,255 @@ const TransportApp = ({ userProfileData }) => {
                         editingTransferSaving &&
                             React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
                         'Uložiť'
+                    )
+                )
+            )
+        ),
+        // ============================================================
+        // ROZHODOVACIE MODÁLNE OKNO PO KLIKNUTÍ NA PRESUN
+        // ============================================================
+        transferActionModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
+                onClick: () => setTransferActionModal(null)
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-circle-question text-blue-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'div',
+                        { className: 'flex-1' },
+                        React.createElement(
+                            'h3',
+                            { className: 'text-lg font-semibold text-gray-800' },
+                            'Upraviť presun'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-xs text-gray-500 mt-0.5' },
+                            `${transferActionModal.transfer.teamName || ''} • ${transferActionModal.transfer.category || ''}`
+                        )
+                    )
+                ),
+                // Info o presune
+                React.createElement(
+                    'div',
+                    { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm' },
+                    React.createElement(
+                        'div',
+                        { className: 'text-gray-600 font-medium' },
+                        `${transferActionModal.transfer.fromLocation || '?'} → ${transferActionModal.transfer.toLocation || '?'}`
+                    ),
+                    transferActionModal.transfer.when &&
+                        React.createElement(
+                            'div',
+                            { className: 'text-xs text-gray-500 mt-1' },
+                            transferActionModal.transfer.when
+                        )
+                ),
+                // Možnosti
+                React.createElement(
+                    'div',
+                    { className: 'space-y-2 mb-4' },
+                    // 1) Pridať medzizastávku
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => {
+                                const t = transferActionModal.transfer;
+                                setEditingTransfer(t);
+                                setEditingTransferStops([]);
+                                setTransferActionModal(null);
+                            },
+                            className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors flex items-center gap-3'
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-route text-blue-600 text-xl w-6 text-center' }),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement('div', { className: 'font-semibold text-gray-800' }, 'Pridať medzizastávku'),
+                            React.createElement('div', { className: 'text-xs text-gray-500' }, 'Rozdeliť trasu na viac segmentov')
+                        )
+                    ),
+                    // 2) Priradiť presun autobusu
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => {
+                                setShowAssignBusModal(true);
+                                // Predvyplň deň z transferu
+                                setAssignBusSelectedDayKey(transferActionModal.transfer.dayKey || '');
+                                setAssignBusSelectedBusId(
+                                    buses.length > 0 ? buses[0].id : ''
+                                );
+                            },
+                            className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors flex items-center gap-3'
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-bus text-amber-600 text-xl w-6 text-center' }),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement('div', { className: 'font-semibold text-gray-800' }, 'Priradiť presun autobusu'),
+                            React.createElement('div', { className: 'text-xs text-gray-500' }, 'Vytvoriť riadok v plánovaní autobusu')
+                        )
+                    ),
+                    // 3) Nastaviť presun peši
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setTransferAsWalking(transferActionModal.transfer),
+                            className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors flex items-center gap-3'
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-person-walking text-emerald-600 text-xl w-6 text-center' }),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement('div', { className: 'font-semibold text-gray-800' }, 'Nastaviť presun peši'),
+                            React.createElement('div', { className: 'text-xs text-gray-500' }, 'Označiť, že tím ide peši')
+                        )
+                    )
+                ),
+                // Zavrieť
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setTransferActionModal(null),
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
+                        },
+                        'Zavrieť'
+                    )
+                )
+            )
+        ),
+        // ============================================================
+        // MODÁLNE OKNO – Priradiť presun k autobusu
+        // ============================================================
+        showAssignBusModal && transferActionModal?.transfer && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100001] p-4',
+                onClick: () => setShowAssignBusModal(false)
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-bus text-amber-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-800' },
+                        'Priradiť presun k autobusu'
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700' },
+                    React.createElement('div', { className: 'font-medium' }, `${transferActionModal.transfer.fromLocation} → ${transferActionModal.transfer.toLocation}`),
+                    React.createElement('div', { className: 'text-xs text-gray-500 mt-1' }, transferActionModal.transfer.teamName || '')
+                ),
+                // Výber autobusu
+                React.createElement(
+                    'label',
+                    { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Autobus'
+                ),
+                buses.length === 0
+                    ? React.createElement(
+                        'p',
+                        { className: 'text-sm text-red-600 italic mb-4' },
+                        'Nie sú dostupné žiadne autobusy. Najprv vytvorte autobus v Plánovaní.'
+                    )
+                    : React.createElement(
+                        'select',
+                        {
+                            value: assignBusSelectedBusId,
+                            onChange: (e) => setAssignBusSelectedBusId(e.target.value),
+                            className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors mb-4'
+                        },
+                        buses.map((b) =>
+                            React.createElement(
+                                'option',
+                                { key: b.id, value: b.id },
+                                b.name
+                            )
+                        )
+                    ),
+                // Výber dňa
+                React.createElement(
+                    'label',
+                    { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Deň'
+                ),
+                tournamentDays.length === 0
+                    ? React.createElement(
+                        'p',
+                        { className: 'text-sm text-red-600 italic mb-4' },
+                        'Žiadne dni turnaja.'
+                    )
+                    : React.createElement(
+                        'select',
+                        {
+                            value: assignBusSelectedDayKey,
+                            onChange: (e) => setAssignBusSelectedDayKey(e.target.value),
+                            className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors mb-4'
+                        },
+                        React.createElement('option', { value: '' }, '— vyber deň —'),
+                        tournamentDays.map((day) =>
+                            React.createElement(
+                                'option',
+                                { key: day.dayKey, value: day.dayKey },
+                                `${day.dayName.charAt(0).toUpperCase() + day.dayName.slice(1)} – ${day.dateLabel}`
+                            )
+                        )
+                    ),
+                // Tlačidlá
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setShowAssignBusModal(false),
+                            disabled: assignBusSaving,
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: assignTransferToBus,
+                            disabled: assignBusSaving || buses.length === 0 || !assignBusSelectedBusId || !assignBusSelectedDayKey,
+                            className: 'px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 transition-colors disabled:opacity-60 flex items-center gap-2'
+                        },
+                        assignBusSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                        'Priradiť'
                     )
                 )
             )
