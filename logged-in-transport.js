@@ -3707,6 +3707,25 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // POMOCNÁ: výpočet medzery v minútach medzi dvoma "HH:MM"
+    // Vráti počet minút (môže byť aj > 24h, ale ošetríme mod 24h)
+    // alebo null, ak sa nedá vypočítať.
+    // ============================================================
+    const getGapMinutes = (timeTo, timeFrom) => {
+        if (!timeTo || !timeFrom) return null;
+        const re = /^(\d{1,2}):(\d{2})$/;
+        const a = re.exec(String(timeTo));
+        const b = re.exec(String(timeFrom));
+        if (!a || !b) return null;
+        const toMin = Number(a[1]) * 60 + Number(a[2]);
+        const fromMin = Number(b[1]) * 60 + Number(b[2]);
+        let diff = fromMin - toMin;
+        // Ak je záporný, berieme to ako prechod cez polnoc
+        if (diff < 0) diff += 24 * 60;
+        return diff;
+    };
+
+    // ============================================================
     // RENDER JEDNÉHO RIADKU (upravený – Do read-only, miesta selectboxy)
     // ============================================================
     const renderBusRow = (row, busId, dayKey) => {
@@ -5080,6 +5099,78 @@ const TransportApp = ({ userProfileData }) => {
                                                         const key = `${bus.id}|${day.dayKey}`;
                                                         const rows = (busRows[key] || []);
                                                         if (rows.length === 0) return null;
+
+                                                        // Zoraď podľa order
+                                                        const sortedRows = [...rows].sort(
+                                                            (a, b) => (a.order || 0) - (b.order || 0)
+                                                        );
+
+                                                        // Postupne renderuj riadky + prípadné volné riadky
+                                                        const rowElements = [];
+                                                        sortedRows.forEach((r, idx) => {
+                                                            // Najprv pridaj "voľný riadok", ak je medzera > 2 min
+                                                            if (idx > 0) {
+                                                                const prev = sortedRows[idx - 1];
+                                                                const gap = getGapMinutes(prev.timeTo, r.timeFrom);
+                                                                if (gap != null && gap > 2) {
+                                                                    rowElements.push(
+                                                                        React.createElement(
+                                                                            'tr',
+                                                                            {
+                                                                                key: `gap-${prev.id}-${r.id}`,
+                                                                                style: { backgroundColor: '#FC9A9C' }
+                                                                            },
+                                                                            // 1. čas od = timeTo predchádzajúceho
+                                                                            React.createElement(
+                                                                                'td',
+                                                                                { className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold text-gray-800' },
+                                                                                prev.timeTo || '—'
+                                                                            ),
+                                                                            // 2. čas do = timeFrom nasledujúceho
+                                                                            React.createElement(
+                                                                                'td',
+                                                                                { className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold text-gray-800' },
+                                                                                r.timeFrom || '—'
+                                                                            ),
+                                                                            // 3. miesto od = placeTo predchádzajúceho
+                                                                            React.createElement(
+                                                                                'td',
+                                                                                { className: 'border border-gray-300 px-2 py-1 text-sm text-gray-800 font-medium' },
+                                                                                prev.placeTo || '—'
+                                                                            ),
+                                                                            // 4. miesto do = placeFrom nasledujúceho (rovnaké miesto)
+                                                                            React.createElement(
+                                                                                'td',
+                                                                                { className: 'border border-gray-300 px-2 py-1 text-sm text-gray-800 font-medium' },
+                                                                                r.placeFrom || '—'
+                                                                            ),
+                                                                            // 5. Nástup – prázdne
+                                                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, ''),
+                                                                            // 6. Výstup – prázdne
+                                                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, ''),
+                                                                            // 7. Počet – prázdne
+                                                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, ''),
+                                                                            // 8. Min – medzera v minútach
+                                                                            React.createElement(
+                                                                                'td',
+                                                                                {
+                                                                                    className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold',
+                                                                                    style: { color: '#7f1d1d' },
+                                                                                    title: 'Voľný čas (prestoj)'
+                                                                                },
+                                                                                gap
+                                                                            ),
+                                                                            // 9. Mazanie – prázdne (nejde zmazať)
+                                                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, '')
+                                                                        )
+                                                                    );
+                                                                }
+                                                            }
+
+                                                            // Pridaj samotný riadok
+                                                            rowElements.push(renderBusRow(r, bus.id, day.dayKey));
+                                                        });
+
                                                         return React.createElement(
                                                             'tr',
                                                             null,
@@ -5090,7 +5181,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                     'table',
                                                                     { className: 'w-full border-collapse text-xs' },
                                                                     renderBusRowsHeader(),
-                                                                    React.createElement('tbody', null, rows.map((r) => renderBusRow(r, bus.id, day.dayKey)))
+                                                                    React.createElement('tbody', null, rowElements)
                                                                 )
                                                             )
                                                         );
