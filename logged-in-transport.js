@@ -1887,7 +1887,8 @@ const TransportApp = ({ userProfileData }) => {
                                 // ============================================================
                                 const ssTeamKeyForGroup = `${cleanCategory(category)}|${teamName}`;
                                 const groupCharForSSGroup = ssGroupCharByTeam[ssTeamKeyForGroup];
-                        
+                                const ssTeamKey = ssTeamKeyForGroup;
+                                
                                 const isPureSuperstructureGroup = (() => {
                                     if (!isSuperstructureTeam || !groupCharForSSGroup) return false;
                         
@@ -2118,9 +2119,9 @@ const TransportApp = ({ userProfileData }) => {
                                 // ============================================================
                                 const isSSPlayDayForSkip =
                                     isSuperstructureTeam &&
-                                    ssPlayDatesByTeam[ssTeamKey] &&
+                                    ssPlayDatesByTeam[ssTeamKeyForGroup] &&
                                     currentDay != null &&
-                                    ssPlayDatesByTeam[ssTeamKey].has(currentDay);
+                                    ssPlayDatesByTeam[ssTeamKeyForGroup].has(currentDay); 
                                 
                                 if (!skipClassicMorningTransfers && !isSSPlayDayForSkip) {
                                 
