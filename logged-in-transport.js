@@ -3658,6 +3658,43 @@ const TransportApp = ({ userProfileData }) => {
     );
 
     // ============================================================
+    // POMOCNÁ: vypočíta počet členov tímu z teamKey "Názov|Kategória"
+    // ============================================================
+    const getTeamMembersCount = (teamKey) => {
+        const parts = String(teamKey).split('|');
+        const teamName = parts[0] || '';
+        const category = parts[1] || '';
+        const counts = getTeamCountsForTransfer(category, teamName);
+        if (!counts) return 0;
+        return (counts.players || 0) + (counts.menRT || 0) + (counts.womenRT || 0)
+            + (counts.menDrivers || 0) + (counts.womenDrivers || 0);
+    };
+
+    // ============================================================
+    // POMOCNÁ: zistí, ktoré tímy sú "v autobuse" po tomto riadku
+    // (nastúpili v tomto alebo skoršom riadku a ešte nevystúpili)
+    // ============================================================
+    const getTeamsInBusAfterRow = (busId, dayKey, rowId) => {
+        const rowsKey = `${busId}|${dayKey}`;
+        const allRows = (busRows[rowsKey] || [])
+            .slice()
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        const currentIdx = allRows.findIndex((r) => r.id === rowId);
+        if (currentIdx === -1) return [];
+
+        const rowsUpToCurrent = allRows.slice(0, currentIdx + 1);
+
+        const inBus = new Set();
+        rowsUpToCurrent.forEach((r) => {
+            (r.teamsIn || []).forEach((t) => inBus.add(String(t)));
+            (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
+        });
+
+        return [...inBus];
+    };
+
+    // ============================================================
     // RENDER JEDNÉHO RIADKU (upravený – Do read-only, miesta selectboxy)
     // ============================================================
     const renderBusRow = (row, busId, dayKey) => {
@@ -3811,19 +3848,20 @@ const TransportApp = ({ userProfileData }) => {
                         })
                     )
             ),
-            // 7. počet (manuálne)
-            React.createElement('td', { className: 'border border-gray-300 p-1' },
-                React.createElement('input', {
-                    type: 'number',
-                    min: '0',
-                    value: row.count ?? '',
-                    onChange: (e) => updateBusRowField(
-                        row.id,
-                        'count',
-                        e.target.value === '' ? null : Number(e.target.value)
-                    ),
-                    className: inputCls + ' text-center',
-                })
+            // 7. počet (AUTOMATICKY – súčet členov tímov v autobuse)
+            React.createElement('td', {
+                className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold',
+                style: { color: '#1d4ed8' },
+                title: 'Automaticky vypočítaný počet členov tímov, ktoré sú práve v autobuse (medzi zastávkami)',
+            },
+                (() => {
+                    const teamsInBus = getTeamsInBusAfterRow(busId, dayKey, row.id);
+                    if (teamsInBus.length === 0) {
+                        return React.createElement('span', { className: 'text-gray-400' }, '—');
+                    }
+                    const total = teamsInBus.reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
+                    return total > 0 ? total : React.createElement('span', { className: 'text-gray-400' }, '—');
+                })()
             ),
             // 8. trvanie v min (read-only, z travelTimes)
             React.createElement('td', {
