@@ -1747,75 +1747,6 @@ const TransportApp = ({ userProfileData }) => {
                                 // DÔLEŽITÉ: V tomto prípade NEgenerujeme klasické ranné presuny
                                 // z ubytovní – preskočíme zvyšok bloku.
                             } else {
-                                                                // ============================================================
-                                    // Deň NIE JE hrací deň skupiny a žiadny tím zo skupiny nemá
-                                    // udalosť → použijeme pôvodnú logiku ranných presunov z ubytovní.
-                                    // ============================================================
-                                    if (!destinationEvent || !destinationEvent.location) {
-                                        // Nemáme cieľovú udalosť – nič negenerujeme
-                                    } else {
-                                        const destination = destinationEvent.location;
-                            
-                                        const uniqueSourceLocations = new Map();
-                                        const updateUniqueSource = (loc, endTs) => {
-                                            if (!loc) return;
-                                            if (loc === destination) return;
-                                            const existing = uniqueSourceLocations.get(loc);
-                                            if (!existing || (endTs != null && endTs > (existing.endTs ?? -Infinity))) {
-                                                uniqueSourceLocations.set(loc, { location: loc, endTs });
-                                            }
-                                        };
-                            
-                                        // Ubytovania tímov zo skupiny s rovnakým písmenom
-                                        (teamsArrivalBufferRef.current || []).forEach((t) => {
-                                            if (cleanCategory(t.category) !== cleanCategory(category)) return;
-                                            if (!t.teamName) return;
-                                            if (t.teamName === teamName) return;
-                                            if (!t.accommodationName || t.accommodationName.trim() === '') return;
-                                            if (!isRealRegisteredTeam(t.teamName, category)) return;
-                                            if (!teamBelongsToChar(t.teamName, category)) return;
-                                            updateUniqueSource(t.accommodationName.trim(), null);
-                                        });
-                            
-                                        const destinationArrivalStr =
-                                            formatFullFromTs(destinationEvent.startTs) || destinationEvent.when;
-                            
-                                        const dayRefTs = destinationEvent.startTs != null
-                                            ? destinationEvent.startTs
-                                            : midnightFromWhen(destinationEvent.when);
-                            
-                                        Array.from(uniqueSourceLocations.values())
-                                            .sort((a, b) => {
-                                                if (a.endTs != null && b.endTs != null) return a.endTs - b.endTs;
-                                                return String(a.location).localeCompare(String(b.location), 'sk');
-                                            })
-                                            .forEach((info) => {
-                                                const departureTs = timestampOnDay(dayRefTs, 0, 0);
-                                                const departureStr = formatFullFromTs(departureTs) || '00:00';
-                            
-                                                let whenStr;
-                                                if (departureStr && destinationArrivalStr) {
-                                                    whenStr = `${departureStr} – ${destinationArrivalStr}`;
-                                                } else if (destinationArrivalStr) {
-                                                    whenStr = destinationArrivalStr;
-                                                } else {
-                                                    whenStr = destinationEvent.when;
-                                                }
-                            
-                                                enriched.push({
-                                                    ts: destinationEvent.ts - 1,
-                                                    when: whenStr,
-                                                    type: 'transfer',
-                                                    text: `Presun z ${info.location} do ${destination}`,
-                                                    location: null,
-                                                    isTransfer: true,
-                                                });
-                                            });
-                                    }
-                                }
-                                // DÔLEŽITÉ: V tomto prípade NEgenerujeme klasické ranné presuny
-                                // z ubytovní – preskočíme zvyšok bloku.
-                            } else {
                                 // ============================================================
                                 // PÔVODNÁ LOGIKA pre bežné (ne-superstructure) tímy
                                 // alebo superstructure tímy v deň, kedy nehrajú.
@@ -2180,7 +2111,6 @@ const TransportApp = ({ userProfileData }) => {
                                     }
                                 }
                             }
-                        }
 
                         enriched.push(current);
 
