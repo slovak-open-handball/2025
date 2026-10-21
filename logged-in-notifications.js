@@ -136,7 +136,7 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading, showCh
     )
   );
 }
-function NotificationsApp() {
+function NotificationsApp() {  
   const auth = React.useRef(getAuth()).current;
   const db = React.useRef(getFirestore()).current;
   const [user, setUser] = React.useState(null);
@@ -155,6 +155,27 @@ function NotificationsApp() {
   const [areAllRestorableSelected, setAreAllRestorableSelected] = React.useState(false); 
   const [showDeleteAllConfirmationModal, setShowDeleteAllConfirmationModal] = React.useState(false);
   const [deleteUnreadToo, setDeleteUnreadToo] = React.useState(false);
+  const [userEmail, setUserEmail] = React.useState('');
+  React.useEffect(() => {
+    let unsubscribePrivate;
+    if (db && user) {
+      const privateDocRef = doc(db, 'usersPrivate', user.uid);
+      unsubscribePrivate = onSnapshot(privateDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setUserEmail(data.email || '');
+        } else {
+          setUserEmail('');
+        }
+      }, (error) => {
+        setUserNotificationMessage(`Chyba pri načítaní e-mailu: ${error.message}`);
+        setUserNotificationType('error');
+      });
+    }
+    return () => {
+      if (unsubscribePrivate) unsubscribePrivate();
+    };
+  }, [db, user]);
   React.useEffect(() => {
     const handleGlobalDataUpdated = (event) => {
       const globalUser = auth.currentUser; 
@@ -730,7 +751,7 @@ function NotificationsApp() {
                                 React.createElement('p', { className: 'text-sm text-yellow-800' }, 'Vymazané (zaškrtnite pre obnovenie)')
                             ),
                             React.createElement('p', { className: 'text-base text-gray-700 mb-2' },
-                                `Používateľ ${notification.userEmail || 'Neznámy používateľ'} zmenil tento údaj:`
+                                `Používateľ ${userEmail || 'Neznámy používateľ'} zmenil tento údaj:`
                             ),
                             (() => {
                                 if (notification.changes && (Array.isArray(notification.changes) || typeof notification.changes === 'string')) {
@@ -926,7 +947,7 @@ function NotificationsApp() {
                                 else {
                                     return React.createElement('div', { className: 'space-y-2' },
                                         React.createElement('p', { className: 'text-gray-700' }, 
-                                            `Upozornenie od: ${notification.userEmail || 'Neznámy používateľ'}`
+                                            `Upozornenie od: ${userEmail || 'Neznámy používateľ'}`
                                         ),
                                         notification.timestamp && React.createElement('p', { className: 'text-gray-500 text-sm' }, 
                                             `Čas: ${notification.timestamp.toLocaleString('sk-SK')}`
