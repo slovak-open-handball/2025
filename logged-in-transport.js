@@ -2654,7 +2654,7 @@ const TransportApp = ({ userProfileData }) => {
                             minutes: Number(v.minutes) || 0,
                         };
                     });
-
+        
                     // NOVÉ: načítaj uložené vygenerované presuny
                     const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
                     Object.entries(rawTransfers).forEach(([key, v]) => {
@@ -2670,6 +2670,10 @@ const TransportApp = ({ userProfileData }) => {
                             dayKey: v.dayKey || null,
                             generatedAt: v.generatedAt || null,
                             generatedBy: v.generatedBy || null,
+                            // NOVÉ: načítaj príznak "peši" a súvisiace polia
+                            isWalking: v.isWalking === true,
+                            walkingSetAt: v.walkingSetAt || null,
+                            walkingSetBy: v.walkingSetBy || null,
                         });
                     });
                     transfers.sort((a, b) => {
