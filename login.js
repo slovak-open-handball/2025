@@ -6,10 +6,11 @@
 // Taktiež bola pridaná validácia e-mailu a štýlovanie tlačidla "Odoslať" aj do formulára na obnovenie hesla.
 // Teraz sa zobrazí červená chyba, ak sa účet s daným e-mailom nenájde.
 // V tejto verzii bol zmenený štýl zablokovaných tlačidiel podľa požiadavky používateľa.
+// NOVINKA: Po úspešnom prihlásení sa do dokumentu používateľa zapíše čas prihlásenia (lastLoginAt).
 
 // Importy pre potrebné Firebase funkcie
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const RECAPTCHA_SITE_KEY = "6LekXLgrAAAAAB6HYeGZG-tu_N42DER2fh1aVBjF";
 
@@ -227,7 +228,23 @@ const App = () => {
             if (!window.auth) {
                 throw new Error("Firebase Auth nie je inicializovaný.");
             }
-            await signInWithEmailAndPassword(window.auth, email, password);
+            const userCredential = await signInWithEmailAndPassword(window.auth, email, password);
+
+            // NOVINKA: Zápis času prihlásenia do dokumentu používateľa
+            // Vykoná sa hneď po úspešnom prihlásení, kým máme user.uid a platnú auth session.
+            try {
+                if (userCredential && userCredential.user && window.db) {
+                    const userDocRef = doc(window.db, 'users', userCredential.user.uid);
+                    await updateDoc(userDocRef, {
+                        lastLoginAt: new Date()
+                    });
+                }
+            } catch (firestoreErr) {
+                // Ak zápis zlyhá (napr. chýbajúci dokument, sieť, oprávnenia),
+                // prihlásenie aj tak pokračuje – nezablokujeme používateľa.
+                console.error("Nepodarilo sa zapísať čas prihlásenia:", firestoreErr);
+            }
+
             // Ak je prihlásenie úspešné, onAuthStateChanged listener v authentication.js
             // sa postará o presmerovanie na index.html.
         } catch (err) {
