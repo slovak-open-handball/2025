@@ -3736,7 +3736,12 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 {
                                     key: `out-${i}`,
-                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-red-100 text-red-800 border border-red-300'
+                                    onClick: () => {
+                                        const newList = (row.teamsOut || []).filter((_, idx) => idx !== i);
+                                        updateBusRowField(row.id, 'teamsOut', newList);
+                                    },
+                                    title: 'Kliknutím odstrániť tím',
+                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-red-100 text-red-800 border border-red-300 cursor-pointer hover:bg-red-200'
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-right-from-bracket text-[9px]' }),
                                 tn
