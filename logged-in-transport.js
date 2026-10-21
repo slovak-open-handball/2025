@@ -437,15 +437,6 @@ const TransportApp = ({ userProfileData }) => {
                 const groupKey = `${cleanCategory(t.category)}|${String(t.groupName).trim()}`;
                 const fromSuperstructure = superstructureGroupsRef.current[groupKey];
 
-                // DEBUG
-                console.log('[TRANSPORT][DEBUG-GROUP]', {
-                    groupKey,
-                    hasData: !!fromSuperstructure,
-                    size: fromSuperstructure ? fromSuperstructure.size : 0,
-                    teams: fromSuperstructure ? [...fromSuperstructure] : [],
-                    allKeys: Object.keys(superstructureGroupsRef.current),
-                });
-
                 const teamsInThisGroup = (() => {
                     if (fromSuperstructure && fromSuperstructure.size > 0) {
                         return [...fromSuperstructure].sort((a, b) =>
@@ -642,9 +633,7 @@ const TransportApp = ({ userProfileData }) => {
             if (keys.length === 0) return null;
             keys.sort();
             return keys[0];
-        })();
-    
-        console.log('[TRANSPORT][DEBUG] globalFirstDay:', globalFirstDay);
+        })();    
 
         const globalLastDay = (() => {
             const keys = [];
@@ -659,9 +648,7 @@ const TransportApp = ({ userProfileData }) => {
             if (keys.length === 0) return null;
             keys.sort();
             return keys[keys.length - 1];
-        })();
-        
-        console.log('[TRANSPORT][DEBUG] globalLastDay:', globalLastDay);
+        })();        
 
         // ============================================================
         // Pomocná funkcia – zisti písmeno skupiny (posledné A-Z písmeno)
