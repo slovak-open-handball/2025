@@ -3699,7 +3699,7 @@ const TransportApp = ({ userProfileData }) => {
                     stopOptions
                 )
             ),
-            // 5. tímy nástup (len badge)
+            // 5. tímy nástup (len badge, bez inputu)
             React.createElement('td', { className: 'border border-gray-300 p-1 align-top' },
                 (row.teamsIn || []).length === 0
                     ? React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—')
@@ -3711,7 +3711,12 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 {
                                     key: `in-${i}`,
-                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                    onClick: () => {
+                                        const newList = (row.teamsIn || []).filter((_, idx) => idx !== i);
+                                        updateBusRowField(row.id, 'teamsIn', newList);
+                                    },
+                                    title: 'Kliknutím odstrániť tím',
+                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-pointer hover:bg-emerald-200'
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-right-to-bracket text-[9px]' }),
                                 tn
