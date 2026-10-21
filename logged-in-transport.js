@@ -2642,6 +2642,9 @@ const TransportApp = ({ userProfileData }) => {
             }, (err) => {
                 console.error('[TRANSPORT] onSnapshot(settings/transportTravelTimes) error:', err);
             });
+        } catch (e) {
+            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transportTravelTimes:', e);
+        }
 
         // 0a1d) KOLEKCIA `transport` – autobusy (dokumenty typu 'bus')
         let unsubscribeBuses = null;
