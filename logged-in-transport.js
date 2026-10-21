@@ -223,7 +223,7 @@ const TransportApp = ({ userProfileData }) => {
         } = options;
 
         const lines = [];
-        lines.push(`\n  [TRANSPORT] Tím: ${teamName} (počet udalsotí: ${events.length})`);
+        lines.push(`\n  [TRANSPORT] Tím: ${teamName} (počet udalostí: ${events.length})`);
 
         // Pomocná: zisti, či je tím pavúkový (WSF/LSF/WQF/W8F/W16F v názve)
         const isPavukTeam = /\b(WSF|LSF|WQF|W8F|W16F)\d*/i.test(String(teamName));
