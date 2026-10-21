@@ -73,6 +73,22 @@ const cleanCategory = (cat) => String(cat || '')
     .trim();
 
 // ============================================================
+// Normalizuje názov miesta – odstráni predpony ako "zastávka ",
+// "ubytovanie ", "ubytovňa " a odstráni medzery na okrajoch
+// ============================================================
+const normalizePlaceName = (name) => {
+    if (!name) return '';
+    return String(name)
+        .trim()
+        .replace(/^zastávka\s+/i, '')
+        .replace(/^zastavka\s+/i, '')
+        .replace(/^ubytovanie\s+/i, '')
+        .replace(/^ubytovňa\s+/i, '')
+        .replace(/^ubytovna\s+/i, '')
+        .trim();
+};
+
+// ============================================================
 // Prevedie identifikátor tímu na zobrazovaný názov
 // ============================================================
 const resolveTeamName = (identifier) => {
@@ -4089,57 +4105,32 @@ const TransportApp = ({ userProfileData }) => {
     // NÁJDI VHODNÉ AUTOBUSY PRE PRESUN
     // ============================================================
     const findMatchingBusRows = (transfer) => {
-        console.log('%c[TRANSPORT-DEBUG] --- findMatchingBusRows START ---', 'color: #2563eb; font-weight: bold;');
-        if (!transfer) {
-            console.log('[TRANSPORT-DEBUG] transfer je null, končím.');
-            return [];
-        }
-    
-        console.log('[TRANSPORT-DEBUG] Vstupný presun:', {
-            fromLocation: transfer.fromLocation,
-            toLocation: transfer.toLocation,
-            when: transfer.when,
-            dayKey: transfer.dayKey,
-            teamName: transfer.teamName,
-            category: transfer.category
-        });
+        if (!transfer) return [];
     
         const trRange = parseTransferWhenToRange(transfer.when);
-        const trFrom = String(transfer.fromLocation || '').trim();
-        const trTo = String(transfer.toLocation || '').trim();
+        // NOVÉ: Normalizujeme názvy miest (odstránime predpony "zastávka ", "ubytovanie ", ...)
+        const trFrom = normalizePlaceName(transfer.fromLocation);
+        const trTo = normalizePlaceName(transfer.toLocation);
         const trDayKey = transfer.dayKey || null;
     
-        console.log('[TRANSPORT-DEBUG] Parsované hodnoty:', {
-            trRange,
-            trFrom,
-            trTo,
-            trDayKey
-        });
-    
-        if (!trRange || !trFrom || !trTo || !trDayKey) {
-            console.log('[TRANSPORT-DEBUG] Chýba niektorý z povinných údajov (trRange, trFrom, trTo, trDayKey) – končím.');
-            return [];
-        }
+        if (!trRange || !trFrom || !trTo || !trDayKey) return [];
     
         const results = [];
-        let busesProcessed = 0;
     
         Object.entries(busRows || {}).forEach(([key, rows]) => {
             const [busId, dayKey] = key.split('|');
-            if (dayKey !== trDayKey) return; // iný deň
+            if (dayKey !== trDayKey) return;
     
             const bus = buses.find((b) => b.id === busId);
             if (!bus) return;
-    
-            busesProcessed++;
-            console.log(`%c[TRANSPORT-DEBUG] Autobus ${bus.name} (deň ${dayKey}) – kontrolujem ${rows.length} riadkov.`, 'color: #7c3aed;');
     
             let boardingRow = null;
             let alightingRow = null;
     
             (rows || []).forEach((row) => {
-                const rowFrom = String(row.placeFrom || '').trim();
-                const rowTo = String(row.placeTo || '').trim();
+                // NOVÉ: Normalizujeme aj názvy v riadku autobusu
+                const rowFrom = normalizePlaceName(row.placeFrom);
+                const rowTo = normalizePlaceName(row.placeTo);
     
                 const rowStartTs = timeOnDayKeyToTs(dayKey, row.timeFrom);
                 const rowEndTs = timeOnDayKeyToTs(dayKey, row.timeTo);
@@ -4148,24 +4139,16 @@ const TransportApp = ({ userProfileData }) => {
                     (rowEndTs == null || trRange.startTs < rowEndTs) &&
                     (rowStartTs == null || trRange.endTs > rowStartTs);
     
-                console.log(`[TRANSPORT-DEBUG]   Riadok ${row.id} (${row.timeFrom}–${row.timeTo}):`, {
-                    rowFrom,
-                    rowTo,
-                    rowStartTs,
-                    rowEndTs,
-                    overlap,
-                    matchFrom: rowFrom && rowFrom === trFrom,
-                    matchTo: rowTo && rowTo === trTo
-                });
-    
                 if (!overlap) return;
     
+                // NÁSTUP
                 if (rowFrom && rowFrom === trFrom) {
                     if (!boardingRow || (rowStartTs != null && boardingRow.startTs != null && rowStartTs < boardingRow.startTs)) {
                         boardingRow = { row, startTs: rowStartTs };
                     }
                 }
     
+                // VÝSTUP
                 if (rowTo && rowTo === trTo) {
                     if (!alightingRow || (rowEndTs != null && alightingRow.endTs != null && rowEndTs > alightingRow.endTs)) {
                         alightingRow = { row, endTs: rowEndTs };
@@ -4173,35 +4156,18 @@ const TransportApp = ({ userProfileData }) => {
                 }
             });
     
-            if (boardingRow) {
-                console.log(`%c[TRANSPORT-DEBUG]   ✅ NÁJDENÝ NÁSTUP: riadok ${boardingRow.row.id} (${boardingRow.row.placeFrom} → ${boardingRow.row.placeTo})`, 'color: #16a34a; font-weight: bold;');
-                results.push({ bus, row: boardingRow.row, side: 'in' });
-            } else {
-                console.log(`[TRANSPORT-DEBUG]   ❌ Nenájdený nástup pre autobus ${bus.name}`);
-            }
-    
-            if (alightingRow) {
-                console.log(`%c[TRANSPORT-DEBUG]   ✅ NÁJDENÝ VÝSTUP: riadok ${alightingRow.row.id} (${alightingRow.row.placeFrom} → ${alightingRow.row.placeTo})`, 'color: #dc2626; font-weight: bold;');
-                results.push({ bus, row: alightingRow.row, side: 'out' });
-            } else {
-                console.log(`[TRANSPORT-DEBUG]   ❌ Nenájdený výstup pre autobus ${bus.name}`);
-            }
+            if (boardingRow) results.push({ bus, row: boardingRow.row, side: 'in' });
+            if (alightingRow) results.push({ bus, row: alightingRow.row, side: 'out' });
         });
     
-        console.log('[TRANSPORT-DEBUG] Spracovaných autobusov:', busesProcessed);
-    
+        // Deduplikácia
         const seen = new Set();
-        const finalResults = results.filter((r) => {
+        return results.filter((r) => {
             const k = `${r.bus.id}|${r.row.id}|${r.side}`;
             if (seen.has(k)) return false;
             seen.add(k);
             return true;
         });
-    
-        console.log('%c[TRANSPORT-DEBUG] --- findMatchingBusRows KONIEC, výsledok: ' + finalResults.length + ' položiek ---', 'color: #2563eb; font-weight: bold;');
-        console.table(finalResults.map(r => ({ bus: r.bus.name, row: r.row.id, from: r.row.placeFrom, to: r.row.placeTo, side: r.side })));
-    
-        return finalResults;
     };
 
     // ============================================================
@@ -4239,12 +4205,7 @@ const TransportApp = ({ userProfileData }) => {
     // PRIRADENIE PRESUNU K AUTOBUSU
     // ============================================================
     const assignTransferToBus = async () => {
-        console.log('%c[TRANSPORT-DEBUG] --- assignTransferToBus START ---', 'color: #ea580c; font-weight: bold;');
-        
-        if (!window.db || !transferActionModal?.transfer) {
-            console.log('[TRANSPORT-DEBUG] Chýba window.db alebo transferActionModal.transfer – končím.');
-            return;
-        }
+        if (!window.db || !transferActionModal?.transfer) return;
         const transfer = transferActionModal.transfer;
     
         if (!assignBusSelectedKey) {
@@ -4253,39 +4214,25 @@ const TransportApp = ({ userProfileData }) => {
         }
     
         const [busId, rowId, side] = assignBusSelectedKey.split('|');
-        console.log('[TRANSPORT-DEBUG] Vybraný kľúč:', { busId, rowId, side });
     
         const teamKey = `${transfer.teamName}|${transfer.category || ''}`;
-        const trFrom = String(transfer.fromLocation || '').trim();
-        const trTo = String(transfer.toLocation || '').trim();
+        // NOVÉ: Normalizujeme názvy miest
+        const trFrom = normalizePlaceName(transfer.fromLocation);
+        const trTo = normalizePlaceName(transfer.toLocation);
         const trDayKey = transfer.dayKey || null;
     
         const busRowsKey = `${busId}|${trDayKey}`;
         const rows = busRows[busRowsKey] || [];
-        console.log('[TRANSPORT-DEBUG] Riadky pre autobus:', { busRowsKey, pocetRiadkov: rows.length });
-        console.log('[TRANSPORT-DEBUG] Hľadám nástup na:', trFrom, '| výstup na:', trTo);
     
         let boardingRow = null;
         let alightingRow = null;
     
         rows.forEach((row) => {
-            const rowFrom = String(row.placeFrom || '').trim();
-            const rowTo = String(row.placeTo || '').trim();
-            console.log(`[TRANSPORT-DEBUG]   Riadok ${row.id}: "${rowFrom}" → "${rowTo}"`);
-            
-            if (rowFrom && rowFrom === trFrom) {
-                console.log(`[TRANSPORT-DEBUG]   ✅ TENTO RIADOK JE NÁSTUP!`);
-                boardingRow = row;
-            }
-            if (rowTo && rowTo === trTo) {
-                console.log(`[TRANSPORT-DEBUG]   ✅ TENTO RIADOK JE VÝSTUP!`);
-                alightingRow = row;
-            }
-        });
-    
-        console.log('[TRANSPORT-DEBUG] Výsledok hľadania:', {
-            boardingRow: boardingRow ? { id: boardingRow.id, from: boardingRow.placeFrom, to: boardingRow.placeTo } : null,
-            alightingRow: alightingRow ? { id: alightingRow.id, from: alightingRow.placeFrom, to: alightingRow.placeTo } : null
+            // NOVÉ: Normalizujeme aj názvy v riadku autobusu
+            const rowFrom = normalizePlaceName(row.placeFrom);
+            const rowTo = normalizePlaceName(row.placeTo);
+            if (rowFrom && rowFrom === trFrom) boardingRow = row;
+            if (rowTo && rowTo === trTo) alightingRow = row;
         });
     
         setAssignBusSaving(true);
@@ -4295,15 +4242,14 @@ const TransportApp = ({ userProfileData }) => {
             if (boardingRow) {
                 const newTeamsIn = Array.from(new Set([...(boardingRow.teamsIn || []), teamKey]));
                 updates[boardingRow.id] = { ...(updates[boardingRow.id] || {}), teamsIn: newTeamsIn };
-                console.log(`[TRANSPORT-DEBUG] Pridávam do teamsIn riadku ${boardingRow.id}:`, newTeamsIn);
             }
     
             if (alightingRow) {
                 const newTeamsOut = Array.from(new Set([...(alightingRow.teamsOut || []), teamKey]));
                 updates[alightingRow.id] = { ...(updates[alightingRow.id] || {}), teamsOut: newTeamsOut };
-                console.log(`[TRANSPORT-DEBUG] Pridávam do teamsOut riadku ${alightingRow.id}:`, newTeamsOut);
             }
     
+            // Fallback – ak sa nenašiel ani nástup ani výstup
             if (!boardingRow && !alightingRow) {
                 let currentRow = rows.find(r => r.id === rowId);
                 if (currentRow) {
@@ -4317,12 +4263,9 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
     
-            console.log('[TRANSPORT-DEBUG] Updates na zápis do DB:', updates);
-    
-            const promises = Object.entries(updates).map(([rid, data]) => {
-                console.log(`[TRANSPORT-DEBUG] Zapisujem do riadku ${rid}:`, data);
-                return updateDoc(doc(window.db, 'transport', rid), data);
-            });
+            const promises = Object.entries(updates).map(([rid, data]) =>
+                updateDoc(doc(window.db, 'transport', rid), data)
+            );
             await Promise.all(promises);
     
             const parts = [];
@@ -4344,7 +4287,6 @@ const TransportApp = ({ userProfileData }) => {
             window.showGlobalNotification('Nepodarilo sa priradiť presun k autobusu.', 'error');
         } finally {
             setAssignBusSaving(false);
-            console.log('%c[TRANSPORT-DEBUG] --- assignTransferToBus KONIEC ---', 'color: #ea580c; font-weight: bold;');
         }
     };
 
