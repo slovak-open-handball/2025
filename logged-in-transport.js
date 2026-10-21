@@ -4298,7 +4298,6 @@ const TransportApp = ({ userProfileData }) => {
 
                                     if (totalMembers != null) {
                                         valueText = `${totalMembers}`;
-                                        displayTitle = 'Celkový počet členov tímu (hráči + RT muži + RT ženy + šoféri muži + šoféri ženy)';
                                     } else {
                                         const avg = getCategoryAverageForTransfer(t.category);
                                         if (avg != null) {
