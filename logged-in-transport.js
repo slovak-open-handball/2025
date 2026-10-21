@@ -225,7 +225,10 @@ const TransportApp = ({ userProfileData }) => {
         const lines = [];
         lines.push(`\n  [TRANSPORT] Tím: ${teamName} (${events.length} udalostí)`);
 
-        if (isSuperstructureTeam) {
+        // Pomocná: zisti, či je tím pavúkový (WSF/LSF/WQF/W8F/W16F v názve)
+        const isPavukTeam = /\b(WSF|LSF|WQF|W8F|W16F)\d*/i.test(String(teamName));
+        
+        if (isSuperstructureTeam && !isPavukTeam) {
             let groupChar = getGroupLastChar(teamGroupName);
             if (!groupChar) groupChar = getGroupLastChar(teamName);
 
@@ -2273,6 +2276,53 @@ const TransportApp = ({ userProfileData }) => {
                                         `${current.location}`,
                                         `${next.location}`
                                     ),
+                                    location: null,
+                                    isTransfer: true,
+                                });
+                            }
+                        }
+
+                        const isPavukTeamName = /\b(WSF|LSF|WQF|W8F|W16F)\d*/i.test(String(teamName));
+                        if (
+                            isPavukTeamName &&
+                            next &&
+                            currentIsTimedEvent &&
+                            current.location &&
+                            next.location &&
+                            current.location !== next.location &&
+                            currentDay != null &&
+                            nextDay != null &&
+                            currentDay !== nextDay
+                        ) {
+                            const departureTs =
+                                current.endTs != null ? current.endTs : current.startTs;
+                            const arrivalTs =
+                                next.startTs != null ? next.startTs : null;
+
+                            if (
+                                departureTs != null &&
+                                arrivalTs != null &&
+                                departureTs < arrivalTs
+                            ) {
+                                const departureStr = formatFullFromTs(departureTs);
+                                const arrivalStr = formatFullFromTs(arrivalTs);
+
+                                let whenStr;
+                                if (departureStr && arrivalStr) {
+                                    whenStr = `${departureStr} – ${arrivalStr}`;
+                                } else if (departureStr) {
+                                    whenStr = departureStr;
+                                } else if (arrivalStr) {
+                                    whenStr = arrivalStr;
+                                } else {
+                                    whenStr = current.when;
+                                }
+
+                                enriched.push({
+                                    ts: current.ts + 0.5,
+                                    when: whenStr,
+                                    type: 'transfer',
+                                    text: `Presun z ${current.location} do ${next.location}`,
                                     location: null,
                                     isTransfer: true,
                                 });
