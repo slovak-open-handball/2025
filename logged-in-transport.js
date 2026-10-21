@@ -3650,6 +3650,32 @@ const TransportApp = ({ userProfileData }) => {
         const stopOptions = stopsList.map((s) =>
             React.createElement('option', { key: s.id, value: s.name }, s.name)
         );
+
+        // Pomocná: získa farby pre badge tímu podľa kategórie
+        // (background + text + border) – na základe transportColorsRef
+        const getCategoryBadgeColors = (categoryName) => {
+            const hex = getTransportColorForCategory(categoryName);
+            if (!hex) {
+                return {
+                    bg: '#dcfce7',   // fallback zelená
+                    text: '#166534',
+                    border: '#86efac',
+                };
+            }
+            const light = lightenHex(hex, 0.2) || hex;
+            // tmavý text – vypočítame podľa jasu
+            let h = String(hex).trim().replace(/^#/, '');
+            if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+            let text = '#111827';
+            if (/^[0-9a-fA-F]{6}$/.test(h)) {
+                const r = parseInt(h.slice(0, 2), 16);
+                const g = parseInt(h.slice(2, 4), 16);
+                const b = parseInt(h.slice(4, 6), 16);
+                const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                text = brightness > 160 ? '#111827' : '#ffffff';
+            }
+            return { bg: light, text, border: hex };
+        };
     
         return React.createElement(
             'tr',
@@ -3699,15 +3725,16 @@ const TransportApp = ({ userProfileData }) => {
                     stopOptions
                 )
             ),
-            // 5. tímy nástup (len badge, bez inputu)
+            // 5. tímy nástup (len badge, bez inputu, s farbou kategórie)
             React.createElement('td', { className: 'border border-gray-300 p-1 align-top' },
                 (row.teamsIn || []).length === 0
                     ? React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—')
                     : React.createElement(
                         'div',
                         { className: 'flex flex-wrap gap-1' },
-                        (row.teamsIn || []).map((tn, i) =>
-                            React.createElement(
+                        (row.teamsIn || []).map((tn, i) => {
+                            const colors = getCategoryBadgeColors(tn);
+                            return React.createElement(
                                 'span',
                                 {
                                     key: `in-${i}`,
@@ -3716,23 +3743,29 @@ const TransportApp = ({ userProfileData }) => {
                                         updateBusRowField(row.id, 'teamsIn', newList);
                                     },
                                     title: 'Kliknutím odstrániť tím',
-                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-pointer hover:bg-emerald-200'
+                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold border cursor-pointer hover:opacity-80',
+                                    style: {
+                                        backgroundColor: colors.bg,
+                                        color: colors.text,
+                                        borderColor: colors.border,
+                                    }
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-right-to-bracket text-[9px]' }),
                                 tn
-                            )
-                        )
+                            );
+                        })
                     )
             ),
-            // 6. tímy výstup (len badge, bez inputu)
+            // 6. tímy výstup (len badge, bez inputu, s farbou kategórie)
             React.createElement('td', { className: 'border border-gray-300 p-1 align-top' },
                 (row.teamsOut || []).length === 0
                     ? React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—')
                     : React.createElement(
                         'div',
                         { className: 'flex flex-wrap gap-1' },
-                        (row.teamsOut || []).map((tn, i) =>
-                            React.createElement(
+                        (row.teamsOut || []).map((tn, i) => {
+                            const colors = getCategoryBadgeColors(tn);
+                            return React.createElement(
                                 'span',
                                 {
                                     key: `out-${i}`,
@@ -3741,12 +3774,17 @@ const TransportApp = ({ userProfileData }) => {
                                         updateBusRowField(row.id, 'teamsOut', newList);
                                     },
                                     title: 'Kliknutím odstrániť tím',
-                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-red-100 text-red-800 border border-red-300 cursor-pointer hover:bg-red-200'
+                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold border cursor-pointer hover:opacity-80',
+                                    style: {
+                                        backgroundColor: colors.bg,
+                                        color: colors.text,
+                                        borderColor: colors.border,
+                                    }
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-right-from-bracket text-[9px]' }),
                                 tn
-                            )
-                        )
+                            );
+                        })
                     )
             ),
             // 7. počet (manuálne)
