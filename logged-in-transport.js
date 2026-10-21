@@ -3392,7 +3392,7 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement(
                             'th',
                             {
-                                className: 'border border-gray-300 bg-gray-100 p-0 whitespace-nowrap sticky left-0 z-5',
+                                className: 'border border-gray-300 bg-gray-100 p-0 whitespace-nowrap sticky left-0 z-[1]',
                                 style: { width: '90px', minWidth: '90px', height: '48px', position: 'relative' }
                             },
                             React.createElement(
@@ -3469,7 +3469,7 @@ const TransportApp = ({ userProfileData }) => {
                                 'th',
                                 {
                                     onClick: () => handleStopHeaderClick(fromStop),
-                                    className: `border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap sticky left-0 z-10 ${
+                                    className: `border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap sticky left-0 z-[1] ${
                                         fromStop.isExternalArrivalStop
                                             ? ''
                                             : 'cursor-pointer hover:bg-gray-200'
