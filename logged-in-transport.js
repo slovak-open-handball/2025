@@ -4087,14 +4087,6 @@ const TransportApp = ({ userProfileData }) => {
 
     // ============================================================
     // NÁJDI VHODNÉ AUTOBUSY PRE PRESUN
-    //
-    // Pre každý autobus a deň:
-    //  - Nájde riadok, kde placeFrom === transfer.fromLocation (nástup)
-    //  - Nájde riadok, kde placeTo === transfer.toLocation (výstup)
-    //  - Tieto riadky môžu byť RÔZNE (trasa autobusu môže byť rozdelená)
-    //  - Časový interval riadku sa musí prekrývať s časom presunu
-    //
-    // Výsledok: pole { bus, row, side } – side = 'in' | 'out'
     // ============================================================
     const findMatchingBusRows = (transfer) => {
         if (!transfer) return [];
@@ -4125,43 +4117,30 @@ const TransportApp = ({ userProfileData }) => {
                 const rowStartTs = timeOnDayKeyToTs(dayKey, row.timeFrom);
                 const rowEndTs = timeOnDayKeyToTs(dayKey, row.timeTo);
     
-                if (rowStartTs == null && rowEndTs == null) return;
-    
+                // Prekryv intervalov (ak chýba čas, berieme to ako zhoda)
                 const overlap =
                     (rowEndTs == null || trRange.startTs < rowEndTs) &&
                     (rowStartTs == null || trRange.endTs > rowStartTs);
     
                 if (!overlap) return;
     
-                // NÁSTUP: Hľadáme riadok, ktorý začína na mieste odchodu presunu.
+                // NÁSTUP
                 if (rowFrom && rowFrom === trFrom) {
-                    // Preferujeme riadok s najskorším začiatkom.
                     if (!boardingRow || (rowStartTs != null && boardingRow.startTs != null && rowStartTs < boardingRow.startTs)) {
-                        boardingRow = { row, startTs: rowStartTs };
-                    } else if (!boardingRow) {
                         boardingRow = { row, startTs: rowStartTs };
                     }
                 }
     
-                // VÝSTUP: Hľadáme riadok, ktorý končí na mieste príchodu presunu.
+                // VÝSTUP
                 if (rowTo && rowTo === trTo) {
-                    // Preferujeme riadok s najneskorším koncom.
                     if (!alightingRow || (rowEndTs != null && alightingRow.endTs != null && rowEndTs > alightingRow.endTs)) {
-                        alightingRow = { row, endTs: rowEndTs };
-                    } else if (!alightingRow) {
                         alightingRow = { row, endTs: rowEndTs };
                     }
                 }
             });
     
-            // DÔLEŽITÉ: Pridáme výsledky nezávisle na sebe.
-            // Ak sa našiel len nástup alebo len výstup, stále ho zobrazíme.
-            if (boardingRow) {
-                results.push({ bus, row: boardingRow.row, side: 'in' });
-            }
-            if (alightingRow) {
-                results.push({ bus, row: alightingRow.row, side: 'out' });
-            }
+            if (boardingRow) results.push({ bus, row: boardingRow.row, side: 'in' });
+            if (alightingRow) results.push({ bus, row: alightingRow.row, side: 'out' });
         });
     
         // Deduplikácia
@@ -4221,28 +4200,13 @@ const TransportApp = ({ userProfileData }) => {
         }
     
         const [busId, rowId, side] = assignBusSelectedKey.split('|');
-        if (!busId || !rowId || !side) {
-            window.showGlobalNotification('Neplatný výber.', 'error');
-            return;
-        }
-    
-        const teamName = String(transfer.teamName || '').trim();
-        if (!teamName) {
-            window.showGlobalNotification('Presun nemá názov tímu.', 'error');
-            return;
-        }
-    
-        const teamKey = `${teamName}|${transfer.category || ''}`;
+        const teamKey = `${transfer.teamName}|${transfer.category || ''}`;
         const trFrom = String(transfer.fromLocation || '').trim();
         const trTo = String(transfer.toLocation || '').trim();
         const trDayKey = transfer.dayKey || null;
     
         const busRowsKey = `${busId}|${trDayKey}`;
-        const rows = busRows[busRowsKey] || [];
-        if (rows.length === 0) {
-            window.showGlobalNotification('Autobus nemá žiadne riadky pre tento deň.', 'error');
-            return;
-        }
+        const rows = busRows[busRowsKey] || []; // Vždy aktuálne dáta z closure
     
         let boardingRow = null;
         let alightingRow = null;
@@ -4268,20 +4232,17 @@ const TransportApp = ({ userProfileData }) => {
                 updates[alightingRow.id] = { ...(updates[alightingRow.id] || {}), teamsOut: newTeamsOut };
             }
     
-            // Ak sa nenašiel ani nástupný ani výstupný riadok, použijeme fallback
+            // Fallback – ak sa nenašiel ani nástup ani výstup
             if (!boardingRow && !alightingRow) {
                 let currentRow = rows.find(r => r.id === rowId);
-                if (!currentRow) {
-                    window.showGlobalNotification('Vybraný riadok autobusu sa nenašiel.', 'error');
-                    setAssignBusSaving(false);
-                    return;
-                }
-                if (side === 'in') {
-                    const newTeamsIn = Array.from(new Set([...(currentRow.teamsIn || []), teamKey]));
-                    updates[currentRow.id] = { teamsIn: newTeamsIn };
-                } else {
-                    const newTeamsOut = Array.from(new Set([...(currentRow.teamsOut || []), teamKey]));
-                    updates[currentRow.id] = { teamsOut: newTeamsOut };
+                if (currentRow) {
+                    if (side === 'in') {
+                        const newTeamsIn = Array.from(new Set([...(currentRow.teamsIn || []), teamKey]));
+                        updates[currentRow.id] = { teamsIn: newTeamsIn };
+                    } else {
+                        const newTeamsOut = Array.from(new Set([...(currentRow.teamsOut || []), teamKey]));
+                        updates[currentRow.id] = { teamsOut: newTeamsOut };
+                    }
                 }
             }
     
@@ -4296,7 +4257,7 @@ const TransportApp = ({ userProfileData }) => {
             if (parts.length === 0) parts.push(side === 'in' ? 'nástup' : 'výstup');
     
             window.showGlobalNotification(
-                `Tím "${teamName}" bol priradený (${parts.join(' + ')}).`,
+                `Tím "${transfer.teamName}" bol priradený (${parts.join(' + ')}).`,
                 'success'
             );
     
