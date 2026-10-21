@@ -4027,7 +4027,8 @@ const TransportApp = ({ userProfileData }) => {
                                 cat
                             ),
                             (() => {
-                                // Zoskup podľa tímu
+                                // Zoskup podľa tímu (aby boli presuny zoradené po tímoch),
+                                // ALE názov tímu sa už v hlavičke nezobrazuje.
                                 const byTeam = {};
                                 byCategory[cat].forEach((t) => {
                                     if (!byTeam[t.teamName]) byTeam[t.teamName] = [];
@@ -4040,13 +4041,8 @@ const TransportApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'div',
                                         { key: `team-${cat}-${teamName}`, className: 'mb-3' },
-                                        // Hlavička tímu (zostáva)
-                                        React.createElement(
-                                            'div',
-                                            { className: 'text-base font-semibold text-gray-800 mb-1.5 flex items-center gap-1.5' },
-                                            React.createElement('i', { className: 'fa-solid fa-people-group text-gray-400 text-sm' }),
-                                            teamName
-                                        ),
+                                        // POZOR: Hlavička tímu je ODSTRÁNENÁ – názov tímu
+                                        // sa zobrazuje iba v každom boxe presunu nižšie.
                                         React.createElement(
                                             'ul',
                                             { className: 'space-y-2 pl-1' },
@@ -4086,7 +4082,7 @@ const TransportApp = ({ userProfileData }) => {
                                                         key: t.key,
                                                         className: 'text-sm text-gray-700 flex flex-col leading-snug bg-violet-50/40 rounded-md px-2 py-1.5 border-l-2 border-violet-300'
                                                     },
-                                                    // 1. riadok – názov tímu
+                                                    // 1. riadok – názov tímu (v každom boxe presunu)
                                                     React.createElement(
                                                         'span',
                                                         { className: 'text-sm font-semibold text-violet-800 flex items-center gap-1' },
