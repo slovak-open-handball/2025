@@ -2477,13 +2477,13 @@ const TransportApp = ({ userProfileData }) => {
             });
         }
 
-        if (!window.__transport_preloadDone) {
-            window.__transport_preloadDone = true;
-            preloadAccommodationsForSuperstructureTeams().then(() => {
-                // Po načítaní cache znova zavolaj rebuild
-                rebuildAndLogTimeline();
-            });
-        }
+//        if (!window.__transport_preloadDone) {
+//            window.__transport_preloadDone = true;
+//            preloadAccommodationsForSuperstructureTeams().then(() => {
+//                // Po načítaní cache znova zavolaj rebuild
+//                rebuildAndLogTimeline();
+//            });
+//        }
         
         console.log('[TRANSPORT] ===============================================');
     };
@@ -2994,11 +2994,10 @@ const TransportApp = ({ userProfileData }) => {
                 teamsArrivalBufferRef.current = buffer;
                 teamsLoadedRef.current = true;
 
+                // Načítaj cache pre superstructure tímy a potom rebuild
                 preloadAccommodationsForSuperstructureTeams().then(() => {
                     rebuildAndLogTimeline();
                 });
-
-                rebuildAndLogTimeline();
 
             } catch (err) {
                 console.error('[TRANSPORT] Chyba pri načítaní tímov s ubytovaním:', err);
