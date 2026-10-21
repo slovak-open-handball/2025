@@ -827,15 +827,31 @@ const TransportApp = ({ userProfileData }) => {
                 const [cat, teamName] = key.split('|');
                 const char = ssGroupCharByTeam[key];
                 const set = ssPlayDatesByTeam[key];
-
+            
                 matchesBufferRef.current.forEach((m) => {
                     if (cleanCategory(m.category) !== cleanCategory(cat)) return;
-
-                    // IBA zápasy, ktoré sú priradené priamo do skupiny s daným písmenom.
-                    const matchGroup = m.groupName ? String(m.groupName).trim() : null;
-                    if (!matchGroup) return;
-                    if (!groupBelongsToChar(matchGroup, char)) return;
-
+            
+                    // NOVÉ: Zápas patrí do skupiny s daným písmenom, ak aspoň jeden z tímov
+                    // patrí do skupiny s daným písmenom (cez groupName alebo posledné písmeno).
+                    const teamBelongsToCharForPlayDates = (tn) => {
+                        if (!tn) return false;
+                        if (String(tn).startsWith('(row team:')) return false;
+                        const teamInfo = (teamsArrivalBufferRef.current || []).find(
+                            (t) => cleanCategory(t.category) === cleanCategory(cat) && t.teamName === tn
+                        );
+                        if (teamInfo && teamInfo.groupName) {
+                            return groupBelongsToChar(teamInfo.groupName, char);
+                        }
+                        const mm = /\d([A-ZÁ-Ž])\s*$/.exec(String(tn).trim());
+                        if (mm && mm[1].toUpperCase() === char) return true;
+                        return false;
+                    };
+            
+                    const matchBelongsToChar =
+                        teamBelongsToCharForPlayDates(m.home) ||
+                        teamBelongsToCharForPlayDates(m.away);
+                    if (!matchBelongsToChar) return;
+            
                     let dayKey = null;
                     if (m.scheduledTime) {
                         const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
@@ -851,7 +867,7 @@ const TransportApp = ({ userProfileData }) => {
                         dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
                     }
                     if (!dayKey) return;
-
+            
                     set.add(dayKey);
                 });
             });
