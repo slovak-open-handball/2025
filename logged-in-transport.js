@@ -3699,33 +3699,45 @@ const TransportApp = ({ userProfileData }) => {
                     stopOptions
                 )
             ),
-            // 5. tímy nástup
-            React.createElement('td', { className: 'border border-gray-300 p-1' },
-                React.createElement('input', {
-                    type: 'text',
-                    value: (row.teamsIn || []).join(', '),
-                    onChange: (e) => updateBusRowField(
-                        row.id,
-                        'teamsIn',
-                        e.target.value.split(',').map(s => s.trim()).filter(Boolean)
-                    ),
-                    placeholder: 'tím A, tím B',
-                    className: inputCls,
-                })
+            // 5. tímy nástup (len badge)
+            React.createElement('td', { className: 'border border-gray-300 p-1 align-top' },
+                (row.teamsIn || []).length === 0
+                    ? React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—')
+                    : React.createElement(
+                        'div',
+                        { className: 'flex flex-wrap gap-1' },
+                        (row.teamsIn || []).map((tn, i) =>
+                            React.createElement(
+                                'span',
+                                {
+                                    key: `in-${i}`,
+                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                },
+                                React.createElement('i', { className: 'fa-solid fa-right-to-bracket text-[9px]' }),
+                                tn
+                            )
+                        )
+                    )
             ),
-            // 6. tímy výstup
-            React.createElement('td', { className: 'border border-gray-300 p-1' },
-                React.createElement('input', {
-                    type: 'text',
-                    value: (row.teamsOut || []).join(', '),
-                    onChange: (e) => updateBusRowField(
-                        row.id,
-                        'teamsOut',
-                        e.target.value.split(',').map(s => s.trim()).filter(Boolean)
-                    ),
-                    placeholder: 'tím C',
-                    className: inputCls,
-                })
+            // 6. tímy výstup (len badge, bez inputu)
+            React.createElement('td', { className: 'border border-gray-300 p-1 align-top' },
+                (row.teamsOut || []).length === 0
+                    ? React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—')
+                    : React.createElement(
+                        'div',
+                        { className: 'flex flex-wrap gap-1' },
+                        (row.teamsOut || []).map((tn, i) =>
+                            React.createElement(
+                                'span',
+                                {
+                                    key: `out-${i}`,
+                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-red-100 text-red-800 border border-red-300'
+                                },
+                                React.createElement('i', { className: 'fa-solid fa-right-from-bracket text-[9px]' }),
+                                tn
+                            )
+                        )
+                    )
             ),
             // 7. počet (manuálne)
             React.createElement('td', { className: 'border border-gray-300 p-1' },
