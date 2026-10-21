@@ -166,6 +166,9 @@ const TransportApp = ({ userProfileData }) => {
     // Mapa: category|groupName → Set(teamName) – reálne priradenie zo settings/superstructureGroups
     const superstructureGroupsRef = useRef({});
 
+    // Mapa: názov kategórie → hex farba pre dopravu (z settings/categories)
+    const transportColorsRef = useRef({});
+
     // Zabráni opakovanému spracovaniu pred prvým načítaním
     const matchesLoadedRef = useRef(false);
     const cateringLoadedRef = useRef(false);
@@ -193,6 +196,8 @@ const TransportApp = ({ userProfileData }) => {
     const [confirmModal, setConfirmModal] = useState(null);    
     const [selectedDayKey, setSelectedDayKey] = useState('');
     const [savedTransfers, setSavedTransfers] = useState([]);
+    // Farba dopravy pre kategórie (na re-render pri zmene)
+    const [transportColors, setTransportColors] = useState({});
     // ==== MODÁLNE OKNO PRE VÝBER KATEGÓRIE (tlačidlo "+") ====
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [selectedCategoryForTimeline, setSelectedCategoryForTimeline] = useState('');
@@ -2734,11 +2739,12 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na superstructureGroups:', e);
         }
 
-        // 0a3) KATEGÓRIE (trvanie zápasu)
+        // 0a3) KATEGÓRIE (trvanie zápasu + farby pre dopravu)
         try {
             const catRef = doc(window.db, 'settings', 'categories');
             unsubscribeCategorySettings = onSnapshot(catRef, (snap) => {
                 const map = {};
+                const colorMap = {};
                 if (snap.exists()) {
                     const data = snap.data() || {};
                     Object.entries(data).forEach(([catId, catData]) => {
@@ -2751,9 +2757,24 @@ const TransportApp = ({ userProfileData }) => {
                         const info = { matchDuration, matchBreak };
                         if (catData.name) map[catData.name] = info;
                         map[catId] = info;
+
+                        // NOVÉ: farba pre dopravu – uložíme pod názov aj pod ID
+                        const transportColor = catData.transportColor || null;
+                        const drawColor = catData.drawColor || null;
+                        if (transportColor) {
+                            if (catData.name) colorMap[String(catData.name).trim()] = transportColor;
+                            colorMap[catId] = transportColor;
+                        }
+                        // Voliteľne aj drawColor (ak by si ho chcel použiť inde)
+                        if (drawColor) {
+                            if (catData.name) colorMap[`__draw__|${String(catData.name).trim()}`] = drawColor;
+                            colorMap[`__draw__|${catId}`] = drawColor;
+                        }
                     });
                 }
                 window.__transport_categories = map;
+                transportColorsRef.current = colorMap;
+                setTransportColors(colorMap);
                 if (matchesLoadedRef.current) rebuildAndLogTimeline();
             }, (err) => {
                 console.error('[TRANSPORT] onSnapshot(settings/categories) error:', err);
@@ -3749,6 +3770,40 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // NOVÉ: Pomocná – získa farbu dopravy pre kategóriu
+    // (skúsi presný názov, potom cleanCategory, potom fallback)
+    // ============================================================
+    const getTransportColorForCategory = (categoryName) => {
+        const map = transportColorsRef.current || {};
+        const raw = String(categoryName || '').trim();
+        if (!raw) return null;
+        if (map[raw]) return map[raw];
+        const cleaned = cleanCategory(raw);
+        if (map[cleaned]) return map[cleaned];
+        // Skús aj case-insensitive
+        const lower = raw.toLowerCase();
+        for (const [k, v] of Object.entries(map)) {
+            if (k.startsWith('__draw__|')) continue;
+            if (k.toLowerCase() === lower) return v;
+        }
+        return null;
+    };
+
+    // ============================================================
+    // NOVÉ: Pomocná – získa farbu pre rozlosovanie (drawColor)
+    // ============================================================
+    const getDrawColorForCategory = (categoryName) => {
+        const map = transportColorsRef.current || {};
+        const raw = String(categoryName || '').trim();
+        if (!raw) return null;
+        if (map[`__draw__|${raw}`]) return map[`__draw__|${raw}`];
+        const cleaned = cleanCategory(raw);
+        if (map[`__draw__|${cleaned}`]) return map[`__draw__|${cleaned}`];
+        return null;
+    };
+
+
+    // ============================================================
     // RENDER – plánovanie
     // ============================================================
     const renderPlanning = () => {
@@ -4054,17 +4109,13 @@ const TransportApp = ({ userProfileData }) => {
                     'Zatiaľ žiadne vygenerované presuny. Kliknite na "+" vpravo dole a vygenerujte časovú os.'
                 )
                 : React.createElement(
-                    'div',
-                    { className: 'max-h-[70vh] overflow-y-auto p-3' },
-                    // Jeden zoznam presunov, zoradený chronologicky (bez zoskupovania
-                    // podľa kategórie v hlavičke – kategória je v každom boxe).
-                    React.createElement(
                         'ul',
                         { className: 'space-y-2' },
                         sortedTransfers.map((t) => {
                             const rangeInfo = parseWhenRange(t.when);
                             const transferInfo = parseTransferText(t.text);
                             const categoryLabel = cleanCategory(t.category) || '(bez kategórie)';
+                            const transportColor = getTransportColorForCategory(t.category);
 
                             // 1. riadok – dátum
                             let dateLabel = null;
@@ -4096,13 +4147,21 @@ const TransportApp = ({ userProfileData }) => {
                                 'li',
                                 {
                                     key: t.key,
-                                    className: 'text-sm text-gray-700 flex flex-col leading-snug bg-violet-50/40 rounded-md px-2 py-1.5 border-l-2 border-violet-300'
+                                    className: 'text-sm text-gray-700 flex flex-col leading-snug bg-violet-50/40 rounded-md px-2 py-1.5',
+                                    style: {
+                                        borderLeft: transportColor
+                                            ? `6px solid ${transportColor}`
+                                            : '2px solid #c4b5fd', // fallback – pôvodná violet-300
+                                    }
                                 },
                                 // 1. riadok – KATEGÓRIA • TÍM (kategória je pred tímom)
                                 React.createElement(
                                     'span',
                                     { className: 'text-sm flex flex-wrap items-center gap-1' },
-                                    React.createElement('i', { className: 'fa-solid fa-layer-group text-violet-500 text-[11px]' }),
+                                    React.createElement('i', {
+                                        className: 'fa-solid fa-layer-group text-[11px]',
+                                        style: { color: transportColor || '#8b5cf6' }
+                                    }),
                                     React.createElement(
                                         'span',
                                         { className: 'font-bold text-violet-900' },
