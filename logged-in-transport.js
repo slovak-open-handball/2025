@@ -5459,7 +5459,7 @@ const TransportApp = ({ userProfileData }) => {
                 React.createElement(
                     'h3',
                     { className: 'text-lg font-bold text-center' },
-                    'Pešie presuny'
+                    'Peši'
                 ),
                 React.createElement(
                     'span',
