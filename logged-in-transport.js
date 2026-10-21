@@ -4075,32 +4075,32 @@ const TransportApp = ({ userProfileData }) => {
                                                         key: t.key,
                                                         className: 'text-sm text-gray-700 flex flex-col leading-snug'
                                                     },
-                                                    // 1. riadok – dátum
+                                                    // 1. riadok – dátum (rovnaký font a veľkosť ako trasa)
                                                     dateLabel &&
                                                         React.createElement(
                                                             'span',
-                                                            { className: 'font-mono text-[13px] text-gray-500' },
+                                                            { className: 'text-sm text-gray-500' },
                                                             dateLabel
                                                         ),
-                                                    // 2. riadok – čas
+                                                    // 2. riadok – čas (rovnaký font a veľkosť ako trasa)
                                                     timeLabel &&
                                                         React.createElement(
                                                             'span',
-                                                            { className: 'font-mono text-[13px] text-gray-600' },
+                                                            { className: 'text-sm text-gray-600' },
                                                             timeLabel
                                                         ),
-                                                    // 3. riadok – miesta
+                                                    // 3. riadok – miesta (rovnaký font a veľkosť ako dátum a čas)
                                                     routeLabel &&
                                                         React.createElement(
                                                             'span',
-                                                            { className: 'text-gray-900 font-medium' },
+                                                            { className: 'text-sm text-gray-900 font-medium' },
                                                             routeLabel
                                                         ),
                                                     // Fallback – ak sa nepodarilo parsovať, zobraz pôvodný text
                                                     (!dateLabel && !timeLabel && !routeLabel) &&
                                                         React.createElement(
                                                             'span',
-                                                            { className: 'text-gray-800' },
+                                                            { className: 'text-sm text-gray-800' },
                                                             t.text.replace(/^Presun z /, '')
                                                         )
                                                 );
@@ -4114,7 +4114,7 @@ const TransportApp = ({ userProfileData }) => {
                 )
         );
     };
-
+    
     // ============================================================
     // HLAVNÝ RENDER
     // ============================================================
