@@ -3902,18 +3902,6 @@ const TransportApp = ({ userProfileData }) => {
             ? savedTransfers.filter((t) => t.dayKey === selectedDayKey)
             : savedTransfers;
 
-        // Zoskupenie podľa kategórie
-        const byCategory = {};
-        filtered.forEach((t) => {
-            const cat = cleanCategory(t.category) || '(bez kategórie)';
-            if (!byCategory[cat]) byCategory[cat] = [];
-            byCategory[cat].push(t);
-        });
-
-        const categories = Object.keys(byCategory).sort((a, b) =>
-            a.localeCompare(b, 'sk', { sensitivity: 'base' })
-        );
-
         // ============================================================
         // Pomocná: z `when` (napr. "26. 12. 2026 08:00 – 26. 12. 2026 09:15")
         // vytiahne dátum začiatku/konca + čas začiatku/konca.
@@ -3984,6 +3972,47 @@ const TransportApp = ({ userProfileData }) => {
             };
         };
 
+        // ============================================================
+        // NOVÉ: Pomocná – z `when` vytiahne číselný kľúč pre zoradenie:
+        //   YYYYMMDD + HHMM (ak chýba čas, berie sa 00:00)
+        // ============================================================
+        const buildChronologySortKey = (t) => {
+            const r = parseWhenRange(t.when);
+            const dayKey = r ? r.startDayKey : (t.dayKey || '');
+            const time = r && r.startTime ? r.startTime : '00:00';
+            const datePart = String(dayKey || '').replace(/-/g, '');
+            const timePart = String(time || '').replace(':', '');
+            return `${datePart}${timePart}`;
+        };
+
+        // ============================================================
+        // Zoradenie: chronologicky podľa dátumu a času začiatku presunu
+        // (a ako sekundárne podľa kategórie a názvu tímu)
+        // ============================================================
+        const sortedTransfers = [...filtered].sort((a, b) => {
+            const ka = buildChronologySortKey(a);
+            const kb = buildChronologySortKey(b);
+            if (ka !== kb) return ka.localeCompare(kb);
+            const ca = cleanCategory(a.category) || '';
+            const cb = cleanCategory(b.category) || '';
+            if (ca !== cb) return ca.localeCompare(cb, 'sk', { sensitivity: 'base' });
+            const ta = String(a.teamName || '');
+            const tb = String(b.teamName || '');
+            return ta.localeCompare(tb, 'sk', { sensitivity: 'base' });
+        });
+
+        // Zoskupenie podľa kategórie (zo zoradeného zoznamu)
+        const byCategory = {};
+        sortedTransfers.forEach((t) => {
+            const cat = cleanCategory(t.category) || '(bez kategórie)';
+            if (!byCategory[cat]) byCategory[cat] = [];
+            byCategory[cat].push(t);
+        });
+
+        const categories = Object.keys(byCategory).sort((a, b) =>
+            a.localeCompare(b, 'sk', { sensitivity: 'base' })
+        );
+
         return React.createElement(
             'div',
             {
@@ -4026,108 +4055,90 @@ const TransportApp = ({ userProfileData }) => {
                                 { className: 'text-sm font-bold uppercase tracking-wide text-violet-700 mb-2 pb-1 border-b border-violet-200' },
                                 cat
                             ),
-                            (() => {
-                                // Zoskup podľa tímu (aby boli presuny zoradené po tímoch),
-                                // ALE názov tímu sa už v hlavičke nezobrazuje.
-                                const byTeam = {};
-                                byCategory[cat].forEach((t) => {
-                                    if (!byTeam[t.teamName]) byTeam[t.teamName] = [];
-                                    byTeam[t.teamName].push(t);
-                                });
-                                const teams = Object.keys(byTeam).sort((a, b) =>
-                                    a.localeCompare(b, 'sk', { sensitivity: 'base' })
-                                );
-                                return teams.map((teamName) =>
-                                    React.createElement(
-                                        'div',
-                                        { key: `team-${cat}-${teamName}`, className: 'mb-3' },
-                                        // POZOR: Hlavička tímu je ODSTRÁNENÁ – názov tímu
-                                        // sa zobrazuje iba v každom boxe presunu nižšie.
+                            // Presuny v kategórii už sú zoradené chronologicky
+                            // (byCategory[cat] je vytvorené zo sortedTransfers)
+                            React.createElement(
+                                'ul',
+                                { className: 'space-y-2 pl-1' },
+                                byCategory[cat].map((t) => {
+                                    const rangeInfo = parseWhenRange(t.when);
+                                    const transferInfo = parseTransferText(t.text);
+
+                                    // 1. riadok – dátum
+                                    let dateLabel = null;
+                                    if (rangeInfo) {
+                                        dateLabel = (rangeInfo.startDayKey === rangeInfo.endDayKey)
+                                            ? rangeInfo.startLabel
+                                            : `${rangeInfo.startLabel} – ${rangeInfo.endLabel}`;
+                                    } else if (t.dayKey) {
+                                        dateLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
+                                    }
+
+                                    // 2. riadok – čas
+                                    let timeLabel = null;
+                                    if (rangeInfo) {
+                                        const st = rangeInfo.startTime;
+                                        const et = rangeInfo.endTime;
+                                        if (st && et) timeLabel = `${st} – ${et}`;
+                                        else if (st) timeLabel = st;
+                                        else if (et) timeLabel = et;
+                                    }
+
+                                    // 3. riadok – miesta (s normalizáciou "ubytovňa" a "zastávka")
+                                    let routeLabel = null;
+                                    if (transferInfo) {
+                                        routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
+                                    }
+
+                                    return React.createElement(
+                                        'li',
+                                        {
+                                            key: t.key,
+                                            className: 'text-sm text-gray-700 flex flex-col leading-snug bg-violet-50/40 rounded-md px-2 py-1.5 border-l-2 border-violet-300'
+                                        },
+                                        // 1. riadok – názov tímu (v každom boxe presunu)
                                         React.createElement(
-                                            'ul',
-                                            { className: 'space-y-2 pl-1' },
-                                            byTeam[teamName].map((t) => {
-                                                const rangeInfo = parseWhenRange(t.when);
-                                                const transferInfo = parseTransferText(t.text);
-
-                                                // 1. riadok – dátum
-                                                let dateLabel = null;
-                                                if (rangeInfo) {
-                                                    dateLabel = (rangeInfo.startDayKey === rangeInfo.endDayKey)
-                                                        ? rangeInfo.startLabel
-                                                        : `${rangeInfo.startLabel} – ${rangeInfo.endLabel}`;
-                                                } else if (t.dayKey) {
-                                                    dateLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
-                                                }
-
-                                                // 2. riadok – čas
-                                                let timeLabel = null;
-                                                if (rangeInfo) {
-                                                    const st = rangeInfo.startTime;
-                                                    const et = rangeInfo.endTime;
-                                                    if (st && et) timeLabel = `${st} – ${et}`;
-                                                    else if (st) timeLabel = st;
-                                                    else if (et) timeLabel = et;
-                                                }
-
-                                                // 3. riadok – miesta (s normalizáciou "ubytovňa" a "zastávka")
-                                                let routeLabel = null;
-                                                if (transferInfo) {
-                                                    routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
-                                                }
-
-                                                return React.createElement(
-                                                    'li',
-                                                    {
-                                                        key: t.key,
-                                                        className: 'text-sm text-gray-700 flex flex-col leading-snug bg-violet-50/40 rounded-md px-2 py-1.5 border-l-2 border-violet-300'
-                                                    },
-                                                    // 1. riadok – názov tímu (v každom boxe presunu)
-                                                    React.createElement(
-                                                        'span',
-                                                        { className: 'text-sm font-semibold text-violet-800 flex items-center gap-1' },
-                                                        React.createElement('i', { className: 'fa-solid fa-people-group text-violet-500 text-[11px]' }),
-                                                        t.teamName || '(neznámy tím)'
-                                                    ),
-                                                    // 2. riadok – dátum
-                                                    dateLabel &&
-                                                        React.createElement(
-                                                            'span',
-                                                            { className: 'text-sm text-gray-500' },
-                                                            dateLabel
-                                                        ),
-                                                    // 3. riadok – čas
-                                                    timeLabel &&
-                                                        React.createElement(
-                                                            'span',
-                                                            { className: 'text-sm text-gray-600' },
-                                                            timeLabel
-                                                        ),
-                                                    // 4. riadok – miesta
-                                                    routeLabel &&
-                                                        React.createElement(
-                                                            'span',
-                                                            { className: 'text-sm text-gray-900 font-medium' },
-                                                            routeLabel
-                                                        ),
-                                                    // Fallback – ak sa nepodarilo parsovať, zobraz pôvodný text
-                                                    (!dateLabel && !timeLabel && !routeLabel) &&
-                                                        React.createElement(
-                                                            'span',
-                                                            { className: 'text-sm text-gray-800' },
-                                                            String(t.text || '')
-                                                                .replace(/^Presun z /, '')
-                                                                .replace(/\bubytovania\b/gi, 'ubytovňa')
-                                                                .replace(/\bubytovanie\b/gi, 'ubytovňa')
-                                                                .replace(/\bzastávky\b/gi, 'zastávka')
-                                                                .replace(/\bzastávok\b/gi, 'zastávka')
-                                                        )
-                                                );
-                                            })
-                                        )
-                                    )
-                                );
-                            })()
+                                            'span',
+                                            { className: 'text-sm font-semibold text-violet-800 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-people-group text-violet-500 text-[11px]' }),
+                                            t.teamName || '(neznámy tím)'
+                                        ),
+                                        // 2. riadok – dátum
+                                        dateLabel &&
+                                            React.createElement(
+                                                'span',
+                                                { className: 'text-sm text-gray-500' },
+                                                dateLabel
+                                            ),
+                                        // 3. riadok – čas
+                                        timeLabel &&
+                                            React.createElement(
+                                                'span',
+                                                { className: 'text-sm text-gray-600' },
+                                                timeLabel
+                                            ),
+                                        // 4. riadok – miesta
+                                        routeLabel &&
+                                            React.createElement(
+                                                'span',
+                                                { className: 'text-sm text-gray-900 font-medium' },
+                                                routeLabel
+                                            ),
+                                        // Fallback – ak sa nepodarilo parsovať, zobraz pôvodný text
+                                        (!dateLabel && !timeLabel && !routeLabel) &&
+                                            React.createElement(
+                                                'span',
+                                                { className: 'text-sm text-gray-800' },
+                                                String(t.text || '')
+                                                    .replace(/^Presun z /, '')
+                                                    .replace(/\bubytovania\b/gi, 'ubytovňa')
+                                                    .replace(/\bubytovanie\b/gi, 'ubytovňa')
+                                                    .replace(/\bzastávky\b/gi, 'zastávka')
+                                                    .replace(/\bzastávok\b/gi, 'zastávka')
+                                            )
+                                    );
+                                })
+                            )
                         )
                     )
                 )
