@@ -963,8 +963,34 @@ const TransportApp = ({ userProfileData }) => {
                             const groupPlayDays = [...ssPlayDatesByTeam[ssTeamKeyPre]].sort();
                     
                             groupPlayDays.forEach((groupPlayDay) => {
-                                // Ak tím má udalosť v tento deň, preskoč – rieši sa v cykle
-                                if (teamEventDays.has(groupPlayDay)) return;
+                                // Zisti, či tím má udalosť v daný deň (z events AJ z matches/catering)
+                                    const teamHasEventOnDay = (() => {
+                                        const fromEvents = events.some((ev) => extractDayKeyFromWhen(ev.when) === groupPlayDay);
+                                        if (fromEvents) return true;
+                                        const fromMatches = (matchesBufferRef.current || []).some((m) => {
+                                            if (cleanCategory(m.category) !== cleanCategory(category)) return false;
+                                            if (m.home !== teamName && m.away !== teamName) return false;
+                                            let dk = null;
+                                            if (m.scheduledTime) {
+                                                const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                                if (mm) dk = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
+                                            }
+                                            if (!dk && m.scheduledTs != null) {
+                                                const dt = new Date(m.scheduledTs);
+                                                dk = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                            }
+                                            return dk === groupPlayDay;
+                                        });
+                                        if (fromMatches) return true;
+                                        const fromCatering = (cateringBufferRef.current || []).some((c) => {
+                                            if (cleanCategory(c.category) !== cleanCategory(category)) return false;
+                                            if (c.teamName !== teamName) return false;
+                                            return c.dayKey === groupPlayDay;
+                                        });
+                                        return fromCatering;
+                                    })();
+                                
+                                    if (teamHasEventOnDay) return;
                     
                                 // Nájdi prvú udalosť tímu v nasledujúcom dni (po groupPlayDay)
                                 let destEvent = null;
