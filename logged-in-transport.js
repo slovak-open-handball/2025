@@ -4788,11 +4788,15 @@ const TransportApp = ({ userProfileData }) => {
             ? tournamentDays.filter((d) => d.dayKey === selectedDayKey)
             : tournamentDays;
 
+        const hasAnythingToRender =
+            buses.length > 0 ||
+            savedTransfers.some((t) => t.isWalking === true && (!selectedDayKey || t.dayKey === selectedDayKey));
+
         return React.createElement(
             'div',
             { className: 'w-full flex flex-col items-start justify-start py-6 relative min-h-[400px]' },
 
-            buses.length === 0
+            hasAnythingToRender
                 ? React.createElement(
                     'div',
                     { className: 'w-full flex flex-col items-center justify-center py-16 text-gray-500' },
@@ -4823,6 +4827,8 @@ const TransportApp = ({ userProfileData }) => {
                 
                     // === NOVÉ: ĽAVÝ STĹPEC – uložené vygenerované presuny ===
                     renderSavedTransfers(),
+
+                    renderWalkingTransfersBox(),
                 
                     // === PÔVODNÉ: boxy autobusov ===
                     buses.map((bus) =>
@@ -5268,6 +5274,176 @@ const TransportApp = ({ userProfileData }) => {
                                     )
                             );
                         })
+                    )
+                )
+        );
+    };
+
+    // ============================================================
+    // RENDER – box pre pešie presuny (zobrazí sa vedľa autobusov)
+    // ============================================================
+    const renderWalkingTransfersBox = () => {
+        // Zober len pešie presuny pre zvolený deň
+        const walkingTransfers = savedTransfers.filter((t) => {
+            if (t.isWalking !== true) return false;
+            if (selectedDayKey && t.dayKey !== selectedDayKey) return false;
+            return true;
+        });
+    
+        // Pomocná: parsovanie "when" → čas od/do
+        const parseWhenRange = (when) => {
+            if (!when) return null;
+            const s = String(when);
+            const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
+            const found = [];
+            let m;
+            while ((m = regex.exec(s)) !== null) {
+                const d = String(m[1]).padStart(2, '0');
+                const mo = String(m[2]).padStart(2, '0');
+                const y = m[3];
+                const hh = m[4] != null ? String(m[4]).padStart(2, '0') : null;
+                const mi = m[5] != null ? String(m[5]).padStart(2, '0') : null;
+                found.push({
+                    dayKey: `${y}-${mo}-${d}`,
+                    label: `${d}. ${mo}. ${y}`,
+                    time: (hh != null && mi != null) ? `${hh}:${mi}` : null,
+                });
+            }
+            if (found.length === 0) return null;
+            if (found.length === 1) {
+                return {
+                    startTime: found[0].time,
+                    endTime: found[0].time,
+                };
+            }
+            return {
+                startTime: found[0].time,
+                endTime: found[1].time,
+            };
+        };
+    
+        // Pomocná: parsovanie textu "Presun z X do Y"
+        const parseTransferText = (text) => {
+            if (!text) return null;
+            const m = /^Presun z (.+?) do (.+)$/.exec(String(text).trim());
+            if (!m) return null;
+            const normalizePlace = (str) => String(str)
+                .replace(/\bubytovania\b/gi, 'ubytovňa')
+                .replace(/\bubytovanie\b/gi, 'ubytovňa')
+                .replace(/\bzastávky\b/gi, 'zastávka')
+                .replace(/\bzastávok\b/gi, 'zastávka');
+            return {
+                from: normalizePlace(m[1].trim()),
+                to: normalizePlace(m[2].trim()),
+            };
+        };
+    
+        // Zoradenie podľa času začiatku
+        const sorted = [...walkingTransfers].sort((a, b) => {
+            const rA = parseWhenRange(a.when);
+            const rB = parseWhenRange(b.when);
+            const tA = rA?.startTime || '00:00';
+            const tB = rB?.startTime || '00:00';
+            return tA.localeCompare(tB);
+        });
+    
+        return React.createElement(
+            'div',
+            {
+                className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
+                style: { width: '720px', maxWidth: '100%' }
+            },
+            // Hlavička
+            React.createElement(
+                'div',
+                {
+                    className: 'relative px-5 py-3 flex items-center justify-center text-white',
+                    style: { backgroundColor: '#059669' } // zelená (emerald-600)
+                },
+                React.createElement('i', { className: 'fa-solid fa-person-walking mr-2' }),
+                React.createElement(
+                    'h3',
+                    { className: 'text-lg font-bold text-center' },
+                    'Pešie presuny'
+                ),
+                React.createElement(
+                    'span',
+                    { className: 'absolute right-3 text-xs bg-white/20 rounded-full px-2 py-0.5' },
+                    `${sorted.length}`
+                )
+            ),
+            // Telo
+            sorted.length === 0
+                ? React.createElement(
+                    'p',
+                    { className: 'text-center text-gray-500 py-6 text-sm italic px-3' },
+                    'Žiadne pešie presuny pre zvolený deň.'
+                )
+                : React.createElement(
+                    'div',
+                    { className: 'max-h-[70vh] overflow-y-auto p-3' },
+                    React.createElement(
+                        'table',
+                        { className: 'w-full border-collapse text-xs' },
+                        React.createElement(
+                            'thead',
+                            null,
+                            React.createElement(
+                                'tr',
+                                { className: 'bg-gray-100 text-xs font-semibold text-gray-700' },
+                                React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '70px' } }, 'Od'),
+                                React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '70px' } }, 'Do'),
+                                React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Miesto od'),
+                                React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Miesto do'),
+                                React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Tím')
+                            )
+                        ),
+                        React.createElement(
+                            'tbody',
+                            null,
+                            sorted.map((t) => {
+                                const range = parseWhenRange(t.when);
+                                const info = parseTransferText(t.text);
+                                const timeFrom = range?.startTime || '';
+                                const timeTo = range?.endTime || '';
+                                const placeFrom = info?.from || '';
+                                const placeTo = info?.to || '';
+                                const textColor = getCategoryTextColor(t.category);
+    
+                                return React.createElement(
+                                    'tr',
+                                    { key: t.key, className: 'hover:bg-gray-50' },
+                                    React.createElement(
+                                        'td',
+                                        { className: 'border border-gray-300 px-2 py-1 text-center font-semibold text-blue-700' },
+                                        timeFrom || '—'
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'border border-gray-300 px-2 py-1 text-center font-semibold text-blue-700' },
+                                        timeTo || '—'
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'border border-gray-300 px-2 py-1' },
+                                        placeFrom || '—'
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'border border-gray-300 px-2 py-1' },
+                                        placeTo || '—'
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        {
+                                            className: 'border border-gray-300 px-2 py-1 font-semibold',
+                                            style: { color: textColor }
+                                        },
+                                        t.teamName || '(neznámy tím)'
+                                    )
+                                );
+                            })
+                        )
                     )
                 )
         );
