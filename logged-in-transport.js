@@ -6275,24 +6275,32 @@ const TransportApp = ({ userProfileData }) => {
                                                     })(),
                                             
                                                     // 3) Riadok s tlačidlom "+" – AŽ POD posledným riadkom udalosti
-                                                    React.createElement(
-                                                        'tr',
-                                                        { className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50' },
-                                                        React.createElement(
-                                                            'td',
-                                                            { className: 'border border-gray-200 px-4 py-2 text-center' },
+                                                    //    Zobrazí sa LEN ak pre daný bus + deň neexistuje žiadny riadok.
+                                                    //    Ak už riadky existujú, nové sa pridávajú cez hover "+" na hraniciach riadkov.
+                                                    (() => {
+                                                        const rowsKey = `${bus.id}|${day.dayKey}`;
+                                                        const existingRows = busRows[rowsKey] || [];
+                                                        if (existingRows.length > 0) return null;
+                                                    
+                                                        return React.createElement(
+                                                            'tr',
+                                                            { className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50' },
                                                             React.createElement(
-                                                                'button',
-                                                                {
-                                                                    type: 'button',
-                                                                    onClick: () => addBusRow(bus, day.dayKey),
-                                                                    className: 'w-9 h-9 rounded-full bg-green-600 text-white shadow hover:bg-green-700 active:scale-95 transition-all duration-150 flex items-center justify-center text-lg font-bold mx-auto',
-                                                                    title: `Pridať riadok pre deň ${day.dateLabel}`
-                                                                },
-                                                                React.createElement('i', { className: 'fa-solid fa-plus' })
+                                                                'td',
+                                                                { className: 'border border-gray-200 px-4 py-2 text-center' },
+                                                                React.createElement(
+                                                                    'button',
+                                                                    {
+                                                                        type: 'button',
+                                                                        onClick: () => addBusRow(bus, day.dayKey),
+                                                                        className: 'w-9 h-9 rounded-full bg-green-600 text-white shadow hover:bg-green-700 active:scale-95 transition-all duration-150 flex items-center justify-center text-lg font-bold mx-auto',
+                                                                        title: `Pridať prvý riadok pre deň ${day.dateLabel}`
+                                                                    },
+                                                                    React.createElement('i', { className: 'fa-solid fa-plus' })
+                                                                )
                                                             )
-                                                        )
-                                                    )
+                                                        );
+                                                    })()
                                                 )
                                             )
                                         )
