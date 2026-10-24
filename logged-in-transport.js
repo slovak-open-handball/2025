@@ -4832,48 +4832,43 @@ const TransportApp = ({ userProfileData }) => {
 
     // ============================================================
     // NÁJDI VHODNÉ AUTOBUSY PRE PRESUN
-    // Vracia zhrnutie celej trasy autobusu pre daný deň
-    // (začiatočná a koncová zastávka + časy).
+    // Vracia len autobusy, ktoré majú AJ nástup AJ výstup
+    // (aby tím v buse neuviazol).
     // ============================================================
     const findMatchingBusRows = (transfer) => {
         if (!transfer) return [];
-
+    
         const trRange = parseTransferWhenToRange(transfer.when);
         const trFrom = normalizePlaceName(transfer.fromLocation);
         const trTo = normalizePlaceName(transfer.toLocation);
         const trDayKey = transfer.dayKey || null;
-
+    
         if (!trRange || !trFrom || !trTo || !trDayKey) return [];
-
+    
         const results = [];
-
+    
         Object.entries(busRows || {}).forEach(([key, rows]) => {
             const [busId, dayKey] = key.split('|');
             if (dayKey !== trDayKey) return;
-
+    
             const bus = buses.find((b) => b.id === busId);
             if (!bus) return;
             if (!rows || rows.length === 0) return;
-
+    
             const sortedRows = [...rows].sort((a, b) => (a.order || 0) - (b.order || 0));
-
-            // ============================================================
+    
             // Nájdi VŠETKY nástupné kandidáty (placeFrom === trFrom)
-            // a VŠETKY výstupné kandidáty (placeTo === trTo) – naprieč
-            // všetkými riadkami autobusu. Medzizastávky sú irelevantné,
-            // tím jednoducho sedí v buse medzi nástupom a výstupom.
-            // ============================================================
+            // a VŠETKY výstupné kandidáty (placeTo === trTo)
             const boardingCandidates = [];
             const alightingCandidates = [];
-
+    
             sortedRows.forEach((row) => {
                 const rowFrom = normalizePlaceName(row.placeFrom);
                 const rowTo = normalizePlaceName(row.placeTo);
                 const rowTimeFromTs = timeOnDayKeyToTs(dayKey, row.timeFrom);
                 const rowTimeToTs = timeOnDayKeyToTs(dayKey, row.timeTo);
-
-                // Nástupný kandidát: placeFrom === trFrom
-                // a timeFrom v okne presunu (>= start, <= end)
+    
+                // Nástupný kandidát
                 if (
                     rowFrom &&
                     rowFrom === trFrom &&
@@ -4883,9 +4878,8 @@ const TransportApp = ({ userProfileData }) => {
                 ) {
                     boardingCandidates.push({ row, timeTs: rowTimeFromTs });
                 }
-
-                // Výstupný kandidát: placeTo === trTo
-                // a timeTo v okne presunu (>= start, <= end)
+    
+                // Výstupný kandidát
                 if (
                     rowTo &&
                     rowTo === trTo &&
@@ -4896,13 +4890,17 @@ const TransportApp = ({ userProfileData }) => {
                     alightingCandidates.push({ row, timeTs: rowTimeToTs });
                 }
             });
-
-            // Ak nemáme ani nástup, ani výstup → bus nie je vhodný
-            if (boardingCandidates.length === 0 && alightingCandidates.length === 0) return;
-
-            // Skúsime vytvoriť `trip` (pre zobrazenie trasy v modálnom okne).
-            // Ak zlyhá (napr. chýba placeFrom/placeTo v prvom/poslednom riadku),
-            // použijeme fallback – zobrazíme len miesta z nástupu/výstupu.
+    
+            // ============================================================
+            // NOVÉ: Ak nemáme AJ nástup AJ výstup → bus nie je vhodný.
+            // (Predtým sa zobrazovali aj bus-y len s nástupom alebo len s výstupom,
+            //  čo spôsobovalo, že tím v buse uviazol.)
+            // ============================================================
+            if (boardingCandidates.length === 0 || alightingCandidates.length === 0) {
+                return;
+            }
+    
+            // Pomocná: vytvor `trip` pre zobrazenie trasy
             const trip = buildBusTripSummary(bus, dayKey, rows) || {
                 bus,
                 dayKey,
@@ -4914,50 +4912,18 @@ const TransportApp = ({ userProfileData }) => {
                 lastRowId: sortedRows[sortedRows.length - 1]?.id || null,
                 rows: sortedRows,
             };
-
-            // ============================================================
-            // Vytvor dvojice (nástup, výstup)
-            // ============================================================
-            if (boardingCandidates.length === 0) {
-                // Len výstup – tím už je v buse a vystupuje
-                alightingCandidates.forEach((alight) => {
-                    results.push({
-                        bus,
-                        trip,
-                        boardingRow: null,
-                        alightingRow: alight.row,
-                        side: 'out',
-                        boardingTime: null,
-                        alightingTime: alight.row.timeTo,
-                    });
-                });
-                return;
-            }
-
+    
+            // Vytvor dvojice (nástup, výstup) – len také, kde výstup je po nástupe
             boardingCandidates.forEach((board) => {
-                // Ak nemáme výstupných kandidátov, ponúkni aspoň nástup
-                if (alightingCandidates.length === 0) {
-                    results.push({
-                        bus,
-                        trip,
-                        boardingRow: board.row,
-                        alightingRow: null,
-                        side: 'in',
-                        boardingTime: board.row.timeFrom,
-                        alightingTime: null,
-                    });
-                    return;
-                }
-
                 alightingCandidates.forEach((alight) => {
                     // Výstup musí byť po nástupe (order) ALEBO v tom istom riadku
                     if ((alight.row.order || 0) < (board.row.order || 0)) return;
-
-                    // Časová konzistencia: čas výstupu musí byť >= čas nástupu
+    
+                    // Časová konzistencia
                     const boardTs = timeOnDayKeyToTs(dayKey, board.row.timeFrom);
                     const alightTs = timeOnDayKeyToTs(dayKey, alight.row.timeTo);
                     if (boardTs != null && alightTs != null && alightTs < boardTs) return;
-
+    
                     results.push({
                         bus,
                         trip,
@@ -4970,15 +4936,15 @@ const TransportApp = ({ userProfileData }) => {
                 });
             });
         });
-
-        // Zoraď výsledky: najprv podľa času nástupu (alebo výstupu), potom podľa názvu busu
+    
+        // Zoraď výsledky
         results.sort((a, b) => {
             const timeA = a.boardingTime || a.alightingTime || '';
             const timeB = b.boardingTime || b.alightingTime || '';
             if (timeA !== timeB) return timeA.localeCompare(timeB);
             return String(a.bus.name).localeCompare(String(b.bus.name), 'sk');
         });
-
+    
         return results;
     };
 
