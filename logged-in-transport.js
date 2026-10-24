@@ -4889,20 +4889,119 @@ const TransportApp = ({ userProfileData }) => {
         setDeleteTransferSaving(true);
         try {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+
+            // ============================================================
+            // 1) Priprav patch – zmaž tento segment
+            // ============================================================
+            const transfersPatch = {
+                [transfer.key]: deleteField(),
+            };
+
+            // ============================================================
+            // 2) Ak je to časť rozdeleného presunu (má _parentKey),
+            //    zisti, či v DB existujú iné nepriradené segmenty
+            //    toho istého _parentKey. Ak NIE, zmaž aj pôvodný
+            //    záznam _parentKey, aby v DB nezostala "sirota".
+            // ============================================================
+            if (transfer._parentKey && transfer._parentKey !== transfer.key) {
+                // Zisti, či existuje aspoň jeden iný nepriradený segment
+                // toho istého _parentKey v savedTransfers.
+                //
+                // POZOR: savedTransfers obsahuje VŠETKY presuny (aj tie,
+                // ktoré sú priradené k autobusu/peši). Tie ale nie sú
+                // "nepriradené" – tie sú vyriešené. Preto musíme
+                // skontrolovať, či existuje iný záznam s rovnakým
+                // _parentKey, ktorý NIE JE priradený.
+
+                const otherUnassignedSegments = savedTransfers.filter((t) => {
+                    if (t.key === transfer.key) return false;
+                    // Musí mať rovnaký _parentKey
+                    // (buď priamo t._parentKey, alebo ak je to sám parent)
+                    const isRelatedToParent =
+                        t._parentKey === transfer._parentKey ||
+                        t.key === transfer._parentKey;
+                    if (!isRelatedToParent) return false;
+
+                    // Ak je peši → vyriešené, nepočítame
+                    if (t.isWalking === true) return false;
+
+                    // Ak je priradený k autobusu → vyriešené, nepočítame
+                    const teamName = String(t.teamName || '').trim();
+                    const category = cleanCategory(t.category || '');
+                    const dayKey = t.dayKey || '';
+                    const fromLoc = normalizePlaceName(t.fromLocation || '');
+                    const toLoc = normalizePlaceName(t.toLocation || '');
+                    if (!fromLoc || !toLoc) return false;
+
+                    // Skontroluj, či je segment priradený k autobusu
+                    const segKey = `${dayKey}|${teamName}|${category}|${fromLoc}→${toLoc}`;
+                    const isInBus = (() => {
+                        let found = false;
+                        Object.entries(busRows || {}).forEach(([busKey, rows]) => {
+                            if (found) return;
+                            const bDayKey = busKey.split('|')[1];
+                            if (bDayKey !== dayKey) return;
+                            const sorted = (rows || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+                            let boardIdx = -1;
+                            let alightIdx = -1;
+                            for (let i = 0; i < sorted.length; i++) {
+                                const row = sorted[i];
+                                const rowFrom = normalizePlaceName(row.placeFrom);
+                                const rowTo = normalizePlaceName(row.placeTo);
+                                const hasTeamIn = (row.teamsIn || []).some((tk) => {
+                                    const [tn, cat] = String(tk).split('|');
+                                    return String(tn).trim() === teamName && cleanCategory(cat) === category;
+                                });
+                                const hasTeamOut = (row.teamsOut || []).some((tk) => {
+                                    const [tn, cat] = String(tk).split('|');
+                                    return String(tn).trim() === teamName && cleanCategory(cat) === category;
+                                });
+                                if (hasTeamIn && rowFrom === fromLoc && boardIdx === -1) {
+                                    boardIdx = i;
+                                }
+                                if (hasTeamOut && rowTo === toLoc && boardIdx !== -1) {
+                                    alightIdx = i;
+                                    break;
+                                }
+                            }
+                            if (boardIdx !== -1) found = true;
+                        });
+                        return found;
+                    })();
+
+                    // Ak nie je peši a nie je v autobuse → je nepriradený
+                    return !isInBus;
+                });
+
+                // Ak žiadne iné nepriradené segmenty neexistujú,
+                // zmaž aj pôvodný záznam _parentKey
+                if (otherUnassignedSegments.length === 0) {
+                    transfersPatch[transfer._parentKey] = deleteField();
+                }
+            }
+
+            // ============================================================
+            // 3) Zapíš patch do DB
+            // ============================================================
             await setDoc(
                 docRef,
                 {
-                    [TRANSPORT_TRANSFERS_FIELD]: {
-                        [transfer.key]: deleteField(),
-                    },
+                    [TRANSPORT_TRANSFERS_FIELD]: transfersPatch,
                     updatedAt: Timestamp.fromDate(new Date()),
                     updatedBy: (userProfileData && userProfileData.email) || null,
                 },
                 { merge: true }
             );
 
+            const deletedParents = Object.keys(transfersPatch).filter(
+                (k) => k === transfer._parentKey && k !== transfer.key
+            );
+            const suffix = deletedParents.length > 0
+                ? ' (a aj pôvodný záznam celého presunu, keďže žiadne iné časti nezostali)'
+                : '';
+
             window.showGlobalNotification(
-                `Presun ${transfer.fromLocation} → ${transfer.toLocation} bol odstránený.`,
+                `Presun ${transfer.fromLocation} → ${transfer.toLocation} bol odstránený${suffix}.`,
                 'success'
             );
             setDeleteTransferModal(null);
