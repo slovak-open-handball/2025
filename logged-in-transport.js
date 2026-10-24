@@ -264,6 +264,10 @@ const TransportApp = ({ userProfileData }) => {
     const [removeWalkingModal, setRemoveWalkingModal] = useState(null); // { transfer }
     const [removeWalkingSaving, setRemoveWalkingSaving] = useState(false);
 
+    // ==== MODÁLNE OKNO PRE ODSTRÁNENIE KONKRÉTNEHO PRESUNU ====
+    const [deleteTransferModal, setDeleteTransferModal] = useState(null); // { transfer }
+    const [deleteTransferSaving, setDeleteTransferSaving] = useState(false);
+
     // ============================================================
     // PREDNAČÍTANIE UBYTOVNÍ PRE SUPERSTRUCTURE TÍMY
     // ============================================================
@@ -4866,6 +4870,39 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // ZMAZANIE KONKRÉTNEHO PRESUNU (len jeden záznam z DB)
+    // ============================================================
+    const deleteSingleTransfer = async (transfer) => {
+        if (!window.db || !transfer) return;
+        setDeleteTransferSaving(true);
+        try {
+            const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+            await setDoc(
+                docRef,
+                {
+                    [TRANSPORT_TRANSFERS_FIELD]: {
+                        [transfer.key]: deleteField(),
+                    },
+                    updatedAt: Timestamp.fromDate(new Date()),
+                    updatedBy: (userProfileData && userProfileData.email) || null,
+                },
+                { merge: true }
+            );
+
+            window.showGlobalNotification(
+                `Presun ${transfer.fromLocation} → ${transfer.toLocation} bol odstránený.`,
+                'success'
+            );
+            setDeleteTransferModal(null);
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri mazaní konkrétneho presunu:', err);
+            window.showGlobalNotification('Nepodarilo sa odstrániť presun.', 'error');
+        } finally {
+            setDeleteTransferSaving(false);
+        }
+    };
+
+    // ============================================================
     // UNIVERZÁLNA: Prepočíta blok segmentov okolo daného transferu.
     //
     // DÔLEŽITÉ: 
@@ -7514,9 +7551,10 @@ const TransportApp = ({ userProfileData }) => {
                                     onClick: () => {
                                         setTransferActionModal({ transfer: t });
                                     },
-                                    className: 'text-sm text-gray-700 flex flex-col leading-snug rounded-md px-2 py-1.5 cursor-pointer hover:shadow-md transition-shadow' +
+                                    className: 'relative text-sm text-gray-700 flex flex-col leading-snug rounded-md px-2 py-1.5 cursor-pointer hover:shadow-md transition-shadow' +
                                         (boxBg ? '' : ' bg-violet-50/40'),
                                     style: {
+                                        position: 'relative',
                                         borderLeft: transportColor
                                             ? `6px solid ${transportColor}`
                                             : '2px solid #c4b5fd',
@@ -7601,6 +7639,20 @@ const TransportApp = ({ userProfileData }) => {
                                         React.createElement('i', { className: 'fa-solid fa-person-walking' }),
                                         'PEŠI'
                                     ),
+                                // NOVÉ: ikona koša vpravo – odstráni len tento konkrétny presun
+                                React.createElement(
+                                    'button',
+                                    {
+                                        type: 'button',
+                                        onClick: (e) => {
+                                            e.stopPropagation();
+                                            setDeleteTransferModal({ transfer: t });
+                                        },
+                                        title: 'Odstrániť tento presun',
+                                        className: 'absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white/90 text-red-600 hover:bg-red-100 hover:text-red-800 shadow-sm flex items-center justify-center transition-colors',
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-trash text-[11px]' })
+                                ),
                                 // Fallback
                                 (!dateLabel && !timeLabel && !routeLabel) &&
                                     React.createElement(
@@ -8991,6 +9043,73 @@ const TransportApp = ({ userProfileData }) => {
                             className: 'px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-60 flex items-center gap-2'
                         },
                         removeWalkingSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                        'Odstrániť'
+                    )
+                )
+            )
+        ),
+        // ============================================================
+        // MODÁLNE OKNO – Potvrdenie odstránenia konkrétneho presunu
+        // ============================================================
+        deleteTransferModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100001] p-4',
+                onClick: () => setDeleteTransferModal(null)
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-trash text-red-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-800' },
+                        'Odstrániť presun'
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700' },
+                    React.createElement('div', { className: 'font-medium' },
+                        `${deleteTransferModal.transfer.fromLocation} → ${deleteTransferModal.transfer.toLocation}`),
+                    React.createElement('div', { className: 'text-xs text-gray-500 mt-1' },
+                        `${deleteTransferModal.transfer.teamName || ''}${deleteTransferModal.transfer.when ? ' • ' + deleteTransferModal.transfer.when : ''}`)
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-gray-600 mb-4' },
+                    'Naozaj chcete odstrániť tento konkrétny presun? Táto akcia je nenávratná.'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setDeleteTransferModal(null),
+                            disabled: deleteTransferSaving,
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => deleteSingleTransfer(deleteTransferModal.transfer),
+                            disabled: deleteTransferSaving,
+                            className: 'px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-60 flex items-center gap-2'
+                        },
+                        deleteTransferSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
                         'Odstrániť'
                     )
                 )
