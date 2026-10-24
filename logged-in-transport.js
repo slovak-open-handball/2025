@@ -2704,13 +2704,34 @@ const TransportApp = ({ userProfileData }) => {
                             });
                     
                             if (Object.keys(transfersPatch).length > 0) {
-                                await setDoc(
+                                setDoc(
                                     doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC),
                                     {
                                         [TRANSPORT_TRANSFERS_FIELD]: transfersPatch,
                                     },
                                     { merge: true }
-                                ).catch((err) => {
+                                ).then(() => {
+                                    // ============================================================
+                                    // NOVÉ: Dogeneruj chýbajúce segmenty pre parent presuny
+                                    // ============================================================
+                                    try {
+                                        const currentSaved = savedTransfers || [];
+                                        const mergedForCheck = [...currentSaved];
+                                        Object.entries(transfersPatch).forEach(([k, v]) => {
+                                            const existingIdx = mergedForCheck.findIndex((s) => s.key === k);
+                                            if (existingIdx >= 0) {
+                                                mergedForCheck[existingIdx] = { ...mergedForCheck[existingIdx], ...v, key: k };
+                                            } else {
+                                                mergedForCheck.push({ ...v, key: k });
+                                            }
+                                        });
+                                        ensureSegmentsForParentTransfers(mergedForCheck).catch((ensureErr) => {
+                                            console.error('[TRANSPORT] Chyba pri dogenerovávaní segmentov:', ensureErr);
+                                        });
+                                    } catch (ensureErr) {
+                                        console.error('[TRANSPORT] Chyba pri dogenerovávaní segmentov:', ensureErr);
+                                    }
+                                }).catch((err) => {
                                     console.error('[TRANSPORT] Chyba pri ukladaní presunov do DB:', err);
                                 });
                             
