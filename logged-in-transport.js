@@ -8026,13 +8026,27 @@ const TransportApp = ({ userProfileData }) => {
                 // nevyriešený segment nepresiahne začiatok nasledujúceho
                 // priradeného segmentu.
                 // ============================================================
-                let endTs = timeRange.endTs;
+                let endTs = null;
                 for (let k = i + 1; k < route.length - 1; k++) {
-                    if (finalTimes[k] && finalTimes[k].startTs != null) {
+                    if (segmentAssigned[k] && finalTimes[k]) {
                         endTs = finalTimes[k].startTs;
                         break;
                     }
                 }
+                if (endTs == null) {
+                    // Skús nájsť reálny koniec v savedTransfers
+                    const realSeg = savedTransfers.find((s) =>
+                        String(s.teamName || '').trim() === teamName &&
+                        cleanCategory(s.category || '') === category &&
+                        s.dayKey === dayKey &&
+                        normalizePlaceName(s.fromLocation) === normalizePlaceName(route[route.length - 1])
+                    );
+                    if (realSeg) {
+                        const r = parseWhenRangeToTs(realSeg.when);
+                        if (r) endTs = r.startTs;
+                    }
+                }
+                if (endTs == null) endTs = timeRange.endTs;
 
                 finalTimes[i] = { startTs, endTs };
             }
@@ -8057,13 +8071,27 @@ const TransportApp = ({ userProfileData }) => {
                 let remainingMinutes = null;
     
                 if (!segmentAssigned[i]) {
-                    let endTs = timeRange.endTs;
+                    let endTs = null;
                     for (let k = i + 1; k < route.length - 1; k++) {
                         if (segmentAssigned[k] && finalTimes[k]) {
                             endTs = finalTimes[k].startTs;
                             break;
                         }
                     }
+                    if (endTs == null) {
+                        // Skús nájsť reálny koniec v savedTransfers
+                        const realSeg = savedTransfers.find((s) =>
+                            String(s.teamName || '').trim() === teamName &&
+                            cleanCategory(s.category || '') === category &&
+                            s.dayKey === dayKey &&
+                            normalizePlaceName(s.fromLocation) === normalizePlaceName(route[route.length - 1])
+                        );
+                        if (realSeg) {
+                            const r = parseWhenRangeToTs(realSeg.when);
+                            if (r) endTs = r.startTs;
+                        }
+                    }
+                    if (endTs == null) endTs = timeRange.endTs;
     
                     if (endTs != null && ft.startTs != null && endTs > ft.startTs) {
                         remainingMinutes = Math.round((endTs - ft.startTs) / 60000);
@@ -8103,7 +8131,7 @@ const TransportApp = ({ userProfileData }) => {
             // Ak je to časť rozdeleného presunu (má _parentKey),
             // ale NEMÁ zvyšný čas na presun, tak ju nezobrazuj.
             // ============================================================
-            if (t._parentKey && (t._remainingMinutes == null || t._remainingMinutes <= 0)) {
+            if (t._parentKey && t._remainingMinutes != null && t._remainingMinutes <= 0) {
                 return false;
             }
         
