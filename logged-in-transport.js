@@ -3758,8 +3758,14 @@ const TransportApp = ({ userProfileData }) => {
         const inputCls = 'w-full px-1 py-1 text-sm border border-gray-300 rounded text-black focus:outline-none focus:ring-2 focus:ring-green-500';
         const selectCls = 'w-full px-1 py-1 text-sm border border-gray-300 rounded text-black bg-white focus:outline-none focus:ring-2 focus:ring-green-500';
     
-        const stopOptions = stopsList
-            .filter((s) => s.isExternalArrivalStop !== true)
+        // Všetky zastávky pre "Miesto od"
+        const stopOptionsFrom = stopsList.map((s) =>
+            React.createElement('option', { key: s.id, value: s.name }, s.name)
+        );
+
+        // Zastávky pre "Miesto do" – bez tej, ktorá je vybraná v "Miesto od"
+        const stopOptionsTo = stopsList
+            .filter((s) => s.name !== (row.placeFrom || ''))
             .map((s) =>
                 React.createElement('option', { key: s.id, value: s.name }, s.name)
             );
@@ -3949,7 +3955,7 @@ const TransportApp = ({ userProfileData }) => {
                     className: selectCls,
                 },
                     React.createElement('option', { value: '' }, '— vyber zastávku —'),
-                    stopOptions
+                    stopOptionsTo
                 )
             ),
             // 5. tímy nástup (len text vo farbe kategórie, bez pozadia a rámčeka)
