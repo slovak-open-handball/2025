@@ -8373,22 +8373,16 @@ const TransportApp = ({ userProfileData }) => {
                                 {
                                     key: t.key,
                                     onClick: () => {
-                                        // Summary záznam (všetko priradené) – neotváraj akčné okno
-                                        if (t._isParentSummary === true) return;
                                         setTransferActionModal({ transfer: t });
                                     },
-                                    className: 'relative text-sm text-gray-700 flex flex-col leading-snug rounded-md px-2 py-1.5 transition-shadow' +
-                                        (t._isParentSummary === true
-                                            ? ' bg-gray-100/70 opacity-80 cursor-default'
-                                            : ' cursor-pointer hover:shadow-md') +
-                                        (boxBg && t._isParentSummary !== true ? '' : (t._isParentSummary === true ? '' : ' bg-violet-50/40')),
+                                    className: 'relative text-sm text-gray-700 flex flex-col leading-snug rounded-md px-2 py-1.5 cursor-pointer hover:shadow-md transition-shadow' +
+                                        (boxBg ? '' : ' bg-violet-50/40'),
                                     style: {
                                         position: 'relative',
                                         borderLeft: transportColor
                                             ? `6px solid ${transportColor}`
                                             : '2px solid #c4b5fd',
-                                        ...(boxBg && t._isParentSummary !== true ? { backgroundColor: boxBg } : {}),
-                                        ...(t._isParentSummary === true ? { borderStyle: 'dashed' } : {}),
+                                        ...(boxBg ? { backgroundColor: boxBg } : {}),
                                     }
                                 },
                                 // 1. riadok – KATEGÓRIA • TÍM
@@ -8469,29 +8463,20 @@ const TransportApp = ({ userProfileData }) => {
                                         React.createElement('i', { className: 'fa-solid fa-person-walking' }),
                                         'PEŠI'
                                     ),
-                                // NOVÉ: summary záznam – všetko priradené
-                                t._isParentSummary === true &&
-                                    React.createElement(
-                                        'span',
-                                        { className: 'text-xs font-semibold text-gray-500 mt-0.5 inline-flex items-center gap-1' },
-                                        React.createElement('i', { className: 'fa-solid fa-circle-check' }),
-                                        'Všetko priradené'
-                                    ),
                                 // NOVÉ: ikona koša vpravo – odstráni len tento konkrétny presun
-                                t._isParentSummary !== true &&
-                                    React.createElement(
-                                        'button',
-                                        {
-                                            type: 'button',
-                                            onClick: (e) => {
-                                                e.stopPropagation();
-                                                setDeleteTransferModal({ transfer: t });
-                                            },
-                                            title: 'Odstrániť tento presun',
-                                            className: 'absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white/90 text-red-600 hover:bg-red-100 hover:text-red-800 shadow-sm flex items-center justify-center transition-colors',
+                                React.createElement(
+                                    'button',
+                                    {
+                                        type: 'button',
+                                        onClick: (e) => {
+                                            e.stopPropagation();
+                                            setDeleteTransferModal({ transfer: t });
                                         },
-                                        React.createElement('i', { className: 'fa-solid fa-trash text-[11px]' })
-                                    ),
+                                        title: 'Odstrániť tento presun',
+                                        className: 'absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white/90 text-red-600 hover:bg-red-100 hover:text-red-800 shadow-sm flex items-center justify-center transition-colors',
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-trash text-[11px]' })
+                                ),
                                 // Fallback
                                 (!dateLabel && !timeLabel && !routeLabel) &&
                                     React.createElement(
@@ -8505,7 +8490,7 @@ const TransportApp = ({ userProfileData }) => {
                                             .replace(/\bzastávok\b/gi, 'zastávka')
                                     ),
                                 // Tlačidlo "Zlúčiť"
-                                mergeMode && t._isParentSummary !== true &&
+                                mergeMode && 
                                     (() => {
                                         const mergeCandidate = baseFilteredFirstOnly.find(
                                             (other) => other.key !== t.key && canMergeTransfers(t, other)
