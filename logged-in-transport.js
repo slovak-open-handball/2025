@@ -6436,7 +6436,24 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     style: { color: '#7f1d1d' },
                                                                                     title: 'Voľný čas (prestoj)'
                                                                                 },
-                                                                                gap
+                                                                                (() => {
+                                                                                    // Zobraz medzeru len ak je čas "Od" <= čas "Do"
+                                                                                    // (t.j. prevRow.timeTo <= nextRow.timeFrom)
+                                                                                    const timeRe = /^\d{1,2}:\d{2}$/;
+                                                                                    const fromOk = prevRow.timeTo && timeRe.test(prevRow.timeTo);
+                                                                                    const toOk = nextRow.timeFrom && timeRe.test(nextRow.timeFrom);
+                                                                                    if (!fromOk || !toOk) return '—';
+                                                                            
+                                                                                    const [fh, fm] = prevRow.timeTo.split(':').map(Number);
+                                                                                    const [th, tm] = nextRow.timeFrom.split(':').map(Number);
+                                                                                    const fromMin = fh * 60 + fm;
+                                                                                    const toMin = th * 60 + tm;
+                                                                            
+                                                                                    // Ak je čas Od väčší ako čas Do → nezobrazuj hodnotu
+                                                                                    if (fromMin > toMin) return 'chyba';
+                                                                            
+                                                                                    return gap;
+                                                                                })()
                                                                             ),
                                                                             // 9. Mazanie – prázdne, ALE sem vložíme hover tlačidlo "+"
                                                                             React.createElement(
