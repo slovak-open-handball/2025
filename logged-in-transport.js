@@ -3758,9 +3758,11 @@ const TransportApp = ({ userProfileData }) => {
         const inputCls = 'w-full px-1 py-1 text-sm border border-gray-300 rounded text-black focus:outline-none focus:ring-2 focus:ring-green-500';
         const selectCls = 'w-full px-1 py-1 text-sm border border-gray-300 rounded text-black bg-white focus:outline-none focus:ring-2 focus:ring-green-500';
     
-        const stopOptions = stopsList.map((s) =>
-            React.createElement('option', { key: s.id, value: s.name }, s.name)
-        );
+        const stopOptions = stopsList
+            .filter((s) => s.isExternalArrivalStop !== true)
+            .map((s) =>
+                React.createElement('option', { key: s.id, value: s.name }, s.name)
+            );
     
         // ============================================================
         // NOVÉ: Odstráni CELÝ SEGMENT (nástup + výstup) pre daný tím,
