@@ -6818,29 +6818,6 @@ const TransportApp = ({ userProfileData }) => {
                 console.error('[TRANSPORT] Chyba pri prepočte bloku po priradení:', precomputeErr);
             }
 
-            const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
-                const rawTransfers = (snap.data() || {})[TRANSPORT_TRANSFERS_FIELD] || {};
-                const keysToDelete = [];
-    
-                Object.entries(rawTransfers).forEach(([key, v]) => {
-                    if (!v) return;
-                    if (String(v.teamName || '').trim() !== String(transfer.teamName || '').trim()) return;
-                    if (cleanCategory(v.category || '') !== cleanCategory(transfer.category || '')) return;
-                    if ((v.dayKey || '') !== (transfer.dayKey || '')) return;
-                    if (normalizePlaceName(v.fromLocation) !== normalizePlaceName(transfer.fromLocation)) return;
-                    if (normalizePlaceName(v.toLocation) !== normalizePlaceName(transfer.toLocation)) return;
-                    keysToDelete.push(key);
-                });
-    
-                if (keysToDelete.length > 0) {
-                    const patch = {};
-                    keysToDelete.forEach((k) => { patch[k] = deleteField(); });
-                    await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: patch }, { merge: true });
-                }
-            }
-
             const parts = [];
             if (boardingRow) parts.push('nástup');
             if (alightingRow) parts.push('výstup');
