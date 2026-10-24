@@ -6510,7 +6510,18 @@ const TransportApp = ({ userProfileData }) => {
         // Filtrovanie – skry len priradené segmenty
         const baseFiltered = expandedTransfers.filter((t) => {
             if (t.isWalking === true) return false;
-            return !isSegmentAssigned(t);
+            if (isSegmentAssigned(t)) return false;
+
+            // ============================================================
+            // NOVÉ: Ak je to časť rozdeleného presunu (má _parentKey),
+            // ale NEMÁ zvyšný čas na presun, tak ju nezobrazuj.
+            // (Zobrazujú sa len časti, ktoré majú v sebe info o zvyšnom čase)
+            // ============================================================
+            if (t._parentKey && (t._remainingMinutes == null || t._remainingMinutes <= 0)) {
+                return false;
+            }
+
+            return true;
         });
     
         const filtered = mergeMode
