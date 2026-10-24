@@ -4434,7 +4434,7 @@ const TransportApp = ({ userProfileData }) => {
     //  - assignTransferToBus  (resolvedKeys = { transfer.key })
     //  - removeWalkingFlag    (resolvedKeys = {} – nič nie je vyriešené)
     // ============================================================
-    const recomputeBlock = async (transfer, resolvedKeys = new Set()) => {
+    const recomputeBlock = async (transfer, resolvedKeys = new Set(), excludeKeys = new Set()) => {
         if (!window.db || !transfer) return;
     
         const teamName = String(transfer.teamName || '').trim();
