@@ -5988,7 +5988,7 @@ const TransportApp = ({ userProfileData }) => {
     // RENDER – ľavý stĺpec s uloženými vygenerovanými presunmi
     // ============================================================
     const renderSavedTransfers = () => {
-        // Filtrovanie podľa zvoleného dňa (ak je vybraný)
+        // Filtrovanie podľa zvoleného dňa
         const filteredByDay = selectedDayKey
             ? savedTransfers.filter((t) => t.dayKey === selectedDayKey)
             : savedTransfers;
@@ -6025,6 +6025,8 @@ const TransportApp = ({ userProfileData }) => {
                     endLabel: found[0].label,
                     startTime: found[0].time,
                     endTime: found[0].time,
+                    startTs: null,
+                    endTs: null,
                 };
             }
     
@@ -6035,6 +6037,33 @@ const TransportApp = ({ userProfileData }) => {
                 endLabel: found[1].label,
                 startTime: found[0].time,
                 endTime: found[1].time,
+                startTs: null,
+                endTs: null,
+            };
+        };
+    
+        // ============================================================
+        // Pomocná: parsovanie "when" → timestampy (pre výpočet zvyšného času)
+        // ============================================================
+        const parseWhenRangeToTs = (when) => {
+            if (!when) return null;
+            const s = String(when);
+            const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
+            const found = [];
+            let m;
+            while ((m = regex.exec(s)) !== null) {
+                const d = Number(m[1]);
+                const mo = Number(m[2]) - 1;
+                const y = Number(m[3]);
+                const hh = m[4] != null ? Number(m[4]) : 0;
+                const mi = m[5] != null ? Number(m[5]) : 0;
+                const ts = new Date(y, mo, d, hh, mi, 0, 0).getTime();
+                if (isFinite(ts)) found.push(ts);
+            }
+            if (found.length === 0) return null;
+            return {
+                startTs: found[0],
+                endTs: found.length > 1 ? found[1] : found[0],
             };
         };
     
@@ -6061,20 +6090,17 @@ const TransportApp = ({ userProfileData }) => {
     
         // ============================================================
         // assignedSegmentKeys – segmenty, ktoré sú už priradené
-        // (autobusom alebo peši)
         // ============================================================
         const assignedSegmentKeys = new Set();
     
-        // 1) Autobusy – pre každý tím v buse vyskladaj VŠETKY segmenty,
-        //    ktoré autobus preň pokrýva (od miesta nástupu po miesto výstupu,
-        //    vrátane medzizastávok).
+        // 1) Autobusy
         Object.entries(busRows || {}).forEach(([busKey, rows]) => {
             const dayKey = busKey.split('|')[1];
             const sorted = (rows || [])
                 .slice()
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
     
-            const teamsInThisBus = new Map(); // teamKey → { boardIdx, alightIdx }
+            const teamsInThisBus = new Map();
     
             sorted.forEach((row, idx) => {
                 (row.teamsIn || []).forEach((teamKey) => {
@@ -6107,27 +6133,21 @@ const TransportApp = ({ userProfileData }) => {
                 const boardFrom = normalizePlaceName(boardRow.placeFrom);
                 const alightTo = normalizePlaceName(alightRow.placeTo);
     
-                // Celkový segment od miesta nástupu po miesto výstupu
                 if (boardFrom && alightTo) {
-                    assignedSegmentKeys.add(
-                        `${dayKey}|${tn}|${cat}|${boardFrom}→${alightTo}`
-                    );
+                    assignedSegmentKeys.add(`${dayKey}|${tn}|${cat}|${boardFrom}→${alightTo}`);
                 }
     
-                // Jednotlivé segmenty z riadkov (medzizastávky)
                 for (let k = boardIdx; k <= alightIdx; k++) {
                     const row = sorted[k];
                     const rowFrom = normalizePlaceName(row.placeFrom);
                     const rowTo = normalizePlaceName(row.placeTo);
                     if (!rowFrom || !rowTo) continue;
-                    assignedSegmentKeys.add(
-                        `${dayKey}|${tn}|${cat}|${rowFrom}→${rowTo}`
-                    );
+                    assignedSegmentKeys.add(`${dayKey}|${tn}|${cat}|${rowFrom}→${rowTo}`);
                 }
             });
         });
     
-        // 2) Pešie presuny – označ konkrétny segment ako priradený
+        // 2) Pešie presuny
         savedTransfers.forEach((t) => {
             if (t.isWalking !== true) return;
             const fromLoc = normalizePlaceName(t.fromLocation || '');
@@ -6147,44 +6167,32 @@ const TransportApp = ({ userProfileData }) => {
             const dayKey = t.dayKey || '';
             const fromLoc = normalizePlaceName(t.fromLocation || '');
             const toLoc = normalizePlaceName(t.toLocation || '');
-    
             if (!fromLoc || !toLoc) return false;
-    
             return assignedSegmentKeys.has(`${dayKey}|${teamName}|${category}|${fromLoc}→${toLoc}`);
         };
     
         // ============================================================
-        // NOVÉ: Rozlož presuny s intermediateStops na jednotlivé segmenty.
-        //
-        // Pre každý segment v trase A → X → Y → B zisti:
-        //  1) Či je vyriešený autobusom (cez busRows) → použi REÁLNY čas z autobusu
-        //  2) Či je vyriešený peši (isWalking) → použi pôvodný čas z when
-        //  3) Inak → dopočítaj čas podľa trvaní jázd
-        //
-        // Tým sa zabezpečí, že po priradení A→X k autobusu (čas 9:30 – 9:35)
-        // sa X→B posunie na 9:35.
+        // NOVÉ: Rozlož presuny s intermediateStops na segmenty
+        // a vypočítaj zvyšný čas pre každý nepriradený segment.
         // ============================================================
         const expandedTransfers = [];
-        
+    
         filteredByDay.forEach((t) => {
             const stops = Array.isArray(t.intermediateStops) ? t.intermediateStops : [];
-        
-            // Ak nemá medzizastávky → ponechaj ako je
+    
             if (stops.length === 0) {
                 expandedTransfers.push(t);
                 return;
             }
-        
-            // Rozlož trasu na segmenty: A → X → Y → B
+    
             const route = [t.fromLocation, ...stops, t.toLocation].filter(Boolean);
             if (route.length < 2) {
                 expandedTransfers.push(t);
                 return;
             }
-        
-            const timeRange = parseWhenRange(t.when);
+    
+            const timeRange = parseWhenRangeToTs(t.when);
             if (!timeRange || timeRange.startTs == null || timeRange.endTs == null || timeRange.endTs <= timeRange.startTs) {
-                // Fallback – nevieme vypočítať časy, použi pôvodný when pre všetky segmenty
                 for (let i = 0; i < route.length - 1; i++) {
                     const text = `Presun z ${route[i]} do ${route[i + 1]}`;
                     const key = buildTransferKey(t.category, t.teamName, t.when, text);
@@ -6197,21 +6205,19 @@ const TransportApp = ({ userProfileData }) => {
                         intermediateStops: [],
                         _parentKey: t.key,
                         _parentRoute: `${t.fromLocation} → ${t.toLocation}`,
+                        _remainingMinutes: null,
+                        _isAssigned: false,
                     });
                 }
                 return;
             }
-        
-            // ============================================================
-            // KROK 1: Pre každý segment zisti, či je vyriešený autobusom
-            // (t. j. či tím nastupuje/vystupuje v busRows pre daný segment).
-            // ============================================================
+    
+            // KROK 1: Reálne časy z autobusu
             const teamName = String(t.teamName || '').trim();
             const category = cleanCategory(t.category || '');
             const dayKey = t.dayKey || '';
             const teamKey = `${teamName}|${category}`;
-        
-            // Predpriprav busRows pre tento deň
+    
             const allBusRowsForDay = [];
             Object.entries(busRows || {}).forEach(([busKey, rows]) => {
                 const bDayKey = busKey.split('|')[1];
@@ -6225,7 +6231,7 @@ const TransportApp = ({ userProfileData }) => {
                 const tb = b.timeFrom || '';
                 return ta.localeCompare(tb);
             });
-        
+    
             const matchesTeam = (rowTeams) => {
                 if (!Array.isArray(rowTeams)) return false;
                 return rowTeams.some((tk) => {
@@ -6235,21 +6241,22 @@ const TransportApp = ({ userProfileData }) => {
                     return String(tn).trim() === teamName && cleanCategory(cat) === category;
                 });
             };
-        
-            // Pre každý segment zisti reálny čas z autobusu (ak existuje)
-            const segmentRealTimes = []; // { startTs, endTs } alebo null
+    
+            const segmentRealTimes = [];
+            const segmentAssigned = [];
+    
             for (let i = 0; i < route.length - 1; i++) {
                 const segFrom = normalizePlaceName(route[i]);
                 const segTo = normalizePlaceName(route[i + 1]);
                 let boardingTs = null;
                 let alightingTs = null;
-        
+    
                 allBusRowsForDay.forEach((row) => {
                     const rowFrom = normalizePlaceName(row.placeFrom);
                     const rowTo = normalizePlaceName(row.placeTo);
                     const hasTeamIn = matchesTeam(row.teamsIn);
                     const hasTeamOut = matchesTeam(row.teamsOut);
-        
+    
                     if (hasTeamIn && rowFrom === segFrom && row.timeFrom && boardingTs == null) {
                         const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
                         if (dm) {
@@ -6265,40 +6272,35 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     }
                 });
-        
+    
                 if (boardingTs != null && alightingTs != null && alightingTs > boardingTs) {
-                    // Plne vyriešený autobusom
                     segmentRealTimes.push({ startTs: boardingTs, endTs: alightingTs });
+                    segmentAssigned.push(true);
                 } else if (boardingTs != null) {
-                    // Čiastočne – máme aspoň nástup
                     segmentRealTimes.push({ startTs: boardingTs, endTs: null });
+                    segmentAssigned.push(true);
                 } else if (alightingTs != null) {
-                    // Čiastočne – máme aspoň výstup
                     segmentRealTimes.push({ startTs: null, endTs: alightingTs });
+                    segmentAssigned.push(true);
                 } else {
                     segmentRealTimes.push(null);
+                    segmentAssigned.push(false);
                 }
             }
-        
-            // ============================================================
-            // KROK 2: Vypočítaj časy pre všetky segmenty s ohľadom na
-            // reálne časy z autobusu.
-            // ============================================================
+    
+            // KROK 2: Vypočítaj časy
             const finalTimes = new Array(route.length - 1).fill(null);
-        
-            // 1) Najprv nastav reálne časy z autobusu (tam, kde sú známe)
+    
             for (let i = 0; i < route.length - 1; i++) {
                 const rt = segmentRealTimes[i];
                 if (rt && rt.startTs != null && rt.endTs != null) {
                     finalTimes[i] = { startTs: rt.startTs, endTs: rt.endTs };
                 }
             }
-        
-            // 2) Pre zostávajúce segmenty dopočítaj podľa trvaní, oddelene po úsekoch
-            //    medzi fixnými bodmi (rovnaký princíp ako v recomputeBlock)
-            const segments = []; // { indexes: [], startTs, endTs }
+    
+            const segments = [];
             let currentSegment = null;
-        
+    
             for (let i = 0; i < route.length - 1; i++) {
                 if (finalTimes[i]) {
                     if (currentSegment) {
@@ -6321,8 +6323,7 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
             if (currentSegment) segments.push(currentSegment);
-        
-            // Pre každý úsek dopočítaj koniec
+    
             segments.forEach((segment) => {
                 const lastIdx = segment.indexes[segment.indexes.length - 1];
                 let segmentEndTs = null;
@@ -6335,8 +6336,7 @@ const TransportApp = ({ userProfileData }) => {
                 if (segmentEndTs == null) segmentEndTs = timeRange.endTs;
                 segment.endTs = segmentEndTs;
             });
-        
-            // Pre každý úsek rozdeľ čas podľa trvaní
+    
             segments.forEach((segment) => {
                 const totalMs = segment.endTs - segment.startTs;
                 if (totalMs <= 0) {
@@ -6345,7 +6345,7 @@ const TransportApp = ({ userProfileData }) => {
                     });
                     return;
                 }
-        
+    
                 const durations = [];
                 for (let i = 0; i < segment.indexes.length; i++) {
                     const idx = segment.indexes[i];
@@ -6360,7 +6360,7 @@ const TransportApp = ({ userProfileData }) => {
                     d != null ? d : (fallback != null ? fallback : null)
                 );
                 const durationsSum = finalDurations.reduce((sum, d) => sum + (d || 0), 0);
-        
+    
                 let cursorTs = segment.startTs;
                 segment.indexes.forEach((idx, j) => {
                     const isLast = j === segment.indexes.length - 1;
@@ -6376,18 +6376,33 @@ const TransportApp = ({ userProfileData }) => {
                     cursorTs = segEndTs;
                 });
             });
-        
-            // ============================================================
-            // KROK 3: Vytvor segmenty s vypočítanými časmi
-            // ============================================================
+    
+            // KROK 3: Vytvor segmenty + vypočítaj zvyšný čas pre nepriradené
             for (let i = 0; i < route.length - 1; i++) {
                 const ft = finalTimes[i];
                 if (!ft) continue;
-        
+    
                 const whenStr = `${formatTsLocal(ft.startTs)} – ${formatTsLocal(ft.endTs)}`;
                 const text = `Presun z ${route[i]} do ${route[i + 1]}`;
                 const key = buildTransferKey(t.category, t.teamName, whenStr, text);
-        
+    
+                // NOVÉ: Ak segment NIE JE priradený, vypočítaj zvyšný čas
+                let remainingMinutes = null;
+    
+                if (!segmentAssigned[i]) {
+                    let endTs = timeRange.endTs;
+                    for (let k = i + 1; k < route.length - 1; k++) {
+                        if (segmentAssigned[k] && finalTimes[k]) {
+                            endTs = finalTimes[k].startTs;
+                            break;
+                        }
+                    }
+    
+                    if (endTs != null && ft.startTs != null && endTs > ft.startTs) {
+                        remainingMinutes = Math.round((endTs - ft.startTs) / 60000);
+                    }
+                }
+    
                 expandedTransfers.push({
                     ...t,
                     key,
@@ -6398,18 +6413,15 @@ const TransportApp = ({ userProfileData }) => {
                     intermediateStops: [],
                     _parentKey: t.key,
                     _parentRoute: `${t.fromLocation} → ${t.toLocation}`,
+                    _remainingMinutes: remainingMinutes,
+                    _isAssigned: segmentAssigned[i],
                 });
             }
         });
     
-        // ============================================================
-        // Filtrovanie – skry LEN tie konkrétne segmenty presunu,
-        // ktoré sú už priradené (buď ako "peši", alebo ako tím v busRow).
-        // ============================================================
+        // Filtrovanie – skry len priradené segmenty
         const baseFiltered = expandedTransfers.filter((t) => {
-            // Ak je celý presun označený ako peši, skry ho
             if (t.isWalking === true) return false;
-            // Skry len konkrétne priradené segmenty
             return !isSegmentAssigned(t);
         });
     
@@ -6419,9 +6431,7 @@ const TransportApp = ({ userProfileData }) => {
             )
             : baseFiltered;
     
-        // ============================================================
-        // Pomocná: z `when` vytiahne číselný kľúč pre začiatok
-        // ============================================================
+        // Zoradenie
         const buildStartSortKey = (t) => {
             const r = parseWhenRange(t.when);
             const dayKey = r ? r.startDayKey : (t.dayKey || '');
@@ -6431,9 +6441,6 @@ const TransportApp = ({ userProfileData }) => {
             return `${datePart}${timePart}`;
         };
     
-        // ============================================================
-        // Pomocná: z `when` vytiahne číselný kľúč pre koniec
-        // ============================================================
         const buildEndSortKey = (t) => {
             const r = parseWhenRange(t.when);
             const dayKey = r ? r.endDayKey : (t.dayKey || '');
@@ -6443,9 +6450,6 @@ const TransportApp = ({ userProfileData }) => {
             return `${datePart}${timePart}`;
         };
     
-        // ============================================================
-        // Zoradenie: začiatok → koniec → kategória → tím
-        // ============================================================
         const sortedTransfers = [...filtered].sort((a, b) => {
             const startA = buildStartSortKey(a);
             const startB = buildStartSortKey(b);
@@ -6488,7 +6492,6 @@ const TransportApp = ({ userProfileData }) => {
                     `${filtered.length}`
                 )
             ),
-            // === CHECKBOX: Zlúčiť presuny ===
             React.createElement(
                 'div',
                 { className: 'px-4 py-2 border-b border-gray-200 bg-gray-50 flex items-center gap-2' },
@@ -6524,13 +6527,11 @@ const TransportApp = ({ userProfileData }) => {
                             const rangeInfo = parseWhenRange(t.when);
                             const transferInfo = parseTransferText(t.text);
     
-                            // Farby pre box
                             const transportColor = getTransportColorForCategory(t.category);
                             const boxBg = transportColor
                                 ? lightenHex(transportColor, 0.15)
                                 : null;
     
-                            // 1. riadok – dátum
                             let dateLabel = null;
                             if (rangeInfo) {
                                 dateLabel = (rangeInfo.startDayKey === rangeInfo.endDayKey)
@@ -6540,7 +6541,6 @@ const TransportApp = ({ userProfileData }) => {
                                 dateLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
                             }
     
-                            // 2. riadok – čas
                             let timeLabel = null;
                             if (rangeInfo) {
                                 const st = rangeInfo.startTime;
@@ -6550,11 +6550,9 @@ const TransportApp = ({ userProfileData }) => {
                                 else if (et) timeLabel = et;
                             }
     
-                            // 3. riadok – miesta
                             let routeLabel = null;
                             if (transferInfo) {
                                 if (t.intermediateStops && t.intermediateStops.length > 0) {
-                                    // Zobraz trasu s medzizastávkami
                                     routeLabel = [t.fromLocation, ...t.intermediateStops, t.toLocation]
                                         .filter(Boolean)
                                         .join(' → ');
@@ -6563,9 +6561,14 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                             }
     
-                            // 4. riadok – informácia o pôvodnom (rozdelenom) presune
+                            // NOVÉ: informácia o pôvodnom presune
                             const parentInfoLabel = t._parentKey && t._parentRoute
                                 ? `časť presunu ${t._parentRoute}`
+                                : null;
+    
+                            // NOVÉ: zvyšný čas na presun (len pre nepriradené segmenty)
+                            const remainingLabel = (t._remainingMinutes != null && t._remainingMinutes > 0)
+                                ? `zvyšný čas na presun: ${t._remainingMinutes} min`
                                 : null;
     
                             return React.createElement(
@@ -6584,7 +6587,7 @@ const TransportApp = ({ userProfileData }) => {
                                         ...(boxBg ? { backgroundColor: boxBg } : {}),
                                     }
                                 },
-                                // 1. riadok – KATEGÓRIA • TÍM (bez ikon)
+                                // 1. riadok – KATEGÓRIA • TÍM
                                 (() => {
                                     const counts = getTeamCountsForTransfer(t.category, t.teamName);
                                     const totalMembers = counts
@@ -6638,7 +6641,7 @@ const TransportApp = ({ userProfileData }) => {
                                         { className: 'text-sm text-gray-900 font-medium' },
                                         routeLabel
                                     ),
-                                // 5. riadok – informácia o pôvodnom presune (rozdelený)
+                                // 5. riadok – informácia o pôvodnom presune
                                 parentInfoLabel &&
                                     React.createElement(
                                         'span',
@@ -6646,7 +6649,15 @@ const TransportApp = ({ userProfileData }) => {
                                         React.createElement('i', { className: 'fa-solid fa-code-branch' }),
                                         parentInfoLabel
                                     ),
-                                // 6. riadok – príznak "peši"
+                                // 6. riadok – NOVÉ: zvyšný čas na presun
+                                remainingLabel &&
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-xs text-amber-700 font-semibold mt-0.5 inline-flex items-center gap-1' },
+                                        React.createElement('i', { className: 'fa-solid fa-hourglass-half' }),
+                                        remainingLabel
+                                    ),
+                                // 7. riadok – príznak "peši"
                                 t.isWalking === true &&
                                     React.createElement(
                                         'span',
@@ -6666,7 +6677,7 @@ const TransportApp = ({ userProfileData }) => {
                                             .replace(/\bzastávky\b/gi, 'zastávka')
                                             .replace(/\bzastávok\b/gi, 'zastávka')
                                     ),
-                                // === TLAČIDLO "ZLÚČIŤ" (len v režime zlučovania) ===
+                                // Tlačidlo "Zlúčiť"
                                 mergeMode &&
                                     (() => {
                                         const mergeCandidate = baseFiltered.find(
