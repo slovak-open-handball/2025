@@ -788,69 +788,7 @@ const TransportApp = ({ userProfileData }) => {
     
         if (categories.length === 0) {
             console.log('[TRANSPORT] Žiadne udalosti.');
-        } else {    
-            Object.entries(grouped).forEach(([category, teamsObj]) => {
-                Object.entries(teamsObj).forEach(([teamName, events]) => {
-                    const teamGroup = (() => {
-                        const groups = teamsByGroup[category] || {};
-                        for (const [gName, teamSet] of Object.entries(groups)) {
-                            if (teamSet.has(teamName)) return gName;
-                        }
-                        return null;
-                    })();
-
-                    // POZOR: teamGroup môže byť null (tím nemá skupinu).
-                    // Stále chceme spracovať jeho udalosti, ale "end locations per group"
-                    // logiku preskočíme.
-
-                    const lastEventsByDay = {};
-                    events.forEach((ev) => {
-                        if (ev.type !== 'match' && ev.type !== 'catering') return;
-                        const dayKey = extractDayKeyFromWhen(ev.when);
-                        if (!dayKey) return;
-                        const endTs =
-                            ev.endTs != null ? ev.endTs :
-                            ev.startTs != null ? ev.startTs :
-                            null;
-                        if (endTs == null) return;
-    
-                        if (
-                            !lastEventsByDay[dayKey] ||
-                            endTs > (lastEventsByDay[dayKey].endTs ?? -Infinity)
-                        ) {
-                            lastEventsByDay[dayKey] = { ev, endTs };
-                        }
-                    });
-    
-                    Object.entries(lastEventsByDay).forEach(([dayKey, { ev, endTs }]) => {
-                        const location = ev.location || null;
-                        if (!location) return;
-                        if (!teamGroup) return;   // ← NOVÉ: bez skupiny nerob "end locations" logiku
-
-                        const key = `${category}|${teamGroup}|${dayKey}`;
-                        if (!groupEndLocationsPerDay[key]) {
-                            groupEndLocationsPerDay[key] = new Map();
-                        }
-                        const locMap = groupEndLocationsPerDay[key];
-                        if (!locMap.has(location) || endTs > (locMap.get(location).endTs ?? -Infinity)) {
-                            locMap.set(location, { location, endTs });
-                        }
-    
-                        const groupLastChar = teamGroup.trim().slice(-1).toUpperCase();
-                        if (groupLastChar && /[A-ZÁ-Ž]/.test(groupLastChar)) {
-                            const keyChar = `${category}|${groupLastChar}|${dayKey}`;
-                            if (!groupEndLocationsByLastCharPerDay[keyChar]) {
-                                groupEndLocationsByLastCharPerDay[keyChar] = new Map();
-                            }
-                            const locMapChar = groupEndLocationsByLastCharPerDay[keyChar];
-                            if (!locMapChar.has(location) || endTs > (locMapChar.get(location).endTs ?? -Infinity)) {
-                                locMapChar.set(location, { location, endTs });
-                            }
-                        }
-                    });
-                });
-            });
-
+        } else {
             // ============================================================
             // Pre každý superstructure tím zisti zoznam jeho "hráčských"
             // dátumov (dni, kedy sa hrá akýkoľvek zápas v skupinách s jeho
@@ -3714,7 +3652,7 @@ const TransportApp = ({ userProfileData }) => {
         }
     
         if (membersText != null) {
-            return `${teamName} • ${membersText} členov${membersTitle}\nKliknutím odstrániť tím z celého autobusu (nástup aj výstup, všetky riadky)`;
+            return `${teamName} • ${membersText} členov\nKliknutím odstrániť tím z celého autobusu (nástup aj výstup, všetky riadky)`;
         }
     
         return `${teamName}\nKliknutím odstrániť tím z celého autobusu (nástup aj výstup, všetky riadky)`;
@@ -4261,7 +4199,7 @@ const TransportApp = ({ userProfileData }) => {
                 results[i] = {
                     startTs: segStartTs,
                     endTs: segEndTs,
-                    whenStr: `${formatTs(segStartTs)} – ${formatTs(segEndTs)}`,
+                    whenStr: `${formatTsLocal(segStartTs)} – ${formatTsLocal(segEndTs)}`,
                 };
                 cursorTs = segEndTs;
             }
@@ -4290,7 +4228,7 @@ const TransportApp = ({ userProfileData }) => {
                     results[i] = {
                         startTs: segStartTs,
                         endTs: segEndTs,
-                        whenStr: `${formatTs(segStartTs)} – ${formatTs(segEndTs)}`,
+                        whenStr: `${formatTsLocal(segStartTs)} – ${formatTsLocal(segEndTs)}`,
                     };
                     cursorTs = segEndTs;
                 }
@@ -4305,7 +4243,7 @@ const TransportApp = ({ userProfileData }) => {
                     results[i] = {
                         startTs: segStartTs,
                         endTs: segEndTs,
-                        whenStr: `${formatTs(segStartTs)} – ${formatTs(segEndTs)}`,
+                        whenStr: `${formatTsLocal(segStartTs)} – ${formatTsLocal(segEndTs)}`,
                     };
                     cursorTs = segEndTs;
                 }
@@ -4536,7 +4474,7 @@ const TransportApp = ({ userProfileData }) => {
 
             const newFrom = first.fromLocation;
             const newTo = second.toLocation;
-            const newWhen = `${formatTs(firstRange.startTs)} – ${formatTs(secondRange.endTs)}`;
+            const newWhen = `${formatTsLocal(firstRange.startTs)} – ${formatTsLocal(secondRange.endTs)}`;
             const newText = `Presun z ${newFrom} do ${newTo}`;
             const newKey = buildTransferKey(first.category, first.teamName, newWhen, newText);
 
