@@ -8439,7 +8439,7 @@ const TransportApp = ({ userProfileData }) => {
                                 // Tlačidlo "Zlúčiť"
                                 mergeMode &&
                                     (() => {
-                                        const mergeCandidate = baseFiltered.find(
+                                        const mergeCandidate = baseFilteredFirstOnly.find(
                                             (other) => other.key !== t.key && canMergeTransfers(t, other)
                                         );
                                         if (!mergeCandidate) return null;
