@@ -6809,18 +6809,38 @@ const TransportApp = ({ userProfileData }) => {
                                                                                 { className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold text-gray-800' },
                                                                                 nextRow.timeFrom || '—'
                                                                             ),
-                                                                            // 3. miesto od
-                                                                            React.createElement(
-                                                                                'td',
-                                                                                { className: 'border border-gray-300 px-2 py-1 text-sm text-gray-800 font-medium' },
-                                                                                prevRow.placeTo || '—'
-                                                                            ),
-                                                                            // 4. miesto do
-                                                                            React.createElement(
-                                                                                'td',
-                                                                                { className: 'border border-gray-300 px-2 py-1 text-sm text-gray-800 font-medium' },
-                                                                                nextRow.placeFrom || '—'
-                                                                            ),
+                                                                            // 3. + 4. miesto od / miesto do
+                                                                            //    Ak sú miesta rovnaké → zlúčiť do jednej bunky (colspan=2) so stredovým zarovnaním
+                                                                            (() => {
+                                                                                const placeFromNorm = normalizePlaceName(prevRow.placeTo || '');
+                                                                                const placeToNorm = normalizePlaceName(nextRow.placeFrom || '');
+                                                                                const samePlace = placeFromNorm !== '' && placeFromNorm === placeToNorm;
+                                                                            
+                                                                                if (samePlace) {
+                                                                                    return React.createElement(
+                                                                                        'td',
+                                                                                        {
+                                                                                            colSpan: 2,
+                                                                                            className: 'border border-gray-300 px-2 py-1 text-sm text-gray-800 font-semibold text-center',
+                                                                                            title: 'Miesto od a miesto do sú rovnaké',
+                                                                                        },
+                                                                                        prevRow.placeTo || nextRow.placeFrom || '—'
+                                                                                    );
+                                                                                }
+                                                                            
+                                                                                return [
+                                                                                    React.createElement(
+                                                                                        'td',
+                                                                                        { key: 'gap-from', className: 'border border-gray-300 px-2 py-1 text-sm text-gray-800 font-medium' },
+                                                                                        prevRow.placeTo || '—'
+                                                                                    ),
+                                                                                    React.createElement(
+                                                                                        'td',
+                                                                                        { key: 'gap-to', className: 'border border-gray-300 px-2 py-1 text-sm text-gray-800 font-medium' },
+                                                                                        nextRow.placeFrom || '—'
+                                                                                    ),
+                                                                                ];
+                                                                            })(),
                                                                             // 5. Nástup – prázdne
                                                                             React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, ''),
                                                                             // 6. Výstup – prázdne
