@@ -4260,10 +4260,9 @@ const TransportApp = ({ userProfileData }) => {
     // (peši alebo autobus). Zvyšné segmenty v bloku sa dopočítajú
     // podľa reálnych trvaní jázd, celkový interval zostane zachovaný.
     //
-    // Volá sa z:
-    //  - setTransferAsWalking (resolvedKeys = { transfer.key })
-    //  - assignTransferToBus  (resolvedKeys = { transfer.key })
-    //  - removeWalkingFlag    (resolvedKeys = {} – nič nie je vyriešené)
+    // DÔLEŽITÉ: Ak je segment vyriešený autobusom, jeho REÁLNY čas
+    // (z busRows) sa použije ako fixný bod. Zvyšné segmenty sa
+    // dopočítajú od tohto reálneho času do konca pôvodného intervalu.
     // ============================================================
     const recomputeBlock = async (transfer, resolvedKeys = new Set(), excludeKeys = new Set()) => {
         if (!window.db || !transfer) return;
@@ -4271,9 +4270,6 @@ const TransportApp = ({ userProfileData }) => {
         const teamName = String(transfer.teamName || '').trim();
         const category = cleanCategory(transfer.category || '');
         const dayKey = transfer.dayKey || '';
-        const trRange = parseTransferWhenToRange(transfer.when);
-    
-        if (!trRange || !dayKey) return;
     
         // Zoznam všetkých segmentov tohto tímu v daný deň (okrem aktuálneho)
         const sameTeamSegments = savedTransfers
@@ -4286,11 +4282,12 @@ const TransportApp = ({ userProfileData }) => {
             .map((t) => ({ ...t, range: parseTransferWhenToRange(t.when) }))
             .filter((t) => t.range != null);
     
-        // Zostav reťazec segmentov (aktuálny + ostatné) a zoraď podľa času
+        const trRange = parseTransferWhenToRange(transfer.when);
+        if (!trRange) return;
+    
         const chain = [{ ...transfer, range: trRange }, ...sameTeamSegments];
         chain.sort((a, b) => a.range.startTs - b.range.startTs);
     
-        // Pomocná: zisti, či dva segmenty na seba nadväzujú
         const isContinuous = (a, b) => {
             const ra = a.range || parseTransferWhenToRange(a.when);
             const rb = b.range || parseTransferWhenToRange(b.when);
@@ -4299,7 +4296,6 @@ const TransportApp = ({ userProfileData }) => {
                 normalizePlaceName(a.toLocation) === normalizePlaceName(b.fromLocation);
         };
     
-        // Nájdi súvislý blok okolo aktuálneho segmentu
         const currentIdx = chain.findIndex((t) => t.key === transfer.key);
         if (currentIdx === -1) return;
     
@@ -4315,11 +4311,12 @@ const TransportApp = ({ userProfileData }) => {
         const lastRange = block[block.length - 1].range || parseTransferWhenToRange(block[block.length - 1].when);
         if (!firstRange || !lastRange) return;
     
-        // Zlož trasu bloku: from prvého → to prvého (= from druhého) → ... → to posledného
         const blockRoute = [block[0].fromLocation];
         for (let i = 0; i < block.length; i++) blockRoute.push(block[i].toLocation);
     
-        // Indexy vyriešených segmentov (buď z resolvedKeys, alebo existujúci isWalking)
+        // ============================================================
+        // Zisti vyriešené segmenty (buď z resolvedKeys, alebo existujúci isWalking)
+        // ============================================================
         const resolvedIndexes = new Set();
         block.forEach((seg, idx) => {
             if (resolvedKeys.has(seg.key)) {
@@ -4329,8 +4326,212 @@ const TransportApp = ({ userProfileData }) => {
             }
         });
     
-        const blockWhen = `${formatTsLocal(firstRange.startTs)} – ${formatTsLocal(lastRange.endTs)}`;
-        const newTimes = recomputeRemainingSegments(blockWhen, blockRoute, resolvedIndexes);
+        // ============================================================
+        // NOVÉ: Pre vyriešené segmenty zisti REÁLNY čas z busRows.
+        // Ak je segment pokrytý autobusom, jeho reálny čas odchodu/príchodu
+        // je v busRows (čas nástupu v boardingRow a čas výstupu v alightingRow).
+        // Tieto časy sú FIXNÉ — zvyšné segmenty sa dopočítajú od nich.
+        // ============================================================
+        const resolvedRealTimes = new Map(); // idx → { startTs, endTs }
+    
+        block.forEach((seg, idx) => {
+            if (!resolvedIndexes.has(idx)) return;
+    
+            // Skús nájsť reálny čas z busRows pre tento segment
+            const segFrom = normalizePlaceName(seg.fromLocation);
+            const segTo = normalizePlaceName(seg.toLocation);
+    
+            let realStartTs = null;
+            let realEndTs = null;
+    
+            // Prejdi všetky busRows pre tento deň a tím
+            Object.entries(busRows || {}).forEach(([busKey, rows]) => {
+                const [busId, busDayKey] = busKey.split('|');
+                if (busDayKey !== dayKey) return;
+    
+                const sortedRows = (rows || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+                sortedRows.forEach((row) => {
+                    const rowFrom = normalizePlaceName(row.placeFrom);
+                    const rowTo = normalizePlaceName(row.placeTo);
+                    const hasTeamIn = (row.teamsIn || []).some((t) => String(t) === `${teamName}|${category}`);
+                    const hasTeamOut = (row.teamsOut || []).some((t) => String(t) === `${teamName}|${category}`);
+    
+                    // Ak tím nastupuje v tomto riadku a rowFrom === segFrom → reálny čas odchodu
+                    if (hasTeamIn && rowFrom === segFrom && row.timeFrom) {
+                        const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+                        if (dm) {
+                            const [h, mi] = row.timeFrom.split(':').map(Number);
+                            const ts = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
+                            if (realStartTs == null || ts < realStartTs) realStartTs = ts;
+                        }
+                    }
+    
+                    // Ak tím vystupuje v tomto riadku a rowTo === segTo → reálny čas príchodu
+                    if (hasTeamOut && rowTo === segTo && row.timeTo) {
+                        const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+                        if (dm) {
+                            const [h, mi] = row.timeTo.split(':').map(Number);
+                            const ts = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
+                            if (realEndTs == null || ts > realEndTs) realEndTs = ts;
+                        }
+                    }
+                });
+            });
+    
+            if (realStartTs != null && realEndTs != null && realEndTs > realStartTs) {
+                resolvedRealTimes.set(idx, { startTs: realStartTs, endTs: realEndTs });
+            }
+        });
+    
+        // ============================================================
+        // Vypočítaj časy pre zostávajúce segmenty tak, aby rešpektovali
+        // reálne časy vyriešených segmentov.
+        //
+        // Princíp:
+        //  1) Rozdeľ blok na "úseky" oddelené vyriešenými segmentmi.
+        //  2) Pre každý úsek (medzi dvoma vyriešenými segmentmi) dopočítaj
+        //     časy podľa trvaní, aby začínal na konci predchádzajúceho
+        //     vyriešeného segmentu (alebo na začiatku bloku) a končil
+        //     na začiatku nasledujúceho vyriešeného segmentu (alebo na konci bloku).
+        // ============================================================
+        const newTimes = new Array(block.length).fill(null);
+    
+        // 1) Vyriešené segmenty s reálnym časom → použi reálny čas
+        resolvedRealTimes.forEach(({ startTs, endTs }, idx) => {
+            newTimes[idx] = {
+                startTs,
+                endTs,
+                whenStr: `${formatTsLocal(startTs)} – ${formatTsLocal(endTs)}`,
+            };
+        });
+    
+        // 2) Vyriešené segmenty bez reálneho času (napr. peši) → dopočítaj z pôvodného intervalu
+        resolvedIndexes.forEach((idx) => {
+            if (newTimes[idx]) return; // už máme reálny čas
+            const seg = block[idx];
+            const range = seg.range || parseTransferWhenToRange(seg.when);
+            if (range) {
+                newTimes[idx] = {
+                    startTs: range.startTs,
+                    endTs: range.endTs,
+                    whenStr: seg.when,
+                };
+            }
+        });
+    
+        // 3) Zostávajúce segmenty → dopočítaj po úsekoch
+        const remainingIndexes = [];
+        for (let i = 0; i < block.length; i++) {
+            if (!newTimes[i]) remainingIndexes.push(i);
+        }
+    
+        // Rozdeľ zostávajúce segmenty do úsekov podľa vyriešených susedov
+        const segments = []; // { indexes: [], startTs, endTs }
+        let currentSegment = null;
+    
+        for (let i = 0; i < block.length; i++) {
+            if (newTimes[i]) {
+                // Vyriešený segment – uzavri aktuálny úsek
+                if (currentSegment) {
+                    segments.push(currentSegment);
+                    currentSegment = null;
+                }
+            } else {
+                // Nevyriešený segment – pridaj do aktuálneho úseku
+                if (!currentSegment) {
+                    // Zisti začiatočný čas úseku
+                    let segmentStartTs = null;
+                    // Pozri predchádzajúci vyriešený segment
+                    for (let k = i - 1; k >= 0; k--) {
+                        if (newTimes[k]) {
+                            segmentStartTs = newTimes[k].endTs;
+                            break;
+                        }
+                    }
+                    if (segmentStartTs == null) {
+                        // Začiatok bloku
+                        segmentStartTs = firstRange.startTs;
+                    }
+                    currentSegment = { indexes: [], startTs: segmentStartTs, endTs: null };
+                }
+                currentSegment.indexes.push(i);
+            }
+        }
+        if (currentSegment) segments.push(currentSegment);
+    
+        // Pre každý úsek dopočítaj koniec (začiatok nasledujúceho vyriešeného alebo koniec bloku)
+        segments.forEach((segment) => {
+            const lastIdx = segment.indexes[segment.indexes.length - 1];
+            // Nájdi nasledujúci vyriešený segment
+            let segmentEndTs = null;
+            for (let k = lastIdx + 1; k < block.length; k++) {
+                if (newTimes[k]) {
+                    segmentEndTs = newTimes[k].startTs;
+                    break;
+                }
+            }
+            if (segmentEndTs == null) {
+                // Koniec bloku
+                segmentEndTs = lastRange.endTs;
+            }
+            segment.endTs = segmentEndTs;
+        });
+    
+        // Pre každý úsek rozdeľ čas podľa trvaní
+        segments.forEach((segment) => {
+            const route = [block[segment.indexes[0]].fromLocation];
+            for (let i = 0; i < segment.indexes.length; i++) {
+                route.push(block[segment.indexes[i]].toLocation);
+            }
+    
+            const totalMs = segment.endTs - segment.startTs;
+            if (totalMs <= 0) {
+                // Fallback – nulový čas
+                segment.indexes.forEach((blockIdx, j) => {
+                    newTimes[blockIdx] = {
+                        startTs: segment.startTs,
+                        endTs: segment.startTs,
+                        whenStr: `${formatTsLocal(segment.startTs)} – ${formatTsLocal(segment.startTs)}`,
+                    };
+                });
+                return;
+            }
+    
+            // Zisti trvania
+            const durations = [];
+            for (let i = 0; i < segment.indexes.length; i++) {
+                const mins = getTravelMinutes(route[i], route[i + 1]);
+                durations.push(mins != null ? Number(mins) : null);
+            }
+            const known = durations.filter((d) => d != null);
+            const fallback = known.length > 0
+                ? Math.round(known.reduce((a, b) => a + b, 0) / known.length)
+                : null;
+            const finalDurations = durations.map((d) =>
+                d != null ? d : (fallback != null ? fallback : null)
+            );
+            const durationsSum = finalDurations.reduce((sum, d) => sum + (d || 0), 0);
+    
+            let cursorTs = segment.startTs;
+            segment.indexes.forEach((blockIdx, j) => {
+                const isLast = j === segment.indexes.length - 1;
+                const dur = finalDurations[j] || 0;
+                const segMs = isLast
+                    ? (segment.endTs - cursorTs)
+                    : (durationsSum > 0
+                        ? Math.round((dur / durationsSum) * totalMs)
+                        : Math.round(totalMs / segment.indexes.length));
+                const segStartTs = cursorTs;
+                const segEndTs = cursorTs + segMs;
+                newTimes[blockIdx] = {
+                    startTs: segStartTs,
+                    endTs: segEndTs,
+                    whenStr: `${formatTsLocal(segStartTs)} – ${formatTsLocal(segEndTs)}`,
+                };
+                cursorTs = segEndTs;
+            });
+        });
     
         const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
         const patch = {};
@@ -4344,7 +4545,6 @@ const TransportApp = ({ userProfileData }) => {
             const newWhen = newTime.whenStr;
             const newKey = buildTransferKey(category, teamName, newWhen, newText);
     
-            // Zmazať starý kľúč, ak sa zmenil
             if (seg.key !== newKey) patch[seg.key] = deleteField();
     
             const base = {
@@ -4359,7 +4559,6 @@ const TransportApp = ({ userProfileData }) => {
                 generatedBy: (userProfileData && userProfileData.email) || null,
             };
     
-            // Zachovaj príznak "peši", ak segment bol peši
             if (seg.isWalking === true) {
                 base.isWalking = true;
                 base.walkingSetAt = seg.walkingSetAt || Timestamp.fromDate(new Date());
