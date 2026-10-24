@@ -4108,7 +4108,7 @@ const TransportApp = ({ userProfileData }) => {
                 title: travelMinutes != null ? 'Trvanie z Nastavení' : 'Trvanie nie je nastavené',
             }, travelMinutes != null ? travelMinutes : '—'),
             // 9. mazanie riadku
-            React.createElement('td', { className: 'border border-gray-300 p-1 text-center relative' },
+            React.createElement('td', { className: 'border border-gray-300 p-1 text-center' },
                 React.createElement('button', {
                     type: 'button',
                     onClick: () => removeBusRow(row.id),
