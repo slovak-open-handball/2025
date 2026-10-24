@@ -6455,7 +6455,22 @@ const TransportApp = ({ userProfileData }) => {
                 if (i > 0 && finalTimes[i - 1]) {
                     startTs = finalTimes[i - 1].endTs;
                 }
-                finalTimes[i] = { startTs, endTs: timeRange.endTs };
+
+                // ============================================================
+                // NOVÉ: Nájdi najbližší NASLEDUJÚCI vyriešený segment
+                // a nastav endTs na jeho startTs. Tým sa zabezpečí, že
+                // nevyriešený segment nepresiahne začiatok nasledujúceho
+                // priradeného segmentu.
+                // ============================================================
+                let endTs = timeRange.endTs;
+                for (let k = i + 1; k < route.length - 1; k++) {
+                    if (finalTimes[k] && finalTimes[k].startTs != null) {
+                        endTs = finalTimes[k].startTs;
+                        break;
+                    }
+                }
+
+                finalTimes[i] = { startTs, endTs };
             }
     
             // ============================================================
