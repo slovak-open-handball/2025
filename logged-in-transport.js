@@ -3328,6 +3328,31 @@ const TransportApp = ({ userProfileData }) => {
     }, [busRows, travelTimes, stopsList]);
 
     // ============================================================
+    // NOVÉ: Automatická synchronizácia "Miesto od" s predchádzajúcim
+    // riadkom. Ak predchádzajúci riadok má placeTo, aktuálny riadok
+    // musí mať placeFrom = prevRow.placeTo.
+    // ============================================================
+    useEffect(() => {
+        if (!window.db) return;
+        if (!busRows || Object.keys(busRows).length === 0) return;
+
+        Object.values(busRows).forEach((rows) => {
+            const sorted = (rows || [])
+                .slice()
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            for (let i = 1; i < sorted.length; i++) {
+                const prevRow = sorted[i - 1];
+                const currRow = sorted[i];
+                if (!prevRow.placeTo || prevRow.placeTo.trim() === '') continue;
+                if ((currRow.placeFrom || '') === prevRow.placeTo) continue;
+
+                updateBusRowField(currRow.id, 'placeFrom', prevRow.placeTo);
+            }
+        });
+    }, [busRows]);
+
+    // ============================================================
     // DETEKCIA CHÝBAJÚCICH TRVANÍ JÁZDY PRE RIADKY AUTOBUSOV
     // (placeFrom + placeTo vyplnené, ale travelTimes[fromId|toId] chýba)
     // ============================================================
@@ -4060,6 +4085,16 @@ const TransportApp = ({ userProfileData }) => {
     const renderBusRow = (row, busId, dayKey) => {
         const travelMinutes = getTravelMinutes(row.placeFrom, row.placeTo);
         const computedTimeTo = addMinutesToTime(row.timeFrom, travelMinutes);
+
+        const rowsKey = `${busId}|${dayKey}`;
+        const allRows = (busRows[rowsKey] || [])
+            .slice()
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+        const currentIdx = allRows.findIndex((r) => r.id === row.id);
+        const prevRow = currentIdx > 0 ? allRows[currentIdx - 1] : null;
+        const lockedPlaceFrom = prevRow && prevRow.placeTo && prevRow.placeTo.trim() !== ''
+            ? prevRow.placeTo
+            : null;
     
         const inputCls = 'w-full px-1 py-1 text-sm border border-gray-300 rounded text-black focus:outline-none focus:ring-2 focus:ring-green-500';
         const selectCls = 'w-full px-1 py-1 text-sm border border-gray-300 rounded text-black bg-white focus:outline-none focus:ring-2 focus:ring-green-500';
@@ -4249,16 +4284,28 @@ const TransportApp = ({ userProfileData }) => {
                     style: { color: computedTimeTo ? '#1d4ed8' : '#9ca3af' },
                 })
             ),
-            // 3. miesto od (SELECT)
+            // 3. miesto od
+            //    - Ak predchádzajúci riadok má vyplnené placeTo → READ-ONLY text
+            //      (hodnota = prevRow.placeTo, nedá sa meniť)
+            //    - Inak → SELECT (pôvodné správanie)
             React.createElement('td', { className: 'border border-gray-300 p-1' },
-                React.createElement('select', {
-                    value: row.placeFrom || '',
-                    onChange: (e) => updateBusRowField(row.id, 'placeFrom', e.target.value),
-                    className: selectCls,
-                },
-                    React.createElement('option', { value: '' }, '— vyber zastávku —'),
-                    stopOptionsFrom
-                )
+                lockedPlaceFrom != null
+                    ? React.createElement(
+                        'div',
+                        {
+                            className: 'w-full px-1 py-1 text-sm text-center font-semibold bg-gray-100 border border-gray-300 rounded text-gray-700',
+                            title: `Miesto od je automaticky nastavené z predchádzajúceho riadku (${prevRow.placeTo}). Nedá sa meniť.`,
+                        },
+                        lockedPlaceFrom
+                    )
+                    : React.createElement('select', {
+                        value: row.placeFrom || '',
+                        onChange: (e) => updateBusRowField(row.id, 'placeFrom', e.target.value),
+                        className: selectCls,
+                    },
+                        React.createElement('option', { value: '' }, '— vyber zastávku —'),
+                        stopOptionsFrom
+                    )
             ),
             // 4. miesto do (SELECT)
             React.createElement('td', { className: 'border border-gray-300 p-1' },
