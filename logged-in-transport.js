@@ -3956,7 +3956,7 @@ const TransportApp = ({ userProfileData }) => {
     
         return React.createElement(
             'tr',
-            { key: row.id, className: 'hover:bg-gray-50' },
+            { key: row.id, className: 'hover:bg-gray-50 group relative' },
             // 1. čas začiatok
             React.createElement('td', { className: 'border border-gray-300 p-1' },
                 React.createElement('input', {
@@ -4115,6 +4115,52 @@ const TransportApp = ({ userProfileData }) => {
                     className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 flex items-center justify-center mx-auto',
                     title: 'Odstrániť riadok',
                 }, React.createElement('i', { className: 'fa-solid fa-xmark' }))
+            ),
+            // 10. HOVER "+" NA SPODNEJ HRANICI RIADKU
+            //     (vloží nový riadok POD tento riadok)
+            React.createElement(
+                'td',
+                {
+                    className: 'p-0 relative',
+                    style: { width: 0, padding: 0, border: 0 }
+                },
+                React.createElement(
+                    'div',
+                    {
+                        className: 'absolute left-0 right-0 flex justify-center pointer-events-none',
+                        style: {
+                            bottom: '-12px',
+                            zIndex: 5,
+                        }
+                    },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: async () => {
+                                const rowsKey = `${busId}|${dayKey}`;
+                                const allRows = (busRows[rowsKey] || [])
+                                    .slice()
+                                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+                                const idx = allRows.findIndex((r) => r.id === row.id);
+                                if (idx === -1) return;
+                                const nextRow = allRows[idx + 1];
+                                const realBus = buses.find((b) => b.id === busId) || { id: busId, name: '' };
+                                if (!nextRow) {
+                                    await addBusRow(realBus, dayKey);
+                                    return;
+                                }
+                                await insertBusRowBetween(realBus, dayKey, row, nextRow);
+                            },
+                            className:
+                                'pointer-events-auto w-6 h-6 rounded-full bg-green-600 text-white shadow-md ' +
+                                'hover:bg-green-700 active:scale-95 transition-all duration-150 ' +
+                                'flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100',
+                            title: 'Vložiť nový riadok pod tento riadok'
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-plus text-[10px]' })
+                    )
+                )
             )
         );
     };
