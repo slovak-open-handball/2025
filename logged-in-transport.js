@@ -3729,6 +3729,93 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // POSUN RIADKOV PO "OBRÁTENOM" ČERVENOM RIADKU
+    // (miesto od == miesto do, ale čas od > čas do)
+    //
+    // Posunie všetky timeFrom a timeTo v nasledujúcich riadkoch
+    // až po prvý ďalší červený riadok o hodnotu (medzera + 2 min).
+    // ============================================================
+    const shiftFollowingRowsAfterInvertedGap = async (busId, dayKey, gapRowPrevId, gapRowNextId) => {
+        if (!window.db || !busId || !dayKey || !gapRowPrevId || !gapRowNextId) return;
+    
+        const rowsKey = `${busId}|${dayKey}`;
+        const allRows = (busRows[rowsKey] || [])
+            .slice()
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+        const prevIdx = allRows.findIndex((r) => r.id === gapRowPrevId);
+        const nextIdx = allRows.findIndex((r) => r.id === gapRowNextId);
+        if (prevIdx === -1 || nextIdx === -1 || nextIdx <= prevIdx) return;
+    
+        const prevRow = allRows[prevIdx];
+        const nextRow = allRows[nextIdx];
+    
+        // Medzera (rovnaká logika ako getGapMinutes – s prechodom cez polnoc)
+        const gap = getGapMinutes(prevRow.timeTo, nextRow.timeFrom);
+        if (gap == null || gap <= 2) return; // nie je červený riadok
+    
+        // Posun = medzera + 2 minúty
+        const deltaMinutes = gap + 2;
+    
+        // Pomocná: posun "HH:MM" o daný počet minút
+        const shiftTime = (timeStr, delta) => {
+            if (!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr)) return timeStr;
+            const [h, m] = timeStr.split(':').map(Number);
+            let total = h * 60 + m + Number(delta);
+            total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
+            const endH = Math.floor(total / 60);
+            const endM = total % 60;
+            return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+        };
+    
+        // Prejdi nasledujúce riadky od nextIdx ďalej, ale zastav
+        // pred ďalším červeným riadkom (medzera > 2 min).
+        const updates = [];
+        for (let i = nextIdx; i < allRows.length; i++) {
+            const curr = allRows[i];
+    
+            // Ak nie sme na prvom riadku za gapom, over medzeru
+            // medzi predchádzajúcim a aktuálnym riadkom.
+            if (i > nextIdx) {
+                const prev = allRows[i - 1];
+                const betweenGap = getGapMinutes(prev.timeTo, curr.timeFrom);
+                if (betweenGap != null && betweenGap > 2) {
+                    // Ďalší červený riadok → stop (tento riadok už neposúvame)
+                    break;
+                }
+            }
+    
+            const newTimeFrom = shiftTime(curr.timeFrom, deltaMinutes);
+            const newTimeTo = shiftTime(curr.timeTo, deltaMinutes);
+    
+            const patch = {};
+            if (newTimeFrom !== curr.timeFrom) patch.timeFrom = newTimeFrom;
+            if (newTimeTo !== curr.timeTo) patch.timeTo = newTimeTo;
+    
+            if (Object.keys(patch).length > 0) {
+                updates.push({ id: curr.id, patch });
+            }
+        }
+    
+        if (updates.length === 0) return;
+    
+        try {
+            await Promise.all(
+                updates.map(({ id, patch }) =>
+                    updateDoc(doc(window.db, 'transport', id), patch)
+                )
+            );
+            window.showGlobalNotification(
+                `Posunutých ${updates.length} nasledujúcich riadkov o ${deltaMinutes} min (medzera ${gap} + 2).`,
+                'info'
+            );
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri posune riadkov po obrátenom červenom riadku:', err);
+            window.showGlobalNotification('Nepodarilo sa posunúť nasledujúce riadky.', 'error');
+        }
+    };
+
+    // ============================================================
     // ODSTRÁNENIE RIADKU
     // ============================================================
     const removeBusRow = async (rowId) => {
@@ -6389,13 +6476,37 @@ const TransportApp = ({ userProfileData }) => {
                                                                     const prevRow = prev;
                                                                     const nextRow = r;
                                                                     const gapRowKey = `gap-${prevRow.id}-${nextRow.id}`;
-                                                                
+                                                        
+                                                                    // ============================================================
+                                                                    // NOVÉ: Detekcia "obráteného" červeného riadku:
+                                                                    //  - miesto od (prevRow.placeTo) == miesto do (nextRow.placeFrom)
+                                                                    //  - čas od (prevRow.timeTo) > čas do (nextRow.timeFrom)
+                                                                    //    (t.j. prevRow.timeTo > nextRow.timeFrom)
+                                                                    // ============================================================
+                                                                    const timeRe = /^\d{1,2}:\d{2}$/;
+                                                                    const sameFromTo =
+                                                                        normalizePlaceName(prevRow.placeTo) !== '' &&
+                                                                        normalizePlaceName(prevRow.placeTo) === normalizePlaceName(nextRow.placeFrom);
+                                                        
+                                                                    let isInvertedGap = false;
+                                                                    if (
+                                                                        sameFromTo &&
+                                                                        prevRow.timeTo && nextRow.timeFrom &&
+                                                                        timeRe.test(prevRow.timeTo) && timeRe.test(nextRow.timeFrom)
+                                                                    ) {
+                                                                        const [fh, fm] = prevRow.timeTo.split(':').map(Number);
+                                                                        const [th, tm] = nextRow.timeFrom.split(':').map(Number);
+                                                                        if (fh * 60 + fm > th * 60 + tm) {
+                                                                            isInvertedGap = true;
+                                                                        }
+                                                                    }
+                                                        
                                                                     rowElements.push(
                                                                         React.createElement(
                                                                             'tr',
                                                                             {
                                                                                 key: gapRowKey,
-                                                                                className: 'group gap-row', // "group" pre hover na celý riadok
+                                                                                className: 'group gap-row',
                                                                                 style: { backgroundColor: '#FC9A9C' }
                                                                             },
                                                                             // 1. čas od
@@ -6437,28 +6548,49 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     title: 'Voľný čas (prestoj)'
                                                                                 },
                                                                                 (() => {
-                                                                                    // Zobraz medzeru len ak je čas "Od" <= čas "Do"
-                                                                                    // (t.j. prevRow.timeTo <= nextRow.timeFrom)
-                                                                                    const timeRe = /^\d{1,2}:\d{2}$/;
                                                                                     const fromOk = prevRow.timeTo && timeRe.test(prevRow.timeTo);
                                                                                     const toOk = nextRow.timeFrom && timeRe.test(nextRow.timeFrom);
                                                                                     if (!fromOk || !toOk) return '—';
-                                                                            
+                                                        
                                                                                     const [fh, fm] = prevRow.timeTo.split(':').map(Number);
                                                                                     const [th, tm] = nextRow.timeFrom.split(':').map(Number);
                                                                                     const fromMin = fh * 60 + fm;
                                                                                     const toMin = th * 60 + tm;
-                                                                            
-                                                                                    // Ak je čas Od väčší ako čas Do → nezobrazuj hodnotu
+                                                        
                                                                                     if (fromMin > toMin) return 'chyba';
-                                                                            
                                                                                     return gap;
                                                                                 })()
                                                                             ),
-                                                                            // 9. Mazanie – prázdne, ALE sem vložíme hover tlačidlo "+"
+                                                                            // 9. Mazanie / "+" + NOVÉ tlačidlo "Posunúť" pri obrátenom riadku
                                                                             React.createElement(
                                                                                 'td',
                                                                                 { className: 'border border-gray-300 px-2 py-1 text-center relative' },
+                                                                                // NOVÉ: ak ide o obrátený riadok (rovnaké miesto, čas od > čas do),
+                                                                                // zobraz tlačidlo na posun nasledujúcich riadkov.
+                                                                                isInvertedGap &&
+                                                                                    React.createElement(
+                                                                                        'button',
+                                                                                        {
+                                                                                            type: 'button',
+                                                                                            onClick: async () => {
+                                                                                                const ok = await askConfirm(
+                                                                                                    `Posunúť všetky nasledujúce riadky (až po prvý ďalší červený riadok) o ${gap + 2} minút?`
+                                                                                                );
+                                                                                                if (!ok) return;
+                                                                                                await shiftFollowingRowsAfterInvertedGap(
+                                                                                                    bus.id,
+                                                                                                    day.dayKey,
+                                                                                                    prevRow.id,
+                                                                                                    nextRow.id
+                                                                                                );
+                                                                                            },
+                                                                                            className:
+                                                                                                'w-7 h-7 rounded-full bg-red-700 text-white shadow hover:bg-red-800 active:scale-95 transition-all duration-150 flex items-center justify-center mx-auto mr-1',
+                                                                                            title: `Posunúť nasledujúce riadky o ${gap + 2} min (medzera ${gap} + 2)`
+                                                                                        },
+                                                                                        React.createElement('i', { className: 'fa-solid fa-arrows-down-to-line text-[10px]' })
+                                                                                    ),
+                                                                                // Pôvodné hover "+" tlačidlo
                                                                                 React.createElement(
                                                                                     'button',
                                                                                     {
@@ -6475,7 +6607,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                     );
                                                                 }
                                                             }
-
+                                                        
                                                             // Pridaj samotný riadok
                                                             rowElements.push(renderBusRow(r, bus.id, day.dayKey));
                                                         });
