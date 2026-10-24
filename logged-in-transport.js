@@ -4889,99 +4889,82 @@ const TransportApp = ({ userProfileData }) => {
         setDeleteTransferSaving(true);
         try {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
-
+    
             // ============================================================
-            // 1) Priprav patch – zmaž tento segment
+            // 1) Načítaj aktuálny stav z DB (nie z React state),
+            //    aby sme mali istotu, že vidíme všetky záznamy.
+            // ============================================================
+            const snap = await getDoc(docRef);
+            const rawTransfers = snap.exists()
+                ? (snap.data() || {})[TRANSPORT_TRANSFERS_FIELD] || {}
+                : {};
+    
+            // ============================================================
+            // 2) Zisti, ktorý _parentKey sa má skontrolovať.
+            //
+            //  - Ak odstraňujeme segment (má _parentKey a ten != key)
+            //    → kontrolujeme _parentKey.
+            //  - Ak odstraňujeme priamo parent (key == _parentKey alebo
+            //    transfer nemá _parentKey) → kontrolujeme jeho vlastný key.
+            // ============================================================
+            const parentKeyToCheck =
+                transfer._parentKey && transfer._parentKey !== transfer.key
+                    ? transfer._parentKey
+                    : transfer.key;
+    
+            // ============================================================
+            // 3) Nájdi VŠETKY zostávajúce záznamy v DB, ktoré patria
+            //    k tomu istému parentKey (okrem odstraňovaného).
+            //
+            //    Zahŕňa to:
+            //      - samotný parent záznam (key === parentKeyToCheck)
+            //      - segmenty, ktoré majú _parentKey === parentKeyToCheck
+            //      - AJ priradené segmenty (tie majú v DB stále _parentKey,
+            //        aj keď sú v busRows/peši)
+            // ============================================================
+            const remainingRelated = Object.entries(rawTransfers).filter(([key, v]) => {
+                if (!v) return false;
+                if (key === transfer.key) return false; // odstraňovaný
+                if (key === parentKeyToCheck) return true; // parent
+                if (v._parentKey === parentKeyToCheck) return true; // segment
+                return false;
+            });
+    
+            // ============================================================
+            // 4) Priprav patch
             // ============================================================
             const transfersPatch = {
                 [transfer.key]: deleteField(),
             };
-
+    
             // ============================================================
-            // 2) Ak je to časť rozdeleného presunu (má _parentKey),
-            //    zisti, či v DB existujú iné nepriradené segmenty
-            //    toho istého _parentKey. Ak NIE, zmaž aj pôvodný
-            //    záznam _parentKey, aby v DB nezostala "sirota".
+            // 5) Ak po odstránení nezostane ŽIADNY súvisiaci záznam
+            //    (ani parent, ani segment), zmaž aj parent (ak ešte existuje).
+            //
+            //    Tým sa zabezpečí, že v DB nezostanú siroty.
             // ============================================================
-            if (transfer._parentKey && transfer._parentKey !== transfer.key) {
-                // Zisti, či existuje aspoň jeden iný nepriradený segment
-                // toho istého _parentKey v savedTransfers.
-                //
-                // POZOR: savedTransfers obsahuje VŠETKY presuny (aj tie,
-                // ktoré sú priradené k autobusu/peši). Tie ale nie sú
-                // "nepriradené" – tie sú vyriešené. Preto musíme
-                // skontrolovať, či existuje iný záznam s rovnakým
-                // _parentKey, ktorý NIE JE priradený.
-
-                const otherUnassignedSegments = savedTransfers.filter((t) => {
-                    if (t.key === transfer.key) return false;
-                    // Musí mať rovnaký _parentKey
-                    // (buď priamo t._parentKey, alebo ak je to sám parent)
-                    const isRelatedToParent =
-                        t._parentKey === transfer._parentKey ||
-                        t.key === transfer._parentKey;
-                    if (!isRelatedToParent) return false;
-
-                    // Ak je peši → vyriešené, nepočítame
-                    if (t.isWalking === true) return false;
-
-                    // Ak je priradený k autobusu → vyriešené, nepočítame
-                    const teamName = String(t.teamName || '').trim();
-                    const category = cleanCategory(t.category || '');
-                    const dayKey = t.dayKey || '';
-                    const fromLoc = normalizePlaceName(t.fromLocation || '');
-                    const toLoc = normalizePlaceName(t.toLocation || '');
-                    if (!fromLoc || !toLoc) return false;
-
-                    // Skontroluj, či je segment priradený k autobusu
-                    const segKey = `${dayKey}|${teamName}|${category}|${fromLoc}→${toLoc}`;
-                    const isInBus = (() => {
-                        let found = false;
-                        Object.entries(busRows || {}).forEach(([busKey, rows]) => {
-                            if (found) return;
-                            const bDayKey = busKey.split('|')[1];
-                            if (bDayKey !== dayKey) return;
-                            const sorted = (rows || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-                            let boardIdx = -1;
-                            let alightIdx = -1;
-                            for (let i = 0; i < sorted.length; i++) {
-                                const row = sorted[i];
-                                const rowFrom = normalizePlaceName(row.placeFrom);
-                                const rowTo = normalizePlaceName(row.placeTo);
-                                const hasTeamIn = (row.teamsIn || []).some((tk) => {
-                                    const [tn, cat] = String(tk).split('|');
-                                    return String(tn).trim() === teamName && cleanCategory(cat) === category;
-                                });
-                                const hasTeamOut = (row.teamsOut || []).some((tk) => {
-                                    const [tn, cat] = String(tk).split('|');
-                                    return String(tn).trim() === teamName && cleanCategory(cat) === category;
-                                });
-                                if (hasTeamIn && rowFrom === fromLoc && boardIdx === -1) {
-                                    boardIdx = i;
-                                }
-                                if (hasTeamOut && rowTo === toLoc && boardIdx !== -1) {
-                                    alightIdx = i;
-                                    break;
-                                }
-                            }
-                            if (boardIdx !== -1) found = true;
-                        });
-                        return found;
-                    })();
-
-                    // Ak nie je peši a nie je v autobuse → je nepriradený
-                    return !isInBus;
-                });
-
-                // Ak žiadne iné nepriradené segmenty neexistujú,
-                // zmaž aj pôvodný záznam _parentKey
-                if (otherUnassignedSegments.length === 0) {
-                    transfersPatch[transfer._parentKey] = deleteField();
-                }
+            if (remainingRelated.length === 0 && parentKeyToCheck !== transfer.key) {
+                transfersPatch[parentKeyToCheck] = deleteField();
             }
-
+    
             // ============================================================
-            // 3) Zapíš patch do DB
+            // 6) Špeciálny prípad: ak odstraňujeme PRIAMO parent záznam
+            //    (transfer.key === parentKeyToCheck), musíme zmazať
+            //    AJ všetky jeho segmenty, ktoré ešte v DB zostali.
+            //
+            //    Inak by v DB zostali sirotské segmenty bez parenta.
+            // ============================================================
+            if (parentKeyToCheck === transfer.key) {
+                const segmentsToDelete = Object.entries(rawTransfers).filter(
+                    ([key, v]) => v && v._parentKey === transfer.key && key !== transfer.key
+                );
+                segmentsToDelete.forEach(([key]) => {
+                    transfersPatch[key] = deleteField();
+                });
+            }
+    
+            // ============================================================
+            // 7) Zapíš patch do DB
             // ============================================================
             await setDoc(
                 docRef,
@@ -4992,14 +4975,20 @@ const TransportApp = ({ userProfileData }) => {
                 },
                 { merge: true }
             );
-
-            const deletedParents = Object.keys(transfersPatch).filter(
-                (k) => k === transfer._parentKey && k !== transfer.key
-            );
-            const suffix = deletedParents.length > 0
-                ? ' (a aj pôvodný záznam celého presunu, keďže žiadne iné časti nezostali)'
-                : '';
-
+    
+            const deletedParent = !!transfersPatch[parentKeyToCheck];
+            const deletedSegmentsCount = Object.keys(transfersPatch).length
+                - 1 /* samotný transfer */
+                - (deletedParent ? 1 : 0);
+    
+            let suffix = '';
+            if (deletedParent) {
+                suffix = ' (a aj pôvodný záznam celého presunu, keďže žiadne iné časti nezostali)';
+            }
+            if (deletedSegmentsCount > 0) {
+                suffix += ` (spolu odstránených ${deletedSegmentsCount + 1} častí presunu)`;
+            }
+    
             window.showGlobalNotification(
                 `Presun ${transfer.fromLocation} → ${transfer.toLocation} bol odstránený${suffix}.`,
                 'success'
