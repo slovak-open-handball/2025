@@ -3438,6 +3438,75 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // VLOŽENIE RIADKU MEDZI DVA EXISTUJÚCE RIADKY (hover "+" v medzere)
+    //
+    // Pravidlá pre zastávky:
+    //  - placeFrom = prevRow.placeTo
+    //  - placeTo   = nextRow.placeFrom
+    //  - ak sú placeFrom a placeTo rovnaké → použijú sa obe (placeFrom = placeTo)
+    // ============================================================
+    const insertBusRowBetween = async (bus, dayKey, prevRow, nextRow) => {
+        if (!window.db || !bus || !dayKey || !prevRow || !nextRow) return;
+    
+        try {
+            const rowsKey = `${bus.id}|${dayKey}`;
+            const allRows = (busRows[rowsKey] || [])
+                .slice()
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+            const prevIdx = allRows.findIndex((r) => r.id === prevRow.id);
+            const nextIdx = allRows.findIndex((r) => r.id === nextRow.id);
+            if (prevIdx === -1 || nextIdx === -1 || nextIdx !== prevIdx + 1) return;
+    
+            // Zastávky podľa pravidla
+            const placeFrom = prevRow.placeTo || '';
+            const placeTo = nextRow.placeFrom || '';
+    
+            // Čas od = čas do predchádzajúceho riadku
+            let initialTimeFrom = '';
+            if (prevRow.timeTo && /^\d{1,2}:\d{2}$/.test(prevRow.timeTo)) {
+                initialTimeFrom = prevRow.timeTo;
+            }
+    
+            // Nový order – vložíme medzi prev a next; ostatné posunieme
+            const newOrder = (prevRow.order || 0) + 1;
+    
+            // Posunieme order všetkých nasledujúcich riadkov (od nextRow ďalej)
+            const shiftPromises = [];
+            for (let i = nextIdx; i < allRows.length; i++) {
+                const r = allRows[i];
+                const newOrderValue = (r.order || 0) + 1;
+                if (newOrderValue !== r.order) {
+                    shiftPromises.push(
+                        updateDoc(doc(window.db, 'transport', r.id), { order: newOrderValue })
+                    );
+                }
+            }
+            await Promise.all(shiftPromises);
+    
+            // Vytvor nový riadok
+            await addDoc(collection(window.db, 'transport'), {
+                type: 'busRow',
+                busId: bus.id,
+                busName: bus.name,
+                dayKey,
+                order: newOrder,
+                timeFrom: initialTimeFrom,
+                timeTo: '',
+                placeFrom,
+                placeTo,
+                teamsIn: [],
+                teamsOut: [],
+            });
+    
+            window.showGlobalNotification('Riadok vložený medzi existujúce riadky.', 'success');
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri vkladaní riadku medzi riadky:', err);
+            window.showGlobalNotification('Nepodarilo sa vložiť riadok.', 'error');
+        }
+    };
+
+    // ============================================================
     // AKTUALIZÁCIA POĽA RIADKU
     // ============================================================
     const updateBusRowField = async (rowId, field, value) => {
@@ -6069,36 +6138,41 @@ const TransportApp = ({ userProfileData }) => {
                                                                 const prev = sortedRows[idx - 1];
                                                                 const gap = getGapMinutes(prev.timeTo, r.timeFrom);
                                                                 if (gap != null && gap > 2) {
+                                                                    const prevRow = prev;
+                                                                    const nextRow = r;
+                                                                    const gapRowKey = `gap-${prevRow.id}-${nextRow.id}`;
+                                                                
                                                                     rowElements.push(
                                                                         React.createElement(
                                                                             'tr',
                                                                             {
-                                                                                key: `gap-${prev.id}-${r.id}`,
+                                                                                key: gapRowKey,
+                                                                                className: 'group gap-row', // "group" pre hover na celý riadok
                                                                                 style: { backgroundColor: '#FC9A9C' }
                                                                             },
-                                                                            // 1. čas od = timeTo predchádzajúceho
+                                                                            // 1. čas od
                                                                             React.createElement(
                                                                                 'td',
                                                                                 { className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold text-gray-800' },
-                                                                                prev.timeTo || '—'
+                                                                                prevRow.timeTo || '—'
                                                                             ),
-                                                                            // 2. čas do = timeFrom nasledujúceho
+                                                                            // 2. čas do
                                                                             React.createElement(
                                                                                 'td',
                                                                                 { className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold text-gray-800' },
-                                                                                r.timeFrom || '—'
+                                                                                nextRow.timeFrom || '—'
                                                                             ),
-                                                                            // 3. miesto od = placeTo predchádzajúceho
+                                                                            // 3. miesto od
                                                                             React.createElement(
                                                                                 'td',
                                                                                 { className: 'border border-gray-300 px-2 py-1 text-sm text-gray-800 font-medium' },
-                                                                                prev.placeTo || '—'
+                                                                                prevRow.placeTo || '—'
                                                                             ),
-                                                                            // 4. miesto do = placeFrom nasledujúceho (rovnaké miesto)
+                                                                            // 4. miesto do
                                                                             React.createElement(
                                                                                 'td',
                                                                                 { className: 'border border-gray-300 px-2 py-1 text-sm text-gray-800 font-medium' },
-                                                                                r.placeFrom || '—'
+                                                                                nextRow.placeFrom || '—'
                                                                             ),
                                                                             // 5. Nástup – prázdne
                                                                             React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, ''),
@@ -6106,7 +6180,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                             React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, ''),
                                                                             // 7. Počet – prázdne
                                                                             React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, ''),
-                                                                            // 8. Min – medzera v minútach
+                                                                            // 8. Min – medzera
                                                                             React.createElement(
                                                                                 'td',
                                                                                 {
@@ -6116,12 +6190,26 @@ const TransportApp = ({ userProfileData }) => {
                                                                                 },
                                                                                 gap
                                                                             ),
-                                                                            // 9. Mazanie – prázdne (nejde zmazať)
-                                                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, '')
+                                                                            // 9. Mazanie – prázdne, ALE sem vložíme hover tlačidlo "+"
+                                                                            React.createElement(
+                                                                                'td',
+                                                                                { className: 'border border-gray-300 px-2 py-1 text-center relative' },
+                                                                                React.createElement(
+                                                                                    'button',
+                                                                                    {
+                                                                                        type: 'button',
+                                                                                        onClick: () => insertBusRowBetween(bus, day.dayKey, prevRow, nextRow),
+                                                                                        className:
+                                                                                            'w-7 h-7 rounded-full bg-green-600 text-white shadow hover:bg-green-700 active:scale-95 transition-all duration-150 flex items-center justify-center mx-auto ' +
+                                                                                            'opacity-0 group-hover:opacity-100 focus:opacity-100',
+                                                                                        title: 'Vložiť nový riadok medzi tieto dva riadky'
+                                                                                    },
+                                                                                    React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                                                                )
+                                                                            )
                                                                         )
                                                                     );
                                                                 }
-                                                            }
 
                                                             // Pridaj samotný riadok
                                                             rowElements.push(renderBusRow(r, bus.id, day.dayKey));
