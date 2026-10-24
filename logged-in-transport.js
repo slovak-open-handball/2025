@@ -4421,6 +4421,73 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // NOVÉ: Zisti, či je segment (from → to) pokrytý trasou autobusu,
+    // v ktorej tím sedí. To znamená:
+    //  - nájdi autobus, kde tím nastúpil na zastávke `from` alebo skôr
+    //  - a vystúpil na zastávke `to` alebo neskôr
+    //  - a medzi nimi autobus prejde cez `from` a `to` v správnom poradí
+    // ============================================================
+    const isSegmentCoveredByBusPath = (dayKey, teamName, category, fromLoc, toLoc) => {
+        const fromNorm = normalizePlaceName(fromLoc);
+        const toNorm = normalizePlaceName(toLoc);
+        if (!fromNorm || !toNorm) return false;
+    
+        const teamKey = `${teamName}|${category}`;
+    
+        let covered = false;
+    
+        Object.entries(busRows || {}).forEach(([busKey, rows]) => {
+            if (covered) return;
+            const bDayKey = busKey.split('|')[1];
+            if (bDayKey !== dayKey) return;
+    
+            const sorted = (rows || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+            // Nájdi indexy, kde tím nastupuje a vystupuje
+            const boardIdxs = [];
+            const alightIdxs = [];
+    
+            sorted.forEach((row, idx) => {
+                const hasTeamIn = (row.teamsIn || []).some((tk) => {
+                    const [tn, cat] = String(tk).split('|');
+                    return String(tn).trim() === teamName && cleanCategory(cat) === category;
+                });
+                const hasTeamOut = (row.teamsOut || []).some((tk) => {
+                    const [tn, cat] = String(tk).split('|');
+                    return String(tn).trim() === teamName && cleanCategory(cat) === category;
+                });
+                if (hasTeamIn) boardIdxs.push(idx);
+                if (hasTeamOut) alightIdxs.push(idx);
+            });
+    
+            if (boardIdxs.length === 0 || alightIdxs.length === 0) return;
+    
+            // Pre každý nástup a každý výstup za ním over, či trasa pokrýva from→to
+            boardIdxs.forEach((boardIdx) => {
+                alightIdxs.forEach((alightIdx) => {
+                    if (alightIdx < boardIdx) return;
+    
+                    // Prejdi trasu od boardIdx po alightIdx a hľadaj from a to v správnom poradí
+                    let fromIdx = -1;
+                    for (let i = boardIdx; i <= alightIdx; i++) {
+                        const rowFromNorm = normalizePlaceName(sorted[i].placeFrom);
+                        const rowToNorm = normalizePlaceName(sorted[i].placeTo);
+                        if (fromIdx === -1 && rowFromNorm === fromNorm) {
+                            fromIdx = i;
+                        }
+                        if (fromIdx !== -1 && rowToNorm === toNorm && i >= fromIdx) {
+                            covered = true;
+                            return;
+                        }
+                    }
+                });
+            });
+        });
+    
+        return covered;
+    };
+
+    // ============================================================
     // RENDER JEDNÉHO RIADKU (upravený – Do read-only, miesta selectboxy)
     // ============================================================
     const renderBusRow = (row, busId, dayKey) => {
@@ -7715,85 +7782,126 @@ const TransportApp = ({ userProfileData }) => {
     
         // ============================================================
         // assignedSegmentKeys – segmenty, ktoré sú už priradené
+        //
+        // NOVÉ: Namiesto presných dvojíc (from→to) budujeme mapu
+        // "pokrytých úsekov" pre každý tím/deň. Pre každý autobusový
+        // segment (nástup → výstup) uložíme VŠETKY možné pod-segmenty,
+        // ktoré tím v buse prejde.
+        //
+        // Napr. ak tím nastúpi na A a vystúpi na D (autobus prejde
+        // A→B→C→D), tak pokryté sú: A→B, B→C, C→D, A→C, A→D, B→D.
         // ============================================================
-        const assignedSegmentKeys = new Set();
-    
+        const assignedSegmentsByTeam = new Map(); // `${dayKey}|${teamName}|${category}` → [{from, to, rowFromIdx, rowToIdx}]
+        
+        const addAssignedSegment = (dayKey, teamName, category, fromLoc, toLoc) => {
+            const key = `${dayKey}|${teamName}|${category}`;
+            if (!assignedSegmentsByTeam.has(key)) assignedSegmentsByTeam.set(key, []);
+            assignedSegmentsByTeam.get(key).push({
+                from: normalizePlaceName(fromLoc),
+                to: normalizePlaceName(toLoc),
+            });
+        };
+        
         // 1) Autobusy
         Object.entries(busRows || {}).forEach(([busKey, rows]) => {
             const dayKey = busKey.split('|')[1];
             const sorted = (rows || [])
                 .slice()
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
-    
-            const teamsInThisBus = new Map();
-    
+        
+            // Pre každý tím v buse nájdi VŠETKY súvislé úseky, ktoré prejde
+            const teamsInThisBus = new Map(); // teamKey → { boardIdx, alightIdxs: [] }
+        
             sorted.forEach((row, idx) => {
                 (row.teamsIn || []).forEach((teamKey) => {
                     const key = String(teamKey);
                     if (!teamsInThisBus.has(key)) {
-                        teamsInThisBus.set(key, { boardIdx: idx, alightIdx: null });
+                        teamsInThisBus.set(key, { boardIdx: idx, alightIdxs: [] });
                     }
                 });
                 (row.teamsOut || []).forEach((teamKey) => {
                     const key = String(teamKey);
                     const entry = teamsInThisBus.get(key);
-                    if (entry && entry.alightIdx == null) {
-                        entry.alightIdx = idx;
-                    } else if (!entry) {
-                        teamsInThisBus.set(key, { boardIdx: null, alightIdx: idx });
+                    if (entry && entry.boardIdx != null) {
+                        entry.alightIdxs.push(idx);
                     }
                 });
             });
-    
-            teamsInThisBus.forEach(({ boardIdx, alightIdx }, teamKey) => {
+        
+            teamsInThisBus.forEach(({ boardIdx, alightIdxs }, teamKey) => {
+                if (boardIdx == null || alightIdxs.length === 0) return;
+        
                 const [teamName, category] = teamKey.split('|');
                 const tn = String(teamName).trim();
                 const cat = cleanCategory(category || '');
-    
-                if (boardIdx == null || alightIdx == null) return;
-                if (alightIdx < boardIdx) return;
-    
-                const boardRow = sorted[boardIdx];
-                const alightRow = sorted[alightIdx];
-                const boardFrom = normalizePlaceName(boardRow.placeFrom);
-                const alightTo = normalizePlaceName(alightRow.placeTo);
-    
-                if (boardFrom && alightTo) {
-                    assignedSegmentKeys.add(`${dayKey}|${tn}|${cat}|${boardFrom}→${alightTo}`);
-                }
-    
-                for (let k = boardIdx; k <= alightIdx; k++) {
-                    const row = sorted[k];
-                    const rowFrom = normalizePlaceName(row.placeFrom);
-                    const rowTo = normalizePlaceName(row.placeTo);
-                    if (!rowFrom || !rowTo) continue;
-                    assignedSegmentKeys.add(`${dayKey}|${tn}|${cat}|${rowFrom}→${rowTo}`);
-                }
+        
+                // Pre každý výstup (môže ich byť viac) vygeneruj VŠETKY pod-segmenty
+                // od nástupu po výstup.
+                alightIdxs.forEach((alightIdx) => {
+                    if (alightIdx < boardIdx) return;
+        
+                    // Pre každú dvojicu (i, j) kde boardIdx <= i < j <= alightIdx
+                    // pridaj segment sorted[i].placeFrom → sorted[j].placeTo
+                    for (let i = boardIdx; i <= alightIdx; i++) {
+                        for (let j = i; j <= alightIdx; j++) {
+                            const fromLoc = sorted[i].placeFrom;
+                            const toLoc = sorted[j].placeTo;
+                            if (!fromLoc || !toLoc) continue;
+                            addAssignedSegment(dayKey, tn, cat, fromLoc, toLoc);
+                        }
+                    }
+                });
             });
         });
-    
+        
         // 2) Pešie presuny
         savedTransfers.forEach((t) => {
             if (t.isWalking !== true) return;
-            const fromLoc = normalizePlaceName(t.fromLocation || '');
-            const toLoc = normalizePlaceName(t.toLocation || '');
-            if (!fromLoc || !toLoc) return;
-            assignedSegmentKeys.add(
-                `${t.dayKey || ''}|${String(t.teamName || '').trim()}|${cleanCategory(t.category || '')}|${fromLoc}→${toLoc}`
-            );
+            const tn = String(t.teamName || '').trim();
+            const cat = cleanCategory(t.category || '');
+            const dayKey = t.dayKey || '';
+            addAssignedSegment(dayKey, tn, cat, t.fromLocation, t.toLocation);
         });
-    
+        
         // ============================================================
         // Pomocná: zistí, či je konkrétny segment už priradený
+        //
+        // NOVÉ: Namiesto presnej zhody kontrolujeme, či existuje
+        // priradený segment, ktorý POKRÝVA tento segment. To znamená:
+        //  - buď je to presne rovnaký segment (from→to)
+        //  - alebo je to nadradený segment, ktorý začína pred/na from
+        //    a končí za/na to (t.j. tento segment je "vnorený")
+        //
+        // Keďže ale nemáme informáciu o poradí zastávok v autobuse
+        // (máme len from/to), musíme použiť heuristiku: ak existuje
+        // priradený segment, ktorý má rovnaký `from` a jeho `to` sa
+        // nachádza "neskôr" v trase, berieme to ako pokryté.
+        //
+        // Pre jednoduchosť a robustnosť: ak existuje priradený segment
+        // s rovnakým `from` a rovnakým `to`, je pokrytý. Ak existuje
+        // priradený segment s rovnakým `from` a iným `to`, NIE JE
+        // pokrytý (môže ísť o inú vetvu). Toto je konzervatívne, ale
+        // bezpečné.
+        //
+        // Pre pokrytie "vnorených" segmentov potrebujeme poznať trasu
+        // autobusu. Preto namiesto `assignedSegmentsByTeam` použijeme
+        // aj `isSegmentCoveredByBusPath` (pozri nižšie).
         // ============================================================
         const isSegmentAssigned = (t) => {
-            const teamName = String(t.teamName || '').trim();
-            const category = cleanCategory(t.category || '');
+            const tn = String(t.teamName || '').trim();
+            const cat = cleanCategory(t.category || '');
             const dayKey = t.dayKey || '';
             const fromLoc = normalizePlaceName(t.fromLocation || '');
             const toLoc = normalizePlaceName(t.toLocation || '');
             if (!fromLoc || !toLoc) return false;
-            return assignedSegmentKeys.has(`${dayKey}|${teamName}|${category}|${fromLoc}→${toLoc}`);
+        
+            // 1) Presná zhoda
+            const key = `${dayKey}|${tn}|${cat}`;
+            const list = assignedSegmentsByTeam.get(key) || [];
+            if (list.some((s) => s.from === fromLoc && s.to === toLoc)) return true;
+        
+            // 2) Vnorený segment – over cez trasu autobusu
+            return isSegmentCoveredByBusPath(dayKey, tn, cat, t.fromLocation, t.toLocation);
         };
     
         // ============================================================
@@ -7805,7 +7913,9 @@ const TransportApp = ({ userProfileData }) => {
             const stops = Array.isArray(t.intermediateStops) ? t.intermediateStops : [];
     
             if (stops.length === 0) {
-                expandedTransfers.push(t);
+                // NOVÉ: Zisti, či je tento klasický parent presun priradený
+                const isAssigned = isSegmentAssigned(t);
+                expandedTransfers.push({ ...t, _isAssigned: isAssigned });
                 return;
             }
     
@@ -8107,11 +8217,8 @@ const TransportApp = ({ userProfileData }) => {
         // Filtrovanie – skry len priradené segmenty
         const baseFiltered = expandedTransfers.filter((t) => {
             if (t.isWalking === true) return false;
-            if (isSegmentAssigned(t)) return false;
-    
-            // NOVÉ: Ak je segment priradený autobusu, skry ho
-            if (t._isAssigned === true) return false;
-    
+            if (isSegmentAssigned(t)) return false;       // ← robustná kontrola (presná aj vnorená)
+            if (t._isAssigned === true) return false;     // ← pre segmenty z intermediateStops
             if (t._parentKey && t._remainingMinutes != null && t._remainingMinutes <= 0) {
                 return false;
             }
