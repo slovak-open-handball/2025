@@ -4108,29 +4108,25 @@ const TransportApp = ({ userProfileData }) => {
                 title: travelMinutes != null ? 'Trvanie z Nastavení' : 'Trvanie nie je nastavené',
             }, travelMinutes != null ? travelMinutes : '—'),
             // 9. mazanie riadku
-            React.createElement('td', { className: 'border border-gray-300 p-1 text-center' },
+            React.createElement('td', { className: 'border border-gray-300 p-1 text-center relative' },
                 React.createElement('button', {
                     type: 'button',
                     onClick: () => removeBusRow(row.id),
                     className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 flex items-center justify-center mx-auto',
                     title: 'Odstrániť riadok',
-                }, React.createElement('i', { className: 'fa-solid fa-xmark' }))
-            ),
-            // 10. HOVER "+" NA SPODNEJ HRANICI RIADKU
-            //     (vloží nový riadok POD tento riadok)
-            React.createElement(
-                'td',
-                {
-                    className: 'p-0 relative',
-                    style: { width: 0, padding: 0, border: 0 }
-                },
+                }, React.createElement('i', { className: 'fa-solid fa-xmark' })),
+            
+                // 10. HOVER "+" VYCIELENÝ NA STRED BOXU AUTOBUSU
+                //     Overlay je vnútri posledného <td>, ale <td> NEMÁ position: relative,
+                //     takže absolute sa vzťahuje na <tr> (ktoré má "group relative").
+                //     left: 50% + translateX(-50%) = stred celého riadku (celého boxu).
                 React.createElement(
                     'div',
                     {
-                        className: 'absolute left-0 right-0 flex justify-center pointer-events-none',
+                        className: 'absolute left-1/2 -translate-x-1/2 pointer-events-none',
                         style: {
                             bottom: '-12px',
-                            zIndex: 5,
+                            zIndex: 20,
                         }
                     },
                     React.createElement(
