@@ -3763,32 +3763,117 @@ const TransportApp = ({ userProfileData }) => {
         );
     
         // ============================================================
-        // NOVÉ: Odstráni tím LEN z aktuálneho riadku (buď z teamsIn,
-        // alebo z teamsOut), aby sa nezrušili ostatné priradenia
-        // toho istého tímu v iných riadkoch autobusu.
+        // NOVÉ: Odstráni CELÝ SEGMENT (nástup + výstup) pre daný tím,
+        // ale LEN pre ten konkrétny segment, v ktorom sa nachádza
+        // aktuálny riadok. Ostatné segmenty toho istého tímu
+        // v iných riadkoch zostanú nedotknuté.
+        //
+        // clickSide = 'in' | 'out' – podľa toho, na ktorý stĺpec
+        // používateľ klikol (nástup alebo výstup).
         // ============================================================
-        const removeTeamFromCurrentRow = async (teamKeyToRemove, side) => {
-            if (!window.db || !row?.id) return;
-            const currentTeams = side === 'in'
-                ? (row.teamsIn || [])
-                : (row.teamsOut || []);
-            const newTeams = currentTeams.filter((t) => String(t) !== String(teamKeyToRemove));
+        const removeTeamSegment = async (teamKeyToRemove, clickSide) => {
+            if (!window.db || !busId || !dayKey || !row?.id) return;
 
-            if (newTeams.length === currentTeams.length) return;
+            const rowsKey = `${busId}|${dayKey}`;
+            const allRows = (busRows[rowsKey] || [])
+                .slice()
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            const currentIdx = allRows.findIndex((r) => r.id === row.id);
+            if (currentIdx === -1) return;
+
+            // Pomocná: zistí, či daný riadok obsahuje tím v teamsIn/teamsOut
+            const hasTeamIn = (r) =>
+                (r.teamsIn || []).some((t) => String(t) === String(teamKeyToRemove));
+            const hasTeamOut = (r) =>
+                (r.teamsOut || []).some((t) => String(t) === String(teamKeyToRemove));
+
+            // Nájdeme nástupný a výstupný riadok pre SEGMENT, v ktorom
+            // sa nachádza aktuálny riadok.
+            let boardIdx = null;
+            let alightIdx = null;
+
+            // 1) Ak kliknutie prišlo z teamsIn → aktuálny riadok je nástupný
+            if (clickSide === 'in' && hasTeamIn(allRows[currentIdx])) {
+                boardIdx = currentIdx;
+                // Hľadaj nasledujúci riadok, kde tím vystupuje
+                for (let i = currentIdx; i < allRows.length; i++) {
+                    if (hasTeamOut(allRows[i])) {
+                        alightIdx = i;
+                        break;
+                    }
+                }
+            }
+
+            // 2) Ak kliknutie prišlo z teamsOut → aktuálny riadok je výstupný
+            if (clickSide === 'out' && hasTeamOut(allRows[currentIdx])) {
+                alightIdx = currentIdx;
+                // Hľadaj predchádzajúci riadok, kde tím nastupuje
+                for (let i = currentIdx; i >= 0; i--) {
+                    if (hasTeamIn(allRows[i])) {
+                        boardIdx = i;
+                        break;
+                    }
+                }
+            }
+
+            // 3) Fallback – ak sa nenašla dvojica, odstráň len z aktuálneho riadku
+            if (boardIdx == null && alightIdx == null) {
+                const currentTeams = clickSide === 'in'
+                    ? (row.teamsIn || [])
+                    : (row.teamsOut || []);
+                const newTeams = currentTeams.filter((t) => String(t) !== String(teamKeyToRemove));
+                if (newTeams.length === currentTeams.length) return;
+                try {
+                    await updateDoc(doc(window.db, 'transport', row.id), {
+                        [clickSide === 'in' ? 'teamsIn' : 'teamsOut']: newTeams,
+                    });
+                    window.showGlobalNotification('Tím bol odstránený z riadku.', 'info');
+                } catch (err) {
+                    console.error('[TRANSPORT] Chyba pri odstraňovaní tímu z riadku:', err);
+                    window.showGlobalNotification('Nepodarilo sa odstrániť tím z riadku.', 'error');
+                }
+                return;
+            }
+
+            // Zostavíme zoznam zmien (riadok → nové teamsIn/teamsOut)
+            const updates = {};
+
+            if (boardIdx != null) {
+                const r = allRows[boardIdx];
+                const newTeamsIn = (r.teamsIn || []).filter(
+                    (t) => String(t) !== String(teamKeyToRemove)
+                );
+                if (newTeamsIn.length !== (r.teamsIn || []).length) {
+                    updates[r.id] = { ...(updates[r.id] || {}), teamsIn: newTeamsIn };
+                }
+            }
+
+            if (alightIdx != null) {
+                const r = allRows[alightIdx];
+                const newTeamsOut = (r.teamsOut || []).filter(
+                    (t) => String(t) !== String(teamKeyToRemove)
+                );
+                if (newTeamsOut.length !== (r.teamsOut || []).length) {
+                    updates[r.id] = { ...(updates[r.id] || {}), teamsOut: newTeamsOut };
+                }
+            }
+
+            if (Object.keys(updates).length === 0) return;
 
             try {
-                await updateDoc(doc(window.db, 'transport', row.id), {
-                    [side === 'in' ? 'teamsIn' : 'teamsOut']: newTeams,
-                });
+                await Promise.all(
+                    Object.entries(updates).map(([rid, data]) =>
+                        updateDoc(doc(window.db, 'transport', rid), data)
+                    )
+                );
                 window.showGlobalNotification(
-                    side === 'in'
-                        ? 'Tím bol odstránený z nástupu v tomto riadku.'
-                        : 'Tím bol odstránený z výstupu v tomto riadku.',
+                    'Tím bol odstránený z celého segmentu (nástup + výstup).',
                     'info'
                 );
             } catch (err) {
-                console.error('[TRANSPORT] Chyba pri odstraňovaní tímu z riadku:', err);
-                window.showGlobalNotification('Nepodarilo sa odstrániť tím z riadku.', 'error');
+                console.error('[TRANSPORT] Chyba pri odstraňovaní segmentu tímu:', err);
+                window.showGlobalNotification('Nepodarilo sa odstrániť segment tímu.', 'error');
             }
         };
     
@@ -3881,7 +3966,7 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 {
                                     key: `in-${i}`,
-                                    onClick: () => removeTeamFromCurrentRow(tn, 'in'),
+                                    onClick: () => removeTeamSegment(tn, 'in'),
                                     title: getTeamTooltipLabel(tn),
                                     className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
                                     style: { color: textColor }
@@ -3907,7 +3992,7 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 {
                                     key: `out-${i}`,
-                                    onClick: () => removeTeamFromCurrentRow(tn, 'out'),
+                                    onClick: () => removeTeamSegment(tn, 'out'),
                                     title: getTeamTooltipLabel(tn),
                                     className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
                                     style: { color: textColor }
