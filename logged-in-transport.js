@@ -7984,12 +7984,14 @@ const TransportApp = ({ userProfileData }) => {
         // Filtrovanie – skry len priradené segmenty
         const baseFiltered = expandedTransfers.filter((t) => {
             // ============================================================
-            // NOVÉ: Pešie presuny sa už NEskrývajú – zobrazujú sa v zozname
-            // „Vygenerované presuny" s príznakom PEŠI (aby používateľ videl,
-            // že existujú a mohol ich upraviť / odstrániť príznak).
+            // OPRAVA: Pešie presuny sa NEzobrazujú v zozname „Vygenerované
+            // presuny" – majú vlastný box „Peši" (zelený).
+            //
+            // Dôvod: Ak by sa zobrazovali na oboch miestach, používateľ by
+            // videl duplicitne tie isté presuny a mätlo by ho to.
             // ============================================================
-            // if (t.isWalking === true) return false;  ← ODSTRÁNENÉ
-            
+            if (t.isWalking === true) return false;
+
             if (isSegmentAssigned(t)) return false;
         
             // ============================================================
