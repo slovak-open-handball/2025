@@ -739,7 +739,7 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     // ZBUILDÍ A VYPÍŠE ČASOVÚ OS PRE KAŽDÝ TÍM V KAŽDEJ KATEGÓRII
     // ============================================================
-    const rebuildAndLogTimeline = async (force = false, categoryFilter = null) => {
+    const rebuildAndLogTimeline = (force = false, categoryFilter = null) => {
         // Ak používateľ ešte neklikol na tlačidlo "+", negeneruj časovú os
         // (pokiaľ nie je volanie vynútené cez force=true, napr. z printTeamTimeline)
         if (!force && !timelineGenerationRequestedRef.current) {
@@ -2734,7 +2734,9 @@ const TransportApp = ({ userProfileData }) => {
                                             mergedForCheck.push({ ...v, key: k });
                                         }
                                     });
-                                    await ensureSegmentsForParentTransfers(mergedForCheck);
+                                    ensureSegmentsForParentTransfers(mergedForCheck).catch((ensureErr) => {
+                                        console.error('[TRANSPORT] Chyba pri dogenerovávaní segmentov:', ensureErr);
+                                    });
                                 } catch (ensureErr) {
                                     console.error('[TRANSPORT] Chyba pri dogenerovávaní segmentov:', ensureErr);
                                 }
@@ -8866,7 +8868,7 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                             
                                 timelineGenerationRequestedRef.current = true;
-                                await rebuildAndLogTimeline(true, cat);
+                                rebuildAndLogTimeline(true, cat);
                                 setShowCategoryModal(false);
                                 window.showGlobalNotification(
                                     `Časová os pre kategóriu ${cat} bola vygenerovaná.`,
@@ -9773,7 +9775,7 @@ const TransportApp = ({ userProfileData }) => {
                                 const cat = regenTransfersModal.category;
                                 setRegenTransfersModal(null);
                                 timelineGenerationRequestedRef.current = true;
-                                await rebuildAndLogTimeline(true, cat);
+                                rebuildAndLogTimeline(true, cat);
                                 window.showGlobalNotification(
                                     `Časová os pre kategóriu ${cat} bola znova vygenerovaná (dogenerované len chýbajúce).`,
                                     'success'
