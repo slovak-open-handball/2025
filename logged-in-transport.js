@@ -5686,11 +5686,6 @@ const TransportApp = ({ userProfileData }) => {
         await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: patch }, { merge: true });
     };
 
-    // ============================================================
-    // ULOŽENIE UPRAVENÉHO PRESUNU (s medzizastávkami)
-    // + ZACHOVANIE CELKOVÉHO ČASOVÉHO INTERVALU
-    // + DOPOČÍTANIE ČASOV SEGMENTOV PODĽA REÁLNYCH TRVANÍ JÁZDY
-    // ============================================================
     const saveEditedTransfer = async () => {
         if (!window.db || !editingTransfer) return;
     
@@ -5701,40 +5696,145 @@ const TransportApp = ({ userProfileData }) => {
         try {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
             
-            // NOVÉ: Zachovaj pôvodný záznam A→B a pridaj intermediateStops
-            const updatedTransfer = {
-                category: original.category,
-                teamName: original.teamName,
-                when: original.when,
-                text: original.text,
-                fromLocation: original.fromLocation,
-                toLocation: original.toLocation,
-                dayKey: original.dayKey,
-            };
-            
-            // Zachovaj intermediateStops (ak sú)
-            if (stops.length > 0) {
-                updatedTransfer.intermediateStops = stops;
+            // ============================================================
+            // NOVÉ: Ak upravujeme SEGMENT (má _parentKey), musíme upraviť
+            // PARENT záznam (nie segment). Nájdeme parenta v savedTransfers.
+            // ============================================================
+            let targetParent = null;
+            if (original._parentKey && original._parentKey !== original.key) {
+                targetParent = savedTransfers.find((s) => s.key === original._parentKey);
             }
-            
-            // Zachovaj isWalking (ak existuje)
-            if (original.isWalking === true) {
-                updatedTransfer.isWalking = true;
-                updatedTransfer.walkingSetAt = original.walkingSetAt || Timestamp.fromDate(new Date());
-                updatedTransfer.walkingSetBy = original.walkingSetBy || (userProfileData && userProfileData.email) || null;
-            }
-            
-            await setDoc(
-                docRef,
-                {
-                    [TRANSPORT_TRANSFERS_FIELD]: {
-                        [original.key]: updatedTransfer,
+    
+            if (targetParent) {
+                // Upravujeme parent záznam – segment zostane nedotknutý
+                // (jeho čas sa prepočíta pri ďalšom generovaní / recomputeBlock)
+                const updatedParent = {
+                    category: targetParent.category,
+                    teamName: targetParent.teamName,
+                    when: targetParent.when,
+                    text: targetParent.text,
+                    fromLocation: targetParent.fromLocation,
+                    toLocation: targetParent.toLocation,
+                    dayKey: targetParent.dayKey,
+                };
+                
+                if (stops.length > 0) {
+                    updatedParent.intermediateStops = stops;
+                } else {
+                    updatedParent.intermediateStops = deleteField();
+                }
+                
+                if (targetParent.isWalking === true) {
+                    updatedParent.isWalking = true;
+                    updatedParent.walkingSetAt = targetParent.walkingSetAt || Timestamp.fromDate(new Date());
+                    updatedParent.walkingSetBy = targetParent.walkingSetBy || (userProfileData && userProfileData.email) || null;
+                }
+                
+                await setDoc(
+                    docRef,
+                    {
+                        [TRANSPORT_TRANSFERS_FIELD]: {
+                            [targetParent.key]: updatedParent,
+                        },
+                        updatedAt: Timestamp.fromDate(new Date()),
+                        updatedBy: (userProfileData && userProfileData.email) || null,
                     },
-                    updatedAt: Timestamp.fromDate(new Date()),
-                    updatedBy: (userProfileData && userProfileData.email) || null,
-                },
-                { merge: true }
-            );
+                    { merge: true }
+                );
+            } else {
+                // Upravujeme parent priamo (original je parent)
+                const updatedTransfer = {
+                    category: original.category,
+                    teamName: original.teamName,
+                    when: original.when,
+                    text: original.text,
+                    fromLocation: original.fromLocation,
+                    toLocation: original.toLocation,
+                    dayKey: original.dayKey,
+                };
+                
+                if (stops.length > 0) {
+                    updatedTransfer.intermediateStops = stops;
+                } else {
+                    updatedTransfer.intermediateStops = deleteField();
+                }
+                
+                if (original.isWalking === true) {
+                    updatedTransfer.isWalking = true;
+                    updatedTransfer.walkingSetAt = original.walkingSetAt || Timestamp.fromDate(new Date());
+                    updatedTransfer.walkingSetBy = original.walkingSetBy || (userProfileData && userProfileData.email) || null;
+                }
+                
+                await setDoc(
+                    docRef,
+                    {
+                        [TRANSPORT_TRANSFERS_FIELD]: {
+                            [original.key]: updatedTransfer,
+                        },
+                        updatedAt: Timestamp.fromDate(new Date()),
+                        updatedBy: (userProfileData && userProfileData.email) || null,
+                    },
+                    { merge: true }
+                );
+            }
+    
+            // ============================================================
+            // NOVÉ: Po uložení zosúlaď segmenty s novými medzizastávkami.
+            // ============================================================
+            try {
+                const snap = await getDoc(docRef);
+                const rawTransfers = snap.exists()
+                    ? (snap.data() || {})[TRANSPORT_TRANSFERS_FIELD] || {}
+                    : {};
+    
+                const parentKeyToCheck = targetParent ? targetParent.key : original.key;
+                const parentFrom = targetParent ? targetParent.fromLocation : original.fromLocation;
+                const parentTo = targetParent ? targetParent.toLocation : original.toLocation;
+    
+                const existingSegments = Object.entries(rawTransfers)
+                    .filter(([k, v]) => v && v._parentKey === parentKeyToCheck)
+                    .map(([k, v]) => ({ ...v, key: k }));
+    
+                const routeRaw = [parentFrom, ...stops, parentTo].filter(Boolean);
+                const route = [];
+                routeRaw.forEach((loc) => {
+                    const normalized = normalizePlaceName(loc);
+                    if (route.length === 0 || normalizePlaceName(route[route.length - 1]) !== normalized) {
+                        route.push(loc);
+                    }
+                });
+    
+                const expectedSegments = [];
+                for (let i = 0; i < route.length - 1; i++) {
+                    const fromLoc = String(route[i] || '').trim();
+                    const toLoc = String(route[i + 1] || '').trim();
+                    if (normalizePlaceName(fromLoc) === normalizePlaceName(toLoc)) continue;
+                    expectedSegments.push({
+                        fromNorm: normalizePlaceName(fromLoc),
+                        toNorm: normalizePlaceName(toLoc),
+                    });
+                }
+    
+                // Zisti, ktoré existujúce segmenty už nemajú byť
+                const segmentsToDelete = existingSegments.filter((seg) => {
+                    const segFrom = normalizePlaceName(seg.fromLocation);
+                    const segTo = normalizePlaceName(seg.toLocation);
+                    return !expectedSegments.some(
+                        (exp) => exp.fromNorm === segFrom && exp.toNorm === segTo
+                    );
+                });
+    
+                const patch = {};
+                segmentsToDelete.forEach((seg) => {
+                    patch[seg.key] = deleteField();
+                });
+    
+                if (Object.keys(patch).length > 0) {
+                    await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: patch }, { merge: true });
+                }
+            } catch (syncErr) {
+                console.error('[TRANSPORT] Chyba pri zosúlaďovaní segmentov po úprave:', syncErr);
+            }
             
             window.showGlobalNotification(
                 stops.length > 0
@@ -9176,6 +9276,58 @@ const TransportApp = ({ userProfileData }) => {
                             { className: 'flex-1' },
                             React.createElement('div', { className: 'font-semibold text-gray-800' }, 'Priradiť presun autobusu'),
                             React.createElement('div', { className: 'text-xs text-gray-500' }, 'Vytvoriť riadok v plánovaní autobusu')
+                        )
+                    ),
+                    // 2) Upraviť medzizastávky (existujúce)
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => {
+                                const t = transferActionModal.transfer;
+                                setEditingTransfer(t);
+                                // ============================================================
+                                // NOVÉ: Predvyplň existujúce medzizastávky z parent záznamu
+                                // ============================================================
+                                // Ak je to segment rozdeleného presunu (má _parentKey),
+                                // nájdi parent záznam v savedTransfers a zober jeho intermediateStops.
+                                // Inak (ak je to parent sám), zober jeho vlastné intermediateStops.
+                                let existingStops = [];
+                                if (t._parentKey) {
+                                    const parent = savedTransfers.find((s) => s.key === t._parentKey);
+                                    if (parent && Array.isArray(parent.intermediateStops)) {
+                                        existingStops = [...parent.intermediateStops];
+                                    }
+                                } else if (Array.isArray(t.intermediateStops)) {
+                                    existingStops = [...t.intermediateStops];
+                                }
+                                setEditingTransferStops(existingStops);
+                                setTransferActionModal(null);
+                            },
+                            className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-indigo-200 bg-indigo-50 hover:bg-indigo-100 transition-colors flex items-center gap-3'
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-pen-to-square text-indigo-600 text-xl w-6 text-center' }),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement('div', { className: 'font-semibold text-gray-800' }, 'Upraviť medzizastávky'),
+                            React.createElement(
+                                'div',
+                                { className: 'text-xs text-gray-500' },
+                                (() => {
+                                    const t = transferActionModal.transfer;
+                                    let count = 0;
+                                    if (t._parentKey) {
+                                        const parent = savedTransfers.find((s) => s.key === t._parentKey);
+                                        if (parent && Array.isArray(parent.intermediateStops)) count = parent.intermediateStops.length;
+                                    } else if (Array.isArray(t.intermediateStops)) {
+                                        count = t.intermediateStops.length;
+                                    }
+                                    return count > 0
+                                        ? `Aktuálne ${count} medzizastávok – upraviť alebo odstrániť`
+                                        : 'Pridať medzizastávky k existujúcemu presunu';
+                                })()
+                            )
                         )
                     ),
                     // 3) Nastaviť presun peši
