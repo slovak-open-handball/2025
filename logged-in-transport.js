@@ -6519,12 +6519,12 @@ const TransportApp = ({ userProfileData }) => {
                     if (deltaMs !== 0) {
                         const updatePromises = [];
                         const batchPatch = {};
-    
+                    
                         followingSegments.forEach((seg) => {
                             const newStartTs = seg.range.startTs + deltaMs;
                             const segDurationMs = seg.range.endTs - seg.range.startTs;
                             const newEndTs = newStartTs + segDurationMs;
-    
+                    
                             const newSegWhen = `${formatTsLocal(newStartTs)} – ${formatTsLocal(newEndTs)}`;
                             const newSegKey = buildTransferKey(
                                 seg.category,
@@ -6532,7 +6532,7 @@ const TransportApp = ({ userProfileData }) => {
                                 newSegWhen,
                                 seg.text
                             );
-    
+                    
                             const newSegData = {
                                 category: seg.category,
                                 teamName: seg.teamName,
@@ -6550,13 +6550,64 @@ const TransportApp = ({ userProfileData }) => {
                                 newSegData.walkingSetAt = seg.walkingSetAt || Timestamp.fromDate(new Date());
                                 newSegData.walkingSetBy = seg.walkingSetBy || (userProfileData && userProfileData.email) || null;
                             }
-    
+                    
                             if (seg.key !== newSegKey) {
                                 batchPatch[seg.key] = deleteField();
                             }
                             batchPatch[newSegKey] = newSegData;
                         });
-    
+                    
+                        // ============================================================
+                        // NOVÉ: Po posunutí followingSegments aktualizuj parent `when`,
+                        // aby koniec parent intervalu zodpovedal koncu posledného
+                        // posunutého segmentu. Tým sa zabezpečí, že pri ďalšom
+                        // renderi sa `_remainingMinutes` počíta zo správneho intervalu
+                        // a druhý segment sa zobrazí v zozname vygenerovaných presunov.
+                        // ============================================================
+                        const parentKey = transfer._parentKey;
+                        if (parentKey && parentKey !== transfer.key) {
+                            const parent = savedTransfers.find((s) => s.key === parentKey);
+                            if (parent) {
+                                // Zisti nový koniec parent intervalu = koniec posledného posunutého segmentu
+                                let newParentEndTs = null;
+                                if (followingSegments.length > 0) {
+                                    const lastSeg = followingSegments[followingSegments.length - 1];
+                                    const lastSegNewStart = lastSeg.range.startTs + deltaMs;
+                                    const lastSegDuration = lastSeg.range.endTs - lastSeg.range.startTs;
+                                    newParentEndTs = lastSegNewStart + lastSegDuration;
+                                }
+                    
+                                const parentRange = parseTransferWhenToRange(parent.when);
+                                if (parentRange && newParentEndTs != null) {
+                                    const newParentWhen = `${formatTsLocal(parentRange.startTs)} – ${formatTsLocal(newParentEndTs)}`;
+                                    const newParentKey = buildTransferKey(
+                                        parent.category,
+                                        parent.teamName,
+                                        newParentWhen,
+                                        parent.text
+                                    );
+                    
+                                    const newParentData = {
+                                        category: parent.category,
+                                        teamName: parent.teamName,
+                                        when: newParentWhen,
+                                        text: parent.text,
+                                        fromLocation: parent.fromLocation,
+                                        toLocation: parent.toLocation,
+                                        dayKey: parent.dayKey,
+                                    };
+                                    if (parent.intermediateStops && parent.intermediateStops.length > 0) {
+                                        newParentData.intermediateStops = parent.intermediateStops;
+                                    }
+                    
+                                    if (parent.key !== newParentKey) {
+                                        batchPatch[parent.key] = deleteField();
+                                    }
+                                    batchPatch[newParentKey] = newParentData;
+                                }
+                            }
+                        }
+                    
                         if (Object.keys(batchPatch).length > 0) {
                             await setDoc(
                                 docRef,
