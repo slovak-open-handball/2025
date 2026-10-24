@@ -4303,7 +4303,17 @@ const TransportApp = ({ userProfileData }) => {
         let blockStart = currentIdx;
         let blockEnd = currentIdx;
         while (blockStart > 0 && isContinuous(chain[blockStart - 1], chain[blockStart])) blockStart--;
-        while (blockEnd < chain.length - 1 && isContinuous(chain[blockEnd], chain[blockEnd + 1])) blockEnd++;
+        
+        // NOVÉ: Rozšír blok smerom dopredu cez VŠETKY nasledujúce segmenty toho istého tímu v ten istý deň,
+        // ktoré NIE SÚ vyriešené (peši alebo v resolvedKeys).
+        // Tým sa zabezpečí, že po priradení segmentu k autobusu sa nasledujúce nevyriešené segmenty
+        // posunú tak, aby začínali tam, kde skončil predchádzajúci segment.
+        while (blockEnd < chain.length - 1) {
+            const nextSeg = chain[blockEnd + 1];
+            if (nextSeg.isWalking === true) break;
+            if (resolvedKeys.has(nextSeg.key)) break;
+            blockEnd++;
+        }
     
         const block = chain.slice(blockStart, blockEnd + 1);
         if (block.length < 2) return;
