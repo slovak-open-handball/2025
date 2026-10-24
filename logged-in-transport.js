@@ -3751,9 +3751,21 @@ const TransportApp = ({ userProfileData }) => {
         const nextRow = allRows[nextIdx];
     
         // Medzera (rovnaká logika ako getGapMinutes – s prechodom cez polnoc)
-        const gap = getGapMinutes(prevRow.timeTo, nextRow.timeFrom);
-        if (gap == null || gap <= 2) return; // nie je červený riadok
-    
+        // Pomocná: "HH:MM" → minúty od 00:00
+        const toMinutes = (timeStr) => {
+            if (!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr)) return null;
+            const [h, m] = timeStr.split(':').map(Number);
+            return h * 60 + m;
+        };
+        
+        const prevToMin = toMinutes(prevRow.timeTo);
+        const nextFromMin = toMinutes(nextRow.timeFrom);
+        if (prevToMin == null || nextFromMin == null) return;
+        
+        // ABSOLÚTNA HODNOTA rozdielu (bez prechodu cez polnoc)
+        const gap = Math.abs(nextFromMin - prevToMin);
+        if (gap <= 2) return; // nie je červený riadok
+        
         // Posun = medzera + 2 minúty
         const deltaMinutes = gap + 2;
     
