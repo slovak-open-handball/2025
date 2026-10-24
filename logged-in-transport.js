@@ -4304,14 +4304,20 @@ const TransportApp = ({ userProfileData }) => {
         let blockEnd = currentIdx;
         while (blockStart > 0 && isContinuous(chain[blockStart - 1], chain[blockStart])) blockStart--;
         
-        // NOVÉ: Rozšír blok smerom dopredu cez VŠETKY nasledujúce segmenty toho istého tímu v ten istý deň,
-        // ktoré NIE SÚ vyriešené (peši alebo v resolvedKeys).
-        // Tým sa zabezpečí, že po priradení segmentu k autobusu sa nasledujúce nevyriešené segmenty
-        // posunú tak, aby začínali tam, kde skončil predchádzajúci segment.
+        // ============================================================
+        // NOVÉ PRAVIDLO: Blok sa rozširuje LEN cez segmenty, ktoré na seba
+        // PRIAMO nadväzujú (isContinuous – koniec jedného = začiatok
+        // druhého a miesto konca = miesto začiatku).
+        //
+        // Ak tím má v ten istý deň DVA NESÚVISLÉ presuny (napr. A→B a C→D),
+        // sú to DVA SAMOSTATNÉ BLOKY. Priradenie jedného k autobusu
+        // NESMIE prepočítať čas toho druhého – ten si musí zachovať
+        // svoj pôvodný vygenerovaný čas.
+        // ============================================================
         while (blockEnd < chain.length - 1) {
             const nextSeg = chain[blockEnd + 1];
-            if (nextSeg.isWalking === true) break;
-            if (resolvedKeys.has(nextSeg.key)) break;
+            // Ak ďalší segment priamo nenadväzuje → stop (iný blok)
+            if (!isContinuous(chain[blockEnd], nextSeg)) break;
             blockEnd++;
         }
     
@@ -4904,38 +4910,6 @@ const TransportApp = ({ userProfileData }) => {
         return new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
     };
 
-        // ============================================================
-    // Pomocná: Z riadkov autobusu pre daný deň vytvorí zhrnutie
-    // celej trasy: začiatočná zastávka, koncová zastávka a časy.
-    // ============================================================
-    const buildBusTripSummary = (bus, dayKey, rows) => {
-        if (!rows || rows.length === 0) return null;
-
-        // Zoraď riadky podľa order
-        const sorted = [...rows].sort((a, b) => (a.order || 0) - (b.order || 0));
-
-        const firstRow = sorted[0];
-        const lastRow = sorted[sorted.length - 1];
-
-        const fromPlace = normalizePlaceName(firstRow.placeFrom);
-        const toPlace = normalizePlaceName(lastRow.placeTo);
-
-        // Ak chýba začiatočná alebo koncová zastávka, trasu nemôžeme použiť
-        if (!fromPlace || !toPlace) return null;
-
-        return {
-            bus,
-            dayKey,
-            fromPlace,
-            toPlace,
-            timeFrom: firstRow.timeFrom || '',
-            timeTo: lastRow.timeTo || '',
-            firstRowId: firstRow.id,
-            lastRowId: lastRow.id,
-            rows: sorted,
-        };
-    };
-
     // ============================================================
     // NÁJDI VHODNÉ AUTOBUSY PRE PRESUN
     // Vracia len autobusy, ktoré majú AJ nástup AJ výstup
@@ -5010,19 +4984,12 @@ const TransportApp = ({ userProfileData }) => {
                 return;
             }
     
-            // Pomocná: vytvor `trip` pre zobrazenie trasy
-            const trip = buildBusTripSummary(bus, dayKey, rows) || {
-                bus,
-                dayKey,
-                fromPlace: trFrom,
-                toPlace: trTo,
-                timeFrom: '',
-                timeTo: '',
-                firstRowId: sortedRows[0]?.id || null,
-                lastRowId: sortedRows[sortedRows.length - 1]?.id || null,
-                rows: sortedRows,
-            };
-    
+            // ============================================================
+            // NOVÉ: `trip` musí obsahovať LEN konkrétny segment
+            // (od nástupnej zastávky po výstupnú zastávku), NIE celú
+            // trasu autobusu. Celá trasa sa zobrazuje len vtedy, ak
+            // nástup aj výstup sú na krajných zastávkach.
+            // ============================================================
             // Vytvor dvojice (nástup, výstup) – len také, kde výstup je po nástupe
             boardingCandidates.forEach((board) => {
                 alightingCandidates.forEach((alight) => {
@@ -5034,9 +5001,26 @@ const TransportApp = ({ userProfileData }) => {
                     const alightTs = timeOnDayKeyToTs(dayKey, alight.row.timeTo);
                     if (boardTs != null && alightTs != null && alightTs < boardTs) return;
     
+                    // ============================================================
+                    // NOVÉ: trip pre tento konkrétny výsledok – len segment
+                    // od nástupu po výstup (nie celá trasa autobusu).
+                    // ============================================================
+                    const segmentFrom = normalizePlaceName(board.row.placeFrom) || trFrom;
+                    const segmentTo = normalizePlaceName(alight.row.placeTo) || trTo;
+    
                     results.push({
                         bus,
-                        trip,
+                        trip: {
+                            bus,
+                            dayKey,
+                            fromPlace: segmentFrom,
+                            toPlace: segmentTo,
+                            timeFrom: board.row.timeFrom || '',
+                            timeTo: alight.row.timeTo || '',
+                            firstRowId: board.row.id,
+                            lastRowId: alight.row.id,
+                            rows: sortedRows,
+                        },
                         boardingRow: board.row,
                         alightingRow: alight.row,
                         side: 'in',
