@@ -5206,9 +5206,6 @@ const TransportApp = ({ userProfileData }) => {
         return results;
     };
 
-    // ============================================================
-    // ZMAZANIE KONKRÉTNEHO PRESUNU (len jeden záznam z DB)
-    // ============================================================
     const deleteSingleTransfer = async (transfer) => {
         if (!window.db || !transfer) return;
         setDeleteTransferSaving(true);
@@ -5216,8 +5213,7 @@ const TransportApp = ({ userProfileData }) => {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
     
             // ============================================================
-            // 1) Načítaj aktuálny stav z DB (nie z React state),
-            //    aby sme mali istotu, že vidíme všetky záznamy.
+            // 1) Načítaj aktuálny stav z DB
             // ============================================================
             const snap = await getDoc(docRef);
             const rawTransfers = snap.exists()
@@ -5225,71 +5221,73 @@ const TransportApp = ({ userProfileData }) => {
                 : {};
     
             // ============================================================
-            // 2) Zisti, ktorý _parentKey sa má skontrolovať.
+            // 2) Urči "koreňový" kľúč bloku.
             //
-            //  - Ak odstraňujeme segment (má _parentKey a ten != key)
-            //    → kontrolujeme _parentKey.
-            //  - Ak odstraňujeme priamo parent (key == _parentKey alebo
-            //    transfer nemá _parentKey) → kontrolujeme jeho vlastný key.
+            //  - Ak transfer má _parentKey → koreň je _parentKey
+            //  - Inak → koreň je transfer.key
+            //
+            //  POZOR: _parentKey môže byť aj reťazový (segment → segment),
+            //  takže musíme ísť až po skutočný koreň.
             // ============================================================
-            const parentKeyToCheck =
-                transfer._parentKey && transfer._parentKey !== transfer.key
-                    ? transfer._parentKey
-                    : transfer.key;
+            let rootKey = transfer._parentKey && transfer._parentKey !== transfer.key
+                ? transfer._parentKey
+                : transfer.key;
+    
+            // Poisti sa, že rootKey existuje v DB (ak nie, skús transfer.key)
+            if (!rawTransfers[rootKey] && rawTransfers[transfer.key]) {
+                rootKey = transfer.key;
+            }
     
             // ============================================================
-            // 3) Nájdi VŠETKY zostávajúce záznamy v DB, ktoré patria
-            //    k tomu istému parentKey (okrem odstraňovaného).
-            //
-            //    Zahŕňa to:
-            //      - samotný parent záznam (key === parentKeyToCheck)
-            //      - segmenty, ktoré majú _parentKey === parentKeyToCheck
-            //      - AJ priradené segmenty (tie majú v DB stále _parentKey,
-            //        aj keď sú v busRows/peši)
+            // 3) Zisti VŠETKY záznamy, ktoré patria k tomuto bloku:
+            //    - samotný root (parent)
+            //    - všetky segmenty s _parentKey === rootKey
+            //    - reťazovo: aj segmenty, ktorých _parentKey je iný segment
+            //      z tohto bloku (pre istotu – rekurzívne)
+            //    - samotný transfer (ak nie je v zozname)
             // ============================================================
-            const remainingRelated = Object.entries(rawTransfers).filter(([key, v]) => {
-                if (!v) return false;
-                if (key === transfer.key) return false; // odstraňovaný
-                if (key === parentKeyToCheck) return true; // parent
-                if (v._parentKey === parentKeyToCheck) return true; // segment
-                return false;
+            const keysToDelete = new Set();
+    
+            // Pomocná: rekurzívne pridaj všetky deti
+            const addDescendants = (parentKey) => {
+                Object.entries(rawTransfers).forEach(([key, v]) => {
+                    if (!v) return;
+                    if (v._parentKey === parentKey && !keysToDelete.has(key)) {
+                        keysToDelete.add(key);
+                        addDescendants(key); // rekurzia pre reťazové segmenty
+                    }
+                });
+            };
+    
+            // Pridaj root
+            if (rawTransfers[rootKey]) {
+                keysToDelete.add(rootKey);
+            }
+    
+            // Pridaj všetky potomky rootu
+            addDescendants(rootKey);
+    
+            // Pridaj samotný transfer (pre istotu, ak by nebol v zozname)
+            keysToDelete.add(transfer.key);
+    
+            // ============================================================
+            // 4) Skontroluj, či sú v bloku ešte NEZMAZANÉ záznamy,
+            //    ktoré by mali zostať (napr. iný tím, iný deň).
+            //    (Toto by sa nemalo stať, ale pre istotu.)
+            // ============================================================
+            // (Netreba – blok je definovaný _parentKey, ktorý je unikátny
+            //  pre daný parent záznam, takže nemôže obsahovať iný tím.)
+    
+            // ============================================================
+            // 5) Priprav patch – zmaž VŠETKY zistené kľúče
+            // ============================================================
+            const transfersPatch = {};
+            keysToDelete.forEach((key) => {
+                transfersPatch[key] = deleteField();
             });
     
             // ============================================================
-            // 4) Priprav patch
-            // ============================================================
-            const transfersPatch = {
-                [transfer.key]: deleteField(),
-            };
-    
-            // ============================================================
-            // 5) Ak po odstránení nezostane ŽIADNY súvisiaci záznam
-            //    (ani parent, ani segment), zmaž aj parent (ak ešte existuje).
-            //
-            //    Tým sa zabezpečí, že v DB nezostanú siroty.
-            // ============================================================
-            if (remainingRelated.length === 0 && parentKeyToCheck !== transfer.key) {
-                transfersPatch[parentKeyToCheck] = deleteField();
-            }
-    
-            // ============================================================
-            // 6) Špeciálny prípad: ak odstraňujeme PRIAMO parent záznam
-            //    (transfer.key === parentKeyToCheck), musíme zmazať
-            //    AJ všetky jeho segmenty, ktoré ešte v DB zostali.
-            //
-            //    Inak by v DB zostali sirotské segmenty bez parenta.
-            // ============================================================
-            if (parentKeyToCheck === transfer.key) {
-                const segmentsToDelete = Object.entries(rawTransfers).filter(
-                    ([key, v]) => v && v._parentKey === transfer.key && key !== transfer.key
-                );
-                segmentsToDelete.forEach(([key]) => {
-                    transfersPatch[key] = deleteField();
-                });
-            }
-    
-            // ============================================================
-            // 7) Zapíš patch do DB
+            // 6) Zapíš patch do DB
             // ============================================================
             await setDoc(
                 docRef,
@@ -5301,17 +5299,13 @@ const TransportApp = ({ userProfileData }) => {
                 { merge: true }
             );
     
-            const deletedParent = !!transfersPatch[parentKeyToCheck];
-            const deletedSegmentsCount = Object.keys(transfersPatch).length
-                - 1 /* samotný transfer */
-                - (deletedParent ? 1 : 0);
-    
+            // ============================================================
+            // 7) Notifikácia
+            // ============================================================
+            const totalDeleted = keysToDelete.size;
             let suffix = '';
-            if (deletedParent) {
-                suffix = ' (a aj pôvodný záznam celého presunu, keďže žiadne iné časti nezostali)';
-            }
-            if (deletedSegmentsCount > 0) {
-                suffix += ` (spolu odstránených ${deletedSegmentsCount + 1} častí presunu)`;
+            if (totalDeleted > 1) {
+                suffix = ` (spolu ${totalDeleted} častí presunu)`;
             }
     
             window.showGlobalNotification(
