@@ -3951,7 +3951,7 @@ const TransportApp = ({ userProfileData }) => {
                     className: selectCls,
                 },
                     React.createElement('option', { value: '' }, '— vyber zastávku —'),
-                    stopOptions
+                    stopOptionsFrom
                 )
             ),
             // 4. miesto do (SELECT)
