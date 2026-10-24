@@ -6439,21 +6439,15 @@ const TransportApp = ({ userProfileData }) => {
             const MIN_WALKING_MS = 60 * 1000; // 1 minúta
     
             if (originalRange && originalRange.startTs != null) {
-                const originalDurationMs = (originalRange.endTs != null)
-                    ? (originalRange.endTs - originalRange.startTs)
-                    : 0;
-    
-                if (originalDurationMs < MIN_WALKING_MS) {
-                    const newEndTs = originalRange.startTs + MIN_WALKING_MS;
-                    newWhen = `${formatTsLocal(originalRange.startTs)} – ${formatTsLocal(newEndTs)}`;
-                    newKey = buildTransferKey(
-                        transfer.category,
-                        transfer.teamName,
-                        newWhen,
-                        transfer.text
-                    );
-                    shouldRenameKey = (newKey !== transfer.key);
-                }
+                const newEndTs = originalRange.startTs + MIN_WALKING_MS;
+                newWhen = `${formatTsLocal(originalRange.startTs)} – ${formatTsLocal(newEndTs)}`;
+                newKey = buildTransferKey(
+                    transfer.category,
+                    transfer.teamName,
+                    newWhen,
+                    transfer.text
+                );
+                shouldRenameKey = (newKey !== transfer.key);
             }
     
             // Zostav záznam pre uloženie
