@@ -3892,10 +3892,12 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement('td', { className: 'border border-gray-300 p-1' },
                 React.createElement('input', {
                     type: 'time',
-                    value: row.timeFrom || '',
-                    onChange: async (e) => {
+                    defaultValue: row.timeFrom || '',
+                    onBlur: async (e) => {
                         const newValue = e.target.value;
                         const oldValue = row.timeFrom || '';
+
+                        if (newValue === oldValue) return; // bez zmeny
 
                         if (!newValue) {
                             // Prázdnu hodnotu len ulož, nič neposúvaj
@@ -3910,13 +3912,18 @@ const TransportApp = ({ userProfileData }) => {
                             const [nh, nm] = newValue.split(':').map(Number);
                             deltaMinutes = (nh * 60 + nm) - (oh * 60 + om);
                         }
-            
+
                         // Najprv ulož novú hodnotu aktuálneho riadku
                         await updateBusRowField(row.id, 'timeFrom', newValue);
 
                         // Potom posuň nasledujúce riadky (len po najbližší červený)
                         if (deltaMinutes !== 0) {
                             await shiftBusRowsAfterChange(busId, dayKey, row.id, deltaMinutes);
+                        }
+                    },
+                    onKeyDown: async (e) => {
+                        if (e.key === 'Enter') {
+                            e.target.blur();
                         }
                     },
                     className: inputCls,
