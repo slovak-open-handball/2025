@@ -8191,15 +8191,19 @@ const TransportApp = ({ userProfileData }) => {
             const dayKey = t.dayKey || '';
 
             let blockEndTs = null;
+            
+            const normParent = (s) => normalizePlaceName(s || '');
 
-            // Prejdi VŠETKY segmenty z `expandedTransfers` (obsahuje
-            // všetky rozložené segmenty – nezávisle od toho, či sú
-            // priradené alebo nie).
-            expandedTransfers.forEach((other) => {
-                if (other._parentKey !== parentKey) return;
+            savedTransfers.forEach((other) => {
                 if (String(other.teamName || '').trim() !== teamName) return;
                 if (cleanCategory(other.category || '') !== category) return;
                 if ((other.dayKey || '') !== dayKey) return;
+
+                // Zisti, či tento záznam patrí k rovnakému parentovi:
+                //  - buď je to sám parent (key === parentKey)
+                //  - alebo je to segment s _parentKey === parentKey
+                const otherParentKey = other._parentKey || other.key;
+                if (otherParentKey !== parentKey) return;
 
                 const r = parseTransferWhenToRange(other.when);
                 if (!r || r.endTs == null) return;
