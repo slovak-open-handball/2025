@@ -6163,14 +6163,32 @@ const TransportApp = ({ userProfileData }) => {
                             : timeRange.startTs;
                         segEndTs = timeRange.endTs;
                     }
-    
+
+                    // ============================================================
+                    // NOVÉ: Over, či pre tento segment existuje REÁLNY záznam
+                    // v savedTransfers (napr. peší segment, ktorý bol manuálne
+                    // označený ako „peši", alebo segment, ktorý bol už dogenerovaný).
+                    // ============================================================
+                    const segFromNorm = normalizePlaceName(route[i]);
+                    const segToNorm = normalizePlaceName(route[i + 1]);
+                    const realSegment = savedTransfers.find((s) => {
+                        if (String(s.teamName || '').trim() !== teamName) return false;
+                        if (cleanCategory(s.category || '') !== category) return false;
+                        if ((s.dayKey || '') !== dayKey) return false;
+                        if (normalizePlaceName(s.fromLocation) !== segFromNorm) return false;
+                        if (normalizePlaceName(s.toLocation) !== segToNorm) return false;
+                        return true;
+                    });
+                    
+                    const isWalkingResolved = realSegment && realSegment.isWalking === true;
+                    
                     allSegments.push({
                         ...t,
                         key: buildTransferKey(t.category, t.teamName, `${formatTsLocal(segStartTs)} – ${formatTsLocal(segEndTs)}`, `Presun z ${route[i]} do ${route[i + 1]}`),
                         range: { startTs: segStartTs, endTs: segEndTs },
                         fromLocation: route[i],
                         toLocation: route[i + 1],
-                        isWalking: t.isWalking === true,
+                        isWalking: t.isWalking === true || isWalkingResolved,
                         _parentKey: t.key,
                         _isAssigned: boardingTs != null || alightingTs != null,
                     });
