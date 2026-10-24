@@ -8212,25 +8212,15 @@ const TransportApp = ({ userProfileData }) => {
     
         // Filtrovanie – skry len priradené segmenty
         const baseFiltered = expandedTransfers.filter((t) => {
-            // ============================================================
-            // OPRAVA: Pešie presuny sa NEzobrazujú v zozname „Vygenerované
-            // presuny" – majú vlastný box „Peši" (zelený).
-            //
-            // Dôvod: Ak by sa zobrazovali na oboch miestach, používateľ by
-            // videl duplicitne tie isté presuny a mätlo by ho to.
-            // ============================================================
             if (t.isWalking === true) return false;
-
             if (isSegmentAssigned(t)) return false;
-        
-            // ============================================================
-            // Ak je to časť rozdeleného presunu (má _parentKey),
-            // ale NEMÁ zvyšný čas na presun, tak ju nezobrazuj.
-            // ============================================================
+    
+            // NOVÉ: Ak je segment priradený autobusu, skry ho
+            if (t._isAssigned === true) return false;
+    
             if (t._parentKey && t._remainingMinutes != null && t._remainingMinutes <= 0) {
                 return false;
             }
-        
             return true;
         });
     
