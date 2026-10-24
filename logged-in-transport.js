@@ -6592,35 +6592,73 @@ const TransportApp = ({ userProfileData }) => {
         try {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
     
-            // 1) Odstráň príznak "peši"
+            // ============================================================
+            // 1) Zisti parenta
+            // ============================================================
+            let targetParent = null;
+            if (transfer._parentKey && transfer._parentKey !== transfer.key) {
+                targetParent = savedTransfers.find((s) => s.key === transfer._parentKey);
+            }
+    
+            const parentKey = targetParent ? targetParent.key : transfer.key;
+            const parentFrom = targetParent ? targetParent.fromLocation : transfer.fromLocation;
+            const parentTo = targetParent ? targetParent.toLocation : transfer.toLocation;
+    
+            // ============================================================
+            // 2) Zmaž VŠETKY segmenty parenta (A–B, B–C, C–D)
+            //    a uprav parenta (A–B–C–D) – odstráň isWalking a intermediateStops
+            // ============================================================
+            const patch = {};
+    
+            // Zmaž segmenty parenta
+            savedTransfers.forEach((s) => {
+                if (s._parentKey === parentKey && s.key !== parentKey) {
+                    patch[s.key] = deleteField();
+                }
+            });
+    
+            // Uprav parenta – odstráň isWalking a intermediateStops
+            if (targetParent) {
+                patch[parentKey] = {
+                    category: targetParent.category,
+                    teamName: targetParent.teamName,
+                    when: targetParent.when,
+                    text: targetParent.text,
+                    fromLocation: parentFrom,
+                    toLocation: parentTo,
+                    dayKey: targetParent.dayKey,
+                    isWalking: deleteField(),
+                    walkingSetAt: deleteField(),
+                    walkingSetBy: deleteField(),
+                    intermediateStops: deleteField(),
+                };
+            } else {
+                patch[parentKey] = {
+                    category: transfer.category,
+                    teamName: transfer.teamName,
+                    when: transfer.when,
+                    text: transfer.text,
+                    fromLocation: parentFrom,
+                    toLocation: parentTo,
+                    dayKey: transfer.dayKey,
+                    isWalking: deleteField(),
+                    walkingSetAt: deleteField(),
+                    walkingSetBy: deleteField(),
+                    intermediateStops: deleteField(),
+                };
+            }
+    
             await setDoc(
                 docRef,
                 {
-                    [TRANSPORT_TRANSFERS_FIELD]: {
-                        [transfer.key]: {
-                            ...transfer,
-                            isWalking: false,
-                            walkingSetAt: deleteField(),
-                            walkingSetBy: deleteField(),
-                        },
-                    },
+                    [TRANSPORT_TRANSFERS_FIELD]: patch,
                     updatedAt: Timestamp.fromDate(new Date()),
                     updatedBy: (userProfileData && userProfileData.email) || null,
                 },
                 { merge: true }
             );
     
-            // 2) Prepočítaj blok – tento segment už NIE je vyriešený,
-            //    takže dostane svoj podiel času z celkového intervalu.
-            //    POZOR: savedTransfers ešte obsahuje starý stav (isWalking: true),
-            //    preto odovzdávame explicitne prázdny set a v recomputeBlock
-            //    kontrolujeme aj seg.isWalking – ten ale musíme dočasne ignorovať.
-            //    Riešenie: prepočítame s upraveným transferom a prázdnym resolvedKeys,
-            //    pričom v recomputeBlock ignorujeme isWalking pre tento kľúč.
-            const updatedTransfer = { ...transfer, isWalking: false };
-            await recomputeBlock(updatedTransfer, new Set(), new Set([transfer.key]));
-    
-            window.showGlobalNotification('Príznak „peši" bol odstránený.', 'success');
+            window.showGlobalNotification('Príznak „peši" bol odstránený (parent presun bol obnovený bez medzizastávok).', 'success');
             setRemoveWalkingModal(null);
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri odstraňovaní príznaku peši:', err);
