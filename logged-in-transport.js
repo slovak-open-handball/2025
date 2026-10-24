@@ -4209,7 +4209,7 @@ const TransportApp = ({ userProfileData }) => {
                 results[i] = {
                     startTs: cursorTs,
                     endTs: cursorTs,
-                    whenStr: `${formatTs(cursorTs)} – ${formatTs(cursorTs)}`,
+                    whenStr: `${formatTsLocal(cursorTs)} – ${formatTsLocal(cursorTs)}`,
                 };
             }
         }
@@ -5690,7 +5690,7 @@ const TransportApp = ({ userProfileData }) => {
         // Tieto segmenty sa označia ako "priradené" (pokryté autobusom).
         // ============================================================
         Object.entries(busRows || {}).forEach(([busKey, rows]) => {
-            const [busId, dayKey] = busKey.split('|');
+            const dayKey = busKey.split('|')[1];
             const sorted = (rows || [])
                 .slice()
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
