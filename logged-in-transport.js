@@ -3596,6 +3596,139 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // PO ZMENE placeTo (a prepočte timeTo) ZOSÚLAĎ NASLEDUJÚCE RIADKY
+    //
+    // Princíp:
+    //  - aktuálny riadok má nový časTo (vypočítaný z timeFrom + travelMinutes)
+    //  - nasledujúce riadky (až po prvý "červený" – medzera > 2 min) sa
+    //    posunú tak, aby ich timeFrom nadväzoval na nový časTo
+    //    predchádzajúceho riadku (+ prípadná pôvodná medzera, ak existuje)
+    //  - ak bola medzi riadkami medzera ≤ 2 min, zachová sa rovnaká medzera
+    //  - ak bola medzera > 2 min (červený riadok), zastavíme sa
+    // ============================================================
+    const resyncFollowingRowsAfterPlaceToChange = async (busId, dayKey, currentRowId) => {
+        if (!window.db || !busId || !dayKey || !currentRowId) return;
+    
+        const rowsKey = `${busId}|${dayKey}`;
+        const allRows = (busRows[rowsKey] || [])
+            .slice()
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+        const currentIdx = allRows.findIndex((r) => r.id === currentRowId);
+        if (currentIdx === -1) return;
+    
+        const currentRow = allRows[currentIdx];
+    
+        // Vypočítaj nový timeTo aktuálneho riadku (rovnaká logika ako v renderBusRow / useEffect)
+        const travelMinutes = getTravelMinutes(currentRow.placeFrom, currentRow.placeTo);
+        if (travelMinutes == null) return; // timeTo sa nedá vypočítať
+        if (!currentRow.timeFrom || !/^\d{1,2}:\d{2}$/.test(currentRow.timeFrom)) return;
+    
+        const [ch, cm] = currentRow.timeFrom.split(':').map(Number);
+        const currentStartMin = ch * 60 + cm;
+        let newCurrentEndMin = currentStartMin + travelMinutes;
+        newCurrentEndMin = ((newCurrentEndMin % (24 * 60)) + (24 * 60)) % (24 * 60);
+    
+        // Pomocná: "HH:MM" → minúty od 00:00
+        const toMinutes = (timeStr) => {
+            if (!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr)) return null;
+            const [h, m] = timeStr.split(':').map(Number);
+            return h * 60 + m;
+        };
+    
+        // Pomocná: minúty → "HH:MM" (s mod 24h)
+        const fromMinutes = (totalMin) => {
+            const norm = ((totalMin % (24 * 60)) + (24 * 60)) % (24 * 60);
+            const h = Math.floor(norm / 60);
+            const m = norm % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        };
+    
+        // Pomocná: posun času o delta minút
+        const shiftTime = (timeStr, delta) => {
+            const min = toMinutes(timeStr);
+            if (min == null) return timeStr;
+            return fromMinutes(min + delta);
+        };
+    
+        // Prechádzaj nasledujúce riadky, kým nenarazíš na "červený" (medzera > 2 min)
+        const updates = [];
+        let prevRow = currentRow;
+        let prevEndMin = newCurrentEndMin;
+    
+        for (let i = currentIdx + 1; i < allRows.length; i++) {
+            const curr = allRows[i];
+    
+            const prevTimeToMin = prevEndMin; // koniec predchádzajúceho riadku (po prepočte)
+            const currTimeFromMin = toMinutes(curr.timeFrom);
+    
+            if (prevTimeToMin == null || currTimeFromMin == null) {
+                // Ak nie sú časy, nedá sa pokračovať – skonči
+                break;
+            }
+    
+            // Zisti pôvodnú medzeru medzi predchádzajúcim a aktuálnym riadkom
+            // (pred akýmkoľvek posunom). Použijeme pôvodné hodnoty z allRows.
+            const originalPrevTimeToMin = toMinutes(allRows[i - 1].timeTo);
+            const originalCurrTimeFromMin = currTimeFromMin;
+    
+            let originalGap = null;
+            if (originalPrevTimeToMin != null && originalCurrTimeFromMin != null) {
+                originalGap = originalCurrTimeFromMin - originalPrevTimeToMin;
+                if (originalGap < 0) originalGap += 24 * 60;
+            }
+    
+            // Ak je medzera > 2 min → červený riadok, zastav
+            if (originalGap != null && originalGap > 2) {
+                break;
+            }
+    
+            // Nový timeFrom = koniec predchádzajúceho + pôvodná medzera (ak existuje)
+            const gapToPreserve = originalGap != null && originalGap > 0 ? originalGap : 0;
+            const newTimeFromMin = prevEndMin + gapToPreserve;
+            const newTimeFromStr = fromMinutes(newTimeFromMin);
+    
+            // Nový timeTo = nový timeFrom + travelMinutes aktuálneho riadku
+            const currTravelMinutes = getTravelMinutes(curr.placeFrom, curr.placeTo);
+            let newTimeToStr = curr.timeTo || '';
+            let newEndMin = null;
+    
+            if (currTravelMinutes != null) {
+                newEndMin = newTimeFromMin + currTravelMinutes;
+                newTimeToStr = fromMinutes(newEndMin);
+            }
+    
+            const patch = {};
+            if (newTimeFromStr !== curr.timeFrom) patch.timeFrom = newTimeFromStr;
+            if (currTravelMinutes != null && newTimeToStr !== curr.timeTo) patch.timeTo = newTimeToStr;
+    
+            if (Object.keys(patch).length > 0) {
+                updates.push({ id: curr.id, patch });
+            }
+    
+            // Posuň prev referenciu
+            prevEndMin = (newEndMin != null) ? newEndMin : newTimeFromMin;
+        }
+    
+        if (updates.length === 0) return;
+    
+        try {
+            await Promise.all(
+                updates.map(({ id, patch }) =>
+                    updateDoc(doc(window.db, 'transport', id), patch)
+                )
+            );
+            window.showGlobalNotification(
+                `Zosúladených ${updates.length} nasledujúcich riadkov.`,
+                'info'
+            );
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri zosúlaďovaní nasledujúcich riadkov:', err);
+            window.showGlobalNotification('Nepodarilo sa zosúladiť nasledujúce riadky.', 'error');
+        }
+    };
+
+    // ============================================================
     // ODSTRÁNENIE RIADKU
     // ============================================================
     const removeBusRow = async (rowId) => {
@@ -4027,7 +4160,42 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement('td', { className: 'border border-gray-300 p-1' },
                 React.createElement('select', {
                     value: row.placeTo || '',
-                    onChange: (e) => updateBusRowField(row.id, 'placeTo', e.target.value),
+                    onChange: async (e) => {
+                        const newPlaceTo = e.target.value;
+                        const oldPlaceTo = row.placeTo || '';
+                    
+                        // Ulož novú hodnotu
+                        await updateBusRowField(row.id, 'placeTo', newPlaceTo);
+
+                        // Ak sa zmenilo placeTo a nové placeTo nie je prázdne → prepočítaj timeTo
+                        // a zosúlaď nasledujúce riadky
+                        if (newPlaceTo !== oldPlaceTo && newPlaceTo) {
+                            // Počkaj, kým sa timeTo uloží (useEffect ho dopočíta asynchrónne).
+                            // Radšej ho dopočítaj priamo tu a zapíš, aby bol konzistentný pred
+                            // zosúladením nasledujúcich riadkov.
+                    
+                            const travelMinutes = getTravelMinutes(row.placeFrom, newPlaceTo);
+                            if (travelMinutes != null && row.timeFrom && /^\d{1,2}:\d{2}$/.test(row.timeFrom)) {
+                                const [h, m] = row.timeFrom.split(':').map(Number);
+                                let total = h * 60 + m + travelMinutes;
+                                total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
+                                const endH = Math.floor(total / 60);
+                                const endM = total % 60;
+                                const newTimeTo = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+                    
+                                if (newTimeTo !== (row.timeTo || '')) {
+                                    await updateBusRowField(row.id, 'timeTo', newTimeTo);
+                                }
+                            }
+                    
+                            // Počkaj jeden frame, aby sa busRows stihol aktualizovať z Firestore
+                            // (onSnapshot), inak by funkcia pracovala so starým busRows.
+                            // Použijeme menší delay (napr. 300 ms).
+                            setTimeout(() => {
+                                resyncFollowingRowsAfterPlaceToChange(busId, dayKey, row.id);
+                            }, 300);
+                        }
+                    },
                     className: selectCls,
                 },
                     React.createElement('option', { value: '' }, '— vyber zastávku —'),
