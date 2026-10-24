@@ -4575,51 +4575,105 @@ const TransportApp = ({ userProfileData }) => {
             return;
         }
         try {
+            const targetCat = cleanCategory(categoryName);
+
+            // ============================================================
+            // 1) Zmazať presuny z settings/transportTravelTimes.transfers
+            // ============================================================
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
             const snap = await getDoc(docRef);
-            if (!snap.exists()) {
-                window.showGlobalNotification('Žiadne presuny na zmazanie', 'info');
-                return;
+
+            let keysToDelete = [];
+            if (snap.exists()) {
+                const data = snap.data() || {};
+                const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
+                Object.entries(rawTransfers).forEach(([key, v]) => {
+                    if (!v) return;
+                    if (cleanCategory(v.category) === targetCat) {
+                        keysToDelete.push(key);
+                    }
+                });
             }
-            const data = snap.data() || {};
-            const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
-    
-            // Zisti, ktoré kľúče patria do danej kategórie
-            const targetCat = cleanCategory(categoryName);
-            const keysToDelete = [];
-            Object.entries(rawTransfers).forEach(([key, v]) => {
-                if (!v) return;
-                if (cleanCategory(v.category) === targetCat) {
-                    keysToDelete.push(key);
-                }
+
+            if (keysToDelete.length > 0) {
+                const transfersPatch = {};
+                keysToDelete.forEach((key) => {
+                    transfersPatch[key] = deleteField();
+                });
+                await setDoc(
+                    docRef,
+                    {
+                        [TRANSPORT_TRANSFERS_FIELD]: transfersPatch,
+                        updatedAt: Timestamp.fromDate(new Date()),
+                        updatedBy: (userProfileData && userProfileData.email) || null,
+                    },
+                    { merge: true }
+                );
+            }
+
+            // ============================================================
+            // 2) Odstrániť tím z danej kategórie z ALL busRows
+            //    (teamsIn / teamsOut) vo všetkých autobusoch a dňoch
+            // ============================================================
+            const rowsUpdates = {}; // rowId → { teamsIn?, teamsOut? }
+            let rowsTouchedCount = 0;
+
+            // Prejdi všetky busRows v aktuálnom stave (z React state `busRows`)
+            Object.entries(busRows || {}).forEach(([busKey, rows]) => {
+                (rows || []).forEach((row) => {
+                    const currentTeamsIn = Array.isArray(row.teamsIn) ? row.teamsIn : [];
+                    const currentTeamsOut = Array.isArray(row.teamsOut) ? row.teamsOut : [];
+
+                    // Pomocná: zisti, či teamKey patrí do cieľovej kategórie
+                    const isFromTargetCategory = (teamKey) => {
+                        const [tn, cat] = String(teamKey).split('|');
+                        return cleanCategory(cat || '') === targetCat;
+                    };
+
+                    const newTeamsIn = currentTeamsIn.filter((tk) => !isFromTargetCategory(tk));
+                    const newTeamsOut = currentTeamsOut.filter((tk) => !isFromTargetCategory(tk));
+
+                    const teamsInChanged = newTeamsIn.length !== currentTeamsIn.length;
+                    const teamsOutChanged = newTeamsOut.length !== currentTeamsOut.length;
+
+                    if (teamsInChanged || teamsOutChanged) {
+                        const patch = {};
+                        if (teamsInChanged) patch.teamsIn = newTeamsIn;
+                        if (teamsOutChanged) patch.teamsOut = newTeamsOut;
+                        rowsUpdates[row.id] = patch;
+                        rowsTouchedCount += 1;
+                    }
+                });
             });
-    
-            if (keysToDelete.length === 0) {
+
+            if (rowsTouchedCount > 0) {
+                const promises = Object.entries(rowsUpdates).map(([rid, patch]) =>
+                    updateDoc(doc(window.db, 'transport', rid), patch)
+                );
+                await Promise.all(promises);
+            }
+
+            // ============================================================
+            // 3) Notifikácia
+            // ============================================================
+            if (keysToDelete.length === 0 && rowsTouchedCount === 0) {
                 window.showGlobalNotification(
-                    `Pre kategóriu ${categoryName} neexistujú žiadne presuny na zmazanie.`,
+                    `Pre kategóriu ${categoryName} neexistujú žiadne presuny ani priradenia na zmazanie.`,
                     'info'
                 );
                 return;
             }
-    
-            // Vytvor patch, ktorý každý kľúč nastaví na deleteField()
-            const transfersPatch = {};
-            keysToDelete.forEach((key) => {
-                transfersPatch[key] = deleteField();
-            });
-    
-            await setDoc(
-                docRef,
-                {
-                    [TRANSPORT_TRANSFERS_FIELD]: transfersPatch,
-                    updatedAt: Timestamp.fromDate(new Date()),
-                    updatedBy: (userProfileData && userProfileData.email) || null,
-                },
-                { merge: true }
-            );
-    
+
+            const parts = [];
+            if (keysToDelete.length > 0) {
+                parts.push(`${keysToDelete.length} presunov`);
+            }
+            if (rowsTouchedCount > 0) {
+                parts.push(`${rowsTouchedCount} priradení v autobusoch`);
+            }
+
             window.showGlobalNotification(
-                `Zmazaných ${keysToDelete.length} presunov pre kategóriu ${categoryName}.`,
+                `Zmazané pre kategóriu ${categoryName}: ${parts.join(', ')}.`,
                 'success'
             );
         } catch (err) {
