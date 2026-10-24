@@ -8039,14 +8039,61 @@ const TransportApp = ({ userProfileData }) => {
             // ============================================================
             const finalTimes = new Array(route.length - 1).fill(null);
     
-            // 1) Plne vyriešené segmenty (máme reálny čas z autobusu)
+            // ============================================================
+            // NOVÉ: Pre každý segment najprv over, či existuje REÁLNY záznam
+            // v `savedTransfers` (napr. peší segment, ktorý bol manuálne
+            // označený ako „peši", alebo segment, ktorý bol už dogenerovaný).
+            //
+            // Ak existuje, použijeme jeho REÁLNY čas z DB – tým sa zabezpečí,
+            // že keď je prvý segment označený ako „peši" (a má čas napr.
+            // 08:00 – 08:01), druhý segment bude začínať 08:01 (koniec
+            // pešieho), NIE 08:30 (pôvodný koniec parenta).
+            // ============================================================
+            const realSegmentTimes = new Array(route.length - 1).fill(null);
+            
+            for (let i = 0; i < route.length - 1; i++) {
+                const segFrom = normalizePlaceName(route[i]);
+                const segTo = normalizePlaceName(route[i + 1]);
+                if (!segFrom || !segTo || segFrom === segTo) continue;
+            
+                // Nájdi reálny záznam v savedTransfers pre tento segment
+                // (rovnaký tím, kategória, deň, from→to)
+                const realSeg = savedTransfers.find((s) => {
+                    if (String(s.teamName || '').trim() !== teamName) return false;
+                    if (cleanCategory(s.category || '') !== category) return false;
+                    if ((s.dayKey || '') !== dayKey) return false;
+                    if (normalizePlaceName(s.fromLocation) !== segFrom) return false;
+                    if (normalizePlaceName(s.toLocation) !== segTo) return false;
+                    return true;
+                });
+            
+                if (realSeg) {
+                    const realRange = parseWhenRangeToTs(realSeg.when);
+                    if (realRange && realRange.startTs != null && realRange.endTs != null) {
+                        realSegmentTimes[i] = {
+                            startTs: realRange.startTs,
+                            endTs: realRange.endTs,
+                            isWalking: realSeg.isWalking === true,
+                        };
+                    }
+                }
+            }
+            
+            // 1) Plne vyriešené segmenty – priorita:
+            //    a) reálny čas z autobusu (segmentRealTimes)
+            //    b) reálny čas zo savedTransfers (realSegmentTimes)
             for (let i = 0; i < route.length - 1; i++) {
                 const rt = segmentRealTimes[i];
                 if (rt && rt.startTs != null && rt.endTs != null) {
                     finalTimes[i] = { startTs: rt.startTs, endTs: rt.endTs };
+                    continue;
+                }
+                const realSeg = realSegmentTimes[i];
+                if (realSeg && realSeg.startTs != null && realSeg.endTs != null) {
+                    finalTimes[i] = { startTs: realSeg.startTs, endTs: realSeg.endTs };
                 }
             }
-    
+            
             // 2) Čiastočne vyriešené segmenty (máme len nástup alebo len výstup)
             //    → použijeme reálny čas pre známu časť, pôvodný interval pre zvyšok.
             for (let i = 0; i < route.length - 1; i++) {
@@ -8058,21 +8105,21 @@ const TransportApp = ({ userProfileData }) => {
                     finalTimes[i] = { startTs, endTs };
                 }
             }
-    
+            
             // 3) Plne nevyriešené segmenty → PÔVODNÝ CELÝ INTERVAL,
-            //    ale ak predchádzajúci segment je vyriešený autobusom,
-            //    začni od jeho konca.
+            //    ale ak predchádzajúci segment je vyriešený (autobusom
+            //    alebo reálnym záznamom v savedTransfers), začni od jeho konca.
             for (let i = 0; i < route.length - 1; i++) {
                 if (finalTimes[i]) continue;
-                
+            
                 let startTs = timeRange.startTs;
                 // Ak predchádzajúci segment je vyriešený, začni od jeho konca
                 if (i > 0 && finalTimes[i - 1]) {
                     startTs = finalTimes[i - 1].endTs;
                 }
-
+            
                 // ============================================================
-                // NOVÉ: Nájdi najbližší NASLEDUJÚCI vyriešený segment
+                // Nájdi najbližší NASLEDUJÚCI vyriešený segment
                 // a nastav endTs na jeho startTs. Tým sa zabezpečí, že
                 // nevyriešený segment nepresiahne začiatok nasledujúceho
                 // priradeného segmentu.
@@ -8086,19 +8133,17 @@ const TransportApp = ({ userProfileData }) => {
                 }
                 if (endTs == null) {
                     // Skús nájsť reálny koniec v savedTransfers
-                    const realSeg = savedTransfers.find((s) =>
-                        String(s.teamName || '').trim() === teamName &&
-                        cleanCategory(s.category || '') === category &&
-                        s.dayKey === dayKey &&
-                        normalizePlaceName(s.fromLocation) === normalizePlaceName(route[route.length - 1])
-                    );
-                    if (realSeg) {
-                        const r = parseWhenRangeToTs(realSeg.when);
-                        if (r) endTs = r.startTs;
+                    // (hľadaj segment, ktorý začína tam, kde tento segment končí,
+                    //  alebo ktorý je posledným segmentom v route)
+                    for (let k = i + 1; k < route.length - 1; k++) {
+                        if (realSegmentTimes[k] && realSegmentTimes[k].startTs != null) {
+                            endTs = realSegmentTimes[k].startTs;
+                            break;
+                        }
                     }
                 }
                 if (endTs == null) endTs = timeRange.endTs;
-
+            
                 finalTimes[i] = { startTs, endTs };
             }
     
