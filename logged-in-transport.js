@@ -739,7 +739,7 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     // ZBUILDÍ A VYPÍŠE ČASOVÚ OS PRE KAŽDÝ TÍM V KAŽDEJ KATEGÓRII
     // ============================================================
-    const rebuildAndLogTimeline = (force = false, categoryFilter = null) => {
+    const rebuildAndLogTimeline = async (force = false, categoryFilter = null) => {
         // Ak používateľ ešte neklikol na tlačidlo "+", negeneruj časovú os
         // (pokiaľ nie je volanie vynútené cez force=true, napr. z printTeamTimeline)
         if (!force && !timelineGenerationRequestedRef.current) {
