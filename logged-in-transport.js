@@ -4293,7 +4293,7 @@ const TransportApp = ({ userProfileData }) => {
                     ? React.createElement(
                         'div',
                         {
-                            className: 'w-full px-1 py-1 text-sm text-left font-semibold bg-gray-100 border border-gray-300 rounded text-gray-700',
+                            className: 'w-full px-1 py-1 text-sm text-left font-semibold bg-gray-100 border border-gray-300 rounded text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis',
                             title: `Miesto od je automaticky nastavené z predchádzajúceho riadku (${prevRow.placeTo}). Nedá sa meniť.`,
                         },
                         lockedPlaceFrom
