@@ -6156,90 +6156,34 @@ const TransportApp = ({ userProfileData }) => {
         // ============================================================
         // NOVÉ: Rozlož presuny s intermediateStops na jednotlivé segmenty.
         //
-        // Pre každý presun A→B s intermediateStops ['X', 'Y'] vytvor
-        // segmenty A→X, X→Y, Y→B s časmi dopočítanými podľa trvaní jázd.
+        // Pre každý segment v trase A → X → Y → B zisti:
+        //  1) Či je vyriešený autobusom (cez busRows) → použi REÁLNY čas z autobusu
+        //  2) Či je vyriešený peši (isWalking) → použi pôvodný čas z when
+        //  3) Inak → dopočítaj čas podľa trvaní jázd
         //
-        // Tým sa zabezpečí, že v zozname vygenerovaných presunov sa
-        // zobrazia aj NEPRIradené časti rozdeleného presunu.
+        // Tým sa zabezpečí, že po priradení A→X k autobusu (čas 9:30 – 9:35)
+        // sa X→B posunie na 9:35.
         // ============================================================
         const expandedTransfers = [];
-    
+        
         filteredByDay.forEach((t) => {
             const stops = Array.isArray(t.intermediateStops) ? t.intermediateStops : [];
-    
+        
             // Ak nemá medzizastávky → ponechaj ako je
             if (stops.length === 0) {
                 expandedTransfers.push(t);
                 return;
             }
-    
+        
             // Rozlož trasu na segmenty: A → X → Y → B
             const route = [t.fromLocation, ...stops, t.toLocation].filter(Boolean);
             if (route.length < 2) {
                 expandedTransfers.push(t);
                 return;
             }
-    
+        
             const timeRange = parseWhenRange(t.when);
-    
-            // Vypočítaj trvania jednotlivých segmentov
-            const durations = [];
-            for (let i = 0; i < route.length - 1; i++) {
-                const mins = getTravelMinutes(route[i], route[i + 1]);
-                durations.push(mins != null ? Number(mins) : null);
-            }
-    
-            // Fallback pre chýbajúce trvania – priemer zo známych
-            const known = durations.filter((d) => d != null);
-            const fallback = known.length > 0
-                ? Math.round(known.reduce((a, b) => a + b, 0) / known.length)
-                : null;
-    
-            const finalDurations = durations.map((d) =>
-                d != null ? d : (fallback != null ? fallback : null)
-            );
-    
-            const durationsSum = finalDurations.reduce((sum, d) => sum + (d || 0), 0);
-    
-            if (
-                timeRange &&
-                timeRange.startTs != null &&
-                timeRange.endTs != null &&
-                timeRange.endTs > timeRange.startTs &&
-                durationsSum > 0
-            ) {
-                // Rozdeľ čas podľa trvaní
-                let cursorTs = timeRange.startTs;
-                const totalMs = timeRange.endTs - timeRange.startTs;
-    
-                for (let i = 0; i < route.length - 1; i++) {
-                    const isLast = i === route.length - 2;
-                    const dur = finalDurations[i] || 0;
-                    const segMs = isLast
-                        ? (timeRange.endTs - cursorTs)
-                        : Math.round((dur / durationsSum) * totalMs);
-    
-                    const segStartTs = cursorTs;
-                    const segEndTs = cursorTs + segMs;
-                    const whenStr = `${formatTsLocal(segStartTs)} – ${formatTsLocal(segEndTs)}`;
-                    const text = `Presun z ${route[i]} do ${route[i + 1]}`;
-                    const key = buildTransferKey(t.category, t.teamName, whenStr, text);
-    
-                    expandedTransfers.push({
-                        ...t,
-                        key,
-                        when: whenStr,
-                        text,
-                        fromLocation: route[i],
-                        toLocation: route[i + 1],
-                        intermediateStops: [], // segment nemá medzizastávky
-                        _parentKey: t.key,     // odkaz na pôvodný záznam
-                        _parentRoute: `${t.fromLocation} → ${t.toLocation}`,
-                    });
-    
-                    cursorTs = segEndTs;
-                }
-            } else {
+            if (!timeRange || timeRange.startTs == null || timeRange.endTs == null || timeRange.endTs <= timeRange.startTs) {
                 // Fallback – nevieme vypočítať časy, použi pôvodný when pre všetky segmenty
                 for (let i = 0; i < route.length - 1; i++) {
                     const text = `Presun z ${route[i]} do ${route[i + 1]}`;
@@ -6255,6 +6199,206 @@ const TransportApp = ({ userProfileData }) => {
                         _parentRoute: `${t.fromLocation} → ${t.toLocation}`,
                     });
                 }
+                return;
+            }
+        
+            // ============================================================
+            // KROK 1: Pre každý segment zisti, či je vyriešený autobusom
+            // (t. j. či tím nastupuje/vystupuje v busRows pre daný segment).
+            // ============================================================
+            const teamName = String(t.teamName || '').trim();
+            const category = cleanCategory(t.category || '');
+            const dayKey = t.dayKey || '';
+            const teamKey = `${teamName}|${category}`;
+        
+            // Predpriprav busRows pre tento deň
+            const allBusRowsForDay = [];
+            Object.entries(busRows || {}).forEach(([busKey, rows]) => {
+                const bDayKey = busKey.split('|')[1];
+                if (bDayKey !== dayKey) return;
+                (rows || []).forEach((row) => {
+                    allBusRowsForDay.push({ ...row, _busKey: busKey });
+                });
+            });
+            allBusRowsForDay.sort((a, b) => {
+                const ta = a.timeFrom || '';
+                const tb = b.timeFrom || '';
+                return ta.localeCompare(tb);
+            });
+        
+            const matchesTeam = (rowTeams) => {
+                if (!Array.isArray(rowTeams)) return false;
+                return rowTeams.some((tk) => {
+                    const s = String(tk).trim();
+                    if (s === teamKey) return true;
+                    const [tn, cat] = s.split('|');
+                    return String(tn).trim() === teamName && cleanCategory(cat) === category;
+                });
+            };
+        
+            // Pre každý segment zisti reálny čas z autobusu (ak existuje)
+            const segmentRealTimes = []; // { startTs, endTs } alebo null
+            for (let i = 0; i < route.length - 1; i++) {
+                const segFrom = normalizePlaceName(route[i]);
+                const segTo = normalizePlaceName(route[i + 1]);
+                let boardingTs = null;
+                let alightingTs = null;
+        
+                allBusRowsForDay.forEach((row) => {
+                    const rowFrom = normalizePlaceName(row.placeFrom);
+                    const rowTo = normalizePlaceName(row.placeTo);
+                    const hasTeamIn = matchesTeam(row.teamsIn);
+                    const hasTeamOut = matchesTeam(row.teamsOut);
+        
+                    if (hasTeamIn && rowFrom === segFrom && row.timeFrom && boardingTs == null) {
+                        const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+                        if (dm) {
+                            const [h, mi] = row.timeFrom.split(':').map(Number);
+                            boardingTs = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
+                        }
+                    }
+                    if (hasTeamOut && rowTo === segTo && row.timeTo && alightingTs == null) {
+                        const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+                        if (dm) {
+                            const [h, mi] = row.timeTo.split(':').map(Number);
+                            alightingTs = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
+                        }
+                    }
+                });
+        
+                if (boardingTs != null && alightingTs != null && alightingTs > boardingTs) {
+                    // Plne vyriešený autobusom
+                    segmentRealTimes.push({ startTs: boardingTs, endTs: alightingTs });
+                } else if (boardingTs != null) {
+                    // Čiastočne – máme aspoň nástup
+                    segmentRealTimes.push({ startTs: boardingTs, endTs: null });
+                } else if (alightingTs != null) {
+                    // Čiastočne – máme aspoň výstup
+                    segmentRealTimes.push({ startTs: null, endTs: alightingTs });
+                } else {
+                    segmentRealTimes.push(null);
+                }
+            }
+        
+            // ============================================================
+            // KROK 2: Vypočítaj časy pre všetky segmenty s ohľadom na
+            // reálne časy z autobusu.
+            // ============================================================
+            const finalTimes = new Array(route.length - 1).fill(null);
+        
+            // 1) Najprv nastav reálne časy z autobusu (tam, kde sú známe)
+            for (let i = 0; i < route.length - 1; i++) {
+                const rt = segmentRealTimes[i];
+                if (rt && rt.startTs != null && rt.endTs != null) {
+                    finalTimes[i] = { startTs: rt.startTs, endTs: rt.endTs };
+                }
+            }
+        
+            // 2) Pre zostávajúce segmenty dopočítaj podľa trvaní, oddelene po úsekoch
+            //    medzi fixnými bodmi (rovnaký princíp ako v recomputeBlock)
+            const segments = []; // { indexes: [], startTs, endTs }
+            let currentSegment = null;
+        
+            for (let i = 0; i < route.length - 1; i++) {
+                if (finalTimes[i]) {
+                    if (currentSegment) {
+                        segments.push(currentSegment);
+                        currentSegment = null;
+                    }
+                } else {
+                    if (!currentSegment) {
+                        let segmentStartTs = null;
+                        for (let k = i - 1; k >= 0; k--) {
+                            if (finalTimes[k]) {
+                                segmentStartTs = finalTimes[k].endTs;
+                                break;
+                            }
+                        }
+                        if (segmentStartTs == null) segmentStartTs = timeRange.startTs;
+                        currentSegment = { indexes: [], startTs: segmentStartTs, endTs: null };
+                    }
+                    currentSegment.indexes.push(i);
+                }
+            }
+            if (currentSegment) segments.push(currentSegment);
+        
+            // Pre každý úsek dopočítaj koniec
+            segments.forEach((segment) => {
+                const lastIdx = segment.indexes[segment.indexes.length - 1];
+                let segmentEndTs = null;
+                for (let k = lastIdx + 1; k < route.length - 1; k++) {
+                    if (finalTimes[k]) {
+                        segmentEndTs = finalTimes[k].startTs;
+                        break;
+                    }
+                }
+                if (segmentEndTs == null) segmentEndTs = timeRange.endTs;
+                segment.endTs = segmentEndTs;
+            });
+        
+            // Pre každý úsek rozdeľ čas podľa trvaní
+            segments.forEach((segment) => {
+                const totalMs = segment.endTs - segment.startTs;
+                if (totalMs <= 0) {
+                    segment.indexes.forEach((idx) => {
+                        finalTimes[idx] = { startTs: segment.startTs, endTs: segment.startTs };
+                    });
+                    return;
+                }
+        
+                const durations = [];
+                for (let i = 0; i < segment.indexes.length; i++) {
+                    const idx = segment.indexes[i];
+                    const mins = getTravelMinutes(route[idx], route[idx + 1]);
+                    durations.push(mins != null ? Number(mins) : null);
+                }
+                const known = durations.filter((d) => d != null);
+                const fallback = known.length > 0
+                    ? Math.round(known.reduce((a, b) => a + b, 0) / known.length)
+                    : null;
+                const finalDurations = durations.map((d) =>
+                    d != null ? d : (fallback != null ? fallback : null)
+                );
+                const durationsSum = finalDurations.reduce((sum, d) => sum + (d || 0), 0);
+        
+                let cursorTs = segment.startTs;
+                segment.indexes.forEach((idx, j) => {
+                    const isLast = j === segment.indexes.length - 1;
+                    const dur = finalDurations[j] || 0;
+                    const segMs = isLast
+                        ? (segment.endTs - cursorTs)
+                        : (durationsSum > 0
+                            ? Math.round((dur / durationsSum) * totalMs)
+                            : Math.round(totalMs / segment.indexes.length));
+                    const segStartTs = cursorTs;
+                    const segEndTs = cursorTs + segMs;
+                    finalTimes[idx] = { startTs: segStartTs, endTs: segEndTs };
+                    cursorTs = segEndTs;
+                });
+            });
+        
+            // ============================================================
+            // KROK 3: Vytvor segmenty s vypočítanými časmi
+            // ============================================================
+            for (let i = 0; i < route.length - 1; i++) {
+                const ft = finalTimes[i];
+                if (!ft) continue;
+        
+                const whenStr = `${formatTsLocal(ft.startTs)} – ${formatTsLocal(ft.endTs)}`;
+                const text = `Presun z ${route[i]} do ${route[i + 1]}`;
+                const key = buildTransferKey(t.category, t.teamName, whenStr, text);
+        
+                expandedTransfers.push({
+                    ...t,
+                    key,
+                    when: whenStr,
+                    text,
+                    fromLocation: route[i],
+                    toLocation: route[i + 1],
+                    intermediateStops: [],
+                    _parentKey: t.key,
+                    _parentRoute: `${t.fromLocation} → ${t.toLocation}`,
+                });
             }
         });
     
