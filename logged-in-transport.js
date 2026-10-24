@@ -6512,7 +6512,7 @@ const TransportApp = ({ userProfileData }) => {
                             'div',
                             {
                                 key: bus.id,
-                                className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
+                                className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0 pb-4',
                                 style: { width: '1000px', maxWidth: '100%' }
                             },
                             // Hlavička autobusu
