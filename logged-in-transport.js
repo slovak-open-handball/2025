@@ -6568,22 +6568,6 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
     
-            // ============================================================
-            // 4) Prepočítaj blok (pre istotu – recomputeBlock pracuje
-            //    s pôvodným savedTransfers, takže po našom posune
-            //    môže mať mierne odlišné výsledky, ale to je OK –
-            //    dôležité je, že prvý nasledujúci segment začína
-            //    1 min po pešom)
-            // ============================================================
-            try {
-                await recomputeBlock(
-                    { ...walkingTransfer, key: newKey },
-                    new Set([newKey])
-                );
-            } catch (precomputeErr) {
-                console.error('[TRANSPORT] Chyba pri prepočte bloku po peši:', precomputeErr);
-            }
-    
             window.showGlobalNotification(
                 shouldRenameKey
                     ? 'Presun bol označený ako „peši" (trvanie natiahnuté na minimálne 1 min, nasledujúce segmenty posunuté).'
