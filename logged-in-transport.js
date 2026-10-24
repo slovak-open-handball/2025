@@ -6497,144 +6497,26 @@ const TransportApp = ({ userProfileData }) => {
                 { merge: true }
             );
     
-            // ============================================================
-            // 3) NOVÉ: Explicitne posuň nasledujúce segmenty tak, aby
-            //    prvý nasledujúci začínal 1 minútu po začiatku pešieho.
+                        // ============================================================
+            // 3) NOVÉ: Po označení segmentu ako „peši" prepočítaj blok
+            //    cez recomputeBlock. Ten správne:
+            //     - nechá peší segment na jeho reálnom čase (08:00–08:01),
+            //     - posunie nasledujúce segmenty tak, aby začínali na konci
+            //       predchádzajúceho,
+            //     - ZAROVNÁ KONIEC POSLEDNÉHO SEGMENTU na pôvodný koniec
+            //       parent intervalu (lastRange.endTs).
             //
-            //    Toto robíme priamo v DB (nie cez recomputeBlock, ktorý
-            //    pracuje so starým savedTransfers).
+            //    Predtým sa tu robilo manuálne posúvanie o deltaMs, ktoré
+            //    zachovalo pôvodnú dĺžku segmentu → koniec posledného
+            //    segmentu sa nezarovnal na koniec parenta.
             // ============================================================
-            if (pešíStartTs != null && window.db) {
-                const teamName = String(transfer.teamName || '').trim();
-                const category = cleanCategory(transfer.category || '');
-                const dayKey = transfer.dayKey || '';
-    
-                // Zober VŠETKY segmenty toho istého tímu v ten istý deň,
-                // ktoré nie sú pešie a začínajú po pešom.
-                const followingSegments = (savedTransfers || [])
-                    .filter((t) => {
-                        if (t.key === transfer.key || t.key === newKey) return false;
-                        if (String(t.teamName || '').trim() !== teamName) return false;
-                        if (cleanCategory(t.category || '') !== category) return false;
-                        if ((t.dayKey || '') !== dayKey) return false;
-                        if (t.isWalking === true) return false; // už pešie preskočíme
-                        const r = parseTransferWhenToRange(t.when);
-                        if (!r || r.startTs == null) return false;
-                        return r.startTs > pešíStartTs;
-                    })
-                    .map((t) => ({
-                        ...t,
-                        range: parseTransferWhenToRange(t.when),
-                    }))
-                    .sort((a, b) => a.range.startTs - b.range.startTs);
-    
-                if (followingSegments.length > 0) {
-                    // Prvý nasledujúci segment musí začínať 1 minútu po začiatku pešieho.
-                    const targetFirstStartTs = pešíStartTs + MIN_WALKING_MS;
-                    const firstSeg = followingSegments[0];
-                    const deltaMs = targetFirstStartTs - firstSeg.range.startTs;
-    
-                    if (deltaMs !== 0) {
-                        const updatePromises = [];
-                        const batchPatch = {};
-                    
-                        followingSegments.forEach((seg) => {
-                            const newStartTs = seg.range.startTs + deltaMs;
-                            const segDurationMs = seg.range.endTs - seg.range.startTs;
-                            const newEndTs = newStartTs + segDurationMs;
-                    
-                            const newSegWhen = `${formatTsLocal(newStartTs)} – ${formatTsLocal(newEndTs)}`;
-                            const newSegKey = buildTransferKey(
-                                seg.category,
-                                seg.teamName,
-                                newSegWhen,
-                                seg.text
-                            );
-                    
-                            const newSegData = {
-                                category: seg.category,
-                                teamName: seg.teamName,
-                                when: newSegWhen,
-                                text: seg.text,
-                                fromLocation: seg.fromLocation,
-                                toLocation: seg.toLocation,
-                                dayKey: seg.dayKey,
-                            };
-                            if (seg.intermediateStops && seg.intermediateStops.length > 0) {
-                                newSegData.intermediateStops = seg.intermediateStops;
-                            }
-                            if (seg.isWalking === true) {
-                                newSegData.isWalking = true;
-                                newSegData.walkingSetAt = seg.walkingSetAt || Timestamp.fromDate(new Date());
-                                newSegData.walkingSetBy = seg.walkingSetBy || (userProfileData && userProfileData.email) || null;
-                            }
-                    
-                            if (seg.key !== newSegKey) {
-                                batchPatch[seg.key] = deleteField();
-                            }
-                            batchPatch[newSegKey] = newSegData;
-                        });
-                    
-                        // ============================================================
-                        // NOVÉ: Po posunutí followingSegments aktualizuj parent `when`,
-                        // aby koniec parent intervalu zodpovedal koncu posledného
-                        // posunutého segmentu. Tým sa zabezpečí, že pri ďalšom
-                        // renderi sa `_remainingMinutes` počíta zo správneho intervalu
-                        // a druhý segment sa zobrazí v zozname vygenerovaných presunov.
-                        // ============================================================
-                        const parentKey = transfer._parentKey;
-                        if (parentKey && parentKey !== transfer.key) {
-                            const parent = savedTransfers.find((s) => s.key === parentKey);
-                            if (parent) {
-                                // Zisti nový koniec parent intervalu = koniec posledného posunutého segmentu
-                                let newParentEndTs = null;
-                                if (followingSegments.length > 0) {
-                                    const lastSeg = followingSegments[followingSegments.length - 1];
-                                    const lastSegNewStart = lastSeg.range.startTs + deltaMs;
-                                    const lastSegDuration = lastSeg.range.endTs - lastSeg.range.startTs;
-                                    newParentEndTs = lastSegNewStart + lastSegDuration;
-                                }
-                    
-                                const parentRange = parseTransferWhenToRange(parent.when);
-                                if (parentRange && newParentEndTs != null) {
-                                    const newParentWhen = `${formatTsLocal(parentRange.startTs)} – ${formatTsLocal(newParentEndTs)}`;
-                                    const newParentKey = buildTransferKey(
-                                        parent.category,
-                                        parent.teamName,
-                                        newParentWhen,
-                                        parent.text
-                                    );
-                    
-                                    const newParentData = {
-                                        category: parent.category,
-                                        teamName: parent.teamName,
-                                        when: newParentWhen,
-                                        text: parent.text,
-                                        fromLocation: parent.fromLocation,
-                                        toLocation: parent.toLocation,
-                                        dayKey: parent.dayKey,
-                                    };
-                                    if (parent.intermediateStops && parent.intermediateStops.length > 0) {
-                                        newParentData.intermediateStops = parent.intermediateStops;
-                                    }
-                    
-                                    if (parent.key !== newParentKey) {
-                                        batchPatch[parent.key] = deleteField();
-                                    }
-                                    batchPatch[newParentKey] = newParentData;
-                                }
-                            }
-                        }
-                    
-                        if (Object.keys(batchPatch).length > 0) {
-                            await setDoc(
-                                docRef,
-                                { [TRANSPORT_TRANSFERS_FIELD]: batchPatch },
-                                { merge: true }
-                            );
-                        }
-                    }
-                }
+            try {
+                await recomputeBlock(
+                    { ...walkingTransfer, key: newKey },
+                    new Set([newKey])   // peší segment je vyriešený
+                );
+            } catch (recomputeErr) {
+                console.error('[TRANSPORT] Chyba pri prepočte bloku po označení peši:', recomputeErr);
             }
     
             window.showGlobalNotification(
