@@ -4151,7 +4151,7 @@ const TransportApp = ({ userProfileData }) => {
                             className:
                                 'pointer-events-auto w-6 h-6 rounded-full bg-green-600 text-white shadow-md ' +
                                 'hover:bg-green-700 active:scale-95 transition-all duration-150 ' +
-                                'flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100',
+                                'flex items-center justify-center opacity-0 group-hover:opacity-100',
                             title: 'Vložiť nový riadok pod tento riadok'
                         },
                         React.createElement('i', { className: 'fa-solid fa-plus text-[10px]' })
