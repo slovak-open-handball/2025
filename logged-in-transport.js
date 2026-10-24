@@ -4788,6 +4788,99 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // Pomocná: Zisti, či je konkrétny segment pokrytý autobusom
+    // ============================================================
+    const isSegmentCoveredByBus = (segment) => {
+        if (!segment) return false;
+    
+        const teamName = String(segment.teamName || '').trim();
+        const category = cleanCategory(segment.category || '');
+        const dayKey = segment.dayKey || '';
+        const fromLoc = normalizePlaceName(segment.fromLocation || '');
+        const toLoc = normalizePlaceName(segment.toLocation || '');
+        if (!fromLoc || !toLoc) return false;
+    
+        let found = false;
+        Object.entries(busRows || {}).forEach(([busKey, rows]) => {
+            if (found) return;
+            const bDayKey = busKey.split('|')[1];
+            if (bDayKey !== dayKey) return;
+    
+            const sorted = (rows || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+            let boardIdx = -1;
+            let alightIdx = -1;
+    
+            for (let i = 0; i < sorted.length; i++) {
+                const row = sorted[i];
+                const rowFrom = normalizePlaceName(row.placeFrom);
+                const rowTo = normalizePlaceName(row.placeTo);
+    
+                const hasTeamIn = (row.teamsIn || []).some((t) => {
+                    const [tn, cat] = String(t).split('|');
+                    return String(tn).trim() === teamName && cleanCategory(cat) === category;
+                });
+                const hasTeamOut = (row.teamsOut || []).some((t) => {
+                    const [tn, cat] = String(t).split('|');
+                    return String(tn).trim() === teamName && cleanCategory(cat) === category;
+                });
+    
+                if (hasTeamIn && rowFrom === fromLoc && boardIdx === -1) {
+                    boardIdx = i;
+                }
+                if (hasTeamOut && rowTo === toLoc && boardIdx !== -1) {
+                    alightIdx = i;
+                    break;
+                }
+            }
+    
+            if (boardIdx !== -1 && alightIdx !== -1 && alightIdx >= boardIdx) {
+                found = true;
+            }
+        });
+    
+        return found;
+    };
+    
+    // ============================================================
+    // Pomocná: Zisti, či všetky PREDCHÁDZAJÚCE segmenty toho istého tímu
+    // v ten istý deň už boli vyriešené (peši alebo autobusom).
+    // ============================================================
+    const arePreviousSegmentsResolved = (transfer) => {
+        if (!transfer) return true;
+    
+        const teamName = String(transfer.teamName || '').trim();
+        const category = cleanCategory(transfer.category || '');
+        const dayKey = transfer.dayKey || '';
+        const trRange = parseTransferWhenToRange(transfer.when);
+        if (!trRange) return true;
+    
+        const sameTeamSegments = savedTransfers
+            .filter((t) =>
+                String(t.teamName || '').trim() === teamName &&
+                cleanCategory(t.category || '') === category &&
+                t.dayKey === dayKey &&
+                t.key !== transfer.key
+            )
+            .map((t) => ({ ...t, range: parseTransferWhenToRange(t.when) }))
+            .filter((t) => t.range != null);
+    
+        sameTeamSegments.sort((a, b) => a.range.startTs - b.range.startTs);
+    
+        for (const seg of sameTeamSegments) {
+            if (seg.range.startTs >= trRange.startTs) continue; // neskorší segment
+    
+            if (seg.isWalking === true) continue; // peši → vyriešené
+    
+            if (!isSegmentCoveredByBus(seg)) {
+                return false;
+            }
+        }
+    
+        return true;
+    };
+
+    // ============================================================
     // POMOCNÁ: Prevod "HH:MM" + dayKey → timestamp
     // ============================================================
     const timeOnDayKeyToTs = (dayKey, timeStr) => {
@@ -4835,8 +4928,12 @@ const TransportApp = ({ userProfileData }) => {
     // Vracia len autobusy, ktoré majú AJ nástup AJ výstup
     // (aby tím v buse neuviazol).
     // ============================================================
-    const findMatchingBusRows = (transfer) => {
+    const findMatchingBusRows = (transfer) => {        
         if (!transfer) return [];
+
+        if (!arePreviousSegmentsResolved(transfer)) {
+            return [];
+        }
     
         const trRange = parseTransferWhenToRange(transfer.when);
         const trFrom = normalizePlaceName(transfer.fromLocation);
@@ -5043,6 +5140,14 @@ const TransportApp = ({ userProfileData }) => {
     const assignTransferToBus = async () => {
         if (!window.db || !transferActionModal?.transfer) return;
         const transfer = transferActionModal.transfer;
+
+        if (!arePreviousSegmentsResolved(transfer)) {
+            window.showGlobalNotification(
+                'Najprv musíte priradiť predchádzajúce segmenty tohto presunu (alebo ich označiť ako „peši").',
+                'error'
+            );
+            return;
+        }
 
         if (!assignBusSelectedKey) {
             window.showGlobalNotification('Vyberte autobus/riadok.', 'error');
@@ -7432,6 +7537,22 @@ const TransportApp = ({ userProfileData }) => {
                 className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100001] p-4',
                 onClick: () => setShowAssignBusModal(false)
             },
+            !arePreviousSegmentsResolved(transferActionModal.transfer) &&
+            React.createElement(
+                'div',
+                { className: 'mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm' },
+                React.createElement(
+                    'p',
+                    { className: 'text-amber-700 flex items-start gap-2' },
+                    React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
+                    React.createElement(
+                        'span',
+                        null,
+                        'Najprv musíte priradiť predchádzajúce segmenty tohto presunu (alebo ich označiť ako „peši"). ',
+                        'Tento presun začína neskôr, takže tím sa musí najprv dostať na miesto odchodu.'
+                    )
+                )
+            ),
             React.createElement(
                 'div',
                 {
