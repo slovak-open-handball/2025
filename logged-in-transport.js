@@ -268,6 +268,9 @@ const TransportApp = ({ userProfileData }) => {
     const [deleteTransferModal, setDeleteTransferModal] = useState(null); // { transfer }
     const [deleteTransferSaving, setDeleteTransferSaving] = useState(false);
 
+    // ==== MODÁLNE OKNO PRE POTVRDENIE REGENERÁCIE PRESUNOV ====
+    const [regenTransfersModal, setRegenTransfersModal] = useState(null); // { category, existingCount }
+
     // ============================================================
     // PREDNAČÍTANIE UBYTOVNÍ PRE SUPERSTRUCTURE TÍMY
     // ============================================================
@@ -2397,6 +2400,9 @@ const TransportApp = ({ userProfileData }) => {
                                     fromLocation = m[1].trim();
                                     toLocation = m[2].trim();
                                 }
+                                // Zisti, či už existuje záznam s rovnakým kľúčom (a zachovaj manuálne úpravy)
+                                const existingSaved = savedTransfers.find((s) => s.key === key);
+
                                 transfersPatch[key] = {
                                     category: cleanCategory(category),
                                     teamName: String(teamName).trim(),
@@ -2405,9 +2411,19 @@ const TransportApp = ({ userProfileData }) => {
                                     fromLocation,
                                     toLocation,
                                     dayKey: extractDayKeyFromWhen(ev.when) || null,
-                                    generatedAt: Timestamp.fromDate(new Date()),
-                                    generatedBy: (userProfileData && userProfileData.email) || null,
                                 };
+
+                                // Zachovaj manuálne pridané vlastnosti z existujúceho záznamu
+                                if (existingSaved) {
+                                    if (existingSaved.isWalking === true) {
+                                        transfersPatch[key].isWalking = true;
+                                        transfersPatch[key].walkingSetAt = existingSaved.walkingSetAt || Timestamp.fromDate(new Date());
+                                        transfersPatch[key].walkingSetBy = existingSaved.walkingSetBy || (userProfileData && userProfileData.email) || null;
+                                    }
+                                    if (Array.isArray(existingSaved.intermediateStops) && existingSaved.intermediateStops.length > 0) {
+                                        transfersPatch[key].intermediateStops = existingSaved.intermediateStops;
+                                    }
+                                }
                             });
                     
                             if (Object.keys(transfersPatch).length > 0) {
@@ -2415,8 +2431,6 @@ const TransportApp = ({ userProfileData }) => {
                                     doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC),
                                     {
                                         [TRANSPORT_TRANSFERS_FIELD]: transfersPatch,
-                                        updatedAt: Timestamp.fromDate(new Date()),
-                                        updatedBy: (userProfileData && userProfileData.email) || null,
                                     },
                                     { merge: true }
                                 ).catch((err) => {
@@ -2555,8 +2569,6 @@ const TransportApp = ({ userProfileData }) => {
                             fromLocation: v.fromLocation || '',
                             toLocation: v.toLocation || '',
                             dayKey: v.dayKey || null,
-                            generatedAt: v.generatedAt || null,
-                            generatedBy: v.generatedBy || null,
                             isWalking: v.isWalking === true,
                             walkingSetAt: v.walkingSetAt || null,
                             walkingSetBy: v.walkingSetBy || null,
@@ -8329,6 +8341,23 @@ const TransportApp = ({ userProfileData }) => {
                                     window.showGlobalNotification('Najprv vyberte kategóriu.', 'error');
                                     return;
                                 }
+
+                                // Skontroluj, či už pre túto kategóriu existujú nejaké presuny
+                                const existingForCat = savedTransfers.filter(
+                                    (t) => cleanCategory(t.category || '') === cleanCategory(cat)
+                                );
+
+                                if (existingForCat.length > 0) {
+                                    // Zobraz potvrdzovacie modálne okno
+                                    setRegenTransfersModal({
+                                        category: cat,
+                                        existingCount: existingForCat.length,
+                                    });
+                                    setShowCategoryModal(false);
+                                    return;
+                                }
+
+                                // Žiadne existujúce → generuj priamo
                                 timelineGenerationRequestedRef.current = true;
                                 rebuildAndLogTimeline(true, cat);
                                 setShowCategoryModal(false);
@@ -9111,6 +9140,89 @@ const TransportApp = ({ userProfileData }) => {
                         },
                         deleteTransferSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
                         'Odstrániť'
+                    )
+                )
+            )
+        ),
+        // ============================================================
+        // MODÁLNE OKNO – Potvrdenie regenerácie presunov pre kategóriu
+        // ============================================================
+        regenTransfersModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100001] p-4',
+                onClick: () => setRegenTransfersModal(null)
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-triangle-exclamation text-amber-500 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-800' },
+                        'Presuny už boli vygenerované'
+                    )
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-gray-700 mb-4' },
+                    `Pre kategóriu „${regenTransfersModal.category}" už existuje ${regenTransfersModal.existingCount} presunov.`,
+                    ' ',
+                    'Chcete časovú os vygenerovať znova?',
+                    ' ',
+                    'Existujúce presuny (s rovnakým tímom, časom a trasou) zostanú zachované a dogenerujú sa len tie, ktoré chýbajú.'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg' },
+                    React.createElement(
+                        'p',
+                        { className: 'text-xs text-amber-700 flex items-start gap-2' },
+                        React.createElement('i', { className: 'fa-solid fa-circle-info mt-0.5' }),
+                        React.createElement(
+                            'span',
+                            null,
+                            'Presuny, ktoré ste už manuálne upravili (označili ako „peši", pridali medzizastávky alebo ich priradili autobusu), zostanú nedotknuté.'
+                        )
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setRegenTransfersModal(null),
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => {
+                                const cat = regenTransfersModal.category;
+                                setRegenTransfersModal(null);
+                                timelineGenerationRequestedRef.current = true;
+                                rebuildAndLogTimeline(true, cat);
+                                window.showGlobalNotification(
+                                    `Časová os pre kategóriu ${cat} bola znova vygenerovaná (dogenerované len chýbajúce).`,
+                                    'success'
+                                );
+                            },
+                            className: 'px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 transition-colors'
+                        },
+                        'Vygenerovať znova'
                     )
                 )
             )
