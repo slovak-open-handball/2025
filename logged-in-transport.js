@@ -3465,7 +3465,12 @@ const TransportApp = ({ userProfileData }) => {
             // Čas od = čas do predchádzajúceho riadku
             let initialTimeFrom = '';
             if (prevRow.timeTo && /^\d{1,2}:\d{2}$/.test(prevRow.timeTo)) {
-                initialTimeFrom = prevRow.timeTo;
+                const [h, m] = prevRow.timeTo.split(':').map(Number);
+                let total = h * 60 + m + 2;
+                total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
+                const endH = Math.floor(total / 60);
+                const endM = total % 60;
+                initialTimeFrom = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
             }
     
             // Nový order – vložíme medzi prev a next; ostatné posunieme
