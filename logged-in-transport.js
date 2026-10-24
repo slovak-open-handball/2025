@@ -6149,6 +6149,25 @@ const TransportApp = ({ userProfileData }) => {
                     )
             );
         };
+
+        // ============================================================
+        // NOVÉ: Pomocná – zisti, či pre danú dvojicu (fromStop, toStop)
+        // existuje chýbajúce trvanie podľa `missingTravelTimeWarning`.
+        //
+        // Porovnávame podľa názvov zastávok (from/to), pretože
+        // `missingTravelTimeWarning` obsahuje názvy, nie ID.
+        // (V `useEffect` pre detekciu sa používajú názvy `placeFrom`/`placeTo`.)
+        // ============================================================
+        const isMissingTravelTime = (fromStop, toStop) => {
+            const fromName = normalizePlaceName(fromStop?.name || '');
+            const toName = normalizePlaceName(toStop?.name || '');
+            if (!fromName || !toName) return false;
+            return missingTravelTimeWarning.some((m) => {
+                const mFrom = normalizePlaceName(m.from || '');
+                const mTo = normalizePlaceName(m.to || '');
+                return mFrom === fromName && mTo === toName;
+            });
+        };
     
         return React.createElement(
             'div',
@@ -6274,11 +6293,17 @@ const TransportApp = ({ userProfileData }) => {
                                 const key = `${fromStop.id}|${toStop.id}`;
                                 const existing = travelTimes[key];
                                 const changed = (value || '') !== (existing ? String(existing.minutes) : '');
+
+                                // NOVÉ: ak pre túto dvojicu chýba trvanie (a je použitá v autobusoch),
+                                // podfarbi bunku (aj input) červeno.
+                                const missing = isMissingTravelTime(fromStop, toStop);
+
                                 return React.createElement(
                                     'td',
                                     {
                                         key: `td-${fromStop.id}-${toStop.id}`,
-                                        className: 'border border-gray-300 px-1 py-1 text-center'
+                                        className: 'border border-gray-300 px-1 py-1 text-center',
+                                        style: missing ? { backgroundColor: '#FECACA' } : undefined, // red-200
                                     },
                                     React.createElement('input', {
                                         type: 'number',
@@ -6289,8 +6314,13 @@ const TransportApp = ({ userProfileData }) => {
                                         onBlur: () => handleBlur(fromStop, toStop),
                                         onKeyDown: (e) => { if (e.key === 'Enter') e.target.blur(); },
                                         placeholder: '—',
+                                        title: missing ? 'Chýba trvanie jazdy – je potrebné pre výpočet trasy autobusu.' : '',
                                         className: `w-24 px-2 py-1 border rounded text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
-                                            changed ? 'border-amber-400 bg-amber-50' : 'border-gray-300 bg-white'
+                                            missing
+                                                ? 'border-red-500 bg-red-100'
+                                                : changed
+                                                    ? 'border-amber-400 bg-amber-50'
+                                                    : 'border-gray-300 bg-white'
                                         }`
                                     })
                                 );
