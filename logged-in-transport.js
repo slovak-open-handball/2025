@@ -3917,18 +3917,10 @@ const TransportApp = ({ userProfileData }) => {
         React.createElement(
             'tr',
             { className: 'bg-gray-100 text-xs font-semibold text-gray-700' },
-            React.createElement(
-                'th',
-                { className: 'border border-gray-300 px-2 py-1', style: { width: '200px', minWidth: '200px' } },
-                'Miesto od'
-            ),
-            React.createElement(
-                'th',
-                { className: 'border border-gray-300 px-2 py-1', style: { width: '200px', minWidth: '200px' } },
-                'Miesto do'
-            ),
-            React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Miesto od'),
-            React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Miesto do'),
+            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '70px' } }, 'Od'),
+            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '70px' } }, 'Do'),
+            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '200px' } }, 'Miesto od'),
+            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '200px' } }, 'Miesto do'),
             React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Nástup'),
             React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Výstup'),
             React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '60px' } }, 'Počet'),
