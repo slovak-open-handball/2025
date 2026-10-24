@@ -6428,7 +6428,7 @@ const TransportApp = ({ userProfileData }) => {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
     
             // ============================================================
-            // 1) Zisti pôvodný interval a rozhodni o novom trvaní
+            // 1) Zisti pôvodný interval a rozhodni o novom trvaní pešieho
             // ============================================================
             const originalRange = parseTransferWhenToRange(transfer.when);
             let newWhen = transfer.when;
@@ -6486,15 +6486,11 @@ const TransportApp = ({ userProfileData }) => {
             );
     
             // ============================================================
-            // 3) NOVÉ: Posuň nasledujúce segmenty tak, aby začínali
-            //    1 minútu po začiatku pešieho segmentu.
+            // 3) NOVÉ: Explicitne posuň nasledujúce segmenty tak, aby
+            //    prvý nasledujúci začínal 1 minútu po začiatku pešieho.
             //
-            //    Princíp:
-            //    - Zober všetky segmenty toho istého tímu v ten istý deň,
-            //      ktoré začínajú PO pešom segmente.
-            //    - Prvý nasledujúci segment musí začínať v pešíStartTs + 1 min.
-            //    - Ostatné nasledujúce segmenty sa posunú o rovnaký delta
-            //      (aby si zachovali svoje trvania).
+            //    Toto robíme priamo v DB (nie cez recomputeBlock, ktorý
+            //    pracuje so starým savedTransfers).
             // ============================================================
             if (pešíStartTs != null && window.db) {
                 const teamName = String(transfer.teamName || '').trim();
@@ -6528,6 +6524,7 @@ const TransportApp = ({ userProfileData }) => {
     
                     if (deltaMs !== 0) {
                         const updatePromises = [];
+                        const batchPatch = {};
     
                         followingSegments.forEach((seg) => {
                             const newStartTs = seg.range.startTs + deltaMs;
@@ -6560,18 +6557,19 @@ const TransportApp = ({ userProfileData }) => {
                                 newSegData.walkingSetBy = seg.walkingSetBy || (userProfileData && userProfileData.email) || null;
                             }
     
-                            const patch = {};
                             if (seg.key !== newSegKey) {
-                                patch[seg.key] = deleteField();
+                                batchPatch[seg.key] = deleteField();
                             }
-                            patch[newSegKey] = newSegData;
-    
-                            updatePromises.push(
-                                setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: patch }, { merge: true })
-                            );
+                            batchPatch[newSegKey] = newSegData;
                         });
     
-                        await Promise.all(updatePromises);
+                        if (Object.keys(batchPatch).length > 0) {
+                            await setDoc(
+                                docRef,
+                                { [TRANSPORT_TRANSFERS_FIELD]: batchPatch },
+                                { merge: true }
+                            );
+                        }
                     }
                 }
             }
@@ -6595,7 +6593,7 @@ const TransportApp = ({ userProfileData }) => {
             window.showGlobalNotification(
                 shouldRenameKey
                     ? 'Presun bol označený ako „peši" (trvanie natiahnuté na minimálne 1 min, nasledujúce segmenty posunuté).'
-                    : 'Presun bol označený ako „peši".',
+                    : 'Presun bol označený ako „peši" (nasledujúce segmenty posunuté).',
                 'success'
             );
             setTransferActionModal(null);
