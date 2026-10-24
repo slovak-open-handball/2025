@@ -6210,6 +6210,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                         )
                                                                     );
                                                                 }
+                                                            }
 
                                                             // Pridaj samotný riadok
                                                             rowElements.push(renderBusRow(r, bus.id, day.dayKey));
