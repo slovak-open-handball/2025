@@ -6428,18 +6428,17 @@ const TransportApp = ({ userProfileData }) => {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
     
             // ============================================================
-            // NOVÉ: Zabezpeč minimálne 1 minútu trvania pre peši presun.
-            //
-            // Ak je pôvodný interval kratší ako 1 minúta (alebo nulový),
-            // natiahneme ho na 1 minútu. Ak je dlhší, necháme pôvodný.
+            // 1) Zisti pôvodný interval a rozhodni o novom trvaní
             // ============================================================
             const originalRange = parseTransferWhenToRange(transfer.when);
             let newWhen = transfer.when;
             let newKey = transfer.key;
             let shouldRenameKey = false;
+            let pešíStartTs = originalRange ? originalRange.startTs : null;
+    
+            const MIN_WALKING_MS = 60 * 1000; // 1 minúta
     
             if (originalRange && originalRange.startTs != null) {
-                const MIN_WALKING_MS = 60 * 1000; // 1 minúta
                 const originalDurationMs = (originalRange.endTs != null)
                     ? (originalRange.endTs - originalRange.startTs)
                     : 0;
@@ -6465,13 +6464,10 @@ const TransportApp = ({ userProfileData }) => {
                 walkingSetAt: Timestamp.fromDate(new Date()),
                 walkingSetBy: (userProfileData && userProfileData.email) || null,
             };
-            // Odstráň starý key (nie je súčasťou DB záznamu)
             delete walkingTransfer.key;
     
             // ============================================================
-            // 1) Ak sa zmenil kľúč (kvôli minimálnemu času), musíme:
-            //    - zmazať starý záznam
-            //    - vytvoriť nový záznam pod novým kľúčom
+            // 2) Ulož peší segment (a prípadne zmaž starý kľúč)
             // ============================================================
             const transfersPatch = {};
             if (shouldRenameKey) {
@@ -6490,20 +6486,115 @@ const TransportApp = ({ userProfileData }) => {
             );
     
             // ============================================================
-            // 2) Prepočítaj celý blok (tento segment je vyriešený, zvyšné sa dopočítajú)
+            // 3) NOVÉ: Posuň nasledujúce segmenty tak, aby začínali
+            //    1 minútu po začiatku pešieho segmentu.
             //
-            //    POZOR: recomputeBlock pracuje s `savedTransfers` (stav pred
-            //    uložením). Ak sme zmenili kľúč, musíme odovzdať transfer
-            //    s NOVÝM kľúčom a NOVÝM when, aby prepočet sedel.
+            //    Princíp:
+            //    - Zober všetky segmenty toho istého tímu v ten istý deň,
+            //      ktoré začínajú PO pešom segmente.
+            //    - Prvý nasledujúci segment musí začínať v pešíStartTs + 1 min.
+            //    - Ostatné nasledujúce segmenty sa posunú o rovnaký delta
+            //      (aby si zachovali svoje trvania).
             // ============================================================
-            await recomputeBlock(
-                { ...walkingTransfer, key: newKey },
-                new Set([newKey])
-            );
+            if (pešíStartTs != null && window.db) {
+                const teamName = String(transfer.teamName || '').trim();
+                const category = cleanCategory(transfer.category || '');
+                const dayKey = transfer.dayKey || '';
+    
+                // Zober VŠETKY segmenty toho istého tímu v ten istý deň,
+                // ktoré nie sú pešie a začínajú po pešom.
+                const followingSegments = (savedTransfers || [])
+                    .filter((t) => {
+                        if (t.key === transfer.key || t.key === newKey) return false;
+                        if (String(t.teamName || '').trim() !== teamName) return false;
+                        if (cleanCategory(t.category || '') !== category) return false;
+                        if ((t.dayKey || '') !== dayKey) return false;
+                        if (t.isWalking === true) return false; // už pešie preskočíme
+                        const r = parseTransferWhenToRange(t.when);
+                        if (!r || r.startTs == null) return false;
+                        return r.startTs > pešíStartTs;
+                    })
+                    .map((t) => ({
+                        ...t,
+                        range: parseTransferWhenToRange(t.when),
+                    }))
+                    .sort((a, b) => a.range.startTs - b.range.startTs);
+    
+                if (followingSegments.length > 0) {
+                    // Prvý nasledujúci segment musí začínať 1 minútu po začiatku pešieho.
+                    const targetFirstStartTs = pešíStartTs + MIN_WALKING_MS;
+                    const firstSeg = followingSegments[0];
+                    const deltaMs = targetFirstStartTs - firstSeg.range.startTs;
+    
+                    if (deltaMs !== 0) {
+                        const updatePromises = [];
+    
+                        followingSegments.forEach((seg) => {
+                            const newStartTs = seg.range.startTs + deltaMs;
+                            const segDurationMs = seg.range.endTs - seg.range.startTs;
+                            const newEndTs = newStartTs + segDurationMs;
+    
+                            const newSegWhen = `${formatTsLocal(newStartTs)} – ${formatTsLocal(newEndTs)}`;
+                            const newSegKey = buildTransferKey(
+                                seg.category,
+                                seg.teamName,
+                                newSegWhen,
+                                seg.text
+                            );
+    
+                            const newSegData = {
+                                category: seg.category,
+                                teamName: seg.teamName,
+                                when: newSegWhen,
+                                text: seg.text,
+                                fromLocation: seg.fromLocation,
+                                toLocation: seg.toLocation,
+                                dayKey: seg.dayKey,
+                            };
+                            if (seg.intermediateStops && seg.intermediateStops.length > 0) {
+                                newSegData.intermediateStops = seg.intermediateStops;
+                            }
+                            if (seg.isWalking === true) {
+                                newSegData.isWalking = true;
+                                newSegData.walkingSetAt = seg.walkingSetAt || Timestamp.fromDate(new Date());
+                                newSegData.walkingSetBy = seg.walkingSetBy || (userProfileData && userProfileData.email) || null;
+                            }
+    
+                            const patch = {};
+                            if (seg.key !== newSegKey) {
+                                patch[seg.key] = deleteField();
+                            }
+                            patch[newSegKey] = newSegData;
+    
+                            updatePromises.push(
+                                setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: patch }, { merge: true })
+                            );
+                        });
+    
+                        await Promise.all(updatePromises);
+                    }
+                }
+            }
+    
+            // ============================================================
+            // 4) Prepočítaj blok (pre istotu – recomputeBlock pracuje
+            //    s pôvodným savedTransfers, takže po našom posune
+            //    môže mať mierne odlišné výsledky, ale to je OK –
+            //    dôležité je, že prvý nasledujúci segment začína
+            //    1 min po pešom)
+            // ============================================================
+            try {
+                await recomputeBlock(
+                    { ...walkingTransfer, key: newKey },
+                    new Set([newKey])
+                );
+            } catch (precomputeErr) {
+                console.error('[TRANSPORT] Chyba pri prepočte bloku po peši:', precomputeErr);
+            }
     
             window.showGlobalNotification(
                 shouldRenameKey
-                    ? 'Presun bol označený ako „peši" (trvanie natiahnuté na minimálne 1 min).'
+                    ? 'Presun bol označený ako „peši" (trvanie natiahnuté na minimálne 1 min, nasledujúce segmenty posunuté).'
                     : 'Presun bol označený ako „peši".',
                 'success'
             );
