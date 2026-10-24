@@ -4853,7 +4853,7 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
     
-            if (boardIdx !== -1 && alightIdx !== -1 && alightIdx >= boardIdx) {
+            if (boardIdx !== -1) {
                 found = true;
             }
         });
@@ -7743,37 +7743,21 @@ const TransportApp = ({ userProfileData }) => {
                 )
             )
         ),
-        // ============================================================
-        // MODÁLNE OKNO – Priradiť presun k autobusu (podľa trasy a času)
-        // ============================================================
         showAssignBusModal && transferActionModal?.transfer && React.createElement(
             'div',
             {
                 className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100001] p-4',
                 onClick: () => setShowAssignBusModal(false)
             },
-            !arePreviousSegmentsResolved(transferActionModal.transfer) &&
-            React.createElement(
-                'div',
-                { className: 'mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm' },
-                React.createElement(
-                    'p',
-                    { className: 'text-amber-700 flex items-start gap-2' },
-                    React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
-                    React.createElement(
-                        'span',
-                        null,
-                        'Najprv musíte priradiť predchádzajúce segmenty tohto presunu (alebo ich označiť ako „peši"). ',
-                        'Tento presun začína neskôr, takže tím sa musí najprv dostať na miesto odchodu.'
-                    )
-                )
-            ),
             React.createElement(
                 'div',
                 {
                     className: 'bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto',
                     onClick: (e) => e.stopPropagation()
                 },
+                // ============================================================
+                // HLAVIČKA
+                // ============================================================
                 React.createElement(
                     'div',
                     { className: 'flex items-start gap-3 mb-4' },
@@ -7795,7 +7779,30 @@ const TransportApp = ({ userProfileData }) => {
                         )
                     )
                 ),
-                // Info o presune
+
+                // ============================================================
+                // VAROVANIE – presunuté DOVNÚTRA modálneho okna (pod hlavičku)
+                // ============================================================
+                !arePreviousSegmentsResolved(transferActionModal.transfer) &&
+                React.createElement(
+                    'div',
+                    { className: 'mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm' },
+                    React.createElement(
+                        'p',
+                        { className: 'text-amber-700 flex items-start gap-2' },
+                        React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
+                        React.createElement(
+                            'span',
+                            null,
+                            'Najprv musíte priradiť predchádzajúce segmenty tohto presunu (alebo ich označiť ako „peši"). ',
+                            'Tento presun začína neskôr, takže tím sa musí najprv dostať na miesto odchodu.'
+                        )
+                    )
+                ),
+
+                // ============================================================
+                // INFO O PRESUNE
+                // ============================================================
                 React.createElement(
                     'div',
                     { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700' },
@@ -7804,8 +7811,10 @@ const TransportApp = ({ userProfileData }) => {
                     React.createElement('div', { className: 'text-xs text-gray-500 mt-1' },
                         `${transferActionModal.transfer.teamName || ''}${transferActionModal.transfer.when ? ' • ' + transferActionModal.transfer.when : ''}`)
                 ),
-                
+
+                // ============================================================
                 // DYNAMICKÝ VÝPOČET ZOZNAMU AUTOBUSOV
+                // ============================================================
                 (() => {
                     const currentMatches = findMatchingBusRows(transferActionModal.transfer);
 
@@ -7839,18 +7848,17 @@ const TransportApp = ({ userProfileData }) => {
                             'ul',
                             { className: 'space-y-2' },
                             currentMatches.map((m, idx) => {
-                                // Ochrana proti undefined
                                 if (!m || !m.bus || !m.trip) {
                                     console.warn('[TRANSPORT] Neplatný výsledok v currentMatches:', m);
                                     return null;
                                 }
-                            
+
                                 const key = `${m.bus.id}|${m.boardingRow?.id || ''}|${m.alightingRow?.id || ''}|${m.side}`;
                                 const isSelected = assignBusSelectedKey === key;
-                            
+
                                 const hasBoarding = !!m.boardingRow;
                                 const hasAlighting = !!m.alightingRow;
-                            
+
                                 return React.createElement(
                                     'li',
                                     { key },
@@ -7906,12 +7914,14 @@ const TransportApp = ({ userProfileData }) => {
                                         )
                                     )
                                 );
-                            }).filter(Boolean) // ← odstráni null hodnoty
+                            }).filter(Boolean)
                         )
                     );
                 })(),
-                
-                // Tlačidlá
+
+                // ============================================================
+                // TLAČIDLÁ
+                // ============================================================
                 React.createElement(
                     'div',
                     { className: 'flex justify-end gap-3' },
@@ -7930,7 +7940,7 @@ const TransportApp = ({ userProfileData }) => {
                         {
                             type: 'button',
                             onClick: assignTransferToBus,
-                            disabled: assignBusSaving || !assignBusSelectedKey || assignBusMatches.length === 0,
+                            disabled: assignBusSaving || !assignBusSelectedKey || assignBusMatches.length === 0 || !arePreviousSegmentsResolved(transferActionModal.transfer),
                             className: 'px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 transition-colors disabled:opacity-60 flex items-center gap-2'
                         },
                         assignBusSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
