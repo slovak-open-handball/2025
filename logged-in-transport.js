@@ -6427,31 +6427,86 @@ const TransportApp = ({ userProfileData }) => {
         try {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
     
-            // 1) Označ tento segment ako peši
+            // ============================================================
+            // NOVÉ: Zabezpeč minimálne 1 minútu trvania pre peši presun.
+            //
+            // Ak je pôvodný interval kratší ako 1 minúta (alebo nulový),
+            // natiahneme ho na 1 minútu. Ak je dlhší, necháme pôvodný.
+            // ============================================================
+            const originalRange = parseTransferWhenToRange(transfer.when);
+            let newWhen = transfer.when;
+            let newKey = transfer.key;
+            let shouldRenameKey = false;
+    
+            if (originalRange && originalRange.startTs != null) {
+                const MIN_WALKING_MS = 60 * 1000; // 1 minúta
+                const originalDurationMs = (originalRange.endTs != null)
+                    ? (originalRange.endTs - originalRange.startTs)
+                    : 0;
+    
+                if (originalDurationMs < MIN_WALKING_MS) {
+                    const newEndTs = originalRange.startTs + MIN_WALKING_MS;
+                    newWhen = `${formatTsLocal(originalRange.startTs)} – ${formatTsLocal(newEndTs)}`;
+                    newKey = buildTransferKey(
+                        transfer.category,
+                        transfer.teamName,
+                        newWhen,
+                        transfer.text
+                    );
+                    shouldRenameKey = (newKey !== transfer.key);
+                }
+            }
+    
+            // Zostav záznam pre uloženie
+            const walkingTransfer = {
+                ...transfer,
+                when: newWhen,
+                isWalking: true,
+                walkingSetAt: Timestamp.fromDate(new Date()),
+                walkingSetBy: (userProfileData && userProfileData.email) || null,
+            };
+            // Odstráň starý key (nie je súčasťou DB záznamu)
+            delete walkingTransfer.key;
+    
+            // ============================================================
+            // 1) Ak sa zmenil kľúč (kvôli minimálnemu času), musíme:
+            //    - zmazať starý záznam
+            //    - vytvoriť nový záznam pod novým kľúčom
+            // ============================================================
+            const transfersPatch = {};
+            if (shouldRenameKey) {
+                transfersPatch[transfer.key] = deleteField();
+            }
+            transfersPatch[newKey] = walkingTransfer;
+    
             await setDoc(
                 docRef,
                 {
-                    [TRANSPORT_TRANSFERS_FIELD]: {
-                        [transfer.key]: {
-                            ...transfer,
-                            isWalking: true,
-                            walkingSetAt: Timestamp.fromDate(new Date()),
-                            walkingSetBy: (userProfileData && userProfileData.email) || null,
-                        },
-                    },
+                    [TRANSPORT_TRANSFERS_FIELD]: transfersPatch,
                     updatedAt: Timestamp.fromDate(new Date()),
                     updatedBy: (userProfileData && userProfileData.email) || null,
                 },
                 { merge: true }
             );
     
+            // ============================================================
             // 2) Prepočítaj celý blok (tento segment je vyriešený, zvyšné sa dopočítajú)
+            //
+            //    POZOR: recomputeBlock pracuje s `savedTransfers` (stav pred
+            //    uložením). Ak sme zmenili kľúč, musíme odovzdať transfer
+            //    s NOVÝM kľúčom a NOVÝM when, aby prepočet sedel.
+            // ============================================================
             await recomputeBlock(
-                { ...transfer, isWalking: true },
-                new Set([transfer.key])
+                { ...walkingTransfer, key: newKey },
+                new Set([newKey])
             );
     
-            window.showGlobalNotification('Presun bol označený ako „peši".', 'success');
+            window.showGlobalNotification(
+                shouldRenameKey
+                    ? 'Presun bol označený ako „peši" (trvanie natiahnuté na minimálne 1 min).'
+                    : 'Presun bol označený ako „peši".',
+                'success'
+            );
             setTransferActionModal(null);
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri označení presunu ako peši:', err);
@@ -7928,18 +7983,23 @@ const TransportApp = ({ userProfileData }) => {
     
         // Filtrovanie – skry len priradené segmenty
         const baseFiltered = expandedTransfers.filter((t) => {
-            if (t.isWalking === true) return false;
-            if (isSegmentAssigned(t)) return false;
-
             // ============================================================
-            // NOVÉ: Ak je to časť rozdeleného presunu (má _parentKey),
+            // NOVÉ: Pešie presuny sa už NEskrývajú – zobrazujú sa v zozname
+            // „Vygenerované presuny" s príznakom PEŠI (aby používateľ videl,
+            // že existujú a mohol ich upraviť / odstrániť príznak).
+            // ============================================================
+            // if (t.isWalking === true) return false;  ← ODSTRÁNENÉ
+            
+            if (isSegmentAssigned(t)) return false;
+        
+            // ============================================================
+            // Ak je to časť rozdeleného presunu (má _parentKey),
             // ale NEMÁ zvyšný čas na presun, tak ju nezobrazuj.
-            // (Zobrazujú sa len časti, ktoré majú v sebe info o zvyšnom čase)
             // ============================================================
             if (t._parentKey && (t._remainingMinutes == null || t._remainingMinutes <= 0)) {
                 return false;
             }
-
+        
             return true;
         });
     
