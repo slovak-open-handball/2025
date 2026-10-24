@@ -4320,7 +4320,6 @@ const TransportApp = ({ userProfileData }) => {
                                 'pointer-events-auto w-6 h-6 rounded-full bg-green-600 text-white shadow-md ' +
                                 'hover:bg-green-700 active:scale-95 transition-all duration-150 ' +
                                 'flex items-center justify-center opacity-0 group-hover:opacity-100',
-                            title: 'Vložiť nový riadok pod tento riadok'
                         },
                         React.createElement('i', { className: 'fa-solid fa-plus text-[10px]' })
                     )
@@ -6412,7 +6411,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                                         className:
                                                                                             'w-7 h-7 rounded-full bg-green-600 text-white shadow hover:bg-green-700 active:scale-95 transition-all duration-150 flex items-center justify-center mx-auto ' +
                                                                                             'opacity-0 group-hover:opacity-100 focus:opacity-100',
-                                                                                        title: 'Vložiť nový riadok medzi tieto dva riadky'
                                                                                     },
                                                                                     React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
                                                                                 )
