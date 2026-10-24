@@ -4853,7 +4853,7 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
     
-            if (boardIdx !== -1) {
+            if (boardIdx !== -1 && alightIdx !== -1 && alightIdx >= boardIdx) {
                 found = true;
             }
         });
