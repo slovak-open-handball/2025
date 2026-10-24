@@ -4874,23 +4874,150 @@ const TransportApp = ({ userProfileData }) => {
         const trRange = parseTransferWhenToRange(transfer.when);
         if (!trRange) return true;
     
-        const sameTeamSegments = savedTransfers
+        // ============================================================
+        // NOVÉ: Rozlož VŠETKY presuny toho istého tímu v ten istý deň
+        // na segmenty (vrátane tých s intermediateStops), aby sme
+        // videli aj predchádzajúce segmenty, ktoré sú súčasťou
+        // rovnakého pôvodného presunu.
+        // ============================================================
+        const allSegments = [];
+    
+        savedTransfers
             .filter((t) =>
                 String(t.teamName || '').trim() === teamName &&
                 cleanCategory(t.category || '') === category &&
-                t.dayKey === dayKey &&
-                t.key !== transfer.key
+                t.dayKey === dayKey
             )
-            .map((t) => ({ ...t, range: parseTransferWhenToRange(t.when) }))
-            .filter((t) => t.range != null);
+            .forEach((t) => {
+                const stops = Array.isArray(t.intermediateStops) ? t.intermediateStops : [];
     
-        sameTeamSegments.sort((a, b) => a.range.startTs - b.range.startTs);
+                if (stops.length === 0) {
+                    const range = parseTransferWhenToRange(t.when);
+                    if (range) {
+                        allSegments.push({
+                            ...t,
+                            range,
+                            fromLocation: t.fromLocation,
+                            toLocation: t.toLocation,
+                            isWalking: t.isWalking === true,
+                            _parentKey: t.key,
+                        });
+                    }
+                    return;
+                }
     
-        for (const seg of sameTeamSegments) {
-            if (seg.range.startTs >= trRange.startTs) continue; // neskorší segment
+                // Rozlož na segmenty
+                const routeRaw = [t.fromLocation, ...stops, t.toLocation].filter(Boolean);
+                const route = [];
+                routeRaw.forEach((loc) => {
+                    const normalized = normalizePlaceName(loc);
+                    if (route.length === 0 || normalizePlaceName(route[route.length - 1]) !== normalized) {
+                        route.push(loc);
+                    }
+                });
     
-            if (seg.isWalking === true) continue; // peši → vyriešené
+                if (route.length < 2) return;
     
+                const timeRange = parseTransferWhenToRange(t.when);
+                if (!timeRange) return;
+    
+                // Pre každý segment dopočítaj čas z busRows, ak je priradený
+                const teamKey = `${teamName}|${category}`;
+                const allBusRowsForDay = [];
+                Object.entries(busRows || {}).forEach(([busKey, rows]) => {
+                    const bDayKey = busKey.split('|')[1];
+                    if (bDayKey !== dayKey) return;
+                    (rows || []).forEach((row) => {
+                        allBusRowsForDay.push(row);
+                    });
+                });
+    
+                const matchesTeam = (rowTeams) => {
+                    if (!Array.isArray(rowTeams)) return false;
+                    return rowTeams.some((tk) => {
+                        const s = String(tk).trim();
+                        if (s === teamKey) return true;
+                        const [tn, cat] = s.split('|');
+                        return String(tn).trim() === teamName && cleanCategory(cat) === category;
+                    });
+                };
+    
+                for (let i = 0; i < route.length - 1; i++) {
+                    const segFrom = normalizePlaceName(route[i]);
+                    const segTo = normalizePlaceName(route[i + 1]);
+    
+                    let boardingTs = null;
+                    let alightingTs = null;
+    
+                    allBusRowsForDay.forEach((row) => {
+                        const rowFrom = normalizePlaceName(row.placeFrom);
+                        const rowTo = normalizePlaceName(row.placeTo);
+                        const hasTeamIn = matchesTeam(row.teamsIn);
+                        const hasTeamOut = matchesTeam(row.teamsOut);
+    
+                        if (hasTeamIn && rowFrom === segFrom && row.timeFrom && boardingTs == null) {
+                            const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+                            if (dm) {
+                                const [h, mi] = row.timeFrom.split(':').map(Number);
+                                boardingTs = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
+                            }
+                        }
+                        if (hasTeamOut && rowTo === segTo && row.timeTo && alightingTs == null) {
+                            const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+                            if (dm) {
+                                const [h, mi] = row.timeTo.split(':').map(Number);
+                                alightingTs = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
+                            }
+                        }
+                    });
+    
+                    let segStartTs, segEndTs;
+                    if (boardingTs != null && alightingTs != null) {
+                        segStartTs = boardingTs;
+                        segEndTs = alightingTs;
+                    } else if (boardingTs != null) {
+                        segStartTs = boardingTs;
+                        segEndTs = timeRange.endTs;
+                    } else if (alightingTs != null) {
+                        segStartTs = timeRange.startTs;
+                        segEndTs = alightingTs;
+                    } else {
+                        // Nepriradený segment – použi pôvodný interval
+                        // (začiatok = koniec predchádzajúceho, ak existuje)
+                        segStartTs = (i > 0 && allSegments.length > 0)
+                            ? allSegments[allSegments.length - 1].range.endTs
+                            : timeRange.startTs;
+                        segEndTs = timeRange.endTs;
+                    }
+    
+                    allSegments.push({
+                        ...t,
+                        key: buildTransferKey(t.category, t.teamName, `${formatTsLocal(segStartTs)} – ${formatTsLocal(segEndTs)}`, `Presun z ${route[i]} do ${route[i + 1]}`),
+                        range: { startTs: segStartTs, endTs: segEndTs },
+                        fromLocation: route[i],
+                        toLocation: route[i + 1],
+                        isWalking: t.isWalking === true,
+                        _parentKey: t.key,
+                        _isAssigned: boardingTs != null || alightingTs != null,
+                    });
+                }
+            });
+    
+        allSegments.sort((a, b) => a.range.startTs - b.range.startTs);
+    
+        for (const seg of allSegments) {
+            // Preskoč samotný aktuálny transfer
+            if (seg.key === transfer.key) continue;
+            // Preskoč neskoršie segmenty
+            if (seg.range.startTs >= trRange.startTs) continue;
+    
+            // Peši → vyriešené
+            if (seg.isWalking === true) continue;
+    
+            // Ak je segment priradený (má _isAssigned=true), je vyriešený
+            if (seg._isAssigned === true) continue;
+    
+            // Inak over cez isSegmentCoveredByBus
             if (!isSegmentCoveredByBus(seg)) {
                 return false;
             }
@@ -4918,7 +5045,12 @@ const TransportApp = ({ userProfileData }) => {
     const findMatchingBusRows = (transfer) => {        
         if (!transfer) return [];
 
+        // ============================================================
+        // NOVÉ: Ak predchádzajúce segmenty nie sú vyriešené, vráť
+        // prázdny zoznam – ale s informáciou, prečo (pre debug).
+        // ============================================================
         if (!arePreviousSegmentsResolved(transfer)) {
+            console.warn('[TRANSPORT] findMatchingBusRows: predchádzajúce segmenty nie sú vyriešené pre', transfer);
             return [];
         }
     
