@@ -4217,6 +4217,7 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     // ULOŽENIE UPRAVENÉHO PRESUNU (s medzizastávkami)
     // + ZACHOVANIE CELKOVÉHO ČASOVÉHO INTERVALU
+    // + DOPOČÍTANIE ČASOV SEGMENTOV PODĽA REÁLNYCH TRVANÍ JÁZDY
     // ============================================================
     const saveEditedTransfer = async () => {
         if (!window.db || !editingTransfer) return;
@@ -4274,36 +4275,107 @@ const TransportApp = ({ userProfileData }) => {
             return `${day}. ${month}. ${year} ${hours}:${minutes}`;
         };
     
-        // ============================================================
-        // NOVÉ: Vypočítaj časové intervaly pre jednotlivé segmenty
-        // tak, aby CELKOVÝ ČAS zostal ZACHOVANÝ.
-        //
-        // Princíp:
-        //  - Ak máme platný interval (startTs < endTs), rozdelíme ho
-        //    na segmenty PODĽA DĹŽKY TRASY (počtu segmentov), ale
-        //    NIE rovnomerne – použijeme rovnaký pomer pre každý segment.
-        //  - Ak interval nemáme, všetky segmenty dostanú pôvodný `when`.
-        //
-        // DÔLEŽITÉ: Toto je len "predvolené" rozdelenie. Ak neskôr
-        // používateľ priradí časť trasy autobusu alebo ju označí ako
-        // peši, zvyšný čas sa dopočíta z celkového intervalu.
-        // ============================================================
         const segmentsCount = route.length - 1;
         let segmentTimes = [];
     
-        if (timeRange && timeRange.startTs != null && timeRange.endTs != null && timeRange.endTs > timeRange.startTs) {
-            // Máme platný interval → rozdeľ rovnomerne (predvolené)
-            const totalMs = timeRange.endTs - timeRange.startTs;
-            const segmentMs = totalMs / segmentsCount;
+        // ============================================================
+        // NOVÉ: Vypočítaj trvania jednotlivých segmentov podľa reálnych
+        // trvaní jázd (travelTimes). Ak pre niektorý segment trvanie
+        // neexistuje, použije sa priemer zo známych segmentov, alebo
+        // sa čas rozdelí rovnomerne (fallback).
+        // ============================================================
+        const segmentDurations = []; // v minútach (alebo null)
+        for (let i = 0; i < segmentsCount; i++) {
+            const from = route[i];
+            const to = route[i + 1];
+            const mins = getTravelMinutes(from, to);
+            segmentDurations.push(mins != null ? Number(mins) : null);
+        }
     
-            for (let i = 0; i < segmentsCount; i++) {
-                const segStartTs = timeRange.startTs + Math.round(segmentMs * i);
-                const segEndTs = timeRange.startTs + Math.round(segmentMs * (i + 1));
-                segmentTimes.push({
-                    startTs: segStartTs,
-                    endTs: segEndTs,
-                    whenStr: `${formatTs(segStartTs)} – ${formatTs(segEndTs)}`,
-                });
+        // Zisti, koľko segmentov má známe trvanie
+        const knownDurations = segmentDurations.filter((d) => d != null);
+        const knownCount = knownDurations.length;
+    
+        // Ak máme aspoň jedno známe trvanie, dopočítaj chýbajúce priemerom
+        let fallbackDuration = null;
+        if (knownCount > 0) {
+            const sumKnown = knownDurations.reduce((a, b) => a + b, 0);
+            fallbackDuration = Math.round(sumKnown / knownCount);
+        }
+    
+        // Doplň chýbajúce trvania
+        const finalDurations = segmentDurations.map((d) =>
+            d != null ? d : (fallbackDuration != null ? fallbackDuration : null)
+        );
+    
+        if (timeRange && timeRange.startTs != null && timeRange.endTs != null && timeRange.endTs > timeRange.startTs) {
+            // ============================================================
+            // Máme platný interval → rozdeľ čas podľa trvaní segmentov.
+            //
+            // Princíp:
+            //  - Ak sú známe všetky trvania, použijeme ich priamo.
+            //  - Ak nie sú, dopočítame chýbajúce priemerom.
+            //  - Ak nemáme žiadne trvania, rozdelíme rovnomerne.
+            //  - Celkový čas MUSÍ zostať zachovaný (startTs – endTs).
+            // ============================================================
+            const totalMs = timeRange.endTs - timeRange.startTs;
+            const totalMinutes = totalMs / 60000;
+    
+            // Ak máme aspoň jedno známe trvanie, použijeme pomery
+            const hasAnyDuration = finalDurations.some((d) => d != null);
+    
+            if (hasAnyDuration) {
+                // Súčet trvaní (minúty)
+                const durationsSum = finalDurations.reduce((a, b) => a + (b || 0), 0);
+    
+                if (durationsSum > 0) {
+                    // Rozdeľ čas podľa pomerov trvaní
+                    let cursorTs = timeRange.startTs;
+                    for (let i = 0; i < segmentsCount; i++) {
+                        const dur = finalDurations[i] || 0;
+                        const segMs = Math.round((dur / durationsSum) * totalMs);
+                        const segStartTs = cursorTs;
+                        const segEndTs = (i === segmentsCount - 1)
+                            ? timeRange.endTs
+                            : cursorTs + segMs;
+    
+                        segmentTimes.push({
+                            startTs: segStartTs,
+                            endTs: segEndTs,
+                            whenStr: `${formatTs(segStartTs)} – ${formatTs(segEndTs)}`,
+                        });
+    
+                        cursorTs = segEndTs;
+                    }
+                } else {
+                    // Fallback – rovnomerné rozdelenie
+                    const segmentMs = totalMs / segmentsCount;
+                    for (let i = 0; i < segmentsCount; i++) {
+                        const segStartTs = timeRange.startTs + Math.round(segmentMs * i);
+                        const segEndTs = (i === segmentsCount - 1)
+                            ? timeRange.endTs
+                            : timeRange.startTs + Math.round(segmentMs * (i + 1));
+                        segmentTimes.push({
+                            startTs: segStartTs,
+                            endTs: segEndTs,
+                            whenStr: `${formatTs(segStartTs)} – ${formatTs(segEndTs)}`,
+                        });
+                    }
+                }
+            } else {
+                // Nemáme žiadne trvania → rovnomerné rozdelenie
+                const segmentMs = totalMs / segmentsCount;
+                for (let i = 0; i < segmentsCount; i++) {
+                    const segStartTs = timeRange.startTs + Math.round(segmentMs * i);
+                    const segEndTs = (i === segmentsCount - 1)
+                        ? timeRange.endTs
+                        : timeRange.startTs + Math.round(segmentMs * (i + 1));
+                    segmentTimes.push({
+                        startTs: segStartTs,
+                        endTs: segEndTs,
+                        whenStr: `${formatTs(segStartTs)} – ${formatTs(segEndTs)}`,
+                    });
+                }
             }
         } else {
             // Nemáme platný interval → všetky segmenty dostanú pôvodný `when`
