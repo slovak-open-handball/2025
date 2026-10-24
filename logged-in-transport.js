@@ -5080,7 +5080,8 @@ const TransportApp = ({ userProfileData }) => {
 
             // Fallback – ak sa nenašiel ani nástup ani výstup
             if (!boardingRow && !alightingRow) {
-                let currentRow = rows.find(r => r.id === rowId);
+                const fallbackRowId = boardingRowId || alightingRowId;
+                let currentRow = rows.find(r => r.id === fallbackRowId);
                 if (currentRow) {
                     if (side === 'in') {
                         const newTeamsIn = Array.from(new Set([...(currentRow.teamsIn || []), teamKey]));
