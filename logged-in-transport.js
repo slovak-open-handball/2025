@@ -67,6 +67,19 @@ const formatDateTime = (ts) => {
     return `${day}. ${month}. ${year} ${hours}:${minutes}`;
 };
 
+// Pomocná: timestamp → "DD. MM. YYYY HH:MM"
+const formatTsLocal = (ts) => {
+    if (ts == null || !isFinite(ts)) return null;
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return null;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${day}. ${month}. ${year} ${hours}:${minutes}`;
+};
+
 const cleanCategory = (cat) => String(cat || '')
     .replace(/\u00A0/g, ' ')
     .replace(/\s+/g, ' ')
@@ -4215,28 +4228,24 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
-    // ULOŽENIE UPRAVENÉHO PRESUNU (s medzizastávkami)
-    // + ZACHOVANIE CELKOVÉHO ČASOVÉHO INTERVALU
-    // + DOPOČÍTANIE ČASOV SEGMENTOV PODĽA REÁLNYCH TRVANÍ JÁZDY
+    // POMOCNÁ: Prepočíta časy zostávajúcich segmentov presunu
+    // tak, aby celkový interval zostal zachovaný a časy sa
+    // dopočítali podľa reálnych trvaní jázd (travelTimes).
+    //
+    // Vstupy:
+    //  - originalWhen: pôvodný "when" celého presunu (start – end)
+    //  - route: pole miest [A, B, C, ...]
+    //  - resolvedSegments: Set indexov segmentov, ktoré sú už vyriešené
+    //    (napr. {0, 2} znamená A→B a C→D sú vyriešené)
+    //  - resolvedDurationMinutes: súčet trvaní vyriešených segmentov
+    //    (v minútach) – ak nie je známy, použije sa getTravelMinutes
+    //
+    // Výstup:
+    //  - pole { startTs, endTs, whenStr } pre KAŽDÝ segment
+    //    (vrátane vyriešených – tie si zachovajú svoj pôvodný čas,
+    //     ak bol známy; inak dostanú null)
     // ============================================================
-    const saveEditedTransfer = async () => {
-        if (!window.db || !editingTransfer) return;
-    
-        const original = editingTransfer;
-        const stops = (editingTransferStops || []).map((s) => String(s || '').trim()).filter(Boolean);
-    
-        // Zlož trasu: from → stop1 → stop2 → ... → to
-        const route = [original.fromLocation, ...stops, original.toLocation].filter(Boolean);
-    
-        if (route.length < 2) {
-            window.showGlobalNotification('Trasa musí mať aspoň dve zastávky.', 'error');
-            return;
-        }
-    
-        // ============================================================
-        // Zisti celkový časový interval pôvodného presunu z `when`
-        // Formát: "DD. MM. YYYY HH:MM – DD. MM. YYYY HH:MM"
-        // ============================================================
+    const recomputeRemainingSegments = (originalWhen, route, resolvedSegments = new Set()) => {
         const parseWhenRangeToTs = (when) => {
             if (!when) return null;
             const s = String(when);
@@ -4253,16 +4262,12 @@ const TransportApp = ({ userProfileData }) => {
                 if (isFinite(ts)) found.push(ts);
             }
             if (found.length === 0) return null;
-            const startTs = found[0];
-            const endTs = found.length > 1 ? found[1] : found[0];
-            return { startTs, endTs };
+            return {
+                startTs: found[0],
+                endTs: found.length > 1 ? found[1] : found[0],
+            };
         };
     
-        const timeRange = parseWhenRangeToTs(original.when);
-    
-        // ============================================================
-        // Pomocná: naformátuje timestamp na "DD. MM. YYYY HH:MM"
-        // ============================================================
         const formatTs = (ts) => {
             if (ts == null || !isFinite(ts)) return null;
             const d = new Date(ts);
@@ -4275,134 +4280,298 @@ const TransportApp = ({ userProfileData }) => {
             return `${day}. ${month}. ${year} ${hours}:${minutes}`;
         };
     
+        const timeRange = parseWhenRangeToTs(originalWhen);
         const segmentsCount = route.length - 1;
-        let segmentTimes = [];
+        if (segmentsCount <= 0) return [];
     
-        // ============================================================
-        // NOVÉ: Vypočítaj trvania jednotlivých segmentov podľa reálnych
-        // trvaní jázd (travelTimes). Ak pre niektorý segment trvanie
-        // neexistuje, použije sa priemer zo známych segmentov, alebo
-        // sa čas rozdelí rovnomerne (fallback).
-        // ============================================================
-        const segmentDurations = []; // v minútach (alebo null)
+        // Zisti trvania všetkých segmentov
+        const durations = [];
         for (let i = 0; i < segmentsCount; i++) {
-            const from = route[i];
-            const to = route[i + 1];
-            const mins = getTravelMinutes(from, to);
-            segmentDurations.push(mins != null ? Number(mins) : null);
+            const mins = getTravelMinutes(route[i], route[i + 1]);
+            durations.push(mins != null ? Number(mins) : null);
         }
     
-        // Zisti, koľko segmentov má známe trvanie
-        const knownDurations = segmentDurations.filter((d) => d != null);
-        const knownCount = knownDurations.length;
+        // Fallback pre chýbajúce trvania – priemer zo známych
+        const known = durations.filter((d) => d != null);
+        const fallback = known.length > 0
+            ? Math.round(known.reduce((a, b) => a + b, 0) / known.length)
+            : null;
     
-        // Ak máme aspoň jedno známe trvanie, dopočítaj chýbajúce priemerom
-        let fallbackDuration = null;
-        if (knownCount > 0) {
-            const sumKnown = knownDurations.reduce((a, b) => a + b, 0);
-            fallbackDuration = Math.round(sumKnown / knownCount);
-        }
-    
-        // Doplň chýbajúce trvania
-        const finalDurations = segmentDurations.map((d) =>
-            d != null ? d : (fallbackDuration != null ? fallbackDuration : null)
+        const finalDurations = durations.map((d) =>
+            d != null ? d : (fallback != null ? fallback : null)
         );
     
-        if (timeRange && timeRange.startTs != null && timeRange.endTs != null && timeRange.endTs > timeRange.startTs) {
-            // ============================================================
-            // Máme platný interval → rozdeľ čas podľa trvaní segmentov.
-            //
-            // Princíp:
-            //  - Ak sú známe všetky trvania, použijeme ich priamo.
-            //  - Ak nie sú, dopočítame chýbajúce priemerom.
-            //  - Ak nemáme žiadne trvania, rozdelíme rovnomerne.
-            //  - Celkový čas MUSÍ zostať zachovaný (startTs – endTs).
-            // ============================================================
-            const totalMs = timeRange.endTs - timeRange.startTs;
-            const totalMinutes = totalMs / 60000;
+        // Ak nemáme platný interval → všetky segmenty dostanú pôvodný when
+        if (!timeRange || timeRange.startTs == null || timeRange.endTs == null || timeRange.endTs <= timeRange.startTs) {
+            return Array.from({ length: segmentsCount }, () => ({
+                startTs: null,
+                endTs: null,
+                whenStr: originalWhen,
+            }));
+        }
     
-            // Ak máme aspoň jedno známe trvanie, použijeme pomery
-            const hasAnyDuration = finalDurations.some((d) => d != null);
+        const totalMs = timeRange.endTs - timeRange.startTs;
     
-            if (hasAnyDuration) {
-                // Súčet trvaní (minúty)
-                const durationsSum = finalDurations.reduce((a, b) => a + (b || 0), 0);
+        // ============================================================
+        // Rozdeľ čas:
+        //  - Vyriešené segmenty si zachovajú svoj podiel podľa trvania
+        //    (alebo ak nemajú trvanie, dostanú 0 – ich čas sa „stratí").
+        //  - Zvyšné segmenty si rozdelia ZVYŠNÝ čas podľa svojich trvaní.
+        // ============================================================
+        const resolvedIndexes = Array.from(resolvedSegments).filter(
+            (i) => i >= 0 && i < segmentsCount
+        );
+        const remainingIndexes = [];
+        for (let i = 0; i < segmentsCount; i++) {
+            if (!resolvedSegments.has(i)) remainingIndexes.push(i);
+        }
     
-                if (durationsSum > 0) {
-                    // Rozdeľ čas podľa pomerov trvaní
-                    let cursorTs = timeRange.startTs;
-                    for (let i = 0; i < segmentsCount; i++) {
-                        const dur = finalDurations[i] || 0;
-                        const segMs = Math.round((dur / durationsSum) * totalMs);
-                        const segStartTs = cursorTs;
-                        const segEndTs = (i === segmentsCount - 1)
-                            ? timeRange.endTs
-                            : cursorTs + segMs;
+        // Trvania vyriešených segmentov
+        const resolvedDurationsSum = resolvedIndexes.reduce(
+            (sum, i) => sum + (finalDurations[i] || 0),
+            0
+        );
     
-                        segmentTimes.push({
-                            startTs: segStartTs,
-                            endTs: segEndTs,
-                            whenStr: `${formatTs(segStartTs)} – ${formatTs(segEndTs)}`,
-                        });
+        // Trvania zostávajúcich segmentov
+        const remainingDurationsSum = remainingIndexes.reduce(
+            (sum, i) => sum + (finalDurations[i] || 0),
+            0
+        );
     
-                        cursorTs = segEndTs;
-                    }
-                } else {
-                    // Fallback – rovnomerné rozdelenie
-                    const segmentMs = totalMs / segmentsCount;
-                    for (let i = 0; i < segmentsCount; i++) {
-                        const segStartTs = timeRange.startTs + Math.round(segmentMs * i);
-                        const segEndTs = (i === segmentsCount - 1)
-                            ? timeRange.endTs
-                            : timeRange.startTs + Math.round(segmentMs * (i + 1));
-                        segmentTimes.push({
-                            startTs: segStartTs,
-                            endTs: segEndTs,
-                            whenStr: `${formatTs(segStartTs)} – ${formatTs(segEndTs)}`,
-                        });
-                    }
-                }
-            } else {
-                // Nemáme žiadne trvania → rovnomerné rozdelenie
-                const segmentMs = totalMs / segmentsCount;
-                for (let i = 0; i < segmentsCount; i++) {
-                    const segStartTs = timeRange.startTs + Math.round(segmentMs * i);
-                    const segEndTs = (i === segmentsCount - 1)
-                        ? timeRange.endTs
-                        : timeRange.startTs + Math.round(segmentMs * (i + 1));
-                    segmentTimes.push({
+        // Čas, ktorý zostáva na rozdelenie medzi zostávajúce segmenty
+        // (celkový čas – podiel vyriešených segmentov)
+        let remainingMs;
+        if (resolvedDurationsSum + remainingDurationsSum > 0) {
+            // Podiel vyriešených segmentov z celkového času
+            const resolvedMs = Math.round(
+                (resolvedDurationsSum / (resolvedDurationsSum + remainingDurationsSum)) * totalMs
+            );
+            remainingMs = totalMs - resolvedMs;
+        } else {
+            remainingMs = totalMs;
+        }
+    
+        // ============================================================
+        // Vypočítaj časy pre jednotlivé segmenty
+        // ============================================================
+        const results = new Array(segmentsCount).fill(null);
+    
+        // 1) Vyriešené segmenty – rozdeľ im ich podiel
+        let cursorTs = timeRange.startTs;
+        if (resolvedDurationsSum > 0) {
+            const resolvedMsTotal = totalMs - remainingMs;
+            for (const i of resolvedIndexes) {
+                const dur = finalDurations[i] || 0;
+                const segMs = Math.round((dur / resolvedDurationsSum) * resolvedMsTotal);
+                const segStartTs = cursorTs;
+                const segEndTs = cursorTs + segMs;
+                results[i] = {
+                    startTs: segStartTs,
+                    endTs: segEndTs,
+                    whenStr: `${formatTs(segStartTs)} – ${formatTs(segEndTs)}`,
+                };
+                cursorTs = segEndTs;
+            }
+        } else {
+            // Vyriešené segmenty bez trvania → dostanú nulový čas
+            for (const i of resolvedIndexes) {
+                results[i] = {
+                    startTs: cursorTs,
+                    endTs: cursorTs,
+                    whenStr: `${formatTs(cursorTs)} – ${formatTs(cursorTs)}`,
+                };
+            }
+        }
+    
+        // 2) Zostávajúce segmenty – rozdeľ im zvyšný čas
+        if (remainingIndexes.length > 0) {
+            if (remainingDurationsSum > 0) {
+                for (const i of remainingIndexes) {
+                    const dur = finalDurations[i] || 0;
+                    const isLastRemaining = i === remainingIndexes[remainingIndexes.length - 1];
+                    const segMs = isLastRemaining
+                        ? (timeRange.endTs - cursorTs)
+                        : Math.round((dur / remainingDurationsSum) * remainingMs);
+                    const segStartTs = cursorTs;
+                    const segEndTs = cursorTs + segMs;
+                    results[i] = {
                         startTs: segStartTs,
                         endTs: segEndTs,
                         whenStr: `${formatTs(segStartTs)} – ${formatTs(segEndTs)}`,
-                    });
+                    };
+                    cursorTs = segEndTs;
+                }
+            } else {
+                // Rovnomerné rozdelenie
+                const segMs = Math.round(remainingMs / remainingIndexes.length);
+                for (let k = 0; k < remainingIndexes.length; k++) {
+                    const i = remainingIndexes[k];
+                    const isLast = k === remainingIndexes.length - 1;
+                    const segStartTs = cursorTs;
+                    const segEndTs = isLast ? timeRange.endTs : cursorTs + segMs;
+                    results[i] = {
+                        startTs: segStartTs,
+                        endTs: segEndTs,
+                        whenStr: `${formatTs(segStartTs)} – ${formatTs(segEndTs)}`,
+                    };
+                    cursorTs = segEndTs;
                 }
             }
-        } else {
-            // Nemáme platný interval → všetky segmenty dostanú pôvodný `when`
-            for (let i = 0; i < segmentsCount; i++) {
-                segmentTimes.push({
-                    startTs: null,
-                    endTs: null,
-                    whenStr: original.when,
-                });
-            }
         }
+    
+        return results;
+    };
+
+    // ============================================================
+    // UNIVERZÁLNA: Prepočíta blok segmentov okolo daného transferu.
+    //
+    // resolvedKeys = Set kľúčov segmentov, ktoré sú VYRIEŠENÉ
+    // (peši alebo autobus). Zvyšné segmenty v bloku sa dopočítajú
+    // podľa reálnych trvaní jázd, celkový interval zostane zachovaný.
+    //
+    // Volá sa z:
+    //  - setTransferAsWalking (resolvedKeys = { transfer.key })
+    //  - assignTransferToBus  (resolvedKeys = { transfer.key })
+    //  - removeWalkingFlag    (resolvedKeys = {} – nič nie je vyriešené)
+    // ============================================================
+    const recomputeBlock = async (transfer, resolvedKeys = new Set()) => {
+        if (!window.db || !transfer) return;
+    
+        const teamName = String(transfer.teamName || '').trim();
+        const category = cleanCategory(transfer.category || '');
+        const dayKey = transfer.dayKey || '';
+        const trRange = parseTransferWhenToRange(transfer.when);
+    
+        if (!trRange || !dayKey) return;
+    
+        // Zoznam všetkých segmentov tohto tímu v daný deň (okrem aktuálneho)
+        const sameTeamSegments = savedTransfers
+            .filter((t) =>
+                String(t.teamName || '').trim() === teamName &&
+                cleanCategory(t.category || '') === category &&
+                t.dayKey === dayKey &&
+                t.key !== transfer.key
+            )
+            .map((t) => ({ ...t, range: parseTransferWhenToRange(t.when) }))
+            .filter((t) => t.range != null);
+    
+        // Zostav reťazec segmentov (aktuálny + ostatné) a zoraď podľa času
+        const chain = [{ ...transfer, range: trRange }, ...sameTeamSegments];
+        chain.sort((a, b) => a.range.startTs - b.range.startTs);
+    
+        // Pomocná: zisti, či dva segmenty na seba nadväzujú
+        const isContinuous = (a, b) => {
+            const ra = a.range || parseTransferWhenToRange(a.when);
+            const rb = b.range || parseTransferWhenToRange(b.when);
+            if (!ra || !rb) return false;
+            return ra.endTs === rb.startTs &&
+                normalizePlaceName(a.toLocation) === normalizePlaceName(b.fromLocation);
+        };
+    
+        // Nájdi súvislý blok okolo aktuálneho segmentu
+        const currentIdx = chain.findIndex((t) => t.key === transfer.key);
+        if (currentIdx === -1) return;
+    
+        let blockStart = currentIdx;
+        let blockEnd = currentIdx;
+        while (blockStart > 0 && isContinuous(chain[blockStart - 1], chain[blockStart])) blockStart--;
+        while (blockEnd < chain.length - 1 && isContinuous(chain[blockEnd], chain[blockEnd + 1])) blockEnd++;
+    
+        const block = chain.slice(blockStart, blockEnd + 1);
+        if (block.length < 2) return;
+    
+        const firstRange = block[0].range || parseTransferWhenToRange(block[0].when);
+        const lastRange = block[block.length - 1].range || parseTransferWhenToRange(block[block.length - 1].when);
+        if (!firstRange || !lastRange) return;
+    
+        // Zlož trasu bloku: from prvého → to prvého (= from druhého) → ... → to posledného
+        const blockRoute = [block[0].fromLocation];
+        for (let i = 0; i < block.length; i++) blockRoute.push(block[i].toLocation);
+    
+        // Indexy vyriešených segmentov (buď z resolvedKeys, alebo existujúci isWalking)
+        const resolvedIndexes = new Set();
+        block.forEach((seg, idx) => {
+            if (resolvedKeys.has(seg.key)) {
+                resolvedIndexes.add(idx);
+            } else if (seg.isWalking === true && !excludeKeys.has(seg.key)) {
+                resolvedIndexes.add(idx);
+            }
+        });
+    
+        const blockWhen = `${formatTsLocal(firstRange.startTs)} – ${formatTsLocal(lastRange.endTs)}`;
+        const newTimes = recomputeRemainingSegments(blockWhen, blockRoute, resolvedIndexes);
+    
+        const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+        const patch = {};
+    
+        block.forEach((seg, idx) => {
+            const newTime = newTimes[idx];
+            if (!newTime) return;
+    
+            const isResolved = resolvedIndexes.has(idx);
+            const newText = `Presun z ${blockRoute[idx]} do ${blockRoute[idx + 1]}`;
+            const newWhen = newTime.whenStr;
+            const newKey = buildTransferKey(category, teamName, newWhen, newText);
+    
+            // Zmazať starý kľúč, ak sa zmenil
+            if (seg.key !== newKey) patch[seg.key] = deleteField();
+    
+            const base = {
+                category,
+                teamName,
+                when: newWhen,
+                text: newText,
+                fromLocation: blockRoute[idx],
+                toLocation: blockRoute[idx + 1],
+                dayKey,
+                generatedAt: Timestamp.fromDate(new Date()),
+                generatedBy: (userProfileData && userProfileData.email) || null,
+            };
+    
+            // Zachovaj príznak "peši", ak segment bol peši
+            if (seg.isWalking === true) {
+                base.isWalking = true;
+                base.walkingSetAt = seg.walkingSetAt || Timestamp.fromDate(new Date());
+                base.walkingSetBy = seg.walkingSetBy || (userProfileData && userProfileData.email) || null;
+            }
+    
+            patch[newKey] = base;
+        });
+    
+        await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: patch }, { merge: true });
+    };
+
+    // ============================================================
+    // ULOŽENIE UPRAVENÉHO PRESUNU (s medzizastávkami)
+    // + ZACHOVANIE CELKOVÉHO ČASOVÉHO INTERVALU
+    // + DOPOČÍTANIE ČASOV SEGMENTOV PODĽA REÁLNYCH TRVANÍ JÁZDY
+    // ============================================================
+    const saveEditedTransfer = async () => {
+        if (!window.db || !editingTransfer) return;
+    
+        const original = editingTransfer;
+        const stops = (editingTransferStops || []).map((s) => String(s || '').trim()).filter(Boolean);
+        const route = [original.fromLocation, ...stops, original.toLocation].filter(Boolean);
+    
+        if (route.length < 2) {
+            window.showGlobalNotification('Trasa musí mať aspoň dve zastávky.', 'error');
+            return;
+        }
+    
+        const segmentsCount = route.length - 1;
+        const segmentTimes = recomputeRemainingSegments(original.when, route, new Set());
     
         setEditingTransferSaving(true);
         try {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
-    
-            // 1) Zmazať pôvodný záznam
             const deletePatch = { [original.key]: deleteField() };
-    
-            // 2) Vytvoriť nové záznamy pre každý segment trasy
             const newTransfersPatch = {};
+    
             for (let i = 0; i < segmentsCount; i++) {
                 const from = route[i];
                 const to = route[i + 1];
                 const text = `Presun z ${from} do ${to}`;
                 const when = segmentTimes[i].whenStr;
-    
                 const key = buildTransferKey(original.category, original.teamName, when, text);
     
                 newTransfersPatch[key] = {
@@ -4421,10 +4590,7 @@ const TransportApp = ({ userProfileData }) => {
             await setDoc(
                 docRef,
                 {
-                    [TRANSPORT_TRANSFERS_FIELD]: {
-                        ...deletePatch,
-                        ...newTransfersPatch,
-                    },
+                    [TRANSPORT_TRANSFERS_FIELD]: { ...deletePatch, ...newTransfersPatch },
                     updatedAt: Timestamp.fromDate(new Date()),
                     updatedBy: (userProfileData && userProfileData.email) || null,
                 },
@@ -4766,6 +4932,8 @@ const TransportApp = ({ userProfileData }) => {
         if (!window.db || !transfer) return;
         try {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+    
+            // 1) Označ tento segment ako peši
             await setDoc(
                 docRef,
                 {
@@ -4782,6 +4950,13 @@ const TransportApp = ({ userProfileData }) => {
                 },
                 { merge: true }
             );
+    
+            // 2) Prepočítaj celý blok (tento segment je vyriešený, zvyšné sa dopočítajú)
+            await recomputeBlock(
+                { ...transfer, isWalking: true },
+                new Set([transfer.key])
+            );
+    
             window.showGlobalNotification('Presun bol označený ako „peši".', 'success');
             setTransferActionModal(null);
         } catch (err) {
@@ -4800,6 +4975,8 @@ const TransportApp = ({ userProfileData }) => {
         setRemoveWalkingSaving(true);
         try {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+    
+            // 1) Odstráň príznak "peši"
             await setDoc(
                 docRef,
                 {
@@ -4816,6 +4993,17 @@ const TransportApp = ({ userProfileData }) => {
                 },
                 { merge: true }
             );
+    
+            // 2) Prepočítaj blok – tento segment už NIE je vyriešený,
+            //    takže dostane svoj podiel času z celkového intervalu.
+            //    POZOR: savedTransfers ešte obsahuje starý stav (isWalking: true),
+            //    preto odovzdávame explicitne prázdny set a v recomputeBlock
+            //    kontrolujeme aj seg.isWalking – ten ale musíme dočasne ignorovať.
+            //    Riešenie: prepočítame s upraveným transferom a prázdnym resolvedKeys,
+            //    pričom v recomputeBlock ignorujeme isWalking pre tento kľúč.
+            const updatedTransfer = { ...transfer, isWalking: false };
+            await recomputeBlock(updatedTransfer, new Set(), new Set([transfer.key]));
+    
             window.showGlobalNotification('Príznak „peši" bol odstránený.', 'success');
             setRemoveWalkingModal(null);
         } catch (err) {
@@ -4908,6 +5096,13 @@ const TransportApp = ({ userProfileData }) => {
                 updateDoc(doc(window.db, 'transport', rid), data)
             );
             await Promise.all(promises);
+
+            // Prepočítaj zostávajúce segmenty bloku po priradení k autobusu
+            try {
+                await recomputeBlock(transfer, new Set([transfer.key]));
+            } catch (precomputeErr) {
+                console.error('[TRANSPORT] Chyba pri prepočte bloku po priradení:', precomputeErr);
+            }
 
             const parts = [];
             if (boardingRow) parts.push('nástup');
