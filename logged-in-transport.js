@@ -8167,7 +8167,62 @@ const TransportApp = ({ userProfileData }) => {
         });
 
         // Finálny zoznam – len prvý segment z každého bloku
-        const baseFilteredFirstOnly = baseFiltered.filter((t) => allowedKeys.has(t.key));
+        const baseFilteredFirstOnlyRaw = baseFiltered.filter((t) => allowedKeys.has(t.key));
+
+        // ============================================================
+        // NOVÉ: Pri každom zobrazenom segmente (prvý z bloku) prepíš
+        // `when` tak, aby koniec zodpovedal koncu CELÉHO bloku
+        // (t.j. koncu posledného segmentu v reťazi patriaceho
+        // k rovnakému parentovi).
+        //
+        // Tým sa zabezpečí, že pri parent presune A → B → C → D
+        // s when = 08:00 – 08:30 sa zobrazí prvý segment A→B
+        // ako 08:00 – 08:30 (nie 08:00 – 08:10).
+        //
+        // Ak segment nemá _parentKey (samostatný presun), nič sa nemení.
+        // ============================================================
+        const baseFilteredFirstOnly = baseFilteredFirstOnlyRaw.map((t) => {
+            if (!t._parentKey) return t;
+
+            // Zisti koniec celého bloku = maximum z endTs všetkých
+            // segmentov (aj nepriradených, aj priradených) patriacich
+            // k rovnakému parentovi v rámci rovnakého tímu, kat., dňa.
+            const parentKey = t._parentKey;
+            const teamName = String(t.teamName || '').trim();
+            const category = cleanCategory(t.category || '');
+            const dayKey = t.dayKey || '';
+
+            let blockEndTs = null;
+
+            // Prejdi VŠETKY segmenty z `expandedTransfers` (obsahuje
+            // všetky rozložené segmenty – nezávisle od toho, či sú
+            // priradené alebo nie).
+            expandedTransfers.forEach((other) => {
+                if (other._parentKey !== parentKey) return;
+                if (String(other.teamName || '').trim() !== teamName) return;
+                if (cleanCategory(other.category || '') !== category) return;
+                if ((other.dayKey || '') !== dayKey) return;
+
+                const r = parseTransferWhenToRange(other.when);
+                if (!r || r.endTs == null) return;
+
+                if (blockEndTs == null || r.endTs > blockEndTs) {
+                    blockEndTs = r.endTs;
+                }
+            });
+
+            if (blockEndTs == null) return t;
+
+            const trRange = parseTransferWhenToRange(t.when);
+            if (!trRange || trRange.startTs == null) return t;
+
+            const newWhen = `${formatTsLocal(trRange.startTs)} – ${formatTsLocal(blockEndTs)}`;
+
+            return {
+                ...t,
+                when: newWhen,
+            };
+        });
 
         const filtered = mergeMode
             ? baseFilteredFirstOnly.filter((t) =>
