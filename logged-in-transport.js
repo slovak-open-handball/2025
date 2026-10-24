@@ -8166,132 +8166,19 @@ const TransportApp = ({ userProfileData }) => {
             allowedKeys.add(segment.key);
         });
 
-        // ============================================================
-        // NOVÉ: Základný zoznam – len prvý segment z každého bloku
-        // (bez summary záznamov). Používa sa nižšie na zistenie,
-        // ktoré parent bloky už majú viditeľný segment.
-        // ============================================================
         const baseFilteredFirstOnlyRaw = baseFiltered.filter((t) => allowedKeys.has(t.key));
 
         // ============================================================
-        // NOVÉ: Pre KAŽDÝ parent blok, ktorý má VŠETKY segmenty priradené
-        // (t.j. nie je v `baseFilteredFirstOnlyRaw`), pridaj "summary"
-        // záznam – vizuálny box s celkovou trasou a časom, ktorý
-        // používateľovi ukáže, že blok existuje, aj keď už nie je
-        // čo priraďovať.
+        // POZNÁMKA: Summary záznamy ("Všetko priradené") sa už
+        // NEZOBRAZUJÚ. Ak má tím všetky segmenty priradené, jeho
+        // blok sa v zozname vygenerovaných presunov nezobrazí vôbec.
         //
-        // Summary záznam:
-        //  - _isParentSummary: true
-        //  - fromLocation = prvý z route
-        //  - toLocation = posledný z route
-        //  - when = začiatok parenta – koniec parenta
-        //  - text = "Presun z X do Y"
-        //  - _parentRoute = celá trasa
-        //  - _allAssigned = true
+        // Premennú `baseFilteredFirstOnlyRawWithSummaries` ale
+        // zachovávame (bez summary), aby nižšie uvedený kód
+        // (prepis `when`) fungoval bez zmeny.
         // ============================================================
-        const parentSummaryRecords = [];
-
-        // Zisti, ktoré parent bloky už majú zobrazený aspoň jeden segment
-        const parentsWithVisibleSegment = new Set();
-        baseFilteredFirstOnlyRaw.forEach((t) => {
-            if (t._parentKey) {
-                parentsWithVisibleSegment.add(
-                    `${t._parentKey}||${cleanCategory(t.category || '')}||${String(t.teamName || '').trim()}`
-                );
-            }
-        });
-
-        // Prejdi VŠETKY parent záznamy (s intermediateStops) v `filteredByDay`
-        // a ak ich blok nemá viditeľný segment, vytvor summary.
-        filteredByDay.forEach((parent) => {
-            const stops = Array.isArray(parent.intermediateStops) ? parent.intermediateStops : [];
-            if (stops.length === 0) return; // nie je parent s medzizastávkami
-
-            const blockKey = `${parent.key}||${cleanCategory(parent.category || '')}||${String(parent.teamName || '').trim()}`;
-            if (parentsWithVisibleSegment.has(blockKey)) return; // už má viditeľný segment
-
-            // Zisti, či aspoň JEDEN segment tohto parenta je priradený
-            // (buď v busRows, alebo ako peší).
-            // Ak áno, zobraz summary. Ak nie, nerob nič (blok je stále
-            // "nepriradený" a mal by sa zobraziť prvý segment – čo
-            // by malo byť pokryté vyššie).
-            const parentTeamName = String(parent.teamName || '').trim();
-            const parentCategory = cleanCategory(parent.category || '');
-            const parentDayKey = parent.dayKey || '';
-
-            // Zisti, či existuje aspoň jeden priradený segment
-            // (autobusom alebo peší)
-            let anyAssigned = false;
-
-            // 1) Pešie segmenty tohto parenta
-            const hasWalkingSegment = savedTransfers.some((s) => {
-                if (s._parentKey !== parent.key) return false;
-                if (s.isWalking !== true) return false;
-                return true;
-            });
-
-            if (hasWalkingSegment) anyAssigned = true;
-
-            // 2) Autobusové priradenia – prejdi busRows a hľadaj tím
-            if (!anyAssigned) {
-                Object.entries(busRows || {}).forEach(([busKey, rows]) => {
-                    if (anyAssigned) return;
-                    const bDayKey = busKey.split('|')[1];
-                    if (bDayKey !== parentDayKey) return;
-
-                    (rows || []).forEach((row) => {
-                        if (anyAssigned) return;
-                        const teamInList = (row.teamsIn || []).some((tk) => {
-                            const [tn, cat] = String(tk).split('|');
-                            return String(tn).trim() === parentTeamName && cleanCategory(cat) === parentCategory;
-                        });
-                        const teamOutList = (row.teamsOut || []).some((tk) => {
-                            const [tn, cat] = String(tk).split('|');
-                            return String(tn).trim() === parentTeamName && cleanCategory(cat) === parentCategory;
-                        });
-                        if (teamInList || teamOutList) anyAssigned = true;
-                    });
-                });
-            }
-
-            if (!anyAssigned) return; // nič priradené → nechaj klasické správanie
-
-            // Vytvor summary záznam
-            const parentRange = parseTransferWhenToRange(parent.when);
-            if (!parentRange) return;
-
-            const routeRaw = [parent.fromLocation, ...stops, parent.toLocation].filter(Boolean);
-            const route = [];
-            routeRaw.forEach((loc) => {
-                const normalized = normalizePlaceName(loc);
-                if (route.length === 0 || normalizePlaceName(route[route.length - 1]) !== normalized) {
-                    route.push(loc);
-                }
-            });
-            if (route.length < 2) return;
-
-            parentSummaryRecords.push({
-                ...parent,
-                key: `__summary__||${parent.key}`, // špeciálny kľúč, aby sa nemýlil s reálnym
-                when: `${formatTsLocal(parentRange.startTs)} – ${formatTsLocal(parentRange.endTs)}`,
-                text: `Presun z ${route[0]} do ${route[route.length - 1]}`,
-                fromLocation: route[0],
-                toLocation: route[route.length - 1],
-                _parentKey: parent.key,
-                _parentRoute: route.join(' → '),
-                _isParentSummary: true,
-                _allAssigned: true,
-                _remainingMinutes: null,
-                _isAssigned: true,
-            });
-        });
-
-        // Zlúč summary záznamy s viditeľnými segmentmi
-        const baseFilteredFirstOnlyRawWithSummaries = [
-            ...baseFilteredFirstOnlyRaw,
-            ...parentSummaryRecords,
-        ];
-
+        const baseFilteredFirstOnlyRawWithSummaries = baseFilteredFirstOnlyRaw;
+        
         const baseFilteredFirstOnly = baseFilteredFirstOnlyRawWithSummaries.map((t) => {
             if (!t._parentKey) return t;
 
