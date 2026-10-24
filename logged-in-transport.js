@@ -4216,22 +4216,22 @@ const TransportApp = ({ userProfileData }) => {
 
     // ============================================================
     // ULOŽENIE UPRAVENÉHO PRESUNU (s medzizastávkami)
-    // + ROVNOMERNÉ ROZDELENIE CELKOVÉHO ČASU MEDZI SEGMENTY
+    // + ZACHOVANIE CELKOVÉHO ČASOVÉHO INTERVALU
     // ============================================================
     const saveEditedTransfer = async () => {
         if (!window.db || !editingTransfer) return;
-
+    
         const original = editingTransfer;
         const stops = (editingTransferStops || []).map((s) => String(s || '').trim()).filter(Boolean);
-
+    
         // Zlož trasu: from → stop1 → stop2 → ... → to
         const route = [original.fromLocation, ...stops, original.toLocation].filter(Boolean);
-
+    
         if (route.length < 2) {
             window.showGlobalNotification('Trasa musí mať aspoň dve zastávky.', 'error');
             return;
         }
-
+    
         // ============================================================
         // Zisti celkový časový interval pôvodného presunu z `when`
         // Formát: "DD. MM. YYYY HH:MM – DD. MM. YYYY HH:MM"
@@ -4256,10 +4256,9 @@ const TransportApp = ({ userProfileData }) => {
             const endTs = found.length > 1 ? found[1] : found[0];
             return { startTs, endTs };
         };
-
+    
         const timeRange = parseWhenRangeToTs(original.when);
-        const segmentsCount = route.length - 1;
-
+    
         // ============================================================
         // Pomocná: naformátuje timestamp na "DD. MM. YYYY HH:MM"
         // ============================================================
@@ -4274,17 +4273,29 @@ const TransportApp = ({ userProfileData }) => {
             const minutes = String(d.getMinutes()).padStart(2, '0');
             return `${day}. ${month}. ${year} ${hours}:${minutes}`;
         };
-
+    
         // ============================================================
-        // Vypočítaj časové intervaly pre jednotlivé segmenty
+        // NOVÉ: Vypočítaj časové intervaly pre jednotlivé segmenty
+        // tak, aby CELKOVÝ ČAS zostal ZACHOVANÝ.
+        //
+        // Princíp:
+        //  - Ak máme platný interval (startTs < endTs), rozdelíme ho
+        //    na segmenty PODĽA DĹŽKY TRASY (počtu segmentov), ale
+        //    NIE rovnomerne – použijeme rovnaký pomer pre každý segment.
+        //  - Ak interval nemáme, všetky segmenty dostanú pôvodný `when`.
+        //
+        // DÔLEŽITÉ: Toto je len "predvolené" rozdelenie. Ak neskôr
+        // používateľ priradí časť trasy autobusu alebo ju označí ako
+        // peši, zvyšný čas sa dopočíta z celkového intervalu.
         // ============================================================
+        const segmentsCount = route.length - 1;
         let segmentTimes = [];
-
+    
         if (timeRange && timeRange.startTs != null && timeRange.endTs != null && timeRange.endTs > timeRange.startTs) {
-            // Máme platný interval → rozdeľ rovnomerne
+            // Máme platný interval → rozdeľ rovnomerne (predvolené)
             const totalMs = timeRange.endTs - timeRange.startTs;
             const segmentMs = totalMs / segmentsCount;
-
+    
             for (let i = 0; i < segmentsCount; i++) {
                 const segStartTs = timeRange.startTs + Math.round(segmentMs * i);
                 const segEndTs = timeRange.startTs + Math.round(segmentMs * (i + 1));
@@ -4304,14 +4315,14 @@ const TransportApp = ({ userProfileData }) => {
                 });
             }
         }
-
+    
         setEditingTransferSaving(true);
         try {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
-
+    
             // 1) Zmazať pôvodný záznam
             const deletePatch = { [original.key]: deleteField() };
-
+    
             // 2) Vytvoriť nové záznamy pre každý segment trasy
             const newTransfersPatch = {};
             for (let i = 0; i < segmentsCount; i++) {
@@ -4319,9 +4330,9 @@ const TransportApp = ({ userProfileData }) => {
                 const to = route[i + 1];
                 const text = `Presun z ${from} do ${to}`;
                 const when = segmentTimes[i].whenStr;
-
+    
                 const key = buildTransferKey(original.category, original.teamName, when, text);
-
+    
                 newTransfersPatch[key] = {
                     category: original.category,
                     teamName: original.teamName,
@@ -4334,7 +4345,7 @@ const TransportApp = ({ userProfileData }) => {
                     generatedBy: (userProfileData && userProfileData.email) || null,
                 };
             }
-
+    
             await setDoc(
                 docRef,
                 {
@@ -4347,7 +4358,7 @@ const TransportApp = ({ userProfileData }) => {
                 },
                 { merge: true }
             );
-
+    
             window.showGlobalNotification(
                 `Presun bol upravený (${segmentsCount} ${segmentsCount === 1 ? 'segment' : segmentsCount < 5 ? 'segmenty' : 'segmentov'}).`,
                 'success'
