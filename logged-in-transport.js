@@ -6488,12 +6488,32 @@ const TransportApp = ({ userProfileData }) => {
                                                             // Najprv pridaj "voľný riadok", ak je medzera > 2 min
                                                             if (idx > 0) {
                                                                 const prev = sortedRows[idx - 1];
-                                                                const gap = getGapMinutes(prev.timeTo, r.timeFrom);
-                                                                if (gap != null && gap > 2) {
+                                                                const rawGap = getGapMinutes(prev.timeTo, r.timeFrom);
+                                                                if (rawGap != null && rawGap > 2) {
                                                                     const prevRow = prev;
                                                                     const nextRow = r;
                                                                     const gapRowKey = `gap-${prevRow.id}-${nextRow.id}`;
-                                                        
+                                                                
+                                                                    // ============================================================
+                                                                    // NOVÉ: Zisti, či ide o "obrátený" prípad (čas od > čas do).
+                                                                    // Ak áno, použijeme ABSOLÚTNU HODNOTU rozdielu (bez prechodu
+                                                                    // cez polnoc), aby sme nepočítali nezmyselne veľkú medzeru.
+                                                                    // ============================================================
+                                                                    const timeReLocal = /^\d{1,2}:\d{2}$/;
+                                                                    let isInverted = false;
+                                                                    let gap = rawGap;
+                                                                
+                                                                    if (timeReLocal.test(prevRow.timeTo || '') && timeReLocal.test(nextRow.timeFrom || '')) {
+                                                                        const [fh, fm] = prevRow.timeTo.split(':').map(Number);
+                                                                        const [th, tm] = nextRow.timeFrom.split(':').map(Number);
+                                                                        const fromMin = fh * 60 + fm;
+                                                                        const toMin = th * 60 + tm;
+                                                                        if (fromMin > toMin) {
+                                                                            isInverted = true;
+                                                                            gap = fromMin - toMin; // ABSOLÚTNA HODNOTA (väčší - menší)
+                                                                        }
+                                                                    }
+                                                                                                                        
                                                                     // ============================================================
                                                                     // NOVÉ: Detekcia "obráteného" červeného riadku:
                                                                     //  - miesto od (prevRow.placeTo) == miesto do (nextRow.placeFrom)
