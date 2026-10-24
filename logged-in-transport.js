@@ -5994,150 +5994,7 @@ const TransportApp = ({ userProfileData }) => {
             : savedTransfers;
     
         // ============================================================
-        // NOVÉ: Filtrovanie – skry LEN tie konkrétne segmenty presunu,
-        // ktoré sú už priradené (buď ako "peši", alebo ako tím v niektorom busRow).
-        //
-        // Kľúč segmentu = dayKey | teamName | category | fromLocation | toLocation
-        // (aby sme rozlíšili jednotlivé časti rozdeleného presunu)
-        // ============================================================
-        const assignedSegmentKeys = new Set();
-    
-        // ============================================================
-        // 1) Autobusy – pre každý tím v buse vyskladaj VŠETKY segmenty,
-        //    ktoré autobus preň pokrýva (od miesta nástupu po miesto výstupu,
-        //    vrátane medzizastávok).
-        //
-        // Príklad: tím A|kat nastúpi v riadku R1 (A → X) a vystúpi v riadku R3
-        // (Y → B). Autobus preň pokrýva segmenty: A→X, X→Y, Y→B.
-        // Tieto segmenty sa označia ako "priradené" (pokryté autobusom).
-        // ============================================================
-        Object.entries(busRows || {}).forEach(([busKey, rows]) => {
-            const dayKey = busKey.split('|')[1];
-            const sorted = (rows || [])
-                .slice()
-                .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-            // Pre každý tím v buse zisti, v ktorom riadku nastúpil a v ktorom vystúpil
-            const teamsInThisBus = new Map(); // teamKey → { boardIdx, alightIdx }
-
-            sorted.forEach((row, idx) => {
-                (row.teamsIn || []).forEach((teamKey) => {
-                    const key = String(teamKey);
-                    if (!teamsInThisBus.has(key)) {
-                        teamsInThisBus.set(key, { boardIdx: idx, alightIdx: null });
-                    }
-                });
-                (row.teamsOut || []).forEach((teamKey) => {
-                    const key = String(teamKey);
-                    const entry = teamsInThisBus.get(key);
-                    if (entry && entry.alightIdx == null) {
-                        entry.alightIdx = idx;
-                    } else if (!entry) {
-                        // Tím vystupuje, ale nenastúpil v tomto buse (fallback)
-                        teamsInThisBus.set(key, { boardIdx: null, alightIdx: idx });
-                    }
-                });
-            });
-
-            // Pre každý tím vyskladaj segmenty medzi nástupom a výstupom
-            teamsInThisBus.forEach(({ boardIdx, alightIdx }, teamKey) => {
-                const [teamName, category] = teamKey.split('|');
-                const tn = String(teamName).trim();
-                const cat = cleanCategory(category || '');
-
-                // Ak chýba nástup alebo výstup, preskoč (nemáme segment)
-                if (boardIdx == null || alightIdx == null) return;
-                if (alightIdx < boardIdx) return;
-
-                const boardRow = sorted[boardIdx];
-                const alightRow = sorted[alightIdx];
-                const boardFrom = normalizePlaceName(boardRow.placeFrom);
-                const alightTo = normalizePlaceName(alightRow.placeTo);
-
-                // ============================================================
-                // 1) Celkový segment od miesta nástupu po miesto výstupu
-                //    (napr. A → B), aby sa skryl aj celkový vygenerovaný
-                //    presun, ktorý autobus pokrýva v jednom alebo viacerých
-                //    riadkoch.
-                // ============================================================
-                if (boardFrom && alightTo) {
-                    assignedSegmentKeys.add(
-                        `${dayKey}|${tn}|${cat}|${boardFrom}→${alightTo}`
-                    );
-                }
-
-                // ============================================================
-                // 2) Jednotlivé segmenty z riadkov (medzizastávky)
-                //    (napr. A → X, X → B), aby sa skryli aj rozdelené
-                //    segmenty vygenerovaného presunu, ktoré autobus pokrýva.
-                // ============================================================
-                for (let k = boardIdx; k <= alightIdx; k++) {
-                    const row = sorted[k];
-                    const rowFrom = normalizePlaceName(row.placeFrom);
-                    const rowTo = normalizePlaceName(row.placeTo);
-                    if (!rowFrom || !rowTo) continue;
-
-                    assignedSegmentKeys.add(
-                        `${dayKey}|${tn}|${cat}|${rowFrom}→${rowTo}`
-                    );
-                }
-            });
-        });
-    
-        // 2) Pešie presuny – označ konkrétny segment ako priradený
-        savedTransfers.forEach((t) => {
-            if (t.isWalking !== true) return;
-            const fromLoc = normalizePlaceName(t.fromLocation || '');
-            const toLoc = normalizePlaceName(t.toLocation || '');
-            if (!fromLoc || !toLoc) return;
-            // Peši znamená, že celý segment from → to je vyriešený peši
-            assignedSegmentKeys.add(
-                `${t.dayKey || ''}|${String(t.teamName || '').trim()}|${cleanCategory(t.category || '')}|${fromLoc}→${toLoc}`
-            );
-        });
-    
-        // ============================================================
-        // Pomocná: zistí, či je konkrétny segment presunu už priradený
-        // (buď ako "peši", alebo ako segment pokrytý autobusom)
-        //
-        // Kľúč segmentu = dayKey|tím|kat|from→to
-        // Presná zhoda from→to – ak áno, segment je vyriešený.
-        // ============================================================
-        const isSegmentAssigned = (t) => {
-            const teamName = String(t.teamName || '').trim();
-            const category = cleanCategory(t.category || '');
-            const dayKey = t.dayKey || '';
-            const fromLoc = normalizePlaceName(t.fromLocation || '');
-            const toLoc = normalizePlaceName(t.toLocation || '');
-
-            if (!fromLoc || !toLoc) return false;
-
-            // Presná zhoda konkrétneho segmentu from→to
-            return assignedSegmentKeys.has(`${dayKey}|${teamName}|${category}|${fromLoc}→${toLoc}`);
-        };
-    
-        // ============================================================
-        // Ak je aktívny režim zlučovania, zobraz LEN tie presuny,
-        // ktoré sa dajú zlúčiť s nejakým iným presunom (t. j. existuje
-        // iný presun, ktorého čas/miesto začiatku nadväzuje na koniec
-        // tohto presunu).
-        // ============================================================
-        const baseFiltered = filteredByDay.filter((t) => {
-            // Ak je celý presun označený ako peši, skry ho (je vyriešený)
-            if (t.isWalking === true) return false;
-            // Skry len konkrétne priradené segmenty
-            return !isSegmentAssigned(t);
-        });
-
-        const filtered = mergeMode
-            ? baseFiltered.filter((t) =>
-                baseFiltered.some((other) => canMergeTransfers(t, other))
-            )
-            : baseFiltered;
-    
-        // ============================================================
-        // Pomocná: z `when` (napr. "26. 12. 2026 08:00 – 26. 12. 2026 09:15")
-        // vytiahne dátum začiatku/konca + čas začiatku/konca.
+        // Pomocná: parsovanie "when" → čas od/do
         // ============================================================
         const parseWhenRange = (when) => {
             if (!when) return null;
@@ -6201,6 +6058,222 @@ const TransportApp = ({ userProfileData }) => {
                 to: normalizePlace(m[2].trim()),
             };
         };
+    
+        // ============================================================
+        // assignedSegmentKeys – segmenty, ktoré sú už priradené
+        // (autobusom alebo peši)
+        // ============================================================
+        const assignedSegmentKeys = new Set();
+    
+        // 1) Autobusy – pre každý tím v buse vyskladaj VŠETKY segmenty,
+        //    ktoré autobus preň pokrýva (od miesta nástupu po miesto výstupu,
+        //    vrátane medzizastávok).
+        Object.entries(busRows || {}).forEach(([busKey, rows]) => {
+            const dayKey = busKey.split('|')[1];
+            const sorted = (rows || [])
+                .slice()
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+            const teamsInThisBus = new Map(); // teamKey → { boardIdx, alightIdx }
+    
+            sorted.forEach((row, idx) => {
+                (row.teamsIn || []).forEach((teamKey) => {
+                    const key = String(teamKey);
+                    if (!teamsInThisBus.has(key)) {
+                        teamsInThisBus.set(key, { boardIdx: idx, alightIdx: null });
+                    }
+                });
+                (row.teamsOut || []).forEach((teamKey) => {
+                    const key = String(teamKey);
+                    const entry = teamsInThisBus.get(key);
+                    if (entry && entry.alightIdx == null) {
+                        entry.alightIdx = idx;
+                    } else if (!entry) {
+                        teamsInThisBus.set(key, { boardIdx: null, alightIdx: idx });
+                    }
+                });
+            });
+    
+            teamsInThisBus.forEach(({ boardIdx, alightIdx }, teamKey) => {
+                const [teamName, category] = teamKey.split('|');
+                const tn = String(teamName).trim();
+                const cat = cleanCategory(category || '');
+    
+                if (boardIdx == null || alightIdx == null) return;
+                if (alightIdx < boardIdx) return;
+    
+                const boardRow = sorted[boardIdx];
+                const alightRow = sorted[alightIdx];
+                const boardFrom = normalizePlaceName(boardRow.placeFrom);
+                const alightTo = normalizePlaceName(alightRow.placeTo);
+    
+                // Celkový segment od miesta nástupu po miesto výstupu
+                if (boardFrom && alightTo) {
+                    assignedSegmentKeys.add(
+                        `${dayKey}|${tn}|${cat}|${boardFrom}→${alightTo}`
+                    );
+                }
+    
+                // Jednotlivé segmenty z riadkov (medzizastávky)
+                for (let k = boardIdx; k <= alightIdx; k++) {
+                    const row = sorted[k];
+                    const rowFrom = normalizePlaceName(row.placeFrom);
+                    const rowTo = normalizePlaceName(row.placeTo);
+                    if (!rowFrom || !rowTo) continue;
+                    assignedSegmentKeys.add(
+                        `${dayKey}|${tn}|${cat}|${rowFrom}→${rowTo}`
+                    );
+                }
+            });
+        });
+    
+        // 2) Pešie presuny – označ konkrétny segment ako priradený
+        savedTransfers.forEach((t) => {
+            if (t.isWalking !== true) return;
+            const fromLoc = normalizePlaceName(t.fromLocation || '');
+            const toLoc = normalizePlaceName(t.toLocation || '');
+            if (!fromLoc || !toLoc) return;
+            assignedSegmentKeys.add(
+                `${t.dayKey || ''}|${String(t.teamName || '').trim()}|${cleanCategory(t.category || '')}|${fromLoc}→${toLoc}`
+            );
+        });
+    
+        // ============================================================
+        // Pomocná: zistí, či je konkrétny segment už priradený
+        // ============================================================
+        const isSegmentAssigned = (t) => {
+            const teamName = String(t.teamName || '').trim();
+            const category = cleanCategory(t.category || '');
+            const dayKey = t.dayKey || '';
+            const fromLoc = normalizePlaceName(t.fromLocation || '');
+            const toLoc = normalizePlaceName(t.toLocation || '');
+    
+            if (!fromLoc || !toLoc) return false;
+    
+            return assignedSegmentKeys.has(`${dayKey}|${teamName}|${category}|${fromLoc}→${toLoc}`);
+        };
+    
+        // ============================================================
+        // NOVÉ: Rozlož presuny s intermediateStops na jednotlivé segmenty.
+        //
+        // Pre každý presun A→B s intermediateStops ['X', 'Y'] vytvor
+        // segmenty A→X, X→Y, Y→B s časmi dopočítanými podľa trvaní jázd.
+        //
+        // Tým sa zabezpečí, že v zozname vygenerovaných presunov sa
+        // zobrazia aj NEPRIradené časti rozdeleného presunu.
+        // ============================================================
+        const expandedTransfers = [];
+    
+        filteredByDay.forEach((t) => {
+            const stops = Array.isArray(t.intermediateStops) ? t.intermediateStops : [];
+    
+            // Ak nemá medzizastávky → ponechaj ako je
+            if (stops.length === 0) {
+                expandedTransfers.push(t);
+                return;
+            }
+    
+            // Rozlož trasu na segmenty: A → X → Y → B
+            const route = [t.fromLocation, ...stops, t.toLocation].filter(Boolean);
+            if (route.length < 2) {
+                expandedTransfers.push(t);
+                return;
+            }
+    
+            const timeRange = parseWhenRange(t.when);
+    
+            // Vypočítaj trvania jednotlivých segmentov
+            const durations = [];
+            for (let i = 0; i < route.length - 1; i++) {
+                const mins = getTravelMinutes(route[i], route[i + 1]);
+                durations.push(mins != null ? Number(mins) : null);
+            }
+    
+            // Fallback pre chýbajúce trvania – priemer zo známych
+            const known = durations.filter((d) => d != null);
+            const fallback = known.length > 0
+                ? Math.round(known.reduce((a, b) => a + b, 0) / known.length)
+                : null;
+    
+            const finalDurations = durations.map((d) =>
+                d != null ? d : (fallback != null ? fallback : null)
+            );
+    
+            const durationsSum = finalDurations.reduce((sum, d) => sum + (d || 0), 0);
+    
+            if (
+                timeRange &&
+                timeRange.startTs != null &&
+                timeRange.endTs != null &&
+                timeRange.endTs > timeRange.startTs &&
+                durationsSum > 0
+            ) {
+                // Rozdeľ čas podľa trvaní
+                let cursorTs = timeRange.startTs;
+                const totalMs = timeRange.endTs - timeRange.startTs;
+    
+                for (let i = 0; i < route.length - 1; i++) {
+                    const isLast = i === route.length - 2;
+                    const dur = finalDurations[i] || 0;
+                    const segMs = isLast
+                        ? (timeRange.endTs - cursorTs)
+                        : Math.round((dur / durationsSum) * totalMs);
+    
+                    const segStartTs = cursorTs;
+                    const segEndTs = cursorTs + segMs;
+                    const whenStr = `${formatTsLocal(segStartTs)} – ${formatTsLocal(segEndTs)}`;
+                    const text = `Presun z ${route[i]} do ${route[i + 1]}`;
+                    const key = buildTransferKey(t.category, t.teamName, whenStr, text);
+    
+                    expandedTransfers.push({
+                        ...t,
+                        key,
+                        when: whenStr,
+                        text,
+                        fromLocation: route[i],
+                        toLocation: route[i + 1],
+                        intermediateStops: [], // segment nemá medzizastávky
+                        _parentKey: t.key,     // odkaz na pôvodný záznam
+                        _parentRoute: `${t.fromLocation} → ${t.toLocation}`,
+                    });
+    
+                    cursorTs = segEndTs;
+                }
+            } else {
+                // Fallback – nevieme vypočítať časy, použi pôvodný when pre všetky segmenty
+                for (let i = 0; i < route.length - 1; i++) {
+                    const text = `Presun z ${route[i]} do ${route[i + 1]}`;
+                    const key = buildTransferKey(t.category, t.teamName, t.when, text);
+                    expandedTransfers.push({
+                        ...t,
+                        key,
+                        text,
+                        fromLocation: route[i],
+                        toLocation: route[i + 1],
+                        intermediateStops: [],
+                        _parentKey: t.key,
+                        _parentRoute: `${t.fromLocation} → ${t.toLocation}`,
+                    });
+                }
+            }
+        });
+    
+        // ============================================================
+        // Filtrovanie – skry LEN tie konkrétne segmenty presunu,
+        // ktoré sú už priradené (buď ako "peši", alebo ako tím v busRow).
+        // ============================================================
+        const baseFiltered = expandedTransfers.filter((t) => {
+            // Ak je celý presun označený ako peši, skry ho
+            if (t.isWalking === true) return false;
+            // Skry len konkrétne priradené segmenty
+            return !isSegmentAssigned(t);
+        });
+    
+        const filtered = mergeMode
+            ? baseFiltered.filter((t) =>
+                baseFiltered.some((other) => canMergeTransfers(t, other))
+            )
+            : baseFiltered;
     
         // ============================================================
         // Pomocná: z `when` vytiahne číselný kľúč pre začiatok
@@ -6346,6 +6419,11 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                             }
     
+                            // 4. riadok – informácia o pôvodnom (rozdelenom) presune
+                            const parentInfoLabel = t._parentKey && t._parentRoute
+                                ? `časť presunu ${t._parentRoute}`
+                                : null;
+    
                             return React.createElement(
                                 'li',
                                 {
@@ -6416,7 +6494,15 @@ const TransportApp = ({ userProfileData }) => {
                                         { className: 'text-sm text-gray-900 font-medium' },
                                         routeLabel
                                     ),
-                                // 5. riadok – príznak "peši"
+                                // 5. riadok – informácia o pôvodnom presune (rozdelený)
+                                parentInfoLabel &&
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-[11px] text-violet-600 italic mt-0.5 inline-flex items-center gap-1' },
+                                        React.createElement('i', { className: 'fa-solid fa-code-branch' }),
+                                        parentInfoLabel
+                                    ),
+                                // 6. riadok – príznak "peši"
                                 t.isWalking === true &&
                                     React.createElement(
                                         'span',
@@ -6439,7 +6525,6 @@ const TransportApp = ({ userProfileData }) => {
                                 // === TLAČIDLO "ZLÚČIŤ" (len v režime zlučovania) ===
                                 mergeMode &&
                                     (() => {
-                                        // Nájdi vhodný druhý presun (čas/miesto začiatku nadväzuje na koniec tohto)
                                         const mergeCandidate = baseFiltered.find(
                                             (other) => other.key !== t.key && canMergeTransfers(t, other)
                                         );
@@ -6450,7 +6535,6 @@ const TransportApp = ({ userProfileData }) => {
                                                 type: 'button',
                                                 onClick: (e) => {
                                                     e.stopPropagation();
-                                                    // Otvor rozhodovacie modálne okno pre zlúčenie
                                                     setMergeTransfersModal({ first: t, second: mergeCandidate });
                                                 },
                                                 className: 'mt-1 self-start px-2 py-1 rounded bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 transition-colors'
