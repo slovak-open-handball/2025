@@ -9300,7 +9300,7 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement(
                             'div',
                             { className: 'flex-1' },
-                            React.createElement('div', { className: 'font-semibold text-gray-800' }, 'Pridať/upraviť medzizastávky'),
+                            React.createElement('div', { className: 'font-semibold text-gray-800' }, 'Upraviť presun'),
                             React.createElement('div', { className: 'text-xs text-gray-500' }, 'Rozdeliť trasu na viac segmentov')
                         )
                     ),
