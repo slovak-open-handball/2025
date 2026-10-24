@@ -3763,42 +3763,32 @@ const TransportApp = ({ userProfileData }) => {
         );
     
         // ============================================================
-        // NOVÉ: Odstráni tím zo VŠETKÝCH riadkov daného autobusu a dňa
-        // (z teamsIn aj teamsOut), aby sa tím úplne odstránil z busu.
+        // NOVÉ: Odstráni tím LEN z aktuálneho riadku (buď z teamsIn,
+        // alebo z teamsOut), aby sa nezrušili ostatné priradenia
+        // toho istého tímu v iných riadkoch autobusu.
         // ============================================================
-        const removeTeamFromWholeBus = async (teamKeyToRemove) => {
-            if (!window.db || !busId || !dayKey) return;
-            const rowsKey = `${busId}|${dayKey}`;
-            const allRows = busRows[rowsKey] || [];
-    
-            const updates = [];
-            allRows.forEach((r) => {
-                const teamsIn = Array.isArray(r.teamsIn) ? r.teamsIn : [];
-                const teamsOut = Array.isArray(r.teamsOut) ? r.teamsOut : [];
-    
-                const newTeamsIn = teamsIn.filter((t) => String(t) !== String(teamKeyToRemove));
-                const newTeamsOut = teamsOut.filter((t) => String(t) !== String(teamKeyToRemove));
-    
-                const inChanged = newTeamsIn.length !== teamsIn.length;
-                const outChanged = newTeamsOut.length !== teamsOut.length;
-    
-                if (inChanged || outChanged) {
-                    updates.push(
-                        updateDoc(doc(window.db, 'transport', r.id), {
-                            ...(inChanged ? { teamsIn: newTeamsIn } : {}),
-                            ...(outChanged ? { teamsOut: newTeamsOut } : {}),
-                        })
-                    );
-                }
-            });
-    
-            if (updates.length === 0) return;
+        const removeTeamFromCurrentRow = async (teamKeyToRemove, side) => {
+            if (!window.db || !row?.id) return;
+            const currentTeams = side === 'in'
+                ? (row.teamsIn || [])
+                : (row.teamsOut || []);
+            const newTeams = currentTeams.filter((t) => String(t) !== String(teamKeyToRemove));
+
+            if (newTeams.length === currentTeams.length) return;
+
             try {
-                await Promise.all(updates);
-                window.showGlobalNotification('Tím bol odstránený z autobusu.', 'info');
+                await updateDoc(doc(window.db, 'transport', row.id), {
+                    [side === 'in' ? 'teamsIn' : 'teamsOut']: newTeams,
+                });
+                window.showGlobalNotification(
+                    side === 'in'
+                        ? 'Tím bol odstránený z nástupu v tomto riadku.'
+                        : 'Tím bol odstránený z výstupu v tomto riadku.',
+                    'info'
+                );
             } catch (err) {
-                console.error('[TRANSPORT] Chyba pri odstraňovaní tímu z autobusu:', err);
-                window.showGlobalNotification('Nepodarilo sa odstrániť tím z autobusu.', 'error');
+                console.error('[TRANSPORT] Chyba pri odstraňovaní tímu z riadku:', err);
+                window.showGlobalNotification('Nepodarilo sa odstrániť tím z riadku.', 'error');
             }
         };
     
@@ -3891,7 +3881,7 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 {
                                     key: `in-${i}`,
-                                    onClick: () => removeTeamFromWholeBus(tn),
+                                    onClick: () => removeTeamFromCurrentRow(tn, 'in'),
                                     title: getTeamTooltipLabel(tn),
                                     className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
                                     style: { color: textColor }
@@ -3917,7 +3907,7 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 {
                                     key: `out-${i}`,
-                                    onClick: () => removeTeamFromWholeBus(tn),
+                                    onClick: () => removeTeamFromCurrentRow(tn, 'out'),
                                     title: getTeamTooltipLabel(tn),
                                     className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
                                     style: { color: textColor }
