@@ -8123,12 +8123,57 @@ const TransportApp = ({ userProfileData }) => {
             }
             return true;
         });
-    
+
+        // ============================================================
+        // NOVÉ: Z každého parent bloku (rovnaký _parentKey, tím, kat.,
+        // deň) zobraz LEN PRVÝ nepriradený segment.
+        //
+        // Tým sa zabezpečí, že keď máš parent presun A → B → C → D
+        // a žiadny segment nie je priradený, v zozname sa zobrazí
+        // iba A→B. Až keď ho priradíš (alebo označíš ako peši),
+        // zobrazí sa B→C, atď.
+        //
+        // Segmenty bez _parentKey (klasické samostatné presuny)
+        // sa správajú ako vlastný blok – pre ne je _parentKey
+        // nahradený kľúčom, aby sa cez skupinu nezlievali.
+        // ============================================================
+        const firstSegmentPerParent = new Map(); // parentKey → segment s najmenším startTs
+
+        baseFiltered.forEach((t) => {
+            // Urči kľúč bloku:
+            //  - ak má _parentKey, patrí do bloku parenta
+            //  - inak je to samostatný presun – vlastný blok
+            const blockKey = t._parentKey
+                ? `${t._parentKey}||${cleanCategory(t.category || '')}||${String(t.teamName || '').trim()}`
+                : `solo||${t.key}`;
+
+            const trRange = parseTransferWhenToRange(t.when);
+            const startTs = trRange ? trRange.startTs : Number.POSITIVE_INFINITY;
+
+            const existing = firstSegmentPerParent.get(blockKey);
+            if (!existing) {
+                firstSegmentPerParent.set(blockKey, { segment: t, startTs });
+                return;
+            }
+            if (startTs < existing.startTs) {
+                firstSegmentPerParent.set(blockKey, { segment: t, startTs });
+            }
+        });
+
+        // Zoznam povolených segmentov (prvý z každého bloku)
+        const allowedKeys = new Set();
+        firstSegmentPerParent.forEach(({ segment }) => {
+            allowedKeys.add(segment.key);
+        });
+
+        // Finálny zoznam – len prvý segment z každého bloku
+        const baseFilteredFirstOnly = baseFiltered.filter((t) => allowedKeys.has(t.key));
+
         const filtered = mergeMode
-            ? baseFiltered.filter((t) =>
-                baseFiltered.some((other) => canMergeTransfers(t, other))
+            ? baseFilteredFirstOnly.filter((t) =>
+                baseFilteredFirstOnly.some((other) => canMergeTransfers(t, other))
             )
-            : baseFiltered;
+            : baseFilteredFirstOnly;
     
         // Zoradenie
         const buildStartSortKey = (t) => {
