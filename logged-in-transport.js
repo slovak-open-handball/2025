@@ -6328,11 +6328,18 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
     
-            // 3) Plne nevyriešené segmenty → PÔVODNÝ CELÝ INTERVAL
-            //    (čas sa NEROZDEĽUJE medzi segmenty!)
+            // 3) Plne nevyriešené segmenty → PÔVODNÝ CELÝ INTERVAL,
+            //    ale ak predchádzajúci segment je vyriešený autobusom,
+            //    začni od jeho konca.
             for (let i = 0; i < route.length - 1; i++) {
                 if (finalTimes[i]) continue;
-                finalTimes[i] = { startTs: timeRange.startTs, endTs: timeRange.endTs };
+                
+                let startTs = timeRange.startTs;
+                // Ak predchádzajúci segment je vyriešený, začni od jeho konca
+                if (i > 0 && finalTimes[i - 1]) {
+                    startTs = finalTimes[i - 1].endTs;
+                }
+                finalTimes[i] = { startTs, endTs: timeRange.endTs };
             }
     
             // ============================================================
