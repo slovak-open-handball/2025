@@ -2,7 +2,7 @@
 import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, Timestamp, setDoc, deleteDoc, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-const { useState, useEffect, useRef, useSyncExternalStore } = React;
+const { useState, useEffect, useRef } = React;
 
 /**
  * Globálna funkcia pre zobrazenie notifikácií
@@ -675,12 +675,6 @@ const TransportApp = ({ userProfileData }) => {
             return new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm, 0, 0).getTime();
         };
     
-        const formatDayWithTime = (dayRefTs, hh, mm) => {
-            const ts = timestampOnDay(dayRefTs, hh, mm);
-            if (ts == null) return null;
-            return formatDateTime(new Date(ts));
-        };
-    
         const midnightFromWhen = (when) => {
             if (!when) return null;
             const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(when);
@@ -775,27 +769,6 @@ const TransportApp = ({ userProfileData }) => {
             const gChar = getGroupLastChar(groupName);
             return gChar === char;
         };
-
-        // ============================================================
-        // NOVÉ: Pomocná funkcia – získa ubytovania pre danú kategóriu a skupinu
-        // ============================================================
-        const getAccommodationsForGroup = (category, groupName) => {
-            if (!category || !groupName) return [];
-            const targetCategory = cleanCategory(category);
-            const targetGroup = String(groupName).trim();
-            const result = new Set();
-    
-            teamsArrivalBufferRef.current.forEach((t) => {
-                if (cleanCategory(t.category) !== targetCategory) return;
-                const teamGroup = t.groupName ? String(t.groupName).trim() : null;
-                if (!teamGroup || teamGroup !== targetGroup) return;
-                if (t.accommodationName && t.accommodationName.trim()) {
-                    result.add(t.accommodationName.trim());
-                }
-            });
-    
-            return [...result].sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
-        };
     
         // ============================================================
         // NOVÉ: Pomocná funkcia – získa skupinu pre superstructure tím
@@ -815,10 +788,7 @@ const TransportApp = ({ userProfileData }) => {
     
         if (categories.length === 0) {
             console.log('[TRANSPORT] Žiadne udalosti.');
-        } else {
-            const groupEndLocationsPerDay = {};
-            const groupEndLocationsByLastCharPerDay = {};
-    
+        } else {    
             Object.entries(grouped).forEach(([category, teamsObj]) => {
                 Object.entries(teamsObj).forEach(([teamName, events]) => {
                     const teamGroup = (() => {
@@ -1036,14 +1006,7 @@ const TransportApp = ({ userProfileData }) => {
                         const ssTeamKeyPre = `${cleanCategory(category)}|${teamName}`;
                         const groupCharPre = ssGroupCharByTeam[ssTeamKeyPre];
                     
-                        if (groupCharPre && ssPlayDatesByTeam[ssTeamKeyPre]) {
-                            // Nájdi všetky hracie dni skupiny, kedy tím NEMÁ udalosť
-                            const teamEventDays = new Set();
-                            events.forEach((ev) => {
-                                const evDay = extractDayKeyFromWhen(ev.when);
-                                if (evDay) teamEventDays.add(evDay);
-                            });
-                    
+                        if (groupCharPre && ssPlayDatesByTeam[ssTeamKeyPre]) {                    
                             const groupPlayDays = [...ssPlayDatesByTeam[ssTeamKeyPre]].sort();                            
                     
                             groupPlayDays.forEach((groupPlayDay) => {
@@ -1128,17 +1091,6 @@ const TransportApp = ({ userProfileData }) => {
                                         return groupBelongsToChar(teamInfo.groupName, groupCharPre);
                                     }
                                     return false;
-                                };
-
-                                // Pomocná: zisti, či tím má ubytovanie (alebo je to tím zo skupiny s ubytovaním)
-                                const getTeamAccommodationPre = (tn) => {
-                                    if (!tn) return null;
-                                    const info = (teamsArrivalBufferRef.current || []).find(
-                                        (t) => cleanCategory(t.category) === cleanCategory(category) && t.teamName === tn
-                                    );
-                                    if (!info) return null;
-                                    if (!info.accommodationName || info.accommodationName.trim() === '') return null;
-                                    return info.accommodationName.trim();
                                 };
                     
                                 // Zisti, či je to prvý hrací deň tímu
@@ -2558,35 +2510,6 @@ const TransportApp = ({ userProfileData }) => {
                 });
             });
         }
-
-        // ============================================================
-        // NOVÉ: Uloženie vygenerovaných presunov do DB
-        // (rovnaký dokument ako trvania jázd)
-        // ============================================================
-        try {
-            if (window.db) {
-                const transfersToSave = {}; // key → objekt
-                const nowTs = Timestamp.fromDate(new Date());
-        
-                Object.entries(grouped).forEach(([category, teamsObj]) => {
-                    Object.entries(teamsObj).forEach(([teamName, events]) => {
-                        // Prejdi enriched eventy – potrebujeme tie isté ako v renderi.
-                        // Keďže `enriched` sa vytvára až nižšie v renderi, tu si
-                        // prejdeme `events` a označíme tie, ktoré sú typu 'transfer'
-                        // (tie sa do `enriched` dostávajú počas renderu).
-                        //
-                        // POZOR: `enriched` nie je dostupné v tejto časti kódu.
-                        // Preto ukladanie robíme cez pomocnú funkciu nižšie,
-                        // ktorá sa volá priamo z renderu pre každý tím.
-                    });
-                });
-        
-                // Uloženie presunov sa deje cez `persistTeamTransfers`
-                // volanú z renderu pre každý tím (viď nižšie).
-            }
-        } catch (e) {
-            console.error('[TRANSPORT] Chyba pri ukladaní presunov:', e);
-        }
         
         console.log('[TRANSPORT] ===============================================');
     };
@@ -3193,9 +3116,7 @@ const TransportApp = ({ userProfileData }) => {
                         });
                     }
                 });
-
-                const ssCount = buffer.filter((b) => b.isSuperstructure).length;
-
+                
                 teamsArrivalBufferRef.current = buffer;
                 teamsLoadedRef.current = true;
 
@@ -3525,21 +3446,6 @@ const TransportApp = ({ userProfileData }) => {
     }, [busRows, travelTimes, stopsList]);
 
     // ============================================================
-    // POMOCNÁ: výpočet trvania v minútach z "HH:MM" – "HH:MM"
-    // ============================================================
-    const computeDurationMinutes = (timeFrom, timeTo) => {
-        if (!timeFrom || !timeTo) return null;
-        const re = /^(\d{1,2}):(\d{2})$/;
-        const a = re.exec(String(timeFrom));
-        const b = re.exec(String(timeTo));
-        if (!a || !b) return null;
-        const fromMin = Number(a[1]) * 60 + Number(a[2]);
-        const toMin = Number(b[1]) * 60 + Number(b[2]);
-        const diff = toMin - fromMin;
-        return diff >= 0 ? diff : null;
-    };
-
-    // ============================================================
     // PRIDANIE RIADKU DO AUTOBUSU PRE DANÝ DEŇ
     // ============================================================
     const addBusRow = async (bus, dayKey) => {
@@ -3791,7 +3697,6 @@ const TransportApp = ({ userProfileData }) => {
     
         const counts = getTeamCountsForTransfer(category, teamName);
         let membersText = null;
-        let membersTitle = '';
     
         if (counts) {
             const total =
@@ -4268,18 +4173,6 @@ const TransportApp = ({ userProfileData }) => {
             };
         };
     
-        const formatTs = (ts) => {
-            if (ts == null || !isFinite(ts)) return null;
-            const d = new Date(ts);
-            if (isNaN(d.getTime())) return null;
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = d.getFullYear();
-            const hours = String(d.getHours()).padStart(2, '0');
-            const minutes = String(d.getMinutes()).padStart(2, '0');
-            return `${day}. ${month}. ${year} ${hours}:${minutes}`;
-        };
-    
         const timeRange = parseWhenRangeToTs(originalWhen);
         const segmentsCount = route.length - 1;
         if (segmentsCount <= 0) return [];
@@ -4640,18 +4533,6 @@ const TransportApp = ({ userProfileData }) => {
                 window.showGlobalNotification('Nepodarilo sa zistiť časový interval.', 'error');
                 return;
             }
-
-            const formatTs = (ts) => {
-                if (ts == null || !isFinite(ts)) return null;
-                const d = new Date(ts);
-                if (isNaN(d.getTime())) return null;
-                const day = String(d.getDate()).padStart(2, '0');
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const year = d.getFullYear();
-                const hours = String(d.getHours()).padStart(2, '0');
-                const minutes = String(d.getMinutes()).padStart(2, '0');
-                return `${day}. ${month}. ${year} ${hours}:${minutes}`;
-            };
 
             const newFrom = first.fromLocation;
             const newTo = second.toLocation;
@@ -6165,7 +6046,6 @@ const TransportApp = ({ userProfileData }) => {
                         sortedTransfers.map((t) => {
                             const rangeInfo = parseWhenRange(t.when);
                             const transferInfo = parseTransferText(t.text);
-                            const categoryLabel = cleanCategory(t.category) || '(bez kategórie)';
     
                             // Farby pre box
                             const transportColor = getTransportColorForCategory(t.category);
