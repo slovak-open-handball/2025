@@ -4324,10 +4324,10 @@ const TransportApp = ({ userProfileData }) => {
         }
     
         if (membersText != null) {
-            return `${teamName} • ${membersText} členov\nKliknutím odstrániť tím z celého autobusu (nástup aj výstup, všetky riadky)`;
+            return `${teamName} • ${membersText} členov`;
         }
     
-        return `${teamName}\nKliknutím odstrániť tím z celého autobusu (nástup aj výstup, všetky riadky)`;
+        return `${teamName}`;
     };
 
     // ============================================================
