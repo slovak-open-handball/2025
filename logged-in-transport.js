@@ -6821,7 +6821,7 @@ const TransportApp = ({ userProfileData }) => {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
             const snap = await getDoc(docRef);
             if (snap.exists()) {
-                const rawTransfers = snap.data()[TRANSPORT_TRANSFERS_FIELD] || {};
+                const rawTransfers = (snap.data() || {})[TRANSPORT_TRANSFERS_FIELD] || {};
                 const keysToDelete = [];
     
                 Object.entries(rawTransfers).forEach(([key, v]) => {
