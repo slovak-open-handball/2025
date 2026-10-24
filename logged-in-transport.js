@@ -9053,7 +9053,7 @@ const TransportApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: 'font-medium text-gray-700 mb-1' },
-                        'Pôvodná trasa:'
+                        'Celá trasa presunu:'
                     ),
                     React.createElement(
                         'div',
@@ -9065,7 +9065,12 @@ const TransportApp = ({ userProfileData }) => {
                             'div',
                             { className: 'text-xs text-gray-500 mt-1' },
                             editingTransfer.when
-                        )
+                        ),
+                    editingTransferStops.length > 0 && React.createElement(
+                        'div',
+                        { className: 'text-xs text-indigo-600 mt-1 italic' },
+                        `Medzizastávky: ${editingTransferStops.join(', ')}`
+                    )
                 ),
                 // Medzizastávky
                 React.createElement(
@@ -9263,8 +9268,30 @@ const TransportApp = ({ userProfileData }) => {
                             type: 'button',
                             onClick: () => {
                                 const t = transferActionModal.transfer;
-                                setEditingTransfer(t);
-                                setEditingTransferStops([]);
+                                
+                                // ============================================================
+                                // NOVÉ: Ak je to segment, pracuj s parent záznamom.
+                                // ============================================================
+                                let transferToEdit = t;
+                                let existingStops = [];
+    
+                                if (t._parentKey) {
+                                    const parent = savedTransfers.find((s) => s.key === t._parentKey);
+                                    if (parent) {
+                                        transferToEdit = {
+                                            ...parent,
+                                            _parentKey: undefined,
+                                        };
+                                        if (Array.isArray(parent.intermediateStops)) {
+                                            existingStops = [...parent.intermediateStops];
+                                        }
+                                    }
+                                } else if (Array.isArray(t.intermediateStops)) {
+                                    existingStops = [...t.intermediateStops];
+                                }
+    
+                                setEditingTransfer(transferToEdit);
+                                setEditingTransferStops(existingStops);
                                 setTransferActionModal(null);
                             },
                             className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors flex items-center gap-3'
@@ -9308,22 +9335,41 @@ const TransportApp = ({ userProfileData }) => {
                             type: 'button',
                             onClick: () => {
                                 const t = transferActionModal.transfer;
-                                setEditingTransfer(t);
+                                
                                 // ============================================================
-                                // NOVÉ: Predvyplň existujúce medzizastávky z parent záznamu
+                                // NOVÉ: Ak je to segment (má _parentKey), musíme do
+                                // editingTransfer nastaviť PARENT záznam, aby sa v modálnom
+                                // okne zobrazila CELÁ trasa presunu (fromLocation → ... → toLocation).
+                                //
+                                // Ak je to parent sám (nemá _parentKey), použijeme ho priamo.
                                 // ============================================================
-                                // Ak je to segment rozdeleného presunu (má _parentKey),
-                                // nájdi parent záznam v savedTransfers a zober jeho intermediateStops.
-                                // Inak (ak je to parent sám), zober jeho vlastné intermediateStops.
+                                let transferToEdit = t;
                                 let existingStops = [];
+                                
                                 if (t._parentKey) {
                                     const parent = savedTransfers.find((s) => s.key === t._parentKey);
-                                    if (parent && Array.isArray(parent.intermediateStops)) {
-                                        existingStops = [...parent.intermediateStops];
+                                    if (parent) {
+                                        // Použiť parent záznam – obsahuje celú trasu
+                                        transferToEdit = {
+                                            ...parent,
+                                            // Zachovaj _parentKey, aby saveEditedTransfer vedel,
+                                            // že pracuje s parentom (a nie so segmentom)
+                                            _parentKey: undefined,
+                                        };
+                                        if (Array.isArray(parent.intermediateStops)) {
+                                            existingStops = [...parent.intermediateStops];
+                                        }
+                                    } else {
+                                        // Parent sa nenašiel – fallback na segment
+                                        if (Array.isArray(t.intermediateStops)) {
+                                            existingStops = [...t.intermediateStops];
+                                        }
                                     }
                                 } else if (Array.isArray(t.intermediateStops)) {
                                     existingStops = [...t.intermediateStops];
                                 }
+                                
+                                setEditingTransfer(transferToEdit);
                                 setEditingTransferStops(existingStops);
                                 setTransferActionModal(null);
                             },
