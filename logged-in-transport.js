@@ -8167,6 +8167,13 @@ const TransportApp = ({ userProfileData }) => {
         });
 
         // ============================================================
+        // NOVÉ: Základný zoznam – len prvý segment z každého bloku
+        // (bez summary záznamov). Používa sa nižšie na zistenie,
+        // ktoré parent bloky už majú viditeľný segment.
+        // ============================================================
+        const baseFilteredFirstOnlyRaw = baseFiltered.filter((t) => allowedKeys.has(t.key));
+
+        // ============================================================
         // NOVÉ: Pre KAŽDÝ parent blok, ktorý má VŠETKY segmenty priradené
         // (t.j. nie je v `baseFilteredFirstOnlyRaw`), pridaj "summary"
         // záznam – vizuálny box s celkovou trasou a časom, ktorý
