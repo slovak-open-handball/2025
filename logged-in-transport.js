@@ -2553,10 +2553,10 @@ const TransportApp = ({ userProfileData }) => {
                             dayKey: v.dayKey || null,
                             generatedAt: v.generatedAt || null,
                             generatedBy: v.generatedBy || null,
-                            // NOVÉ: načítaj príznak "peši" a súvisiace polia
                             isWalking: v.isWalking === true,
                             walkingSetAt: v.walkingSetAt || null,
                             walkingSetBy: v.walkingSetBy || null,
+                            intermediateStops: Array.isArray(v.intermediateStops) ? v.intermediateStops : [],  // ← NOVÉ
                         });
                     });
                     transfers.sort((a, b) => {
@@ -4604,9 +4604,18 @@ const TransportApp = ({ userProfileData }) => {
                 fromLocation: blockRoute[idx],
                 toLocation: blockRoute[idx + 1],
                 dayKey,
-                generatedAt: Timestamp.fromDate(new Date()),
-                generatedBy: (userProfileData && userProfileData.email) || null,
             };
+            
+            // NOVÉ: Zachovaj intermediateStops, ak existujú
+            if (seg.intermediateStops && seg.intermediateStops.length > 0) {
+                base.intermediateStops = seg.intermediateStops;
+            }
+
+            if (seg.isWalking === true) {
+                base.isWalking = true;
+                base.walkingSetAt = seg.walkingSetAt || Timestamp.fromDate(new Date());
+                base.walkingSetBy = seg.walkingSetBy || (userProfileData && userProfileData.email) || null;
+            }
     
             if (seg.isWalking === true) {
                 base.isWalking = true;
@@ -4630,54 +4639,50 @@ const TransportApp = ({ userProfileData }) => {
     
         const original = editingTransfer;
         const stops = (editingTransferStops || []).map((s) => String(s || '').trim()).filter(Boolean);
-        const route = [original.fromLocation, ...stops, original.toLocation].filter(Boolean);
-    
-        if (route.length < 2) {
-            window.showGlobalNotification('Trasa musí mať aspoň dve zastávky.', 'error');
-            return;
-        }
-    
-        const segmentsCount = route.length - 1;
-        const segmentTimes = recomputeRemainingSegments(original.when, route, new Set());
-    
+        
         setEditingTransferSaving(true);
         try {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
-            const deletePatch = { [original.key]: deleteField() };
-            const newTransfersPatch = {};
-    
-            for (let i = 0; i < segmentsCount; i++) {
-                const from = route[i];
-                const to = route[i + 1];
-                const text = `Presun z ${from} do ${to}`;
-                const when = segmentTimes[i].whenStr;
-                const key = buildTransferKey(original.category, original.teamName, when, text);
-    
-                newTransfersPatch[key] = {
-                    category: original.category,
-                    teamName: original.teamName,
-                    when,
-                    text,
-                    fromLocation: from,
-                    toLocation: to,
-                    dayKey: original.dayKey,
-                    generatedAt: Timestamp.fromDate(new Date()),
-                    generatedBy: (userProfileData && userProfileData.email) || null,
-                };
+            
+            // NOVÉ: Zachovaj pôvodný záznam A→B a pridaj intermediateStops
+            const updatedTransfer = {
+                category: original.category,
+                teamName: original.teamName,
+                when: original.when,
+                text: original.text,
+                fromLocation: original.fromLocation,
+                toLocation: original.toLocation,
+                dayKey: original.dayKey,
+            };
+            
+            // Zachovaj intermediateStops (ak sú)
+            if (stops.length > 0) {
+                updatedTransfer.intermediateStops = stops;
             }
-    
+            
+            // Zachovaj isWalking (ak existuje)
+            if (original.isWalking === true) {
+                updatedTransfer.isWalking = true;
+                updatedTransfer.walkingSetAt = original.walkingSetAt || Timestamp.fromDate(new Date());
+                updatedTransfer.walkingSetBy = original.walkingSetBy || (userProfileData && userProfileData.email) || null;
+            }
+            
             await setDoc(
                 docRef,
                 {
-                    [TRANSPORT_TRANSFERS_FIELD]: { ...deletePatch, ...newTransfersPatch },
+                    [TRANSPORT_TRANSFERS_FIELD]: {
+                        [original.key]: updatedTransfer,
+                    },
                     updatedAt: Timestamp.fromDate(new Date()),
                     updatedBy: (userProfileData && userProfileData.email) || null,
                 },
                 { merge: true }
             );
-    
+            
             window.showGlobalNotification(
-                `Presun bol upravený (${segmentsCount} ${segmentsCount === 1 ? 'segment' : segmentsCount < 5 ? 'segmenty' : 'segmentov'}).`,
+                stops.length > 0
+                    ? `Presun bol upravený (${stops.length} medzizastávok).`
+                    : 'Medzizastávky boli odstránené.',
                 'success'
             );
             setEditingTransfer(null);
@@ -4741,8 +4746,6 @@ const TransportApp = ({ userProfileData }) => {
                 fromLocation: newFrom,
                 toLocation: newTo,
                 dayKey: first.dayKey,
-                generatedAt: Timestamp.fromDate(new Date()),
-                generatedBy: (userProfileData && userProfileData.email) || null,
             };
 
             await setDoc(
@@ -6333,7 +6336,14 @@ const TransportApp = ({ userProfileData }) => {
                             // 3. riadok – miesta
                             let routeLabel = null;
                             if (transferInfo) {
-                                routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
+                                if (t.intermediateStops && t.intermediateStops.length > 0) {
+                                    // Zobraz trasu s medzizastávkami
+                                    routeLabel = [t.fromLocation, ...t.intermediateStops, t.toLocation]
+                                        .filter(Boolean)
+                                        .join(' → ');
+                                } else {
+                                    routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
+                                }
                             }
     
                             return React.createElement(
