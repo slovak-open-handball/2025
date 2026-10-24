@@ -5674,15 +5674,86 @@ const TransportApp = ({ userProfileData }) => {
             });
         });
     
-        // Zoraď výsledky
-        results.sort((a, b) => {
+        // ============================================================
+        // NOVÉ: Deduplikácia – ak majú viaceré kandidáti rovnaký
+        // `boardingTime` (čas odchodu z nástupnej zastávky), necháme
+        // len toho s NAJKRAJŠÍM trvaním jazdy medzi nástupnou
+        // a výstupnou zastávkou.
+        //
+        // Trvanie jazdy vypočítame ako:
+        //   (timeTo výstupného riadku) − (timeFrom nástupného riadku)
+        // s prechodom cez polnoc (mod 24h).
+        // ============================================================
+        const computeTripDurationMinutes = (boardingRow, alightingRow) => {
+            const timeRe = /^\d{1,2}:\d{2}$/;
+            if (!boardingRow || !alightingRow) return null;
+            if (!timeRe.test(boardingRow.timeFrom || '') || !timeRe.test(alightingRow.timeTo || '')) {
+                return null;
+            }
+            const [bh, bm] = boardingRow.timeFrom.split(':').map(Number);
+            const [ah, am] = alightingRow.timeTo.split(':').map(Number);
+            let diff = (ah * 60 + am) - (bh * 60 + bm);
+            if (diff < 0) diff += 24 * 60;
+            return diff;
+        };
+
+        // Zoskup kandidátov podľa kľúča:
+        //   busId | dayKey | boardingTime | fromPlace
+        // (t. j. rovnaký autobus, rovnaký deň, rovnaký čas odchodu
+        //  z rovnakej nástupnej zastávky)
+        const groupedByBoarding = new Map();
+        results.forEach((r) => {
+            const busId = r.bus?.id || '';
+            const dayKey = r.trip?.dayKey || '';
+            const boardingTime = r.boardingTime || '';
+            const fromPlace = normalizePlaceName(r.trip?.fromPlace || '');
+            const key = `${busId}|${dayKey}|${boardingTime}|${fromPlace}`;
+            if (!groupedByBoarding.has(key)) groupedByBoarding.set(key, []);
+            groupedByBoarding.get(key).push(r);
+        });
+
+        // Pre každú skupinu nechaj len kandidáta s najkratším trvaním jazdy
+        const dedupedResults = [];
+        groupedByBoarding.forEach((group) => {
+            if (group.length === 1) {
+                dedupedResults.push(group[0]);
+                return;
+            }
+
+            // Vypočítaj trvanie pre každého kandidáta
+            const withDuration = group.map((r) => ({
+                candidate: r,
+                duration: computeTripDurationMinutes(r.boardingRow, r.alightingRow),
+            }));
+
+            // Nájdi minimum (null = neznáme → berieme ako najhoršie)
+            let best = null;
+            withDuration.forEach((item) => {
+                if (item.duration == null) return; // neznáme trvanie – preskoč
+                if (best == null || item.duration < best.duration) {
+                    best = item;
+                }
+            });
+
+            if (best != null) {
+                // Máme kandidáta s najkratším trvaním – nechaj len jeho
+                dedupedResults.push(best.candidate);
+            } else {
+                // Ak sa nedá vypočítať trvanie pre nikoho, nechaj všetkých
+                // (nemáme podklad na výber)
+                group.forEach((r) => dedupedResults.push(r));
+            }
+        });
+
+        // Zoraď výsledky (po deduplikácii)
+        dedupedResults.sort((a, b) => {
             const timeA = a.boardingTime || a.alightingTime || '';
             const timeB = b.boardingTime || b.alightingTime || '';
             if (timeA !== timeB) return timeA.localeCompare(timeB);
             return String(a.bus.name).localeCompare(String(b.bus.name), 'sk');
         });
-    
-        return results;
+
+        return dedupedResults;
     };
 
     // ============================================================
