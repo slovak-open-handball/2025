@@ -6492,31 +6492,21 @@ const TransportApp = ({ userProfileData }) => {
         if (!window.db || !transfer) return;
         try {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
-    
-            // ============================================================
-            // 1) Zisti pôvodný interval a rozhodni o novom trvaní pešieho
-            // ============================================================
+            
             const originalRange = parseTransferWhenToRange(transfer.when);
             let newWhen = transfer.when;
             let newKey = transfer.key;
             let shouldRenameKey = false;
-            let pešíStartTs = originalRange ? originalRange.startTs : null;
-    
-            const MIN_WALKING_MS = 60 * 1000; // 1 minúta
-    
+            
+            const MIN_WALKING_MS = 60 * 1000;
+            
             if (originalRange && originalRange.startTs != null) {
                 const newEndTs = originalRange.startTs + MIN_WALKING_MS;
                 newWhen = `${formatTsLocal(originalRange.startTs)} – ${formatTsLocal(newEndTs)}`;
-                newKey = buildTransferKey(
-                    transfer.category,
-                    transfer.teamName,
-                    newWhen,
-                    transfer.text
-                );
+                newKey = buildTransferKey(transfer.category, transfer.teamName, newWhen, transfer.text);
                 shouldRenameKey = (newKey !== transfer.key);
             }
-    
-            // Zostav záznam pre uloženie
+            
             const walkingTransfer = {
                 ...transfer,
                 when: newWhen,
@@ -6525,40 +6515,49 @@ const TransportApp = ({ userProfileData }) => {
                 walkingSetBy: (userProfileData && userProfileData.email) || null,
             };
             delete walkingTransfer.key;
-    
+            
             // ============================================================
-            // 2) NOVÉ: NEZAPISUJ peší segment priamo do DB.
-            //    Namiesto toho zavolaj recomputeBlock, ktorý ho uloží
-            //    (pretože je v `block` a má isWalking: true).
-            //
-            //    Tým sa vyhneme problému, keď recomputeBlock zmaže
-            //    peší segment (deleteField pre seg.key), pretože
-            //    seg.key sa líši od newKey.
+            // NOVÉ: NAJPRV ulož peší segment priamo do DB.
+            // Tým zabezpečíme, že sa uloží AJ keď recomputeBlock
+            // vráti sa hneď (napr. keď block.length < 2).
             // ============================================================
-            // (priamy setDoc s transfersPatch sa NEVYKONÁVA)
-    
-                        // ============================================================
-            // 3) NOVÉ: Po označení segmentu ako „peši" prepočítaj blok
-            //    cez recomputeBlock. Ten správne:
-            //     - nechá peší segment na jeho reálnom čase (08:00–08:01),
-            //     - posunie nasledujúce segmenty tak, aby začínali na konci
-            //       predchádzajúceho,
-            //     - ZAROVNÁ KONIEC POSLEDNÉHO SEGMENTU na pôvodný koniec
-            //       parent intervalu (lastRange.endTs).
-            //
-            //    Predtým sa tu robilo manuálne posúvanie o deltaMs, ktoré
-            //    zachovalo pôvodnú dĺžku segmentu → koniec posledného
-            //    segmentu sa nezarovnal na koniec parenta.
+            const transfersPatch = {};
+            if (shouldRenameKey) {
+                // Zmaž starý kľúč
+                transfersPatch[transfer.key] = deleteField();
+            }
+            transfersPatch[newKey] = {
+                category: transfer.category,
+                teamName: transfer.teamName,
+                when: newWhen,
+                text: transfer.text,
+                fromLocation: transfer.fromLocation,
+                toLocation: transfer.toLocation,
+                dayKey: transfer.dayKey,
+                isWalking: true,
+                walkingSetAt: walkingTransfer.walkingSetAt,
+                walkingSetBy: walkingTransfer.walkingSetBy,
+            };
+            
+            // Zachovaj intermediateStops, ak existujú
+            if (Array.isArray(transfer.intermediateStops) && transfer.intermediateStops.length > 0) {
+                transfersPatch[newKey].intermediateStops = transfer.intermediateStops;
+            }
+            
+            await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: transfersPatch }, { merge: true });
+            
+            // ============================================================
+            // POTOM zavolaj recomputeBlock na prepočet nasledujúcich segmentov
             // ============================================================
             try {
                 await recomputeBlock(
                     { ...walkingTransfer, key: newKey },
-                    new Set([newKey])   // peší segment je vyriešený
+                    new Set([newKey])
                 );
             } catch (recomputeErr) {
                 console.error('[TRANSPORT] Chyba pri prepočte bloku po označení peši:', recomputeErr);
             }
-    
+            
             window.showGlobalNotification(
                 shouldRenameKey
                     ? 'Presun bol označený ako „peši" (trvanie natiahnuté na minimálne 1 min, nasledujúce segmenty posunuté).'
