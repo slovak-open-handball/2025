@@ -254,11 +254,6 @@ const TransportApp = ({ userProfileData }) => {
     const [assignBusMatches, setAssignBusMatches] = useState([]); // pole { bus, row, side } – side = 'in' | 'out'
     const [assignBusSelectedKey, setAssignBusSelectedKey] = useState(''); // `${busId}|${rowId}|${side}`
     const [assignBusSaving, setAssignBusSaving] = useState(false);
-    const [mergeMode, setMergeMode] = useState(false);
-
-    // ==== MODÁLNE OKNO PRE ZLÚČENIE PRESUNOV ====
-    const [mergeTransfersModal, setMergeTransfersModal] = useState(null); // { first, second }
-    const [mergeTransfersSaving, setMergeTransfersSaving] = useState(false);
 
     // ==== MODÁLNE OKNO PRE ODSTRÁNENIE "PEŠI" PRÍZNAKU ====
     const [removeWalkingModal, setRemoveWalkingModal] = useState(null); // { transfer }
@@ -4380,47 +4375,6 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
-    // POMOCNÁ: zistí, či sa dva presuny dajú zlúčiť.
-    // Podmienka: čas a miesto konca prvého presunu sa zhoduje
-    // s časom a miestom začiatku druhého presunu.
-    // (Rovnaký tím, kategória, deň.)
-    // ============================================================
-    const canMergeTransfers = (a, b) => {
-        if (!a || !b) return false;
-        if (a.key === b.key) return false;
-
-        // Rovnaký tím a kategória
-        const aTeam = String(a.teamName || '').trim();
-        const bTeam = String(b.teamName || '').trim();
-        const aCat = cleanCategory(a.category || '');
-        const bCat = cleanCategory(b.category || '');
-        if (aTeam !== bTeam || aCat !== bCat) return false;
-
-        // Rovnaký deň
-        const aDay = a.dayKey || '';
-        const bDay = b.dayKey || '';
-        if (!aDay || aDay !== bDay) return false;
-
-        // Konec prvého = koniec intervalu z `when` (druhý timestamp)
-        // a začiatok druhého = začiatok intervalu z `when` (prvý timestamp)
-        const aRange = parseTransferWhenToRange(a.when);
-        const bRange = parseTransferWhenToRange(b.when);
-        if (!aRange || !bRange) return false;
-
-        // Čas konca A musí byť rovnaký ako čas začiatku B
-        if (aRange.endTs == null || bRange.startTs == null) return false;
-        if (aRange.endTs !== bRange.startTs) return false;
-
-        // Miesto konca A musí byť rovnaké ako miesto začiatku B
-        const aTo = normalizePlaceName(a.toLocation || '');
-        const bFrom = normalizePlaceName(b.fromLocation || '');
-        if (!aTo || !bFrom) return false;
-        if (aTo !== bFrom) return false;
-
-        return true;
-    };
-
-    // ============================================================
     // NOVÉ: Zisti, či je segment (from → to) pokrytý trasou autobusu,
     // v ktorej tím sedí. To znamená:
     //  - nájdi autobus, kde tím nastúpil na zastávke `from` alebo skôr
@@ -5758,12 +5712,6 @@ const TransportApp = ({ userProfileData }) => {
                 base.walkingSetBy = seg.walkingSetBy || (userProfileData && userProfileData.email) || null;
             }
     
-            if (seg.isWalking === true) {
-                base.isWalking = true;
-                base.walkingSetAt = seg.walkingSetAt || Timestamp.fromDate(new Date());
-                base.walkingSetBy = seg.walkingSetBy || (userProfileData && userProfileData.email) || null;
-            }
-    
             patch[newKey] = base;
         });
     
@@ -5933,85 +5881,6 @@ const TransportApp = ({ userProfileData }) => {
             window.showGlobalNotification('Nepodarilo sa uložiť úpravu presunu.', 'error');
         } finally {
             setEditingTransferSaving(false);
-        }
-    };
-
-    // ============================================================
-    // ZLÚČENIE DVOCH PRESUNOV DO JEDNÉHO
-    // ============================================================
-    const mergeTransfers = async () => {
-        if (!window.db || !mergeTransfersModal) return;
-        const { first, second } = mergeTransfersModal;
-
-        // Over, že sa dajú zlúčiť
-        if (!canMergeTransfers(first, second)) {
-            window.showGlobalNotification('Presuny sa nedajú zlúčiť.', 'error');
-            return;
-        }
-
-        setMergeTransfersSaving(true);
-        try {
-            const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
-
-            // Nový zlúčený presun:
-            //  - fromLocation = first.fromLocation
-            //  - toLocation = second.toLocation
-            //  - when = začiatok prvého – koniec druhého
-            //  - text = "Presun z X do Y"
-            const firstRange = parseTransferWhenToRange(first.when);
-            const secondRange = parseTransferWhenToRange(second.when);
-
-            if (!firstRange || !secondRange) {
-                window.showGlobalNotification('Nepodarilo sa zistiť časový interval.', 'error');
-                return;
-            }
-
-            const newFrom = first.fromLocation;
-            const newTo = second.toLocation;
-            const newWhen = `${formatTsLocal(firstRange.startTs)} – ${formatTsLocal(secondRange.endTs)}`;
-            const newText = `Presun z ${newFrom} do ${newTo}`;
-            const newKey = buildTransferKey(first.category, first.teamName, newWhen, newText);
-
-            // 1) Zmazať pôvodné dva záznamy
-            const deletePatch = {
-                [first.key]: deleteField(),
-                [second.key]: deleteField(),
-            };
-
-            // 2) Vytvoriť nový záznam
-            const newTransfer = {
-                category: first.category,
-                teamName: first.teamName,
-                when: newWhen,
-                text: newText,
-                fromLocation: newFrom,
-                toLocation: newTo,
-                dayKey: first.dayKey,
-            };
-
-            await setDoc(
-                docRef,
-                {
-                    [TRANSPORT_TRANSFERS_FIELD]: {
-                        ...deletePatch,
-                        [newKey]: newTransfer,
-                    },
-                    updatedAt: Timestamp.fromDate(new Date()),
-                    updatedBy: (userProfileData && userProfileData.email) || null,
-                },
-                { merge: true }
-            );
-
-            window.showGlobalNotification(
-                `Presuny boli zlúčené do jedného: ${newFrom} → ${newTo}.`,
-                'success'
-            );
-            setMergeTransfersModal(null);
-        } catch (err) {
-            console.error('[TRANSPORT] Chyba pri zlučovaní presunov:', err);
-            window.showGlobalNotification('Nepodarilo sa zlúčiť presuny.', 'error');
-        } finally {
-            setMergeTransfersSaving(false);
         }
     };
     
@@ -8238,12 +8107,13 @@ const TransportApp = ({ userProfileData }) => {
         // sa správajú ako vlastný blok – pre ne je _parentKey
         // nahradený kľúčom, aby sa cez skupinu nezlievali.
         // ============================================================
-        const firstSegmentPerParent = new Map(); // parentKey → segment s najmenším startTs
+        // ============================================================
+        // NOVÉ: Výber prvého segmentu z každého parent bloku
+        // s prioritou segmentu, ktorý začína na fromLocation parenta
+        // ============================================================
+        const firstSegmentPerParent = new Map(); // parentKey → { segment, startTs, isFirstFromParent }
 
         baseFiltered.forEach((t) => {
-            // Urči kľúč bloku:
-            //  - ak má _parentKey, patrí do bloku parenta
-            //  - inak je to samostatný presun – vlastný blok
             const blockKey = t._parentKey
                 ? `${t._parentKey}||${cleanCategory(t.category || '')}||${String(t.teamName || '').trim()}`
                 : `solo||${t.key}`;
@@ -8251,13 +8121,37 @@ const TransportApp = ({ userProfileData }) => {
             const trRange = parseTransferWhenToRange(t.when);
             const startTs = trRange ? trRange.startTs : Number.POSITIVE_INFINITY;
 
+            // Zisti, či tento segment začína na fromLocation parenta
+            let isFirstFromParent = false;
+            if (t._parentKey) {
+                const parent = savedTransfers.find((s) => s.key === t._parentKey);
+                if (parent) {
+                    const parentFromNorm = normalizePlaceName(parent.fromLocation || '');
+                    const segFromNorm = normalizePlaceName(t.fromLocation || '');
+                    if (parentFromNorm && segFromNorm && parentFromNorm === segFromNorm) {
+                        isFirstFromParent = true;
+                    }
+                }
+            }
+
             const existing = firstSegmentPerParent.get(blockKey);
             if (!existing) {
-                firstSegmentPerParent.set(blockKey, { segment: t, startTs });
+                firstSegmentPerParent.set(blockKey, { segment: t, startTs, isFirstFromParent });
                 return;
             }
+
+            // Priorita 1: segment, ktorý začína na fromLocation parenta
+            if (isFirstFromParent && !existing.isFirstFromParent) {
+                firstSegmentPerParent.set(blockKey, { segment: t, startTs, isFirstFromParent });
+                return;
+            }
+            if (!isFirstFromParent && existing.isFirstFromParent) {
+                return; // existujúci je lepší
+            }
+
+            // Priorita 2: najmenší startTs (pri zhode nechaj existujúci)
             if (startTs < existing.startTs) {
-                firstSegmentPerParent.set(blockKey, { segment: t, startTs });
+                firstSegmentPerParent.set(blockKey, { segment: t, startTs, isFirstFromParent });
             }
         });
 
@@ -8269,18 +8163,7 @@ const TransportApp = ({ userProfileData }) => {
 
         const baseFilteredFirstOnlyRaw = baseFiltered.filter((t) => allowedKeys.has(t.key));
 
-        // ============================================================
-        // POZNÁMKA: Summary záznamy ("Všetko priradené") sa už
-        // NEZOBRAZUJÚ. Ak má tím všetky segmenty priradené, jeho
-        // blok sa v zozname vygenerovaných presunov nezobrazí vôbec.
-        //
-        // Premennú `baseFilteredFirstOnlyRawWithSummaries` ale
-        // zachovávame (bez summary), aby nižšie uvedený kód
-        // (prepis `when`) fungoval bez zmeny.
-        // ============================================================
-        const baseFilteredFirstOnlyRawWithSummaries = baseFilteredFirstOnlyRaw;
-        
-        const baseFilteredFirstOnly = baseFilteredFirstOnlyRawWithSummaries.map((t) => {
+        const baseFilteredFirstOnly = baseFilteredFirstOnlyRaw.map((t) => {
             if (!t._parentKey) return t;
 
             // Zisti koniec celého bloku = maximum z endTs všetkých
@@ -8292,8 +8175,6 @@ const TransportApp = ({ userProfileData }) => {
             const dayKey = t.dayKey || '';
 
             let blockEndTs = null;
-            
-            const normParent = (s) => normalizePlaceName(s || '');
 
             savedTransfers.forEach((other) => {
                 if (String(other.teamName || '').trim() !== teamName) return;
@@ -8326,12 +8207,8 @@ const TransportApp = ({ userProfileData }) => {
                 when: newWhen,
             };
         });
-
-        const filtered = mergeMode
-            ? baseFilteredFirstOnly.filter((t) =>
-                baseFilteredFirstOnly.some((other) => canMergeTransfers(t, other))
-            )
-            : baseFilteredFirstOnly;
+        
+        const filtered = baseFilteredFirstOnly;
     
         // Zoradenie
         const buildStartSortKey = (t) => {
@@ -8392,25 +8269,6 @@ const TransportApp = ({ userProfileData }) => {
                     'span',
                     { className: 'absolute right-3 text-xs bg-white/20 rounded-full px-2 py-0.5' },
                     `${filtered.length}`
-                )
-            ),
-            React.createElement(
-                'div',
-                { className: 'px-4 py-2 border-b border-gray-200 bg-gray-50 flex items-center gap-2' },
-                React.createElement('input', {
-                    type: 'checkbox',
-                    id: 'merge-transfers-checkbox',
-                    checked: mergeMode,
-                    onChange: (e) => setMergeMode(e.target.checked),
-                    className: 'w-4 h-4 text-violet-600 border-gray-300 rounded focus:ring-violet-500 cursor-pointer',
-                }),
-                React.createElement(
-                    'label',
-                    {
-                        htmlFor: 'merge-transfers-checkbox',
-                        className: 'text-sm font-medium text-gray-700 cursor-pointer select-none'
-                    },
-                    'Zlúčiť presuny'
                 )
             ),
             filtered.length === 0
@@ -8594,30 +8452,6 @@ const TransportApp = ({ userProfileData }) => {
                                             .replace(/\bzastávky\b/gi, 'zastávka')
                                             .replace(/\bzastávok\b/gi, 'zastávka')
                                     ),
-                                // Tlačidlo "Zlúčiť"
-                                mergeMode && 
-                                    (() => {
-                                        const mergeCandidate = baseFilteredFirstOnly.find(
-                                            (other) => other.key !== t.key && canMergeTransfers(t, other)
-                                        );
-                                        if (!mergeCandidate) return null;
-                                        return React.createElement(
-                                            'button',
-                                            {
-                                                type: 'button',
-                                                onClick: (e) => {
-                                                    e.stopPropagation();
-                                                    setMergeTransfersModal({ first: t, second: mergeCandidate });
-                                                },
-                                                className: 'mt-1 self-start px-2 py-1 rounded bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 transition-colors'
-                                            },
-                                            React.createElement('i', { className: 'fa-solid fa-link mr-1' }),
-                                            'Zlúčiť s: ',
-                                            mergeCandidate.fromLocation,
-                                            ' → ',
-                                            mergeCandidate.toLocation
-                                        );
-                                    })(),
                             );
                         })
                     )
@@ -9283,109 +9117,6 @@ const TransportApp = ({ userProfileData }) => {
                             className: 'px-4 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-colors'
                         },
                         'Vygenerovať'
-                    )
-                )
-            )
-        ),
-        // ============================================================
-        // MODÁLNE OKNO – Potvrdenie zlúčenia presunov
-        // ============================================================
-        mergeTransfersModal && React.createElement(
-            'div',
-            {
-                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
-                onClick: () => setMergeTransfersModal(null)
-            },
-            React.createElement(
-                'div',
-                {
-                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
-                    onClick: (e) => e.stopPropagation()
-                },
-                React.createElement(
-                    'div',
-                    { className: 'flex items-start gap-3 mb-4' },
-                    React.createElement('i', {
-                        className: 'fa-solid fa-link text-violet-600 text-2xl mt-0.5'
-                    }),
-                    React.createElement(
-                        'h3',
-                        { className: 'text-lg font-semibold text-gray-800' },
-                        'Zlúčiť presuny'
-                    )
-                ),
-                React.createElement(
-                    'p',
-                    { className: 'text-gray-700 mb-4 text-sm' },
-                    'Naozaj chcete zlúčiť tieto dva presuny do jedného?'
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm space-y-2' },
-                    React.createElement(
-                        'div',
-                        null,
-                        React.createElement('div', { className: 'font-medium text-gray-700' }, 'Prvý presun:'),
-                        React.createElement(
-                            'div',
-                            { className: 'text-gray-600' },
-                            `${mergeTransfersModal.first.fromLocation} → ${mergeTransfersModal.first.toLocation}`
-                        ),
-                        React.createElement(
-                            'div',
-                            { className: 'text-xs text-gray-500' },
-                            mergeTransfersModal.first.when
-                        )
-                    ),
-                    React.createElement(
-                        'div',
-                        null,
-                        React.createElement('div', { className: 'font-medium text-gray-700' }, 'Druhý presun:'),
-                        React.createElement(
-                            'div',
-                            { className: 'text-gray-600' },
-                            `${mergeTransfersModal.second.fromLocation} → ${mergeTransfersModal.second.toLocation}`
-                        ),
-                        React.createElement(
-                            'div',
-                            { className: 'text-xs text-gray-500' },
-                            mergeTransfersModal.second.when
-                        )
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'pt-2 border-t border-gray-300' },
-                        React.createElement('div', { className: 'font-medium text-violet-700' }, 'Výsledný presun:'),
-                        React.createElement(
-                            'div',
-                            { className: 'text-violet-800 font-semibold' },
-                            `${mergeTransfersModal.first.fromLocation} → ${mergeTransfersModal.second.toLocation}`
-                        )
-                    )
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'flex justify-end gap-3' },
-                    React.createElement(
-                        'button',
-                        {
-                            type: 'button',
-                            onClick: () => setMergeTransfersModal(null),
-                            disabled: mergeTransfersSaving,
-                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
-                        },
-                        'Zrušiť'
-                    ),
-                    React.createElement(
-                        'button',
-                        {
-                            type: 'button',
-                            onClick: mergeTransfers,
-                            disabled: mergeTransfersSaving,
-                            className: 'px-4 py-2 rounded-lg bg-violet-600 text-white font-medium hover:bg-violet-700 transition-colors disabled:opacity-60 flex items-center gap-2'
-                        },
-                        mergeTransfersSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
-                        'Zlúčiť'
                     )
                 )
             )
