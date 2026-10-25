@@ -6453,15 +6453,29 @@ const TransportApp = ({ userProfileData }) => {
             }
         });
 
-        // Zoraď výsledky (po deduplikácii)
-        dedupedResults.sort((a, b) => {
+        // ============================================================
+        // NOVÉ: Vyfiltruj trasy, ktoré trvajú dlhšie ako 60 minút.
+        // Trvanie sa počíta ako (timeTo výstupného riadku) −
+        // (timeFrom nástupného riadku) s prechodom cez polnoc.
+        // Ak sa trvanie nedá vypočítať (null), kandidáta ZACHOVÁME
+        // (nemáme podklad na vylúčenie).
+        // ============================================================
+        const MAX_TRIP_DURATION_MINUTES = 60;
+        const filteredByDuration = dedupedResults.filter((r) => {
+            const duration = computeTripDurationMinutes(r.boardingRow, r.alightingRow);
+            if (duration == null) return true; // neznáme trvanie – nechaj
+            return duration <= MAX_TRIP_DURATION_MINUTES;
+        });
+
+        // Zoraď výsledky (po deduplikácii a filtri trvania)
+        filteredByDuration.sort((a, b) => {
             const timeA = a.boardingTime || a.alightingTime || '';
             const timeB = b.boardingTime || b.alightingTime || '';
             if (timeA !== timeB) return timeA.localeCompare(timeB);
             return String(a.bus.name).localeCompare(String(b.bus.name), 'sk');
         });
 
-        return dedupedResults;
+        return filteredByDuration;
     };
 
     // ============================================================
