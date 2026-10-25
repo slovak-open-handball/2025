@@ -5460,14 +5460,18 @@ const TransportApp = ({ userProfileData }) => {
     
         // Zoznam všetkých segmentov tohto tímu v daný deň (okrem aktuálneho)
         const sameTeamSegments = savedTransfers
-            .filter((t) =>
-                String(t.teamName || '').trim() === teamName &&
-                cleanCategory(t.category || '') === category &&
-                t.dayKey === dayKey &&
-                t.key !== transfer.key
+        .filter((t) =>
+            String(t.teamName || '').trim() === teamName &&
+            cleanCategory(t.category || '') === category &&
+            t.dayKey === dayKey &&
+            t.key !== transfer.key &&
+            !(
+                normalizePlaceName(t.fromLocation) === normalizePlaceName(transfer.fromLocation) &&
+                normalizePlaceName(t.toLocation) === normalizePlaceName(transfer.toLocation)
             )
-            .map((t) => ({ ...t, range: parseTransferWhenToRange(t.when) }))
-            .filter((t) => t.range != null);
+        )
+        .map((t) => ({ ...t, range: parseTransferWhenToRange(t.when) }))
+        .filter((t) => t.range != null);
     
         const trRange = parseTransferWhenToRange(transfer.when);
         if (!trRange) return;
@@ -5786,7 +5790,7 @@ const TransportApp = ({ userProfileData }) => {
             const newWhen = newTime.whenStr;
             const newKey = buildTransferKey(category, teamName, newWhen, newText);
     
-            if (seg.key !== newKey && seg.isWalking !== true) {
+            if (seg.key !== newKey) {
                 patch[seg.key] = deleteField();
             }
     
@@ -6200,7 +6204,7 @@ const TransportApp = ({ userProfileData }) => {
                     // ============================================================
                     const segFromNorm = normalizePlaceName(route[i]);
                     const segToNorm = normalizePlaceName(route[i + 1]);
-                    const realSegment = savedTransfers.find((s) => {
+                    const matchingSegs = savedTransfers.filter((s) => {
                         if (String(s.teamName || '').trim() !== teamName) return false;
                         if (cleanCategory(s.category || '') !== category) return false;
                         if ((s.dayKey || '') !== dayKey) return false;
@@ -6208,6 +6212,7 @@ const TransportApp = ({ userProfileData }) => {
                         if (normalizePlaceName(s.toLocation) !== segToNorm) return false;
                         return true;
                     });
+                    const realSegment = matchingSegs.find((s) => s.isWalking === true) || matchingSegs[0] || null;
                     
                     const isWalkingResolved = realSegment && realSegment.isWalking === true;
                     
@@ -8036,7 +8041,7 @@ const TransportApp = ({ userProfileData }) => {
             
                 // Nájdi reálny záznam v savedTransfers pre tento segment
                 // (rovnaký tím, kategória, deň, from→to)
-                const realSeg = savedTransfers.find((s) => {
+                const matchingSegs = savedTransfers.filter((s) => {
                     if (String(s.teamName || '').trim() !== teamName) return false;
                     if (cleanCategory(s.category || '') !== category) return false;
                     if ((s.dayKey || '') !== dayKey) return false;
@@ -8044,7 +8049,8 @@ const TransportApp = ({ userProfileData }) => {
                     if (normalizePlaceName(s.toLocation) !== segTo) return false;
                     return true;
                 });
-            
+                const realSeg = matchingSegs.find((s) => s.isWalking === true) || matchingSegs[0] || null;
+                
                 if (realSeg) {
                     const realRange = parseWhenRangeToTs(realSeg.when);
                     if (realRange && realRange.startTs != null && realRange.endTs != null) {
@@ -8184,6 +8190,7 @@ const TransportApp = ({ userProfileData }) => {
                     _parentRoute: `${t.fromLocation} → ${t.toLocation}`,
                     _remainingMinutes: remainingMinutes,
                     _isAssigned: segmentAssigned[i],
+                    isWalking: realSegmentTimes[i]?.isWalking === true,
                 });
             }
         });
