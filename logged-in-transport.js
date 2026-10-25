@@ -8284,38 +8284,61 @@ const TransportApp = ({ userProfileData }) => {
             const teamName = String(t.teamName || '').trim();
             const category = cleanCategory(t.category || '');
             const dayKey = t.dayKey || '';
-
+        
             let blockEndTs = null;
-
+        
             savedTransfers.forEach((other) => {
                 if (String(other.teamName || '').trim() !== teamName) return;
                 if (cleanCategory(other.category || '') !== category) return;
                 if ((other.dayKey || '') !== dayKey) return;
-
+        
                 // Zisti, či tento záznam patrí k rovnakému parentovi:
                 //  - buď je to sám parent (key === parentKey)
                 //  - alebo je to segment s _parentKey === parentKey
                 const otherParentKey = other._parentKey || other.key;
                 if (otherParentKey !== parentKey) return;
-
+        
                 const r = parseTransferWhenToRange(other.when);
                 if (!r || r.endTs == null) return;
-
+        
                 if (blockEndTs == null || r.endTs > blockEndTs) {
                     blockEndTs = r.endTs;
                 }
             });
-
+        
             if (blockEndTs == null) return t;
-
+        
             const trRange = parseTransferWhenToRange(t.when);
             if (!trRange || trRange.startTs == null) return t;
-
+        
             const newWhen = `${formatTsLocal(trRange.startTs)} – ${formatTsLocal(blockEndTs)}`;
-
+        
+            // ============================================================
+            // NOVÉ: Prepočítaj _remainingMinutes podľa nového when, aby
+            // "Zvyšný čas na presun" sedel s časom zobrazeným pod dátumom.
+            //
+            // Predtým sa _remainingMinutes počítal z pôvodného ft.startTs/endTs
+            // (t.j. z pôvodného intervalu segmentu), ale `when` sa neskôr
+            // prepísal na trRange.startTs – blockEndTs (celý zvyšok bloku).
+            // Preto číslo "zvyšný čas" nesedelo s časom pod dátumom.
+            //
+            // Teraz sa _remainingMinutes počíta z rovnakého intervalu,
+            // aký sa zobrazuje v timeLabel (trRange.startTs – blockEndTs).
+            // ============================================================
+            let newRemainingMinutes = t._remainingMinutes;
+            if (
+                t._remainingMinutes != null &&
+                trRange.startTs != null &&
+                blockEndTs != null &&
+                blockEndTs > trRange.startTs
+            ) {
+                newRemainingMinutes = Math.round((blockEndTs - trRange.startTs) / 60000);
+            }
+        
             return {
                 ...t,
                 when: newWhen,
+                _remainingMinutes: newRemainingMinutes,
             };
         });
         
