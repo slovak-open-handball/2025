@@ -8194,12 +8194,55 @@ const TransportApp = ({ userProfileData }) => {
             }
         });
     
+        // ============================================================
+        // NOVÉ: Zisti, ktoré parent bloky (parentKey + tím + kat. + deň)
+        // sú ÚPLNE priradené (všetky ich segmenty sú priradené alebo peši).
+        // Len takéto parent bloky môžeme skryť z zoznamu.
+        //
+        // DÔVOD: Ak má tím v ten istý deň DVA parent presuny
+        // (napr. A→B→C a D→E→F), a jeden z nich je priradený
+        // k autobusu, nesmieme skryť segmenty toho druhého parenta
+        // len preto, že ich náhodou pokrýva trasa autobusu
+        // (isSegmentAssigned by vrátil true pre A→B, aj keď patrí
+        // k inému parentovi).
+        // ============================================================
+        const fullyAssignedParentKeys = new Set();
+        const parentSegmentsMap = new Map(); // parentBlockKey → [segmenty]
+
+        expandedTransfers.forEach((t) => {
+            if (!t._parentKey) return;
+            const blockKey = `${t._parentKey}||${cleanCategory(t.category || '')}||${String(t.teamName || '').trim()}`;
+            if (!parentSegmentsMap.has(blockKey)) parentSegmentsMap.set(blockKey, []);
+            parentSegmentsMap.get(blockKey).push(t);
+        });
+
+        parentSegmentsMap.forEach((segments, blockKey) => {
+            // Parent je úplne priradený, ak VŠETKY jeho segmenty sú priradené/peši
+            const allAssigned = segments.every((t) => {
+                if (t.isWalking === true) return true;
+                if (t._isAssigned === true) return true;
+                if (isSegmentAssigned(t)) return true;
+                return false;
+            });
+            if (allAssigned) fullyAssignedParentKeys.add(blockKey);
+        });
+
         // Filtrovanie – skry len priradené segmenty
         const baseFiltered = expandedTransfers.filter((t) => {
             if (t.isWalking === true) return false;
-            if (isSegmentAssigned(t)) return false;       // ← robustná kontrola (presná aj vnorená)
-            if (t._isAssigned === true) return false;     // ← pre segmenty z intermediateStops
-            if (t._parentKey && t._remainingMinutes != null && t._remainingMinutes <= 0) {
+            if (t._isAssigned === true) return false;
+
+            // Pre segmenty s _parentKey: skry len ak je CELÝ parent priradený
+            if (t._parentKey) {
+                const blockKey = `${t._parentKey}||${cleanCategory(t.category || '')}||${String(t.teamName || '').trim()}`;
+                if (fullyAssignedParentKeys.has(blockKey)) return false;
+                // Parent nie je úplne priradený → zachovaj segment
+                return true;
+            }
+
+            // Pre klasické parent presuny bez intermediateStops:
+            if (isSegmentAssigned(t)) return false;
+            if (t._remainingMinutes != null && t._remainingMinutes <= 0) {
                 return false;
             }
             return true;
