@@ -9713,14 +9713,33 @@ const TransportApp = ({ userProfileData }) => {
                 // ============================================================
                 // INFO O PRESUNE
                 // ============================================================
-                React.createElement(
-                    'div',
-                    { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700' },
-                    React.createElement('div', { className: 'font-medium' },
-                        `${transferActionModal.transfer.fromLocation} → ${transferActionModal.transfer.toLocation}`),
-                    React.createElement('div', { className: 'text-xs text-gray-500 mt-1' },
-                        `${transferActionModal.transfer.teamName || ''}${transferActionModal.transfer.when ? ' • ' + transferActionModal.transfer.when : ''}`)
-                ),
+                (() => {
+                    const tr = transferActionModal.transfer;
+                    const counts = getTeamCountsForTransfer(tr.category, tr.teamName);
+                    let membersCount = null;
+                    if (counts) {
+                        membersCount =
+                            (counts.players || 0) +
+                            (counts.menRT || 0) +
+                            (counts.womenRT || 0) +
+                            (counts.menDrivers || 0) +
+                            (counts.womenDrivers || 0);
+                    } else {
+                        const avg = getCategoryAverageForTransfer(tr.category);
+                        if (avg != null) membersCount = avg;
+                    }
+                    const teamLabel = membersCount != null
+                        ? `${tr.teamName || ''} ● ${membersCount}`
+                        : (tr.teamName || '');
+                    return React.createElement(
+                        'div',
+                        { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700' },
+                        React.createElement('div', { className: 'font-medium' },
+                            `${tr.fromLocation} → ${tr.toLocation}`),
+                        React.createElement('div', { className: 'text-xs text-gray-500 mt-1' },
+                            `${teamLabel}${tr.when ? ' • ' + tr.when : ''}`)
+                    );
+                })(),
 
                 // ============================================================
                 // DYNAMICKÝ VÝPOČET ZOZNAMU AUTOBUSOV
