@@ -9729,7 +9729,7 @@ const TransportApp = ({ userProfileData }) => {
                         if (avg != null) membersCount = avg;
                     }
                     const teamLabel = membersCount != null
-                        ? `${tr.teamName || ''} ● ${membersCount}`
+                        ? `${tr.teamName || ''} • ${membersCount}`
                         : (tr.teamName || '');
                     return React.createElement(
                         'div',
