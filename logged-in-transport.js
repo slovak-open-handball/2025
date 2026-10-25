@@ -4689,6 +4689,7 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement('td', { className: 'border border-gray-300 p-1' },
                 React.createElement('input', {
                     type: 'time',
+                    key: `timeFrom-${row.id}-${row.timeFrom || ''}`,   // ← NOVÉ
                     defaultValue: row.timeFrom || '',
                     onBlur: async (e) => {
                         const newValue = e.target.value;
@@ -4700,10 +4701,8 @@ const TransportApp = ({ userProfileData }) => {
                             return;
                         }
                     
-                        // 1) Ulož nový timeFrom
                         await updateBusRowField(row.id, 'timeFrom', newValue);
                     
-                        // 2) Vypočítaj a ulož nový timeTo aktuálneho riadku
                         let newTimeTo = null;
                         const travelMinutes = getTravelMinutes(row.placeFrom, row.placeTo);
                         if (travelMinutes != null && /^\d{1,2}:\d{2}$/.test(newValue)) {
@@ -4718,8 +4717,6 @@ const TransportApp = ({ userProfileData }) => {
                             }
                         }
                     
-                        // 3) Zosúlaď nasledujúce riadky – odovzdaj PRIAMO newTimeFrom a newTimeTo
-                        //    (bez setTimeout, bez závislosti na busRows)
                         if (newTimeTo != null) {
                             cascadeFollowingRowsAfterTimeFromChange(busId, dayKey, row.id, newValue, newTimeTo);
                         }
