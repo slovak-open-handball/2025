@@ -4629,7 +4629,9 @@ const TransportApp = ({ userProfileData }) => {
                             deltaMinutes = (nh * 60 + nm) - (oh * 60 + om);
                         }
                         if (deltaMinutes !== 0) {
-                            await shiftBusRowsAfterChange(busId, dayKey, row.id, deltaMinutes);
+                            setTimeout(() => {
+                                shiftBusRowsAfterChange(busId, dayKey, row.id, deltaMinutes);
+                            }, 100);
                         }
                     },
                     onKeyDown: async (e) => {
