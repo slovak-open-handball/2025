@@ -9808,6 +9808,58 @@ const TransportApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { className: 'flex flex-col items-end gap-1 text-xs font-semibold' },
+                                                // ============================================================
+                                                // NOVÉ: Počet ľudí v autobuse medzi nástupnou a výstupnou zastávkou
+                                                // ============================================================
+                                                (() => {
+                                                    const busId = m.bus.id;
+                                                    const dayKey = m.trip?.dayKey;
+                                                    const boardingRow = m.boardingRow;
+                                                    const alightingRow = m.alightingRow;
+                                                    if (!busId || !dayKey || !boardingRow || !alightingRow) return null;
+
+                                                    const rowsKey = `${busId}|${dayKey}`;
+                                                    const allRows = (busRows[rowsKey] || [])
+                                                        .slice()
+                                                        .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+                                                    const boardIdx = allRows.findIndex((r) => r.id === boardingRow.id);
+                                                    const alightIdx = allRows.findIndex((r) => r.id === alightingRow.id);
+                                                    if (boardIdx === -1 || alightIdx === -1 || alightIdx < boardIdx) return null;
+
+                                                    // Zisti tímy v autobuse PO nástupe (a pred výstupom)
+                                                    const inBus = new Set();
+                                                    for (let i = 0; i <= boardIdx; i++) {
+                                                        const r = allRows[i];
+                                                        (r.teamsIn || []).forEach((t) => inBus.add(String(t)));
+                                                        (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
+                                                    }
+                                                    // Pridaj tímy, ktoré nastúpili v boardingRow (ale ešte nevystúpili)
+                                                    (boardingRow.teamsIn || []).forEach((t) => inBus.add(String(t)));
+                                                    // Odober tímy, ktoré vystúpili pred alightingRow
+                                                    for (let i = boardIdx + 1; i < alightIdx; i++) {
+                                                        const r = allRows[i];
+                                                        (r.teamsIn || []).forEach((t) => inBus.add(String(t)));
+                                                        (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
+                                                    }
+
+                                                    const total = [...inBus].reduce(
+                                                        (sum, tk) => sum + getTeamMembersCount(tk),
+                                                        0
+                                                    );
+
+                                                    if (total <= 0) return null;
+
+                                                    return React.createElement(
+                                                        'span',
+                                                        {
+                                                            className: 'flex items-center gap-1 text-blue-700',
+                                                            title: `V autobuse v tomto čase: ${total} členov`
+                                                        },
+                                                        React.createElement('i', { className: 'fa-solid fa-users' }),
+                                                        `${total}`
+                                                    );
+                                                })(),
                                                 hasBoarding && React.createElement(
                                                     'span',
                                                     { className: 'flex items-center gap-1 text-emerald-600' },
