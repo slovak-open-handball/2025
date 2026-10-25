@@ -9810,7 +9810,7 @@ const TransportApp = ({ userProfileData }) => {
                                             // ============================================================
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex flex-row items-center gap-2 text-xs font-semibold' },
+                                                { className: 'flex flex-row items-center gap-6 text-xs font-semibold' },
                                                 // Počet ľudí v autobuse medzi nástupnou a výstupnou zastávkou
                                                 (() => {
                                                     const busId = m.bus.id;
