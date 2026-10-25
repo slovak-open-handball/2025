@@ -7314,7 +7314,7 @@ const TransportApp = ({ userProfileData }) => {
                 )
                 : React.createElement(
                     'div',
-                    { className: 'w-full flex flex-row flex-nowrap gap-6 pb-24 overflow-visible items-start' },
+                    { className: 'w-full flex flex-row flex-nowrap gap-6 pb-24 overflow-visible items-stretch' },
                 
                     // === ĽAVÝ STĹPEC – uložené vygenerované presuny ===
                     renderSavedTransfers(),
@@ -8456,7 +8456,7 @@ const TransportApp = ({ userProfileData }) => {
                 )
                 : React.createElement(
                     'div',
-                    { className: 'max-h-[70vh] overflow-y-auto p-3' },
+                    { className: 'p-3' },
                     React.createElement(
                         'ul',
                         { className: 'space-y-2' },
