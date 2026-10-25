@@ -4092,19 +4092,10 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
-    // ============================================================
-    // PO ZMENE timeFrom V RIADKU ZOSÚLAĎ NASLEDUJÚCE RIADKY TAK,
-    // ABY PLATILO: timeFrom[N+1] = timeTo[N] + 2 min
-    //
-    // Princíp:
-    //  - aktuálny riadok má nový timeFrom (a prepočítaný timeTo)
-    //  - pre každý nasledujúci riadok:
-    //      timeFrom = timeTo predchádzajúceho + 2 min
-    //      timeTo = timeFrom + travelMinutes
-    //  - zastav pri prvom "červenom" riadku (pôvodná medzera > 2 min)
-    // ============================================================
-    const cascadeFollowingRowsAfterTimeFromChange = async (busId, dayKey, currentRowId) => {
+    const cascadeFollowingRowsAfterTimeFromChange = async (busId, dayKey, currentRowId, newTimeFrom, newTimeTo) => {
         if (!window.db || !busId || !dayKey || !currentRowId) return;
+        if (!newTimeFrom || !/^\d{1,2}:\d{2}$/.test(newTimeFrom)) return;
+        if (!newTimeTo || !/^\d{1,2}:\d{2}$/.test(newTimeTo)) return;
     
         const rowsKey = `${busId}|${dayKey}`;
         const allRows = (busRows[rowsKey] || [])
@@ -4113,13 +4104,6 @@ const TransportApp = ({ userProfileData }) => {
     
         const currentIdx = allRows.findIndex((r) => r.id === currentRowId);
         if (currentIdx === -1) return;
-    
-        const currentRow = allRows[currentIdx];
-    
-        // Vypočítaj nový timeTo aktuálneho riadku (rovnaká logika ako v renderBusRow)
-        const travelMinutes = getTravelMinutes(currentRow.placeFrom, currentRow.placeTo);
-        if (travelMinutes == null) return;
-        if (!currentRow.timeFrom || !/^\d{1,2}:\d{2}$/.test(currentRow.timeFrom)) return;
     
         const toMinutes = (timeStr) => {
             if (!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr)) return null;
@@ -4134,18 +4118,19 @@ const TransportApp = ({ userProfileData }) => {
             return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         };
     
-        const [ch, cm] = currentRow.timeFrom.split(':').map(Number);
-        const currentStartMin = ch * 60 + cm;
-        const newCurrentEndMin = ((currentStartMin + travelMinutes) % (24 * 60) + (24 * 60)) % (24 * 60);
+        // ============================================================
+        // KĽÚČOVÉ: Použi PRIAMO newTimeTo (už vypočítaný v onBlur),
+        // nie starý currentRow.timeTo z busRows.
+        // ============================================================
+        let prevEndMin = toMinutes(newTimeTo);
+        if (prevEndMin == null) return;
     
         const updates = [];
-        let prevEndMin = newCurrentEndMin;
     
         for (let i = currentIdx + 1; i < allRows.length; i++) {
             const curr = allRows[i];
     
-            // Zisti pôvodnú medzeru medzi predchádzajúcim a aktuálnym riadkom
-            // (pred akýmkoľvek posunom) — aby sme zachovali "červené" riadky
+            // Pôvodná medzera (z pôvodných hodnôt v busRows)
             const originalPrevTimeToMin = toMinutes(allRows[i - 1].timeTo);
             const originalCurrTimeFromMin = toMinutes(curr.timeFrom);
     
@@ -4718,7 +4703,8 @@ const TransportApp = ({ userProfileData }) => {
                         // 1) Ulož nový timeFrom
                         await updateBusRowField(row.id, 'timeFrom', newValue);
                     
-                        // 2) Dopočítaj a ulož nový timeTo aktuálneho riadku
+                        // 2) Vypočítaj a ulož nový timeTo aktuálneho riadku
+                        let newTimeTo = null;
                         const travelMinutes = getTravelMinutes(row.placeFrom, row.placeTo);
                         if (travelMinutes != null && /^\d{1,2}:\d{2}$/.test(newValue)) {
                             const [h, m] = newValue.split(':').map(Number);
@@ -4726,16 +4712,17 @@ const TransportApp = ({ userProfileData }) => {
                             total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
                             const endH = Math.floor(total / 60);
                             const endM = total % 60;
-                            const newTimeTo = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+                            newTimeTo = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
                             if (newTimeTo !== (row.timeTo || '')) {
                                 await updateBusRowField(row.id, 'timeTo', newTimeTo);
                             }
                         }
                     
-                        // 3) Zosúlaď nasledujúce riadky (timeFrom = prev.timeTo + 2 min, timeTo = timeFrom + travelMinutes)
-                        setTimeout(() => {
-                            cascadeFollowingRowsAfterTimeFromChange(busId, dayKey, row.id);
-                        }, 100);
+                        // 3) Zosúlaď nasledujúce riadky – odovzdaj PRIAMO newTimeFrom a newTimeTo
+                        //    (bez setTimeout, bez závislosti na busRows)
+                        if (newTimeTo != null) {
+                            cascadeFollowingRowsAfterTimeFromChange(busId, dayKey, row.id, newValue, newTimeTo);
+                        }
                     },
                     onKeyDown: async (e) => {
                         if (e.key === 'Enter') {
