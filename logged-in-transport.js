@@ -5786,7 +5786,9 @@ const TransportApp = ({ userProfileData }) => {
             const newWhen = newTime.whenStr;
             const newKey = buildTransferKey(category, teamName, newWhen, newText);
     
-            if (seg.key !== newKey) patch[seg.key] = deleteField();
+            if (seg.key !== newKey && seg.isWalking !== true) {
+                patch[seg.key] = deleteField();
+            }
     
             const base = {
                 category,
@@ -6520,23 +6522,15 @@ const TransportApp = ({ userProfileData }) => {
             delete walkingTransfer.key;
     
             // ============================================================
-            // 2) Ulož peší segment (a prípadne zmaž starý kľúč)
+            // 2) NOVÉ: NEZAPISUJ peší segment priamo do DB.
+            //    Namiesto toho zavolaj recomputeBlock, ktorý ho uloží
+            //    (pretože je v `block` a má isWalking: true).
+            //
+            //    Tým sa vyhneme problému, keď recomputeBlock zmaže
+            //    peší segment (deleteField pre seg.key), pretože
+            //    seg.key sa líši od newKey.
             // ============================================================
-            const transfersPatch = {};
-            if (shouldRenameKey) {
-                transfersPatch[transfer.key] = deleteField();
-            }
-            transfersPatch[newKey] = walkingTransfer;
-    
-            await setDoc(
-                docRef,
-                {
-                    [TRANSPORT_TRANSFERS_FIELD]: transfersPatch,
-                    updatedAt: Timestamp.fromDate(new Date()),
-                    updatedBy: (userProfileData && userProfileData.email) || null,
-                },
-                { merge: true }
-            );
+            // (priamy setDoc s transfersPatch sa NEVYKONÁVA)
     
                         // ============================================================
             // 3) NOVÉ: Po označení segmentu ako „peši" prepočítaj blok
