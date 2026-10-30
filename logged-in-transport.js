@@ -9369,36 +9369,35 @@ const TransportApp = ({ userProfileData }) => {
                     'div',
                     { className: 'mb-4' },
                     React.createElement(
-                        'div',
-                        { className: 'flex items-center justify-between mb-2' },
-                        React.createElement(
-                            'label',
-                            { className: 'block text-sm font-medium text-gray-700' },
-                            'Medzizastávky (voliteľné)'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                type: 'button',
-                                onClick: () => setEditingTransferStops((prev) => [...prev, '']),
-                                className: 'text-sm px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1'
-                            },
-                            React.createElement('i', { className: 'fa-solid fa-plus' }),
-                            'Pridať'
-                        )
+                        'label',
+                        { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                        'Medzizastávky (voliteľné)'
                     ),
                     editingTransferStops.length === 0 &&
                         React.createElement(
                             'p',
-                            { className: 'text-xs text-gray-400 italic' },
+                            { className: 'text-xs text-gray-400 italic mb-2' },
                             'Žiadne medzizastávky. Presun pôjde priamo z „' + editingTransfer.fromLocation + '" do „' + editingTransfer.toLocation + '".'
                         ),
                     editingTransferStops.length > 0 &&
                         React.createElement(
                             'ul',
                             { className: 'space-y-2' },
-                            editingTransferStops.map((stopValue, idx) =>
-                                React.createElement(
+                            editingTransferStops.map((stopValue, idx) => {
+                                // Všetky už vybrané zastávky (okrem aktuálneho indexu)
+                                const selectedElsewhere = new Set(
+                                    editingTransferStops
+                                        .filter((_, i) => i !== idx)
+                                        .map((s) => String(s || '').trim())
+                                        .filter(Boolean)
+                                );
+                                // Zastávky, ktoré ešte nie sú vybrané (alebo sú aktuálna hodnota)
+                                const availableStops = stopsList.filter((s) => {
+                                    if (s.name === stopValue) return true; // aktuálna hodnota vždy dostupná
+                                    return !selectedElsewhere.has(s.name);
+                                });
+        
+                                return React.createElement(
                                     'li',
                                     {
                                         key: `stop-${idx}`,
@@ -9424,7 +9423,7 @@ const TransportApp = ({ userProfileData }) => {
                                             className: 'flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500'
                                         },
                                         React.createElement('option', { value: '' }, '— vyber zastávku —'),
-                                        stopsList.map((s) =>
+                                        availableStops.map((s) =>
                                             React.createElement(
                                                 'option',
                                                 { key: s.id, value: s.name },
@@ -9432,6 +9431,24 @@ const TransportApp = ({ userProfileData }) => {
                                             )
                                         )
                                     ),
+                                    // Tlačidlo "+" – vloží nové prázdne miesto POD aktuálny riadok
+                                    React.createElement(
+                                        'button',
+                                        {
+                                            type: 'button',
+                                            onClick: () => {
+                                                setEditingTransferStops((prev) => {
+                                                    const copy = [...prev];
+                                                    copy.splice(idx + 1, 0, '');
+                                                    return copy;
+                                                });
+                                            },
+                                            className: 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded w-7 h-7 flex items-center justify-center',
+                                            title: 'Vložiť medzizastávku pod tento riadok'
+                                        },
+                                        React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                    ),
+                                    // Tlačidlo "X" – odstráni tento riadok
                                     React.createElement(
                                         'button',
                                         {
@@ -9444,9 +9461,24 @@ const TransportApp = ({ userProfileData }) => {
                                         },
                                         React.createElement('i', { className: 'fa-solid fa-xmark' })
                                     )
-                                )
-                            )
+                                );
+                            })
+                        ),
+                    // Tlačidlo "+ Pridať" – POD zoznamom medzizastávok
+                    React.createElement(
+                        'div',
+                        { className: 'mt-3 flex justify-start' },
+                        React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: () => setEditingTransferStops((prev) => [...prev, '']),
+                                className: 'text-sm px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1'
+                            },
+                            React.createElement('i', { className: 'fa-solid fa-plus text-xs' }),
+                            'Pridať medzizastávku'
                         )
+                    )
                 ),
                 // Náhľad novej trasy
                 React.createElement(
