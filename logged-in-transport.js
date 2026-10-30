@@ -8214,6 +8214,8 @@ const TransportApp = ({ userProfileData }) => {
                     endDayKey: found[0].dayKey,
                     startLabel: found[0].label,
                     endLabel: found[0].label,
+                    startTime: found[0].time,
+                    endTime: found[0].time,
                 };
             }
             return {
@@ -8221,6 +8223,8 @@ const TransportApp = ({ userProfileData }) => {
                 endDayKey: found[1].dayKey,
                 startLabel: found[0].label,
                 endLabel: found[1].label,
+                startTime: found[0].time,
+                endTime: found[1].time,
             };
         };
     
@@ -8901,7 +8905,7 @@ const TransportApp = ({ userProfileData }) => {
     
         // Zoradenie
         const buildStartSortKey = (t) => {
-            const r = parseWhenRange(t.when);
+            const r = parseWhenRangeFull(t.when);
             const dayKey = r ? r.startDayKey : (t.dayKey || '');
             const time = r && r.startTime ? r.startTime : '00:00';
             const datePart = String(dayKey || '').replace(/-/g, '');
@@ -8910,7 +8914,7 @@ const TransportApp = ({ userProfileData }) => {
         };
     
         const buildEndSortKey = (t) => {
-            const r = parseWhenRange(t.when);
+            const r = parseWhenRangeFull(t.when);
             const dayKey = r ? r.endDayKey : (t.dayKey || '');
             const time = r && r.endTime ? r.endTime : '23:59';
             const datePart = String(dayKey || '').replace(/-/g, '');
