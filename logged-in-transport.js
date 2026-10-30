@@ -8977,7 +8977,7 @@ const TransportApp = ({ userProfileData }) => {
                         'ul',
                         { className: 'space-y-2' },
                         sortedTransfers.map((t) => {
-                            const rangeInfo = parseWhenRange(t.when);
+                            const rangeInfo = parseWhenRangeFull(t.when);
                             const transferInfo = parseTransferText(t.text);
     
                             const transportColor = getTransportColorForCategory(t.category);
