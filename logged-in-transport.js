@@ -7007,7 +7007,13 @@ const TransportApp = ({ userProfileData }) => {
         const name = String(teamName || '').trim();
         if (!cat || !name) return;
 
-        const newShortcut = String(newShortcutRaw || '').trim();
+        // ============================================================
+        // NOVÉ: Normalizácia skratky – všetko na VEĽKÉ písmená
+        // (diakritika zostáva zachovaná, iba sa zmení veľkosť).
+        // ============================================================
+        const newShortcut = String(newShortcutRaw || '')
+            .trim()
+            .toLocaleUpperCase('sk-SK');
 
         setShortcutSaving(true);
         try {
@@ -7015,14 +7021,46 @@ const TransportApp = ({ userProfileData }) => {
             const snap = await getDocs(transportRef);
 
             // Nájdi existujúci záznam pre (category, teamName)
+            // + NOVÉ: zisti, či v tej istej kategórii už neexistuje
+            //   INÝ tím s rovnakou skratkou.
             let existingDocId = null;
+            let conflictingTeamName = null;
+
             snap.forEach((docSnap) => {
                 const data = docSnap.data() || {};
                 if (data.type !== 'teamShortcut') return;
                 if (cleanCategory(data.category) !== cat) return;
-                if (String(data.teamName || '').trim() !== name) return;
-                existingDocId = docSnap.id;
+
+                const docTeamName = String(data.teamName || '').trim();
+                const docShortcut = String(data.shortcut || '').trim().toLocaleUpperCase('sk-SK');
+
+                // Záznam pre aktuálny tím (rovnaký tím) – zapamätaj si ID
+                if (docTeamName === name) {
+                    existingDocId = docSnap.id;
+                    return;
+                }
+
+                // Iný tím v tej istej kategórii s rovnakou skratkou → konflikt
+                if (
+                    newShortcut &&
+                    docShortcut &&
+                    docShortcut === newShortcut
+                ) {
+                    conflictingTeamName = docTeamName;
+                }
             });
+
+            // ============================================================
+            // NOVÉ: Ak existuje konflikt (iný tím s rovnakou skratkou),
+            // zablokuj uloženie.
+            // ============================================================
+            if (newShortcut && conflictingTeamName) {
+                window.showGlobalNotification(
+                    `Skratka "${newShortcut}" je už použitá pre tím "${conflictingTeamName}" v kategórii "${cat}". Zvoľte inú skratku.`,
+                    'error'
+                );
+                return;
+            }
 
             if (!newShortcut) {
                 // Prázdna skratka → zmaž záznam (ak existuje)
