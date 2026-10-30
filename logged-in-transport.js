@@ -7514,7 +7514,14 @@ const TransportApp = ({ userProfileData }) => {
                                         'td',
                                         { className: 'border border-gray-300 px-3 py-1' },
                                         shortcut
-                                            ? React.createElement('span', { className: 'font-semibold text-blue-700' }, shortcut)
+                                            ? React.createElement(
+                                                'span',
+                                                {
+                                                    className: 'font-semibold',
+                                                    style: { color: getCategoryTextColor(category) },
+                                                },
+                                                shortcut
+                                            )
                                             : React.createElement('span', { className: 'text-gray-400 italic' }, '—')
                                     ),
                                     React.createElement(
@@ -10720,7 +10727,7 @@ const TransportApp = ({ userProfileData }) => {
                     autoFocus: true,
                     value: shortcutEditModal.shortcut || '',
                     onChange: (e) => {
-                        const v = e.target.value;
+                        const v = e.target.value.toLocaleUpperCase('sk-SK');
                         setShortcutEditModal((prev) => prev ? { ...prev, shortcut: v } : prev);
                     },
                     onKeyDown: async (e) => {
