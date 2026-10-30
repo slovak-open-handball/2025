@@ -295,6 +295,17 @@ const TransportApp = ({ userProfileData }) => {
     // ==== NOVÉ: príznak, že zoznam zastávok (places) už bol načítaný ====
     const [placesLoaded, setPlacesLoaded] = useState(false);
 
+    // ==== NOVÉ: Prepínač záložiek v Nastaveniach ====
+    const [settingsTab, setSettingsTab] = useState('travelTimes'); // 'travelTimes' | 'teamShortcuts'
+
+    // ==== NOVÉ: Skratky názvov tímov (category|teamName → shortcut) ====
+    const [teamShortcuts, setTeamShortcuts] = useState({});
+    const [teamShortcutsLoaded, setTeamShortcutsLoaded] = useState(false);
+
+    // ==== NOVÉ: Modálne okno pre úpravu skratky tímu ====
+    const [shortcutEditModal, setShortcutEditModal] = useState(null); // { category, teamName, shortcut }
+    const [shortcutSaving, setShortcutSaving] = useState(false);
+
     // ==== MODÁLNE OKNO PRE ÚPRAVU VYGENEROVANÉHO PRESUNU ====
     const [editingTransfer, setEditingTransfer] = useState(null);
     const [editingTransferStops, setEditingTransferStops] = useState([]); // medzizastávky medzi from a to
@@ -3049,8 +3060,31 @@ const TransportApp = ({ userProfileData }) => {
             });
         } catch (e) {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport:', e);
-        }   
+        }
 
+        // 0a1f) NOVÉ: SKRATKY NÁZVOV TÍMOV (transport, type='teamShortcut')
+        let unsubscribeTeamShortcuts = null;
+        try {
+            const transportRef = collection(window.db, 'transport');
+            unsubscribeTeamShortcuts = onSnapshot(transportRef, (snapshot) => {
+                const map = {};
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data() || {};
+                    if (data.type !== 'teamShortcut') return;
+                    if (!data.category || !data.teamName) return;
+                    if (!data.shortcut) return;
+                    const key = `${cleanCategory(data.category)}|${String(data.teamName).trim()}`;
+                    map[key] = String(data.shortcut).trim();
+                });
+                setTeamShortcuts(map);
+                setTeamShortcutsLoaded(true);
+            }, (err) => {
+                console.error('[TRANSPORT] onSnapshot(transport – teamShortcuts) error:', err);
+            });
+        } catch (e) {
+            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport (teamShortcuts):', e);
+        }        
+        
         // 0a2) STRAVOVACIA JEDNOTKA (unitMinutes)
         try {
             const cateringSettingsRef = doc(window.db, 'settings', 'catering');
@@ -3698,6 +3732,7 @@ const TransportApp = ({ userProfileData }) => {
             if (unsubscribeSuperstructureGroups) unsubscribeSuperstructureGroups();
             if (unsubscribeBuses) unsubscribeBuses();
             if (unsubscribeTeamCounts) unsubscribeTeamCounts();
+            if (unsubscribeTeamShortcuts) unsubscribeTeamShortcuts();
         };
     }, []);
 
@@ -4947,8 +4982,10 @@ const TransportApp = ({ userProfileData }) => {
                         { className: 'flex flex-wrap gap-2' },
                         (row.teamsIn || []).map((tn, i) => {
                             const parts = String(tn).split('|');
-                            const teamLabel = parts[0] || tn;
+                            const teamName = parts[0] || tn;
                             const teamCategory = parts[1] || '';
+                            const shortcut = getTeamShortcut(teamCategory, teamName);
+                            const teamLabel = shortcut || teamName;
                             const textColor = getCategoryTextColor(teamCategory);
                             return React.createElement(
                                 'span',
@@ -4973,8 +5010,10 @@ const TransportApp = ({ userProfileData }) => {
                         { className: 'flex flex-wrap gap-2' },
                         (row.teamsOut || []).map((tn, i) => {
                             const parts = String(tn).split('|');
-                            const teamLabel = parts[0] || tn;
+                            const teamName = parts[0] || tn;
                             const teamCategory = parts[1] || '';
+                            const shortcut = getTeamShortcut(teamCategory, teamName);
+                            const teamLabel = shortcut || teamName;
                             const textColor = getCategoryTextColor(teamCategory);
                             return React.createElement(
                                 'span',
@@ -6960,6 +6999,65 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // NOVÉ: Uloženie / odstránenie skratky tímu (transport, type='teamShortcut')
+    // ============================================================
+    const saveTeamShortcut = async (category, teamName, newShortcutRaw) => {
+        if (!window.db) return;
+        const cat = cleanCategory(category);
+        const name = String(teamName || '').trim();
+        if (!cat || !name) return;
+
+        const newShortcut = String(newShortcutRaw || '').trim();
+
+        setShortcutSaving(true);
+        try {
+            const transportRef = collection(window.db, 'transport');
+            const snap = await getDocs(transportRef);
+
+            // Nájdi existujúci záznam pre (category, teamName)
+            let existingDocId = null;
+            snap.forEach((docSnap) => {
+                const data = docSnap.data() || {};
+                if (data.type !== 'teamShortcut') return;
+                if (cleanCategory(data.category) !== cat) return;
+                if (String(data.teamName || '').trim() !== name) return;
+                existingDocId = docSnap.id;
+            });
+
+            if (!newShortcut) {
+                // Prázdna skratka → zmaž záznam (ak existuje)
+                if (existingDocId) {
+                    await deleteDoc(doc(window.db, 'transport', existingDocId));
+                    window.showGlobalNotification(`Skratka pre tím "${name}" bola odstránená.`, 'info');
+                }
+            } else {
+                if (existingDocId) {
+                    await updateDoc(doc(window.db, 'transport', existingDocId), {
+                        shortcut: newShortcut,
+                        updatedAt: Timestamp.fromDate(new Date()),
+                        updatedBy: (userProfileData && userProfileData.email) || null,
+                    });
+                } else {
+                    await addDoc(transportRef, {
+                        type: 'teamShortcut',
+                        category: cat,
+                        teamName: name,
+                        shortcut: newShortcut,
+                        createdAt: Timestamp.fromDate(new Date()),
+                        createdBy: (userProfileData && userProfileData.email) || null,
+                    });
+                }
+                window.showGlobalNotification(`Skratka pre tím "${name}" bola uložená: "${newShortcut}".`, 'success');
+            }
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri ukladaní skratky tímu:', err);
+            window.showGlobalNotification('Nepodarilo sa uložiť skratku tímu.', 'error');
+        } finally {
+            setShortcutSaving(false);
+        }
+    };    
+
+    // ============================================================
     // VLASTNÉ MODÁLNE POTVRDENIE (Promise-based)
     // ============================================================
     const askConfirm = (message) => {
@@ -7273,6 +7371,122 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // NOVÉ: RENDER – tabuľka skratiek názvov tímov
+    // ============================================================
+    const renderTeamShortcuts = () => {
+        // Zoznam kategórií z tímov (users + matches + catering)
+        const categories = (() => {
+            const set = new Set();
+            (teamsArrivalBufferRef.current || []).forEach((t) => {
+                if (t.category && t.isRegistered === true) set.add(cleanCategory(t.category));
+            });
+            return [...set].sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
+        })();
+
+        if (categories.length === 0) {
+            return React.createElement(
+                'div',
+                { className: 'text-gray-400 italic text-sm px-1' },
+                'Žiadne registrované tímy v users.'
+            );
+        }
+
+        return React.createElement(
+            'div',
+            { className: 'w-full space-y-6' },
+            React.createElement(
+                'p',
+                { className: 'text-xs text-gray-500 italic' },
+                'Pre každý tím môžete nastaviť skratku, ktorá sa zobrazí v stĺpcoch Nástup / Výstup v Plánovaní. Ak skratka nie je nastavená, zobrazí sa plný názov tímu.'
+            ),
+            categories.map((category) => {
+                // Všetky tímy v danej kategórii z users (registrované)
+                const teams = (teamsArrivalBufferRef.current || [])
+                    .filter((t) => cleanCategory(t.category) === category && t.isRegistered === true)
+                    .map((t) => String(t.teamName || '').trim())
+                    .filter(Boolean)
+                    .filter((v, i, a) => a.indexOf(v) === i)
+                    .sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
+
+                if (teams.length === 0) return null;
+
+                return React.createElement(
+                    'div',
+                    { key: category, className: 'border border-gray-200 rounded-lg overflow-hidden' },
+                    React.createElement(
+                        'div',
+                        {
+                            className: 'px-4 py-2 font-semibold text-gray-800 text-sm flex items-center gap-2',
+                            style: {
+                                backgroundColor: lightenHex(getTransportColorForCategory(category), 0.15) || '#f3f4f6',
+                                borderLeft: `6px solid ${getTransportColorForCategory(category) || '#9ca3af'}`,
+                            }
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-layer-group' }),
+                        `Kategória: ${category}`,
+                        React.createElement(
+                            'span',
+                            { className: 'ml-auto text-xs text-gray-500 font-normal' },
+                            `${teams.length} tímov`
+                        )
+                    ),
+                    React.createElement(
+                        'table',
+                        { className: 'w-full border-collapse text-sm' },
+                        React.createElement(
+                            'thead',
+                            null,
+                            React.createElement(
+                                'tr',
+                                { className: 'bg-gray-100 text-xs font-semibold text-gray-700' },
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left' }, 'Tím'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { width: '200px' } }, 'Skratka'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-center', style: { width: '80px' } }, '')
+                            )
+                        ),
+                        React.createElement(
+                            'tbody',
+                            null,
+                            teams.map((teamName) => {
+                                const shortcut = getTeamShortcut(category, teamName);
+                                return React.createElement(
+                                    'tr',
+                                    { key: teamName, className: 'hover:bg-gray-50' },
+                                    React.createElement('td', { className: 'border border-gray-300 px-3 py-1 text-gray-800' }, teamName),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'border border-gray-300 px-3 py-1' },
+                                        shortcut
+                                            ? React.createElement('span', { className: 'font-semibold text-blue-700' }, shortcut)
+                                            : React.createElement('span', { className: 'text-gray-400 italic' }, '—')
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'border border-gray-300 px-3 py-1 text-center' },
+                                        React.createElement(
+                                            'button',
+                                            {
+                                                type: 'button',
+                                                onClick: () => setShortcutEditModal({
+                                                    category,
+                                                    teamName,
+                                                    shortcut: shortcut || '',
+                                                }),
+                                                className: 'px-3 py-1 rounded-md bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors',
+                                            },
+                                            shortcut ? 'Upraviť' : 'Pridať'
+                                        )
+                                    )
+                                );
+                            })
+                        )
+                    )
+                );
+            })
+        );
+    };    
+
+    // ============================================================
     // Zoznam dostupných kategórií (z tímov + zápasov + stravovania)
     // ============================================================
     const getAvailableCategories = () => {
@@ -7391,6 +7605,27 @@ const TransportApp = ({ userProfileData }) => {
         const hex = getTransportColorForCategory(categoryName);
         return hex || '#374151'; // fallback tmavosivá
     };
+
+    // ============================================================
+    // NOVÉ: Získa skratku pre tím v kategórii (alebo null)
+    // ============================================================
+    const getTeamShortcut = (category, teamName) => {
+        const cat = cleanCategory(category);
+        const name = String(teamName || '').trim();
+        if (!cat || !name) return null;
+        return teamShortcuts[`${cat}|${name}`] || null;
+    };
+
+    // ============================================================
+    // NOVÉ: Vráti text pre tím v autobuse – skratka alebo plný názov
+    // ============================================================
+    const getTeamDisplayLabel = (teamKey) => {
+        const parts = String(teamKey).split('|');
+        const teamName = (parts[0] || '').trim();
+        const category = (parts[1] || '').trim();
+        const shortcut = getTeamShortcut(category, teamName);
+        return shortcut || teamName;
+    };    
 
     // ============================================================
     // RENDER – plánovanie
@@ -9069,13 +9304,67 @@ const TransportApp = ({ userProfileData }) => {
                     ? React.createElement(
                         'div',
                         { className: 'w-full' },
+                        // NOVÉ: Prepínač záložiek Nastavení
                         React.createElement(
                             'div',
-                            { className: 'flex items-center justify-between mb-4 pb-3 border-b border-gray-200' },
-                            React.createElement('h3', { className: 'text-xl font-semibold text-gray-700' }, 'Trvania jazdy medzi zastávkami'),
-                            React.createElement('span', { className: 'text-sm text-gray-500' }, `Zastávok: ${stopsList.length}`)
+                            { className: 'flex flex-wrap items-center justify-center gap-3 mb-6' },
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => setSettingsTab('travelTimes'),
+                                    className: `px-4 py-2 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
+                                        settingsTab === 'travelTimes'
+                                            ? 'bg-purple-600 text-white border-purple-600 hover:bg-purple-700'
+                                            : 'bg-white text-purple-600 border-purple-600 hover:bg-purple-50'
+                                    }`
+                                },
+                                React.createElement('i', { className: 'fa-solid fa-clock' }),
+                                'Trvania jazdy medzi zastávkami'
+                            ),
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => setSettingsTab('teamShortcuts'),
+                                    className: `px-4 py-2 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
+                                        settingsTab === 'teamShortcuts'
+                                            ? 'bg-orange-600 text-white border-orange-600 hover:bg-orange-700'
+                                            : 'bg-white text-orange-600 border-orange-600 hover:bg-orange-50'
+                                    }`
+                                },
+                                React.createElement('i', { className: 'fa-solid fa-tag' }),
+                                'Skratky názvov tímov'
+                            )
                         ),
-                        renderTravelTimes()
+                        // NOVÉ: Obsah podľa zvolenej záložky
+                        settingsTab === 'travelTimes'
+                            ? React.createElement(
+                                'div',
+                                { className: 'w-full' },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex items-center justify-between mb-4 pb-3 border-b border-gray-200' },
+                                    React.createElement('h3', { className: 'text-xl font-semibold text-gray-700' }, 'Trvania jazdy medzi zastávkami'),
+                                    React.createElement('span', { className: 'text-sm text-gray-500' }, `Zastávok: ${stopsList.length}`)
+                                ),
+                                renderTravelTimes()
+                            )
+                            : React.createElement(
+                                'div',
+                                { className: 'w-full' },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex items-center justify-between mb-4 pb-3 border-b border-gray-200' },
+                                    React.createElement('h3', { className: 'text-xl font-semibold text-gray-700' }, 'Skratky názvov tímov'),
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-sm text-gray-500' },
+                                        `Definovaných skratiek: ${Object.keys(teamShortcuts).length}`
+                                    )
+                                ),
+                                renderTeamShortcuts()
+                            )
                     )
                     : renderPlanning()
             ),
@@ -10324,6 +10613,104 @@ const TransportApp = ({ userProfileData }) => {
                             className: 'px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 transition-colors'
                         },
                         'Vygenerovať znova'
+                    )
+                )
+            )
+        ),
+        // ============================================================
+        // NOVÉ: MODÁLNE OKNO – Úprava skratky tímu
+        // ============================================================
+        shortcutEditModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100001] p-4',
+                onClick: () => setShortcutEditModal(null)
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-tag text-orange-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'div',
+                        { className: 'flex-1' },
+                        React.createElement(
+                            'h3',
+                            { className: 'text-lg font-semibold text-gray-800' },
+                            shortcutEditModal.shortcut ? 'Upraviť skratku tímu' : 'Pridať skratku tímu'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-xs text-gray-500 mt-0.5' },
+                            `${shortcutEditModal.category} • ${shortcutEditModal.teamName}`
+                        )
+                    )
+                ),
+                React.createElement(
+                    'label',
+                    { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Skratka'
+                ),
+                React.createElement('input', {
+                    type: 'text',
+                    autoFocus: true,
+                    value: shortcutEditModal.shortcut || '',
+                    onChange: (e) => {
+                        const v = e.target.value;
+                        setShortcutEditModal((prev) => prev ? { ...prev, shortcut: v } : prev);
+                    },
+                    onKeyDown: async (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const m = shortcutEditModal;
+                            if (!m) return;
+                            await saveTeamShortcut(m.category, m.teamName, m.shortcut);
+                            setShortcutEditModal(null);
+                        }
+                    },
+                    placeholder: 'napr. "U12 CH 1C"',
+                    className: 'w-full px-3 py-2 text-sm border border-gray-300 rounded text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 mb-4'
+                }),
+                React.createElement(
+                    'p',
+                    { className: 'text-xs text-gray-500 mb-4 italic' },
+                    'Prázdna hodnota skratku odstráni (zobrazí sa plný názov tímu).'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setShortcutEditModal(null),
+                            disabled: shortcutSaving,
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: async () => {
+                                const m = shortcutEditModal;
+                                if (!m) return;
+                                await saveTeamShortcut(m.category, m.teamName, m.shortcut);
+                                setShortcutEditModal(null);
+                            },
+                            disabled: shortcutSaving,
+                            className: 'px-4 py-2 rounded-lg bg-orange-600 text-white font-medium hover:bg-orange-700 transition-colors disabled:opacity-60 flex items-center gap-2'
+                        },
+                        shortcutSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                        'Uložiť'
                     )
                 )
             )
