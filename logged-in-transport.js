@@ -7677,7 +7677,9 @@ const TransportApp = ({ userProfileData }) => {
         const cat = cleanCategory(category);
         const name = String(teamName || '').trim();
         if (!cat || !name) return null;
-        return teamShortcuts[`${cat}|${name}`] || null;
+        const raw = teamShortcuts[`${cat}|${name}`];
+        if (!raw) return null;
+        return String(raw).trim().toLocaleUpperCase('sk-SK');
     };
 
     // ============================================================
@@ -10722,7 +10724,7 @@ const TransportApp = ({ userProfileData }) => {
                     { className: 'block text-sm font-medium text-gray-700 mb-1' },
                     'Skratka'
                 ),
-                React.createElement('input', {
+                 React.createElement('input', {
                     type: 'text',
                     autoFocus: true,
                     value: shortcutEditModal.shortcut || '',
