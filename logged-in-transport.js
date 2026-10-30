@@ -9272,13 +9272,17 @@ const TransportApp = ({ userProfileData }) => {
                             )
                         ),
                         React.createElement(
+                        'table',
+                        { className: 'w-full border-collapse text-xs' },
+                        React.createElement(
                             'tbody',
                             null,
                             (() => {
                                 // ============================================================
                                 // NOVÉ: Zoskup pešie presuny podľa dňa – pre každý deň
-                                // sa najprv vykreslí riadok s dátumom (rovnako ako
-                                // v boxe autobusu), potom jednotlivé pešie presuny.
+                                // sa najprv vykreslí riadok s dátumom, POTOM hlavička
+                                // stĺpcov (Od, Do, Miesto od, Miesto do, Tím),
+                                // a až potom jednotlivé pešie presuny.
                                 // ============================================================
                                 const groupsByDay = new Map();
                                 sorted.forEach((t) => {
@@ -9324,7 +9328,26 @@ const TransportApp = ({ userProfileData }) => {
                                     );
 
                                     // ============================================================
-                                    // 2) Riadky s pešími presunmi pre daný deň
+                                    // 2) Hlavička stĺpcov pre daný deň
+                                    // ============================================================
+                                    elements.push(
+                                        React.createElement(
+                                            'tr',
+                                            {
+                                                key: `header-${dayKey || 'unknown'}`,
+                                                className: 'bg-gray-100 text-xs font-semibold text-gray-700'
+                                            },
+                                            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '70px' } }, 'Od'),
+                                            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '70px' } }, 'Do'),
+                                            React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Miesto od'),
+                                            React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Miesto do'),
+                                            React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Tím'),
+                                            React.createElement('th', { className: 'border border-gray-300 px-2 py-1 text-center', style: { width: '40px' } }, '')
+                                        )
+                                    );
+
+                                    // ============================================================
+                                    // 3) Riadky s pešími presunmi pre daný deň
                                     // ============================================================
                                     items.forEach((t) => {
                                         const range = parseWhenRange(t.when);
