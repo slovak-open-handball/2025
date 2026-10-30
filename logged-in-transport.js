@@ -4978,7 +4978,7 @@ const TransportApp = ({ userProfileData }) => {
                 )
             ),
             // 5. tímy nástup (len text vo farbe kategórie, bez pozadia a rámčeka)
-            React.createElement('td', { className: 'border border-gray-300 p-1 align-top' },
+            React.createElement('td', { className: 'border border-gray-300 p-1 align-top whitespace-nowrap' },
                 (row.teamsIn || []).length === 0
                     ? React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—')
                     : React.createElement(
@@ -5006,7 +5006,7 @@ const TransportApp = ({ userProfileData }) => {
                     )
             ),
             // 6. tímy výstup (len text vo farbe kategórie, bez pozadia a rámčeka)
-            React.createElement('td', { className: 'border border-gray-300 p-1 align-top' },
+            React.createElement('td', { className: 'border border-gray-300 p-1 align-top whitespace-nowrap' },
                 (row.teamsOut || []).length === 0
                     ? React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—')
                     : React.createElement(
@@ -7827,7 +7827,7 @@ const TransportApp = ({ userProfileData }) => {
                             {
                                 key: bus.id,
                                 className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0 pb-4',
-                                style: { width: '1000px', maxWidth: '100%' }
+                                style: { minWidth: '1000px', width: 'max-content' }
                             },
                             // Hlavička autobusu
                             React.createElement(
@@ -8113,7 +8113,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                 { colSpan: 1, className: 'border border-gray-200 p-0' },
                                                                 React.createElement(
                                                                     'table',
-                                                                    { className: 'w-full border-collapse text-xs' },
+                                                                    { className: 'w-full border-collapse text-xs', style: { tableLayout: 'auto', minWidth: '100%' } },
                                                                     renderBusRowsHeader(),
                                                                     React.createElement('tbody', null, rowElements)
                                                                 )
