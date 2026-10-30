@@ -4983,7 +4983,7 @@ const TransportApp = ({ userProfileData }) => {
                     ? React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—')
                     : React.createElement(
                         'div',
-                        { className: 'flex flex-wrap gap-2' },
+                        { className: 'flex flex-nowrap gap-2' },
                         (row.teamsIn || []).map((tn, i) => {
                             const parts = String(tn).split('|');
                             const teamName = parts[0] || tn;
@@ -4997,7 +4997,7 @@ const TransportApp = ({ userProfileData }) => {
                                     key: `in-${i}`,
                                     onClick: () => removeTeamSegment(tn, 'in'),
                                     title: getTeamTooltipLabel(tn),
-                                    className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
+                                    className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline whitespace-nowrap',
                                     style: { color: textColor }
                                 },
                                 teamLabel
@@ -5011,7 +5011,7 @@ const TransportApp = ({ userProfileData }) => {
                     ? React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—')
                     : React.createElement(
                         'div',
-                        { className: 'flex flex-wrap gap-2' },
+                        { className: 'flex flex-nowrap gap-2' },
                         (row.teamsOut || []).map((tn, i) => {
                             const parts = String(tn).split('|');
                             const teamName = parts[0] || tn;
@@ -5025,7 +5025,7 @@ const TransportApp = ({ userProfileData }) => {
                                     key: `out-${i}`,
                                     onClick: () => removeTeamSegment(tn, 'out'),
                                     title: getTeamTooltipLabel(tn),
-                                    className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline',
+                                    className: 'inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline whitespace-nowrap',
                                     style: { color: textColor }
                                 },
                                 teamLabel
