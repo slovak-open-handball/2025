@@ -306,6 +306,10 @@ const TransportApp = ({ userProfileData }) => {
     const [shortcutEditModal, setShortcutEditModal] = useState(null); // { category, teamName, shortcut }
     const [shortcutSaving, setShortcutSaving] = useState(false);
     const [shortcutConflict, setShortcutConflict] = useState(null);
+    
+    // ==== NOVÉ: Modálne okno pre potvrdenie zmazania skratky tímu ====
+    const [deleteShortcutModal, setDeleteShortcutModal] = useState(null); // { category, teamName, shortcut }
+    const [deleteShortcutSaving, setDeleteShortcutSaving] = useState(false);
 
     // ==== MODÁLNE OKNO PRE ÚPRAVU VYGENEROVANÉHO PRESUNU ====
     const [editingTransfer, setEditingTransfer] = useState(null);
@@ -7097,6 +7101,52 @@ const TransportApp = ({ userProfileData }) => {
     };    
 
     // ============================================================
+    // NOVÉ: Zmazanie skratky tímu (transport, type='teamShortcut')
+    // ============================================================
+    const deleteTeamShortcut = async (category, teamName) => {
+        if (!window.db) return;
+        const cat = cleanCategory(category);
+        const name = String(teamName || '').trim();
+        if (!cat || !name) return;
+
+        setDeleteShortcutSaving(true);
+        try {
+            const transportRef = collection(window.db, 'transport');
+            const snap = await getDocs(transportRef);
+
+            let existingDocId = null;
+            snap.forEach((docSnap) => {
+                const data = docSnap.data() || {};
+                if (data.type !== 'teamShortcut') return;
+                if (cleanCategory(data.category) !== cat) return;
+                if (String(data.teamName || '').trim() !== name) return;
+                existingDocId = docSnap.id;
+            });
+
+            if (!existingDocId) {
+                window.showGlobalNotification(
+                    `Skratka pre tím "${name}" sa nenašla.`,
+                    'info'
+                );
+                setDeleteShortcutModal(null);
+                return;
+            }
+
+            await deleteDoc(doc(window.db, 'transport', existingDocId));
+            window.showGlobalNotification(
+                `Skratka pre tím "${name}" bola odstránená.`,
+                'success'
+            );
+            setDeleteShortcutModal(null);
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri mazaní skratky tímu:', err);
+            window.showGlobalNotification('Nepodarilo sa odstrániť skratku tímu.', 'error');
+        } finally {
+            setDeleteShortcutSaving(false);
+        }
+    };    
+
+    // ============================================================
     // VLASTNÉ MODÁLNE POTVRDENIE (Promise-based)
     // ============================================================
     const askConfirm = (message) => {
@@ -7529,20 +7579,45 @@ const TransportApp = ({ userProfileData }) => {
                                         'td',
                                         { className: 'border border-gray-300 px-3 py-1 text-center' },
                                         React.createElement(
-                                            'button',
-                                            {
-                                                type: 'button',
-                                                onClick: () => {
-                                                    setShortcutConflict(null);
-                                                    setShortcutEditModal({
-                                                        category,
-                                                        teamName,
-                                                        shortcut: shortcut || '',
-                                                    });
+                                            'div',
+                                            { className: 'flex items-center justify-center gap-2' },
+                                            // Ikona ceruzky – otvorí modálne okno na pridanie/úpravu skratky
+                                            React.createElement(
+                                                'button',
+                                                {
+                                                    type: 'button',
+                                                    onClick: () => {
+                                                        setShortcutConflict(null);
+                                                        setShortcutEditModal({
+                                                            category,
+                                                            teamName,
+                                                            shortcut: shortcut || '',
+                                                        });
+                                                    },
+                                                    title: shortcut ? 'Upraviť skratku' : 'Pridať skratku',
+                                                    className: 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded w-7 h-7 flex items-center justify-center transition-colors',
                                                 },
-                                                className: 'px-3 py-1 rounded-md bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors',
-                                            },
-                                            shortcut ? 'Upraviť' : 'Pridať'
+                                                React.createElement('i', { className: 'fa-solid fa-pen' })
+                                            ),
+                                            // Ikona koša – otvorí modálne okno na potvrdenie zmazania skratky
+                                            // Zobrazí sa LEN ak skratka existuje
+                                            shortcut &&
+                                                React.createElement(
+                                                    'button',
+                                                    {
+                                                        type: 'button',
+                                                        onClick: () => {
+                                                            setDeleteShortcutModal({
+                                                                category,
+                                                                teamName,
+                                                                shortcut,
+                                                            });
+                                                        },
+                                                        title: 'Odstrániť skratku',
+                                                        className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 flex items-center justify-center transition-colors',
+                                                    },
+                                                    React.createElement('i', { className: 'fa-solid fa-trash' })
+                                                )
                                         )
                                     )
                                 );
@@ -10863,6 +10938,95 @@ const TransportApp = ({ userProfileData }) => {
                             'Uložiť'
                         );
                     })()
+                )
+            )
+        ),
+        // ============================================================
+        // NOVÉ: MODÁLNE OKNO – Potvrdenie zmazania skratky tímu
+        // ============================================================
+        deleteShortcutModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100002] p-4',
+                onClick: () => {
+                    if (deleteShortcutSaving) return;
+                    setDeleteShortcutModal(null);
+                }
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-tag text-red-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-800' },
+                        'Odstrániť skratku tímu'
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700' },
+                    React.createElement(
+                        'div',
+                        { className: 'font-medium' },
+                        `${deleteShortcutModal.teamName}`
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'text-xs text-gray-500 mt-1' },
+                        `Kategória: ${deleteShortcutModal.category}`
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'text-xs text-gray-500 mt-1' },
+                        `Aktuálna skratka: `,
+                        React.createElement(
+                            'span',
+                            { className: 'font-semibold text-orange-600' },
+                            deleteShortcutModal.shortcut
+                        )
+                    )
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-gray-600 mb-4' },
+                    'Naozaj chcete odstrániť túto skratku? V plánovaní sa potom pre tím zobrazí plný názov. Táto akcia je nenávratná.'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setDeleteShortcutModal(null),
+                            disabled: deleteShortcutSaving,
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => deleteTeamShortcut(
+                                deleteShortcutModal.category,
+                                deleteShortcutModal.teamName
+                            ),
+                            disabled: deleteShortcutSaving,
+                            className: 'px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-60 flex items-center gap-2'
+                        },
+                        deleteShortcutSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                        'Odstrániť'
+                    )
                 )
             )
         )
