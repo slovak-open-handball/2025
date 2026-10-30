@@ -305,6 +305,7 @@ const TransportApp = ({ userProfileData }) => {
     // ==== NOVÉ: Modálne okno pre úpravu skratky tímu ====
     const [shortcutEditModal, setShortcutEditModal] = useState(null); // { category, teamName, shortcut }
     const [shortcutSaving, setShortcutSaving] = useState(false);
+    const [shortcutConflict, setShortcutConflict] = useState(null);
 
     // ==== MODÁLNE OKNO PRE ÚPRAVU VYGENEROVANÉHO PRESUNU ====
     const [editingTransfer, setEditingTransfer] = useState(null);
@@ -7531,11 +7532,14 @@ const TransportApp = ({ userProfileData }) => {
                                             'button',
                                             {
                                                 type: 'button',
-                                                onClick: () => setShortcutEditModal({
-                                                    category,
-                                                    teamName,
-                                                    shortcut: shortcut || '',
-                                                }),
+                                                onClick: () => {
+                                                    setShortcutConflict(null);
+                                                    setShortcutEditModal({
+                                                        category,
+                                                        teamName,
+                                                        shortcut: shortcut || '',
+                                                    });
+                                                },
                                                 className: 'px-3 py-1 rounded-md bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors',
                                             },
                                             shortcut ? 'Upraviť' : 'Pridať'
@@ -10724,26 +10728,81 @@ const TransportApp = ({ userProfileData }) => {
                     { className: 'block text-sm font-medium text-gray-700 mb-1' },
                     'Skratka'
                 ),
-                 React.createElement('input', {
+                React.createElement('input', {
                     type: 'text',
                     autoFocus: true,
                     value: shortcutEditModal.shortcut || '',
                     onChange: (e) => {
                         const v = e.target.value.toLocaleUpperCase('sk-SK');
                         setShortcutEditModal((prev) => prev ? { ...prev, shortcut: v } : prev);
+                        // ============================================================
+                        // NOVÉ: Live kontrola konfliktu – hneď po zadaní znaku
+                        // over, či skratka neexistuje pre iný tím v tej istej
+                        // kategórii. Ak áno, nastav `shortcutConflict` a zobraz
+                        // chybovú hlášku pod inputom.
+                        // ============================================================
+                        const trimmed = String(v || '').trim();
+                        if (!trimmed) {
+                            setShortcutConflict(null);
+                            return;
+                        }
+                        const cat = cleanCategory(shortcutEditModal.category || '');
+                        const currentTeam = String(shortcutEditModal.teamName || '').trim();
+                        let conflict = null;
+                        Object.entries(teamShortcuts || {}).forEach(([key, shortcutVal]) => {
+                            const [kCat, kTeam] = String(key).split('|');
+                            if (cleanCategory(kCat) !== cat) return;
+                            if (String(kTeam || '').trim() === currentTeam) return; // vlastná skratka
+                            const normalized = String(shortcutVal || '').trim().toLocaleUpperCase('sk-SK');
+                            if (normalized && normalized === trimmed) {
+                                conflict = {
+                                    conflictingTeamName: String(kTeam || '').trim(),
+                                    conflictingCategory: cleanCategory(kCat),
+                                };
+                            }
+                        });
+                        setShortcutConflict(conflict);
                     },
                     onKeyDown: async (e) => {
                         if (e.key === 'Enter') {
                             e.preventDefault();
+                            // ============================================================
+                            // NOVÉ: Ak existuje konflikt, Enter nesmie uložiť.
+                            // ============================================================
+                            if (shortcutConflict) return;
                             const m = shortcutEditModal;
                             if (!m) return;
                             await saveTeamShortcut(m.category, m.teamName, m.shortcut);
                             setShortcutEditModal(null);
+                            setShortcutConflict(null);
                         }
                     },
                     placeholder: 'napr. "U12 CH 1C"',
                     className: 'w-full px-3 py-2 text-sm border border-gray-300 rounded text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 mb-4'
                 }),
+                // ============================================================
+                // NOVÉ: Ak existuje konflikt, zobraz červenú chybovú hlášku
+                // pod inputom (nad pomocným textom).
+                // ============================================================
+                shortcutConflict &&
+                    React.createElement(
+                        'div',
+                        {
+                            className: 'mb-3 p-2 rounded-md bg-red-50 border border-red-300 text-sm text-red-700 flex items-start gap-2'
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
+                        React.createElement(
+                            'span',
+                            null,
+                            'Táto skratka „',
+                            String(shortcutEditModal.shortcut || '').trim(),
+                            '" už existuje pre tím „',
+                            shortcutConflict.conflictingTeamName,
+                            '" v kategórii „',
+                            shortcutConflict.conflictingCategory,
+                            '". Zvoľte inú skratku.'
+                        )
+                    ),
                 React.createElement(
                     'p',
                     { className: 'text-xs text-gray-500 mb-4 italic' },
@@ -10756,28 +10815,54 @@ const TransportApp = ({ userProfileData }) => {
                         'button',
                         {
                             type: 'button',
-                            onClick: () => setShortcutEditModal(null),
+                            onClick: () => {
+                                setShortcutEditModal(null);
+                                setShortcutConflict(null);
+                            },
                             disabled: shortcutSaving,
                             className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
                         },
                         'Zrušiť'
                     ),
-                    React.createElement(
-                        'button',
-                        {
-                            type: 'button',
-                            onClick: async () => {
-                                const m = shortcutEditModal;
-                                if (!m) return;
-                                await saveTeamShortcut(m.category, m.teamName, m.shortcut);
-                                setShortcutEditModal(null);
+                    (() => {
+                        // ============================================================
+                        // NOVÉ: Tlačidlo „Uložiť" je zablokované, ak:
+                        //  - beží ukladanie (shortcutSaving), alebo
+                        //  - existuje konflikt skratky (shortcutConflict).
+                        //
+                        // Vizuál zablokovaného tlačidla:
+                        //  - biele pozadie
+                        //  - oranžový obrys a oranžový text (rovnaká farba ako
+                        //    výplň odblokovaného tlačidla)
+                        //  - cursor: not-allowed (disabled myš)
+                        // ============================================================
+                        const isBlocked = shortcutSaving || !!shortcutConflict;
+
+                        const baseCls = 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2';
+                        const enabledCls = 'bg-orange-600 text-white hover:bg-orange-700';
+                        const blockedCls = 'bg-white border-2 border-orange-600 text-orange-600 cursor-not-allowed';
+
+                        return React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: async () => {
+                                    if (isBlocked) return;
+                                    const m = shortcutEditModal;
+                                    if (!m) return;
+                                    await saveTeamShortcut(m.category, m.teamName, m.shortcut);
+                                    setShortcutEditModal(null);
+                                },
+                                disabled: isBlocked,
+                                title: shortcutConflict
+                                    ? 'Skratka už existuje pre iný tím v tejto kategórii.'
+                                    : undefined,
+                                className: `${baseCls} ${isBlocked ? blockedCls : enabledCls}`,
                             },
-                            disabled: shortcutSaving,
-                            className: 'px-4 py-2 rounded-lg bg-orange-600 text-white font-medium hover:bg-orange-700 transition-colors disabled:opacity-60 flex items-center gap-2'
-                        },
-                        shortcutSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
-                        'Uložiť'
-                    )
+                            shortcutSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                            'Uložiť'
+                        );
+                    })()
                 )
             )
         )
