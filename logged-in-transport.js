@@ -8189,7 +8189,7 @@ const TransportApp = ({ userProfileData }) => {
         // ============================================================
         // Pomocná: parsovanie "when" → čas od/do
         // ============================================================
-        const parseWhenRange = (when) => {
+        const parseWhenRangeFull = (when) => {
             if (!when) return null;
             const s = String(when);
             const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
@@ -8207,31 +8207,20 @@ const TransportApp = ({ userProfileData }) => {
                     time: (hh != null && mi != null) ? `${hh}:${mi}` : null,
                 });
             }
-    
             if (found.length === 0) return null;
-    
             if (found.length === 1) {
                 return {
                     startDayKey: found[0].dayKey,
                     endDayKey: found[0].dayKey,
                     startLabel: found[0].label,
                     endLabel: found[0].label,
-                    startTime: found[0].time,
-                    endTime: found[0].time,
-                    startTs: null,
-                    endTs: null,
                 };
             }
-    
             return {
                 startDayKey: found[0].dayKey,
                 endDayKey: found[1].dayKey,
                 startLabel: found[0].label,
                 endLabel: found[1].label,
-                startTime: found[0].time,
-                endTime: found[1].time,
-                startTs: null,
-                endTs: null,
             };
         };
     
@@ -9290,32 +9279,117 @@ const TransportApp = ({ userProfileData }) => {
                                 const placeFrom = info?.from || '';
                                 const placeTo = info?.to || '';
                                 const textColor = getCategoryTextColor(t.category);
-    
+                                const transportColor = getTransportColorForCategory(t.category);
+
+                                // ============================================================
+                                // NOVÉ: Prvý riadok s dátumom (rovnako ako v renderSavedTransfers)
+                                // ============================================================
+                                const rangeFull = parseWhenRangeFull(t.when);
+                                let dateLabel = null;
+                                if (rangeFull) {
+                                    dateLabel = (rangeFull.startDayKey === rangeFull.endDayKey)
+                                        ? rangeFull.startLabel
+                                        : `${rangeFull.startLabel} – ${rangeFull.endLabel}`;
+                                } else if (t.dayKey) {
+                                    dateLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
+                                }
+
+                                // Počet členov tímu (rovnaká logika ako v renderSavedTransfers)
+                                const counts = getTeamCountsForTransfer(t.category, t.teamName);
+                                const totalMembers = counts
+                                    ? (counts.players || 0) + (counts.menRT || 0) + (counts.womenRT || 0) + (counts.menDrivers || 0) + (counts.womenDrivers || 0)
+                                    : null;
+
+                                let membersText = null;
+                                let membersTitle = null;
+                                if (totalMembers != null) {
+                                    membersText = `${totalMembers}`;
+                                } else {
+                                    const avg = getCategoryAverageForTransfer(t.category);
+                                    if (avg != null) {
+                                        membersText = `${avg}`;
+                                        membersTitle = `Priemer členov tímu v kategórii ${t.category} (zaokrúhlené nahor)`;
+                                    }
+                                }
+
                                 return React.createElement(
-                                    'tr',
-                                    { key: t.key, className: 'hover:bg-gray-50' },
-                                    React.createElement('td', { className: 'border border-gray-300 px-2 py-1 text-center font-semibold text-blue-700' }, timeFrom || '—'),
-                                    React.createElement('td', { className: 'border border-gray-300 px-2 py-1 text-center font-semibold text-blue-700' }, timeTo || '—'),
-                                    React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, placeFrom || '—'),
-                                    React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, placeTo || '—'),
+                                    React.Fragment,
+                                    { key: t.key },
+                                    // ============================================================
+                                    // NOVÉ: Prvý riadok – KATEGÓRIA • TÍM ● POČET + DÁTUM
+                                    // (colSpan = 6, aby zaberal celú šírku tabuľky)
+                                    // ============================================================
                                     React.createElement(
-                                        'td',
-                                        { className: 'border border-gray-300 px-2 py-1 font-semibold', style: { color: textColor } },
-                                        t.teamName || '(neznámy tím)'
-                                    ),
-                                    // NOVÉ: tlačidlo na odstránenie príznaku "peši"
-                                    React.createElement(
-                                        'td',
-                                        { className: 'border border-gray-300 px-2 py-1 text-center' },
+                                        'tr',
+                                        { className: 'hover:bg-gray-50' },
                                         React.createElement(
-                                            'button',
+                                            'td',
                                             {
-                                                type: 'button',
-                                                onClick: () => setRemoveWalkingModal({ transfer: t }),
-                                                title: 'Odstrániť príznak „peši" (presun sa vráti medzi vygenerované)',
-                                                className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 inline-flex items-center justify-center'
+                                                colSpan: 6,
+                                                className: 'border border-gray-300 px-2 py-1',
+                                                style: {
+                                                    borderLeft: transportColor
+                                                        ? `6px solid ${transportColor}`
+                                                        : '6px solid #059669',
+                                                    backgroundColor: transportColor
+                                                        ? lightenHex(transportColor, 0.15)
+                                                        : '#ecfdf5',
+                                                }
                                             },
-                                            React.createElement('i', { className: 'fa-solid fa-xmark' })
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center justify-between gap-3' },
+                                                // Vľavo: názov tímu ● počet
+                                                React.createElement(
+                                                    'span',
+                                                    {
+                                                        className: 'font-semibold text-xs',
+                                                        style: { color: transportColor || '#065f46' },
+                                                        title: membersTitle || ''
+                                                    },
+                                                    membersText
+                                                        ? `${t.teamName || '(neznámy tím)'} ● ${membersText}`
+                                                        : (t.teamName || '(neznámy tím)')
+                                                ),
+                                                // Vpravo: dátum
+                                                dateLabel &&
+                                                    React.createElement(
+                                                        'span',
+                                                        { className: 'text-xs text-gray-600' },
+                                                        dateLabel
+                                                    )
+                                            )
+                                        )
+                                    ),
+                                    // ============================================================
+                                    // Druhý riadok – pôvodné stĺpce (Od, Do, Miesto od, Miesto do, Tím, Akcia)
+                                    // ============================================================
+                                    React.createElement(
+                                        'tr',
+                                        { className: 'hover:bg-gray-50' },
+                                        React.createElement('td', { className: 'border border-gray-300 px-2 py-1 text-center font-semibold text-blue-700' }, timeFrom || '—'),
+                                        React.createElement('td', { className: 'border border-gray-300 px-2 py-1 text-center font-semibold text-blue-700' }, timeTo || '—'),
+                                        React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, placeFrom || '—'),
+                                        React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, placeTo || '—'),
+                                        React.createElement(
+                                            'td',
+                                            { className: 'border border-gray-300 px-2 py-1 font-semibold', style: { color: textColor } },
+                                            t.teamName || '(neznámy tím)'
+                                        ),
+                                        // NOVÉ: tlačidlo na odstránenie príznaku "peši"
+                                        React.createElement(
+                                            'td',
+                                            { className: 'border border-gray-300 px-2 py-1 text-center' },
+                                            React.createElement(
+                                                'button',
+                                                {
+                                                    type: 'button',
+                                                    onClick: () => setRemoveWalkingModal({ transfer: t }),
+                                                    title: 'Odstrániť príznak „peši" (presun sa vráti medzi vygenerované)',
+                                                    className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 inline-flex items-center justify-center'
+                                                },
+                                                React.createElement('i', { className: 'fa-solid fa-xmark' })
+                                            )
                                         )
                                     )
                                 );
