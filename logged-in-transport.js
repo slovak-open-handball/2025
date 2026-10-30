@@ -292,6 +292,9 @@ const TransportApp = ({ userProfileData }) => {
     // ==== VAROVANIE: CHÝBAJÚCE TRVANIE JÁZDY ====
     const [missingTravelTimeWarning, setMissingTravelTimeWarning] = useState([]);
 
+    // ==== NOVÉ: príznak, že zoznam zastávok (places) už bol načítaný ====
+    const [placesLoaded, setPlacesLoaded] = useState(false);
+
     // ==== MODÁLNE OKNO PRE ÚPRAVU VYGENEROVANÉHO PRESUNU ====
     const [editingTransfer, setEditingTransfer] = useState(null);
     const [editingTransferStops, setEditingTransferStops] = useState([]); // medzizastávky medzi from a to
@@ -2906,6 +2909,7 @@ const TransportApp = ({ userProfileData }) => {
                 list.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
                 setAllPlaces(list);
                 allPlacesRef.current = list; // okamžite aktualizuj ref
+                setPlacesLoaded(true);        // ← NOVÉ: označ, že places sú načítané
 
                 // Prepočítaj timeline, aby sa nové flagy prejavili
                 if (matchesLoadedRef.current && cateringLoadedRef.current && teamsLoadedRef.current) {
@@ -3805,6 +3809,16 @@ const TransportApp = ({ userProfileData }) => {
             setMissingTravelTimeWarning([]);
             return;
         }
+
+        // NOVÉ: Kým nie je načítaný zoznam zastávok (places), varovanie
+        // nerieš. Bez zastávok sa nedá overiť, či trvanie existuje,
+        // pretože getTravelMinutes potrebuje ID zastávok z `stopsList`.
+        // Tým sa zabráni falošnému varovaniu pri prvotnom načítaní,
+        // keď ešte places nedorazili z Firestore.
+        if (!placesLoaded || !stopsList || stopsList.length === 0) {
+            setMissingTravelTimeWarning([]);
+            return;
+        }
     
         if (!busRows || Object.keys(busRows).length === 0) {
             setMissingTravelTimeWarning([]);
@@ -3855,8 +3869,7 @@ const TransportApp = ({ userProfileData }) => {
         });
     
         setMissingTravelTimeWarning(missing);
-    }, [busRows, travelTimes, stopsList, travelTimesLoaded]);
-
+    }, [busRows, travelTimes, stopsList, travelTimesLoaded, placesLoaded]);
     // ============================================================
     // PRIDANIE RIADKU DO AUTOBUSU PRE DANÝ DEŇ
     // ============================================================
