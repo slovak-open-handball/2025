@@ -186,6 +186,26 @@ const TransportApp = ({ userProfileData }) => {
 
     const savedTransfersRef = useRef([]);
 
+    const findTeamIdentifiersByName = (category, teamName) => {
+        const cat = cleanCategory(category);
+        const name = String(teamName || '').trim();
+        if (!cat || !name) return null;
+    
+        const lookup = teamsLookupRef.current || {};
+        
+        for (const [key, info] of Object.entries(lookup)) {
+            if (!info) continue;
+            if (info.teamName === name && cleanCategory(info.category) === cat) {
+                return {
+                    teamUid: info.userId,
+                    teamIndex: info.teamIndex,
+                    category: cat,
+                };
+            }
+        }
+        return null;
+    };
+
     // ============================================================
     // Pomocná: obohatí transfer o teamUid/teamIndex (ak chýbajú)
     // a odstráni teamName (neukladá sa do DB).
@@ -208,26 +228,6 @@ const TransportApp = ({ userProfileData }) => {
         }
         delete out.teamName;
         return out;
-    };
-
-    const findTeamIdentifiersByName = (category, teamName) => {
-        const cat = cleanCategory(category);
-        const name = String(teamName || '').trim();
-        if (!cat || !name) return null;
-    
-        const lookup = teamsLookupRef.current || {};
-        
-        for (const [key, info] of Object.entries(lookup)) {
-            if (!info) continue;
-            if (info.teamName === name && cleanCategory(info.category) === cat) {
-                return {
-                    teamUid: info.userId,
-                    teamIndex: info.teamIndex,
-                    category: cat,
-                };
-            }
-        }
-        return null;
     };
 
     // Buffery pre udalosti z jednotlivých kolekcií
