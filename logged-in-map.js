@@ -123,6 +123,8 @@ const MapApp = ({ userProfileData }) => {
     const [isSportHallAssigned, setIsSportHallAssigned] = useState(false);
     const [isCateringPlaceAssigned, setIsCateringPlaceAssigned] = useState(false);
 
+    const [isStopAssigned, setIsStopAssigned] = useState(false); // ← NOVÉ
+
     const [newHeaderColor, setNewHeaderColor] = useState('#1e40af');
     const [editHeaderColor, setEditHeaderColor] = useState('#1e40af');
     const [newHeaderTextColor, setNewHeaderTextColor] = useState('#000000');
@@ -354,6 +356,43 @@ const MapApp = ({ userProfileData }) => {
         };
 
         checkIfCateringPlaceIsAssigned();
+    }, [selectedPlace, places]);
+
+    // NOVÉ: Kontrola, či je zastávka priradená v trase autobusu
+    useEffect(() => {
+        const checkIfStopIsAssigned = async () => {
+            if (!selectedPlace || !window.db || selectedPlace.type !== 'zastavka') {
+                setIsStopAssigned(false);
+                return;
+            }
+
+            try {
+                const transportRef = collection(window.db, 'transport');
+                const transportSnapshot = await getDocs(transportRef);
+    
+                let isAssigned = false;
+                const stopName = selectedPlace.name;
+    
+                transportSnapshot.forEach((docSnap) => {
+                    if (isAssigned) return;
+                    const data = docSnap.data() || {};
+                    if (data.type !== 'busRow') return;
+    
+                    const placeFrom = data.placeFrom || '';
+                    const placeTo = data.placeTo || '';
+
+                    if (placeFrom === stopName || placeTo === stopName) {
+                        isAssigned = true;
+                    }
+                });
+
+                setIsStopAssigned(isAssigned);
+            } catch (err) {
+                setIsStopAssigned(false);
+            }
+        };
+
+        checkIfStopIsAssigned();
     }, [selectedPlace, places]);
 
     useEffect(() => {
@@ -2617,15 +2656,18 @@ const MapApp = ({ userProfileData }) => {
                      React.createElement('button', {
                          onClick: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
                                   (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ||
-                                  (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned) ? 
+                                  (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned) ||
+                                  (selectedPlace?.type === 'zastavka' && isStopAssigned) ? 
                                   null : handleDeletePlace,
                          disabled: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
                                    (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ||
-                                   (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned),
+                                   (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned) ||
+                                   (selectedPlace?.type === 'zastavka' && isStopAssigned),
                          className: `w-full py-3 font-medium rounded-lg transition flex items-center justify-center gap-2
                              ${((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
                                 (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ||
-                                (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned))
+                                (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned) ||
+                                (selectedPlace?.type === 'zastavka' && isStopAssigned))
                                  ? 'bg-white text-red-600 border-2 border-red-600 opacity-100 hover:cursor-not-allowed' 
                                  : 'bg-red-600 hover:bg-red-700 text-white'
                              }`,
@@ -2635,11 +2677,14 @@ const MapApp = ({ userProfileData }) => {
                                   ? 'Halu nie je možné odstrániť (priradené zápasy)'
                                   : (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned)
                                     ? 'Miesto nie je možné odstrániť (priradené tímy)'
-                                    : 'Odstrániť miesto'
+                                    : (selectedPlace?.type === 'zastavka' && isStopAssigned)
+                                      ? 'Zastávku nie je možné odstrániť (priradená v trase autobusu)'
+                                      : 'Odstrániť miesto'
                      }, 
                      ((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
                       (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ||
-                      (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned))
+                      (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned) ||
+                      (selectedPlace?.type === 'zastavka' && isStopAssigned))
                      ? React.createElement(React.Fragment, null,
                          React.createElement('i', { 
                            className: 'fa-solid fa-trash-alt mr-2',
@@ -2653,7 +2698,7 @@ const MapApp = ({ userProfileData }) => {
                          }),
                          'Odstrániť miesto'
                        )
-                  ),
+                     ),
                 )
               ),
             ),
