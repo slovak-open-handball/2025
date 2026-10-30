@@ -9467,7 +9467,7 @@ const TransportApp = ({ userProfileData }) => {
                     // Tlačidlo "+ Pridať" – POD zoznamom medzizastávok
                     React.createElement(
                         'div',
-                        { className: 'mt-3 flex justify-start' },
+                        { className: 'mt-3 flex justify-center' },
                         React.createElement(
                             'button',
                             {
