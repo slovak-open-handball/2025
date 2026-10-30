@@ -9396,7 +9396,7 @@ const TransportApp = ({ userProfileData }) => {
                                     if (s.name === stopValue) return true; // aktuálna hodnota vždy dostupná
                                     return !selectedElsewhere.has(s.name);
                                 });
-        
+                
                                 return React.createElement(
                                     'li',
                                     {
@@ -9464,21 +9464,23 @@ const TransportApp = ({ userProfileData }) => {
                                 );
                             })
                         ),
-                    // Tlačidlo "+ Pridať" – POD zoznamom medzizastávok
-                    React.createElement(
-                        'div',
-                        { className: 'mt-3 flex justify-center' },
+                    // Tlačidlo "+" – POD zoznamom, vycentrované
+                    // ZOBRAZÍ SA LEN AK NEEXISTUJE ŽIADNY SELECTBOX (t.j. zoznam je prázdny)
+                    editingTransferStops.length === 0 &&
                         React.createElement(
-                            'button',
-                            {
-                                type: 'button',
-                                onClick: () => setEditingTransferStops((prev) => [...prev, '']),
-                                className: 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded w-7 h-7 flex items-center justify-center',
-                                title: 'Pridať medzizastávku'
-                            },
-                            React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                            'div',
+                            { className: 'mt-3 flex justify-center' },
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => setEditingTransferStops((prev) => [...prev, '']),
+                                    className: 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded w-7 h-7 flex items-center justify-center',
+                                    title: 'Pridať medzizastávku'
+                                },
+                                React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                            )
                         )
-                    )
                 ),
                 // Náhľad novej trasy
                 React.createElement(
