@@ -9369,7 +9369,15 @@ const TransportApp = ({ userProfileData }) => {
                                                 React.createElement(
                                                     'td',
                                                     { className: 'border border-gray-300 px-2 py-1 font-semibold', style: { color: textColor } },
-                                                    t.teamName || '(neznámy tím)'
+                                                    (() => {
+                                                        // ============================================================
+                                                        // NOVÉ: Ak má tím nastavenú skratku, zobraz ju;
+                                                        // inak zobraz plný názov tímu (rovnako ako
+                                                        // v renderSavedTransfers).
+                                                        // ============================================================
+                                                        const shortcut = getTeamShortcut(t.category, t.teamName);
+                                                        return shortcut || t.teamName || '(neznámy tím)';
+                                                    })()
                                                 ),
                                                 // Tlačidlo na odstránenie príznaku "peši"
                                                 React.createElement(
