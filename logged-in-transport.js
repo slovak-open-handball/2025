@@ -8728,6 +8728,7 @@ const TransportApp = ({ userProfileData }) => {
                                         'PEŠI'
                                     ),
                                 // NOVÉ: ikona koša vpravo – odstráni len tento konkrétny presun
+                                // (rovnaký štýl ako v hlavičke busu, keď je tlačidlo odblokované)
                                 React.createElement(
                                     'button',
                                     {
@@ -8737,9 +8738,9 @@ const TransportApp = ({ userProfileData }) => {
                                             setDeleteTransferModal({ transfer: t });
                                         },
                                         title: 'Odstrániť tento presun',
-                                        className: 'absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white/90 text-red-600 hover:bg-red-100 hover:text-red-800 shadow-sm flex items-center justify-center transition-colors',
+                                        className: 'absolute top-1.5 right-1.5 rounded-full w-8 h-8 flex items-center justify-center transition-colors bg-red-600 text-white hover:bg-red-700',
                                     },
-                                    React.createElement('i', { className: 'fa-solid fa-trash text-[11px]' })
+                                    React.createElement('i', { className: 'fa-solid fa-trash' })
                                 ),
                                 // Fallback
                                 (!dateLabel && !timeLabel && !routeLabel) &&
