@@ -3724,8 +3724,12 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     useEffect(() => {
         if (!window.db) return;
+        // NOVÉ: Kým nie je načítaný travelTimes, neprepočítavaj timeTo
+        // (inak by sa pri prvotnom načítavaní zbytočne zapisovalo do DB
+        // a spôsobilo by to viacnásobný re-render + duplicitné varovanie)
+        if (!travelTimesLoaded) return;
         if (!busRows || Object.keys(busRows).length === 0) return;
-    
+
         Object.values(busRows).forEach((rows) => {
             (rows || []).forEach((row) => {
                 // Použiť rovnakú logiku ako v renderBusRow
@@ -3762,7 +3766,7 @@ const TransportApp = ({ userProfileData }) => {
                 }
             });
         });
-    }, [busRows, travelTimes, stopsList]);
+    }, [busRows, travelTimes, stopsList, travelTimesLoaded]);
 
     // ============================================================
     // NOVÉ: Automatická synchronizácia "Miesto od" s predchádzajúcim
@@ -3771,6 +3775,8 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     useEffect(() => {
         if (!window.db) return;
+        // NOVÉ: Kým nie je načítaný travelTimes, nesynchronizuj placeFrom
+        if (!travelTimesLoaded) return;
         if (!busRows || Object.keys(busRows).length === 0) return;
 
         Object.values(busRows).forEach((rows) => {
@@ -3787,7 +3793,7 @@ const TransportApp = ({ userProfileData }) => {
                 updateBusRowField(currRow.id, 'placeFrom', prevRow.placeTo);
             }
         });
-    }, [busRows]);
+    }, [busRows, travelTimesLoaded]);
 
     // ============================================================
     // DETEKCIA CHÝBAJÚCICH TRVANÍ JÁZDY PRE RIADKY AUTOBUSOV
