@@ -7337,16 +7337,37 @@ const TransportApp = ({ userProfileData }) => {
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-bus mr-2' }),
                                 React.createElement('h3', { className: 'text-lg font-bold text-center' }, bus.name),
-                                React.createElement(
-                                    'button',
-                                    {
-                                        type: 'button',
-                                        onClick: () => removeBus(bus),
-                                        className: 'absolute right-3 text-gray-900/70 hover:text-gray-900 hover:bg-black/10 rounded-full w-8 h-8 flex items-center justify-center transition-colors',
-                                        title: 'Odstrániť autobus'
-                                    },
-                                    React.createElement('i', { className: 'fa-solid fa-trash' })
-                                )
+                                (() => {
+                                    // Zisti, či autobus má aspoň jeden riadok s časmi a miestami (v ľubovoľnom dni)
+                                    let hasAnyRowWithData = false;
+                                    Object.entries(busRows || {}).forEach(([key, rows]) => {
+                                        if (hasAnyRowWithData) return;
+                                        const [bId] = key.split('|');
+                                        if (bId !== bus.id) return;
+                                        if ((rows || []).length > 0) {
+                                            hasAnyRowWithData = true;
+                                        }
+                                    });
+                            
+                                    const isDisabled = hasAnyRowWithData;
+                            
+                                    return React.createElement(
+                                        'button',
+                                        {
+                                            type: 'button',
+                                            onClick: isDisabled ? undefined : () => removeBus(bus),
+                                            disabled: isDisabled,
+                                            className: isDisabled
+                                                ? 'absolute right-3 rounded-full w-8 h-8 flex items-center justify-center transition-colors cursor-not-allowed border-2 border-red-600 bg-white'
+                                                : 'absolute right-3 rounded-full w-8 h-8 flex items-center justify-center transition-colors bg-red-600 text-white hover:bg-red-700',
+                                            title: isDisabled
+                                                ? 'Najprv odstráňte všetky riadky s časmi a miestami v tomto autobuse'
+                                                : 'Odstrániť autobus',
+                                            style: isDisabled ? { color: '#dc2626' } : undefined,
+                                        },
+                                        React.createElement('i', { className: 'fa-solid fa-trash' })
+                                    );
+                                })()
                             ),
                             tournamentDays.length === 0
                                 ? React.createElement(
