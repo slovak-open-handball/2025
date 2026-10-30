@@ -186,36 +186,36 @@ const TransportApp = ({ userProfileData }) => {
 
     const savedTransfersRef = useRef([]);
 
+    // ============================================================
+    // Pomocná: obohatí transfer o teamUid/teamIndex (ak chýbajú)
+    // a odstráni teamName (neukladá sa do DB).
+    //
+    // teamUid  = ID dokumentu používateľa v kolekcii users
+    // teamIndex = poradie tímu v poli teams[category] v tomto dokumente
+    // ============================================================
+    const toDbTransfer = (src, fallbackCategory, fallbackTeamName) => {
+        if (!src) return src;
+        const category = cleanCategory(src.category || fallbackCategory || '');
+        const teamName = String(src.teamName || fallbackTeamName || '').trim();
+        const ids = (src.teamUid != null && src.teamIndex != null)
+            ? { teamUid: src.teamUid, teamIndex: src.teamIndex }
+            : findTeamIdentifiersByName(category, teamName);
+
+        const out = { ...src, category };
+        if (ids) {
+            out.teamUid = ids.teamUid;
+            out.teamIndex = ids.teamIndex;
+        }
+        delete out.teamName;
+        return out;
+    };
+
     const findTeamIdentifiersByName = (category, teamName) => {
         const cat = cleanCategory(category);
         const name = String(teamName || '').trim();
         if (!cat || !name) return null;
     
         const lookup = teamsLookupRef.current || {};
-
-        // ============================================================
-        // Pomocná: obohatí transfer o teamUid/teamIndex (ak chýbajú)
-        // a odstráni teamName (neukladá sa do DB).
-        //
-        // teamUid  = ID dokumentu používateľa v kolekcii users
-        // teamIndex = poradie tímu v poli teams[category] v tomto dokumente
-        // ============================================================
-        const toDbTransfer = (src, fallbackCategory, fallbackTeamName) => {
-            if (!src) return src;
-            const category = cleanCategory(src.category || fallbackCategory || '');
-            const teamName = String(src.teamName || fallbackTeamName || '').trim();
-            const ids = (src.teamUid != null && src.teamIndex != null)
-                ? { teamUid: src.teamUid, teamIndex: src.teamIndex }
-                : findTeamIdentifiersByName(category, teamName);
-
-            const out = { ...src, category };
-            if (ids) {
-                out.teamUid = ids.teamUid;
-                out.teamIndex = ids.teamIndex;
-            }
-            delete out.teamName;
-            return out;
-        };
         
         for (const [key, info] of Object.entries(lookup)) {
             if (!info) continue;
