@@ -285,6 +285,9 @@ const TransportApp = ({ userProfileData }) => {
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [selectedCategoryForTimeline, setSelectedCategoryForTimeline] = useState('');
 
+    // ==== NOVÉ: Filter – zobraziť iba presuny s textom "časť presunu" ====
+    const [showOnlyPartialTransfers, setShowOnlyPartialTransfers] = useState(false);
+
     // ==== MODÁLNE OKNO PRE MAZANIE PRESUNOV (červená polovica FAB) ====
     const [showDeleteTransfersModal, setShowDeleteTransfersModal] = useState(false);
     const [selectedCategoryForDelete, setSelectedCategoryForDelete] = useState('');
@@ -8900,7 +8903,9 @@ const TransportApp = ({ userProfileData }) => {
             };
         });
         
-        const filtered = baseFilteredFirstOnly;
+        const filtered = showOnlyPartialTransfers
+            ? baseFilteredFirstOnly.filter((t) => t._parentKey && t._parentRoute)
+            : baseFilteredFirstOnly;
     
         // Zoradenie
         const buildStartSortKey = (t) => {
@@ -8961,13 +8966,32 @@ const TransportApp = ({ userProfileData }) => {
                     'span',
                     { className: 'absolute right-3 text-xs bg-white/20 rounded-full px-2 py-0.5' },
                     `${filtered.length}`
+                ),
+                // ============================================================
+                // NOVÉ: Checkbox – zobraziť iba presuny s textom "časť presunu"
+                // ============================================================
+                React.createElement(
+                    'label',
+                    {
+                        className: 'absolute left-3 flex items-center gap-2 text-xs font-medium cursor-pointer select-none',
+                        title: 'Zobraziť iba tie presuny, ktoré sú časťou väčšieho presunu (majú medzizastávky)',
+                    },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        checked: showOnlyPartialTransfers,
+                        onChange: (e) => setShowOnlyPartialTransfers(e.target.checked),
+                        className: 'w-4 h-4 rounded accent-white cursor-pointer',
+                    }),
+                    React.createElement('span', { className: 'whitespace-nowrap' }, 'Iba časti presunov')
                 )
             ),
             filtered.length === 0
                 ? React.createElement(
                     'p',
                     { className: 'text-center text-gray-500 py-6 text-sm italic px-3' },
-                    'Zatiaľ žiadne vygenerované presuny. Kliknite na "+" vpravo dole a vygenerujte časovú os.'
+                    showOnlyPartialTransfers
+                        ? 'Žiadne presuny, ktoré by boli časťou väčšieho presunu (s medzizastávkami).'
+                        : 'Zatiaľ žiadne vygenerované presuny. Kliknite na "+" vpravo dole a vygenerujte časovú os.'
                 )
                 : React.createElement(
                     'div',
