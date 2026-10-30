@@ -10388,7 +10388,7 @@ const TransportApp = ({ userProfileData }) => {
                 ),
 
                 // ============================================================
-                // INFO O PRESUNE
+                // INFO O PRESUNE – rovnaká farba výplne ako box vo vygenerovaných presunoch
                 // ============================================================
                 (() => {
                     const tr = transferActionModal.transfer;
@@ -10408,9 +10408,23 @@ const TransportApp = ({ userProfileData }) => {
                     const teamLabel = membersCount != null
                         ? `${tr.teamName || ''} • ${membersCount}`
                         : (tr.teamName || '');
+                
+                    // Rovnaká logika ako v renderSavedTransfers
+                    const transportColor = getTransportColorForCategory(tr.category);
+                    const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
+                
                     return React.createElement(
                         'div',
-                        { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700' },
+                        {
+                            className: 'mb-4 p-3 rounded-lg text-sm text-gray-700' +
+                                (boxBg ? '' : ' bg-violet-50/40 border border-gray-200'),
+                            style: {
+                                borderLeft: transportColor
+                                    ? `6px solid ${transportColor}`
+                                    : '2px solid #c4b5fd',
+                                ...(boxBg ? { backgroundColor: boxBg } : {}),
+                            }
+                        },
                         React.createElement('div', { className: 'font-medium' },
                             `${tr.fromLocation} → ${tr.toLocation}`),
                         React.createElement('div', { className: 'text-xs text-gray-500 mt-1' },
