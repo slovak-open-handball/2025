@@ -184,6 +184,52 @@ const TransportApp = ({ userProfileData }) => {
     // Lookup pre názvy tímov (userId|category|teamIndex → teamName)
     const teamsLookupRef = useRef({});
 
+    const savedTransfersRef = useRef([]);
+
+    const findTeamIdentifiersByName = (category, teamName) => {
+        const cat = cleanCategory(category);
+        const name = String(teamName || '').trim();
+        if (!cat || !name) return null;
+    
+        const lookup = teamsLookupRef.current || {};
+
+        // ============================================================
+        // Pomocná: obohatí transfer o teamUid/teamIndex (ak chýbajú)
+        // a odstráni teamName (neukladá sa do DB).
+        //
+        // teamUid  = ID dokumentu používateľa v kolekcii users
+        // teamIndex = poradie tímu v poli teams[category] v tomto dokumente
+        // ============================================================
+        const toDbTransfer = (src, fallbackCategory, fallbackTeamName) => {
+            if (!src) return src;
+            const category = cleanCategory(src.category || fallbackCategory || '');
+            const teamName = String(src.teamName || fallbackTeamName || '').trim();
+            const ids = (src.teamUid != null && src.teamIndex != null)
+                ? { teamUid: src.teamUid, teamIndex: src.teamIndex }
+                : findTeamIdentifiersByName(category, teamName);
+
+            const out = { ...src, category };
+            if (ids) {
+                out.teamUid = ids.teamUid;
+                out.teamIndex = ids.teamIndex;
+            }
+            delete out.teamName;
+            return out;
+        };
+        
+        for (const [key, info] of Object.entries(lookup)) {
+            if (!info) continue;
+            if (info.teamName === name && cleanCategory(info.category) === cat) {
+                return {
+                    teamUid: info.userId,
+                    teamIndex: info.teamIndex,
+                    category: cat,
+                };
+            }
+        }
+        return null;
+    };
+
     // Buffery pre udalosti z jednotlivých kolekcií
     const matchesBufferRef = useRef([]);
     const cateringBufferRef = useRef([]);
@@ -202,6 +248,8 @@ const TransportApp = ({ userProfileData }) => {
     const matchesLoadedRef = useRef(false);
     const cateringLoadedRef = useRef(false);
     const teamsLoadedRef = useRef(false);
+
+    const teamsLookupLoadedRef = useRef(false);
 
     // UI prepínač: 'planovanie' | 'nastavenia'
     const [activeView, setActiveView] = useState('planovanie');
@@ -454,22 +502,10 @@ const TransportApp = ({ userProfileData }) => {
         });
     };
 
-    // ============================================================
-    // NOVÉ: Dogeneruje chýbajúce segmenty pre všetky parent presuny
-    // s intermediateStops.
-    //
-    // Pre každý parent záznam (s intermediateStops) overí, či v DB
-    // existujú VŠETKY segmenty (from→stop1, stop1→stop2, ..., stopN→to).
-    // Ak niektorý chýba, dogeneruje ho s časom vypočítaným z celkového
-    // intervalu podľa trvaní jázd (travelTimes).
-    //
-    // Volá sa po uložení presunov v rebuildAndLogTimeline.
-    // ============================================================
     const ensureSegmentsForParentTransfers = async (existingSavedTransfers) => {
         if (!window.db) return;
         if (!Array.isArray(existingSavedTransfers) || existingSavedTransfers.length === 0) return;
     
-        // Zober len parent záznamy s intermediateStops
         const parentsWithStops = existingSavedTransfers.filter(
             (t) => Array.isArray(t.intermediateStops) && t.intermediateStops.length > 0
         );
@@ -478,23 +514,34 @@ const TransportApp = ({ userProfileData }) => {
         const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
         const transfersPatch = {};
     
-        // Pomocná: normalizácia miesta pre porovnanie
         const norm = (s) => normalizePlaceName(s || '');
     
-        // Pomocná: nájdi existujúci záznam v DB, ktorý zodpovedá segmentu
-        // (rovnaký tím, kategória, deň, from→to)
-        const findExistingSegment = (category, teamName, dayKey, fromLoc, toLoc) => {
+        // ============================================================
+        // OPRAVA: findExistingSegment – fallback cez teamName, ak
+        // teamUid/teamIndex chýbajú (staré záznamy).
+        // ============================================================
+        const findExistingSegment = (category, teamUid, teamIndex, teamName, dayKey, fromLoc, toLoc) => {
             const cat = cleanCategory(category);
-            const tn = String(teamName || '').trim();
             const fromNorm = norm(fromLoc);
             const toNorm = norm(toLoc);
+            const tn = String(teamName || '').trim();
+    
             return existingSavedTransfers.find((s) => {
                 if (cleanCategory(s.category || '') !== cat) return false;
-                if (String(s.teamName || '').trim() !== tn) return false;
                 if ((s.dayKey || '') !== (dayKey || '')) return false;
                 if (norm(s.fromLocation) !== fromNorm) return false;
                 if (norm(s.toLocation) !== toNorm) return false;
-                return true;
+    
+                // Primárne porovnaj teamUid/teamIndex
+                if (teamUid != null && teamIndex != null) {
+                    if (s.teamUid != null && s.teamIndex != null) {
+                        return s.teamUid === teamUid && s.teamIndex === teamIndex;
+                    }
+                    // Starý záznam bez teamUid → porovnaj cez teamName
+                    return String(s.teamName || '').trim() === tn;
+                }
+                // Ak nemáme teamUid, porovnaj cez teamName
+                return String(s.teamName || '').trim() === tn;
             });
         };
     
@@ -502,7 +549,6 @@ const TransportApp = ({ userProfileData }) => {
             const stops = parent.intermediateStops.filter(Boolean);
             const routeRaw = [parent.fromLocation, ...stops, parent.toLocation].filter(Boolean);
     
-            // Odstráň duplicitné po sebe idúce zastávky
             const route = [];
             routeRaw.forEach((loc) => {
                 if (route.length === 0 || norm(route[route.length - 1]) !== norm(loc)) {
@@ -514,14 +560,23 @@ const TransportApp = ({ userProfileData }) => {
     
             const timeRange = parseTransferWhenToRange(parent.when);
             if (!timeRange || timeRange.startTs == null || timeRange.endTs == null || timeRange.endTs <= timeRange.startTs) {
-                return; // nevieme vypočítať časy
+                return;
             }
     
-            // Zisti reálne časy z autobusu pre jednotlivé segmenty (rovnaká logika ako v renderSavedTransfers)
-            const teamName = String(parent.teamName || '').trim();
             const category = cleanCategory(parent.category || '');
             const dayKey = parent.dayKey || '';
-            const teamKey = `${teamName}|${category}`;
+            const parentTeamUid = parent.teamUid != null ? parent.teamUid : null;
+            const parentTeamIndex = parent.teamIndex != null ? parent.teamIndex : null;
+    
+            // Zisti teamName pre porovnanie s busRows
+            let parentTeamName = String(parent.teamName || '').trim();
+            if (!parentTeamName && parentTeamUid != null && parentTeamIndex != null) {
+                const lookup = teamsLookupRef.current || {};
+                const k = `${parentTeamUid}|${category}|${parentTeamIndex}`;
+                if (lookup[k]) parentTeamName = lookup[k].teamName;
+            }
+    
+            const teamKey = `${parentTeamName}|${category}`;
     
             const allBusRowsForDay = [];
             Object.entries(busRows || {}).forEach(([busKey, rows]) => {
@@ -538,7 +593,7 @@ const TransportApp = ({ userProfileData }) => {
                     const s = String(tk).trim();
                     if (s === teamKey) return true;
                     const [tn, cat] = s.split('|');
-                    return String(tn).trim() === teamName && cleanCategory(cat) === category;
+                    return String(tn).trim() === parentTeamName && cleanCategory(cat) === category;
                 });
             };
     
@@ -582,10 +637,8 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
     
-            // Vypočítaj časy pre segmenty (rovnaká logika ako v renderSavedTransfers)
             const finalTimes = new Array(route.length - 1).fill(null);
     
-            // 1) Plne vyriešené
             for (let i = 0; i < route.length - 1; i++) {
                 const rt = segmentRealTimes[i];
                 if (rt && rt.startTs != null && rt.endTs != null) {
@@ -593,7 +646,6 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
     
-            // 2) Čiastočne vyriešené
             for (let i = 0; i < route.length - 1; i++) {
                 if (finalTimes[i]) continue;
                 const rt = segmentRealTimes[i];
@@ -604,11 +656,7 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
     
-            // 3) Plne nevyriešené – dopočítaj podľa trvaní
-            //    (postupne od začiatku alebo od konca predchádzajúceho vyriešeného)
-            //    Najprv nájdi "kotvy" (vyriešené segmenty), potom rozdeľ čas
-            //    medzi nevyriešené úseky podľa trvaní.
-            const unresolvedRuns = []; // pole { startIdx, endIdx } (inclusive)
+            const unresolvedRuns = [];
             let runStart = null;
             for (let i = 0; i < route.length - 1; i++) {
                 if (finalTimes[i]) {
@@ -625,12 +673,10 @@ const TransportApp = ({ userProfileData }) => {
             }
     
             unresolvedRuns.forEach(({ startIdx, endIdx }) => {
-                // Začiatok úseku = koniec predchádzajúceho vyriešeného (alebo timeRange.startTs)
                 let runStartTs = timeRange.startTs;
                 if (startIdx > 0 && finalTimes[startIdx - 1]) {
                     runStartTs = finalTimes[startIdx - 1].endTs;
                 }
-                // Koniec úseku = začiatok nasledujúceho vyriešeného (alebo timeRange.endTs)
                 let runEndTs = timeRange.endTs;
                 if (endIdx < route.length - 2 && finalTimes[endIdx + 1]) {
                     runEndTs = finalTimes[endIdx + 1].startTs;
@@ -644,7 +690,6 @@ const TransportApp = ({ userProfileData }) => {
                     return;
                 }
     
-                // Trvania segmentov v tomto úseku
                 const durations = [];
                 for (let i = startIdx; i <= endIdx; i++) {
                     const mins = getTravelMinutes(route[i], route[i + 1]);
@@ -674,7 +719,6 @@ const TransportApp = ({ userProfileData }) => {
                 }
             });
     
-            // Pre každý segment over, či existuje v DB; ak nie, dogeneruj
             for (let i = 0; i < route.length - 1; i++) {
                 const ft = finalTimes[i];
                 if (!ft || ft.startTs == null || ft.endTs == null) continue;
@@ -683,26 +727,39 @@ const TransportApp = ({ userProfileData }) => {
                 const toLoc = String(route[i + 1] || '').trim();
                 if (norm(fromLoc) === norm(toLoc)) continue;
     
-                const existing = findExistingSegment(category, teamName, dayKey, fromLoc, toLoc);
-                if (existing) continue; // segment už existuje
+                const existing = findExistingSegment(
+                    category,
+                    parentTeamUid,
+                    parentTeamIndex,
+                    parentTeamName,
+                    dayKey,
+                    fromLoc,
+                    toLoc
+                );
+                if (existing) continue;
     
-                // Dogeneruj nový segment
                 const whenStr = `${formatTsLocal(ft.startTs)} – ${formatTsLocal(ft.endTs)}`;
                 const text = `Presun z ${fromLoc} do ${toLoc}`;
-                const key = buildTransferKey(category, teamName, whenStr, text);
+                const key = buildTransferKey(category, parentTeamName, whenStr, text);
     
-                const newSegment = {
+                const newSegment = toDbTransfer({
                     category,
-                    teamName,
+                    teamName: parentTeamName,
+                    teamUid: parentTeamUid,
+                    teamIndex: parentTeamIndex,
                     when: whenStr,
                     text,
                     fromLocation: fromLoc,
                     toLocation: toLoc,
                     dayKey,
                     _parentKey: parent.key,
-                };
+                });
     
-                // Zachovaj isWalking, ak ho má parent (napr. celý presun je peši)
+                if (newSegment.teamUid == null || newSegment.teamIndex == null) {
+                    console.warn('[TRANSPORT] Segment sa neukladá – chýba teamUid/teamIndex pre', parentTeamName, category);
+                    continue;
+                }
+    
                 if (parent.isWalking === true) {
                     newSegment.isWalking = true;
                     newSegment.walkingSetAt = parent.walkingSetAt || Timestamp.fromDate(new Date());
@@ -718,9 +775,7 @@ const TransportApp = ({ userProfileData }) => {
         try {
             await setDoc(
                 docRef,
-                {
-                    [TRANSPORT_TRANSFERS_FIELD]: transfersPatch,
-                },
+                { [TRANSPORT_TRANSFERS_FIELD]: transfersPatch },
                 { merge: true }
             );
             console.log(
@@ -735,14 +790,9 @@ const TransportApp = ({ userProfileData }) => {
     // ZBUILDÍ A VYPÍŠE ČASOVÚ OS PRE KAŽDÝ TÍM V KAŽDEJ KATEGÓRII
     // ============================================================
     const rebuildAndLogTimeline = (force = false, categoryFilter = null) => {
-        // Ak používateľ ešte neklikol na tlačidlo "+", negeneruj časovú os
-        // (pokiaľ nie je volanie vynútené cez force=true, napr. z printTeamTimeline)
-        if (!force && !timelineGenerationRequestedRef.current) {
-            return;
-        }
-        if (!matchesLoadedRef.current || !cateringLoadedRef.current || !teamsLoadedRef.current) {
-            return;
-        }  
+        if (!force && !timelineGenerationRequestedRef.current) return;
+        if (!matchesLoadedRef.current || !cateringLoadedRef.current || !teamsLoadedRef.current) return;
+        if (!teamsLookupLoadedRef.current) return;
 
         const normalizedFilter = categoryFilter ? cleanCategory(categoryFilter) : null;
     
@@ -2657,104 +2707,116 @@ const TransportApp = ({ userProfileData }) => {
 
                     // ============================================================
                     // NOVÉ: Uloženie vygenerovaných presunov pre tento tím do DB
+                    // (s čistením starých záznamov pre tento tím/kategóriu)
                     // ============================================================
                     try {
                         const transfersForTeam = enriched.filter((ev) => ev.isTransfer === true);
                         if (transfersForTeam.length > 0 && window.db) {
-                            const transfersPatch = {};
-                            transfersForTeam.forEach((ev) => {
-                                const key = buildTransferKey(category, teamName, ev.when, ev.text);
-                                // Zisti from/to z textu "Presun z X do Y"
-                                let fromLocation = '';
-                                let toLocation = '';
-                                const m = /^Presun z (.+?) do (.+)$/.exec(String(ev.text || ''));
-                                if (m) {
-                                    fromLocation = m[1].trim();
-                                    toLocation = m[2].trim();
-                                }
-                                // Zisti, či už existuje záznam s rovnakým kľúčom (a zachovaj manuálne úpravy)
-                                const existingSaved = savedTransfers.find((s) => s.key === key);
-
-                                transfersPatch[key] = {
-                                    category: cleanCategory(category),
-                                    teamName: String(teamName).trim(),
-                                    when: String(ev.when || '').trim(),
-                                    text: String(ev.text || '').trim(),
-                                    fromLocation,
-                                    toLocation,
-                                    dayKey: extractDayKeyFromWhen(ev.when) || null,
-                                };
-
-                                // Zachovaj manuálne pridané vlastnosti z existujúceho záznamu
-                                if (existingSaved) {
-                                    if (existingSaved.isWalking === true) {
-                                        transfersPatch[key].isWalking = true;
-                                        transfersPatch[key].walkingSetAt = existingSaved.walkingSetAt || Timestamp.fromDate(new Date());
-                                        transfersPatch[key].walkingSetBy = existingSaved.walkingSetBy || (userProfileData && userProfileData.email) || null;
-                                    }
-                                    if (Array.isArray(existingSaved.intermediateStops) && existingSaved.intermediateStops.length > 0) {
-                                        transfersPatch[key].intermediateStops = existingSaved.intermediateStops;
-                                    }
-                                }
-                            });
+                            const teamIdentifiers = findTeamIdentifiersByName(category, teamName);
                     
-                            if (Object.keys(transfersPatch).length > 0) {
-                                setDoc(
-                                    doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC),
-                                    {
-                                        [TRANSPORT_TRANSFERS_FIELD]: transfersPatch,
-                                    },
-                                    { merge: true }
-                                ).then(() => {
-                                    // ============================================================
-                                    // NOVÉ: Dogeneruj chýbajúce segmenty pre parent presuny
-                                    // ============================================================
-                                    try {
-                                        const currentSaved = savedTransfers || [];
-                                        const mergedForCheck = [...currentSaved];
-                                        Object.entries(transfersPatch).forEach(([k, v]) => {
-                                            const existingIdx = mergedForCheck.findIndex((s) => s.key === k);
-                                            if (existingIdx >= 0) {
-                                                mergedForCheck[existingIdx] = { ...mergedForCheck[existingIdx], ...v, key: k };
-                                            } else {
-                                                mergedForCheck.push({ ...v, key: k });
-                                            }
-                                        });
-                                        ensureSegmentsForParentTransfers(mergedForCheck).catch((ensureErr) => {
-                                            console.error('[TRANSPORT] Chyba pri dogenerovávaní segmentov:', ensureErr);
-                                        });
-                                    } catch (ensureErr) {
-                                        console.error('[TRANSPORT] Chyba pri dogenerovávaní segmentov:', ensureErr);
+                            if (!teamIdentifiers) {
+                                console.warn(
+                                    '[TRANSPORT] Presuny sa neukladajú – nepodarilo sa nájsť teamUid/teamIndex pre tím:',
+                                    teamName, 'v kategórii', category
+                                );
+                            } else {
+                                const transfersPatch = {};
+                                const newKeys = new Set();
+                    
+                                transfersForTeam.forEach((ev) => {
+                                    const key = buildTransferKey(category, teamName, ev.when, ev.text);
+                                    newKeys.add(key);
+                    
+                                    let fromLocation = '';
+                                    let toLocation = '';
+                                    const m = /^Presun z (.+?) do (.+)$/.exec(String(ev.text || ''));
+                                    if (m) {
+                                        fromLocation = m[1].trim();
+                                        toLocation = m[2].trim();
                                     }
-                                }).catch((err) => {
-                                    console.error('[TRANSPORT] Chyba pri ukladaní presunov do DB:', err);
-                                });
-                            
-                                // ============================================================
-                                // NOVÉ: Dogeneruj chýbajúce segmenty pre parent presuny
-                                // s intermediateStops (napr. keď sa zmenil počet medzizastávok,
-                                // alebo sa niektorý segment vymazal manuálne).
-                                //
-                                // Použijeme AKTUÁLNY stav savedTransfers (pred uložením) + nové
-                                // transfersPatch, aby sme videli aj novo-vytvorené parent záznamy.
-                                // ============================================================
-                                try {
-                                    const currentSaved = savedTransfers || [];
-                                    // Zlúč nové záznamy s existujúcimi (aby sme videli aj novo-vytvorené)
-                                    const mergedForCheck = [...currentSaved];
-                                    Object.entries(transfersPatch).forEach(([k, v]) => {
-                                        const existingIdx = mergedForCheck.findIndex((s) => s.key === k);
-                                        if (existingIdx >= 0) {
-                                            mergedForCheck[existingIdx] = { ...mergedForCheck[existingIdx], ...v, key: k };
-                                        } else {
-                                            mergedForCheck.push({ ...v, key: k });
+                    
+                                    const existingSaved = savedTransfers.find((s) => s.key === key);
+                    
+                                    transfersPatch[key] = {
+                                        category: cleanCategory(category),
+                                        teamUid: teamIdentifiers.teamUid,
+                                        teamIndex: teamIdentifiers.teamIndex,
+                                        when: String(ev.when || '').trim(),
+                                        text: String(ev.text || '').trim(),
+                                        fromLocation,
+                                        toLocation,
+                                        dayKey: extractDayKeyFromWhen(ev.when) || null,
+                                    };
+                    
+                                    if (existingSaved) {
+                                        if (existingSaved.isWalking === true) {
+                                            transfersPatch[key].isWalking = true;
+                                            transfersPatch[key].walkingSetAt = existingSaved.walkingSetAt || Timestamp.fromDate(new Date());
+                                            transfersPatch[key].walkingSetBy = existingSaved.walkingSetBy || (userProfileData && userProfileData.email) || null;
                                         }
+                                        if (Array.isArray(existingSaved.intermediateStops) && existingSaved.intermediateStops.length > 0) {
+                                            transfersPatch[key].intermediateStops = existingSaved.intermediateStops;
+                                        }
+                                    }
+                                });
+                    
+                                // ============================================================
+                                // OPRAVA (Chyba 3): Zmaž staré záznamy pre tento tím,
+                                // ktoré už nemajú byť (parent aj segmenty), aby sa nehromadili.
+                                // ============================================================
+                                const categoryClean = cleanCategory(category);
+                                savedTransfers.forEach((s) => {
+                                    if (cleanCategory(s.category || '') !== categoryClean) return;
+                                    // Musí ísť o rovnaký tím
+                                    const sameTeam =
+                                        (s.teamUid != null && s.teamUid === teamIdentifiers.teamUid
+                                            && s.teamIndex === teamIdentifiers.teamIndex)
+                                        || (s.teamUid == null && String(s.teamName || '').trim() === teamName);
+                                    if (!sameTeam) return;
+                                    if (newKeys.has(s.key)) return;
+                                    // Zmaž len ak nie je súčasťou parent bloku s intermediateStops
+                                    // (tie sa spravujú cez ensureSegmentsForParentTransfers)
+                                    if (Array.isArray(s.intermediateStops) && s.intermediateStops.length > 0) return;
+                                    if (s._parentKey && s._parentKey !== s.key) {
+                                        // Je to segment iného parenta – tiež zmaž, ak nový parent neexistuje
+                                        const parentExists = savedTransfers.some(
+                                            (p) => p.key === s._parentKey && Array.isArray(p.intermediateStops) && p.intermediateStops.length > 0
+                                        );
+                                        if (parentExists) return;
+                                    }
+                                    transfersPatch[s.key] = deleteField();
+                                });
+                    
+                                if (Object.keys(transfersPatch).length > 0) {
+                                    setDoc(
+                                        doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC),
+                                        { [TRANSPORT_TRANSFERS_FIELD]: transfersPatch },
+                                        { merge: true }
+                                    ).then(async () => {
+                                        // OPRAVA (Chyba 5): Počkať na onSnapshot pred ensureSegments...
+                                        try {
+                                            await new Promise((r) => setTimeout(r, 300));
+                                            const mergedForCheck = [...(savedTransfers || [])];
+                                            Object.entries(transfersPatch).forEach(([k, v]) => {
+                                                if (v && typeof v === 'object' && v.constructor?.name === 'FieldValue') {
+                                                    const idx = mergedForCheck.findIndex((s) => s.key === k);
+                                                    if (idx >= 0) mergedForCheck.splice(idx, 1);
+                                                    return;
+                                                }
+                                                const existingIdx = mergedForCheck.findIndex((s) => s.key === k);
+                                                if (existingIdx >= 0) {
+                                                    mergedForCheck[existingIdx] = { ...mergedForCheck[existingIdx], ...v, key: k };
+                                                } else {
+                                                    mergedForCheck.push({ ...v, key: k });
+                                                }
+                                            });
+                                            await ensureSegmentsForParentTransfers(mergedForCheck);
+                                        } catch (ensureErr) {
+                                            console.error('[TRANSPORT] Chyba pri dogenerovávaní segmentov:', ensureErr);
+                                        }
+                                    }).catch((err) => {
+                                        console.error('[TRANSPORT] Chyba pri ukladaní presunov do DB:', err);
                                     });
-                                    ensureSegmentsForParentTransfers(mergedForCheck).catch((ensureErr) => {
-                                        console.error('[TRANSPORT] Chyba pri dogenerovávaní segmentov:', ensureErr);
-                                    });
-                                } catch (ensureErr) {
-                                    console.error('[TRANSPORT] Chyba pri dogenerovávaní segmentov:', ensureErr);
                                 }
                             }
                         }
@@ -2883,7 +2945,10 @@ const TransportApp = ({ userProfileData }) => {
                         transfers.push({
                             key,
                             category: v.category || '',
+                            // teamName sa už neukladá – necháme prázdne, dopočíta sa z lookupu
                             teamName: v.teamName || '',
+                            teamUid: v.teamUid || null,          // ← NOVÉ
+                            teamIndex: v.teamIndex ?? null,      // ← NOVÉ
                             when: v.when || '',
                             text: v.text || '',
                             fromLocation: v.fromLocation || '',
@@ -2892,8 +2957,20 @@ const TransportApp = ({ userProfileData }) => {
                             isWalking: v.isWalking === true,
                             walkingSetAt: v.walkingSetAt || null,
                             walkingSetBy: v.walkingSetBy || null,
-                            intermediateStops: Array.isArray(v.intermediateStops) ? v.intermediateStops : [],  // ← NOVÉ
+                            intermediateStops: Array.isArray(v.intermediateStops) ? v.intermediateStops : [],
                         });
+                    });
+                    // Po naplnení transfers (pred setSavedTransfers) dopočítaj teamName
+                    const lookup = teamsLookupRef.current || {};
+                    transfers.forEach((t) => {
+                        if (t.teamName && t.teamName.trim() !== '') return; // už máme
+                        if (t.teamUid == null || t.teamIndex == null) return;
+                        const cat = cleanCategory(t.category);
+                        const key = `${t.teamUid}|${cat}|${t.teamIndex}`;
+                        const info = lookup[key];
+                        if (info && info.teamName) {
+                            t.teamName = info.teamName;
+                        }
                     });
                     transfers.sort((a, b) => {
                         if (a.category !== b.category) {
@@ -2906,6 +2983,7 @@ const TransportApp = ({ userProfileData }) => {
                     });
                 }
                 setTravelTimes(map);
+                savedTransfersRef.current = transfers;
                 setSavedTransfers(transfers);
             }, (err) => {
                 console.error('[TRANSPORT] onSnapshot(settings/transportTravelTimes) error:', err);
@@ -3076,12 +3154,12 @@ const TransportApp = ({ userProfileData }) => {
                 const usersRef = collection(window.db, 'users');
                 const usersSnap = await getDocs(usersRef);
                 const lookup = {};
-
+        
                 usersSnap.forEach((userDoc) => {
                     const userData = userDoc.data() || {};
                     const teams = userData.teams;
                     if (!teams || typeof teams !== 'object') return;
-
+        
                     Object.entries(teams).forEach(([category, teamArray]) => {
                         if (!Array.isArray(teamArray)) return;
                         teamArray.forEach((team, teamIndex) => {
@@ -3092,13 +3170,34 @@ const TransportApp = ({ userProfileData }) => {
                                 teamName: team.teamName,
                                 category: cat,
                                 teamIndex,
-                                userId: userDoc.id,
+                                userId: userDoc.id,   // ID používateľa (dokumentu v users)
                             };
                         });
                     });
                 });
-
+        
                 teamsLookupRef.current = lookup;
+                teamsLookupLoadedRef.current = true;
+        
+                // Doplň teamName do už načítaných savedTransfers (ak chýba)
+                setSavedTransfers((prev) => {
+                    const updated = prev.map((t) => {
+                        if (t.teamName && t.teamName.trim() !== '') return t;
+                        if (t.teamUid == null || t.teamIndex == null) return t;
+                        const cat = cleanCategory(t.category);
+                        const k = `${t.teamUid}|${cat}|${t.teamIndex}`;
+                        const info = lookup[k];
+                        return info && info.teamName ? { ...t, teamName: info.teamName } : t;
+                    });
+                    savedTransfersRef.current = updated;   // ← NOVÉ
+                    return updated;
+                });
+        
+                // Ak už boli načítané matches/catering/teams, prerob timeline
+                // (aby sa presuny uložili s teamUid/teamIndex)
+                if (matchesLoadedRef.current && cateringLoadedRef.current && teamsLoadedRef.current) {
+                    rebuildAndLogTimeline();
+                }
             } catch (err) {
                 console.error('[TRANSPORT] Chyba pri načítaní lookup tímov:', err);
             }
@@ -5339,19 +5438,22 @@ const TransportApp = ({ userProfileData }) => {
                 : {};
     
             // ============================================================
-            // 2) Urči "koreňový" kľúč bloku.
-            //
-            //  - Ak transfer má _parentKey → koreň je _parentKey
-            //  - Inak → koreň je transfer.key
-            //
-            //  POZOR: _parentKey môže byť aj reťazový (segment → segment),
-            //  takže musíme ísť až po skutočný koreň.
+            // 2) OPRAVA (Chyba 6): Urči SKUTOČNÝ koreň bloku –
+            // choď po reťazi _parentKey až po záznam bez _parentKey.
             // ============================================================
-            let rootKey = transfer._parentKey && transfer._parentKey !== transfer.key
-                ? transfer._parentKey
-                : transfer.key;
-    
-            // Poisti sa, že rootKey existuje v DB (ak nie, skús transfer.key)
+            let rootKey = transfer.key;
+            const visitedKeys = new Set();
+            while (
+                rawTransfers[rootKey] &&
+                rawTransfers[rootKey]._parentKey &&
+                rawTransfers[rootKey]._parentKey !== rootKey &&
+                !visitedKeys.has(rootKey)
+            ) {
+                visitedKeys.add(rootKey);
+                rootKey = rawTransfers[rootKey]._parentKey;
+            }
+            
+            // Ak rootKey neexistuje v DB (napr. už bol zmazaný), skús transfer.key
             if (!rawTransfers[rootKey] && rawTransfers[transfer.key]) {
                 rootKey = transfer.key;
             }
@@ -5453,32 +5555,35 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     const recomputeBlock = async (transfer, resolvedKeys = new Set(), excludeKeys = new Set()) => {
         if (!window.db || !transfer) return;
-    
+
         const teamName = String(transfer.teamName || '').trim();
         const category = cleanCategory(transfer.category || '');
         const dayKey = transfer.dayKey || '';
-    
-        // Zoznam všetkých segmentov tohto tímu v daný deň (okrem aktuálneho)
+
         const sameTeamSegments = savedTransfers
         .filter((t) =>
-            String(t.teamName || '').trim() === teamName &&
             cleanCategory(t.category || '') === category &&
             t.dayKey === dayKey &&
             t.key !== transfer.key &&
             !(
                 normalizePlaceName(t.fromLocation) === normalizePlaceName(transfer.fromLocation) &&
                 normalizePlaceName(t.toLocation) === normalizePlaceName(transfer.toLocation)
+            ) &&
+            (
+                (transfer.teamUid != null && t.teamUid === transfer.teamUid && t.teamIndex === transfer.teamIndex)
+                ||
+                (transfer.teamUid == null && String(t.teamName || '').trim() === teamName)
             )
         )
         .map((t) => ({ ...t, range: parseTransferWhenToRange(t.when) }))
         .filter((t) => t.range != null);
-    
+
         const trRange = parseTransferWhenToRange(transfer.when);
         if (!trRange) return;
-    
+
         const chain = [{ ...transfer, range: trRange }, ...sameTeamSegments];
         chain.sort((a, b) => a.range.startTs - b.range.startTs);
-    
+
         const isContinuous = (a, b) => {
             const ra = a.range || parseTransferWhenToRange(a.when);
             const rb = b.range || parseTransferWhenToRange(b.when);
@@ -5486,58 +5591,35 @@ const TransportApp = ({ userProfileData }) => {
             return ra.endTs === rb.startTs &&
                 normalizePlaceName(a.toLocation) === normalizePlaceName(b.fromLocation);
         };
-    
+
         const currentIdx = chain.findIndex((t) => t.key === transfer.key);
         if (currentIdx === -1) return;
-    
+
         let blockStart = currentIdx;
         let blockEnd = currentIdx;
         while (blockStart > 0 && isContinuous(chain[blockStart - 1], chain[blockStart])) blockStart--;
-        
-        // ============================================================
-        // NOVÉ PRAVIDLO: Blok sa rozširuje LEN cez segmenty, ktoré na seba
-        // PRIAMO nadväzujú (isContinuous – koniec jedného = začiatok
-        // druhého a miesto konca = miesto začiatku).
-        //
-        // Ak tím má v ten istý deň DVA NESÚVISLÉ presuny (napr. A→B a C→D),
-        // sú to DVA SAMOSTATNÉ BLOKY. Priradenie jedného k autobusu
-        // NESMIE prepočítať čas toho druhého – ten si musí zachovať
-        // svoj pôvodný vygenerovaný čas.
-        // ============================================================
+
         while (blockEnd < chain.length - 1) {
             const nextSeg = chain[blockEnd + 1];
-            // Ak ďalší segment priamo nenadväzuje → stop (iný blok)
             if (!isContinuous(chain[blockEnd], nextSeg)) break;
             blockEnd++;
         }
-    
+
         const block = chain.slice(blockStart, blockEnd + 1);
         if (block.length < 2) return;
-    
+
         const firstRange = block[0].range || parseTransferWhenToRange(block[0].when);
         const lastRange = block[block.length - 1].range || parseTransferWhenToRange(block[block.length - 1].when);
         if (!firstRange || !lastRange) return;
-    
+
         const blockRoute = [block[0].fromLocation];
         for (let i = 0; i < block.length; i++) blockRoute.push(block[i].toLocation);
-    
-        // ============================================================
-        // KROK 1: Pre KAŽDÝ segment v bloku over, či je vyriešený
-        //         (peši ALEBO autobusom) a zisti jeho REÁLNY čas.
-        //
-        // Pre autobus: hľadaj v busRows riadok, kde tím nastupuje
-        // (teamsIn obsahuje tím) a row.placeFrom zodpovedá segment.from.
-        // Tak získaš reálny čas odchodu. Podobne pre výstup.
-        //
-        // Pre peši: segment má isWalking=true a jeho čas sa zachová.
-        // ============================================================
+
         const resolvedIndexes = new Set();
-        const resolvedRealTimes = new Map(); // idx → { startTs, endTs }
-    
-        // Normalizovaný kľúč tímu pre porovnanie v busRows
+        const resolvedRealTimes = new Map();
+
         const teamKey = `${teamName}|${category}`;
-    
-        // Predpriprav všetky busRows pre tento deň a tím
+
         const allBusRowsForDay = [];
         Object.entries(busRows || {}).forEach(([busKey, rows]) => {
             const parts = busKey.split('|');
@@ -5547,35 +5629,30 @@ const TransportApp = ({ userProfileData }) => {
                 allBusRowsForDay.push({ ...row, _busKey: busKey });
             });
         });
-        // Zoraď podľa času odchodu (pre istotu)
         allBusRowsForDay.sort((a, b) => {
             const ta = a.timeFrom || '';
             const tb = b.timeFrom || '';
             return ta.localeCompare(tb);
         });
-    
-        // Pomocná: normalizované porovnanie tímového kľúča
-        const matchesTeam = (rowTeams, targetKey) => {
+
+        const matchesTeam = (rowTeams) => {
             if (!Array.isArray(rowTeams)) return false;
             return rowTeams.some((t) => {
                 const s = String(t).trim();
-                // Presná zhoda
-                if (s === targetKey) return true;
-                // Alternatívne: "teamName|category" s medzerami
+                if (s === teamKey) return true;
                 const [tn, cat] = s.split('|');
                 return String(tn).trim() === teamName && cleanCategory(cat) === category;
             });
         };
-    
+
         block.forEach((seg, idx) => {
             const segFrom = normalizePlaceName(seg.fromLocation);
             const segTo = normalizePlaceName(seg.toLocation);
-    
-            // 1) Peši — resolvedKeys alebo isWalking
+
             const isWalkingResolved =
                 (resolvedKeys.has(seg.key) || seg.isWalking === true) &&
                 !excludeKeys.has(seg.key);
-    
+
             if (isWalkingResolved) {
                 resolvedIndexes.add(idx);
                 const range = seg.range || parseTransferWhenToRange(seg.when);
@@ -5584,59 +5661,47 @@ const TransportApp = ({ userProfileData }) => {
                 }
                 return;
             }
-    
-            // 2) Autobus — hľadaj reálny čas v busRows
-            let boardingTimeStr = null;
-            let alightingTimeStr = null;
+
             let boardingTs = null;
             let alightingTs = null;
-    
+
             allBusRowsForDay.forEach((row) => {
                 const rowFrom = normalizePlaceName(row.placeFrom);
                 const rowTo = normalizePlaceName(row.placeTo);
-    
-                const hasTeamIn = matchesTeam(row.teamsIn, teamKey);
-                const hasTeamOut = matchesTeam(row.teamsOut, teamKey);
-    
+                const hasTeamIn = matchesTeam(row.teamsIn);
+                const hasTeamOut = matchesTeam(row.teamsOut);
+
                 if (hasTeamIn && rowFrom === segFrom && row.timeFrom && boardingTs == null) {
                     const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
                     if (dm) {
                         const [h, mi] = row.timeFrom.split(':').map(Number);
                         boardingTs = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
-                        boardingTimeStr = row.timeFrom;
                     }
                 }
-    
+
                 if (hasTeamOut && rowTo === segTo && row.timeTo && alightingTs == null) {
                     const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
                     if (dm) {
                         const [h, mi] = row.timeTo.split(':').map(Number);
                         alightingTs = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
-                        alightingTimeStr = row.timeTo;
                     }
                 }
             });
-    
-            // Ak máme reálny čas nástupu aj výstupu → segment je vyriešený autobusom
+
             if (boardingTs != null && alightingTs != null && alightingTs > boardingTs) {
                 resolvedIndexes.add(idx);
                 resolvedRealTimes.set(idx, { startTs: boardingTs, endTs: alightingTs });
                 return;
             }
-    
-            // Ak máme aspoň reálny čas nástupu (tím nastúpil, ale ešte nevystúpil)
-            // → segment je čiastočne vyriešený. Použijeme reálny čas odchodu,
-            // ale koniec dopočítame.
+
             if (boardingTs != null && alightingTs == null) {
                 resolvedIndexes.add(idx);
-                // endTs bude dopočítaný neskôr z trvania segmentu
                 const mins = getTravelMinutes(segFrom, segTo);
                 const computedEndTs = (mins != null) ? boardingTs + mins * 60000 : null;
                 resolvedRealTimes.set(idx, { startTs: boardingTs, endTs: computedEndTs });
                 return;
             }
-    
-            // Ak máme aspoň reálny čas výstupu (tím vystúpil, ale nenastúpil v našom buse)
+
             if (boardingTs == null && alightingTs != null) {
                 resolvedIndexes.add(idx);
                 const mins = getTravelMinutes(segFrom, segTo);
@@ -5645,19 +5710,9 @@ const TransportApp = ({ userProfileData }) => {
                 return;
             }
         });
-    
-        // ============================================================
-        // KROK 2: Vypočítaj časy pre všetky segmenty.
-        //
-        // Princíp:
-        //  - Vyriešené segmenty s reálnym časom → fixný čas.
-        //  - Vyriešené segmenty bez reálneho času → dopočítaj z pôvodného intervalu.
-        //  - Zostávajúce segmenty → dopočítaj podľa trvaní, oddelene po úsekoch
-        //    medzi fixnými bodmi.
-        // ============================================================
+
         const newTimes = new Array(block.length).fill(null);
-    
-        // 1) Vyriešené segmenty s reálnym časom
+
         resolvedRealTimes.forEach(({ startTs, endTs }, idx) => {
             if (startTs != null && endTs != null) {
                 newTimes[idx] = {
@@ -5667,8 +5722,7 @@ const TransportApp = ({ userProfileData }) => {
                 };
             }
         });
-    
-        // 2) Vyriešené segmenty bez reálneho času → z pôvodného intervalu
+
         resolvedIndexes.forEach((idx) => {
             if (newTimes[idx]) return;
             const seg = block[idx];
@@ -5681,11 +5735,10 @@ const TransportApp = ({ userProfileData }) => {
                 };
             }
         });
-    
-        // 3) Zostávajúce segmenty → dopočítaj po úsekoch
-        const segments = []; // { indexes: [], startTs, endTs }
+
+        const segments = [];
         let currentSegment = null;
-    
+
         for (let i = 0; i < block.length; i++) {
             if (newTimes[i]) {
                 if (currentSegment) {
@@ -5708,8 +5761,7 @@ const TransportApp = ({ userProfileData }) => {
             }
         }
         if (currentSegment) segments.push(currentSegment);
-    
-        // Pre každý úsek dopočítaj koniec
+
         segments.forEach((segment) => {
             const lastIdx = segment.indexes[segment.indexes.length - 1];
             let segmentEndTs = null;
@@ -5722,14 +5774,13 @@ const TransportApp = ({ userProfileData }) => {
             if (segmentEndTs == null) segmentEndTs = lastRange.endTs;
             segment.endTs = segmentEndTs;
         });
-    
-        // Pre každý úsek rozdeľ čas podľa trvaní
+
         segments.forEach((segment) => {
             const route = [block[segment.indexes[0]].fromLocation];
             for (let i = 0; i < segment.indexes.length; i++) {
                 route.push(block[segment.indexes[i]].toLocation);
             }
-    
+
             const totalMs = segment.endTs - segment.startTs;
             if (totalMs <= 0) {
                 segment.indexes.forEach((blockIdx) => {
@@ -5741,7 +5792,7 @@ const TransportApp = ({ userProfileData }) => {
                 });
                 return;
             }
-    
+
             const durations = [];
             for (let i = 0; i < segment.indexes.length; i++) {
                 const mins = getTravelMinutes(route[i], route[i + 1]);
@@ -5755,7 +5806,7 @@ const TransportApp = ({ userProfileData }) => {
                 d != null ? d : (fallback != null ? fallback : null)
             );
             const durationsSum = finalDurations.reduce((sum, d) => sum + (d || 0), 0);
-    
+
             let cursorTs = segment.startTs;
             segment.indexes.forEach((blockIdx, j) => {
                 const isLast = j === segment.indexes.length - 1;
@@ -5775,36 +5826,46 @@ const TransportApp = ({ userProfileData }) => {
                 cursorTs = segEndTs;
             });
         });
-    
+
         // ============================================================
         // KROK 3: Zapíš nové časy do DB
         // ============================================================
         const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
         const patch = {};
-    
+
+        // Zisti ID používateľa pre tím (raz pre celý blok)
+        const teamIds = (transfer.teamUid != null && transfer.teamIndex != null)
+            ? { teamUid: transfer.teamUid, teamIndex: transfer.teamIndex }
+            : findTeamIdentifiersByName(category, teamName);
+
+        if (!teamIds) {
+            console.warn('[TRANSPORT] recomputeBlock: nepodarilo sa nájsť teamUid/teamIndex pre', teamName, category);
+            return;
+        }
+
         block.forEach((seg, idx) => {
             const newTime = newTimes[idx];
             if (!newTime) return;
-    
+
             const newText = `Presun z ${blockRoute[idx]} do ${blockRoute[idx + 1]}`;
             const newWhen = newTime.whenStr;
             const newKey = buildTransferKey(category, teamName, newWhen, newText);
-    
+
             if (seg.key !== newKey) {
                 patch[seg.key] = deleteField();
             }
-    
+
             const base = {
                 category,
-                teamName,
+                teamUid: teamIds.teamUid,
+                teamIndex: teamIds.teamIndex,
                 when: newWhen,
                 text: newText,
                 fromLocation: blockRoute[idx],
                 toLocation: blockRoute[idx + 1],
                 dayKey,
             };
-            
-            // NOVÉ: Zachovaj intermediateStops, ak existujú
+
             if (seg.intermediateStops && seg.intermediateStops.length > 0) {
                 base.intermediateStops = seg.intermediateStops;
             }
@@ -5814,10 +5875,10 @@ const TransportApp = ({ userProfileData }) => {
                 base.walkingSetAt = seg.walkingSetAt || Timestamp.fromDate(new Date());
                 base.walkingSetBy = seg.walkingSetBy || (userProfileData && userProfileData.email) || null;
             }
-    
+
             patch[newKey] = base;
         });
-    
+
         await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: patch }, { merge: true });
     };
 
@@ -5914,58 +5975,77 @@ const TransportApp = ({ userProfileData }) => {
             }
     
             // ============================================================
-            // NOVÉ: Po uložení zosúlaď segmenty s novými medzizastávkami.
+            // OPRAVA (Chyba 13): Po uložení zosúlaď segmenty.
+            // parentKeyToCheck = kľúč SKUTOČNÉHO parenta (nie segmentu).
             // ============================================================
             try {
                 const snap = await getDoc(docRef);
                 const rawTransfers = snap.exists()
                     ? (snap.data() || {})[TRANSPORT_TRANSFERS_FIELD] || {}
                     : {};
-    
+            
                 const parentKeyToCheck = targetParent ? targetParent.key : original.key;
-                const parentFrom = targetParent ? targetParent.fromLocation : original.fromLocation;
-                const parentTo = targetParent ? targetParent.toLocation : original.toLocation;
-    
-                const existingSegments = Object.entries(rawTransfers)
-                    .filter(([k, v]) => v && v._parentKey === parentKeyToCheck)
-                    .map(([k, v]) => ({ ...v, key: k }));
-    
-                const routeRaw = [parentFrom, ...stops, parentTo].filter(Boolean);
-                const route = [];
-                routeRaw.forEach((loc) => {
-                    const normalized = normalizePlaceName(loc);
-                    if (route.length === 0 || normalizePlaceName(route[route.length - 1]) !== normalized) {
-                        route.push(loc);
-                    }
-                });
-    
-                const expectedSegments = [];
-                for (let i = 0; i < route.length - 1; i++) {
-                    const fromLoc = String(route[i] || '').trim();
-                    const toLoc = String(route[i + 1] || '').trim();
-                    if (normalizePlaceName(fromLoc) === normalizePlaceName(toLoc)) continue;
-                    expectedSegments.push({
-                        fromNorm: normalizePlaceName(fromLoc),
-                        toNorm: normalizePlaceName(toLoc),
-                    });
-                }
-    
-                // Zisti, ktoré existujúce segmenty už nemajú byť
-                const segmentsToDelete = existingSegments.filter((seg) => {
-                    const segFrom = normalizePlaceName(seg.fromLocation);
-                    const segTo = normalizePlaceName(seg.toLocation);
-                    return !expectedSegments.some(
-                        (exp) => exp.fromNorm === segFrom && exp.toNorm === segTo
+            
+                // Over, či parentKeyToCheck je naozaj parent (nemá _parentKey)
+                const parentRecord = rawTransfers[parentKeyToCheck];
+                if (!parentRecord) {
+                    console.warn(
+                        '[TRANSPORT] saveEditedTransfer: parent záznam sa nenašiel pre kľúč',
+                        parentKeyToCheck
                     );
-                });
-    
-                const patch = {};
-                segmentsToDelete.forEach((seg) => {
-                    patch[seg.key] = deleteField();
-                });
-    
-                if (Object.keys(patch).length > 0) {
-                    await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: patch }, { merge: true });
+                } else if (parentRecord._parentKey && parentRecord._parentKey !== parentKeyToCheck) {
+                    console.warn(
+                        '[TRANSPORT] saveEditedTransfer: kľúč',
+                        parentKeyToCheck,
+                        'je segment, nie parent – preskakujem zosúladenie.'
+                    );
+                } else {
+                    const parentFrom = parentRecord.fromLocation;
+                    const parentTo = parentRecord.toLocation;
+                    const parentStops = Array.isArray(parentRecord.intermediateStops)
+                        ? parentRecord.intermediateStops
+                        : [];
+            
+                    const existingSegments = Object.entries(rawTransfers)
+                        .filter(([k, v]) => v && v._parentKey === parentKeyToCheck)
+                        .map(([k, v]) => ({ ...v, key: k }));
+            
+                    const routeRaw = [parentFrom, ...parentStops, parentTo].filter(Boolean);
+                    const route = [];
+                    routeRaw.forEach((loc) => {
+                        const normalized = normalizePlaceName(loc);
+                        if (route.length === 0 || normalizePlaceName(route[route.length - 1]) !== normalized) {
+                            route.push(loc);
+                        }
+                    });
+            
+                    const expectedSegments = [];
+                    for (let i = 0; i < route.length - 1; i++) {
+                        const fromLoc = String(route[i] || '').trim();
+                        const toLoc = String(route[i + 1] || '').trim();
+                        if (normalizePlaceName(fromLoc) === normalizePlaceName(toLoc)) continue;
+                        expectedSegments.push({
+                            fromNorm: normalizePlaceName(fromLoc),
+                            toNorm: normalizePlaceName(toLoc),
+                        });
+                    }
+            
+                    const segmentsToDelete = existingSegments.filter((seg) => {
+                        const segFrom = normalizePlaceName(seg.fromLocation);
+                        const segTo = normalizePlaceName(seg.toLocation);
+                        return !expectedSegments.some(
+                            (exp) => exp.fromNorm === segFrom && exp.toNorm === segTo
+                        );
+                    });
+            
+                    const patch = {};
+                    segmentsToDelete.forEach((seg) => {
+                        patch[seg.key] = deleteField();
+                    });
+            
+                    if (Object.keys(patch).length > 0) {
+                        await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: patch }, { merge: true });
+                    }
                 }
             } catch (syncErr) {
                 console.error('[TRANSPORT] Chyba pri zosúlaďovaní segmentov po úprave:', syncErr);
@@ -6492,21 +6572,31 @@ const TransportApp = ({ userProfileData }) => {
         if (!window.db || !transfer) return;
         try {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
-            
+    
             const originalRange = parseTransferWhenToRange(transfer.when);
             let newWhen = transfer.when;
             let newKey = transfer.key;
             let shouldRenameKey = false;
-            
+    
             const MIN_WALKING_MS = 60 * 1000;
-            
+    
             if (originalRange && originalRange.startTs != null) {
                 const newEndTs = originalRange.startTs + MIN_WALKING_MS;
                 newWhen = `${formatTsLocal(originalRange.startTs)} – ${formatTsLocal(newEndTs)}`;
                 newKey = buildTransferKey(transfer.category, transfer.teamName, newWhen, transfer.text);
                 shouldRenameKey = (newKey !== transfer.key);
             }
-            
+    
+            // ============================================================
+            // OPRAVA (Chyba 10): Doplň teamUid/teamIndex, aby recomputeBlock
+            // vedel nájsť peší segment v savedTransfers.
+            // ============================================================
+            const category = cleanCategory(transfer.category || '');
+            const teamName = String(transfer.teamName || '').trim();
+            const ids = (transfer.teamUid != null && transfer.teamIndex != null)
+                ? { teamUid: transfer.teamUid, teamIndex: transfer.teamIndex }
+                : findTeamIdentifiersByName(category, teamName);
+    
             const walkingTransfer = {
                 ...transfer,
                 when: newWhen,
@@ -6515,20 +6605,13 @@ const TransportApp = ({ userProfileData }) => {
                 walkingSetBy: (userProfileData && userProfileData.email) || null,
             };
             delete walkingTransfer.key;
-            
-            // ============================================================
-            // NOVÉ: NAJPRV ulož peší segment priamo do DB.
-            // Tým zabezpečíme, že sa uloží AJ keď recomputeBlock
-            // vráti sa hneď (napr. keď block.length < 2).
-            // ============================================================
+    
             const transfersPatch = {};
             if (shouldRenameKey) {
-                // Zmaž starý kľúč
                 transfersPatch[transfer.key] = deleteField();
             }
             transfersPatch[newKey] = {
                 category: transfer.category,
-                teamName: transfer.teamName,
                 when: newWhen,
                 text: transfer.text,
                 fromLocation: transfer.fromLocation,
@@ -6538,26 +6621,33 @@ const TransportApp = ({ userProfileData }) => {
                 walkingSetAt: walkingTransfer.walkingSetAt,
                 walkingSetBy: walkingTransfer.walkingSetBy,
             };
-            
-            // Zachovaj intermediateStops, ak existujú
+    
+            // OPRAVA: Doplň teamUid/teamIndex
+            if (ids) {
+                transfersPatch[newKey].teamUid = ids.teamUid;
+                transfersPatch[newKey].teamIndex = ids.teamIndex;
+            }
+    
             if (Array.isArray(transfer.intermediateStops) && transfer.intermediateStops.length > 0) {
                 transfersPatch[newKey].intermediateStops = transfer.intermediateStops;
             }
-            
+    
             await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: transfersPatch }, { merge: true });
-            
+    
             // ============================================================
-            // POTOM zavolaj recomputeBlock na prepočet nasledujúcich segmentov
+            // OPRAVA (Chyba 5): Počkať na onSnapshot pred recomputeBlock,
+            // aby savedTransfers obsahoval nový peší segment.
             // ============================================================
             try {
+                await new Promise((r) => setTimeout(r, 300));
                 await recomputeBlock(
-                    { ...walkingTransfer, key: newKey },
+                    { ...walkingTransfer, key: newKey, teamUid: ids?.teamUid, teamIndex: ids?.teamIndex },
                     new Set([newKey])
                 );
             } catch (recomputeErr) {
                 console.error('[TRANSPORT] Chyba pri prepočte bloku po označení peši:', recomputeErr);
             }
-            
+    
             window.showGlobalNotification(
                 shouldRenameKey
                     ? 'Presun bol označený ako „peši" (trvanie natiahnuté na minimálne 1 min, nasledujúce segmenty posunuté).'
@@ -6748,10 +6838,15 @@ const TransportApp = ({ userProfileData }) => {
             const promises = Object.entries(updates).map(([rid, data]) =>
                 updateDoc(doc(window.db, 'transport', rid), data)
             );
+            
             await Promise.all(promises);
 
-            // Prepočítaj zostávajúce segmenty bloku po priradení k autobusu
+            // ============================================================
+            // OPRAVA (Chyba 9): Počkať na onSnapshot, aby busRows
+            // obsahoval novo priradené tímy pred recomputeBlock.
+            // ============================================================
             try {
+                await new Promise((r) => setTimeout(r, 300));
                 await recomputeBlock(transfer, new Set([transfer.key]));
             } catch (precomputeErr) {
                 console.error('[TRANSPORT] Chyba pri prepočte bloku po priradení:', precomputeErr);
