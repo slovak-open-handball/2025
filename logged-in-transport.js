@@ -9259,22 +9259,6 @@ const TransportApp = ({ userProfileData }) => {
                         'table',
                         { className: 'w-full border-collapse text-xs' },
                         React.createElement(
-                            'thead',
-                            null,
-                            React.createElement(
-                                'tr',
-                                { className: 'bg-gray-100 text-xs font-semibold text-gray-700' },
-                                React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '70px' } }, 'Od'),
-                                React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '70px' } }, 'Do'),
-                                React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Miesto od'),
-                                React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Miesto do'),
-                                React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Tím')
-                            )
-                        ),
-                        React.createElement(
-                        'table',
-                        { className: 'w-full border-collapse text-xs' },
-                        React.createElement(
                             'tbody',
                             null,
                             (() => {
