@@ -456,7 +456,6 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     window.printTeamTimeline = (teamName) => {
         if (!teamName || typeof teamName !== 'string') {
-            console.warn('[TRANSPORT] printTeamTimeline: Zadajte názov tímu, napr. "U12 CH 1C".');
             return;
         }
 
@@ -10903,7 +10902,6 @@ const TransportApp = ({ userProfileData }) => {
                             setShortcutConflict(null);
                         }
                     },
-                    placeholder: 'napr. "U12 CH 1C"',
                     className: 'w-full px-3 py-2 text-sm border border-gray-300 rounded text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 mb-4'
                 }),
                 // ============================================================
