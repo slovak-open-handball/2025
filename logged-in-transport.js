@@ -8966,21 +8966,26 @@ const TransportApp = ({ userProfileData }) => {
                     'span',
                     { className: 'absolute right-3 text-xs bg-white/20 rounded-full px-2 py-0.5' },
                     `${filtered.length}`
-                ),
-                // ============================================================
-                // NOVÉ: Checkbox – zobraziť iba presuny s textom "časť presunu"
-                // ============================================================
+                )
+            ),
+            // ============================================================
+            // NOVÉ: Checkbox – zobraziť iba presuny s textom "časť presunu"
+            // (umiestnený POD hlavičkou boxu)
+            // ============================================================
+            React.createElement(
+                'div',
+                { className: 'px-3 pt-2 pb-1 border-b border-gray-100 flex items-center justify-end' },
                 React.createElement(
                     'label',
                     {
-                        className: 'absolute left-3 flex items-center gap-2 text-xs font-medium cursor-pointer select-none',
+                        className: 'flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer select-none',
                         title: 'Zobraziť iba tie presuny, ktoré sú časťou väčšieho presunu (majú medzizastávky)',
                     },
                     React.createElement('input', {
                         type: 'checkbox',
                         checked: showOnlyPartialTransfers,
                         onChange: (e) => setShowOnlyPartialTransfers(e.target.checked),
-                        className: 'w-4 h-4 rounded accent-white cursor-pointer',
+                        className: 'w-4 h-4 rounded accent-violet-600 cursor-pointer',
                     }),
                     React.createElement('span', { className: 'whitespace-nowrap' }, 'Iba časti presunov')
                 )
