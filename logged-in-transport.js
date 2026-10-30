@@ -264,6 +264,7 @@ const TransportApp = ({ userProfileData }) => {
     const [travelTimes, setTravelTimes] = useState({});
     const [travelTimesDraft, setTravelTimesDraft] = useState({});
     const [travelTimesSaving, setTravelTimesSaving] = useState(false);
+    const [travelTimesLoaded, setTravelTimesLoaded] = useState(false);
 
     // Mapa: category|teamName → { players, menRT, womenRT, menDrivers, womenDrivers }
     const [teamCounts, setTeamCounts] = useState({});
@@ -2985,6 +2986,7 @@ const TransportApp = ({ userProfileData }) => {
                 setTravelTimes(map);
                 savedTransfersRef.current = transfers;
                 setSavedTransfers(transfers);
+                setTravelTimesLoaded(true);
             }, (err) => {
                 console.error('[TRANSPORT] onSnapshot(settings/transportTravelTimes) error:', err);
             });
@@ -3792,6 +3794,12 @@ const TransportApp = ({ userProfileData }) => {
     // (placeFrom + placeTo vyplnené, ale travelTimes[fromId|toId] chýba)
     // ============================================================
     useEffect(() => {
+        // Kým nie je načítaný prvý snapshot travelTimes, varovanie nerieš
+        if (!travelTimesLoaded) {
+            setMissingTravelTimeWarning([]);
+            return;
+        }
+    
         if (!busRows || Object.keys(busRows).length === 0) {
             setMissingTravelTimeWarning([]);
             return;
@@ -3841,7 +3849,7 @@ const TransportApp = ({ userProfileData }) => {
         });
     
         setMissingTravelTimeWarning(missing);
-    }, [busRows, travelTimes, stopsList]);
+    }, [busRows, travelTimes, stopsList, travelTimesLoaded]);
 
     // ============================================================
     // PRIDANIE RIADKU DO AUTOBUSU PRE DANÝ DEŇ
