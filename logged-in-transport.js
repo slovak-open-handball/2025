@@ -9473,10 +9473,10 @@ const TransportApp = ({ userProfileData }) => {
                             {
                                 type: 'button',
                                 onClick: () => setEditingTransferStops((prev) => [...prev, '']),
-                                className: 'text-sm px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1'
+                                className: 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded w-7 h-7 flex items-center justify-center',
+                                title: 'Pridať medzizastávku'
                             },
-                            React.createElement('i', { className: 'fa-solid fa-plus text-xs' }),
-                            'Pridať medzizastávku'
+                            React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
                         )
                     )
                 ),
