@@ -7393,7 +7393,7 @@ const TransportApp = ({ userProfileData }) => {
 
         return React.createElement(
             'div',
-            { className: 'w-full space-y-6' },
+            { className: 'space-y-6', style: { maxWidth: '760px' } },
             React.createElement(
                 'p',
                 { className: 'text-xs text-gray-500 italic' },
@@ -7439,7 +7439,7 @@ const TransportApp = ({ userProfileData }) => {
                             React.createElement(
                                 'tr',
                                 { className: 'bg-gray-100 text-xs font-semibold text-gray-700' },
-                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left' }, 'Tím'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { width: '200px', maxWidth: '200px' } }, 'Tím'),
                                 React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { width: '200px' } }, 'Skratka'),
                                 React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-center', style: { width: '80px' } }, '')
                             )
@@ -7452,7 +7452,26 @@ const TransportApp = ({ userProfileData }) => {
                                 return React.createElement(
                                     'tr',
                                     { key: teamName, className: 'hover:bg-gray-50' },
-                                    React.createElement('td', { className: 'border border-gray-300 px-3 py-1 text-gray-800' }, teamName),
+                                    React.createElement(
+                                        'td',
+                                        {
+                                            className: 'border border-gray-300 px-3 py-1 text-gray-800',
+                                            style: { width: '200px', maxWidth: '200px' },
+                                            title: teamName,
+                                        },
+                                        React.createElement(
+                                            'div',
+                                            {
+                                                style: {
+                                                    maxWidth: '200px',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap',
+                                                }
+                                            },
+                                            teamName
+                                        )
+                                    ),
                                     React.createElement(
                                         'td',
                                         { className: 'border border-gray-300 px-3 py-1' },
