@@ -4981,12 +4981,12 @@ const TransportApp = ({ userProfileData }) => {
                 )
             ),
             // 5. tímy nástup (len text vo farbe kategórie, bez pozadia a rámčeka)
-            React.createElement('td', { className: 'border border-gray-300 p-1 align-top whitespace-nowrap' },
+            React.createElement('td', { className: 'border border-gray-300 p-1 align-middle whitespace-nowrap' },
                 (row.teamsIn || []).length === 0
                     ? React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—')
                     : React.createElement(
                         'div',
-                        { className: 'flex flex-nowrap gap-2' },
+                        { className: 'flex flex-nowrap gap-2 items-center' },
                         (row.teamsIn || []).map((tn, i) => {
                             const parts = String(tn).split('|');
                             const teamName = parts[0] || tn;
@@ -5009,12 +5009,12 @@ const TransportApp = ({ userProfileData }) => {
                     )
             ),
             // 6. tímy výstup (len text vo farbe kategórie, bez pozadia a rámčeka)
-            React.createElement('td', { className: 'border border-gray-300 p-1 align-top whitespace-nowrap' },
+            React.createElement('td', { className: 'border border-gray-300 p-1 align-middle whitespace-nowrap' },
                 (row.teamsOut || []).length === 0
                     ? React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—')
                     : React.createElement(
                         'div',
-                        { className: 'flex flex-nowrap gap-2' },
+                        { className: 'flex flex-nowrap gap-2 items-center' },
                         (row.teamsOut || []).map((tn, i) => {
                             const parts = String(tn).split('|');
                             const teamName = parts[0] || tn;
