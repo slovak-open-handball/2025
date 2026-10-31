@@ -5383,13 +5383,23 @@ const TransportApp = ({ userProfileData }) => {
         const original = editingTransfer;
         const stops = (editingTransferStops || []).map((s) => String(s || '').trim()).filter(Boolean);
         const parentKey = original._parentKey || original.key;
-    
+
         // ============================================================
-        // NOVÉ: Zapamätaj si pôvodný `when` parenta (pred úpravou).
-        // Po úprave medzizastávok sa `when` NESMIE zmeniť – iba sa
-        // rozdelí na segmenty v rámci pôvodného intervalu.
+        // NOVÉ: Vždy použi `when` z PARENTA (nie zo segmentu).
+        //
+        // Ak je `editingTransfer` segment (má `_parentKey`), jeho `when`
+        // môže byť `null`. V takom prípade treba vziať `when` z parenta,
+        // aby sa po úprave trasy nezmenil čas konca presunu.
         // ============================================================
-        const originalWhen = original.when;
+        const originalWhen = (() => {
+            if (original._parentKey) {
+                const parent = savedTransfersRef.current.find((s) => s.key === original._parentKey);
+                if (parent && parent.when && String(parent.when).trim() !== '') {
+                    return parent.when;
+                }
+            }
+            return original.when;
+        })();
     
         setEditingTransferSaving(true);
         try {
@@ -6276,7 +6286,22 @@ const TransportApp = ({ userProfileData }) => {
             parentRange.endTs > parentRange.startTs;
         
         if (parentIsFullyWalking) {
-            draft.when = '';
+            // ============================================================
+            // NOVÉ: Ak máme pôvodný `when` (z draftu alebo z parenta),
+            // zachovaj ho aj pri plne walking parentovi. Čas konca
+            // presunu sa NESMIE zmeniť len preto, že všetky segmenty
+            // sú walking.
+            // ============================================================
+            if (originalWhenFromDraft && String(originalWhenFromDraft).trim() !== '') {
+                draft.when = originalWhenFromDraft;
+            } else {
+                const parentRec = savedTransfersRef.current.find((s) => s.key === draft.key);
+                if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
+                    draft.when = parentRec.when;
+                } else {
+                    draft.when = '';
+                }
+            }
         } else if (!draft.when || String(draft.when).trim() === '') {
             if (allStart.length > 0 && allEnd.length > 0) {
                 draft.when = `${formatTsLocal(Math.min(...allStart))} – ${formatTsLocal(Math.max(...allEnd))}`;
@@ -8649,7 +8674,9 @@ const TransportApp = ({ userProfileData }) => {
                 startTsForDisplay = prevResolvedEndTs;
             }
             
-            const newWhen = `${formatTsLocal(startTsForDisplay)} – ${formatTsLocal(displayEndTs)}`;
+            const newWhen = (t.when && String(t.when).trim() !== '')
+                ? t.when
+                : `${formatTsLocal(startTsForDisplay)} – ${formatTsLocal(displayEndTs)}`;
             
             let newRemainingMinutes = t._remainingMinutes;
             if (
