@@ -6276,21 +6276,14 @@ const TransportApp = ({ userProfileData }) => {
             parentRange.endTs > parentRange.startTs;
         
         if (parentIsFullyWalking) {
-            // Celý presun je peší → žiadny čas
             draft.when = '';
-        } else if (hasOriginalWhen) {
-            // Zachovaj pôvodný `when` – segmenty sú dopočítané v rámci neho
-            draft.when = `${formatTsLocal(parentRange.startTs)} – ${formatTsLocal(parentRange.endTs)}`;
-        } else if (allStart.length > 0 && allEnd.length > 0) {
-            // Nový `when` z min/max časov segmentov
-            draft.when = `${formatTsLocal(Math.min(...allStart))} – ${formatTsLocal(Math.max(...allEnd))}`;
-        } else {
-            if (!draft.when || String(draft.when).trim() === '') {
+        } else if (!draft.when || String(draft.when).trim() === '') {
+            if (allStart.length > 0 && allEnd.length > 0) {
+                draft.when = `${formatTsLocal(Math.min(...allStart))} – ${formatTsLocal(Math.max(...allEnd))}`;
+            } else {
                 const parentRec = savedTransfersRef.current.find((s) => s.key === draft.key);
                 if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
                     draft.when = parentRec.when;
-                } else if (originalWhenFromDraft && String(originalWhenFromDraft).trim() !== '') {
-                    draft.when = originalWhenFromDraft;
                 }
             }
         }
