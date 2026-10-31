@@ -6750,8 +6750,8 @@ const TransportApp = ({ userProfileData }) => {
             try {
                 await new Promise((r) => setTimeout(r, 300));
                 await recomputeBlock(
-                    { ...transfer, key: isSegment ? newKey : transfer.key, when: isSegment ? newWhen : transfer.when, isWalking: true, teamUid: ids?.teamUid, teamIndex: ids?.teamIndex },
-                    new Set([isSegment ? newKey : newKey])
+                    { ...transfer, key: newKey, when: newWhen, isWalking: true, _parentKey: transfer.key, teamUid: ids?.teamUid, teamIndex: ids?.teamIndex },
+                    new Set([newKey])
                 );
             } catch (recomputeErr) {
                 console.error('[TRANSPORT] Chyba pri prepočte bloku po označení peši:', recomputeErr);
