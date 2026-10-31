@@ -5720,7 +5720,44 @@ const TransportApp = ({ userProfileData }) => {
         }
 
         const block = chain.slice(blockStart, blockEnd + 1);
-        if (block.length < 2) return;
+        if (block.length < 2) {
+            // ============================================================
+            // NOVÉ: Ak je v bloku len jeden segment a je walking, nastav
+            // mu nulové trvanie (startTs === endTs). Nemá susedov, takže
+            // sa nedá dopočítať, ale aspoň nezostane s celým intervalom.
+            // ============================================================
+            if (block.length === 1 && block[0].isWalking === true) {
+                const seg = block[0];
+                const range = seg.range || parseTransferWhenToRange(seg.when);
+                if (range) {
+                    const whenStr = `${formatTsLocal(range.startTs)} – ${formatTsLocal(range.startTs)}`;
+                    const teamIds = (transfer.teamUid != null && transfer.teamIndex != null)
+                        ? { teamUid: transfer.teamUid, teamIndex: transfer.teamIndex }
+                        : findTeamIdentifiersByName(category, teamName);
+                    if (teamIds) {
+                        const base = {
+                            category,
+                            teamUid: teamIds.teamUid,
+                            teamIndex: teamIds.teamIndex,
+                            when: whenStr,
+                            text: seg.text,
+                            fromLocation: seg.fromLocation,
+                            toLocation: seg.toLocation,
+                            dayKey,
+                            isWalking: true,
+                            walkingSetAt: seg.walkingSetAt || Timestamp.fromDate(new Date()),
+                            walkingSetBy: seg.walkingSetBy || (userProfileData && userProfileData.email) || null,
+                        };
+                        if (Array.isArray(seg.intermediateStops) && seg.intermediateStops.length > 0) {
+                            base.intermediateStops = seg.intermediateStops;
+                        }
+                        const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+                        await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: { [seg.key]: base } }, { merge: true });
+                    }
+                }
+            }
+            return;
+        }
 
         const firstRange = block[0].range || parseTransferWhenToRange(block[0].when);
         const lastRange = block[block.length - 1].range || parseTransferWhenToRange(block[block.length - 1].when);
