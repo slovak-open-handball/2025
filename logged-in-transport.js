@@ -6006,7 +6006,8 @@ const TransportApp = ({ userProfileData }) => {
     // Čistý výpočet – bez zápisu do DB
     const recomputeParentSegmentsInPlace = (draft) => {
         if (!draft) return;
-    
+
+        const originalWhenFromDraft = draft.when;
         const stops = Array.isArray(draft.intermediateStops) ? draft.intermediateStops : [];
         const routeRaw = [draft.fromLocation, ...stops, draft.toLocation].filter(Boolean);
         const route = [];
@@ -6284,23 +6285,14 @@ const TransportApp = ({ userProfileData }) => {
             // Nový `when` z min/max časov segmentov
             draft.when = `${formatTsLocal(Math.min(...allStart))} – ${formatTsLocal(Math.max(...allEnd))}`;
         } else {
-            // ============================================================
-            // NOVÉ: Nemáme reálne časy segmentov, ale parent NIE JE celý peší
-            // (má aspoň jeden nepeší segment). ZACHOVAJ pôvodný `draft.when`,
-            // ktorý prišiel z DB / z generovania. Nezahadzuj ho!
-            //
-            // Ak by bol prázdny, presun by stratil čas a v UI by sa
-            // nezobrazoval žiadny časový interval.
-            // ============================================================
             if (!draft.when || String(draft.when).trim() === '') {
-                // Posledná záchrana: skús `parent.when` z parent záznamu
                 const parentRec = savedTransfersRef.current.find((s) => s.key === draft.key);
                 if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
                     draft.when = parentRec.when;
+                } else if (originalWhenFromDraft && String(originalWhenFromDraft).trim() !== '') {
+                    draft.when = originalWhenFromDraft;
                 }
-                // Ak ani to nepomôže, `when` zostane prázdny (nedá sa nič robiť)
             }
-            // Inak `draft.when` zostáva tak, ako bol (nezahadzujeme ho)
         }
     };
     
