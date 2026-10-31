@@ -6157,7 +6157,9 @@ const TransportApp = ({ userProfileData }) => {
         } else {
             // Všetko pešie → žiadny čas
             draft.when = '';
-        }    
+        }  
+    };
+    
     // Zápis verzia – zavolá inPlace a zapíše parenta
     const recomputeParentSegments = async (parent) => {
         if (!window.db || !parent) return;
