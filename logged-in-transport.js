@@ -8455,16 +8455,8 @@ const TransportApp = ({ userProfileData }) => {
     
         // ============================================================
         // assignedSegmentKeys – segmenty, ktoré sú už priradené
-        //
-        // NOVÉ: Namiesto presných dvojíc (from→to) budujeme mapu
-        // "pokrytých úsekov" pre každý tím/deň. Pre každý autobusový
-        // segment (nástup → výstup) uložíme VŠETKY možné pod-segmenty,
-        // ktoré tím v buse prejde.
-        //
-        // Napr. ak tím nastúpi na A a vystúpi na D (autobus prejde
-        // A→B→C→D), tak pokryté sú: A→B, B→C, C→D, A→C, A→D, B→D.
         // ============================================================
-        const assignedSegmentsByTeam = new Map(); // `${dayKey}|${teamName}|${category}` → [{from, to, rowFromIdx, rowToIdx}]
+        const assignedSegmentsByTeam = new Map();
         
         const addAssignedSegment = (dayKey, teamName, category, fromLoc, toLoc) => {
             const key = `${dayKey}|${teamName}|${category}`;
@@ -8482,8 +8474,7 @@ const TransportApp = ({ userProfileData }) => {
                 .slice()
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
         
-            // Pre každý tím v buse nájdi VŠETKY súvislé úseky, ktoré prejde
-            const teamsInThisBus = new Map(); // teamKey → { boardIdx, alightIdxs: [] }
+            const teamsInThisBus = new Map();
         
             sorted.forEach((row, idx) => {
                 (row.teamsIn || []).forEach((teamKey) => {
@@ -8508,13 +8499,9 @@ const TransportApp = ({ userProfileData }) => {
                 const tn = String(teamName).trim();
                 const cat = cleanCategory(category || '');
         
-                // Pre každý výstup (môže ich byť viac) vygeneruj VŠETKY pod-segmenty
-                // od nástupu po výstup.
                 alightIdxs.forEach((alightIdx) => {
                     if (alightIdx < boardIdx) return;
         
-                    // Pre každú dvojicu (i, j) kde boardIdx <= i < j <= alightIdx
-                    // pridaj segment sorted[i].placeFrom → sorted[j].placeTo
                     for (let i = boardIdx; i <= alightIdx; i++) {
                         for (let j = i; j <= alightIdx; j++) {
                             const fromLoc = sorted[i].placeFrom;
@@ -8538,27 +8525,6 @@ const TransportApp = ({ userProfileData }) => {
         
         // ============================================================
         // Pomocná: zistí, či je konkrétny segment už priradený
-        //
-        // NOVÉ: Namiesto presnej zhody kontrolujeme, či existuje
-        // priradený segment, ktorý POKRÝVA tento segment. To znamená:
-        //  - buď je to presne rovnaký segment (from→to)
-        //  - alebo je to nadradený segment, ktorý začína pred/na from
-        //    a končí za/na to (t.j. tento segment je "vnorený")
-        //
-        // Keďže ale nemáme informáciu o poradí zastávok v autobuse
-        // (máme len from/to), musíme použiť heuristiku: ak existuje
-        // priradený segment, ktorý má rovnaký `from` a jeho `to` sa
-        // nachádza "neskôr" v trase, berieme to ako pokryté.
-        //
-        // Pre jednoduchosť a robustnosť: ak existuje priradený segment
-        // s rovnakým `from` a rovnakým `to`, je pokrytý. Ak existuje
-        // priradený segment s rovnakým `from` a iným `to`, NIE JE
-        // pokrytý (môže ísť o inú vetvu). Toto je konzervatívne, ale
-        // bezpečné.
-        //
-        // Pre pokrytie "vnorených" segmentov potrebujeme poznať trasu
-        // autobusu. Preto namiesto `assignedSegmentsByTeam` použijeme
-        // aj `isSegmentCoveredByBusPath` (pozri nižšie).
         // ============================================================
         const isSegmentAssigned = (t) => {
             const tn = String(t.teamName || '').trim();
@@ -8568,12 +8534,10 @@ const TransportApp = ({ userProfileData }) => {
             const toLoc = normalizePlaceName(t.toLocation || '');
             if (!fromLoc || !toLoc) return false;
         
-            // 1) Presná zhoda
             const key = `${dayKey}|${tn}|${cat}`;
             const list = assignedSegmentsByTeam.get(key) || [];
             if (list.some((s) => s.from === fromLoc && s.to === toLoc)) return true;
         
-            // 2) Vnorený segment – over cez trasu autobusu
             return isSegmentCoveredByBusPath(dayKey, tn, cat, t.fromLocation, t.toLocation);
         };
     
@@ -8586,7 +8550,23 @@ const TransportApp = ({ userProfileData }) => {
             const stops = Array.isArray(t.intermediateStops) ? t.intermediateStops : [];
     
             if (stops.length === 0) {
-                // NOVÉ: Zisti, či je tento klasický parent presun priradený
+                // ============================================================
+                // OPRAVA (duplicita): Ak pre tento parent existujú segmenty
+                // (s _parentKey === t.key), NEpridávaj parent ako samostatný
+                // záznam – jeho segmenty ho už reprezentujú.
+                //
+                // Tým sa zabráni tomu, aby sa parent zobrazil dvakrát:
+                //  - raz ako samostatný záznam (bez _parentKey)
+                //  - raz ako segment (s _parentKey)
+                // ============================================================
+                const hasChildSegments = savedTransfers.some(
+                    (s) => s._parentKey === t.key && s.key !== t.key
+                );
+                if (hasChildSegments) {
+                    return; // parent má segmenty – preskoč ho
+                }
+
+                // Zisti, či je tento klasický parent presun priradený
                 const isAssigned = isSegmentAssigned(t);
                 expandedTransfers.push({ ...t, _isAssigned: isAssigned });
                 return;
@@ -8710,9 +8690,6 @@ const TransportApp = ({ userProfileData }) => {
     
             // ============================================================
             // KROK 2: Vypočítaj časy
-            // DÔLEŽITÉ: Čas sa NEROZDEĽUJE medzi segmenty!
-            // Každý nevyriešený segment dostane PÔVODNÝ CELÝ INTERVAL.
-            // Ak je segment vyriešený autobusom, dostane reálny čas z autobusu.
             // ============================================================
             const finalTimes = new Array(route.length - 1).fill(null);
 
@@ -8735,10 +8712,7 @@ const TransportApp = ({ userProfileData }) => {
                     if (normalizePlaceName(s.fromLocation) !== segFrom) return false;
                     if (normalizePlaceName(s.toLocation) !== segTo) return false;
 
-                    // NOVÉ: Ak je to segment (má _parentKey) a jeho parent už NIE JE walking
-                    // (t.j. bol obnovený bez intermediateStops), tento segment je "zastaraný"
-                    // a nesmie sa použiť ako reálny čas – inak posunie začiatok nového
-                    // parent presunu na svoj koniec.
+                    // NOVÉ: ignoruj zastarané segmenty (parent už nie je walking)
                     if (s._parentKey && s._parentKey !== s.key) {
                         const parentRec = savedTransfers.find((p) => p.key === s._parentKey);
                         if (parentRec && parentRec.isWalking !== true) {
@@ -8748,8 +8722,33 @@ const TransportApp = ({ userProfileData }) => {
 
                     return true;
                 });
-                const realSeg = matchingSegs.find((s) => s.isWalking === true) || matchingSegs[0] || null;
-                
+
+                // ============================================================
+                // OPRAVA (nesprávny čas): Walking segmenty s NULOVÝM intervalom
+                // (startTs === endTs) sa NESMÚ použiť ako "reálny čas" – len
+                // hovoria "tím ide peši", ale nemajú reálny čas.
+                //
+                // Predtým sa walking segment použil ako realSeg a jeho nulový
+                // interval sa stal výsledným časom segmentu → "0 min".
+                //
+                // Teraz: prechádzame všetky matchingSegs a preskakujeme
+                // walking segmenty s nulovým trvaním. Ak nájdeme iný (ne-walking
+                // alebo walking s reálnym časom), použijeme ho.
+                // ============================================================
+                let realSeg = null;
+                for (const seg of matchingSegs) {
+                    const r = parseWhenRangeToTs(seg.when);
+                    if (!r) continue;
+                    const isWalking = seg.isWalking === true;
+                    const isZeroDuration = r.startTs === r.endTs;
+
+                    // Preskoč walking segmenty s nulovým trvaním – nemajú reálny čas
+                    if (isWalking && isZeroDuration) continue;
+
+                    realSeg = seg;
+                    break;
+                }
+
                 if (realSeg) {
                     const realRange = parseWhenRangeToTs(realSeg.when);
                     if (realRange && realRange.startTs != null && realRange.endTs != null) {
@@ -8791,11 +8790,6 @@ const TransportApp = ({ userProfileData }) => {
             // 3) Plne nevyriešené segmenty → PÔVODNÝ CELÝ INTERVAL,
             //    ale ak predchádzajúci segment je vyriešený (autobusom
             //    alebo reálnym záznamom v savedTransfers), začni od jeho konca.
-            //
-            // NOVÉ: Ak NASLEDUJÚCI segment je vyriešený (bus alebo peši),
-            // skonči presne na jeho začiatku. Tým sa zabezpečí, že
-            // peší presun pred busom skončí v čase odchodu busu,
-            // a peší presun po buse začne v čase príchodu busu.
             for (let i = 0; i < route.length - 1; i++) {
                 if (finalTimes[i]) continue;
             
@@ -8803,8 +8797,6 @@ const TransportApp = ({ userProfileData }) => {
                 if (i > 0 && finalTimes[i - 1]) {
                     startTs = finalTimes[i - 1].endTs;
                 }
-                // NOVÉ: Ak aj tak je stále pôvodný začiatok, ale existuje
-                // predchádzajúci REÁLNY koniec (bus/peši), použi ten.
                 if (i > 0 && realSegmentTimes[i - 1] && realSegmentTimes[i - 1].endTs != null) {
                     startTs = realSegmentTimes[i - 1].endTs;
                 }
@@ -8812,11 +8804,6 @@ const TransportApp = ({ userProfileData }) => {
                     startTs = segmentRealTimes[i - 1].endTs;
                 }
             
-                // ============================================================
-                // NOVÉ: Nájdi najbližší NASLEDUJÚCI vyriešený segment
-                // (bus alebo reálny záznam v savedTransfers) a nastav
-                // endTs na jeho startTs.
-                // ============================================================
                 let endTs = null;
                 for (let k = i + 1; k < route.length - 1; k++) {
                     if (segmentAssigned[k] && finalTimes[k] && finalTimes[k].startTs != null) {
@@ -8830,8 +8817,6 @@ const TransportApp = ({ userProfileData }) => {
                 }
                 if (endTs == null) endTs = timeRange.endTs;
             
-                // Ak by endTs bol menší ako startTs (napr. pri prechode
-                // cez polnoc alebo nesúlade), použi pôvodný endTs.
                 if (endTs < startTs) endTs = timeRange.endTs;
             
                 finalTimes[i] = { startTs, endTs };
@@ -8896,7 +8881,12 @@ const TransportApp = ({ userProfileData }) => {
                     _parentRoute: `${t.fromLocation} → ${t.toLocation}`,
                     _remainingMinutes: remainingMinutes,
                     _isAssigned: segmentAssigned[i],
-                    isWalking: realSegmentTimes[i]?.isWalking === true,
+                    // ============================================================
+                    // OPRAVA: walking flag dedí LEN z parenta (t.isWalking),
+                    // NIE z realSegmentTimes – to môže byť walking segment
+                    // s nulovým časom, ktorý sme chceli preskočiť.
+                    // ============================================================
+                    isWalking: t.isWalking === true,
                 });
             }
         });
