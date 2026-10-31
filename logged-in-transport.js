@@ -9284,7 +9284,7 @@ const TransportApp = ({ userProfileData }) => {
             const tB = rB?.startTime || '00:00';
             return tA.localeCompare(tB);
         });
-
+    
         // Pomocná: získa názov dňa z dayKey (napr. "Piatok")
         const getDayNameFromDayKey = (dayKey) => {
             if (!dayKey) return '';
@@ -9329,7 +9329,7 @@ const TransportApp = ({ userProfileData }) => {
                 )
                 : React.createElement(
                     'div',
-                    { className: 'max-h-[70vh] overflow-y-auto p-3' },
+                    { className: 'max-h-[70vh] overflow-y-auto' },
                     React.createElement(
                         'table',
                         { className: 'w-full border-collapse text-xs' },
@@ -9343,14 +9343,14 @@ const TransportApp = ({ userProfileData }) => {
                                     if (!groupsByDay.has(dayKey)) groupsByDay.set(dayKey, []);
                                     groupsByDay.get(dayKey).push(t);
                                 });
-
+    
                                 const sortedDayKeys = [...groupsByDay.keys()].sort();
-
+    
                                 const elements = [];
-
+    
                                 sortedDayKeys.forEach((dayKey, dayIdx) => {
                                     const items = groupsByDay.get(dayKey) || [];
-
+    
                                     // ============================================================
                                     // 1) Riadok s dátumom (rovnaký štýl ako v boxe autobusu) +
                                     //    názov dňa (napr. "Piatok")
@@ -9362,7 +9362,7 @@ const TransportApp = ({ userProfileData }) => {
                                     const capitalizedDayName = dayName
                                         ? dayName.charAt(0).toUpperCase() + dayName.slice(1)
                                         : '';
-
+    
                                     elements.push(
                                         React.createElement(
                                             'tr',
@@ -9396,7 +9396,7 @@ const TransportApp = ({ userProfileData }) => {
                                             )
                                         )
                                     );
-
+    
                                     // ============================================================
                                     // 2) Hlavička stĺpcov pre daný deň – rovnaká ako v boxe autobusu
                                     //    (Od, Do, Miesto od, Miesto do, Nástup, Výstup, Min) + mazanie
@@ -9416,7 +9416,7 @@ const TransportApp = ({ userProfileData }) => {
                                             React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '36px' } }, '')
                                         )
                                     );
-
+    
                                     // ============================================================
                                     // 3) Riadky s pešími presunmi pre daný deň – rovnaký štýl
                                     //    ako riadky v boxe autobusu (bunky, triedy)
@@ -9429,7 +9429,7 @@ const TransportApp = ({ userProfileData }) => {
                                         const placeFrom = info?.from || '';
                                         const placeTo = info?.to || '';
                                         const textColor = getCategoryTextColor(t.category);
-
+    
                                         elements.push(
                                             React.createElement(
                                                 'tr',
@@ -9489,7 +9489,7 @@ const TransportApp = ({ userProfileData }) => {
                                         );
                                     });
                                 });
-
+    
                                 return elements;
                             })()
                         )
