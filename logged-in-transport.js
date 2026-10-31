@@ -5766,16 +5766,22 @@ const TransportApp = ({ userProfileData }) => {
                 resolvedIndexes.add(idx);
                 const range = seg.range || parseTransferWhenToRange(seg.when);
                 if (range) {
-                    // ============================================================
-                    // NOVÉ: Prvý walking segment bloku má VŽDY nulové trvanie
-                    // (startTs === endTs). Jeho endTs sa nastaví neskôr
-                    // v kroku dopočtu – buď na startTs nasledujúceho
-                    // vyriešeného segmentu (bus), alebo zostane na startTs.
-                    // ============================================================
                     if (idx === 0) {
                         resolvedRealTimes.set(idx, { startTs: range.startTs, endTs: range.startTs });
                     } else {
                         resolvedRealTimes.set(idx, { startTs: range.startTs, endTs: range.endTs });
+                    }
+                } else {
+                    // ============================================================
+                    // NOVÉ: Ak walking segment nemá parsovateľný when, použi
+                    // aspoň začiatok celého bloku (firstRange.startTs) ako
+                    // startTs a endTs (nulové trvanie). Tým sa zabráni tomu,
+                    // aby walking segment dostal celý zvyšný interval.
+                    // ============================================================
+                    if (idx === 0) {
+                        resolvedRealTimes.set(idx, { startTs: firstRange.startTs, endTs: firstRange.startTs });
+                    } else {
+                        resolvedRealTimes.set(idx, { startTs: firstRange.startTs, endTs: firstRange.endTs });
                     }
                 }
                 return;
