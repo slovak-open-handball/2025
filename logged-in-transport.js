@@ -9018,29 +9018,18 @@ const TransportApp = ({ userProfileData }) => {
 
         const baseFilteredFirstOnly = baseFilteredFirstOnlyRaw.map((t) => {
             if (!t._parentKey) return t;
-
-            // Zisti koniec celého bloku = maximum z endTs všetkých
-            // segmentov patriacich k rovnakému parentovi.
+        
             const parentKey = t._parentKey;
             const teamName = String(t.teamName || '').trim();
             const category = cleanCategory(t.category || '');
             const dayKey = t.dayKey || '';
         
-            let blockEndTs = null;
-        
-            // ============================================================
-            // NOVÉ: Pre aktuálny zobrazený segment zisti, či nasleduje
-            // priradený (bus) segment. Ak áno, koniec zobrazeného segmentu
-            // má byť čas odchodu busu (start nasledujúceho segmentu),
-            // nie koniec celého bloku.
-            // ============================================================
             const trRange = parseTransferWhenToRange(t.when);
             if (!trRange || trRange.startTs == null) return t;
-
-            // Nájdi nasledujúci priradený segment (bus) v rámci parenta
-            let nextAssignedStartTs = null;
-
+        
+            // ============================================================
             // Zoznam všetkých segmentov parenta (parent + segmenty s _parentKey)
+            // ============================================================
             const parentSegments = [];
             savedTransfers.forEach((other) => {
                 if (String(other.teamName || '').trim() !== teamName) return;
@@ -9056,47 +9045,105 @@ const TransportApp = ({ userProfileData }) => {
                 });
             });
             parentSegments.sort((a, b) => a.range.startTs - b.range.startTs);
-
-            // Prejdi segmenty za aktuálnym a hľadaj prvý priradený (bus)
-            const currentEndTs = trRange.endTs;
+        
+            // ============================================================
+            // NOVÉ: Zisti, či aktuálny segment je walking a či existuje
+            // nasledujúci PRIradený (bus) segment.
+            // ============================================================
+            const isCurrentWalking = t.isWalking === true;
+        
+            // Nájdi nasledujúci priradený (bus) segment za aktuálnym
+            let nextAssignedStartTs = null;
+            // Nájdi predchádzajúci priradený (bus) segment pred aktuálnym
+            let prevAssignedEndTs = null;
+        
             for (const seg of parentSegments) {
-                if (seg.range.startTs <= trRange.startTs) continue;
-                // Je to priradený bus segment?
-                if (seg._isAssigned === true || isSegmentAssigned(seg)) {
-                    nextAssignedStartTs = seg.range.startTs;
-                    break;
+                // Preskoč samotný aktuálny segment
+                if (seg.key === t.key) continue;
+        
+                if (seg.range.startTs > trRange.startTs) {
+                    // Segment za aktuálnym
+                    if (nextAssignedStartTs == null) {
+                        const isAssigned = seg._isAssigned === true || isSegmentAssigned(seg);
+                        // Pre walking aktuálneho segmentu hľadáme PRVÝ bus segment
+                        // (pešie segmenty preskočíme, chceme čas odchodu busu)
+                        if (isCurrentWalking) {
+                            if (isAssigned && seg.isWalking !== true) {
+                                nextAssignedStartTs = seg.range.startTs;
+                            }
+                        } else {
+                            // Pre nebusový (nepriradený) segment – chceme najbližší
+                            // priradený segment (bus alebo walking)
+                            if (isAssigned || seg.isWalking === true) {
+                                nextAssignedStartTs = seg.range.startTs;
+                            }
+                        }
+                    }
+                } else if (seg.range.endTs != null && seg.range.endTs <= trRange.startTs) {
+                    // Segment pred aktuálnym
+                    const isAssigned = seg._isAssigned === true || isSegmentAssigned(seg);
+                    if (isAssigned && seg.range.endTs != null) {
+                        if (prevAssignedEndTs == null || seg.range.endTs > prevAssignedEndTs) {
+                            prevAssignedEndTs = seg.range.endTs;
+                        }
+                    }
                 }
-                // Ak je to peší segment, neprerušuj hľadanie – pokračuj
-                // (chceme nájsť prvý BUS segment za aktuálnym peším).
-                if (seg.isWalking === true) continue;
             }
-
+        
+            // ============================================================
             // Vypočítaj blockEndTs – maximum z koncov všetkých segmentov
-            savedTransfers.forEach((other) => {
-                if (String(other.teamName || '').trim() !== teamName) return;
-                if (cleanCategory(other.category || '') !== category) return;
-                if ((other.dayKey || '') !== dayKey) return;
-                const otherParentKey = other._parentKey || other.key;
-                if (otherParentKey !== parentKey) return;
-                const r = parseTransferWhenToRange(other.when);
-                if (!r || r.endTs == null) return;
-                if (blockEndTs == null || r.endTs > blockEndTs) {
-                    blockEndTs = r.endTs;
+            // (alebo koniec posledného bus segmentu, ak aktuálny je walking
+            // a nasleduje bus)
+            // ============================================================
+            let blockEndTs = null;
+            parentSegments.forEach((seg) => {
+                if (seg.range.endTs == null) return;
+                if (blockEndTs == null || seg.range.endTs > blockEndTs) {
+                    blockEndTs = seg.range.endTs;
                 }
             });
         
             if (blockEndTs == null) return t;
-
+        
             // ============================================================
-            // NOVÉ: Ak je aktuálny segment PEŠÍ a nasleduje BUS segment,
-            // koniec zobrazeného segmentu = čas odchodu busu.
-            // Inak použi koniec celého bloku (pôvodné správanie).
+            // NOVÉ: Pre walking segment urči správny displayEndTs:
+            //  - Ak aktuálny segment je walking a nasleduje bus segment
+            //    → displayEndTs = čas odchodu busu (nextAssignedStartTs)
+            //  - Ak aktuálny segment je walking a NEnasleduje bus (je to
+            //    posledný walking pred koncom bloku)
+            //    → displayEndTs = blockEndTs (celkový koniec bloku)
+            //  - Pre nebusový (nepriradený) segment:
+            //    → displayEndTs = nextAssignedStartTs (ak existuje),
+            //      inak blockEndTs
             // ============================================================
-            const isCurrentWalking = t.isWalking === true;
             let displayEndTs = blockEndTs;
-
-            if (isCurrentWalking && nextAssignedStartTs != null) {
-                displayEndTs = nextAssignedStartTs;
+        
+            if (isCurrentWalking) {
+                // Walking segment:
+                // - ak nasleduje bus → koniec = čas odchodu busu
+                // - inak → koniec = koniec celého bloku
+                if (nextAssignedStartTs != null && nextAssignedStartTs >= trRange.startTs) {
+                    displayEndTs = nextAssignedStartTs;
+                } else {
+                    displayEndTs = blockEndTs;
+                }
+            } else {
+                // Nebusový (nepriradený) segment:
+                // - ak nasleduje priradený segment → koniec = jeho začiatok
+                // - inak → koniec = koniec bloku
+                if (nextAssignedStartTs != null && nextAssignedStartTs >= trRange.startTs) {
+                    displayEndTs = nextAssignedStartTs;
+                } else {
+                    displayEndTs = blockEndTs;
+                }
+            }
+        
+            // ============================================================
+            // Bezpečnostná poistka: displayEndTs nesmie byť menší ako startTs
+            // (inak by vznikol nulový alebo záporný interval)
+            // ============================================================
+            if (displayEndTs != null && displayEndTs < trRange.startTs) {
+                displayEndTs = trRange.startTs;
             }
         
             const newWhen = `${formatTsLocal(trRange.startTs)} – ${formatTsLocal(displayEndTs)}`;
