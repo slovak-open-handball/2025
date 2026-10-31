@@ -4844,6 +4844,42 @@ const TransportApp = ({ userProfileData }) => {
                     'Tím bol odstránený z celého segmentu (nástup + výstup).',
                     'info'
                 );
+
+                // ============================================================
+                // NOVÉ: Po odstránení segmentu z autobusu sa zmenil reálny
+                // čas príchodu busu. Preto treba prepočítať nadväzujúce
+                // pešie (a iné) segmenty toho istého tímu v ten istý deň.
+                // ============================================================
+                try {
+                    await new Promise((r) => setTimeout(r, 400)); // počkať na onSnapshot
+
+                    const teamKeyParts = String(teamKeyToRemove).split('|');
+                    const removedTeamName = (teamKeyParts[0] || '').trim();
+                    const removedCategory = cleanCategory(teamKeyParts[1] || '');
+
+                    // Nájdi pešie segmenty tohto tímu v tento deň
+                    // (aj parent pešie záznamy, aj segmenty s _parentKey)
+                    const walkingCandidates = (savedTransfersRef.current || [])
+                        .filter((s) => {
+                            if (s.isWalking !== true) return false;
+                            if (String(s.teamName || '').trim() !== removedTeamName) return false;
+                            if (cleanCategory(s.category || '') !== removedCategory) return false;
+                            if ((s.dayKey || '') !== dayKey) return false;
+                            return true;
+                        });
+
+                    // Pre každý peší záznam zavolaj recomputeBlock – ten prepočíta
+                    // časy celého bloku (peší + bus) podľa nových reálnych časov.
+                    for (const wk of walkingCandidates) {
+                        try {
+                            await recomputeBlock(wk, new Set([wk.key]));
+                        } catch (e) {
+                            console.error('[TRANSPORT] Chyba pri prepočte pešieho bloku po odstránení segmentu:', e);
+                        }
+                    }
+                } catch (postErr) {
+                    console.error('[TRANSPORT] Chyba pri post-spracovaní po odstránení segmentu:', postErr);
+                }
             } catch (err) {
                 console.error('[TRANSPORT] Chyba pri odstraňovaní segmentu tímu:', err);
                 window.showGlobalNotification('Nepodarilo sa odstrániť segment tímu.', 'error');
