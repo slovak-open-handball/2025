@@ -7985,17 +7985,36 @@ const TransportApp = ({ userProfileData }) => {
             if (stops.length === 0) {
                 // Klasický parent presun bez medzizastávok
                 const isAssigned = isSegmentAssigned(t);
-
+    
                 // ============================================================
-                // NOVÉ: Ak `when` je prázdny (napr. ho vymazal recomputeParentSegmentsInPlace
-                // pri generovaní), skús ho doplniť z parent záznamu v savedTransfers
-                // alebo aspoň zobraz `dayKey`, aby používateľ videl, kedy sa presun koná.
+                // Ak `when` je prázdny, skús ho doplniť:
+                //  1) z parent záznamu v savedTransfers (rovnaký key)
+                //  2) z reálnych časov segmentov (startTs/endTs)
                 // ============================================================
                 let displayWhen = t.when;
                 if (!displayWhen || String(displayWhen).trim() === '') {
                     const parentRec = savedTransfers.find((s) => s.key === t.key);
                     if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
                         displayWhen = parentRec.when;
+                    } else if (Array.isArray(t.segments) && t.segments.length > 0) {
+                        // NOVÉ: poskladaj `when` z reálnych časov segmentov
+                        let earliestStart = null;
+                        let latestEnd = null;
+                        t.segments.forEach((s) => {
+                            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                earliestStart = s.startTs;
+                            }
+                            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                latestEnd = s.endTs;
+                            }
+                        });
+                        if (earliestStart != null && latestEnd != null) {
+                            displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                        } else if (earliestStart != null) {
+                            displayWhen = formatTsLocal(earliestStart);
+                        } else if (latestEnd != null) {
+                            displayWhen = formatTsLocal(latestEnd);
+                        }
                     }
                 }
             
@@ -8003,8 +8022,6 @@ const TransportApp = ({ userProfileData }) => {
                     ...t,
                     when: displayWhen,
                     _isAssigned: isAssigned,
-                    // NOVÉ: ak nemá reálny čas, ale má aspoň `when`, považujeme to za "má čas"
-                    // (aby sa zobrazil časový label v UI)
                     _hasRealTime: !!(displayWhen && String(displayWhen).trim() !== ''),
                 });
                 return;
@@ -8703,11 +8720,11 @@ const TransportApp = ({ userProfileData }) => {
                             }
     
                             // ============================================================
-                            // NOVÉ: Zobraz čas vždy, keď ho máme – aj keď segment nemá
-                            // "reálny čas z busu". Fallback:
+                            // Zobraz čas vždy, keď ho máme. Fallback:
                             //  1) ak `rangeInfo` má čas → "HH:MM – HH:MM"
                             //  2) ak `t.when` je neprázdny string → zobraz ho priamo
-                            //  3) ak máme len `dayKey` → zobraz deň s poznámkou "čas neurčený"
+                            //  3) ak `t.segments` majú reálne časy → poskladaj z nich
+                            //  4) ak máme len `dayKey` → "DD. MM. YYYY (čas neurčený)"
                             // ============================================================
                             let timeLabel = null;
                             if (rangeInfo && (rangeInfo.startTime || rangeInfo.endTime)) {
@@ -8718,7 +8735,27 @@ const TransportApp = ({ userProfileData }) => {
                                 else if (et) timeLabel = et;
                             } else if (t.when && String(t.when).trim() !== '') {
                                 timeLabel = String(t.when).trim();
-                            } else if (t.dayKey) {
+                            } else if (Array.isArray(t.segments) && t.segments.length > 0) {
+                                // NOVÉ: skús vytiahnuť aspoň HH:MM z reálnych časov segmentov
+                                let earliestStart = null;
+                                let latestEnd = null;
+                                t.segments.forEach((s) => {
+                                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                        earliestStart = s.startTs;
+                                    }
+                                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                        latestEnd = s.endTs;
+                                    }
+                                });
+                                const startStr = earliestStart != null ? formatTsLocal(earliestStart) : null;
+                                const endStr = latestEnd != null ? formatTsLocal(latestEnd) : null;
+                                const startTime = startStr ? /(\d{2}:\d{2})$/.exec(startStr)?.[1] : null;
+                                const endTime = endStr ? /(\d{2}:\d{2})$/.exec(endStr)?.[1] : null;
+                                if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
+                                else if (startTime) timeLabel = startTime;
+                                else if (endTime) timeLabel = endTime;
+                            }
+                            if (!timeLabel && t.dayKey) {
                                 const dayLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
                                 timeLabel = `${dayLabel} (čas neurčený)`;
                             }
@@ -10254,21 +10291,47 @@ const TransportApp = ({ userProfileData }) => {
                     )
                 ),
                 // Info o presune
-                React.createElement(
-                    'div',
-                    { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm' },
-                    React.createElement(
+                (() => {
+                    const tr = transferActionModal.transfer;
+                    // NOVÉ: ak `when` je prázdny, poskladaj ho zo segmentov
+                    let displayWhen = tr.when;
+                    if (!displayWhen || String(displayWhen).trim() === '') {
+                        if (Array.isArray(tr.segments) && tr.segments.length > 0) {
+                            let earliestStart = null;
+                            let latestEnd = null;
+                            tr.segments.forEach((s) => {
+                                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                    earliestStart = s.startTs;
+                                }
+                                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                    latestEnd = s.endTs;
+                                }
+                            });
+                            if (earliestStart != null && latestEnd != null) {
+                                displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                            } else if (earliestStart != null) {
+                                displayWhen = formatTsLocal(earliestStart);
+                            } else if (latestEnd != null) {
+                                displayWhen = formatTsLocal(latestEnd);
+                            }
+                        }
+                    }
+                    return React.createElement(
                         'div',
-                        { className: 'text-gray-600 font-medium' },
-                        `${transferActionModal.transfer.fromLocation || '?'} → ${transferActionModal.transfer.toLocation || '?'}`
-                    ),
-                    transferActionModal.transfer.when &&
+                        { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm' },
                         React.createElement(
                             'div',
-                            { className: 'text-xs text-gray-500 mt-1' },
-                            transferActionModal.transfer.when
-                        )
-                ),
+                            { className: 'text-gray-600 font-medium' },
+                            `${tr.fromLocation || '?'} → ${tr.toLocation || '?'}`
+                        ),
+                        displayWhen &&
+                            React.createElement(
+                                'div',
+                                { className: 'text-xs text-gray-500 mt-1' },
+                                displayWhen
+                            )
+                    );
+                })(),
                 // Možnosti
                 React.createElement(
                     'div',
@@ -10456,6 +10519,30 @@ const TransportApp = ({ userProfileData }) => {
                     const transportColor = getTransportColorForCategory(tr.category);
                     const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
                 
+                    // NOVÉ: ak `when` je prázdny, poskladaj ho zo segmentov
+                    let displayWhen = tr.when;
+                    if (!displayWhen || String(displayWhen).trim() === '') {
+                        if (Array.isArray(tr.segments) && tr.segments.length > 0) {
+                            let earliestStart = null;
+                            let latestEnd = null;
+                            tr.segments.forEach((s) => {
+                                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                    earliestStart = s.startTs;
+                                }
+                                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                    latestEnd = s.endTs;
+                                }
+                            });
+                            if (earliestStart != null && latestEnd != null) {
+                                displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                            } else if (earliestStart != null) {
+                                displayWhen = formatTsLocal(earliestStart);
+                            } else if (latestEnd != null) {
+                                displayWhen = formatTsLocal(latestEnd);
+                            }
+                        }
+                    }
+
                     return React.createElement(
                         'div',
                         {
@@ -10471,7 +10558,7 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement('div', { className: 'font-medium' },
                             `${tr.fromLocation} → ${tr.toLocation}`),
                         React.createElement('div', { className: 'text-xs text-gray-500 mt-1' },
-                            `${teamLabel}${tr.when ? ' • ' + tr.when : ''}`)
+                            `${teamLabel}${displayWhen ? ' • ' + displayWhen : ''}`)
                     );
                 })(),
 
