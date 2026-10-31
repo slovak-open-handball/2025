@@ -8743,7 +8743,12 @@ const TransportApp = ({ userProfileData }) => {
 
         // Filtrovanie – skry len priradené segmenty
         const baseFiltered = expandedTransfers.filter((t) => {
-            if (t.isWalking === true) return false;
+            // ============================================================
+            // NOVÉ: Ak je to PEŠÍ záznam (parent aj segment), VŽDY ho skry
+            // z boxu "Vygenerované presuny". Zobrazí sa len v boxe "Peši".
+            // ============================================================
+            if (t.isWalking === true) return false; 
+
             if (t._isAssigned === true) return false;
 
             // Pre segmenty s _parentKey: skry len ak je CELÝ parent priradený
