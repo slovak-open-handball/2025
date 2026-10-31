@@ -5665,10 +5665,7 @@ const TransportApp = ({ userProfileData }) => {
         allSegments.sort((a, b) => a.range.startTs - b.range.startTs);
     
         // ============================================================
-        // NOVÉ: Pre porovnanie aktuálneho segmentu nepoužívaj `key`
-        // (kľúče sa môžu líšiť, lebo `seg.key` používa vypočítaný
-        // `when`, kým `transfer.key` môže mať prázdny `when`).
-        // Porovnávaj `fromLocation` + `toLocation` (normalizované).
+        // OPRAVA: Pre porovnanie aktuálneho segmentu použijeme `from` a `to`.
         // ============================================================
         const transferFromNorm = normalizePlaceName(transfer.fromLocation || '');
         const transferToNorm = normalizePlaceName(transfer.toLocation || '');
@@ -5679,6 +5676,21 @@ const TransportApp = ({ userProfileData }) => {
             const segToNorm = normalizePlaceName(seg.toLocation || '');
             if (segFromNorm === transferFromNorm && segToNorm === transferToNorm) continue;
     
+            // ============================================================
+            // OPRAVA: Ak ide o prvý segment parenta (začína tam, kde parent),
+            // nemôže mať žiadny predchádzajúci segment. 
+            // Tým pádom nemôže blokovať priradenie.
+            // ============================================================
+            if (seg._parentKey) {
+                const parent = savedTransfers.find(p => p.key === seg._parentKey);
+                if (parent) {
+                    const pFromNorm = normalizePlaceName(parent.fromLocation || '');
+                    if (segFromNorm === pFromNorm) {
+                        continue; // Toto je prvý segment parenta, nie je to "predchádzajúci" pre nič.
+                    }
+                }
+            }
+
             // Preskoč neskoršie segmenty
             if (seg.range.startTs >= trRange.startTs) continue;
     
