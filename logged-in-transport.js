@@ -8548,7 +8548,19 @@ const TransportApp = ({ userProfileData }) => {
     
         filteredByDay.forEach((t) => {
             const stops = Array.isArray(t.intermediateStops) ? t.intermediateStops : [];
-    
+
+            // ============================================================
+            // NOVÉ: Ak je to SEGMENT (má _parentKey) a parent má
+            // intermediateStops, preskoč ho – segmenty sa vygenerujú
+            // z parenta nižšie (aby nevznikli duplicitné boxy).
+            // ============================================================
+            if (t._parentKey && t._parentKey !== t.key) {
+                const parentRecord = savedTransfers.find((s) => s.key === t._parentKey);
+                if (parentRecord && Array.isArray(parentRecord.intermediateStops) && parentRecord.intermediateStops.length > 0) {
+                    return; // segment sa vygeneruje z parenta
+                }
+            }
+
             if (stops.length === 0) {
                 // ============================================================
                 // OPRAVA (duplicita): Ak pre tento parent existujú segmenty
