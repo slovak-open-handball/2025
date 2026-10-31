@@ -8839,9 +8839,27 @@ const TransportApp = ({ userProfileData }) => {
                             //  2) ak `t.when` je neprázdny string → zobraz ho priamo
                             //  3) ak `t.segments` majú reálne časy → poskladaj z nich
                             //  4) NOVÉ: ak je to segment (má `_parentKey`), skús `when` parenta
-                            //     (rovnaká logika ako v modálnom okne na úpravu presunu)
+                            //     – ale zobraz IBA ČAS (HH:MM – HH:MM), bez dátumu
                             //  5) ak máme len `dayKey` → "DD. MM. YYYY (čas neurčený)"
                             // ============================================================
+                            
+                            // Pomocná: z ľubovoľného "when" stringu vytiahne iba časy "HH:MM – HH:MM"
+                            const extractTimesOnly = (whenStr) => {
+                                if (!whenStr) return null;
+                                const s = String(whenStr);
+                                const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
+                                const times = [];
+                                let m;
+                                while ((m = regex.exec(s)) !== null) {
+                                    if (m[4] != null && m[5] != null) {
+                                        times.push(`${String(m[4]).padStart(2, '0')}:${String(m[5]).padStart(2, '0')}`);
+                                    }
+                                }
+                                if (times.length === 0) return null;
+                                if (times.length === 1) return times[0];
+                                return `${times[0]} – ${times[1]}`;
+                            };
+                            
                             let timeLabel = null;
                             if (rangeInfo && (rangeInfo.startTime || rangeInfo.endTime)) {
                                 const st = rangeInfo.startTime;
@@ -8850,9 +8868,10 @@ const TransportApp = ({ userProfileData }) => {
                                 else if (st) timeLabel = st;
                                 else if (et) timeLabel = et;
                             } else if (t.when && String(t.when).trim() !== '') {
-                                timeLabel = String(t.when).trim();
+                                // NOVÉ: z `t.when` zobraz iba časy (bez dátumu)
+                                timeLabel = extractTimesOnly(t.when) || String(t.when).trim();
                             } else if (Array.isArray(t.segments) && t.segments.length > 0) {
-                                // NOVÉ: skús vytiahnuť aspoň HH:MM z reálnych časov segmentov
+                                // skús vytiahnuť aspoň HH:MM z reálnych časov segmentov
                                 let earliestStart = null;
                                 let latestEnd = null;
                                 t.segments.forEach((s) => {
@@ -8874,15 +8893,13 @@ const TransportApp = ({ userProfileData }) => {
                             
                             // ============================================================
                             // NOVÉ: Ak stále nemáme čas a ide o segment (má `_parentKey`),
-                            // skús vziať `when` z parenta – rovnaká logika ako v modálnom okne
-                            // na úpravu presunu (transferActionModal).
+                            // skús vziať `when` z parenta – ale zobraz IBA ČASY (bez dátumu).
                             // ============================================================
                             if (!timeLabel && t._parentKey) {
                                 const parentRec = savedTransfers.find((s) => s.key === t._parentKey);
                                 if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
-                                    timeLabel = String(parentRec.when).trim();
+                                    timeLabel = extractTimesOnly(parentRec.when) || String(parentRec.when).trim();
                                 } else if (parentRec && Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
-                                    // Fallback: poskladaj `when` z reálnych časov segmentov parenta
                                     let earliestStart = null;
                                     let latestEnd = null;
                                     parentRec.segments.forEach((s) => {
@@ -8893,30 +8910,19 @@ const TransportApp = ({ userProfileData }) => {
                                             latestEnd = s.endTs;
                                         }
                                     });
-                                    if (earliestStart != null && latestEnd != null) {
-                                        timeLabel = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-                                    } else if (earliestStart != null) {
-                                        timeLabel = formatTsLocal(earliestStart);
-                                    } else if (latestEnd != null) {
-                                        timeLabel = formatTsLocal(latestEnd);
-                                    }
+                                    const startStr = earliestStart != null ? formatTsLocal(earliestStart) : null;
+                                    const endStr = latestEnd != null ? formatTsLocal(latestEnd) : null;
+                                    const startTime = startStr ? /(\d{2}:\d{2})$/.exec(startStr)?.[1] : null;
+                                    const endTime = endStr ? /(\d{2}:\d{2})$/.exec(endStr)?.[1] : null;
+                                    if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
+                                    else if (startTime) timeLabel = startTime;
+                                    else if (endTime) timeLabel = endTime;
                                 }
                             }
                             
                             if (!timeLabel && t.dayKey) {
                                 const dayLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
                                 timeLabel = `${dayLabel} (čas neurčený)`;
-                            }
-    
-                            let routeLabel = null;
-                            if (transferInfo) {
-                                if (t.intermediateStops && t.intermediateStops.length > 0) {
-                                    routeLabel = [t.fromLocation, ...t.intermediateStops, t.toLocation]
-                                        .filter(Boolean)
-                                        .join(' → ');
-                                } else {
-                                    routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
-                                }
                             }
     
                             // NOVÉ: informácia o pôvodnom presune
