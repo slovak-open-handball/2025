@@ -5384,6 +5384,13 @@ const TransportApp = ({ userProfileData }) => {
         const stops = (editingTransferStops || []).map((s) => String(s || '').trim()).filter(Boolean);
         const parentKey = original._parentKey || original.key;
     
+        // ============================================================
+        // NOVÉ: Zapamätaj si pôvodný `when` parenta (pred úpravou).
+        // Po úprave medzizastávok sa `when` NESMIE zmeniť – iba sa
+        // rozdelí na segmenty v rámci pôvodného intervalu.
+        // ============================================================
+        const originalWhen = original.when;
+    
         setEditingTransferSaving(true);
         try {
             await updateParentTransfer(parentKey, (draft) => {
@@ -5403,6 +5410,15 @@ const TransportApp = ({ userProfileData }) => {
                         s.walkingSetBy = old.walkingSetBy || null;
                     }
                 });
+    
+                // ============================================================
+                // NOVÉ: Po úprave medzizastávok VŽDY vráť pôvodný `when`
+                // parenta (ak existoval). Tým sa zabezpečí, že celkový
+                // interval presunu sa NEMENÍ – iba sa rozdelí na segmenty.
+                // ============================================================
+                if (originalWhen && originalWhen.trim() !== '') {
+                    draft.when = originalWhen;
+                }
             });
     
             window.showGlobalNotification(
@@ -6098,7 +6114,10 @@ const TransportApp = ({ userProfileData }) => {
                         continue;
                     }
                     const dur = getSegmentDurationMs(seg.from, seg.to);
-                    const segEndTs = dur != null ? cursorStartTs + dur : cursorStartTs;
+                    let segEndTs = dur != null ? cursorStartTs + dur : cursorStartTs;
+                    if (parentRange && parentRange.endTs != null && segEndTs > parentRange.endTs) {
+                        segEndTs = parentRange.endTs;
+                    }
                     draft.segments[i] = {
                         ...seg,
                         startTs: cursorStartTs,
@@ -6152,13 +6171,23 @@ const TransportApp = ({ userProfileData }) => {
         const nonWalkingSegments = draft.segments.filter((s) => s.isWalking !== true);
         const allStart = nonWalkingSegments.map((s) => s.startTs).filter((ts) => ts != null);
         const allEnd = nonWalkingSegments.map((s) => s.endTs).filter((ts) => ts != null);
-        
-        if (allStart.length > 0 && allEnd.length > 0) {
+
+        // Skontroluj, či máme pôvodný platný `when`
+        const hasOriginalWhen = parentRange && 
+            parentRange.startTs != null && 
+            parentRange.endTs != null && 
+            parentRange.endTs > parentRange.startTs;
+
+        if (hasOriginalWhen) {
+            // Zachovaj pôvodný `when` – segmenty sú dopočítané v rámci neho
+            draft.when = `${formatTsLocal(parentRange.startTs)} – ${formatTsLocal(parentRange.endTs)}`;
+        } else if (allStart.length > 0 && allEnd.length > 0) {
+            // Nový `when` z min/max časov segmentov
             draft.when = `${formatTsLocal(Math.min(...allStart))} – ${formatTsLocal(Math.max(...allEnd))}`;
         } else {
             // Všetko pešie → žiadny čas
             draft.when = '';
-        }  
+        }
     };
     
     // Zápis verzia – zavolá inPlace a zapíše parenta
