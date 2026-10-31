@@ -5979,7 +5979,6 @@ const TransportApp = ({ userProfileData }) => {
                 // (jeho čas sa prepočíta pri ďalšom generovaní / recomputeBlock)
                 const updatedParent = {
                     category: targetParent.category,
-                    teamName: targetParent.teamName,
                     when: targetParent.when,
                     text: targetParent.text,
                     fromLocation: targetParent.fromLocation,
@@ -6363,6 +6362,15 @@ const TransportApp = ({ userProfileData }) => {
                         if ((s.dayKey || '') !== dayKey) return false;
                         if (normalizePlaceName(s.fromLocation) !== segFromNorm) return false;
                         if (normalizePlaceName(s.toLocation) !== segToNorm) return false;
+
+                        // NOVÉ: ignoruj zastarané segmenty (parent už nie je walking)
+                        if (s._parentKey && s._parentKey !== s.key) {
+                            const parentRec = savedTransfers.find((p) => p.key === s._parentKey);
+                            if (parentRec && parentRec.isWalking !== true) {
+                                return false;
+                            }
+                        }
+
                         return true;
                     });
                     const realSegment = matchingSegs.find((s) => s.isWalking === true) || matchingSegs[0] || null;
@@ -6770,7 +6778,6 @@ const TransportApp = ({ userProfileData }) => {
             if (targetParent) {
                 patch[parentKey] = {
                     category: targetParent.category,
-                    teamName: targetParent.teamName,
                     when: targetParent.when,
                     text: targetParent.text,
                     fromLocation: parentFrom,
@@ -6806,6 +6813,10 @@ const TransportApp = ({ userProfileData }) => {
                 },
                 { merge: true }
             );
+
+            // NOVÉ: Počkať na onSnapshot, aby sa savedTransfers aktualizoval
+            // (inak by sa mohol parent zobraziť ako walking + nový parent súčasne)
+            await new Promise((r) => setTimeout(r, 400));
     
             window.showGlobalNotification('Príznak „peši" bol odstránený (parent presun bol obnovený bez medzizastávok).', 'success');
             setRemoveWalkingModal(null);
@@ -8553,6 +8564,18 @@ const TransportApp = ({ userProfileData }) => {
                     if ((s.dayKey || '') !== dayKey) return false;
                     if (normalizePlaceName(s.fromLocation) !== segFrom) return false;
                     if (normalizePlaceName(s.toLocation) !== segTo) return false;
+
+                    // NOVÉ: Ak je to segment (má _parentKey) a jeho parent už NIE JE walking
+                    // (t.j. bol obnovený bez intermediateStops), tento segment je "zastaraný"
+                    // a nesmie sa použiť ako reálny čas – inak posunie začiatok nového
+                    // parent presunu na svoj koniec.
+                    if (s._parentKey && s._parentKey !== s.key) {
+                        const parentRec = savedTransfers.find((p) => p.key === s._parentKey);
+                        if (parentRec && parentRec.isWalking !== true) {
+                            return false; // zastaraný segment
+                        }
+                    }
+
                     return true;
                 });
                 const realSeg = matchingSegs.find((s) => s.isWalking === true) || matchingSegs[0] || null;
