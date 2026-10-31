@@ -8692,7 +8692,6 @@ const TransportApp = ({ userProfileData }) => {
             
             return {
                 ...t,
-                when: newWhen,
                 _remainingMinutes: newRemainingMinutes,
             };
         });
