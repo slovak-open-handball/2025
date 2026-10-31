@@ -8838,7 +8838,9 @@ const TransportApp = ({ userProfileData }) => {
                             //  1) ak `rangeInfo` má čas → "HH:MM – HH:MM"
                             //  2) ak `t.when` je neprázdny string → zobraz ho priamo
                             //  3) ak `t.segments` majú reálne časy → poskladaj z nich
-                            //  4) ak máme len `dayKey` → "DD. MM. YYYY (čas neurčený)"
+                            //  4) NOVÉ: ak je to segment (má `_parentKey`), skús `when` parenta
+                            //     (rovnaká logika ako v modálnom okne na úpravu presunu)
+                            //  5) ak máme len `dayKey` → "DD. MM. YYYY (čas neurčený)"
                             // ============================================================
                             let timeLabel = null;
                             if (rangeInfo && (rangeInfo.startTime || rangeInfo.endTime)) {
@@ -8869,6 +8871,38 @@ const TransportApp = ({ userProfileData }) => {
                                 else if (startTime) timeLabel = startTime;
                                 else if (endTime) timeLabel = endTime;
                             }
+                            
+                            // ============================================================
+                            // NOVÉ: Ak stále nemáme čas a ide o segment (má `_parentKey`),
+                            // skús vziať `when` z parenta – rovnaká logika ako v modálnom okne
+                            // na úpravu presunu (transferActionModal).
+                            // ============================================================
+                            if (!timeLabel && t._parentKey) {
+                                const parentRec = savedTransfers.find((s) => s.key === t._parentKey);
+                                if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
+                                    timeLabel = String(parentRec.when).trim();
+                                } else if (parentRec && Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
+                                    // Fallback: poskladaj `when` z reálnych časov segmentov parenta
+                                    let earliestStart = null;
+                                    let latestEnd = null;
+                                    parentRec.segments.forEach((s) => {
+                                        if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                            earliestStart = s.startTs;
+                                        }
+                                        if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                            latestEnd = s.endTs;
+                                        }
+                                    });
+                                    if (earliestStart != null && latestEnd != null) {
+                                        timeLabel = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                                    } else if (earliestStart != null) {
+                                        timeLabel = formatTsLocal(earliestStart);
+                                    } else if (latestEnd != null) {
+                                        timeLabel = formatTsLocal(latestEnd);
+                                    }
+                                }
+                            }
+                            
                             if (!timeLabel && t.dayKey) {
                                 const dayLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
                                 timeLabel = `${dayLabel} (čas neurčený)`;
