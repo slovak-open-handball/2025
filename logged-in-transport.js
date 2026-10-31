@@ -6007,7 +6007,7 @@ const TransportApp = ({ userProfileData }) => {
             if (!isWalkingSeg) continue;
             const curTime = newTimes[i];
             if (!curTime) continue;
-
+        
             // Nájdi nasledujúci vyriešený segment (bus/peší s reálnym časom)
             let nextStartTs = null;
             for (let k = i + 1; k < block.length; k++) {
@@ -6016,15 +6016,16 @@ const TransportApp = ({ userProfileData }) => {
                     break;
                 }
             }
-
+        
             // ============================================================
-            // NOVÉ: Pre PRVÝ walking segment (i === 0) VŽDY nastav endTs
-            // na startTs nasledujúceho vyriešeného segmentu (bus), ak existuje.
-            // Ak neexistuje (žiadny ďalší bus), walking segment zostane
-            // s nulovým trvaním (startTs === endTs).
+            // OPRAVA: Pre walking segment, ktorý nasleduje PRED iným
+            // vyriešeným segmentom (bus), VŽDY nastav endTs na nextStartTs.
+            // Aj keď bol walking segment predtým označený ako peši s nulovým
+            // časom, jeho endTs sa musí aktualizovať na čas odchodu busu.
             // ============================================================
             if (i === 0) {
                 if (nextStartTs != null) {
+                    // Walking segment pred busom → koniec = čas odchodu busu
                     newTimes[i] = {
                         startTs: curTime.startTs,
                         endTs: nextStartTs,
@@ -6038,15 +6039,27 @@ const TransportApp = ({ userProfileData }) => {
                         whenStr: `${formatTsLocal(curTime.startTs)} – ${formatTsLocal(curTime.startTs)}`,
                     };
                 }
-            } else if (curTime.endTs == null || curTime.endTs > (nextStartTs != null ? nextStartTs : curTime.startTs)) {
-                // Pre ostatné walking segmenty: ak endTs chýba alebo je väčší
-                // ako nasledujúci startTs, nastav endTs na nextStartTs
+            } else {
+                // ============================================================
+                // OPRAVA: Pre ostatné walking segmenty (i > 0):
+                // - ak existuje nasledujúci vyriešený segment (bus), nastav
+                //   endTs na jeho startTs (walking segment končí v čase
+                //   odchodu busu)
+                // - ak neexistuje (walking je posledný), nechaj pôvodný endTs
+                //   (walking segment po buse → koniec = koniec celého bloku)
+                // ============================================================
                 if (nextStartTs != null) {
+                    // Walking segment pred ďalším vyriešeným segmentom
+                    // → koniec = čas odchodu nasledujúceho segmentu
                     newTimes[i] = {
                         startTs: curTime.startTs,
                         endTs: nextStartTs,
                         whenStr: `${formatTsLocal(curTime.startTs)} – ${formatTsLocal(nextStartTs)}`,
                     };
+                } else {
+                    // Walking segment je posledný → nechaj pôvodný endTs
+                    // (z pôvodného when alebo z dopočítaného segments.forEach)
+                    // Nič nemeniť
                 }
             }
         }
