@@ -5766,7 +5766,17 @@ const TransportApp = ({ userProfileData }) => {
                 resolvedIndexes.add(idx);
                 const range = seg.range || parseTransferWhenToRange(seg.when);
                 if (range) {
-                    resolvedRealTimes.set(idx, { startTs: range.startTs, endTs: range.endTs });
+                    // ============================================================
+                    // NOVÉ: Ak je to PRVÝ segment bloku a je walking, jeho trvanie
+                    // má byť 0 minút (startTs === endTs). Čas príchodu (endTs)
+                    // sa nastaví neskôr v kroku dopočtu – musí to byť čas
+                    // odchodu nasledujúceho (bus) segmentu.
+                    // ============================================================
+                    if (idx === 0) {
+                        resolvedRealTimes.set(idx, { startTs: range.startTs, endTs: range.startTs });
+                    } else {
+                        resolvedRealTimes.set(idx, { startTs: range.startTs, endTs: range.endTs });
+                    }
                 }
                 return;
             }
