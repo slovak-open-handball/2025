@@ -5756,7 +5756,11 @@ const TransportApp = ({ userProfileData }) => {
                 const seg = block[0];
                 const range = seg.range || parseTransferWhenToRange(seg.when);
                 if (range) {
-                    const whenStr = `${formatTsLocal(range.startTs)} – ${formatTsLocal(range.startTs)}`;
+                    // Walking segment, ktorý je sám v bloku, musí pokryť CELÝ
+                    // pôvodný interval (zvyšný čas), nie len nulový bod.
+                    // (Predtým sa nastavoval startTs === endTs, čo spôsobovalo,
+                    // že sa zobrazoval nulový čas namiesto zvyšného času.)
+                    const whenStr = `${formatTsLocal(range.startTs)} – ${formatTsLocal(range.endTs)}`;
                     const teamIds = (transfer.teamUid != null && transfer.teamIndex != null)
                         ? { teamUid: transfer.teamUid, teamIndex: transfer.teamIndex }
                         : findTeamIdentifiersByName(category, teamName);
