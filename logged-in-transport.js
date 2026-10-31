@@ -2579,6 +2579,10 @@ const TransportApp = ({ userProfileData }) => {
                                     recomputeParentSegmentsInPlace(draft);
                                     
                                     // Zapíšeme výsledok do patche
+                                    const finalWhen = (draft.when && String(draft.when).trim() !== '')
+                                        ? draft.when
+                                        : (baseRecord.when && String(baseRecord.when).trim() !== '' ? baseRecord.when : '');
+
                                     transfersPatch[key] = {
                                         category: draft.category,
                                         teamUid: draft.teamUid,
@@ -2586,7 +2590,7 @@ const TransportApp = ({ userProfileData }) => {
                                         dayKey: draft.dayKey,
                                         fromLocation: draft.fromLocation,
                                         toLocation: draft.toLocation,
-                                        when: draft.when,
+                                        when: finalWhen,
                                         text: draft.text,
                                         segments: draft.segments,
                                     };
@@ -6215,7 +6219,7 @@ const TransportApp = ({ userProfileData }) => {
             // Pôvodný when existuje → VŽDY ho zachovaj
             draft.when = originalWhenFromDraft;
         } else if (savedParentWhen) {
-            // NOVÉ: Parent mal `when` v DB → zachovaj ho
+            // Parent mal `when` v DB → zachovaj ho
             draft.when = savedParentWhen;
         } else if (parentIsFullyWalking) {
             draft.when = '';
@@ -6229,8 +6233,19 @@ const TransportApp = ({ userProfileData }) => {
                 draft.when = '';
             }
         } else {
-            // Žiadny bus, žiadny walking → when = ''
-            draft.when = '';
+            // ============================================================
+            // NOVÉ: Žiadny bus, žiadny walking, žiadny pôvodný when.
+            // Skús poskladať `when` z REÁLNYCH časov segmentov
+            // (napr. keď parent má intermediateStops a segmenty ešte
+            // neboli priradené, ale mali by sme poznať celkový interval).
+            // ============================================================
+            const allSegStart = draft.segments.map((s) => s.startTs).filter((ts) => ts != null);
+            const allSegEnd = draft.segments.map((s) => s.endTs).filter((ts) => ts != null);
+            if (allSegStart.length > 0 && allSegEnd.length > 0) {
+                draft.when = `${formatTsLocal(Math.min(...allSegStart))} – ${formatTsLocal(Math.max(...allSegEnd))}`;
+            } else {
+                draft.when = '';
+            }
         }
     };
     
@@ -8876,13 +8891,8 @@ const TransportApp = ({ userProfileData }) => {
                                 : null;
     
                             // NOVÉ: zvyšný čas na presun (len pre segmenty s reálnym časom)
-                            const remainingLabel = (t._hasRealTime === true && t._remainingMinutes != null && t._remainingMinutes > 0)
+                            const remainingLabel = (t._remainingMinutes != null && t._remainingMinutes > 0)
                                 ? `zvyšný čas na presun: ${t._remainingMinutes} min`
-                                : null;
-
-                            // NOVÉ: ak segment nemá reálny čas, zobraz výzvu
-                            const needsAssignmentLabel = (t._hasRealTime !== true)
-                                ? 'priraďte tento segment k busu alebo označte ako peši'
                                 : null;
     
                             return React.createElement(
@@ -8971,14 +8981,6 @@ const TransportApp = ({ userProfileData }) => {
                                         { className: 'text-xs text-amber-700 font-semibold mt-0.5 inline-flex items-center gap-1' },
                                         React.createElement('i', { className: 'fa-solid fa-hourglass-half' }),
                                         remainingLabel
-                                    ),
-                                // 6b. riadok – výzva na priradenie (ak segment nemá reálny čas)
-                                needsAssignmentLabel &&
-                                    React.createElement(
-                                        'span',
-                                        { className: 'text-xs text-orange-600 font-semibold mt-0.5 inline-flex items-center gap-1' },
-                                        React.createElement('i', { className: 'fa-solid fa-hand-pointer' }),
-                                        needsAssignmentLabel
                                     ),
                                 // 7. riadok – príznak "peši"
                                 t.isWalking === true &&
