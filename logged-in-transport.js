@@ -9687,10 +9687,15 @@ const TransportApp = ({ userProfileData }) => {
                                             displayStartTs = trRange.startTs;
                                             displayEndTs = trRange.endTs;
                                         
-                                            // Ak má walking segment _parentKey, nájdi nasledujúci
-                                            // priradený (bus) segment v rámci toho istého parenta.
                                             if (t._parentKey) {
                                                 const parentKey = t._parentKey;
+                                        
+                                                // ============================================================
+                                                // NOVÉ: Nájdi parent záznam (nie segment) – má v `when`
+                                                // uložený celý interval presunu.
+                                                // ============================================================
+                                                const parentRecord = savedTransfers.find((s) => s.key === parentKey);
+                                                const parentRange = parentRecord ? parseTransferWhenToRange(parentRecord.when) : null;
                                         
                                                 const parentSegments = [];
                                                 savedTransfers.forEach((other) => {
@@ -9724,13 +9729,16 @@ const TransportApp = ({ userProfileData }) => {
                                                 // ============================================================
                                                 // OPRAVA: Ak nasleduje bus segment, walking segment končí
                                                 // v čase odchodu busu. Ak NIE (walking je posledný v bloku),
-                                                // walking segment končí v celkovom čase konca parent bloku
-                                                // (maximum z endTs všetkých segmentov parenta).
+                                                // walking segment končí v celkovom čase konca parent bloku –
+                                                // použijeme `when` parent záznamu (má celý interval).
                                                 // ============================================================
                                                 if (nextAssignedStartTs != null && nextAssignedStartTs >= trRange.startTs) {
                                                     displayEndTs = nextAssignedStartTs;
+                                                } else if (parentRange && parentRange.endTs != null && parentRange.endTs > displayStartTs) {
+                                                    // Použi koniec parent záznamu
+                                                    displayEndTs = parentRange.endTs;
                                                 } else {
-                                                    // Nájdi maximum endTs zo všetkých segmentov parenta
+                                                    // Fallback – maximum z endTs všetkých segmentov parenta
                                                     let blockEndTs = null;
                                                     parentSegments.forEach((seg) => {
                                                         if (seg.range.endTs == null) return;
@@ -9742,8 +9750,6 @@ const TransportApp = ({ userProfileData }) => {
                                                     if (blockEndTs != null && blockEndTs > displayStartTs) {
                                                         displayEndTs = blockEndTs;
                                                     }
-                                                    // Ak aj tak je displayEndTs == displayStartTs (napr. parent má nulový interval),
-                                                    // nechaj pôvodné displayEndTs (bude to startTs – nulový, ale aspoň konzistentné)
                                                 }
                                         
                                                 if (displayEndTs != null && displayStartTs != null && displayEndTs > displayStartTs) {
