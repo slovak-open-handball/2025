@@ -5947,6 +5947,46 @@ const TransportApp = ({ userProfileData }) => {
         });
 
         // ============================================================
+        // NOVÉ: Pre walking segmenty, ktoré nasledujú PRED iným
+        // vyriešeným segmentom (typicky PRVÝ segment bloku = walking,
+        // za ním bus), nastav ich endTs na startTs nasledujúceho
+        // vyriešeného segmentu. Trvanie walking segmentu = 0 minút,
+        // ale čas príchodu = čas odchodu nasledujúceho segmentu.
+        // ============================================================
+        for (let i = 0; i < block.length - 1; i++) {
+            const seg = block[i];
+            const isWalkingSeg = seg.isWalking === true || resolvedKeys.has(seg.key);
+            if (!isWalkingSeg) continue;
+            const curTime = newTimes[i];
+            if (!curTime) continue;
+
+            // Nájdi nasledujúci vyriešený segment (bus/peší s reálnym časom)
+            let nextStartTs = null;
+            for (let k = i + 1; k < block.length; k++) {
+                if (newTimes[k] && newTimes[k].startTs != null) {
+                    nextStartTs = newTimes[k].startTs;
+                    break;
+                }
+            }
+            if (nextStartTs == null) continue;
+
+            // Ak je walking segment PRVÝ v bloku (i === 0), alebo jeho
+            // aktuálny endTs je väčší než nextStartTs, nastav endTs
+            // na nextStartTs (aby peší segment "skončil" v čase odchodu busu).
+            if (curTime.endTs == null || curTime.endTs > nextStartTs || i === 0) {
+                // Pre prvý walking segment: endTs = nextStartTs (čas odchodu busu)
+                // startTs zostáva pôvodný (čas, kedy tím vyšiel z ubytovania)
+                if (i === 0) {
+                    newTimes[i] = {
+                        startTs: curTime.startTs,
+                        endTs: nextStartTs,
+                        whenStr: `${formatTsLocal(curTime.startTs)} – ${formatTsLocal(nextStartTs)}`,
+                    };
+                }
+            }
+        }
+
+        // ============================================================
         // KROK 3: Zapíš nové časy do DB
         // ============================================================
         const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
