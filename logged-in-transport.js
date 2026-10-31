@@ -9736,7 +9736,36 @@ const TransportApp = ({ userProfileData }) => {
                                                 });
                                                 parentSegments.sort((a, b) => a.range.startTs - b.range.startTs);
                                         
+                                                // ============================================================
+                                                // OPRAVA: Nájdi PREDCHÁDZAJÚCI priradený (bus) segment.
+                                                // Ak existuje, walking segment musí začínať v čase jeho konca
+                                                // (t.j. v čase, kedy bus skončil jazdu). Tým sa zabezpečí,
+                                                // že po zmene času busu sa správne zobrazí nový čas začiatku
+                                                // walking segmentu.
+                                                // ============================================================
+                                                let prevAssignedEndTs = null;
+                                                for (const seg of parentSegments) {
+                                                    if (seg.key === t.key) continue;
+                                                    if (seg.range.startTs >= trRange.startTs) continue;  // budúce segmenty
+                                                    if (seg.range.endTs == null) continue;
+                                        
+                                                    const isAssigned = seg._isAssigned === true || isSegmentAssigned(seg);
+                                                    if (isAssigned && seg.isWalking !== true) {
+                                                        // Toto je priradený (bus) segment pred walking segmentom
+                                                        if (prevAssignedEndTs == null || seg.range.endTs > prevAssignedEndTs) {
+                                                            prevAssignedEndTs = seg.range.endTs;
+                                                        }
+                                                    }
+                                                }
+                                        
+                                                if (prevAssignedEndTs != null) {
+                                                    // Walking segment začína v čase konca predchádzajúceho busu
+                                                    displayStartTs = prevAssignedEndTs;
+                                                }
+                                        
+                                                // ============================================================
                                                 // Nájdi nasledujúci priradený (bus) segment za aktuálnym walking segmentom
+                                                // ============================================================
                                                 let nextAssignedStartTs = null;
                                                 for (const seg of parentSegments) {
                                                     if (seg.key === t.key) continue;
