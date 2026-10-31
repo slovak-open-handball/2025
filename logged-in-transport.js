@@ -7957,27 +7957,20 @@ const TransportApp = ({ userProfileData }) => {
                     expandedTransfers.push({
                         ...t,
                         key,
-                        when: whenStr,           // ← už obsahuje reálne časy z busu
                         text,
                         fromLocation: fromLoc,
                         toLocation: toLoc,
                         intermediateStops: [],
                         _parentKey: t.key,
                         _parentRoute: `${t.fromLocation} → ${t.toLocation}`,
-                        _remainingMinutes: remainingMinutes,
-                        _isAssigned: segmentAssigned[i],
+                        _remainingMinutes: null,
+                        _isAssigned: false,
                         isWalking: t.isWalking === true,
-                        // ============================================================
-                        // NOVÉ: Ak segment nemá čas a nie je peší, znamená to, že
-                        // ešte nie je priradený k busu. Zobrazíme ho v boxe
-                        // "Vygenerované presuny" s výzvou na priradenie.
-                        // ============================================================
-                        _hasRealTime: (ft.startTs != null && ft.endTs != null),
                     });
                 }
                 return;
             }
-    
+            
             // KROK 1: Reálne časy z autobusu
             const teamName = String(t.teamName || '').trim();
             const category = cleanCategory(t.category || '');
