@@ -5383,30 +5383,81 @@ const TransportApp = ({ userProfileData }) => {
         const original = editingTransfer;
         const stops = (editingTransferStops || []).map((s) => String(s || '').trim()).filter(Boolean);
         const parentKey = original._parentKey || original.key;
-
+    
         // ============================================================
         // NOVÉ: Vždy použi `when` z PARENTA (nie zo segmentu).
         //
         // Ak je `editingTransfer` segment (má `_parentKey`), jeho `when`
         // môže byť `null`. V takom prípade treba vziať `when` z parenta,
         // aby sa po úprave trasy nezmenil čas konca presunu.
+        //
+        // NOVÉ: Ak parent nemá `when` (je prázdny), skús ho poskladať
+        // z reálnych časov segmentov (startTs/endTs), aby sa nestratil
+        // čas, ktorý bol predtým definovaný.
         // ============================================================
         const originalWhen = (() => {
-            if (original._parentKey) {
-                const parent = savedTransfersRef.current.find((s) => s.key === original._parentKey);
-                if (parent && parent.when && String(parent.when).trim() !== '') {
-                    return parent.when;
+            // 1) Skús parent záznam
+            const parentRec = savedTransfersRef.current.find((s) => s.key === parentKey);
+            if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
+                return parentRec.when;
+            }
+    
+            // 2) Skús `original.when`
+            if (original.when && String(original.when).trim() !== '') {
+                return original.when;
+            }
+    
+            // 3) NOVÉ: Poskladaj z reálnych časov segmentov parenta
+            if (parentRec && Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
+                let earliestStart = null;
+                let latestEnd = null;
+                parentRec.segments.forEach((s) => {
+                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                        earliestStart = s.startTs;
+                    }
+                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                        latestEnd = s.endTs;
+                    }
+                });
+                if (earliestStart != null && latestEnd != null) {
+                    return `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                } else if (earliestStart != null) {
+                    return formatTsLocal(earliestStart);
+                } else if (latestEnd != null) {
+                    return formatTsLocal(latestEnd);
                 }
             }
-            return original.when;
+    
+            // 4) Skús `original.segments`
+            if (Array.isArray(original.segments) && original.segments.length > 0) {
+                let earliestStart = null;
+                let latestEnd = null;
+                original.segments.forEach((s) => {
+                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                        earliestStart = s.startTs;
+                    }
+                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                        latestEnd = s.endTs;
+                    }
+                });
+                if (earliestStart != null && latestEnd != null) {
+                    return `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                } else if (earliestStart != null) {
+                    return formatTsLocal(earliestStart);
+                } else if (latestEnd != null) {
+                    return formatTsLocal(latestEnd);
+                }
+            }
+    
+            return null;
         })();
     
         setEditingTransferSaving(true);
         try {
             await updateParentTransfer(parentKey, (draft) => {
                 draft.intermediateStops = stops;
-                // Pregeneruj segments z novej trasy (from/to); časy doplní recompute
                 draft.segments = buildDefaultSegments({ ...draft, intermediateStops: stops });
+                
                 // Zachovaj walking flagy pre segmenty, ktoré ostali rovnaké
                 const oldSegments = Array.isArray(original.segments) ? original.segments : [];
                 draft.segments.forEach((s) => {
@@ -6145,14 +6196,27 @@ const TransportApp = ({ userProfileData }) => {
         // ============================================================
         const nonWalkingSegments = draft.segments.filter((s) => s.isWalking !== true);
         const busSegments = nonWalkingSegments.filter((s) => s.busAssigned === true);
-    
+        
         const parentIsFullyWalking =
             draft.segments.length > 0 &&
             draft.segments.every((s) => s.isWalking === true);
-    
+        
+        // NOVÉ: Skús získať pôvodný `when` zo savedTransfers
+        const savedParentWhen = (() => {
+            if (!draft.key) return null;
+            const savedRec = (savedTransfersRef.current || []).find((s) => s.key === draft.key);
+            if (savedRec && savedRec.when && String(savedRec.when).trim() !== '') {
+                return savedRec.when;
+            }
+            return null;
+        })();
+        
         if (originalWhenFromDraft && String(originalWhenFromDraft).trim() !== '') {
             // Pôvodný when existuje → VŽDY ho zachovaj
             draft.when = originalWhenFromDraft;
+        } else if (savedParentWhen) {
+            // NOVÉ: Parent mal `when` v DB → zachovaj ho
+            draft.when = savedParentWhen;
         } else if (parentIsFullyWalking) {
             draft.when = '';
         } else if (busSegments.length > 0) {
@@ -6165,7 +6229,7 @@ const TransportApp = ({ userProfileData }) => {
                 draft.when = '';
             }
         } else {
-            // Žiadny bus, žiadny walking → when = '' (segmenty čakajú na priradenie)
+            // Žiadny bus, žiadny walking → when = ''
             draft.when = '';
         }
     };
