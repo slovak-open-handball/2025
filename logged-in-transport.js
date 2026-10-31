@@ -9457,6 +9457,20 @@ const TransportApp = ({ userProfileData }) => {
             if (selectedDayKey && t.dayKey !== selectedDayKey) return false;
             return true;
         });
+
+        const isSegmentAssigned = (t) => {
+            const tn = String(t.teamName || '').trim();
+            const cat = cleanCategory(t.category || '');
+            const dayKey = t.dayKey || '';
+            const fromLoc = normalizePlaceName(t.fromLocation || '');
+            const toLoc = normalizePlaceName(t.toLocation || '');
+            if (!fromLoc || !toLoc) return false;
+    
+            // Walking segment je vždy "vyriešený" (nemá reálny čas, len príznak)
+            if (t.isWalking === true) return true;
+    
+            return isSegmentCoveredByBusPath(dayKey, tn, cat, t.fromLocation, t.toLocation);
+        };
     
         // Pomocná: parsovanie "when" → čas od/do
         const parseWhenRange = (when) => {
@@ -9654,12 +9668,97 @@ const TransportApp = ({ userProfileData }) => {
                                     items.forEach((t) => {
                                         const range = parseWhenRange(t.when);
                                         const info = parseTransferText(t.text);
-                                        const timeFrom = range?.startTime || '';
-                                        const timeTo = range?.endTime || '';
+
+                                        // ============================================================
+                                        // NOVÉ: Pre walking segment vypočítaj zvyšný čas na presun
+                                        // rovnako ako v boxe "Vygenerované presuny".
+                                        //
+                                        // Walking segment môže byť súčasťou väčšieho parent bloku
+                                        // (má _parentKey). V tom prípade:
+                                        //  - nájdi nasledujúci priradený (bus) segment v rámci parenta
+                                        //  - displayEndTs = čas odchodu busu (startTs nasledujúceho segmentu)
+                                        //  - zvyšný čas = displayEndTs - startTs walking segmentu
+                                        //
+                                        // Ak walking segment nie je súčasťou parenta (samostatný walking),
+                                        // použi t.when priamo.
+                                        // ============================================================
+                                        let displayStartTs = null;
+                                        let displayEndTs = null;
+                                        let remainingMinutes = null;
+
+                                        const teamName = String(t.teamName || '').trim();
+                                        const category = cleanCategory(t.category || '');
+                                        const dayKey = t.dayKey || '';
+                                        const trRange = parseTransferWhenToRange(t.when);
+
+                                        if (trRange && trRange.startTs != null) {
+                                            displayStartTs = trRange.startTs;
+                                            displayEndTs = trRange.endTs;
+
+                                            // Ak má walking segment _parentKey, nájdi nasledujúci
+                                            // priradený (bus) segment v rámci toho istého parenta.
+                                            if (t._parentKey) {
+                                                const parentKey = t._parentKey;
+
+                                                // Zoznam všetkých segmentov parenta (parent + segmenty s _parentKey)
+                                                const parentSegments = [];
+                                                savedTransfers.forEach((other) => {
+                                                    if (String(other.teamName || '').trim() !== teamName) return;
+                                                    if (cleanCategory(other.category || '') !== category) return;
+                                                    if ((other.dayKey || '') !== dayKey) return;
+                                                    const otherParentKey = other._parentKey || other.key;
+                                                    if (otherParentKey !== parentKey) return;
+                                                    const r = parseTransferWhenToRange(other.when);
+                                                    if (!r || r.startTs == null) return;
+                                                    parentSegments.push({
+                                                        ...other,
+                                                        range: r,
+                                                    });
+                                                });
+                                                parentSegments.sort((a, b) => a.range.startTs - b.range.startTs);
+
+                                                // Nájdi nasledujúci priradený (bus) segment za aktuálnym walking segmentom
+                                                let nextAssignedStartTs = null;
+                                                for (const seg of parentSegments) {
+                                                    if (seg.key === t.key) continue;
+                                                    if (seg.range.startTs <= trRange.startTs) continue;
+
+                                                    const isAssigned = seg._isAssigned === true || isSegmentAssigned(seg);
+                                                    if (isAssigned && seg.isWalking !== true) {
+                                                        nextAssignedStartTs = seg.range.startTs;
+                                                        break;
+                                                    }
+                                                }
+
+                                                // Ak nasleduje bus, walking segment končí v čase odchodu busu
+                                                if (nextAssignedStartTs != null && nextAssignedStartTs >= trRange.startTs) {
+                                                    displayEndTs = nextAssignedStartTs;
+                                                }
+
+                                                // Prepočítaj zvyšný čas
+                                                if (displayEndTs != null && displayStartTs != null && displayEndTs > displayStartTs) {
+                                                    remainingMinutes = Math.round((displayEndTs - displayStartTs) / 60000);
+                                                }
+                                            }
+                                        }
+
+                                        // Fallback: ak sa nepodarilo prepočítať, použi pôvodné when
+                                        let timeFrom = range?.startTime || '';
+                                        let timeTo = range?.endTime || '';
+
+                                        if (displayStartTs != null && displayEndTs != null) {
+                                            const startFmt = formatTsLocal(displayStartTs);
+                                            const endFmt = formatTsLocal(displayEndTs);
+                                            const startTimeMatch = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt) : null;
+                                            const endTimeMatch = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt) : null;
+                                            if (startTimeMatch) timeFrom = startTimeMatch[1];
+                                            if (endTimeMatch) timeTo = endTimeMatch[1];
+                                        }
+
                                         const placeFrom = info?.from || '';
                                         const placeTo = info?.to || '';
                                         const textColor = getCategoryTextColor(t.category);
-    
+
                                         elements.push(
                                             React.createElement(
                                                 'tr',
@@ -9688,7 +9787,7 @@ const TransportApp = ({ userProfileData }) => {
                                                     { className: 'border border-gray-300 p-1 text-sm text-gray-800' },
                                                     placeTo || '—'
                                                 ),
-                                                // 5. tím (skratka alebo plný názov)
+                                                // 5. tím (skratka alebo plný názov) + NOVÉ: zvyšný čas
                                                 React.createElement(
                                                     'td',
                                                     {
@@ -9697,7 +9796,23 @@ const TransportApp = ({ userProfileData }) => {
                                                     },
                                                     (() => {
                                                         const shortcut = getTeamShortcut(t.category, t.teamName);
-                                                        return shortcut || t.teamName || '(neznámy tím)';
+                                                        const teamLabel = shortcut || t.teamName || '(neznámy tím)';
+                                                        if (remainingMinutes != null && remainingMinutes > 0) {
+                                                            return React.createElement(
+                                                                'span',
+                                                                { className: 'inline-flex items-center gap-1' },
+                                                                teamLabel,
+                                                                React.createElement(
+                                                                    'span',
+                                                                    {
+                                                                        className: 'text-[10px] text-amber-700 font-normal ml-1',
+                                                                        title: 'Zvyšný čas na presun'
+                                                                    },
+                                                                    `(${remainingMinutes} min)`
+                                                                )
+                                                            );
+                                                        }
+                                                        return teamLabel;
                                                     })()
                                                 ),
                                                 // 6. mazanie (X)
@@ -9718,7 +9833,6 @@ const TransportApp = ({ userProfileData }) => {
                                             )
                                         );
                                     });
-                                });
     
                                 return elements;
                             })()
