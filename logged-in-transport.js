@@ -5767,10 +5767,10 @@ const TransportApp = ({ userProfileData }) => {
                 const range = seg.range || parseTransferWhenToRange(seg.when);
                 if (range) {
                     // ============================================================
-                    // NOVÉ: Ak je to PRVÝ segment bloku a je walking, jeho trvanie
-                    // má byť 0 minút (startTs === endTs). Čas príchodu (endTs)
-                    // sa nastaví neskôr v kroku dopočtu – musí to byť čas
-                    // odchodu nasledujúceho (bus) segmentu.
+                    // NOVÉ: Prvý walking segment bloku má VŽDY nulové trvanie
+                    // (startTs === endTs). Jeho endTs sa nastaví neskôr
+                    // v kroku dopočtu – buď na startTs nasledujúceho
+                    // vyriešeného segmentu (bus), alebo zostane na startTs.
                     // ============================================================
                     if (idx === 0) {
                         resolvedRealTimes.set(idx, { startTs: range.startTs, endTs: range.startTs });
@@ -5968,15 +5968,32 @@ const TransportApp = ({ userProfileData }) => {
                     break;
                 }
             }
-            if (nextStartTs == null) continue;
 
-            // Ak je walking segment PRVÝ v bloku (i === 0), alebo jeho
-            // aktuálny endTs je väčší než nextStartTs, nastav endTs
-            // na nextStartTs (aby peší segment "skončil" v čase odchodu busu).
-            if (curTime.endTs == null || curTime.endTs > nextStartTs || i === 0) {
-                // Pre prvý walking segment: endTs = nextStartTs (čas odchodu busu)
-                // startTs zostáva pôvodný (čas, kedy tím vyšiel z ubytovania)
-                if (i === 0) {
+            // ============================================================
+            // NOVÉ: Pre PRVÝ walking segment (i === 0) VŽDY nastav endTs
+            // na startTs nasledujúceho vyriešeného segmentu (bus), ak existuje.
+            // Ak neexistuje (žiadny ďalší bus), walking segment zostane
+            // s nulovým trvaním (startTs === endTs).
+            // ============================================================
+            if (i === 0) {
+                if (nextStartTs != null) {
+                    newTimes[i] = {
+                        startTs: curTime.startTs,
+                        endTs: nextStartTs,
+                        whenStr: `${formatTsLocal(curTime.startTs)} – ${formatTsLocal(nextStartTs)}`,
+                    };
+                } else {
+                    // Žiadny ďalší vyriešený segment → nulové trvanie
+                    newTimes[i] = {
+                        startTs: curTime.startTs,
+                        endTs: curTime.startTs,
+                        whenStr: `${formatTsLocal(curTime.startTs)} – ${formatTsLocal(curTime.startTs)}`,
+                    };
+                }
+            } else if (curTime.endTs == null || curTime.endTs > (nextStartTs != null ? nextStartTs : curTime.startTs)) {
+                // Pre ostatné walking segmenty: ak endTs chýba alebo je väčší
+                // ako nasledujúci startTs, nastav endTs na nextStartTs
+                if (nextStartTs != null) {
                     newTimes[i] = {
                         startTs: curTime.startTs,
                         endTs: nextStartTs,
