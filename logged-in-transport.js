@@ -9284,6 +9284,16 @@ const TransportApp = ({ userProfileData }) => {
             const tB = rB?.startTime || '00:00';
             return tA.localeCompare(tB);
         });
+
+        // Pomocná: získa názov dňa z dayKey (napr. "Piatok")
+        const getDayNameFromDayKey = (dayKey) => {
+            if (!dayKey) return '';
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+            if (!m) return '';
+            const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+            if (isNaN(d.getTime())) return '';
+            return d.toLocaleDateString('sk-SK', { weekday: 'long' });
+        };
     
         return React.createElement(
             'div',
@@ -9327,12 +9337,6 @@ const TransportApp = ({ userProfileData }) => {
                             'tbody',
                             null,
                             (() => {
-                                // ============================================================
-                                // NOVÉ: Zoskup pešie presuny podľa dňa – pre každý deň
-                                // sa najprv vykreslí riadok s dátumom, POTOM hlavička
-                                // stĺpcov (Od, Do, Miesto od, Miesto do, Tím),
-                                // a až potom jednotlivé pešie presuny.
-                                // ============================================================
                                 const groupsByDay = new Map();
                                 sorted.forEach((t) => {
                                     const dayKey = t.dayKey || '';
@@ -9348,11 +9352,16 @@ const TransportApp = ({ userProfileData }) => {
                                     const items = groupsByDay.get(dayKey) || [];
 
                                     // ============================================================
-                                    // 1) Riadok s dátumom (rovnaký štýl ako v boxe autobusu)
+                                    // 1) Riadok s dátumom (rovnaký štýl ako v boxe autobusu) +
+                                    //    názov dňa (napr. "Piatok")
                                     // ============================================================
                                     const dateLabel = dayKey
                                         ? (formatDateDDMMYYYY(dayKey) || dayKey)
                                         : '—';
+                                    const dayName = dayKey ? getDayNameFromDayKey(dayKey) : '';
+                                    const capitalizedDayName = dayName
+                                        ? dayName.charAt(0).toUpperCase() + dayName.slice(1)
+                                        : '';
 
                                     elements.push(
                                         React.createElement(
@@ -9364,12 +9373,24 @@ const TransportApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'td',
                                                 {
-                                                    colSpan: 6,
+                                                    colSpan: 7, // 7 stĺpcov (Od, Do, Miesto od, Miesto do, Nástup, Výstup, Min) + mazanie? 
                                                     className: 'border border-gray-200 px-4 py-2 text-gray-800 text-center'
                                                 },
+                                                capitalizedDayName &&
+                                                    React.createElement(
+                                                        'span',
+                                                        { className: 'font-semibold capitalize' },
+                                                        capitalizedDayName
+                                                    ),
+                                                capitalizedDayName &&
+                                                    React.createElement(
+                                                        'span',
+                                                        { className: 'text-gray-500 mx-2' },
+                                                        '–'
+                                                    ),
                                                 React.createElement(
                                                     'span',
-                                                    { className: 'font-semibold' },
+                                                    null,
                                                     dateLabel
                                                 )
                                             )
@@ -9377,7 +9398,8 @@ const TransportApp = ({ userProfileData }) => {
                                     );
 
                                     // ============================================================
-                                    // 2) Hlavička stĺpcov pre daný deň
+                                    // 2) Hlavička stĺpcov pre daný deň – rovnaká ako v boxe autobusu
+                                    //    (Od, Do, Miesto od, Miesto do, Nástup, Výstup, Min) + mazanie
                                     // ============================================================
                                     elements.push(
                                         React.createElement(
@@ -9388,15 +9410,16 @@ const TransportApp = ({ userProfileData }) => {
                                             },
                                             React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '70px' } }, 'Od'),
                                             React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '70px' } }, 'Do'),
-                                            React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Miesto od'),
-                                            React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Miesto do'),
+                                            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '200px' } }, 'Miesto od'),
+                                            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '200px' } }, 'Miesto do'),
                                             React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Tím'),
-                                            React.createElement('th', { className: 'border border-gray-300 px-2 py-1 text-center', style: { width: '40px' } }, '')
+                                            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '36px' } }, '')
                                         )
                                     );
 
                                     // ============================================================
-                                    // 3) Riadky s pešími presunmi pre daný deň
+                                    // 3) Riadky s pešími presunmi pre daný deň – rovnaký štýl
+                                    //    ako riadky v boxe autobusu (bunky, triedy)
                                     // ============================================================
                                     items.forEach((t) => {
                                         const range = parseWhenRange(t.when);
@@ -9411,27 +9434,46 @@ const TransportApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'tr',
                                                 { key: t.key, className: 'hover:bg-gray-50' },
-                                                React.createElement('td', { className: 'border border-gray-300 px-2 py-1 text-center font-semibold text-blue-700' }, timeFrom || '—'),
-                                                React.createElement('td', { className: 'border border-gray-300 px-2 py-1 text-center font-semibold text-blue-700' }, timeTo || '—'),
-                                                React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, placeFrom || '—'),
-                                                React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, placeTo || '—'),
+                                                // 1. čas od
                                                 React.createElement(
                                                     'td',
-                                                    { className: 'border border-gray-300 px-2 py-1 font-semibold', style: { color: textColor } },
+                                                    { className: 'border border-gray-300 p-1 text-center text-sm font-semibold text-blue-700' },
+                                                    timeFrom || '—'
+                                                ),
+                                                // 2. čas do
+                                                React.createElement(
+                                                    'td',
+                                                    { className: 'border border-gray-300 p-1 text-center text-sm font-semibold text-blue-700' },
+                                                    timeTo || '—'
+                                                ),
+                                                // 3. miesto od
+                                                React.createElement(
+                                                    'td',
+                                                    { className: 'border border-gray-300 p-1 text-sm text-gray-800' },
+                                                    placeFrom || '—'
+                                                ),
+                                                // 4. miesto do
+                                                React.createElement(
+                                                    'td',
+                                                    { className: 'border border-gray-300 p-1 text-sm text-gray-800' },
+                                                    placeTo || '—'
+                                                ),
+                                                // 5. tím (skratka alebo plný názov)
+                                                React.createElement(
+                                                    'td',
+                                                    {
+                                                        className: 'border border-gray-300 p-1 text-sm font-semibold align-middle whitespace-nowrap',
+                                                        style: { color: textColor }
+                                                    },
                                                     (() => {
-                                                        // ============================================================
-                                                        // NOVÉ: Ak má tím nastavenú skratku, zobraz ju;
-                                                        // inak zobraz plný názov tímu (rovnako ako
-                                                        // v renderSavedTransfers).
-                                                        // ============================================================
                                                         const shortcut = getTeamShortcut(t.category, t.teamName);
                                                         return shortcut || t.teamName || '(neznámy tím)';
                                                     })()
                                                 ),
-                                                // Tlačidlo na odstránenie príznaku "peši"
+                                                // 6. mazanie (X)
                                                 React.createElement(
                                                     'td',
-                                                    { className: 'border border-gray-300 px-2 py-1 text-center' },
+                                                    { className: 'border border-gray-300 p-1 text-center' },
                                                     React.createElement(
                                                         'button',
                                                         {
