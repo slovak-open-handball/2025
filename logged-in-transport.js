@@ -5503,7 +5503,10 @@ const TransportApp = ({ userProfileData }) => {
         const category = cleanCategory(transfer.category || '');
         const dayKey = transfer.dayKey || '';
         const trRange = parseTransferWhenToRange(transfer.when);
-        if (!trRange) return true;
+        if (!trRange) {
+            console.warn('[TRANSPORT][arePreviousSegmentsResolved] Žiadny trRange pre:', transfer);
+            return true;
+        }
     
         // ============================================================
         // NOVÉ: Rozlož VŠETKY presuny toho istého tímu v ten istý deň
@@ -5724,8 +5727,21 @@ const TransportApp = ({ userProfileData }) => {
     // Vracia len autobusy, ktoré majú AJ nástup AJ výstup
     // (aby tím v buse neuviazol).
     // ============================================================
-    const findMatchingBusRows = (transfer) => {        
+    const findMatchingBusRows = (transfer) => {
         if (!transfer) return [];
+
+        console.log('[TRANSPORT][findMatchingBusRows] VSTUP:', {
+            teamName: transfer.teamName,
+            category: transfer.category,
+            dayKey: transfer.dayKey,
+            fromLocation: transfer.fromLocation,
+            toLocation: transfer.toLocation,
+            when: transfer.when,
+            isWalking: transfer.isWalking,
+            _parentKey: transfer._parentKey,
+            _hasRealTime: transfer._hasRealTime,
+            _isAssigned: transfer._isAssigned,
+        });
 
         // ============================================================
         // NOVÉ: Ak predchádzajúce segmenty nie sú vyriešené, vráť
@@ -5740,6 +5756,13 @@ const TransportApp = ({ userProfileData }) => {
         const trFrom = normalizePlaceName(transfer.fromLocation);
         const trTo = normalizePlaceName(transfer.toLocation);
         const trDayKey = transfer.dayKey || null;
+
+        if (!trRange || !trFrom || !trTo || !trDayKey) {
+            console.warn('[TRANSPORT][findMatchingBusRows] Chýba vstup:', {
+                trRange, trFrom, trTo, trDayKey,
+            });
+            return [];
+        }
     
         if (!trRange || !trFrom || !trTo || !trDayKey) return [];
     
