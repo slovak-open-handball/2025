@@ -3070,7 +3070,8 @@ const TransportApp = ({ userProfileData }) => {
                 console.error('[TRANSPORT] Chyba pri načítaní lookup tímov:', err);
             }
         };
-        await loadTeamsLookup();
+        
+        loadTeamsLookup();
 
         // 0b2) VEĽKOSTI POLÍ TÍMOV (počty členov) – pre zobrazenie za názvom tímu v presunoch
         let unsubscribeTeamCounts = null;
