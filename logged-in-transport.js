@@ -5498,13 +5498,29 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     const arePreviousSegmentsResolved = (transfer) => {
         if (!transfer) return true;
-    
-        const teamName = String(transfer.teamName || '').trim();
-        const category = cleanCategory(transfer.category || '');
-        const dayKey = transfer.dayKey || '';
-        const trRange = parseTransferWhenToRange(transfer.when);
+
+        // NOVÉ: fallback pre `when`
+        let effectiveWhen = transfer.when;
+        if (!effectiveWhen || String(effectiveWhen).trim() === '') {
+            const segs = Array.isArray(transfer.segments) ? transfer.segments : [];
+            let earliestStart = null;
+            let latestEnd = null;
+            segs.forEach((s) => {
+                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) earliestStart = s.startTs;
+                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) latestEnd = s.endTs;
+            });
+            if (earliestStart != null && latestEnd != null) {
+                effectiveWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+            } else if (earliestStart != null) {
+                effectiveWhen = formatTsLocal(earliestStart);
+            } else if (latestEnd != null) {
+                effectiveWhen = formatTsLocal(latestEnd);
+            }
+        }
+
+        const trRange = parseTransferWhenToRange(effectiveWhen);
         if (!trRange) {
-            console.warn('[TRANSPORT][arePreviousSegmentsResolved] Žiadny trRange pre:', transfer);
+            console.warn('[TRANSPORT][arePreviousSegmentsResolved] Žiadny trRange pre:', { transfer, effectiveWhen });
             return true;
         }
     
@@ -5729,37 +5745,45 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     const findMatchingBusRows = (transfer) => {
         if (!transfer) return [];
-
-        console.log('[TRANSPORT][findMatchingBusRows] VSTUP:', {
-            teamName: transfer.teamName,
-            category: transfer.category,
-            dayKey: transfer.dayKey,
-            fromLocation: transfer.fromLocation,
-            toLocation: transfer.toLocation,
-            when: transfer.when,
-            isWalking: transfer.isWalking,
-            _parentKey: transfer._parentKey,
-            _hasRealTime: transfer._hasRealTime,
-            _isAssigned: transfer._isAssigned,
-        });
-
+    
         // ============================================================
-        // NOVÉ: Ak predchádzajúce segmenty nie sú vyriešené, vráť
-        // prázdny zoznam – ale s informáciou, prečo (pre debug).
+        // NOVÉ: Ak `when` chýba, skús ho poskladať z reálnych časov
+        // segmentov (rovnaký fallback ako v renderi modálneho okna).
+        //
+        // Tým sa zabezpečí, že segment, ktorý má reálne časy v segments
+        // (napr. 09:16 – 12:16), sa dá priradiť k busu, aj keď jeho
+        // `when` je null.
         // ============================================================
-        if (!arePreviousSegmentsResolved(transfer)) {
-            console.warn('[TRANSPORT] findMatchingBusRows: predchádzajúce segmenty nie sú vyriešené pre', transfer);
-            return [];
+        let effectiveWhen = transfer.when;
+        if (!effectiveWhen || String(effectiveWhen).trim() === '') {
+            const segs = Array.isArray(transfer.segments) ? transfer.segments : [];
+            let earliestStart = null;
+            let latestEnd = null;
+            segs.forEach((s) => {
+                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                    earliestStart = s.startTs;
+                }
+                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                    latestEnd = s.endTs;
+                }
+            });
+            if (earliestStart != null && latestEnd != null) {
+                effectiveWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+            } else if (earliestStart != null) {
+                effectiveWhen = formatTsLocal(earliestStart);
+            } else if (latestEnd != null) {
+                effectiveWhen = formatTsLocal(latestEnd);
+            }
         }
     
-        const trRange = parseTransferWhenToRange(transfer.when);
+        const trRange = parseTransferWhenToRange(effectiveWhen);
         const trFrom = normalizePlaceName(transfer.fromLocation);
         const trTo = normalizePlaceName(transfer.toLocation);
         const trDayKey = transfer.dayKey || null;
-
+    
         if (!trRange || !trFrom || !trTo || !trDayKey) {
             console.warn('[TRANSPORT][findMatchingBusRows] Chýba vstup:', {
-                trRange, trFrom, trTo, trDayKey,
+                effectiveWhen, trRange, trFrom, trTo, trDayKey,
             });
             return [];
         }
