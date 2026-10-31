@@ -5664,9 +5664,21 @@ const TransportApp = ({ userProfileData }) => {
     
         allSegments.sort((a, b) => a.range.startTs - b.range.startTs);
     
+        // ============================================================
+        // NOVÉ: Pre porovnanie aktuálneho segmentu nepoužívaj `key`
+        // (kľúče sa môžu líšiť, lebo `seg.key` používa vypočítaný
+        // `when`, kým `transfer.key` môže mať prázdny `when`).
+        // Porovnávaj `fromLocation` + `toLocation` (normalizované).
+        // ============================================================
+        const transferFromNorm = normalizePlaceName(transfer.fromLocation || '');
+        const transferToNorm = normalizePlaceName(transfer.toLocation || '');
+    
         for (const seg of allSegments) {
-            // Preskoč samotný aktuálny transfer
-            if (seg.key === transfer.key) continue;
+            // Preskoč samotný aktuálny transfer (podľa from → to)
+            const segFromNorm = normalizePlaceName(seg.fromLocation || '');
+            const segToNorm = normalizePlaceName(seg.toLocation || '');
+            if (segFromNorm === transferFromNorm && segToNorm === transferToNorm) continue;
+    
             // Preskoč neskoršie segmenty
             if (seg.range.startTs >= trRange.startTs) continue;
     
