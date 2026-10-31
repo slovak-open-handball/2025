@@ -9686,12 +9686,12 @@ const TransportApp = ({ userProfileData }) => {
                                         if (trRange && trRange.startTs != null) {
                                             displayStartTs = trRange.startTs;
                                             displayEndTs = trRange.endTs;
-
+                                        
                                             // Ak má walking segment _parentKey, nájdi nasledujúci
                                             // priradený (bus) segment v rámci toho istého parenta.
                                             if (t._parentKey) {
                                                 const parentKey = t._parentKey;
-
+                                        
                                                 const parentSegments = [];
                                                 savedTransfers.forEach((other) => {
                                                     if (String(other.teamName || '').trim() !== teamName) return;
@@ -9707,23 +9707,45 @@ const TransportApp = ({ userProfileData }) => {
                                                     });
                                                 });
                                                 parentSegments.sort((a, b) => a.range.startTs - b.range.startTs);
-
+                                        
+                                                // Nájdi nasledujúci priradený (bus) segment za aktuálnym walking segmentom
                                                 let nextAssignedStartTs = null;
                                                 for (const seg of parentSegments) {
                                                     if (seg.key === t.key) continue;
                                                     if (seg.range.startTs <= trRange.startTs) continue;
-
+                                        
                                                     const isAssigned = seg._isAssigned === true || isSegmentAssigned(seg);
                                                     if (isAssigned && seg.isWalking !== true) {
                                                         nextAssignedStartTs = seg.range.startTs;
                                                         break;
                                                     }
                                                 }
-
+                                        
+                                                // ============================================================
+                                                // OPRAVA: Ak nasleduje bus segment, walking segment končí
+                                                // v čase odchodu busu. Ak NIE (walking je posledný v bloku),
+                                                // walking segment končí v celkovom čase konca parent bloku
+                                                // (maximum z endTs všetkých segmentov parenta).
+                                                // ============================================================
                                                 if (nextAssignedStartTs != null && nextAssignedStartTs >= trRange.startTs) {
                                                     displayEndTs = nextAssignedStartTs;
+                                                } else {
+                                                    // Nájdi maximum endTs zo všetkých segmentov parenta
+                                                    let blockEndTs = null;
+                                                    parentSegments.forEach((seg) => {
+                                                        if (seg.range.endTs == null) return;
+                                                        if (blockEndTs == null || seg.range.endTs > blockEndTs) {
+                                                            blockEndTs = seg.range.endTs;
+                                                        }
+                                                    });
+                                        
+                                                    if (blockEndTs != null && blockEndTs > displayStartTs) {
+                                                        displayEndTs = blockEndTs;
+                                                    }
+                                                    // Ak aj tak je displayEndTs == displayStartTs (napr. parent má nulový interval),
+                                                    // nechaj pôvodné displayEndTs (bude to startTs – nulový, ale aspoň konzistentné)
                                                 }
-
+                                        
                                                 if (displayEndTs != null && displayStartTs != null && displayEndTs > displayStartTs) {
                                                     remainingMinutes = Math.round((displayEndTs - displayStartTs) / 60000);
                                                 }
