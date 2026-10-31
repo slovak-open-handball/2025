@@ -8105,10 +8105,6 @@ const TransportApp = ({ userProfileData }) => {
                     finalTimes[i] = { startTs: rt.startTs, endTs: rt.endTs };
                     continue;
                 }
-                const realSeg = realSegmentTimes[i];
-                if (realSeg && realSeg.startTs != null && realSeg.endTs != null) {
-                    finalTimes[i] = { startTs: realSeg.startTs, endTs: realSeg.endTs };
-                }
             }
             
             // 2) Čiastočne vyriešené segmenty (máme len nástup alebo len výstup)
@@ -8187,10 +8183,6 @@ const TransportApp = ({ userProfileData }) => {
                     for (let k = i + 1; k < route.length - 1; k++) {
                         if (segmentAssigned[k] && finalTimes[k] && finalTimes[k].startTs != null) {
                             endTs = finalTimes[k].startTs;
-                            break;
-                        }
-                        if (realSegmentTimes[k] && realSegmentTimes[k].startTs != null) {
-                            endTs = realSegmentTimes[k].startTs;
                             break;
                         }
                     }
