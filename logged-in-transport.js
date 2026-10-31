@@ -5676,8 +5676,10 @@ const TransportApp = ({ userProfileData }) => {
             const segToNorm = normalizePlaceName(seg.toLocation || '');
             if (segFromNorm === transferFromNorm && segToNorm === transferToNorm) continue;
     
+            // ============================================================
             // OPRAVA: Ak ide o prvý segment parenta (začína tam, kde parent), 
             // nemôže mať žiadny predchádzajúci segment. Tým pádom nemôže blokovať priradenie.
+            // ============================================================
             if (seg._parentKey) {
                 const parent = savedTransfers.find(p => p.key === seg._parentKey);
                 if (parent) {
