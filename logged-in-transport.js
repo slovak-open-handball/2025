@@ -6061,6 +6061,12 @@ const TransportApp = ({ userProfileData }) => {
             patch[newKey] = base;
         });
 
+        block.forEach((seg, idx) => {
+            if (seg.isWalking === true) {
+                console.log('[TRANSPORT][DEBUG] walking segment', idx, 'newTime:', newTimes[idx]);
+            }
+        });
+
         await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: patch }, { merge: true });
     };
 
