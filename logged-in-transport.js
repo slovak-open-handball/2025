@@ -2531,21 +2531,7 @@ const TransportApp = ({ userProfileData }) => {
                                         fromLocation = m[1].trim();
                                         toLocation = m[2].trim();
                                     }
-                    
-                                    const existingSaved = savedTransfers.find((s) => s.key === key);
-                    
-                                    // ============================================================
-                                    // NOVÉ: Každý presun musí mať vlastný dokument so segments
-                                    // (aj s časmi busu) a intermediateStops.
-                                    //
-                                    // Pravidlá:
-                                    //  - Ak záznam už existuje a má manuálne úpravy (intermediateStops,
-                                    //    isWalking, segments s busAssigned), ZACHOVÁME ich.
-                                    //  - Ak záznam neexistuje, vytvoríme ho s default segments
-                                    //    z `buildDefaultSegments`.
-                                    //  - `segments` sa VŽDY dopočítajú podľa aktuálnych busRows
-                                    //    cez `recomputeParentSegmentsInPlace` (aby mali reálne časy).
-                                    // ============================================================
+                                        
                                     const existingSaved = savedTransfers.find((s) => s.key === key);
                                     
                                     // Základný záznam (bez segments – tie dopočítame nižšie)
