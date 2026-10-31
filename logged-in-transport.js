@@ -5685,7 +5685,12 @@ const TransportApp = ({ userProfileData }) => {
             )
         )
         .map((t) => ({ ...t, range: parseTransferWhenToRange(t.when) }))
-        .filter((t) => t.range != null);
+        // ============================================================
+        // NOVÉ: Walking segmenty ponechaj aj vtedy, ak nemajú
+        // parsovateľný `when` (t.j. `range` je null). Ich čas sa
+        // dopočíta v `recomputeBlock` na základe susedov.
+        // ============================================================
+        .filter((t) => t.range != null || t.isWalking === true);
 
         const trRange = parseTransferWhenToRange(transfer.when);
         if (!trRange) return;
