@@ -6660,10 +6660,6 @@ const TransportApp = ({ userProfileData }) => {
                 shouldRenameKey = (newKey !== transfer.key);
             }
     
-            // ============================================================
-            // OPRAVA (Chyba 10): Doplň teamUid/teamIndex, aby recomputeBlock
-            // vedel nájsť peší segment v savedTransfers.
-            // ============================================================
             const category = cleanCategory(transfer.category || '');
             const teamName = String(transfer.teamName || '').trim();
             const ids = (transfer.teamUid != null && transfer.teamIndex != null)
@@ -6680,51 +6676,108 @@ const TransportApp = ({ userProfileData }) => {
             delete walkingTransfer.key;
     
             const transfersPatch = {};
-            if (shouldRenameKey) {
-                transfersPatch[transfer.key] = deleteField();
-            }
-            transfersPatch[newKey] = {
-                category: transfer.category,
-                when: newWhen,
-                text: transfer.text,
-                fromLocation: transfer.fromLocation,
-                toLocation: transfer.toLocation,
-                dayKey: transfer.dayKey,
-                isWalking: true,
-                walkingSetAt: walkingTransfer.walkingSetAt,
-                walkingSetBy: walkingTransfer.walkingSetBy,
-            };
-    
-            // OPRAVA: Doplň teamUid/teamIndex
-            if (ids) {
-                transfersPatch[newKey].teamUid = ids.teamUid;
-                transfersPatch[newKey].teamIndex = ids.teamIndex;
-            }
-    
-            if (Array.isArray(transfer.intermediateStops) && transfer.intermediateStops.length > 0) {
-                transfersPatch[newKey].intermediateStops = transfer.intermediateStops;
+            
+            // ============================================================
+            // NOVÉ: Ak je to PARENT (nemá _parentKey), neprepisujeme
+            // jeho when na 1 min. Namiesto toho:
+            //  - ponecháme parent s pôvodným when (celý interval)
+            //  - pridáme isWalking: true (aby sa vedelo, že je peší)
+            //  - vytvoríme NOVÝ segment s when = startTs – startTs+1min
+            //    a _parentKey = parentKey
+            //
+            // Ak je to SEGMENT (má _parentKey), prepíšeme jeho when
+            // na startTs – startTs+1min (to je OK, segment má 1 min).
+            // ============================================================
+            const isSegment = transfer._parentKey && transfer._parentKey !== transfer.key;
+            
+            if (isSegment) {
+                // Upravujeme segment – prepíšeme jeho when na 1 min
+                if (shouldRenameKey) {
+                    transfersPatch[transfer.key] = deleteField();
+                }
+                transfersPatch[newKey] = {
+                    category: transfer.category,
+                    when: newWhen,
+                    text: transfer.text,
+                    fromLocation: transfer.fromLocation,
+                    toLocation: transfer.toLocation,
+                    dayKey: transfer.dayKey,
+                    isWalking: true,
+                    walkingSetAt: walkingTransfer.walkingSetAt,
+                    walkingSetBy: walkingTransfer.walkingSetBy,
+                    _parentKey: transfer._parentKey,  // ← zachovať parentKey!
+                };
+                if (ids) {
+                    transfersPatch[newKey].teamUid = ids.teamUid;
+                    transfersPatch[newKey].teamIndex = ids.teamIndex;
+                }
+                if (Array.isArray(transfer.intermediateStops) && transfer.intermediateStops.length > 0) {
+                    transfersPatch[newKey].intermediateStops = transfer.intermediateStops;
+                }
+            } else {
+                // Upravujeme parent – NEprepisujeme parent when.
+                // Namiesto toho:
+                // 1) Ponecháme parent s pôvodným when + isWalking: true
+                // 2) Vytvoríme nový segment s when = startTs – startTs+1min
+                
+                // 1) Parent zostáva s pôvodným when (len pridáme isWalking)
+                transfersPatch[transfer.key] = {
+                    category: transfer.category,
+                    when: transfer.when,  // ← PÔVODNÝ when (celý interval)
+                    text: transfer.text,
+                    fromLocation: transfer.fromLocation,
+                    toLocation: transfer.toLocation,
+                    dayKey: transfer.dayKey,
+                    isWalking: true,
+                    walkingSetAt: walkingTransfer.walkingSetAt,
+                    walkingSetBy: walkingTransfer.walkingSetBy,
+                };
+                if (ids) {
+                    transfersPatch[transfer.key].teamUid = ids.teamUid;
+                    transfersPatch[transfer.key].teamIndex = ids.teamIndex;
+                }
+                if (Array.isArray(transfer.intermediateStops) && transfer.intermediateStops.length > 0) {
+                    transfersPatch[transfer.key].intermediateStops = transfer.intermediateStops;
+                }
+                
+                // 2) Vytvoríme nový segment s 1 min trvaním
+                // (key = buildTransferKey s novým when)
+                const segmentWhen = `${formatTsLocal(originalRange.startTs)} – ${formatTsLocal(originalRange.startTs + MIN_WALKING_MS)}`;
+                const segmentKey = buildTransferKey(transfer.category, transfer.teamName, segmentWhen, transfer.text);
+                
+                transfersPatch[segmentKey] = {
+                    category: transfer.category,
+                    when: segmentWhen,
+                    text: transfer.text,
+                    fromLocation: transfer.fromLocation,
+                    toLocation: transfer.toLocation,
+                    dayKey: transfer.dayKey,
+                    isWalking: true,
+                    walkingSetAt: walkingTransfer.walkingSetAt,
+                    walkingSetBy: walkingTransfer.walkingSetBy,
+                    _parentKey: transfer.key,  // ← segment patrí k parentovi
+                };
+                if (ids) {
+                    transfersPatch[segmentKey].teamUid = ids.teamUid;
+                    transfersPatch[segmentKey].teamIndex = ids.teamIndex;
+                }
             }
     
             await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: transfersPatch }, { merge: true });
     
-            // ============================================================
-            // OPRAVA (Chyba 5): Počkať na onSnapshot pred recomputeBlock,
-            // aby savedTransfers obsahoval nový peší segment.
-            // ============================================================
+            // Počkať na onSnapshot pred recomputeBlock
             try {
                 await new Promise((r) => setTimeout(r, 300));
                 await recomputeBlock(
-                    { ...walkingTransfer, key: newKey, teamUid: ids?.teamUid, teamIndex: ids?.teamIndex },
-                    new Set([newKey])
+                    { ...walkingTransfer, key: isSegment ? newKey : transfer.key, teamUid: ids?.teamUid, teamIndex: ids?.teamIndex },
+                    new Set([isSegment ? newKey : transfer.key])
                 );
             } catch (recomputeErr) {
                 console.error('[TRANSPORT] Chyba pri prepočte bloku po označení peši:', recomputeErr);
             }
     
             window.showGlobalNotification(
-                shouldRenameKey
-                    ? 'Presun bol označený ako „peši" (trvanie natiahnuté na minimálne 1 min, nasledujúce segmenty posunuté).'
-                    : 'Presun bol označený ako „peši" (nasledujúce segmenty posunuté).',
+                'Presun bol označený ako „peši".',
                 'success'
             );
             setTransferActionModal(null);
