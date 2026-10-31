@@ -5676,11 +5676,8 @@ const TransportApp = ({ userProfileData }) => {
             const segToNorm = normalizePlaceName(seg.toLocation || '');
             if (segFromNorm === transferFromNorm && segToNorm === transferToNorm) continue;
     
-            // ============================================================
-            // OPRAVA: Ak ide o prvý segment parenta (začína tam, kde parent),
-            // nemôže mať žiadny predchádzajúci segment. 
-            // Tým pádom nemôže blokovať priradenie.
-            // ============================================================
+            // OPRAVA: Ak ide o prvý segment parenta (začína tam, kde parent), 
+            // nemôže mať žiadny predchádzajúci segment. Tým pádom nemôže blokovať priradenie.
             if (seg._parentKey) {
                 const parent = savedTransfers.find(p => p.key === seg._parentKey);
                 if (parent) {
@@ -5760,6 +5757,8 @@ const TransportApp = ({ userProfileData }) => {
             // a VŠETKY výstupné kandidáty (placeTo === trTo)
             const boardingCandidates = [];
             const alightingCandidates = [];
+            let isCurrentSegmentAlreadyAssignedToThisBus = false;
+            const currentTeamKey = `${transfer.teamName}|${transfer.category || ''}`;
     
             sortedRows.forEach((row) => {
                 const rowFrom = normalizePlaceName(row.placeFrom);
@@ -5788,14 +5787,27 @@ const TransportApp = ({ userProfileData }) => {
                 ) {
                     alightingCandidates.push({ row, timeTs: rowTimeToTs });
                 }
+
+                // OPRAVA: Zisti, či tento segment už nie je priradený tomuto autobusu
+                const hasTeamIn = (row.teamsIn || []).includes(currentTeamKey);
+                const hasTeamOut = (row.teamsOut || []).includes(currentTeamKey);
+                if (hasTeamIn && rowFrom === trFrom) {
+                    isCurrentSegmentAlreadyAssignedToThisBus = true;
+                }
+                if (hasTeamOut && rowTo === trTo) {
+                    isCurrentSegmentAlreadyAssignedToThisBus = true;
+                }
             });
     
             // ============================================================
-            // NOVÉ: Ak nemáme AJ nástup AJ výstup → bus nie je vhodný.
-            // (Predtým sa zobrazovali aj bus-y len s nástupom alebo len s výstupom,
-            //  čo spôsobovalo, že tím v buse uviazol.)
+            // NOVÉ: Ak nemáme AJ nástup AJ výstup, bus nie je vhodný...
+            // ALE ak je tento segment už priradený tomuto autobusu, 
+            // tak ho zobrazíme aj tak (aby sa dal odobrať alebo upraviť).
             // ============================================================
-            if (boardingCandidates.length === 0 || alightingCandidates.length === 0) {
+            if (
+                (boardingCandidates.length === 0 || alightingCandidates.length === 0) &&
+                !isCurrentSegmentAlreadyAssignedToThisBus
+            ) {
                 return;
             }
     
@@ -10632,6 +10644,12 @@ const TransportApp = ({ userProfileData }) => {
 
                                 const hasBoarding = !!m.boardingRow;
                                 const hasAlighting = !!m.alightingRow;
+                                
+                                // Zisti, či tím už je v tomto buse na tomto segmente
+                                const teamKey = `${transferActionModal.transfer.teamName}|${transferActionModal.transfer.category || ''}`;
+                                const isAlreadyInBus = 
+                                    (m.boardingRow && (m.boardingRow.teamsIn || []).includes(teamKey)) ||
+                                    (m.alightingRow && (m.alightingRow.teamsOut || []).includes(teamKey));
 
                                 return React.createElement(
                                     'li',
