@@ -9447,7 +9447,7 @@ const TransportApp = ({ userProfileData }) => {
         );
     };
 
-    // ============================================================
+        // ============================================================
     // RENDER – box pre pešie presuny (zobrazí sa vedľa autobusov)
     // ============================================================
     const renderWalkingTransfersBox = () => {
@@ -9458,6 +9458,10 @@ const TransportApp = ({ userProfileData }) => {
             return true;
         });
 
+        // ============================================================
+        // Pomocná: zisti, či je segment priradený (rovnaká logika
+        // ako v renderSavedTransfers)
+        // ============================================================
         const isSegmentAssigned = (t) => {
             const tn = String(t.teamName || '').trim();
             const cat = cleanCategory(t.category || '');
@@ -9465,13 +9469,13 @@ const TransportApp = ({ userProfileData }) => {
             const fromLoc = normalizePlaceName(t.fromLocation || '');
             const toLoc = normalizePlaceName(t.toLocation || '');
             if (!fromLoc || !toLoc) return false;
-    
+
             // Walking segment je vždy "vyriešený" (nemá reálny čas, len príznak)
             if (t.isWalking === true) return true;
-    
+
             return isSegmentCoveredByBusPath(dayKey, tn, cat, t.fromLocation, t.toLocation);
         };
-    
+
         // Pomocná: parsovanie "when" → čas od/do
         const parseWhenRange = (when) => {
             if (!when) return null;
@@ -9503,7 +9507,7 @@ const TransportApp = ({ userProfileData }) => {
                 endTime: found[1].time,
             };
         };
-    
+
         // Pomocná: parsovanie textu "Presun z X do Y"
         const parseTransferText = (text) => {
             if (!text) return null;
@@ -9519,7 +9523,7 @@ const TransportApp = ({ userProfileData }) => {
                 to: normalizePlace(m[2].trim()),
             };
         };
-    
+
         // Zoradenie podľa času začiatku
         const sorted = [...walkingTransfers].sort((a, b) => {
             const rA = parseWhenRange(a.when);
@@ -9528,7 +9532,7 @@ const TransportApp = ({ userProfileData }) => {
             const tB = rB?.startTime || '00:00';
             return tA.localeCompare(tB);
         });
-    
+
         // Pomocná: získa názov dňa z dayKey (napr. "Piatok")
         const getDayNameFromDayKey = (dayKey) => {
             if (!dayKey) return '';
@@ -9538,7 +9542,7 @@ const TransportApp = ({ userProfileData }) => {
             if (isNaN(d.getTime())) return '';
             return d.toLocaleDateString('sk-SK', { weekday: 'long' });
         };
-    
+
         return React.createElement(
             'div',
             {
@@ -9587,17 +9591,16 @@ const TransportApp = ({ userProfileData }) => {
                                     if (!groupsByDay.has(dayKey)) groupsByDay.set(dayKey, []);
                                     groupsByDay.get(dayKey).push(t);
                                 });
-    
+
                                 const sortedDayKeys = [...groupsByDay.keys()].sort();
-    
+
                                 const elements = [];
-    
+
                                 sortedDayKeys.forEach((dayKey, dayIdx) => {
                                     const items = groupsByDay.get(dayKey) || [];
-    
+
                                     // ============================================================
-                                    // 1) Riadok s dátumom (rovnaký štýl ako v boxe autobusu) +
-                                    //    názov dňa (napr. "Piatok")
+                                    // 1) Riadok s dátumom
                                     // ============================================================
                                     const dateLabel = dayKey
                                         ? (formatDateDDMMYYYY(dayKey) || dayKey)
@@ -9606,7 +9609,7 @@ const TransportApp = ({ userProfileData }) => {
                                     const capitalizedDayName = dayName
                                         ? dayName.charAt(0).toUpperCase() + dayName.slice(1)
                                         : '';
-    
+
                                     elements.push(
                                         React.createElement(
                                             'tr',
@@ -9617,7 +9620,7 @@ const TransportApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'td',
                                                 {
-                                                    colSpan: 7, // 7 stĺpcov (Od, Do, Miesto od, Miesto do, Nástup, Výstup, Min) + mazanie? 
+                                                    colSpan: 7,
                                                     className: 'border border-gray-200 px-4 py-2 text-gray-800 text-center text-sm'
                                                 },
                                                 capitalizedDayName &&
@@ -9640,10 +9643,9 @@ const TransportApp = ({ userProfileData }) => {
                                             )
                                         )
                                     );
-    
+
                                     // ============================================================
-                                    // 2) Hlavička stĺpcov pre daný deň – rovnaká ako v boxe autobusu
-                                    //    (Od, Do, Miesto od, Miesto do, Nástup, Výstup, Min) + mazanie
+                                    // 2) Hlavička stĺpcov pre daný deň
                                     // ============================================================
                                     elements.push(
                                         React.createElement(
@@ -9660,10 +9662,9 @@ const TransportApp = ({ userProfileData }) => {
                                             React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '36px' } }, '')
                                         )
                                     );
-    
+
                                     // ============================================================
-                                    // 3) Riadky s pešími presunmi pre daný deň – rovnaký štýl
-                                    //    ako riadky v boxe autobusu (bunky, triedy)
+                                    // 3) Riadky s pešími presunmi pre daný deň
                                     // ============================================================
                                     items.forEach((t) => {
                                         const range = parseWhenRange(t.when);
@@ -9672,15 +9673,6 @@ const TransportApp = ({ userProfileData }) => {
                                         // ============================================================
                                         // NOVÉ: Pre walking segment vypočítaj zvyšný čas na presun
                                         // rovnako ako v boxe "Vygenerované presuny".
-                                        //
-                                        // Walking segment môže byť súčasťou väčšieho parent bloku
-                                        // (má _parentKey). V tom prípade:
-                                        //  - nájdi nasledujúci priradený (bus) segment v rámci parenta
-                                        //  - displayEndTs = čas odchodu busu (startTs nasledujúceho segmentu)
-                                        //  - zvyšný čas = displayEndTs - startTs walking segmentu
-                                        //
-                                        // Ak walking segment nie je súčasťou parenta (samostatný walking),
-                                        // použi t.when priamo.
                                         // ============================================================
                                         let displayStartTs = null;
                                         let displayEndTs = null;
@@ -9688,7 +9680,7 @@ const TransportApp = ({ userProfileData }) => {
 
                                         const teamName = String(t.teamName || '').trim();
                                         const category = cleanCategory(t.category || '');
-                                        const dayKey = t.dayKey || '';
+                                        const dayKeyLocal = t.dayKey || '';
                                         const trRange = parseTransferWhenToRange(t.when);
 
                                         if (trRange && trRange.startTs != null) {
@@ -9700,12 +9692,11 @@ const TransportApp = ({ userProfileData }) => {
                                             if (t._parentKey) {
                                                 const parentKey = t._parentKey;
 
-                                                // Zoznam všetkých segmentov parenta (parent + segmenty s _parentKey)
                                                 const parentSegments = [];
                                                 savedTransfers.forEach((other) => {
                                                     if (String(other.teamName || '').trim() !== teamName) return;
                                                     if (cleanCategory(other.category || '') !== category) return;
-                                                    if ((other.dayKey || '') !== dayKey) return;
+                                                    if ((other.dayKey || '') !== dayKeyLocal) return;
                                                     const otherParentKey = other._parentKey || other.key;
                                                     if (otherParentKey !== parentKey) return;
                                                     const r = parseTransferWhenToRange(other.when);
@@ -9717,7 +9708,6 @@ const TransportApp = ({ userProfileData }) => {
                                                 });
                                                 parentSegments.sort((a, b) => a.range.startTs - b.range.startTs);
 
-                                                // Nájdi nasledujúci priradený (bus) segment za aktuálnym walking segmentom
                                                 let nextAssignedStartTs = null;
                                                 for (const seg of parentSegments) {
                                                     if (seg.key === t.key) continue;
@@ -9730,12 +9720,10 @@ const TransportApp = ({ userProfileData }) => {
                                                     }
                                                 }
 
-                                                // Ak nasleduje bus, walking segment končí v čase odchodu busu
                                                 if (nextAssignedStartTs != null && nextAssignedStartTs >= trRange.startTs) {
                                                     displayEndTs = nextAssignedStartTs;
                                                 }
 
-                                                // Prepočítaj zvyšný čas
                                                 if (displayEndTs != null && displayStartTs != null && displayEndTs > displayStartTs) {
                                                     remainingMinutes = Math.round((displayEndTs - displayStartTs) / 60000);
                                                 }
@@ -9833,7 +9821,8 @@ const TransportApp = ({ userProfileData }) => {
                                             )
                                         );
                                     });
-    
+                                });
+
                                 return elements;
                             })()
                         )
