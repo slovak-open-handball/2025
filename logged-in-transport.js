@@ -6038,6 +6038,21 @@ const TransportApp = ({ userProfileData }) => {
             const curTime = newTimes[i];
             if (!curTime) continue;
         
+            // ============================================================
+            // OPRAVA: Pre walking segment s i > 0 (t.j. nie je prvý v bloku)
+            // musí byť startTs = čas konca PREDCHÁDZAJÚCEHO segmentu
+            // (typicky bus), aby walking segment vždy začínal tam, kde
+            // skončil predchádzajúci segment. Bez tejto opravy ostane
+            // walking segmentu pôvodný (zastaraný) startTs, aj keď sa
+            // zmenil čas konca predchádzajúceho bus segmentu.
+            // ============================================================
+            let effectiveStartTs = curTime.startTs;
+            if (i > 0 && newTimes[i - 1] && newTimes[i - 1].endTs != null) {
+                // Walking segment nasleduje po predchádzajúcom vyriešenom
+                // segmente → začiatok = koniec predchádzajúceho segmentu
+                effectiveStartTs = newTimes[i - 1].endTs;
+            }
+        
             // Nájdi nasledujúci vyriešený segment (bus/peší s reálnym časom)
             let nextStartTs = null;
             for (let k = i + 1; k < block.length; k++) {
@@ -6047,12 +6062,6 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
         
-            // ============================================================
-            // OPRAVA: Pre walking segment, ktorý nasleduje PRED iným
-            // vyriešeným segmentom (bus), VŽDY nastav endTs na nextStartTs.
-            // Aj keď bol walking segment predtým označený ako peši s nulovým
-            // časom, jeho endTs sa musí aktualizovať na čas odchodu busu.
-            // ============================================================
             if (i === 0) {
                 if (nextStartTs != null) {
                     // Walking segment pred busom → koniec = čas odchodu busu
@@ -6070,47 +6079,45 @@ const TransportApp = ({ userProfileData }) => {
                     };
                 }
             } else {
-                // ============================================================
-                // OPRAVA: Pre ostatné walking segmenty (i > 0):
-                // - ak existuje nasledujúci vyriešený segment (bus), nastav
-                //   endTs na jeho startTs (walking segment končí v čase
-                //   odchodu busu)
-                // - ak neexistuje (walking je posledný), nechaj pôvodný endTs
-                //   (walking segment po buse → koniec = koniec celého bloku)
-                // ============================================================
                 if (nextStartTs != null) {
                     // Walking segment pred ďalším vyriešeným segmentom
-                    // → koniec = čas odchodu nasledujúceho segmentu
+                    // → začiatok = koniec predchádzajúceho segmentu,
+                    //   koniec = čas odchodu nasledujúceho segmentu
                     newTimes[i] = {
-                        startTs: curTime.startTs,
+                        startTs: effectiveStartTs,
                         endTs: nextStartTs,
-                        whenStr: `${formatTsLocal(curTime.startTs)} – ${formatTsLocal(nextStartTs)}`,
+                        whenStr: `${formatTsLocal(effectiveStartTs)} – ${formatTsLocal(nextStartTs)}`,
                     };
                 } else {
-                    // Walking segment je posledný → nechaj pôvodný endTs
+                    // Walking segment je posledný → začiatok = koniec
+                    // predchádzajúceho segmentu, koniec = pôvodný endTs
                     // (z pôvodného when alebo z dopočítaného segments.forEach)
-                    // Nič nemeniť
+                    newTimes[i] = {
+                        startTs: effectiveStartTs,
+                        endTs: curTime.endTs,
+                        whenStr: `${formatTsLocal(effectiveStartTs)} – ${formatTsLocal(curTime.endTs)}`,
+                    };
                 }
             }
         }
-
-        // ============================================================
-        // KROK 3: Zapíš nové časy do DB
-        // ============================================================
-        const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
-        const patch = {};
-
-        // Zisti ID používateľa pre tím (raz pre celý blok)
-        const teamIds = (transfer.teamUid != null && transfer.teamIndex != null)
-            ? { teamUid: transfer.teamUid, teamIndex: transfer.teamIndex }
-            : findTeamIdentifiersByName(category, teamName);
-
-        if (!teamIds) {
-            console.warn('[TRANSPORT] recomputeBlock: nepodarilo sa nájsť teamUid/teamIndex pre', teamName, category);
-            return;
-        }
-
-        block.forEach((seg, idx) => {
+        
+                // ============================================================
+                // KROK 3: Zapíš nové časy do DB
+                // ============================================================
+                const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+                const patch = {};
+        
+                // Zisti ID používateľa pre tím (raz pre celý blok)
+                const teamIds = (transfer.teamUid != null && transfer.teamIndex != null)
+                    ? { teamUid: transfer.teamUid, teamIndex: transfer.teamIndex }
+                    : findTeamIdentifiersByName(category, teamName);
+        
+                if (!teamIds) {
+                    console.warn('[TRANSPORT] recomputeBlock: nepodarilo sa nájsť teamUid/teamIndex pre', teamName, category);
+                    return;
+                }
+        
+                block.forEach((seg, idx) => {
             const newTime = newTimes[idx];
             if (!newTime) return;
 
