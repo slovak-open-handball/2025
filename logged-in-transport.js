@@ -6016,7 +6016,7 @@ const TransportApp = ({ userProfileData }) => {
     // Čistý výpočet – bez zápisu do DB
     const recomputeParentSegmentsInPlace = (draft) => {
         if (!draft) return;
-
+    
         const originalWhenFromDraft = draft.when;
         const stops = Array.isArray(draft.intermediateStops) ? draft.intermediateStops : [];
         const routeRaw = [draft.fromLocation, ...stops, draft.toLocation].filter(Boolean);
@@ -6101,12 +6101,10 @@ const TransportApp = ({ userProfileData }) => {
             return { boardingTs, alightingTs };
         };
     
-        const getSegmentDurationMs = (fromLoc, toLoc) => {
-            const mins = getTravelMinutes(fromLoc, toLoc);
-            return mins != null ? mins * 60000 : null;
-        };
-    
-        // 1) Bus časy
+        // ============================================================
+        // NOVÉ: Segmenty dostanú časy LEN ak sú priradené k busu.
+        // Pešie segmenty a nepriradené segmenty NEMAJÚ časy.
+        // ============================================================
         draft.segments = draft.segments.map((seg) => {
             const busTimes = findBusTimesForSegment(seg.from, seg.to);
             if (busTimes.boardingTs != null && busTimes.alightingTs != null && busTimes.alightingTs > busTimes.boardingTs) {
@@ -6119,198 +6117,56 @@ const TransportApp = ({ userProfileData }) => {
                     busAssigned: true,
                 };
             }
-            return { ...seg, startTs: null, endTs: null, when: null, busAssigned: false };
+            // ============================================================
+            // NOVÉ: Nepriradené segmenty (ani bus, ani walking)
+            // NEDOSTÁVAJÚ žiadne časy. Čas sa im priradí až keď ich
+            // používateľ priradí k busu alebo označí ako peši.
+            // ============================================================
+            return {
+                ...seg,
+                startTs: null,
+                endTs: null,
+                when: null,
+                busAssigned: false,
+            };
         });
     
-        // 2) Dopočet walking / nepriradených podľa susedov
-        const parentRange = parseTransferWhenToRange(draft.when);
-        const firstResolvedIdx = draft.segments.findIndex((s) => s.startTs != null);
-        const lastResolvedIdx = (() => {
-            for (let i = draft.segments.length - 1; i >= 0; i--) {
-                if (draft.segments[i].startTs != null && draft.segments[i].endTs != null) return i;
-            }
-            return -1;
-        })();
-        
         // ============================================================
-        // NOVÉ: Pešie segmenty NIKDY nedostanú časy – ani keď sú
-        // obklopené bus segmentami. Ich startTs/endTs zostanú null.
-        //
-        // Tým sa zabezpečí, že v DB má peší segment vždy `isWalking: true`
-        // a `startTs: null, endTs: null`. Časová os sa počíta dynamicky
-        // pri renderi (viď renderWalkingTransfersBox).
-        // ============================================================
-        if (firstResolvedIdx === -1) {
-            // Žiadny bus – rozdeľ podľa parent.when
-            if (parentRange && parentRange.startTs != null && parentRange.endTs != null) {
-                let cursorTs = parentRange.startTs;
-                draft.segments = draft.segments.map((seg) => {
-                    // Pešie segmenty nemajú časy
-                    if (seg.isWalking === true) {
-                        return {
-                            ...seg,
-                            startTs: null,
-                            endTs: null,
-                            when: null,
-                            busAssigned: false,
-                        };
-                    }
-                    const dur = getSegmentDurationMs(seg.from, seg.to);
-                    const endTs = dur != null ? cursorTs + dur : parentRange.endTs;
-                    const out = {
-                        ...seg,
-                        startTs: cursorTs,
-                        endTs,
-                        when: `${formatTsLocal(cursorTs)} – ${formatTsLocal(endTs)}`,
-                    };
-                    cursorTs = endTs;
-                    return out;
-                });
-            }
-        } else {
-            // Pred prvým busom
-            if (firstResolvedIdx > 0) {
-                let cursorEndTs = draft.segments[firstResolvedIdx].startTs;
-                for (let i = firstResolvedIdx - 1; i >= 0; i--) {
-                    const seg = draft.segments[i];
-                    if (seg.isWalking === true) {
-                        draft.segments[i] = {
-                            ...seg,
-                            startTs: null,
-                            endTs: null,
-                            when: null,
-                            busAssigned: false,
-                        };
-                        continue;
-                    }
-                    const dur = getSegmentDurationMs(seg.from, seg.to);
-                    const segStartTs = dur != null ? cursorEndTs - dur : (parentRange?.startTs ?? cursorEndTs);
-                    draft.segments[i] = {
-                        ...seg,
-                        startTs: segStartTs,
-                        endTs: cursorEndTs,
-                        when: `${formatTsLocal(segStartTs)} – ${formatTsLocal(cursorEndTs)}`,
-                    };
-                    cursorEndTs = segStartTs;
-                }
-            }
-            // Po poslednom buse
-            if (lastResolvedIdx < draft.segments.length - 1) {
-                let cursorStartTs = draft.segments[lastResolvedIdx].endTs;
-                for (let i = lastResolvedIdx + 1; i < draft.segments.length; i++) {
-                    const seg = draft.segments[i];
-                    if (seg.isWalking === true) {
-                        draft.segments[i] = {
-                            ...seg,
-                            startTs: null,
-                            endTs: null,
-                            when: null,
-                            busAssigned: false,
-                        };
-                        continue;
-                    }
-                    const dur = getSegmentDurationMs(seg.from, seg.to);
-                    let segEndTs = dur != null ? cursorStartTs + dur : cursorStartTs;
-                    if (parentRange && parentRange.endTs != null && segEndTs > parentRange.endTs) {
-                        segEndTs = parentRange.endTs;
-                    }
-                    draft.segments[i] = {
-                        ...seg,
-                        startTs: cursorStartTs,
-                        endTs: segEndTs,
-                        when: `${formatTsLocal(cursorStartTs)} – ${formatTsLocal(segEndTs)}`,
-                    };
-                    cursorStartTs = segEndTs;
-                }
-            }
-            // Medzi dvoma busmi (vnútorné walking)
-            for (let i = 0; i < draft.segments.length; i++) {
-                if (draft.segments[i].startTs != null) continue;
-                if (draft.segments[i].isWalking === true) {
-                    // Peší segment – nechaj null časy
-                    draft.segments[i] = {
-                        ...draft.segments[i],
-                        startTs: null,
-                        endTs: null,
-                        when: null,
-                        busAssigned: false,
-                    };
-                    continue;
-                }
-                let prevEndTs = null;
-                for (let k = i - 1; k >= 0; k--) {
-                    if (draft.segments[k].endTs != null) { prevEndTs = draft.segments[k].endTs; break; }
-                }
-                let nextStartTs = null;
-                for (let k = i + 1; k < draft.segments.length; k++) {
-                    if (draft.segments[k].startTs != null) { nextStartTs = draft.segments[k].startTs; break; }
-                }
-                const dur = getSegmentDurationMs(draft.segments[i].from, draft.segments[i].to);
-                const segStartTs = prevEndTs != null ? prevEndTs : (parentRange?.startTs ?? null);
-                let segEndTs = nextStartTs != null ? nextStartTs : null;
-                if (segEndTs == null && dur != null && segStartTs != null) segEndTs = segStartTs + dur;
-                if (segStartTs != null && segEndTs != null) {
-                    draft.segments[i] = {
-                        ...draft.segments[i],
-                        startTs: segStartTs,
-                        endTs: segEndTs,
-                        when: `${formatTsLocal(segStartTs)} – ${formatTsLocal(segEndTs)}`,
-                    };
-                }
-            }
-        }
-        
-        // ============================================================
-        // ============================================================
-        // NOVÉ: Celkový `when` parenta.
+        // NOVÉ: Celkový `when` parenta sa NIKDY nemení pri úprave
+        // medzizastávok. Zachová sa pôvodný `when` (ak existoval).
         //
         // PRAVIDLÁ:
-        //  1) Ak máme pôvodný platný `parentRange` → zachovaj ho.
-        //  2) Ak máme reálne časy segmentov → použi min/max.
-        //  3) Ak NEMÁME ani jedno, ale máme pôvodný neprázdny `draft.when` (string)
-        //     → ZACHOVAJ ho (nezahadzuj!). Tým sa zabezpečí, že presun
-        //     nestratí čas len preto, že ešte nie je priradený k busu.
-        //  4) Ak je celý parent peší → `when = ''`.
+        //  1) Ak máme pôvodný `when` (originalWhenFromDraft) → ZACHOVAJ ho.
+        //  2) Ak nemáme pôvodný `when`:
+        //     a) Ak má parent aspoň jeden bus segment → dopočítaj when
+        //        z min/max časov bus segmentov.
+        //     b) Ak je celý parent walking → when = ''.
+        //     c) Inak → when = '' (nedopočítavame z trvaní jázd).
         // ============================================================
         const nonWalkingSegments = draft.segments.filter((s) => s.isWalking !== true);
-        const allStart = nonWalkingSegments.map((s) => s.startTs).filter((ts) => ts != null);
-        const allEnd = nonWalkingSegments.map((s) => s.endTs).filter((ts) => ts != null);
-        
+        const busSegments = nonWalkingSegments.filter((s) => s.busAssigned === true);
+    
         const parentIsFullyWalking =
             draft.segments.length > 0 &&
             draft.segments.every((s) => s.isWalking === true);
-        
-        const hasOriginalWhen = parentRange &&
-            parentRange.startTs != null &&
-            parentRange.endTs != null &&
-            parentRange.endTs > parentRange.startTs;
-        
-        if (parentIsFullyWalking) {
-            // ============================================================
-            // NOVÉ: Ak máme pôvodný `when` (z draftu alebo z parenta),
-            // zachovaj ho aj pri plne walking parentovi. Čas konca
-            // presunu sa NESMIE zmeniť len preto, že všetky segmenty
-            // sú walking.
-            // ============================================================
-            if (originalWhenFromDraft && String(originalWhenFromDraft).trim() !== '') {
-                draft.when = originalWhenFromDraft;
+    
+        if (originalWhenFromDraft && String(originalWhenFromDraft).trim() !== '') {
+            // Pôvodný when existuje → VŽDY ho zachovaj
+            draft.when = originalWhenFromDraft;
+        } else if (parentIsFullyWalking) {
+            draft.when = '';
+        } else if (busSegments.length > 0) {
+            // Máme aspoň jeden bus segment → dopočítaj when z reálnych časov
+            const busStart = busSegments.map((s) => s.startTs).filter((ts) => ts != null);
+            const busEnd = busSegments.map((s) => s.endTs).filter((ts) => ts != null);
+            if (busStart.length > 0 && busEnd.length > 0) {
+                draft.when = `${formatTsLocal(Math.min(...busStart))} – ${formatTsLocal(Math.max(...busEnd))}`;
             } else {
-                const parentRec = savedTransfersRef.current.find((s) => s.key === draft.key);
-                if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
-                    draft.when = parentRec.when;
-                } else {
-                    draft.when = '';
-                }
+                draft.when = '';
             }
-        } else if (!draft.when || String(draft.when).trim() === '') {
-            if (allStart.length > 0 && allEnd.length > 0) {
-                draft.when = `${formatTsLocal(Math.min(...allStart))} – ${formatTsLocal(Math.max(...allEnd))}`;
-            } else {
-                const parentRec = savedTransfersRef.current.find((s) => s.key === draft.key);
-                if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
-                    draft.when = parentRec.when;
-                }
-            }
+        } else {
+            // Žiadny bus, žiadny walking → when = '' (segmenty čakajú na priradenie)
+            draft.when = '';
         }
     };
     
