@@ -8674,10 +8674,6 @@ const TransportApp = ({ userProfileData }) => {
                 startTsForDisplay = prevResolvedEndTs;
             }
             
-            const newWhen = (t.when && String(t.when).trim() !== '')
-                ? t.when
-                : `${formatTsLocal(startTsForDisplay)} – ${formatTsLocal(displayEndTs)}`;
-            
             let newRemainingMinutes = t._remainingMinutes;
             if (
                 t._remainingMinutes != null &&
