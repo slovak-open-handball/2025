@@ -6647,18 +6647,15 @@ const TransportApp = ({ userProfileData }) => {
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
     
             const originalRange = parseTransferWhenToRange(transfer.when);
-            let newWhen = transfer.when;
-            let newKey = transfer.key;
-            let shouldRenameKey = false;
+            if (!originalRange || originalRange.startTs == null) {
+                window.showGlobalNotification('Nepodarilo sa určiť čas presunu.', 'error');
+                return;
+            }
     
             const MIN_WALKING_MS = 60 * 1000;
-    
-            if (originalRange && originalRange.startTs != null) {
-                const newEndTs = originalRange.startTs + MIN_WALKING_MS;
-                newWhen = `${formatTsLocal(originalRange.startTs)} – ${formatTsLocal(newEndTs)}`;
-                newKey = buildTransferKey(transfer.category, transfer.teamName, newWhen, transfer.text);
-                shouldRenameKey = (newKey !== transfer.key);
-            }
+            const newEndTs = originalRange.startTs + MIN_WALKING_MS;
+            const newWhen = `${formatTsLocal(originalRange.startTs)} – ${formatTsLocal(newEndTs)}`;
+            const newKey = buildTransferKey(transfer.category, transfer.teamName, newWhen, transfer.text);
     
             const category = cleanCategory(transfer.category || '');
             const teamName = String(transfer.teamName || '').trim();
@@ -6666,33 +6663,18 @@ const TransportApp = ({ userProfileData }) => {
                 ? { teamUid: transfer.teamUid, teamIndex: transfer.teamIndex }
                 : findTeamIdentifiersByName(category, teamName);
     
-            const walkingTransfer = {
-                ...transfer,
-                when: newWhen,
-                isWalking: true,
-                walkingSetAt: Timestamp.fromDate(new Date()),
-                walkingSetBy: (userProfileData && userProfileData.email) || null,
-            };
-            delete walkingTransfer.key;
+            const walkingSetAt = Timestamp.fromDate(new Date());
+            const walkingSetBy = (userProfileData && userProfileData.email) || null;
     
             const transfersPatch = {};
             
-            // ============================================================
-            // NOVÉ: Ak je to PARENT (nemá _parentKey), neprepisujeme
-            // jeho when na 1 min. Namiesto toho:
-            //  - ponecháme parent s pôvodným when (celý interval)
-            //  - pridáme isWalking: true (aby sa vedelo, že je peší)
-            //  - vytvoríme NOVÝ segment s when = startTs – startTs+1min
-            //    a _parentKey = parentKey
-            //
-            // Ak je to SEGMENT (má _parentKey), prepíšeme jeho when
-            // na startTs – startTs+1min (to je OK, segment má 1 min).
-            // ============================================================
             const isSegment = transfer._parentKey && transfer._parentKey !== transfer.key;
             
             if (isSegment) {
-                // Upravujeme segment – prepíšeme jeho when na 1 min
-                if (shouldRenameKey) {
+                // ============================================================
+                // Upravujeme SEGMENT – prepíšeme jeho when na 1 min.
+                // ============================================================
+                if (newKey !== transfer.key) {
                     transfersPatch[transfer.key] = deleteField();
                 }
                 transfersPatch[newKey] = {
@@ -6703,9 +6685,9 @@ const TransportApp = ({ userProfileData }) => {
                     toLocation: transfer.toLocation,
                     dayKey: transfer.dayKey,
                     isWalking: true,
-                    walkingSetAt: walkingTransfer.walkingSetAt,
-                    walkingSetBy: walkingTransfer.walkingSetBy,
-                    _parentKey: transfer._parentKey,  // ← zachovať parentKey!
+                    walkingSetAt,
+                    walkingSetBy,
+                    _parentKey: transfer._parentKey,
                 };
                 if (ids) {
                     transfersPatch[newKey].teamUid = ids.teamUid;
@@ -6715,22 +6697,25 @@ const TransportApp = ({ userProfileData }) => {
                     transfersPatch[newKey].intermediateStops = transfer.intermediateStops;
                 }
             } else {
-                // Upravujeme parent – NEprepisujeme parent when.
+                // ============================================================
+                // Upravujeme PARENT – NEprepisujeme parent when.
                 // Namiesto toho:
-                // 1) Ponecháme parent s pôvodným when + isWalking: true
-                // 2) Vytvoríme nový segment s when = startTs – startTs+1min
+                //  1) Ponecháme parent s pôvodným when + isWalking: true
+                //  2) Vytvoríme nový SEGMENT s when = startTs – startTs+1min
+                //     a _parentKey = parentKey
+                // ============================================================
                 
-                // 1) Parent zostáva s pôvodným when (len pridáme isWalking)
+                // 1) Parent zostáva s pôvodným when
                 transfersPatch[transfer.key] = {
                     category: transfer.category,
-                    when: transfer.when,  // ← PÔVODNÝ when (celý interval)
+                    when: transfer.when,  // pôvodný when
                     text: transfer.text,
                     fromLocation: transfer.fromLocation,
                     toLocation: transfer.toLocation,
                     dayKey: transfer.dayKey,
                     isWalking: true,
-                    walkingSetAt: walkingTransfer.walkingSetAt,
-                    walkingSetBy: walkingTransfer.walkingSetBy,
+                    walkingSetAt,
+                    walkingSetBy,
                 };
                 if (ids) {
                     transfersPatch[transfer.key].teamUid = ids.teamUid;
@@ -6740,26 +6725,22 @@ const TransportApp = ({ userProfileData }) => {
                     transfersPatch[transfer.key].intermediateStops = transfer.intermediateStops;
                 }
                 
-                // 2) Vytvoríme nový segment s 1 min trvaním
-                // (key = buildTransferKey s novým when)
-                const segmentWhen = `${formatTsLocal(originalRange.startTs)} – ${formatTsLocal(originalRange.startTs + MIN_WALKING_MS)}`;
-                const segmentKey = buildTransferKey(transfer.category, transfer.teamName, segmentWhen, transfer.text);
-                
-                transfersPatch[segmentKey] = {
+                // 2) Nový segment s 1 min trvaním
+                transfersPatch[newKey] = {
                     category: transfer.category,
-                    when: segmentWhen,
+                    when: newWhen,
                     text: transfer.text,
                     fromLocation: transfer.fromLocation,
                     toLocation: transfer.toLocation,
                     dayKey: transfer.dayKey,
                     isWalking: true,
-                    walkingSetAt: walkingTransfer.walkingSetAt,
-                    walkingSetBy: walkingTransfer.walkingSetBy,
-                    _parentKey: transfer.key,  // ← segment patrí k parentovi
+                    walkingSetAt,
+                    walkingSetBy,
+                    _parentKey: transfer.key,
                 };
                 if (ids) {
-                    transfersPatch[segmentKey].teamUid = ids.teamUid;
-                    transfersPatch[segmentKey].teamIndex = ids.teamIndex;
+                    transfersPatch[newKey].teamUid = ids.teamUid;
+                    transfersPatch[newKey].teamIndex = ids.teamIndex;
                 }
             }
     
@@ -6769,8 +6750,8 @@ const TransportApp = ({ userProfileData }) => {
             try {
                 await new Promise((r) => setTimeout(r, 300));
                 await recomputeBlock(
-                    { ...walkingTransfer, key: isSegment ? newKey : transfer.key, teamUid: ids?.teamUid, teamIndex: ids?.teamIndex },
-                    new Set([isSegment ? newKey : transfer.key])
+                    { ...transfer, key: isSegment ? newKey : transfer.key, when: isSegment ? newWhen : transfer.when, isWalking: true, teamUid: ids?.teamUid, teamIndex: ids?.teamIndex },
+                    new Set([isSegment ? newKey : newKey])
                 );
             } catch (recomputeErr) {
                 console.error('[TRANSPORT] Chyba pri prepočte bloku po označení peši:', recomputeErr);
