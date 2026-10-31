@@ -8924,6 +8924,24 @@ const TransportApp = ({ userProfileData }) => {
                                 const dayLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
                                 timeLabel = `${dayLabel} (čas neurčený)`;
                             }
+
+                            // ============================================================
+                            // NOVÉ: routeLabel – zostav z `transferInfo` alebo z parent route
+                            // (musí byť definované, inak render padá na ReferenceError)
+                            // ============================================================
+                            let routeLabel = null;
+                            if (transferInfo) {
+                                if (t.intermediateStops && t.intermediateStops.length > 0) {
+                                    routeLabel = [t.fromLocation, ...t.intermediateStops, t.toLocation]
+                                        .filter(Boolean)
+                                        .join(' → ');
+                                } else {
+                                    routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
+                                }
+                            } else if (t.fromLocation && t.toLocation) {
+                                // Fallback – ak sa z textu nedá parsovať, použi priamo from/to
+                                routeLabel = `${t.fromLocation} → ${t.toLocation}`;
+                            }
     
                             // NOVÉ: informácia o pôvodnom presune
                             const parentInfoLabel = t._parentKey && t._parentRoute
