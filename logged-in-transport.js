@@ -7899,7 +7899,7 @@ const TransportApp = ({ userProfileData }) => {
                                                         { className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50' },
                                                         React.createElement(
                                                             'td',
-                                                            { className: 'border border-gray-200 px-4 py-2 text-gray-800 text-center' },
+                                                            { className: 'border border-gray-200 px-4 py-2 text-gray-800 text-center text-sm' },
                                                             React.createElement('span', { className: 'font-semibold capitalize' }, day.dayName),
                                                             React.createElement('span', { className: 'text-gray-500 mx-2' }, '–'),
                                                             React.createElement('span', null, day.dateLabel)
@@ -9332,7 +9332,7 @@ const TransportApp = ({ userProfileData }) => {
                     { className: 'max-h-[70vh] overflow-y-auto' },
                     React.createElement(
                         'table',
-                        { className: 'w-full border-collapse text-xs' },
+                        { className: 'w-full border-collapse text-sm' },
                         React.createElement(
                             'tbody',
                             null,
@@ -9374,7 +9374,7 @@ const TransportApp = ({ userProfileData }) => {
                                                 'td',
                                                 {
                                                     colSpan: 7, // 7 stĺpcov (Od, Do, Miesto od, Miesto do, Nástup, Výstup, Min) + mazanie? 
-                                                    className: 'border border-gray-200 px-4 py-2 text-gray-800 text-center'
+                                                    className: 'border border-gray-200 px-4 py-2 text-gray-800 text-center text-sm'
                                                 },
                                                 capitalizedDayName &&
                                                     React.createElement(
