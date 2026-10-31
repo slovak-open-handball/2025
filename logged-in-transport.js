@@ -8538,16 +8538,11 @@ const TransportApp = ({ userProfileData }) => {
             // Ak je segment vyriešený autobusom, dostane reálny čas z autobusu.
             // ============================================================
             const finalTimes = new Array(route.length - 1).fill(null);
-    
+
             // ============================================================
             // NOVÉ: Pre každý segment najprv over, či existuje REÁLNY záznam
             // v `savedTransfers` (napr. peší segment, ktorý bol manuálne
             // označený ako „peši", alebo segment, ktorý bol už dogenerovaný).
-            //
-            // Ak existuje, použijeme jeho REÁLNY čas z DB – tým sa zabezpečí,
-            // že keď je prvý segment označený ako „peši" (a má čas napr.
-            // 08:00 – 08:01), druhý segment bude začínať 08:01 (koniec
-            // pešieho), NIE 08:30 (pôvodný koniec parenta).
             // ============================================================
             const realSegmentTimes = new Array(route.length - 1).fill(null);
             
@@ -8556,8 +8551,6 @@ const TransportApp = ({ userProfileData }) => {
                 const segTo = normalizePlaceName(route[i + 1]);
                 if (!segFrom || !segTo || segFrom === segTo) continue;
             
-                // Nájdi reálny záznam v savedTransfers pre tento segment
-                // (rovnaký tím, kategória, deň, from→to)
                 const matchingSegs = savedTransfers.filter((s) => {
                     if (String(s.teamName || '').trim() !== teamName) return false;
                     if (cleanCategory(s.category || '') !== category) return false;
@@ -8596,7 +8589,6 @@ const TransportApp = ({ userProfileData }) => {
             }
             
             // 2) Čiastočne vyriešené segmenty (máme len nástup alebo len výstup)
-            //    → použijeme reálny čas pre známu časť, pôvodný interval pre zvyšok.
             for (let i = 0; i < route.length - 1; i++) {
                 if (finalTimes[i]) continue;
                 const rt = segmentRealTimes[i];
@@ -8610,40 +8602,48 @@ const TransportApp = ({ userProfileData }) => {
             // 3) Plne nevyriešené segmenty → PÔVODNÝ CELÝ INTERVAL,
             //    ale ak predchádzajúci segment je vyriešený (autobusom
             //    alebo reálnym záznamom v savedTransfers), začni od jeho konca.
+            //
+            // NOVÉ: Ak NASLEDUJÚCI segment je vyriešený (bus alebo peši),
+            // skonči presne na jeho začiatku. Tým sa zabezpečí, že
+            // peší presun pred busom skončí v čase odchodu busu,
+            // a peší presun po buse začne v čase príchodu busu.
             for (let i = 0; i < route.length - 1; i++) {
                 if (finalTimes[i]) continue;
             
                 let startTs = timeRange.startTs;
-                // Ak predchádzajúci segment je vyriešený, začni od jeho konca
                 if (i > 0 && finalTimes[i - 1]) {
                     startTs = finalTimes[i - 1].endTs;
                 }
+                // NOVÉ: Ak aj tak je stále pôvodný začiatok, ale existuje
+                // predchádzajúci REÁLNY koniec (bus/peši), použi ten.
+                if (i > 0 && realSegmentTimes[i - 1] && realSegmentTimes[i - 1].endTs != null) {
+                    startTs = realSegmentTimes[i - 1].endTs;
+                }
+                if (i > 0 && segmentRealTimes[i - 1] && segmentRealTimes[i - 1].endTs != null) {
+                    startTs = segmentRealTimes[i - 1].endTs;
+                }
             
                 // ============================================================
-                // Nájdi najbližší NASLEDUJÚCI vyriešený segment
-                // a nastav endTs na jeho startTs. Tým sa zabezpečí, že
-                // nevyriešený segment nepresiahne začiatok nasledujúceho
-                // priradeného segmentu.
+                // NOVÉ: Nájdi najbližší NASLEDUJÚCI vyriešený segment
+                // (bus alebo reálny záznam v savedTransfers) a nastav
+                // endTs na jeho startTs.
                 // ============================================================
                 let endTs = null;
                 for (let k = i + 1; k < route.length - 1; k++) {
-                    if (segmentAssigned[k] && finalTimes[k]) {
+                    if (segmentAssigned[k] && finalTimes[k] && finalTimes[k].startTs != null) {
                         endTs = finalTimes[k].startTs;
                         break;
                     }
-                }
-                if (endTs == null) {
-                    // Skús nájsť reálny koniec v savedTransfers
-                    // (hľadaj segment, ktorý začína tam, kde tento segment končí,
-                    //  alebo ktorý je posledným segmentom v route)
-                    for (let k = i + 1; k < route.length - 1; k++) {
-                        if (realSegmentTimes[k] && realSegmentTimes[k].startTs != null) {
-                            endTs = realSegmentTimes[k].startTs;
-                            break;
-                        }
+                    if (realSegmentTimes[k] && realSegmentTimes[k].startTs != null) {
+                        endTs = realSegmentTimes[k].startTs;
+                        break;
                     }
                 }
                 if (endTs == null) endTs = timeRange.endTs;
+            
+                // Ak by endTs bol menší ako startTs (napr. pri prechode
+                // cez polnoc alebo nesúlade), použi pôvodný endTs.
+                if (endTs < startTs) endTs = timeRange.endTs;
             
                 finalTimes[i] = { startTs, endTs };
             }
@@ -8839,8 +8839,7 @@ const TransportApp = ({ userProfileData }) => {
             if (!t._parentKey) return t;
 
             // Zisti koniec celého bloku = maximum z endTs všetkých
-            // segmentov (aj nepriradených, aj priradených) patriacich
-            // k rovnakému parentovi v rámci rovnakého tímu, kat., dňa.
+            // segmentov patriacich k rovnakému parentovi.
             const parentKey = t._parentKey;
             const teamName = String(t.teamName || '').trim();
             const category = cleanCategory(t.category || '');
@@ -8848,52 +8847,88 @@ const TransportApp = ({ userProfileData }) => {
         
             let blockEndTs = null;
         
+            // ============================================================
+            // NOVÉ: Pre aktuálny zobrazený segment zisti, či nasleduje
+            // priradený (bus) segment. Ak áno, koniec zobrazeného segmentu
+            // má byť čas odchodu busu (start nasledujúceho segmentu),
+            // nie koniec celého bloku.
+            // ============================================================
+            const trRange = parseTransferWhenToRange(t.when);
+            if (!trRange || trRange.startTs == null) return t;
+
+            // Nájdi nasledujúci priradený segment (bus) v rámci parenta
+            let nextAssignedStartTs = null;
+
+            // Zoznam všetkých segmentov parenta (parent + segmenty s _parentKey)
+            const parentSegments = [];
             savedTransfers.forEach((other) => {
                 if (String(other.teamName || '').trim() !== teamName) return;
                 if (cleanCategory(other.category || '') !== category) return;
                 if ((other.dayKey || '') !== dayKey) return;
-        
-                // Zisti, či tento záznam patrí k rovnakému parentovi:
-                //  - buď je to sám parent (key === parentKey)
-                //  - alebo je to segment s _parentKey === parentKey
                 const otherParentKey = other._parentKey || other.key;
                 if (otherParentKey !== parentKey) return;
-        
+                const r = parseTransferWhenToRange(other.when);
+                if (!r || r.startTs == null) return;
+                parentSegments.push({
+                    ...other,
+                    range: r,
+                });
+            });
+            parentSegments.sort((a, b) => a.range.startTs - b.range.startTs);
+
+            // Prejdi segmenty za aktuálnym a hľadaj prvý priradený (bus)
+            const currentEndTs = trRange.endTs;
+            for (const seg of parentSegments) {
+                if (seg.range.startTs <= trRange.startTs) continue;
+                // Je to priradený bus segment?
+                if (seg._isAssigned === true || isSegmentAssigned(seg)) {
+                    nextAssignedStartTs = seg.range.startTs;
+                    break;
+                }
+                // Ak je to peší segment, neprerušuj hľadanie – pokračuj
+                // (chceme nájsť prvý BUS segment za aktuálnym peším).
+                if (seg.isWalking === true) continue;
+            }
+
+            // Vypočítaj blockEndTs – maximum z koncov všetkých segmentov
+            savedTransfers.forEach((other) => {
+                if (String(other.teamName || '').trim() !== teamName) return;
+                if (cleanCategory(other.category || '') !== category) return;
+                if ((other.dayKey || '') !== dayKey) return;
+                const otherParentKey = other._parentKey || other.key;
+                if (otherParentKey !== parentKey) return;
                 const r = parseTransferWhenToRange(other.when);
                 if (!r || r.endTs == null) return;
-        
                 if (blockEndTs == null || r.endTs > blockEndTs) {
                     blockEndTs = r.endTs;
                 }
             });
         
             if (blockEndTs == null) return t;
-        
-            const trRange = parseTransferWhenToRange(t.when);
-            if (!trRange || trRange.startTs == null) return t;
-        
-            const newWhen = `${formatTsLocal(trRange.startTs)} – ${formatTsLocal(blockEndTs)}`;
-        
+
             // ============================================================
-            // NOVÉ: Prepočítaj _remainingMinutes podľa nového when, aby
-            // "Zvyšný čas na presun" sedel s časom zobrazeným pod dátumom.
-            //
-            // Predtým sa _remainingMinutes počítal z pôvodného ft.startTs/endTs
-            // (t.j. z pôvodného intervalu segmentu), ale `when` sa neskôr
-            // prepísal na trRange.startTs – blockEndTs (celý zvyšok bloku).
-            // Preto číslo "zvyšný čas" nesedelo s časom pod dátumom.
-            //
-            // Teraz sa _remainingMinutes počíta z rovnakého intervalu,
-            // aký sa zobrazuje v timeLabel (trRange.startTs – blockEndTs).
+            // NOVÉ: Ak je aktuálny segment PEŠÍ a nasleduje BUS segment,
+            // koniec zobrazeného segmentu = čas odchodu busu.
+            // Inak použi koniec celého bloku (pôvodné správanie).
             // ============================================================
+            const isCurrentWalking = t.isWalking === true;
+            let displayEndTs = blockEndTs;
+
+            if (isCurrentWalking && nextAssignedStartTs != null) {
+                displayEndTs = nextAssignedStartTs;
+            }
+        
+            const newWhen = `${formatTsLocal(trRange.startTs)} – ${formatTsLocal(displayEndTs)}`;
+        
+            // Prepočítaj _remainingMinutes podľa nového when
             let newRemainingMinutes = t._remainingMinutes;
             if (
                 t._remainingMinutes != null &&
                 trRange.startTs != null &&
-                blockEndTs != null &&
-                blockEndTs > trRange.startTs
+                displayEndTs != null &&
+                displayEndTs > trRange.startTs
             ) {
-                newRemainingMinutes = Math.round((blockEndTs - trRange.startTs) / 60000);
+                newRemainingMinutes = Math.round((displayEndTs - trRange.startTs) / 60000);
             }
         
             return {
