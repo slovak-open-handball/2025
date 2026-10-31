@@ -8060,15 +8060,55 @@ const TransportApp = ({ userProfileData }) => {
             const timeRange = parseWhenRangeToTs(t.when);
             if (!timeRange || timeRange.startTs == null || timeRange.endTs == null || timeRange.endTs <= timeRange.startTs) {
                 // Fallback – nevieme vypočítať časy
+
+                // ============================================================
+                // NOVÉ: Zisti `parentEffectiveWhen` (rovnaká logika ako vyššie)
+                // ============================================================
+                const parentEffectiveWhenFallback = (() => {
+                    if (t.when && String(t.when).trim() !== '') return t.when;
+                    if (Array.isArray(t.segments) && t.segments.length > 0) {
+                        let earliestStart = null;
+                        let latestEnd = null;
+                        t.segments.forEach((s) => {
+                            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                earliestStart = s.startTs;
+                            }
+                            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                latestEnd = s.endTs;
+                            }
+                        });
+                        if (earliestStart != null && latestEnd != null) {
+                            return `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                        } else if (earliestStart != null) {
+                            return formatTsLocal(earliestStart);
+                        } else if (latestEnd != null) {
+                            return formatTsLocal(latestEnd);
+                        }
+                    }
+                    return null;
+                })();
+
+                let firstUnassignedFallbackIdx = -1;
+
                 for (let i = 0; i < route.length - 1; i++) {
                     const fromLoc = String(route[i] || '').trim();
                     const toLoc = String(route[i + 1] || '').trim();
                     if (normalizePlaceName(fromLoc) === normalizePlaceName(toLoc)) continue;
                     const text = `Presun z ${fromLoc} do ${toLoc}`;
-                    const key = buildTransferKey(t.category, t.teamName, t.when, text);
+                    const key = buildTransferKey(t.category, t.teamName, t.when || '', text);
+
+                    // Pre PRVÝ segment použi `parentEffectiveWhen`, ostatné bez času
+                    const isFirst = firstUnassignedFallbackIdx === -1;
+                    if (isFirst) firstUnassignedFallbackIdx = i;
+
+                    const displayWhen = isFirst && parentEffectiveWhenFallback
+                        ? parentEffectiveWhenFallback
+                        : null;
+
                     expandedTransfers.push({
                         ...t,
                         key,
+                        when: displayWhen,
                         text,
                         fromLocation: fromLoc,
                         toLocation: toLoc,
@@ -8077,6 +8117,7 @@ const TransportApp = ({ userProfileData }) => {
                         _parentRoute: `${t.fromLocation} → ${t.toLocation}`,
                         _remainingMinutes: null,
                         _isAssigned: false,
+                        _hasRealTime: displayWhen != null,
                         isWalking: t.isWalking === true,
                     });
                 }
@@ -8212,6 +8253,44 @@ const TransportApp = ({ userProfileData }) => {
                 if (finalTimes[i]) continue;
                 finalTimes[i] = { startTs: null, endTs: null };
             }
+
+            // ============================================================
+            // NOVÉ: Zisti, či parent mal `when` (alebo segmenty mali reálne časy).
+            // Ak áno, pre PRVÝ nepriradený segment použi tento `when`.
+            // ============================================================
+            const parentEffectiveWhen = (() => {
+                if (t.when && String(t.when).trim() !== '') return t.when;
+                if (Array.isArray(t.segments) && t.segments.length > 0) {
+                    let earliestStart = null;
+                    let latestEnd = null;
+                    t.segments.forEach((s) => {
+                        if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                            earliestStart = s.startTs;
+                        }
+                        if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                            latestEnd = s.endTs;
+                        }
+                    });
+                    if (earliestStart != null && latestEnd != null) {
+                        return `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                    } else if (earliestStart != null) {
+                        return formatTsLocal(earliestStart);
+                    } else if (latestEnd != null) {
+                        return formatTsLocal(latestEnd);
+                    }
+                }
+                return null;
+            })();
+
+            // Nájdi index PRVÉHO nepriradeného segmentu (hasRealTime === false)
+            const firstUnassignedIdx = (() => {
+                for (let i = 0; i < route.length - 1; i++) {
+                    const ft = finalTimes[i];
+                    const hasRealTime = ft && ft.startTs != null && ft.endTs != null;
+                    if (!hasRealTime) return i;
+                }
+                return -1;
+            })();
     
             // ============================================================
             // KROK 3: Vytvor segmenty
@@ -8238,9 +8317,17 @@ const TransportApp = ({ userProfileData }) => {
                 // (nezobrazí sa časový interval, len výzva na priradenie).
                 // ============================================================
                 const hasRealTime = ft.startTs != null && ft.endTs != null;
-                const whenStr = hasRealTime
+                let whenStr = hasRealTime
                     ? `${formatTsLocal(ft.startTs)} – ${formatTsLocal(ft.endTs)}`
                     : null;
+
+                // ============================================================
+                // NOVÉ: Pre PRVÝ nepriradený segment použi `when` parenta
+                // (aby sa v boxe nezobrazilo "čas neurčený", keď parent mal čas).
+                // ============================================================
+                if (!whenStr && i === firstUnassignedIdx && parentEffectiveWhen) {
+                    whenStr = parentEffectiveWhen;
+                }
             
                 const text = `Presun z ${fromLoc} do ${toLoc}`;
                 const key = buildTransferKey(
