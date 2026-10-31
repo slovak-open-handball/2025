@@ -8503,19 +8503,62 @@ const TransportApp = ({ userProfileData }) => {
                 displayEndTs = trRange.startTs;
             }
         
-            const newWhen = `${formatTsLocal(trRange.startTs)} – ${formatTsLocal(displayEndTs)}`;
-        
+            // ============================================================
+            // NOVÉ: Zisti, či existuje predchádzajúci ZOBRAZENÝ segment
+            // toho istého parenta (v boxe "Vygenerované presuny").
+            //
+            // Ak áno, aktuálny segment musí začínať na JEHO koncovom čase
+            // (endTs), aby časti presunu na seba nadväzovali.
+            //
+            // Predchádzajúci zobrazený segment nájdeme tak, že prejdeme
+            // parentSegments a nájdeme najbližší predchádzajúci segment,
+            // ktorý je buď priradený (bus) alebo walking (teda už "vyriešený"
+            // a nezobrazí sa v boxe), alebo je to náš aktuálny segment.
+            // ============================================================
+            let startTsForDisplay = trRange.startTs;
+            
+            // Nájdi predchádzajúci segment v parentovi (podľa poradia),
+            // ktorý je vyriešený (bus alebo walking) – jeho endTs je
+            // čas, kedy môže aktuálny segment začať.
+            let prevResolvedEndTs = null;
+            for (const seg of parentSegments) {
+                if (seg.key === t.key) break;
+                if (seg.range.startTs >= trRange.startTs) break;
+            
+                const isAssigned = seg._isAssigned === true || isSegmentAssigned(seg);
+                if (isAssigned || seg.isWalking === true) {
+                    if (seg.range.endTs != null) {
+                        if (prevResolvedEndTs == null || seg.range.endTs > prevResolvedEndTs) {
+                            prevResolvedEndTs = seg.range.endTs;
+                        }
+                    }
+                }
+            }
+            
+            // ============================================================
+            // Ak existuje predchádzajúci vyriešený segment, aktuálny segment
+            // musí začínať na jeho koncovom čase (endTs). Tým sa zabezpečí,
+            // že časti presunu v boxe na seba nadväzujú.
+            // ============================================================
+            if (prevResolvedEndTs != null && prevResolvedEndTs > startTsForDisplay) {
+                startTsForDisplay = prevResolvedEndTs;
+            }
+            
+            const newWhen = `${formatTsLocal(startTsForDisplay)} – ${formatTsLocal(displayEndTs)}`;
+            
             // Prepočítaj _remainingMinutes podľa nového when
             let newRemainingMinutes = t._remainingMinutes;
             if (
                 t._remainingMinutes != null &&
-                trRange.startTs != null &&
+                startTsForDisplay != null &&
                 displayEndTs != null &&
-                displayEndTs > trRange.startTs
+                displayEndTs > startTsForDisplay
             ) {
-                newRemainingMinutes = Math.round((displayEndTs - trRange.startTs) / 60000);
+                newRemainingMinutes = Math.round((displayEndTs - startTsForDisplay) / 60000);
+            } else if (t._remainingMinutes != null) {
+                newRemainingMinutes = null;
             }
-        
+            
             return {
                 ...t,
                 when: newWhen,
