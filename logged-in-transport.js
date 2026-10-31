@@ -6165,28 +6165,57 @@ const TransportApp = ({ userProfileData }) => {
         }
         
         // ============================================================
-        // NOVÉ: Celkový `when` parenta sa počíta LEN z nepeších segmentov.
-        // Ak sú všetky segmenty pešie, `when` zostane prázdny.
+        // ============================================================
+        // NOVÉ: Celkový `when` parenta.
+        //
+        // PRAVIDLÁ:
+        //  1) Ak máme pôvodný platný `parentRange` → zachovaj ho.
+        //  2) Ak máme reálne časy segmentov → použi min/max.
+        //  3) Ak NEMÁME ani jedno, ale máme pôvodný neprázdny `draft.when` (string)
+        //     → ZACHOVAJ ho (nezahadzuj!). Tým sa zabezpečí, že presun
+        //     nestratí čas len preto, že ešte nie je priradený k busu.
+        //  4) Ak je celý parent peší → `when = ''`.
         // ============================================================
         const nonWalkingSegments = draft.segments.filter((s) => s.isWalking !== true);
         const allStart = nonWalkingSegments.map((s) => s.startTs).filter((ts) => ts != null);
         const allEnd = nonWalkingSegments.map((s) => s.endTs).filter((ts) => ts != null);
-
-        // Skontroluj, či máme pôvodný platný `when`
-        const hasOriginalWhen = parentRange && 
-            parentRange.startTs != null && 
-            parentRange.endTs != null && 
+        
+        const parentIsFullyWalking =
+            draft.segments.length > 0 &&
+            draft.segments.every((s) => s.isWalking === true);
+        
+        const hasOriginalWhen = parentRange &&
+            parentRange.startTs != null &&
+            parentRange.endTs != null &&
             parentRange.endTs > parentRange.startTs;
-
-        if (hasOriginalWhen) {
+        
+        if (parentIsFullyWalking) {
+            // Celý presun je peší → žiadny čas
+            draft.when = '';
+        } else if (hasOriginalWhen) {
             // Zachovaj pôvodný `when` – segmenty sú dopočítané v rámci neho
             draft.when = `${formatTsLocal(parentRange.startTs)} – ${formatTsLocal(parentRange.endTs)}`;
         } else if (allStart.length > 0 && allEnd.length > 0) {
             // Nový `when` z min/max časov segmentov
             draft.when = `${formatTsLocal(Math.min(...allStart))} – ${formatTsLocal(Math.max(...allEnd))}`;
         } else {
-            // Všetko pešie → žiadny čas
-            draft.when = '';
+            // ============================================================
+            // NOVÉ: Nemáme reálne časy segmentov, ale parent NIE JE celý peší
+            // (má aspoň jeden nepeší segment). ZACHOVAJ pôvodný `draft.when`,
+            // ktorý prišiel z DB / z generovania. Nezahadzuj ho!
+            //
+            // Ak by bol prázdny, presun by stratil čas a v UI by sa
+            // nezobrazoval žiadny časový interval.
+            // ============================================================
+            if (!draft.when || String(draft.when).trim() === '') {
+                // Posledná záchrana: skús `parent.when` z parent záznamu
+                const parentRec = savedTransfersRef.current.find((s) => s.key === draft.key);
+                if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
+                    draft.when = parentRec.when;
+                }
+                // Ak ani to nepomôže, `when` zostane prázdny (nedá sa nič robiť)
+            }
+            // Inak `draft.when` zostáva tak, ako bol (nezahadzujeme ho)
         }
     };
     
@@ -7956,7 +7985,28 @@ const TransportApp = ({ userProfileData }) => {
             if (stops.length === 0) {
                 // Klasický parent presun bez medzizastávok
                 const isAssigned = isSegmentAssigned(t);
-                expandedTransfers.push({ ...t, _isAssigned: isAssigned });
+
+                // ============================================================
+                // NOVÉ: Ak `when` je prázdny (napr. ho vymazal recomputeParentSegmentsInPlace
+                // pri generovaní), skús ho doplniť z parent záznamu v savedTransfers
+                // alebo aspoň zobraz `dayKey`, aby používateľ videl, kedy sa presun koná.
+                // ============================================================
+                let displayWhen = t.when;
+                if (!displayWhen || String(displayWhen).trim() === '') {
+                    const parentRec = savedTransfers.find((s) => s.key === t.key);
+                    if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
+                        displayWhen = parentRec.when;
+                    }
+                }
+            
+                expandedTransfers.push({
+                    ...t,
+                    when: displayWhen,
+                    _isAssigned: isAssigned,
+                    // NOVÉ: ak nemá reálny čas, ale má aspoň `when`, považujeme to za "má čas"
+                    // (aby sa zobrazil časový label v UI)
+                    _hasRealTime: !!(displayWhen && String(displayWhen).trim() !== ''),
+                });
                 return;
             }
     
@@ -8653,15 +8703,24 @@ const TransportApp = ({ userProfileData }) => {
                             }
     
                             // ============================================================
-                            // NOVÉ: Pre segmenty bez reálneho času nezobrazuj timeLabel.
+                            // NOVÉ: Zobraz čas vždy, keď ho máme – aj keď segment nemá
+                            // "reálny čas z busu". Fallback:
+                            //  1) ak `rangeInfo` má čas → "HH:MM – HH:MM"
+                            //  2) ak `t.when` je neprázdny string → zobraz ho priamo
+                            //  3) ak máme len `dayKey` → zobraz deň s poznámkou "čas neurčený"
                             // ============================================================
                             let timeLabel = null;
-                            if (t._hasRealTime === true && rangeInfo) {
+                            if (rangeInfo && (rangeInfo.startTime || rangeInfo.endTime)) {
                                 const st = rangeInfo.startTime;
                                 const et = rangeInfo.endTime;
                                 if (st && et) timeLabel = `${st} – ${et}`;
                                 else if (st) timeLabel = st;
                                 else if (et) timeLabel = et;
+                            } else if (t.when && String(t.when).trim() !== '') {
+                                timeLabel = String(t.when).trim();
+                            } else if (t.dayKey) {
+                                const dayLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
+                                timeLabel = `${dayLabel} (čas neurčený)`;
                             }
     
                             let routeLabel = null;
