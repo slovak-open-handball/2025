@@ -11003,6 +11003,7 @@ const TransportApp = ({ userProfileData }) => {
                         {
                             type: 'button',
                             onClick: () => {
+                                const transferToAssign = transferActionModal.transfer;
                                 const matches = findMatchingBusRows(transferActionModal.transfer);
                                 setAssignBusMatches(matches);
                                 setAssignBusSelectedKey(
