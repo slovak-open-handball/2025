@@ -6349,7 +6349,43 @@ const TransportApp = ({ userProfileData }) => {
             if (diff < 0) diff += 24 * 60;
             return diff;
         };
-    
+
+        // Pomocná: vráti "efektívne" trvanie pre porovnanie.
+        // Ak sa trvanie nedá vypočítať, vráti Number.POSITIVE_INFINITY,
+        // aby takýto kandidát nikdy nevyhral proti vypočítateľnému.
+        const getEffectiveDuration = (r) => {
+            const d = computeTripDurationMinutes(r.boardingRow, r.alightingRow);
+            return d != null ? d : Number.POSITIVE_INFINITY;
+        };
+
+        // Pomocná: z danej skupiny vyberie toho s najkratším trvaním.
+        // Pri zhode trvania (napr. obe Infinity) nechá pôvodné poradie
+        // a vyberie prvého – ale keďže ide o rovnaký čas začiatku/konca,
+        // je to jedno.
+        const pickShortestDuration = (group) => {
+            if (!group || group.length === 0) return null;
+            if (group.length === 1) return group[0];
+            let best = group[0];
+            let bestDuration = getEffectiveDuration(best);
+            for (let i = 1; i < group.length; i++) {
+                const r = group[i];
+                const d = getEffectiveDuration(r);
+                if (d < bestDuration) {
+                    best = r;
+                    bestDuration = d;
+                }
+            }
+            return best;
+        };
+
+        // ============================================================
+        // KROK 1: Deduplikácia podľa rovnakého času ZAČIATKU.
+        //
+        // Kľúč: busId|dayKey|boardingTime|fromPlace
+        // (fromPlace je súčasťou kľúča, aby sa nezlievali rôzne trasy
+        //  v tom istom buse s rovnakým časom začiatku – tie sa majú
+        //  zobraziť obe, keďže idú z iného miesta.)
+        // ============================================================
         const groupedByBoarding = new Map();
         results.forEach((r) => {
             const busId = r.bus?.id || '';
@@ -6360,31 +6396,38 @@ const TransportApp = ({ userProfileData }) => {
             if (!groupedByBoarding.has(key)) groupedByBoarding.set(key, []);
             groupedByBoarding.get(key).push(r);
         });
-    
-        const dedupedResults = [];
+
+        const afterBoardingDedup = [];
         groupedByBoarding.forEach((group) => {
-            if (group.length === 1) {
-                dedupedResults.push(group[0]);
-                return;
-            }
-            const withDuration = group.map((r) => ({
-                candidate: r,
-                duration: computeTripDurationMinutes(r.boardingRow, r.alightingRow),
-            }));
-            let best = null;
-            withDuration.forEach((item) => {
-                if (item.duration == null) return;
-                if (best == null || item.duration < best.duration) {
-                    best = item;
-                }
-            });
-            if (best != null) {
-                dedupedResults.push(best.candidate);
-            } else {
-                group.forEach((r) => dedupedResults.push(r));
-            }
+            const best = pickShortestDuration(group);
+            if (best) afterBoardingDedup.push(best);
         });
-    
+
+        // ============================================================
+        // KROK 2: Deduplikácia podľa rovnakého času KONCA.
+        //
+        // Kľúč: busId|dayKey|alightingTime|toPlace
+        // (toPlace je súčasťou kľúča, aby sa nezlievali rôzne trasy
+        //  končiace na inom mieste v tom istom buse s rovnakým časom
+        //  konca.)
+        // ============================================================
+        const groupedByAlighting = new Map();
+        afterBoardingDedup.forEach((r) => {
+            const busId = r.bus?.id || '';
+            const dayKey = r.trip?.dayKey || '';
+            const alightingTime = r.alightingTime || '';
+            const toPlace = normalizePlaceName(r.trip?.toPlace || '');
+            const key = `${busId}|${dayKey}|${alightingTime}|${toPlace}`;
+            if (!groupedByAlighting.has(key)) groupedByAlighting.set(key, []);
+            groupedByAlighting.get(key).push(r);
+        });
+
+        const dedupedResults = [];
+        groupedByAlighting.forEach((group) => {
+            const best = pickShortestDuration(group);
+            if (best) dedupedResults.push(best);
+        });
+
         console.log(`📊 Po deduplikácii: ${dedupedResults.length}`);
     
         // ============================================================
