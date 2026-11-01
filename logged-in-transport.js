@@ -4623,21 +4623,41 @@ const TransportApp = ({ userProfileData }) => {
     const getTravelMinutes = (placeFrom, placeTo) => {
         if (!placeFrom || !placeTo) return null;
     
-        // 1) Skús priamo ID
+        const normFrom = normalizePlaceName(placeFrom);
+        const normTo = normalizePlaceName(placeTo);
+    
+        // 1) Priamo ID (presná zhoda)
         const keyId = `${placeFrom}|${placeTo}`;
         if (travelTimes[keyId] && travelTimes[keyId].minutes != null) {
             return Number(travelTimes[keyId].minutes);
         }
     
-        // 2) Skús nájsť zastávky podľa názvu → ID
-        const fromStop = stopsList.find((s) => s.name === placeFrom || s.id === placeFrom);
-        const toStop = stopsList.find((s) => s.name === placeTo || s.id === placeTo);
+        // 2) Cez normalizovaný názov → nájdi zastávku
+        const fromStop = stopsList.find((s) =>
+            normalizePlaceName(s.name) === normFrom || s.id === placeFrom
+        );
+        const toStop = stopsList.find((s) =>
+            normalizePlaceName(s.name) === normTo || s.id === placeTo
+        );
         if (fromStop && toStop) {
             const key = `${fromStop.id}|${toStop.id}`;
             if (travelTimes[key] && travelTimes[key].minutes != null) {
                 return Number(travelTimes[key].minutes);
             }
         }
+    
+        // 3) Fallback: prejdi všetky travelTimes a porovnaj normalizované názvy
+        for (const [key, v] of Object.entries(travelTimes)) {
+            if (!v) continue;
+            if (
+                normalizePlaceName(v.fromName) === normFrom &&
+                normalizePlaceName(v.toName) === normTo &&
+                v.minutes != null
+            ) {
+                return Number(v.minutes);
+            }
+        }
+    
         return null;
     };
 
