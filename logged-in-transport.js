@@ -10624,7 +10624,7 @@ const TransportApp = ({ userProfileData }) => {
                                         style: { color: transportColor || '#5b21b6' },
                                         title: membersTitle,
                                     },
-                                    `• ${membersCount}`
+                                    `• ${membersCount} členov`
                                 )
                         ),
                         // 2. riadok – trasa (celá trasa parenta)
@@ -11181,7 +11181,7 @@ const TransportApp = ({ userProfileData }) => {
                                         style: { color: transportColor || '#5b21b6' },
                                         title: membersTitle,
                                     },
-                                    `• ${membersCount}`
+                                    `• ${membersCount} členov`
                                 )
                         ),
                         // 2. riadok – trasa (rovnaká veľkosť / farba ako čas)
