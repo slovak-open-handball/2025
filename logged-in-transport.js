@@ -2784,197 +2784,233 @@ const TransportApp = ({ userProfileData }) => {
                     try {
                         const transfersForTeam = enriched.filter((ev) => ev.isTransfer === true);
                         if (transfersForTeam.length > 0 && window.db) {
-                            const teamIdentifiers = findTeamIdentifiersByName(category, teamName);
                     
-                            if (!teamIdentifiers) {
-                                console.warn(
-                                    '[TRANSPORT] Presuny sa neukladajú – nepodarilo sa nájsť teamUid/teamIndex pre tím:',
-                                    teamName, 'v kategórii', category
+                            // ============================================================
+                            // NOVÉ: Zisti, či je tím superstructure (nie je v users).
+                            // Pre superstructure tímy nemáme teamUid/teamIndex – uložíme
+                            // ich s teamName priamo v DB.
+                            // ============================================================
+                            const foundTeamIdentifiers = findTeamIdentifiersByName(category, teamName);
+                            const isSuperstructureTeamForDb = !foundTeamIdentifiers;
+                    
+                            const effectiveTeamIdentifiers = isSuperstructureTeamForDb
+                                ? { teamUid: null, teamIndex: null, category }
+                                : foundTeamIdentifiers;
+                    
+                            if (isSuperstructureTeamForDb) {
+                                console.log(
+                                    '%c[TRANSPORT][SUPERSTRUCTURE] Ukladám presuny pre superstructure tím:',
+                                    'color:#7c3aed;font-weight:bold;',
+                                    teamName, 'v kategórii', category,
+                                    '(teamUid=null, teamIndex=null, teamName="' + teamName + '")'
                                 );
-                            } else {
-                                const transfersPatch = {};
-                                const newKeys = new Set();
+                            }
                     
-                                transfersForTeam.forEach((ev) => {
-                                    // ============================================================
-                                    // NOVÉ: Najprv zisti from/to z textu – potrebujeme ich
-                                    // na vyhľadanie existujúceho parent záznamu s medzizastávkami.
-                                    // ============================================================
-                                    let fromLocation = '';
-                                    let toLocation = '';
-                                    const m = /^Presun z (.+?) do (.+)$/.exec(String(ev.text || ''));
-                                    if (m) {
-                                        fromLocation = m[1].trim();
-                                        toLocation = m[2].trim();
-                                    }
-
-                                    const evDayKey = extractDayKeyFromWhen(ev.when) || null;
-
-                                    // ============================================================
-                                    // NOVÉ: Skontroluj, či už existuje PARENT záznam
-                                    // s rovnakou kategóriou, tímom, fromLocation, toLocation
-                                    // a dayKey, ktorý má intermediateStops (medzizastávky).
-                                    //
-                                    // Ak áno, MUSÍME zachovať JEHO kľúč (a jeho úpravy),
-                                    // inak by sa vygeneroval nový duplicitný záznam a starý
-                                    // (s medzizastávkami) by zostal v DB.
-                                    // ============================================================
-                                    const existingParentWithStops = (savedTransfers || []).find((s) => {
-                                        if (cleanCategory(s.category || '') !== cleanCategory(category)) return false;
-                                        if (String(s.teamName || '').trim() !== teamName) return false;
-                                        if (normalizePlaceName(s.fromLocation || '') !== normalizePlaceName(fromLocation)) return false;
-                                        if (normalizePlaceName(s.toLocation || '') !== normalizePlaceName(toLocation)) return false;
-                                        if ((s.dayKey || '') !== (evDayKey || '')) return false;
-                                        // Musí ísť o parent záznam (nie segment)
-                                        if (s._parentKey && s._parentKey !== s.key) return false;
-                                        // Musí mať medzizastávky
-                                        if (!Array.isArray(s.intermediateStops) || s.intermediateStops.length === 0) return false;
-                                        return true;
-                                    });
-
-                                    // ============================================================
-                                    // KĽÚČ: Ak existuje parent s medzizastávkami, použi
-                                    // JEHO kľúč. Inak vytvor nový kľúč cez buildTransferKey.
-                                    // ============================================================
-                                    const key = existingParentWithStops
-                                        ? existingParentWithStops.key
-                                        : buildTransferKey(category, teamName, ev.when, ev.text);
-                                    newKeys.add(key);
-
-                                    const existingSaved = existingParentWithStops || savedTransfers.find((s) => s.key === key);
-                                    
-                                    // Základný záznam (bez segments – tie dopočítame nižšie)
-                                    const baseRecord = {
-                                        category: cleanCategory(category),
-                                        teamUid: teamIdentifiers.teamUid,
-                                        teamIndex: teamIdentifiers.teamIndex,
-                                        when: String(ev.when || '').trim(),
-                                        text: String(ev.text || '').trim(),
-                                        fromLocation,
-                                        toLocation,
-                                        dayKey: extractDayKeyFromWhen(ev.when) || null,
-                                    };
-                                    
-                                    // Ak existuje manuálne upravený záznam, prenesieme si jeho úpravy
-                                    if (existingSaved) {
-                                        if (Array.isArray(existingSaved.intermediateStops) && existingSaved.intermediateStops.length > 0) {
-                                            baseRecord.intermediateStops = existingSaved.intermediateStops;
-                                        }
-                                        if (existingSaved.isWalking === true) {
-                                            baseRecord.isWalking = true;
-                                            baseRecord.walkingSetAt = existingSaved.walkingSetAt || Timestamp.fromDate(new Date());
-                                            baseRecord.walkingSetBy = existingSaved.walkingSetBy || (userProfileData && userProfileData.email) || null;
-                                        }
-                                    }
-                                    
-                                    // ============================================================
-                                    // NOVÉ: Vždy vytvoríme draft so segments a dopočítame časy
-                                    // podľa aktuálnych busRows (recomputeParentSegmentsInPlace).
-                                    //
-                                    // Tým sa zabezpečí, že KAŽDÝ presun má v DB:
-                                    //  - intermediateStops (ak existujú)
-                                    //  - segments s reálnymi časmi z busu (ak je priradený)
-                                    //  - segments bez časov pre pešie segmenty
-                                    // ============================================================
-                                    const draft = {
-                                        ...baseRecord,
-                                        key,
-                                        segments: Array.isArray(existingSaved?.segments)
-                                            ? existingSaved.segments.map((s) => ({ ...s }))
-                                            : buildDefaultSegments(baseRecord),
-                                    };
-                                    
-                                    // Dopočítaj časy segmentov podľa busRows
-                                    recomputeParentSegmentsInPlace(draft);
-                                    
-                                    // Zapíšeme výsledok do patche
-                                    const finalWhen = (draft.when && String(draft.when).trim() !== '')
-                                        ? draft.when
-                                        : (baseRecord.when && String(baseRecord.when).trim() !== '' ? baseRecord.when : '');
-
-                                    transfersPatch[key] = {
-                                        category: draft.category,
-                                        teamUid: draft.teamUid,
-                                        teamIndex: draft.teamIndex,
-                                        dayKey: draft.dayKey,
-                                        fromLocation: draft.fromLocation,
-                                        toLocation: draft.toLocation,
-                                        when: finalWhen,
-                                        text: draft.text,
-                                        segments: draft.segments,
-                                    };
-                                    
-                                    if (Array.isArray(draft.intermediateStops) && draft.intermediateStops.length > 0) {
-                                        transfersPatch[key].intermediateStops = draft.intermediateStops;
-                                    }
-                                    
-                                    if (draft.isWalking === true) {
-                                        transfersPatch[key].isWalking = true;
-                                        transfersPatch[key].walkingSetAt = draft.walkingSetAt;
-                                        transfersPatch[key].walkingSetBy = draft.walkingSetBy;
-                                    
-                                        // ============================================================
-                                        // NOVÉ: Peší presun NEMÁ ČASY.
-                                        // - `when` sa nastaví na prázdny string (alebo null)
-                                        // - segments dostanú null časy
-                                        // ============================================================
-                                        transfersPatch[key].when = '';
-                                        transfersPatch[key].segments = (draft.segments || []).map((s) => ({
-                                            ...s,
-                                            startTs: null,
-                                            endTs: null,
-                                            when: null,
-                                            busAssigned: false,
-                                        }));
-                                    }
+                            const transfersPatch = {};
+                            const newKeys = new Set();
                     
-                                    if (existingSaved) {
-                                        if (existingSaved.isWalking === true) {
-                                            transfersPatch[key].isWalking = true;
-                                            transfersPatch[key].walkingSetAt = existingSaved.walkingSetAt || Timestamp.fromDate(new Date());
-                                            transfersPatch[key].walkingSetBy = existingSaved.walkingSetBy || (userProfileData && userProfileData.email) || null;
-                                        }
-                                        if (Array.isArray(existingSaved.intermediateStops) && existingSaved.intermediateStops.length > 0) {
-                                            transfersPatch[key].intermediateStops = existingSaved.intermediateStops;
-                                        }
-                                    }
-                                });
-                    
+                            transfersForTeam.forEach((ev) => {
                                 // ============================================================
-                                // OPRAVA (Chyba 3): Zmaž staré záznamy pre tento tím,
-                                // ktoré už nemajú byť (parent aj segmenty), aby sa nehromadili.
+                                // NOVÉ: Najprv zisti from/to z textu – potrebujeme ich
+                                // na vyhľadanie existujúceho parent záznamu s medzizastávkami.
                                 // ============================================================
-                                const categoryClean = cleanCategory(category);
-                                savedTransfers.forEach((s) => {
-                                    if (cleanCategory(s.category || '') !== categoryClean) return;
-                                    // Musí ísť o rovnaký tím
-                                    const sameTeam =
-                                        (s.teamUid != null && s.teamUid === teamIdentifiers.teamUid
-                                            && s.teamIndex === teamIdentifiers.teamIndex)
-                                        || (s.teamUid == null && String(s.teamName || '').trim() === teamName);
-                                    if (!sameTeam) return;
-                                    if (newKeys.has(s.key)) return;
-                                    // Zmaž len ak nie je súčasťou parent bloku s intermediateStops
-                                    if (Array.isArray(s.intermediateStops) && s.intermediateStops.length > 0) return;
-                                    if (s._parentKey && s._parentKey !== s.key) {
-                                        // Je to segment iného parenta – tiež zmaž, ak nový parent neexistuje
-                                        const parentExists = savedTransfers.some(
-                                            (p) => p.key === s._parentKey && Array.isArray(p.intermediateStops) && p.intermediateStops.length > 0
-                                        );
-                                        if (parentExists) return;
-                                    }
-                                    transfersPatch[s.key] = deleteField();
-                                });
-                    
-                                if (Object.keys(transfersPatch).length > 0) {
-                                    setDoc(
-                                        doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC),
-                                        { [TRANSPORT_TRANSFERS_FIELD]: transfersPatch },
-                                        { merge: true }
-                                    ).catch((err) => {
-                                        console.error('[TRANSPORT] Chyba pri ukladaní presunov do DB:', err);
-                                    });
+                                let fromLocation = '';
+                                let toLocation = '';
+                                const m = /^Presun z (.+?) do (.+)$/.exec(String(ev.text || ''));
+                                if (m) {
+                                    fromLocation = m[1].trim();
+                                    toLocation = m[2].trim();
                                 }
+                    
+                                const evDayKey = extractDayKeyFromWhen(ev.when) || null;
+                    
+                                // ============================================================
+                                // NOVÉ: Skontroluj, či už existuje PARENT záznam
+                                // s rovnakou kategóriou, tímom, fromLocation, toLocation
+                                // a dayKey, ktorý má intermediateStops (medzizastávky).
+                                //
+                                // Ak áno, MUSÍME zachovať JEHO kľúč (a jeho úpravy),
+                                // inak by sa vygeneroval nový duplicitný záznam a starý
+                                // (s medzizastávkami) by zostal v DB.
+                                // ============================================================
+                                const existingParentWithStops = (savedTransfers || []).find((s) => {
+                                    if (cleanCategory(s.category || '') !== cleanCategory(category)) return false;
+                                    if (String(s.teamName || '').trim() !== teamName) return false;
+                                    if (normalizePlaceName(s.fromLocation || '') !== normalizePlaceName(fromLocation)) return false;
+                                    if (normalizePlaceName(s.toLocation || '') !== normalizePlaceName(toLocation)) return false;
+                                    if ((s.dayKey || '') !== (evDayKey || '')) return false;
+                                    // Musí ísť o parent záznam (nie segment)
+                                    if (s._parentKey && s._parentKey !== s.key) return false;
+                                    // Musí mať medzizastávky
+                                    if (!Array.isArray(s.intermediateStops) || s.intermediateStops.length === 0) return false;
+                                    return true;
+                                });
+                    
+                                // ============================================================
+                                // KĽÚČ: Ak existuje parent s medzizastávkami, použi
+                                // JEHO kľúč. Inak vytvor nový kľúč cez buildTransferKey.
+                                // ============================================================
+                                const key = existingParentWithStops
+                                    ? existingParentWithStops.key
+                                    : buildTransferKey(category, teamName, ev.when, ev.text);
+                                newKeys.add(key);
+                    
+                                const existingSaved = existingParentWithStops || savedTransfers.find((s) => s.key === key);
+                    
+                                // Základný záznam (bez segments – tie dopočítame nižšie)
+                                const baseRecord = {
+                                    category: cleanCategory(category),
+                                    teamUid: effectiveTeamIdentifiers.teamUid,
+                                    teamIndex: effectiveTeamIdentifiers.teamIndex,
+                                    when: String(ev.when || '').trim(),
+                                    text: String(ev.text || '').trim(),
+                                    fromLocation,
+                                    toLocation,
+                                    dayKey: extractDayKeyFromWhen(ev.when) || null,
+                                };
+                    
+                                // ============================================================
+                                // NOVÉ: Pre superstructure tímy ulož aj teamName (nemajú
+                                // teamUid/teamIndex v users).
+                                // ============================================================
+                                if (isSuperstructureTeamForDb) {
+                                    baseRecord.teamName = teamName;
+                                }
+                    
+                                // Ak existuje manuálne upravený záznam, prenesieme si jeho úpravy
+                                if (existingSaved) {
+                                    if (Array.isArray(existingSaved.intermediateStops) && existingSaved.intermediateStops.length > 0) {
+                                        baseRecord.intermediateStops = existingSaved.intermediateStops;
+                                    }
+                                    if (existingSaved.isWalking === true) {
+                                        baseRecord.isWalking = true;
+                                        baseRecord.walkingSetAt = existingSaved.walkingSetAt || Timestamp.fromDate(new Date());
+                                        baseRecord.walkingSetBy = existingSaved.walkingSetBy || (userProfileData && userProfileData.email) || null;
+                                    }
+                                }
+                    
+                                // ============================================================
+                                // NOVÉ: Vždy vytvoríme draft so segments a dopočítame časy
+                                // podľa aktuálnych busRows (recomputeParentSegmentsInPlace).
+                                //
+                                // Tým sa zabezpečí, že KAŽDÝ presun má v DB:
+                                //  - intermediateStops (ak existujú)
+                                //  - segments s reálnymi časmi z busu (ak je priradený)
+                                //  - segments bez časov pre pešie segmenty
+                                // ============================================================
+                                const draft = {
+                                    ...baseRecord,
+                                    key,
+                                    segments: Array.isArray(existingSaved?.segments)
+                                        ? existingSaved.segments.map((s) => ({ ...s }))
+                                        : buildDefaultSegments(baseRecord),
+                                };
+                    
+                                // Dopočítaj časy segmentov podľa busRows
+                                recomputeParentSegmentsInPlace(draft);
+                    
+                                // Zapíšeme výsledok do patche
+                                const finalWhen = (draft.when && String(draft.when).trim() !== '')
+                                    ? draft.when
+                                    : (baseRecord.when && String(baseRecord.when).trim() !== '' ? baseRecord.when : '');
+                    
+                                transfersPatch[key] = {
+                                    category: draft.category,
+                                    teamUid: draft.teamUid,
+                                    teamIndex: draft.teamIndex,
+                                    dayKey: draft.dayKey,
+                                    fromLocation: draft.fromLocation,
+                                    toLocation: draft.toLocation,
+                                    when: finalWhen,
+                                    text: draft.text,
+                                    segments: draft.segments,
+                                };
+                    
+                                // ============================================================
+                                // NOVÉ: Pre superstructure tímy ulož aj teamName.
+                                // ============================================================
+                                if (isSuperstructureTeamForDb) {
+                                    transfersPatch[key].teamName = teamName;
+                                }
+                    
+                                if (Array.isArray(draft.intermediateStops) && draft.intermediateStops.length > 0) {
+                                    transfersPatch[key].intermediateStops = draft.intermediateStops;
+                                }
+                    
+                                if (draft.isWalking === true) {
+                                    transfersPatch[key].isWalking = true;
+                                    transfersPatch[key].walkingSetAt = draft.walkingSetAt;
+                                    transfersPatch[key].walkingSetBy = draft.walkingSetBy;
+                    
+                                    // ============================================================
+                                    // NOVÉ: Peší presun NEMÁ ČASY.
+                                    // - `when` sa nastaví na prázdny string (alebo null)
+                                    // - segments dostanú null časy
+                                    // ============================================================
+                                    transfersPatch[key].when = '';
+                                    transfersPatch[key].segments = (draft.segments || []).map((s) => ({
+                                        ...s,
+                                        startTs: null,
+                                        endTs: null,
+                                        when: null,
+                                        busAssigned: false,
+                                    }));
+                                }
+                    
+                                if (existingSaved) {
+                                    if (existingSaved.isWalking === true) {
+                                        transfersPatch[key].isWalking = true;
+                                        transfersPatch[key].walkingSetAt = existingSaved.walkingSetAt || Timestamp.fromDate(new Date());
+                                        transfersPatch[key].walkingSetBy = existingSaved.walkingSetBy || (userProfileData && userProfileData.email) || null;
+                                    }
+                                    if (Array.isArray(existingSaved.intermediateStops) && existingSaved.intermediateStops.length > 0) {
+                                        transfersPatch[key].intermediateStops = existingSaved.intermediateStops;
+                                    }
+                                }
+                            });
+                    
+                            // ============================================================
+                            // OPRAVA (Chyba 3): Zmaž staré záznamy pre tento tím,
+                            // ktoré už nemajú byť (parent aj segmenty), aby sa nehromadili.
+                            //
+                            // NOVÉ: Rozšírené o superstructure tímy – porovnávame buď
+                            // cez teamUid/teamIndex, alebo (pre superstructure) cez teamName.
+                            // ============================================================
+                            const categoryClean = cleanCategory(category);
+                            savedTransfers.forEach((s) => {
+                                if (cleanCategory(s.category || '') !== categoryClean) return;
+                    
+                                // Musí ísť o rovnaký tím – buď cez teamUid/teamIndex,
+                                // alebo (pre superstructure) cez teamName.
+                                const sameTeam =
+                                    (effectiveTeamIdentifiers.teamUid != null
+                                        && s.teamUid === effectiveTeamIdentifiers.teamUid
+                                        && s.teamIndex === effectiveTeamIdentifiers.teamIndex)
+                                    || (effectiveTeamIdentifiers.teamUid == null
+                                        && String(s.teamName || '').trim() === teamName);
+                    
+                                if (!sameTeam) return;
+                                if (newKeys.has(s.key)) return;
+                                // Zmaž len ak nie je súčasťou parent bloku s intermediateStops
+                                if (Array.isArray(s.intermediateStops) && s.intermediateStops.length > 0) return;
+                                if (s._parentKey && s._parentKey !== s.key) {
+                                    // Je to segment iného parenta – tiež zmaž, ak nový parent neexistuje
+                                    const parentExists = savedTransfers.some(
+                                        (p) => p.key === s._parentKey && Array.isArray(p.intermediateStops) && p.intermediateStops.length > 0
+                                    );
+                                    if (parentExists) return;
+                                }
+                                transfersPatch[s.key] = deleteField();
+                            });
+                    
+                            if (Object.keys(transfersPatch).length > 0) {
+                                setDoc(
+                                    doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC),
+                                    { [TRANSPORT_TRANSFERS_FIELD]: transfersPatch },
+                                    { merge: true }
+                                ).catch((err) => {
+                                    console.error('[TRANSPORT] Chyba pri ukladaní presunov do DB:', err);
+                                });
                             }
                         }
                     } catch (e) {
@@ -3105,6 +3141,7 @@ const TransportApp = ({ userProfileData }) => {
                             category: v.category || '',
                             teamUid: v.teamUid || null,
                             teamIndex: v.teamIndex ?? null,
+                            teamName: v.teamName || null,
                             when: v.when || '',
                             text: v.text || '',
                             fromLocation: v.fromLocation || '',
