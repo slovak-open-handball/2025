@@ -8733,14 +8733,22 @@ const TransportApp = ({ userProfileData }) => {
             const category = cleanCategory(t.category || '');
             const dayKey = t.dayKey || '';
         
+            // ============================================================
+            // NOVÉ: Získať parent záznam pre fallback `when`
+            // ============================================================
+            const parentRec = savedTransfers.find((s) => s.key === parentKey);
+        
+            // ============================================================
+            // OPRAVA: `trRange` pre aktuálny segment
+            //  - Ak má segment reálny `when`, použi ho
+            //  - Inak použi `when` parenta (ak existuje)
+            //  - Inak skús poskladať z reálnych časov segmentov parenta
+            // ============================================================
             let trRange = parseTransferWhenToRange(t.when);
             if (!trRange || trRange.startTs == null) {
-                // Skús parent záznam
-                const parentRec = savedTransfers.find((s) => s.key === parentKey);
                 if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
                     trRange = parseTransferWhenToRange(parentRec.when);
                 } else if (parentRec && Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
-                    // Poskladaj z reálnych časov segmentov
                     let earliestStart = null;
                     let latestEnd = null;
                     parentRec.segments.forEach((s) => {
@@ -8759,7 +8767,16 @@ const TransportApp = ({ userProfileData }) => {
             if (!trRange || trRange.startTs == null) return t;
         
             // ============================================================
-            // Zoznam všetkých segmentov parenta (parent + segmenty s _parentKey)
+            // OPRAVA: Zoznam všetkých segmentov parenta
+            //
+            // Pre každý segment určíme efektívny `when`:
+            //  - Ak má segment reálny `when`, použijeme ho
+            //  - Inak skúsime `when` z parenta (rozložený podľa poradia)
+            //  - Inak skúsime reálne časy z parent.segments
+            //
+            // Tým sa zabezpečí, že aj nevyriešené segmenty majú
+            // aspoň približný interval (z parenta), aby sa dali
+            // správne vypočítať `prevResolvedEndTs` / `nextResolvedStartTs`.
             // ============================================================
             const parentSegments = [];
             savedTransfers.forEach((other) => {
@@ -8768,6 +8785,7 @@ const TransportApp = ({ userProfileData }) => {
                 if ((other.dayKey || '') !== dayKey) return;
                 const otherParentKey = other._parentKey || other.key;
                 if (otherParentKey !== parentKey) return;
+        
                 const r = parseTransferWhenToRange(other.when);
                 if (!r || r.startTs == null) return;
                 parentSegments.push({
@@ -8775,6 +8793,25 @@ const TransportApp = ({ userProfileData }) => {
                     range: r,
                 });
             });
+        
+            // ============================================================
+            // NOVÉ: Ak `parentSegments` neobsahuje aktuálny segment (lebo
+            // jeho `when` je null), musíme ho pridať manuálne s fallback
+            // `when` z parenta. Inak by sa stratil z poradia a výpočet
+            // `prevResolvedEndTs` / `nextResolvedStartTs` by bol nesprávny.
+            // ============================================================
+            const currentSegmentInList = parentSegments.some(
+                (seg) => normalizePlaceName(seg.fromLocation) === normalizePlaceName(t.fromLocation)
+                    && normalizePlaceName(seg.toLocation) === normalizePlaceName(t.toLocation)
+            );
+            if (!currentSegmentInList && trRange) {
+                // Pridaj aktuálny segment s `trRange` (fallback z parenta)
+                parentSegments.push({
+                    ...t,
+                    range: trRange,
+                });
+            }
+        
             parentSegments.sort((a, b) => a.range.startTs - b.range.startTs);
         
             // ============================================================
@@ -8790,7 +8827,9 @@ const TransportApp = ({ userProfileData }) => {
         
             for (const seg of parentSegments) {
                 // Preskoč samotný aktuálny segment
-                if (seg.key === t.key) continue;
+                const isCurrentSegment = normalizePlaceName(seg.fromLocation) === normalizePlaceName(t.fromLocation)
+                    && normalizePlaceName(seg.toLocation) === normalizePlaceName(t.toLocation);
+                if (isCurrentSegment) continue;
         
                 if (seg.range.startTs > trRange.startTs) {
                     // Segment za aktuálnym
@@ -8823,8 +8862,6 @@ const TransportApp = ({ userProfileData }) => {
         
             // ============================================================
             // Vypočítaj blockEndTs – maximum z koncov všetkých segmentov
-            // (alebo koniec posledného bus segmentu, ak aktuálny je walking
-            // a nasleduje bus)
             // ============================================================
             let blockEndTs = null;
             parentSegments.forEach((seg) => {
@@ -8837,31 +8874,17 @@ const TransportApp = ({ userProfileData }) => {
             if (blockEndTs == null) return t;
         
             // ============================================================
-            // NOVÉ: Pre walking segment urči správny displayEndTs:
-            //  - Ak aktuálny segment je walking a nasleduje bus segment
-            //    → displayEndTs = čas odchodu busu (nextAssignedStartTs)
-            //  - Ak aktuálny segment je walking a NEnasleduje bus (je to
-            //    posledný walking pred koncom bloku)
-            //    → displayEndTs = blockEndTs (celkový koniec bloku)
-            //  - Pre nebusový (nepriradený) segment:
-            //    → displayEndTs = nextAssignedStartTs (ak existuje),
-            //      inak blockEndTs
+            // OPRAVA: Pre walking segment urči správny displayEndTs
             // ============================================================
             let displayEndTs = blockEndTs;
         
             if (isCurrentWalking) {
-                // Walking segment:
-                // - ak nasleduje bus → koniec = čas odchodu busu
-                // - inak → koniec = koniec celého bloku
                 if (nextAssignedStartTs != null && nextAssignedStartTs >= trRange.startTs) {
                     displayEndTs = nextAssignedStartTs;
                 } else {
                     displayEndTs = blockEndTs;
                 }
             } else {
-                // Nebusový (nepriradený) segment:
-                // - ak nasleduje priradený segment → koniec = jeho začiatok
-                // - inak → koniec = koniec bloku
                 if (nextAssignedStartTs != null && nextAssignedStartTs >= trRange.startTs) {
                     displayEndTs = nextAssignedStartTs;
                 } else {
@@ -8869,36 +8892,25 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
         
-            // ============================================================
-            // Bezpečnostná poistka: displayEndTs nesmie byť menší ako startTs
-            // (inak by vznikol nulový alebo záporný interval)
-            // ============================================================
             if (displayEndTs != null && displayEndTs < trRange.startTs) {
                 displayEndTs = trRange.startTs;
             }
         
             // ============================================================
-            // NOVÉ: Pre segmenty BEZ reálneho času (t._hasRealTime === false)
-            // vypočítame "predbežný" interval z okolitých vyriešených segmentov
-            // (bus alebo walking alebo už priradený).
+            // OPRAVA: Nájdi koncový čas PREDCHÁDZAJÚCEHO vyriešeného segmentu
             //
-            // PRAVIDLÁ:
-            //  - startTs = koniec posledného vyriešeného predchádzajúceho segmentu
-            //    (ak neexistuje → startTs parenta)
-            //  - endTs   = začiatok najbližšieho vyriešeného nasledujúceho segmentu
-            //    (ak neexistuje → endTs parenta)
-            //
-            // Tým sa zabezpečí, že aj nepriradený segment má v boxe
-            // "Vygenerované presuny" zmysluplný časový interval, ktorý
-            // nadväzuje na predchádzajúce a nasledujúce časti presunu.
+            // DÔLEŽITÉ: Pre aktuálny segment používame `prevResolvedEndTs`
+            // ako ZAČIATOČNÝ čas (t.j. koniec predchádzajúceho vyriešeného
+            // segmentu). Ak neexistuje, použijeme `trRange.startTs` (začiatok
+            // parenta).
             // ============================================================
-            
-            // Nájdi koncový čas PREDCHÁDZAJÚCEHO vyriešeného segmentu
             let prevResolvedEndTs = null;
             for (const seg of parentSegments) {
-                if (seg.key === t.key) break;
+                const isCurrentSegment = normalizePlaceName(seg.fromLocation) === normalizePlaceName(t.fromLocation)
+                    && normalizePlaceName(seg.toLocation) === normalizePlaceName(t.toLocation);
+                if (isCurrentSegment) break;
                 if (seg.range.startTs >= trRange.startTs) break;
-            
+        
                 const isAssigned = seg._isAssigned === true || isSegmentAssigned(seg);
                 if (isAssigned || seg.isWalking === true) {
                     if (seg.range.endTs != null) {
@@ -8908,13 +8920,17 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 }
             }
-            
-            // Nájdi začiatočný čas NASLEDUJÚCEHO vyriešeného segmentu
+        
+            // ============================================================
+            // OPRAVA: Nájdi začiatočný čas NASLEDUJÚCEHO vyriešeného segmentu
+            // ============================================================
             let nextResolvedStartTs = null;
             for (const seg of parentSegments) {
+                const isCurrentSegment = normalizePlaceName(seg.fromLocation) === normalizePlaceName(t.fromLocation)
+                    && normalizePlaceName(seg.toLocation) === normalizePlaceName(t.toLocation);
+                if (isCurrentSegment) continue;
                 if (seg.range.startTs <= trRange.startTs) continue;
-                if (seg.key === t.key) continue;
-            
+        
                 const isAssigned = seg._isAssigned === true || isSegmentAssigned(seg);
                 if (isAssigned || seg.isWalking === true) {
                     if (seg.range.startTs != null) {
@@ -8924,13 +8940,25 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 }
             }
-
+        
             const isCurrentSegmentResolved =
                 t._isAssigned === true ||
                 (t.segments && Array.isArray(t.segments) && t.segments.some((s) => s.startTs != null && s.endTs != null)) ||
                 (t._hasRealTime === true && isSegmentAssigned(t));
-            
-            // ZAČIATOČNÝ ČAS: predchádzajúci vyriešený alebo pôvodný startTs parenta
+        
+            // ============================================================
+            // OPRAVA: Výpočet `startTsForDisplay` a `endTsForDisplay`
+            //
+            // Pre NEVYRIEŠENÝ segment:
+            //  - startTsForDisplay = koniec predchádzajúceho vyriešeného segmentu
+            //    (alebo začiatok parenta, ak neexistuje)
+            //  - endTsForDisplay   = začiatok nasledujúceho vyriešeného segmentu
+            //    (alebo koniec parenta, ak neexistuje)
+            //
+            // Tým sa zabezpečí, že segment má v boxe "Vygenerované presuny"
+            // zmysluplný interval, ktorý nadväzuje na predchádzajúce
+            // a nasledujúce časti presunu.
+            // ============================================================
             let startTsForDisplay;
             if (isCurrentSegmentResolved) {
                 startTsForDisplay = trRange.startTs;
@@ -8939,8 +8967,7 @@ const TransportApp = ({ userProfileData }) => {
                     ? prevResolvedEndTs
                     : trRange.startTs;
             }
-
-            // KONCOVÝ ČAS: pre nepriradený segment preferuj nasledujúci vyriešený segment
+        
             let endTsForDisplay;
             if (isCurrentSegmentResolved) {
                 endTsForDisplay = trRange.endTs;
@@ -8949,7 +8976,7 @@ const TransportApp = ({ userProfileData }) => {
             } else {
                 endTsForDisplay = trRange.endTs;
             }
-            
+        
             // Bezpečnostná poistka: endTs musí byť > startTs
             if (
                 startTsForDisplay == null ||
@@ -8962,37 +8989,15 @@ const TransportApp = ({ userProfileData }) => {
                     _remainingMinutes: null,
                 };
             }
-            
+        
             // Zostav `when` string
             const provisionalWhenStr = `${formatTsLocal(startTsForDisplay)} – ${formatTsLocal(endTsForDisplay)}`;
-            
+        
             return {
                 ...t,
                 when: provisionalWhenStr,
                 _remainingMinutes: null,
                 _hasRealTime: false,   // stále false – segment nie je vyriešený
-            };
-            
-            // ============================================================
-            // NOVÉ: Prepíš `when` aktuálneho segmentu tak, aby začínal
-            // na `startTsForDisplay` a končil na `displayEndTs`.
-            //
-            // Tým sa zabezpečí, že:
-            //  - Ak predchádzajúci segment končí 10:15, aktuálny začína 10:15
-            //  - Ak nasledujúci priradený segment začína 11:30, aktuálny končí 11:30
-            // ============================================================
-            const newWhenStr = `${formatTsLocal(startTsForDisplay)} – ${formatTsLocal(displayEndTs)}`;
-            
-            // Zvyšný čas na presun
-            let newRemainingMinutes = null;
-            if (t._remainingMinutes != null && displayEndTs > startTsForDisplay) {
-                newRemainingMinutes = Math.round((displayEndTs - startTsForDisplay) / 60000);
-            }
-            
-            return {
-                ...t,
-                when: newWhenStr,
-                _remainingMinutes: newRemainingMinutes,
             };
         });
         
