@@ -6678,13 +6678,33 @@ const TransportApp = ({ userProfileData }) => {
                 };
             }
             // ============================================================
-            // NOVÉ: Nepriradené segmenty (ani bus, ani walking)
-            // NEDOSTÁVAJÚ žiadne časy.
-            // POZOR: ak segment NEBOL nájdený v buse, musíme odstrániť
-            // aj busId (inak by tam zostal starý záznam).
-            // ALE: ak má segment explicitné busId z assignTransferToBus
-            // (a nemá časy), zachovaj aspoň busId – časy sa doplnia neskôr.
+            // NOVÉ: Nepriradené segmenty (ani bus, ani walking) NEDOSTÁVAJÚ
+            // nové časy – ALE ak segment UŽ MAL reálne časy z predošlého
+            // priradenia (busAssigned === true && busId != null && startTs/endTs),
+            // ZACHOVAJ ICH.
+            //
+            // DÔVOD: recomputeParentSegmentsInPlace sa volá pri každej zmene
+            // busRows (onSnapshot). Ak sa zavolá v momente, keď onSnapshot
+            // ešte nestihol aktualizovať busRows (napr. tesne po zápise
+            // teamsIn/teamsOut), findBusTimesForSegment nič nenájde a bez
+            // tejto ochrany by sa prepísal busAssigned na false a časy na null
+            // – čo je nesprávne, pretože tím v buse SKUTOČNE sedí.
             // ============================================================
+            const hadRealBusTimes =
+                seg.busAssigned === true &&
+                seg.busId != null &&
+                seg.startTs != null &&
+                seg.endTs != null &&
+                seg.endTs > seg.startTs;
+            
+            if (hadRealBusTimes) {
+                return {
+                    ...seg,
+                    isWalking: false,
+                    when: `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`,
+                };
+            }
+            
             return {
                 ...seg,
                 startTs: null,
