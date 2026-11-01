@@ -8021,7 +8021,7 @@ const TransportApp = ({ userProfileData }) => {
                             'div',
                             {
                                 key: bus.id,
-                                className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0 pb-4',
+                                className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
                                 style: { minWidth: '1000px', width: 'max-content' }
                             },
                             // Hlavička autobusu
