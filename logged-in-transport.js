@@ -10843,7 +10843,7 @@ const TransportApp = ({ userProfileData }) => {
                 ),
                 // Info o presune – rovnaký box ako v "Priradiť presun k autobusu"
                 (() => {
-                    const tr = assignBusTransfer;
+                    const tr = transferActionModal.transfer;
                 
                     let displayWhen = null;
                 
@@ -10961,7 +10961,7 @@ const TransportApp = ({ userProfileData }) => {
                         {
                             type: 'button',
                             onClick: () => {
-                                const t = assignBusTransfer;
+                                const t = transferActionModal.transfer;
                                 
                                 // ============================================================
                                 // NOVÉ: Ak je to segment, pracuj s parent záznamom.
@@ -11003,8 +11003,8 @@ const TransportApp = ({ userProfileData }) => {
                         {
                             type: 'button',
                             onClick: () => {
-                                const transferToAssign = assignBusTransfer;
-                                const matches = findMatchingBusRows(assignBusTransfer);
+                                const transferToAssign = transferActionModal.transfer;
+                                const matches = findMatchingBusRows(transferActionModal.transfer);
                                 setAssignBusMatches(matches);
                                 setAssignBusSelectedKey(
                                     matches.length > 0
@@ -11030,7 +11030,7 @@ const TransportApp = ({ userProfileData }) => {
                         'button',
                         {
                             type: 'button',
-                            onClick: () => setTransferAsWalking(assignBusTransfer),
+                            onClick: () => setTransferAsWalking(transferActionModal.transfer),
                             className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors flex items-center gap-3'
                         },
                         React.createElement('i', { className: 'fa-solid fa-person-walking text-emerald-600 text-xl w-6 text-center' }),
