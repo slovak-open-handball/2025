@@ -11588,44 +11588,14 @@ const TransportApp = ({ userProfileData }) => {
                                                         const alightingRow = m.alightingRow;
                                                         if (!busId || !dayKey || !boardingRow || !alightingRow) return null;
                                                 
-                                                        const rowsKey = `${busId}|${dayKey}`;
-                                                        const allRows = (busRows[rowsKey] || [])
-                                                            .slice()
-                                                            .sort((a, b) => (a.order || 0) - (b.order || 0));
-                                                
-                                                        const boardIdx = allRows.findIndex((r) => r.id === boardingRow.id);
-                                                        const alightIdx = allRows.findIndex((r) => r.id === alightingRow.id);
-                                                        if (boardIdx === -1 || alightIdx === -1 || alightIdx < boardIdx) return null;
-                                                
-                                                        const inBus = new Set();
-                                                        for (let i = 0; i <= boardIdx; i++) {
-                                                            const r = allRows[i];
-                                                            (r.teamsIn || []).forEach((t) => inBus.add(String(t)));
-                                                            (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
-                                                        }
-                                                        (boardingRow.teamsIn || []).forEach((t) => inBus.add(String(t)));
-                                                        for (let i = boardIdx + 1; i < alightIdx; i++) {
-                                                            const r = allRows[i];
-                                                            (r.teamsIn || []).forEach((t) => inBus.add(String(t)));
-                                                            (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
-                                                        }
-                                                
-                                                        const total = [...inBus].reduce(
-                                                            (sum, tk) => sum + getTeamMembersCount(tk),
-                                                            0
-                                                        );
-                                                
-                                                        if (total <= 0) return null;
-                                                
                                                         // ============================================================
-                                                        // NOVÉ: Vypočítaj dĺžku jazdy (trvanie) z času nástupu a výstupu.
-                                                        // timeFrom = boardingRow.timeFrom, timeTo = alightingRow.timeTo
+                                                        // Dĺžka jazdy – počíta sa VŽDY z boardingRow.timeFrom → alightingRow.timeTo
+                                                        // (nezávisle od počtu členov v autobuse).
                                                         // ============================================================
                                                         const computeTripDuration = () => {
                                                             const timeRe = /^\d{1,2}:\d{2}$/;
                                                             const boardStr = String(m.boardingTime || '').trim();
                                                             const alightStr = String(m.alightingTime || '').trim();
-                                                            console.log('[TRANSPORT][TRIP-DURATION] boardStr:', boardStr, 'alightStr:', alightStr);
                                                             if (!timeRe.test(boardStr) || !timeRe.test(alightStr)) return null;
                                                             const [bh, bm] = boardStr.split(':').map(Number);
                                                             const [ah, am] = alightStr.split(':').map(Number);
@@ -11636,10 +11606,40 @@ const TransportApp = ({ userProfileData }) => {
                                                 
                                                         const tripDurationMin = computeTripDuration();
                                                 
+                                                        // ============================================================
+                                                        // Počet členov v autobuse – voliteľný údaj.
+                                                        // ============================================================
+                                                        const rowsKey = `${busId}|${dayKey}`;
+                                                        const allRows = (busRows[rowsKey] || [])
+                                                            .slice()
+                                                            .sort((a, b) => (a.order || 0) - (b.order || 0));
+                                                
+                                                        const boardIdx = allRows.findIndex((r) => r.id === boardingRow.id);
+                                                        const alightIdx = allRows.findIndex((r) => r.id === alightingRow.id);
+                                                        let total = 0;
+                                                        if (boardIdx !== -1 && alightIdx !== -1 && alightIdx >= boardIdx) {
+                                                            const inBus = new Set();
+                                                            for (let i = 0; i <= boardIdx; i++) {
+                                                                const r = allRows[i];
+                                                                (r.teamsIn || []).forEach((t) => inBus.add(String(t)));
+                                                                (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
+                                                            }
+                                                            (boardingRow.teamsIn || []).forEach((t) => inBus.add(String(t)));
+                                                            for (let i = boardIdx + 1; i < alightIdx; i++) {
+                                                                const r = allRows[i];
+                                                                (r.teamsIn || []).forEach((t) => inBus.add(String(t)));
+                                                                (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
+                                                            }
+                                                            total = [...inBus].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
+                                                        }
+                                                
+                                                        // ============================================================
+                                                        // Render: dĺžka jazdy sa zobrazí VŽDY (ak je vypočítateľná),
+                                                        // počet členov len ak je > 0.
+                                                        // ============================================================
                                                         return React.createElement(
                                                             React.Fragment,
                                                             null,
-                                                            // NOVÉ: dĺžka jazdy (trvanie) – pred ikonou fa-users
                                                             tripDurationMin != null &&
                                                                 React.createElement(
                                                                     'span',
@@ -11650,16 +11650,16 @@ const TransportApp = ({ userProfileData }) => {
                                                                     React.createElement('i', { className: 'fa-solid fa-clock' }),
                                                                     `${tripDurationMin} min`
                                                                 ),
-                                                            // Pôvodný počet členov v buse
-                                                            React.createElement(
-                                                                'span',
-                                                                {
-                                                                    className: 'flex items-center gap-1 text-blue-700',
-                                                                    title: `V autobuse v tomto čase: ${total} členov`,
-                                                                },
-                                                                React.createElement('i', { className: 'fa-solid fa-users' }),
-                                                                `${total}`
-                                                            )
+                                                            total > 0 &&
+                                                                React.createElement(
+                                                                    'span',
+                                                                    {
+                                                                        className: 'flex items-center gap-1 text-blue-700',
+                                                                        title: `V autobuse v tomto čase: ${total} členov`,
+                                                                    },
+                                                                    React.createElement('i', { className: 'fa-solid fa-users' }),
+                                                                    `${total}`
+                                                                )
                                                         );
                                                     })(),
                                                     React.createElement(
