@@ -10488,7 +10488,7 @@ const TransportApp = ({ userProfileData }) => {
         // ============================================================
         // MODÁLNE OKNO – Úprava vygenerovaného presunu (medzizastávky)
         // ============================================================
-        editingTransfer && React.createElement(
+        eeditingTransfer && React.createElement(
             'div',
             {
                 className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
@@ -10503,7 +10503,7 @@ const TransportApp = ({ userProfileData }) => {
                     className: 'bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto',
                     onClick: (e) => e.stopPropagation()
                 },
-                // Hlavička
+                // Hlavička – BEZ názvu tímu a kategórie
                 React.createElement(
                     'div',
                     { className: 'flex items-start gap-3 mb-4' },
@@ -10517,38 +10517,157 @@ const TransportApp = ({ userProfileData }) => {
                             'h3',
                             { className: 'text-lg font-semibold text-gray-800' },
                             'Upraviť presun'
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'text-xs text-gray-500 mt-0.5' },
-                            `${editingTransfer.teamName} • ${editingTransfer.category}`
                         )
                     )
                 ),
-                // Info o pôvodnom presune
-                React.createElement(
-                    'div',
-                    { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm' },
-                    React.createElement(
+                // ============================================================
+                // NOVÝ BOX – rovnaký vizuál ako v "Priradiť presun k autobusu"
+                // ============================================================
+                (() => {
+                    const tr = editingTransfer;
+                
+                    // Vypočítaj zobrazený čas (rovnaká logika ako v "Priradiť presun")
+                    let displayWhen = null;
+                
+                    if (tr.when && String(tr.when).trim() !== '') {
+                        displayWhen = tr.when;
+                    }
+                
+                    if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
+                        let earliestStart = null;
+                        let latestEnd = null;
+                        tr.segments.forEach((s) => {
+                            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                earliestStart = s.startTs;
+                            }
+                            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                latestEnd = s.endTs;
+                            }
+                        });
+                        if (earliestStart != null && latestEnd != null) {
+                            displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                        } else if (earliestStart != null) {
+                            displayWhen = formatTsLocal(earliestStart);
+                        } else if (latestEnd != null) {
+                            displayWhen = formatTsLocal(latestEnd);
+                        }
+                    }
+                
+                    if (!displayWhen) {
+                        const provisional = computeProvisionalSegmentRange(tr);
+                        if (provisional) {
+                            displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                        }
+                    }
+                
+                    // Počet členov tímu
+                    const counts = getTeamCountsForTransfer(tr.category, tr.teamName);
+                    let membersCount = null;
+                    let membersTitle = '';
+                    if (counts) {
+                        membersCount =
+                            (counts.players || 0) +
+                            (counts.menRT || 0) +
+                            (counts.womenRT || 0) +
+                            (counts.menDrivers || 0) +
+                            (counts.womenDrivers || 0);
+                        membersTitle = 'Počet členov tímu z users';
+                    } else {
+                        const avg = getCategoryAverageForTransfer(tr.category);
+                        if (avg != null) {
+                            membersCount = avg;
+                            membersTitle = `Priemer členov tímu v kategórii ${tr.category} (zaokrúhlené nahor)`;
+                        }
+                    }
+                
+                    const transportColor = getTransportColorForCategory(tr.category);
+                    const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
+                
+                    // Vypočítaj trvanie presunu v minútach
+                    let durationMinutes = null;
+                    if (displayWhen) {
+                        const range = parseWhenRangeToTs(displayWhen);
+                        if (range && range.startTs != null && range.endTs != null && range.endTs > range.startTs) {
+                            durationMinutes = Math.round((range.endTs - range.startTs) / 60000);
+                        }
+                    }
+                
+                    return React.createElement(
                         'div',
-                        { className: 'font-medium text-gray-700 mb-1' },
-                        'Celá trasa presunu:'
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'text-gray-600' },
-                        `${editingTransfer.fromLocation} → ${editingTransfer.toLocation}`
-                    ),
-                    editingTransfer.when &&
+                        {
+                            className: 'mb-4 text-sm text-gray-700 flex flex-col leading-snug rounded-md px-3 py-2',
+                            style: {
+                                position: 'relative',
+                                borderLeft: transportColor ? `6px solid ${transportColor}` : '2px solid #c4b5fd',
+                                ...(boxBg ? { backgroundColor: boxBg } : { backgroundColor: '#f5f3ff' }),
+                            },
+                        },
+                        // 1. riadok – kategória • tím • počet
                         React.createElement(
                             'div',
-                            { className: 'text-xs text-gray-500 mt-1' },
-                            editingTransfer.when
+                            { className: 'flex flex-wrap items-center gap-x-2 gap-y-1' },
+                            tr.category &&
+                                React.createElement(
+                                    'span',
+                                    {
+                                        className: 'text-sm font-semibold',
+                                        style: { color: transportColor || '#5b21b6' },
+                                        title: 'Kategória',
+                                    },
+                                    tr.category
+                                ),
+                            tr.teamName &&
+                                React.createElement(
+                                    'span',
+                                    {
+                                        className: 'text-sm font-semibold',
+                                        style: { color: transportColor || '#5b21b6' },
+                                        title: 'Tím',
+                                    },
+                                    tr.teamName
+                                ),
+                            membersCount != null &&
+                                React.createElement(
+                                    'span',
+                                    {
+                                        className: 'text-sm font-semibold',
+                                        style: { color: transportColor || '#5b21b6' },
+                                        title: membersTitle,
+                                    },
+                                    `• ${membersCount}`
+                                )
                         ),
-                    editingTransferStops.length > 0 && React.createElement(
+                        // 2. riadok – trasa (celá trasa parenta)
+                        React.createElement(
+                            'span',
+                            { className: 'text-sm text-gray-900 font-medium' },
+                            `${tr.fromLocation || '?'} → ${tr.toLocation || '?'}`
+                        ),
+                        // 3. riadok – dátum, čas a trvanie
+                        (displayWhen || durationMinutes != null) &&
+                            React.createElement(
+                                'span',
+                                { className: 'text-sm text-gray-600' },
+                                [
+                                    displayWhen || null,
+                                    durationMinutes != null ? `trvanie: ${durationMinutes} min` : null
+                                ].filter(Boolean).join(' • ')
+                            )
+                    );
+                })(),
+                // Info o medzizastávkach (zobrazí sa len ak sú nejaké)
+                editingTransferStops.length > 0 && React.createElement(
+                    'div',
+                    { className: 'mb-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-sm' },
+                    React.createElement(
                         'div',
-                        { className: 'text-xs text-indigo-600 mt-1 italic' },
-                        `Medzizastávky: ${editingTransferStops.join(', ')}`
+                        { className: 'font-medium text-indigo-700 mb-1' },
+                        'Medzizastávky:'
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'text-indigo-800' },
+                        editingTransferStops.join(', ')
                     )
                 ),
                 // Medzizastávky
