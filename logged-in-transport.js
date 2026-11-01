@@ -11586,17 +11586,40 @@ const TransportApp = ({ userProfileData }) => {
                             },
                             'Zrušiť'
                         ),
-                        React.createElement(
-                            'button',
-                            {
-                                type: 'button',
-                                onClick: assignTransferToBus,
-                                disabled: assignBusSaving || !assignBusSelectedKey || assignBusMatches.length === 0 || !arePreviousSegmentsResolved(currentTransfer),
-                                className: 'px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 transition-colors disabled:opacity-60 flex items-center gap-2'
-                            },
-                            assignBusSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
-                            'Priradiť'
-                        )
+                        (() => {
+                            // ============================================================
+                            // NOVÉ: Zisti, či má byť tlačidlo zablokované
+                            // ============================================================
+                            const isBlocked =
+                                assignBusSaving ||
+                                !assignBusSelectedKey ||
+                                assignBusMatches.length === 0 ||
+                                !arePreviousSegmentsResolved(currentTransfer);
+                        
+                            const baseCls =
+                                'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2';
+                            // Odblokované: oranžová výplň, biely text
+                            const enabledCls = 'bg-amber-600 text-white hover:bg-amber-700';
+                            // Zablokované: biele pozadie, oranžový text, oranžové rámovanie,
+                            // cursor: not-allowed (zakázaná myš)
+                            const blockedCls =
+                                'bg-white border-2 border-amber-600 text-amber-600 cursor-not-allowed';
+                        
+                            return React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: assignTransferToBus,
+                                    disabled: isBlocked,
+                                    title: isBlocked
+                                        ? 'Tlačidlo je neaktívne – najprv vyberte autobus a vyriešte predchádzajúce segmenty.'
+                                        : undefined,
+                                    className: `${baseCls} ${isBlocked ? blockedCls : enabledCls}`,
+                                },
+                                assignBusSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                                'Priradiť'
+                            );
+                        })()
                     )
                 )
             );
