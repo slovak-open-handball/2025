@@ -9263,7 +9263,7 @@ const TransportApp = ({ userProfileData }) => {
                                     }
     
                                     const teamLabel = t.teamName || '(neznámy tím)';
-                                    const fullText = valueText ? `${teamLabel} ● ${valueText} členov` : teamLabel;
+                                    const fullText = valueText ? `${teamLabel} ● ${valueText}` : teamLabel;
     
                                     return React.createElement(
                                         'span',
