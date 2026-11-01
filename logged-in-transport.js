@@ -8942,7 +8942,14 @@ const TransportApp = ({ userProfileData }) => {
             }
 
             // KONCOVÝ ČAS: pre nepriradený segment preferuj nasledujúci vyriešený segment
-            const endTsForDisplay = trRange.endTs;
+            let endTsForDisplay;
+            if (isCurrentSegmentResolved) {
+                endTsForDisplay = trRange.endTs;
+            } else if (nextResolvedStartTs != null && nextResolvedStartTs > startTsForDisplay) {
+                endTsForDisplay = nextResolvedStartTs;
+            } else {
+                endTsForDisplay = trRange.endTs;
+            }
             
             // Bezpečnostná poistka: endTs musí byť > startTs
             if (
