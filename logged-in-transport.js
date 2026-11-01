@@ -2792,11 +2792,11 @@ const TransportApp = ({ userProfileData }) => {
                             // ============================================================
                             const foundTeamIdentifiers = findTeamIdentifiersByName(category, teamName);
                             const isSuperstructureTeamForDb = !foundTeamIdentifiers;
-                    
+                            
                             const effectiveTeamIdentifiers = isSuperstructureTeamForDb
                                 ? { teamUid: null, teamIndex: null, category }
                                 : foundTeamIdentifiers;
-                    
+
                             if (isSuperstructureTeamForDb) {
                                 console.log(
                                     '%c[TRANSPORT][SUPERSTRUCTURE] Ukladám presuny pre superstructure tím:',
@@ -2804,6 +2804,15 @@ const TransportApp = ({ userProfileData }) => {
                                     teamName, 'v kategórii', category,
                                     '(teamUid=null, teamIndex=null, teamName="' + teamName + '")'
                                 );
+                            } else {
+                                // Tím z users – over, že máme platný identifikátor
+                                if (effectiveTeamIdentifiers.teamUid == null || effectiveTeamIdentifiers.teamIndex == null) {
+                                    console.warn(
+                                        '[TRANSPORT] Tím z users nemá platný teamUid/teamIndex – presuny sa neukladajú:',
+                                        { category, teamName }
+                                    );
+                                    return;
+                                }
                             }
                     
                             const transfersPatch = {};
@@ -2925,9 +2934,10 @@ const TransportApp = ({ userProfileData }) => {
                                     text: draft.text,
                                     segments: draft.segments,
                                 };
-                    
+                                
                                 // ============================================================
                                 // NOVÉ: Pre superstructure tímy ulož aj teamName.
+                                // Pre tímy z users sa teamName NIKDY neukladá.
                                 // ============================================================
                                 if (isSuperstructureTeamForDb) {
                                     transfersPatch[key].teamName = teamName;
