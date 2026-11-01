@@ -349,46 +349,39 @@ const TransportApp = ({ userProfileData }) => {
         const parentKey = transfer._parentKey || transfer.key;
         if (!parentKey) return null;
     
-        const teamName = String(transfer.teamName || '').trim();
-        const category = cleanCategory(transfer.category || '');
-        const dayKey = transfer.dayKey || '';
-    
         const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
         if (!parentRec) return null;
     
         // ============================================================
-        // `trRange` aktuálneho segmentu:
-        //  - skús reálny `when` segmentu
-        //  - inak `when` parenta
-        //  - inak poskladaj z reálnych časov segmentov parenta
+        // 1) Zisti PEVNÝ rozsah parenta (parentRec.when).
+        //    Toto je JEDINÝ povolený interval pre všetky segmenty.
+        //    Ak parent nemá when, skús poskladať z reálnych časov segmentov.
         // ============================================================
-        let trRange = parseTransferWhenToRange(transfer.when);
-        if (!trRange || trRange.startTs == null) {
-            if (parentRec.when && String(parentRec.when).trim() !== '') {
-                trRange = parseTransferWhenToRange(parentRec.when);
-            } else if (Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
-                let earliestStart = null;
-                let latestEnd = null;
-                parentRec.segments.forEach((s) => {
-                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                        earliestStart = s.startTs;
-                    }
-                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                        latestEnd = s.endTs;
-                    }
-                });
-                if (earliestStart != null && latestEnd != null) {
-                    trRange = { startTs: earliestStart, endTs: latestEnd };
-                }
+        let parentRange = null;
+        if (parentRec.when && String(parentRec.when).trim() !== '') {
+            parentRange = parseTransferWhenToRange(parentRec.when);
+        }
+        if (!parentRange || parentRange.startTs == null || parentRange.endTs == null) {
+            // Fallback – poskladaj z reálnych časov segmentov parenta
+            let earliestStart = null;
+            let latestEnd = null;
+            (parentRec.segments || []).forEach((s) => {
+                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) earliestStart = s.startTs;
+                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) latestEnd = s.endTs;
+            });
+            if (earliestStart != null && latestEnd != null) {
+                parentRange = { startTs: earliestStart, endTs: latestEnd };
             }
         }
-        if (!trRange || trRange.startTs == null) return null;
+        if (!parentRange || parentRange.startTs == null || parentRange.endTs == null) return null;
+    
+        const PARENT_START = parentRange.startTs;
+        const PARENT_END = parentRange.endTs;
     
         // ============================================================
-        // Zoznam všetkých segmentov parenta
+        // 2) Zoznam všetkých segmentov parenta
         // ============================================================
         const parentSegments = [];
-    
         if (Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
             parentRec.segments.forEach((seg, idx) => {
                 const segFrom = String(seg.from || '').trim();
@@ -399,22 +392,9 @@ const TransportApp = ({ userProfileData }) => {
                 if (seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs) {
                     range = { startTs: seg.startTs, endTs: seg.endTs };
                 } else if (seg.startTs != null) {
-                    range = { startTs: seg.startTs, endTs: trRange.endTs };
+                    range = { startTs: seg.startTs, endTs: null };
                 } else if (seg.endTs != null) {
-                    range = { startTs: trRange.startTs, endTs: seg.endTs };
-                } else if (seg.when && String(seg.when).trim() !== '') {
-                    const parsed = parseTransferWhenToRange(seg.when);
-                    if (parsed && parsed.startTs != null) {
-                        range = { startTs: parsed.startTs, endTs: parsed.endTs };
-                    }
-                }
-    
-                if (!range) {
-                    if (seg.isWalking === true) {
-                        range = { startTs: null, endTs: null };
-                    } else {
-                        range = { startTs: trRange.startTs, endTs: trRange.endTs };
-                    }
+                    range = { startTs: null, endTs: seg.endTs };
                 }
     
                 const isResolvedWithTime =
@@ -426,7 +406,6 @@ const TransportApp = ({ userProfileData }) => {
                     fromLocation: segFrom,
                     toLocation: segTo,
                     isWalking: seg.isWalking === true,
-                    busAssigned: seg.busAssigned === true,
                     isResolvedWithTime,
                     range,
                 });
@@ -446,18 +425,15 @@ const TransportApp = ({ userProfileData }) => {
                 fromLocation: transfer.fromLocation,
                 toLocation: transfer.toLocation,
                 isWalking: transfer.isWalking === true,
-                busAssigned: false,
                 isResolvedWithTime: false,
-                range: trRange,
+                range: null,
             });
         }
-    
         parentSegments.sort((a, b) => (a.idx || 0) - (b.idx || 0));
     
         // ============================================================
-        // OPRAVA: Nájdi koncový čas PREDCHÁDZAJÚCEHO vyriešeného segmentu
-        // LEN ak je v rámci trRange (t.j. jeho endTs <= trRange.startTs).
-        // Inak ignoruj (je to segment z inej časti dňa).
+        // 3) Predchádzajúci resolved segment – berieme LEN ak jeho
+        //    endTs je v rámci [PARENT_START, PARENT_END].
         // ============================================================
         let prevResolvedEndTs = null;
         for (const seg of parentSegments) {
@@ -466,23 +442,19 @@ const TransportApp = ({ userProfileData }) => {
                 normalizePlaceName(seg.toLocation) === currentToNorm;
             if (isCurrent) break;
     
-            if (seg.isResolvedWithTime) {
-                if (seg.range.endTs != null) {
-                    // OPRAVA: ber len ak je endTs pred začiatkom aktuálneho segmentu
-                    // (t.j. nepresahuje do aktuálneho intervalu)
-                    if (seg.range.endTs <= trRange.startTs) {
-                        if (prevResolvedEndTs == null || seg.range.endTs > prevResolvedEndTs) {
-                            prevResolvedEndTs = seg.range.endTs;
-                        }
+            if (seg.isResolvedWithTime && seg.range && seg.range.endTs != null) {
+                const e = seg.range.endTs;
+                if (e >= PARENT_START && e <= PARENT_END) {
+                    if (prevResolvedEndTs == null || e > prevResolvedEndTs) {
+                        prevResolvedEndTs = e;
                     }
                 }
             }
         }
     
         // ============================================================
-        // OPRAVA: Nájdi začiatočný čas NASLEDUJÚCEHO vyriešeného segmentu
-        // LEN ak je v rámci trRange (t.j. jeho startTs >= trRange.startTs)
-        // a zároveň nasleduje po aktuálnom segmente v poradí.
+        // 4) Nasledujúci resolved segment – berieme LEN ak jeho
+        //    startTs je v rámci [PARENT_START, PARENT_END].
         // ============================================================
         let nextResolvedStartTs = null;
         let foundCurrent = false;
@@ -490,43 +462,38 @@ const TransportApp = ({ userProfileData }) => {
             const isCurrent =
                 normalizePlaceName(seg.fromLocation) === currentFromNorm &&
                 normalizePlaceName(seg.toLocation) === currentToNorm;
-            if (isCurrent) {
-                foundCurrent = true;
-                continue;
-            }
+            if (isCurrent) { foundCurrent = true; continue; }
             if (!foundCurrent) continue;
     
-            // OPRAVA: ber len ak je startTs v rámci alebo za koncom aktuálneho intervalu
-            if (seg.isResolvedWithTime) {
-                if (seg.range.startTs != null) {
-                    if (seg.range.startTs >= trRange.startTs) {
-                        if (nextResolvedStartTs == null || seg.range.startTs < nextResolvedStartTs) {
-                            nextResolvedStartTs = seg.range.startTs;
-                        }
+            if (seg.isResolvedWithTime && seg.range && seg.range.startTs != null) {
+                const s = seg.range.startTs;
+                if (s >= PARENT_START && s <= PARENT_END) {
+                    if (nextResolvedStartTs == null || s < nextResolvedStartTs) {
+                        nextResolvedStartTs = s;
                     }
                 }
             }
         }
     
         // ============================================================
-        // Zostav výsledok
+        // 5) Zostav výsledok – VŽDY v rámci [PARENT_START, PARENT_END]
         // ============================================================
-        const startTsForDisplay =
-            prevResolvedEndTs != null ? prevResolvedEndTs : trRange.startTs;
+        let startTsForDisplay = prevResolvedEndTs != null ? prevResolvedEndTs : PARENT_START;
+        // Orezanie na PARENT_START
+        if (startTsForDisplay < PARENT_START) startTsForDisplay = PARENT_START;
     
         let endTsForDisplay;
         if (nextResolvedStartTs != null && nextResolvedStartTs > startTsForDisplay) {
             endTsForDisplay = nextResolvedStartTs;
         } else {
-            endTsForDisplay = trRange.endTs;
+            endTsForDisplay = PARENT_END;
         }
+        // Orezanie na PARENT_END
+        if (endTsForDisplay > PARENT_END) endTsForDisplay = PARENT_END;
     
-        if (
-            startTsForDisplay == null ||
-            endTsForDisplay == null ||
-            endTsForDisplay <= startTsForDisplay
-        ) {
-            return null;
+        if (endTsForDisplay <= startTsForDisplay) {
+            // Fallback – celý parent rozsah
+            return { startTs: PARENT_START, endTs: PARENT_END };
         }
     
         return { startTs: startTsForDisplay, endTs: endTsForDisplay };
