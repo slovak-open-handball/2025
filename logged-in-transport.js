@@ -8995,24 +8995,28 @@ const TransportApp = ({ userProfileData }) => {
             return true;
         });
 
-        // ============================================================
-        // NOVÉ: Z každého parent bloku (rovnaký _parentKey, tím, kat.,
-        // deň) zobraz LEN PRVÝ nepriradený segment.
-        //
-        // Tým sa zabezpečí, že keď máš parent presun A → B → C → D
-        // a žiadny segment nie je priradený, v zozname sa zobrazí
-        // iba A→B. Až keď ho priradíš (alebo označíš ako peši),
-        // zobrazí sa B→C, atď.
-        //
-        // Segmenty bez _parentKey (klasické samostatné presuny)
-        // sa správajú ako vlastný blok – pre ne je _parentKey
-        // nahradený kľúčom, aby sa cez skupinu nezlievali.
-        // ============================================================
-        // ============================================================
+                // ============================================================
         // NOVÉ: Výber prvého segmentu z každého parent bloku
-        // s prioritou segmentu, ktorý začína na fromLocation parenta
+        // s prioritou:
+        //   1) segment, ktorý začína na fromLocation parenta
+        //   2) NAJMENŠÍ INDEX segmentu v parent.segments
+        //      (t.j. najskorší v poradí trasy)
+        //   3) až potom najmenší startTs (fallback)
+        //
+        // DÔVOD: Pri odstránení priradenia skoršieho segmentu sa musí
+        // zobraziť práve ten skorší (podľa poradia v parent.segments),
+        // nie ten neskorší, ktorý má len provizórny `when`.
         // ============================================================
         const firstSegmentPerParent = new Map();
+
+        // Pomocná: získa index segmentu (from → to) v parent.segments
+        const getParentSegmentIndex = (t) => {
+            if (!t._parentKey) return Number.POSITIVE_INFINITY;
+            const parent = savedTransfers.find((s) => s.key === t._parentKey);
+            if (!parent || !Array.isArray(parent.segments)) return Number.POSITIVE_INFINITY;
+            const idx = findSegmentIndex(parent.segments, t.fromLocation, t.toLocation);
+            return idx === -1 ? Number.POSITIVE_INFINITY : idx;
+        };
 
         baseFiltered.forEach((t) => {
             const blockKey = t._parentKey
@@ -9021,6 +9025,7 @@ const TransportApp = ({ userProfileData }) => {
 
             const trRange = parseTransferWhenToRange(t.when);
             const startTs = trRange ? trRange.startTs : Number.POSITIVE_INFINITY;
+            const segmentIdx = getParentSegmentIndex(t);
 
             // Zisti, či tento segment začína na fromLocation parenta
             let isFirstFromParent = false;
@@ -9037,22 +9042,32 @@ const TransportApp = ({ userProfileData }) => {
 
             const existing = firstSegmentPerParent.get(blockKey);
             if (!existing) {
-                firstSegmentPerParent.set(blockKey, { segment: t, startTs, isFirstFromParent });
+                firstSegmentPerParent.set(blockKey, { segment: t, startTs, isFirstFromParent, segmentIdx });
                 return;
             }
 
             // Priorita 1: segment, ktorý začína na fromLocation parenta
             if (isFirstFromParent && !existing.isFirstFromParent) {
-                firstSegmentPerParent.set(blockKey, { segment: t, startTs, isFirstFromParent });
+                firstSegmentPerParent.set(blockKey, { segment: t, startTs, isFirstFromParent, segmentIdx });
                 return;
             }
             if (!isFirstFromParent && existing.isFirstFromParent) {
                 return;
             }
 
-            // Priorita 2: najmenší startTs
+            // Priorita 2: NAJMENŠÍ INDEX segmentu v parent.segments
+            // (t.j. najskorší segment v poradí trasy)
+            if (segmentIdx < existing.segmentIdx) {
+                firstSegmentPerParent.set(blockKey, { segment: t, startTs, isFirstFromParent, segmentIdx });
+                return;
+            }
+            if (segmentIdx > existing.segmentIdx) {
+                return;
+            }
+
+            // Priorita 3 (fallback): najmenší startTs
             if (startTs < existing.startTs) {
-                firstSegmentPerParent.set(blockKey, { segment: t, startTs, isFirstFromParent });
+                firstSegmentPerParent.set(blockKey, { segment: t, startTs, isFirstFromParent, segmentIdx });
             }
         });
 
@@ -9060,7 +9075,7 @@ const TransportApp = ({ userProfileData }) => {
         firstSegmentPerParent.forEach(({ segment }) => {
             allowedKeys.add(segment.key);
         });
-
+        
         const baseFilteredFirstOnlyRaw = baseFiltered.filter((t) => allowedKeys.has(t.key));
 
         const baseFilteredFirstOnly = baseFilteredFirstOnlyRaw.map((t) => {
