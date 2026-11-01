@@ -387,19 +387,51 @@ const TransportApp = ({ userProfileData }) => {
                 const segFrom = String(seg.from || '').trim();
                 const segTo = String(seg.to || '').trim();
                 if (!segFrom || !segTo) return;
-    
+        
+                // ============================================================
+                // NOVÉ: Peší segment má trvanie 0 minút.
+                // Preto:
+                //  - ak má startTs, berieme ho ako endTs (trvanie = 0)
+                //  - ak má len endTs, berieme ho ako startTs (trvanie = 0)
+                //  - ak nemá ani jeden, range = null
+                //
+                // Tým sa zabezpečí, že pri hľadaní provizórneho intervalu
+                // pre aktuálny segment sa peší segment NEPOČÍTA ako časová
+                // prekážka – aktuálny segment môže začínať hneď na konci
+                // predchádzajúceho BUS segmentu (pešo sa ide "zadarmo").
+                // ============================================================
+                const isWalkingSeg = seg.isWalking === true;
+        
                 let range = null;
-                if (seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs) {
-                    range = { startTs: seg.startTs, endTs: seg.endTs };
-                } else if (seg.startTs != null) {
-                    range = { startTs: seg.startTs, endTs: null };
-                } else if (seg.endTs != null) {
-                    range = { startTs: null, endTs: seg.endTs };
+                if (isWalkingSeg) {
+                    // Peší segment: trvanie 0 min → startTs = endTs
+                    if (seg.startTs != null) {
+                        range = { startTs: seg.startTs, endTs: seg.startTs };
+                    } else if (seg.endTs != null) {
+                        range = { startTs: seg.endTs, endTs: seg.endTs };
+                    }
+                } else {
+                    if (seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs) {
+                        range = { startTs: seg.startTs, endTs: seg.endTs };
+                    } else if (seg.startTs != null) {
+                        range = { startTs: seg.startTs, endTs: null };
+                    } else if (seg.endTs != null) {
+                        range = { startTs: null, endTs: seg.endTs };
+                    }
                 }
-    
+        
+                // ============================================================
+                // NOVÉ: Peší segment sa NIKDY nepovažuje za "resolved with time"
+                // pre účely hľadania okolia (prev/next resolved segment).
+                // Dôvod: peší segment nemá reálny časový interval – jeho
+                // trvanie je 0 min, takže nesmie "blokovať" hľadanie
+                // predchádzajúceho/nasledujúceho BUS segmentu.
+                // ============================================================
                 const isResolvedWithTime =
-                    (seg.busAssigned === true && seg.startTs != null && seg.endTs != null) ||
-                    (seg.startTs != null && seg.endTs != null);
+                    !isWalkingSeg && (
+                        (seg.busAssigned === true && seg.startTs != null && seg.endTs != null) ||
+                        (seg.startTs != null && seg.endTs != null)
+                    );
     
                 parentSegments.push({
                     idx,
@@ -437,11 +469,12 @@ const TransportApp = ({ userProfileData }) => {
         // ============================================================
         let prevResolvedEndTs = null;
         for (const seg of parentSegments) {
-            const isCurrent =
-                normalizePlaceName(seg.fromLocation) === currentFromNorm &&
-                normalizePlaceName(seg.toLocation) === currentToNorm;
+            const isCurrent = ...
             if (isCurrent) break;
-    
+        
+            // NOVÉ: Pešie segmenty preskoč – nemajú reálny časový interval
+            if (seg.isWalking === true) continue;
+        
             if (seg.isResolvedWithTime && seg.range && seg.range.endTs != null) {
                 const e = seg.range.endTs;
                 if (e >= PARENT_START && e <= PARENT_END) {
@@ -459,12 +492,13 @@ const TransportApp = ({ userProfileData }) => {
         let nextResolvedStartTs = null;
         let foundCurrent = false;
         for (const seg of parentSegments) {
-            const isCurrent =
-                normalizePlaceName(seg.fromLocation) === currentFromNorm &&
-                normalizePlaceName(seg.toLocation) === currentToNorm;
+            const isCurrent = ...
             if (isCurrent) { foundCurrent = true; continue; }
             if (!foundCurrent) continue;
-    
+        
+            // NOVÉ: Pešie segmenty preskoč
+            if (seg.isWalking === true) continue;
+        
             if (seg.isResolvedWithTime && seg.range && seg.range.startTs != null) {
                 const s = seg.range.startTs;
                 if (s >= PARENT_START && s <= PARENT_END) {
@@ -5544,167 +5578,6 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Chyba pri mazaní presunov:', err);
             window.showGlobalNotification('Nepodarilo sa zmazať presuny.', 'error');
         }
-    };
-
-    // ============================================================
-    // POMOCNÁ: Prepočíta časy zostávajúcich segmentov presunu
-    // tak, aby celkový interval zostal zachovaný a časy sa
-    // dopočítali podľa reálnych trvaní jázd (travelTimes).
-    //
-    // Vstupy:
-    //  - originalWhen: pôvodný "when" celého presunu (start – end)
-    //  - route: pole miest [A, B, C, ...]
-    //  - resolvedSegments: Set indexov segmentov, ktoré sú už vyriešené
-    //    (napr. {0, 2} znamená A→B a C→D sú vyriešené)
-    //  - resolvedDurationMinutes: súčet trvaní vyriešených segmentov
-    //    (v minútach) – ak nie je známy, použije sa getTravelMinutes
-    //
-    // Výstup:
-    //  - pole { startTs, endTs, whenStr } pre KAŽDÝ segment
-    //    (vrátane vyriešených – tie si zachovajú svoj pôvodný čas,
-    //     ak bol známy; inak dostanú null)
-    // ============================================================
-    const recomputeRemainingSegments = (originalWhen, route, resolvedSegments = new Set()) => {    
-        const timeRange = parseWhenRangeToTs(originalWhen);
-        const segmentsCount = route.length - 1;
-        if (segmentsCount <= 0) return [];
-    
-        // Zisti trvania všetkých segmentov
-        const durations = [];
-        for (let i = 0; i < segmentsCount; i++) {
-            const mins = getTravelMinutes(route[i], route[i + 1]);
-            durations.push(mins != null ? Number(mins) : null);
-        }
-    
-        // Fallback pre chýbajúce trvania – priemer zo známych
-        const known = durations.filter((d) => d != null);
-        const fallback = known.length > 0
-            ? Math.round(known.reduce((a, b) => a + b, 0) / known.length)
-            : null;
-    
-        const finalDurations = durations.map((d) =>
-            d != null ? d : (fallback != null ? fallback : null)
-        );
-    
-        // Ak nemáme platný interval → všetky segmenty dostanú pôvodný when
-        if (!timeRange || timeRange.startTs == null || timeRange.endTs == null || timeRange.endTs <= timeRange.startTs) {
-            return Array.from({ length: segmentsCount }, () => ({
-                startTs: null,
-                endTs: null,
-                whenStr: originalWhen,
-            }));
-        }
-    
-        const totalMs = timeRange.endTs - timeRange.startTs;
-    
-        // ============================================================
-        // Rozdeľ čas:
-        //  - Vyriešené segmenty si zachovajú svoj podiel podľa trvania
-        //    (alebo ak nemajú trvanie, dostanú 0 – ich čas sa „stratí").
-        //  - Zvyšné segmenty si rozdelia ZVYŠNÝ čas podľa svojich trvaní.
-        // ============================================================
-        const resolvedIndexes = Array.from(resolvedSegments).filter(
-            (i) => i >= 0 && i < segmentsCount
-        );
-        const remainingIndexes = [];
-        for (let i = 0; i < segmentsCount; i++) {
-            if (!resolvedSegments.has(i)) remainingIndexes.push(i);
-        }
-    
-        // Trvania vyriešených segmentov
-        const resolvedDurationsSum = resolvedIndexes.reduce(
-            (sum, i) => sum + (finalDurations[i] || 0),
-            0
-        );
-    
-        // Trvania zostávajúcich segmentov
-        const remainingDurationsSum = remainingIndexes.reduce(
-            (sum, i) => sum + (finalDurations[i] || 0),
-            0
-        );
-    
-        // Čas, ktorý zostáva na rozdelenie medzi zostávajúce segmenty
-        // (celkový čas – podiel vyriešených segmentov)
-        let remainingMs;
-        if (resolvedDurationsSum + remainingDurationsSum > 0) {
-            // Podiel vyriešených segmentov z celkového času
-            const resolvedMs = Math.round(
-                (resolvedDurationsSum / (resolvedDurationsSum + remainingDurationsSum)) * totalMs
-            );
-            remainingMs = totalMs - resolvedMs;
-        } else {
-            remainingMs = totalMs;
-        }
-    
-        // ============================================================
-        // Vypočítaj časy pre jednotlivé segmenty
-        // ============================================================
-        const results = new Array(segmentsCount).fill(null);
-    
-        // 1) Vyriešené segmenty – rozdeľ im ich podiel
-        let cursorTs = timeRange.startTs;
-        if (resolvedDurationsSum > 0) {
-            const resolvedMsTotal = totalMs - remainingMs;
-            for (const i of resolvedIndexes) {
-                const dur = finalDurations[i] || 0;
-                const segMs = Math.round((dur / resolvedDurationsSum) * resolvedMsTotal);
-                const segStartTs = cursorTs;
-                const segEndTs = cursorTs + segMs;
-                results[i] = {
-                    startTs: segStartTs,
-                    endTs: segEndTs,
-                    whenStr: `${formatTsLocal(segStartTs)} – ${formatTsLocal(segEndTs)}`,
-                };
-                cursorTs = segEndTs;
-            }
-        } else {
-            // Vyriešené segmenty bez trvania → dostanú nulový čas
-            for (const i of resolvedIndexes) {
-                results[i] = {
-                    startTs: cursorTs,
-                    endTs: cursorTs,
-                    whenStr: `${formatTsLocal(cursorTs)} – ${formatTsLocal(cursorTs)}`,
-                };
-            }
-        }
-    
-        // 2) Zostávajúce segmenty – rozdeľ im zvyšný čas
-        if (remainingIndexes.length > 0) {
-            if (remainingDurationsSum > 0) {
-                for (const i of remainingIndexes) {
-                    const dur = finalDurations[i] || 0;
-                    const isLastRemaining = i === remainingIndexes[remainingIndexes.length - 1];
-                    const segMs = isLastRemaining
-                        ? (timeRange.endTs - cursorTs)
-                        : Math.round((dur / remainingDurationsSum) * remainingMs);
-                    const segStartTs = cursorTs;
-                    const segEndTs = cursorTs + segMs;
-                    results[i] = {
-                        startTs: segStartTs,
-                        endTs: segEndTs,
-                        whenStr: `${formatTsLocal(segStartTs)} – ${formatTsLocal(segEndTs)}`,
-                    };
-                    cursorTs = segEndTs;
-                }
-            } else {
-                // Rovnomerné rozdelenie
-                const segMs = Math.round(remainingMs / remainingIndexes.length);
-                for (let k = 0; k < remainingIndexes.length; k++) {
-                    const i = remainingIndexes[k];
-                    const isLast = k === remainingIndexes.length - 1;
-                    const segStartTs = cursorTs;
-                    const segEndTs = isLast ? timeRange.endTs : cursorTs + segMs;
-                    results[i] = {
-                        startTs: segStartTs,
-                        endTs: segEndTs,
-                        whenStr: `${formatTsLocal(segStartTs)} – ${formatTsLocal(segEndTs)}`,
-                    };
-                    cursorTs = segEndTs;
-                }
-            }
-        }
-    
-        return results;
     };
 
     const deleteSingleTransfer = async (transfer) => {
