@@ -8734,7 +8734,29 @@ const TransportApp = ({ userProfileData }) => {
             const category = cleanCategory(t.category || '');
             const dayKey = t.dayKey || '';
         
-            const trRange = parseTransferWhenToRange(t.when);
+            let trRange = parseTransferWhenToRange(t.when);
+            if (!trRange || trRange.startTs == null) {
+                // Skús parent záznam
+                const parentRec = savedTransfers.find((s) => s.key === parentKey);
+                if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
+                    trRange = parseTransferWhenToRange(parentRec.when);
+                } else if (parentRec && Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
+                    // Poskladaj z reálnych časov segmentov
+                    let earliestStart = null;
+                    let latestEnd = null;
+                    parentRec.segments.forEach((s) => {
+                        if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                            earliestStart = s.startTs;
+                        }
+                        if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                            latestEnd = s.endTs;
+                        }
+                    });
+                    if (earliestStart != null && latestEnd != null) {
+                        trRange = { startTs: earliestStart, endTs: latestEnd };
+                    }
+                }
+            }
             if (!trRange || trRange.startTs == null) return t;
         
             // ============================================================
@@ -8920,14 +8942,7 @@ const TransportApp = ({ userProfileData }) => {
             }
 
             // KONCOVÝ ČAS: pre nepriradený segment preferuj nasledujúci vyriešený segment
-            let endTsForDisplay;
-            if (nextResolvedStartTs != null) {
-                endTsForDisplay = nextResolvedStartTs;
-            } else if (isCurrentSegmentResolved) {
-                endTsForDisplay = trRange.endTs;
-            } else {
-                endTsForDisplay = blockEndTs;
-            }
+            const endTsForDisplay = trRange.endTs;
             
             // Bezpečnostná poistka: endTs musí byť > startTs
             if (
