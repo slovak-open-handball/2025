@@ -8573,9 +8573,7 @@ const TransportApp = ({ userProfileData }) => {
         
             const key = `${dayKey}|${tn}|${cat}`;
             const list = assignedSegmentsByTeam.get(key) || [];
-            if (list.some((s) => s.from === fromLoc && s.to === toLoc)) return true;
-        
-            return isSegmentCoveredByBusPath(dayKey, tn, cat, t.fromLocation, t.toLocation);
+            return list.some((s) => s.from === fromLoc && s.to === toLoc);
         };
     
         // ============================================================
