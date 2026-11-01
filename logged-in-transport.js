@@ -393,7 +393,6 @@ const TransportApp = ({ userProfileData }) => {
                 if (seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs) {
                     range = { startTs: seg.startTs, endTs: seg.endTs };
                 } else if (seg.startTs != null) {
-                    // Má len startTs – použi ho ako start, end = trRange.endTs
                     range = { startTs: seg.startTs, endTs: trRange.endTs };
                 } else if (seg.endTs != null) {
                     range = { startTs: trRange.startTs, endTs: seg.endTs };
@@ -403,16 +402,24 @@ const TransportApp = ({ userProfileData }) => {
                         range = { startTs: parsed.startTs, endTs: parsed.endTs };
                     }
                 }
-    
-                // Ak stále nemáme range, použi trRange parenta
-                // (aby segment mal aspoň poradie podľa indexu)
+
+                // NOVÉ: Ak segment je walking a nemá reálne časy,
+                // NEPRIraďuj mu `range` (nemá časy).
+                // Inak by sa walking segment počítal ako "vyriešený s časom
+                // trRange", čo by spôsobilo, že pre nasledujúci segment sa
+                // prevResolvedEndTs nastaví na koniec parenta (nesprávne).
                 if (!range) {
-                    range = { startTs: trRange.startTs, endTs: trRange.endTs };
+                    if (seg.isWalking === true) {
+                        // Walking segment nemá časy – range = null
+                        range = { startTs: null, endTs: null };
+                    } else {
+                        // Fallback pre nevyriešené segmenty bez času
+                        range = { startTs: trRange.startTs, endTs: trRange.endTs };
+                    }
                 }
     
                 // Je segment vyriešený?
-                const isResolved =
-                    seg.isWalking === true ||
+                const isResolvedWithTime =
                     (seg.busAssigned === true && seg.startTs != null && seg.endTs != null) ||
                     (seg.startTs != null && seg.endTs != null);
     
@@ -422,7 +429,7 @@ const TransportApp = ({ userProfileData }) => {
                     toLocation: segTo,
                     isWalking: seg.isWalking === true,
                     busAssigned: seg.busAssigned === true,
-                    isResolved,
+                    isResolvedWithTime,
                     range,
                 });
             });
@@ -446,7 +453,7 @@ const TransportApp = ({ userProfileData }) => {
                 toLocation: transfer.toLocation,
                 isWalking: transfer.isWalking === true,
                 busAssigned: false,
-                isResolved: false,
+                isResolvedWithTime: false,
                 range: trRange,
             });
         }
@@ -463,7 +470,7 @@ const TransportApp = ({ userProfileData }) => {
                 normalizePlaceName(seg.toLocation) === currentToNorm;
             if (isCurrent) break;
 
-            if (seg.isResolved) {
+            if (seg.isResolvedWithTime) {
                 if (seg.range.endTs != null) {
                     if (prevResolvedEndTs == null || seg.range.endTs > prevResolvedEndTs) {
                         prevResolvedEndTs = seg.range.endTs;
@@ -483,7 +490,7 @@ const TransportApp = ({ userProfileData }) => {
             if (isCurrent) continue;
             if (seg.range.startTs <= trRange.startTs) continue;
     
-            if (seg.isResolved) {
+            if (seg.isResolvedWithTime) {
                 if (seg.range.startTs != null) {
                     if (nextResolvedStartTs == null || seg.range.startTs < nextResolvedStartTs) {
                         nextResolvedStartTs = seg.range.startTs;
