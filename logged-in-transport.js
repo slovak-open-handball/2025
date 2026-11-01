@@ -8566,15 +8566,27 @@ const TransportApp = ({ userProfileData }) => {
             if (exactMatch) return true;
         
             // ============================================================
-            // ODSTRÁNENÉ: Fallback cez isSegmentCoveredByBusPath
+            // NOVÉ: Fallback cez isSegmentCoveredByBusPath – LEN pre segmenty,
+            // ktoré MAJÚ reálne časy z busu (busAssigned === true).
             //
             // DÔVOD: Ak tím v buse absolvoval dlhšiu trasu (napr. Hájik →
-            // Internátna → UNIZA), tak segment Hájik → Internátna je
-            // "pokrytý" trasou busu, ale NIE JE priradený k busu v zmysle
-            // "tím na tomto segmente nastúpil a vystúpil". Preto sa má
-            // zobraziť v boxe vygenerovaných presunov ako nepriradený.
+            // Internátna → UNIZA) a vystúpil až na UNIZA, tak segment
+            // Hájik → Internátna NIE JE v assignedSegmentsByTeam (lebo tím
+            // vystúpil na UNIZA, nie na Internátna), ale JE pokrytý trasou
+            // busu – tím ho absolvoval. Preto sa má skryť.
+            //
+            // Pre NEPRIradené segmenty (busAssigned !== true) fallback
+            // NEPOUŽÍVAME – tie sa majú zobraziť ako "čakajúce na priradenie".
             // ============================================================
-            // return isSegmentCoveredByBusPath(dayKey, tn, cat, t.fromLocation, t.toLocation);
+            const segmentHasRealBusTimes =
+                t.busAssigned === true ||
+                (t._hasRealTime === true && t._isAssigned === true);
+        
+            if (segmentHasRealBusTimes) {
+                if (isSegmentCoveredByBusPath(dayKey, tn, cat, t.fromLocation, t.toLocation)) {
+                    return true;
+                }
+            }
         
             return false;
         };
