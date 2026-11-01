@@ -9524,33 +9524,11 @@ const TransportApp = ({ userProfileData }) => {
             return d.toLocaleDateString('sk-SK', { weekday: 'long' });
         };
     
-        // ============================================================
-        // 3) DYNAMICKÝ VÝPOČET ČASOV PRE PEŠIE SEGMENTY
-        //
-        // Pre každý walking segment:
-        //  - startTs = endTs predchádzajúceho bus segmentu
-        //  - endTs   = startTs nasledujúceho bus segmentu
-        //  - Ak nie je predchádzajúci bus → startTs = null
-        //  - Ak nie je nasledujúci bus → endTs = null
-        //
-        // Bus segmenty sa hľadajú v parent zázname (parent.segments),
-        // pričom sa použijú IBA tie, ktoré majú reálne časy (busAssigned).
-        //
-        // Pre walking segment s _segmentIndex:
-        //  - Predchádzajúci bus = najbližší segment s idx < _segmentIndex
-        //    a busAssigned === true
-        //  - Nasledujúci bus = najbližší segment s idx > _segmentIndex
-        //    a busAssigned === true
-        //
-        // Pre celý parent walking (bez stops):
-        //  - startTs = null (nemá predchádzajúci bus v rámci parenta)
-        //  - endTs = null (nemá nasledujúci bus v rámci parenta)
-        //  - Zobrazí sa len ak má parent aspoň jeden bus segment
-        //    (t.j. parent má intermediateStops a niektoré segments sú bus)
-        // ============================================================
         const enrichedWalking = walkingTransfers.map((t) => {
             // ------------------------------------------------------------
-            // A) Celý parent walking (bez medzizastávok)
+            // A) Celý parent walking (bez medzizastávok) – nemá zmysel
+            //    počítať z okolitých bus segmentov, patrí sem len ak má
+            //    parent aspoň jeden bus segment (t.j. má intermediateStops).
             // ------------------------------------------------------------
             if (!t._parentKey) {
                 return {
@@ -9562,13 +9540,13 @@ const TransportApp = ({ userProfileData }) => {
                     _hasAnyBus: false,
                 };
             }
-    
+        
             // ------------------------------------------------------------
             // B) Walking segment z parenta s medzizastávkami
             // ------------------------------------------------------------
             const parentKey = t._parentKey;
             const parent = savedTransfers.find((s) => s.key === parentKey);
-    
+        
             if (!parent) {
                 return {
                     ...t,
@@ -9579,98 +9557,153 @@ const TransportApp = ({ userProfileData }) => {
                     _hasAnyBus: false,
                 };
             }
-    
+        
             const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
             const segmentIndex = t._segmentIndex;
-    
-            // Nájdi predchádzajúci bus segment (s reálnym endTs)
-            let prevBusEndTs = null;
+        
+            // ============================================================
+            // NOVÉ: Zisti celkový začiatok a koniec parent presunu.
+            //  - Prednostne z parent.when (rozsah celého presunu)
+            //  - Inak z reálnych časov segmentov (startTs / endTs)
+            // ============================================================
+            const parentRange = (() => {
+                const parsed = parseWhenRangeToTs(parent.when);
+                if (parsed && parsed.startTs != null && parsed.endTs != null) {
+                    return { startTs: parsed.startTs, endTs: parsed.endTs };
+                }
+                let earliestStart = null;
+                let latestEnd = null;
+                parentSegments.forEach((s) => {
+                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                        earliestStart = s.startTs;
+                    }
+                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                        latestEnd = s.endTs;
+                    }
+                });
+                if (earliestStart != null && latestEnd != null) {
+                    return { startTs: earliestStart, endTs: latestEnd };
+                }
+                return null;
+            })();
+        
+            // ------------------------------------------------------------
+            // Nájdi koniec predchádzajúceho segmentu (bus aj walking)
+            // – berieme endTs, inak startTs
+            // ------------------------------------------------------------
+            let prevSegmentEndTs = null;
             for (let i = segmentIndex - 1; i >= 0; i--) {
                 const seg = parentSegments[i];
                 if (!seg) continue;
-                if (seg.isWalking === true) continue;
-                if (seg.busAssigned === true && seg.endTs != null) {
-                    prevBusEndTs = seg.endTs;
+                if (seg.endTs != null) {
+                    prevSegmentEndTs = seg.endTs;
+                    break;
+                }
+                if (seg.startTs != null) {
+                    prevSegmentEndTs = seg.startTs;
                     break;
                 }
             }
-    
-            // Nájdi nasledujúci bus segment (s reálnym startTs)
-            let nextBusStartTs = null;
+        
+            // ------------------------------------------------------------
+            // Nájdi začiatok nasledujúceho segmentu (bus aj walking)
+            // – berieme startTs, inak endTs
+            // ------------------------------------------------------------
+            let nextSegmentStartTs = null;
             for (let i = segmentIndex + 1; i < parentSegments.length; i++) {
                 const seg = parentSegments[i];
                 if (!seg) continue;
-                if (seg.isWalking === true) continue;
-                if (seg.busAssigned === true && seg.startTs != null) {
-                    nextBusStartTs = seg.startTs;
+                if (seg.startTs != null) {
+                    nextSegmentStartTs = seg.startTs;
+                    break;
+                }
+                if (seg.endTs != null) {
+                    nextSegmentStartTs = seg.endTs;
                     break;
                 }
             }
-    
+        
             // ============================================================
-            // NOVÉ: Ak nie je predchádzajúci bus, použi štart parent bloku
-            // (prvý bus segment v parentovi – čas odchodu)
+            // NOVÉ PRAVIDLÁ pre zobrazené časy:
             //
-            // Tým sa zabezpečí, že walking segment, ktorý je PRVÝ v bloku
-            // (napr. od ubytovne na zastávku busu), má startTs = čas
-            // odchodu prvého busu (tím ide peši na zastávku, aby stihol bus).
+            //  - PRVÝ walking segment (segmentIndex === 0 alebo nemá
+            //    predchádzajúci segment s časom):
+            //      startTs = parentRange.startTs (začiatok celého presunu)
+            //      endTs   = nextSegmentStartTs (začiatok nasledujúceho segmentu)
+            //
+            //  - POSLEDNÝ walking segment (segmentIndex === parentSegments.length - 1
+            //    alebo nemá nasledujúci segment s časom):
+            //      startTs = prevSegmentEndTs (koniec predchádzajúceho segmentu)
+            //      endTs   = parentRange.endTs (koniec celého presunu)
+            //
+            //  - VNÚTORNÝ walking segment:
+            //      startTs = prevSegmentEndTs
+            //      endTs   = nextSegmentStartTs
+            //
+            // Ak chýba parentRange alebo príslušný sused, použije sa
+            // fallback (null).
             // ============================================================
-            if (prevBusEndTs == null) {
-                for (let i = 0; i < parentSegments.length; i++) {
-                    const seg = parentSegments[i];
-                    if (!seg) continue;
-                    if (seg.isWalking === true) continue;
-                    if (seg.busAssigned === true && seg.startTs != null) {
-                        prevBusEndTs = seg.startTs;
-                        break;
-                    }
-                }
+            const isFirstWalkingSegment =
+                prevSegmentEndTs == null && parentRange && parentRange.startTs != null;
+            const isLastWalkingSegment =
+                nextSegmentStartTs == null && parentRange && parentRange.endTs != null;
+        
+            let displayStartTs = null;
+            let displayEndTs = null;
+        
+            if (isFirstWalkingSegment) {
+                displayStartTs = parentRange.startTs;
+            } else if (prevSegmentEndTs != null) {
+                displayStartTs = prevSegmentEndTs;
             }
-    
-            // ============================================================
-            // NOVÉ: Ak nie je nasledujúci bus, použi koniec parent bloku
-            // (posledný bus segment v parentovi – čas príchodu)
-            // ============================================================
-            if (nextBusStartTs == null) {
-                for (let i = parentSegments.length - 1; i >= 0; i--) {
-                    const seg = parentSegments[i];
-                    if (!seg) continue;
-                    if (seg.isWalking === true) continue;
-                    if (seg.busAssigned === true && seg.endTs != null) {
-                        nextBusStartTs = seg.endTs;
-                        break;
-                    }
-                }
+        
+            if (isLastWalkingSegment) {
+                displayEndTs = parentRange.endTs;
+            } else if (nextSegmentStartTs != null) {
+                displayEndTs = nextSegmentStartTs;
             }
-    
+        
+            // Ak ide o jediný walking segment v parentovi (parent má len
+            // jeden segment a ten je walking), použijeme celý parent rozsah.
+            if (
+                parentSegments.length === 1 &&
+                parentRange &&
+                parentRange.startTs != null &&
+                parentRange.endTs != null
+            ) {
+                displayStartTs = parentRange.startTs;
+                displayEndTs = parentRange.endTs;
+            }
+        
             // ============================================================
             // Zostav when string
-            //  - ak sú oba časy → "od – do"
-            //  - ak len jeden → len ten jeden
-            //  - ak žiadny → null (nezobrazí sa)
             // ============================================================
             let whenStr = null;
-            if (prevBusEndTs != null && nextBusStartTs != null) {
-                whenStr = `${formatTsLocal(prevBusEndTs)} – ${formatTsLocal(nextBusStartTs)}`;
-            } else if (prevBusEndTs != null) {
-                whenStr = formatTsLocal(prevBusEndTs);
-            } else if (nextBusStartTs != null) {
-                whenStr = formatTsLocal(nextBusStartTs);
+            if (displayStartTs != null && displayEndTs != null) {
+                whenStr = `${formatTsLocal(displayStartTs)} – ${formatTsLocal(displayEndTs)}`;
+            } else if (displayStartTs != null) {
+                whenStr = formatTsLocal(displayStartTs);
+            } else if (displayEndTs != null) {
+                whenStr = formatTsLocal(displayEndTs);
             }
-    
+        
             // Zvyšný čas na presun (minúty)
             let remainingMinutes = null;
-            if (prevBusEndTs != null && nextBusStartTs != null && nextBusStartTs > prevBusEndTs) {
-                remainingMinutes = Math.round((nextBusStartTs - prevBusEndTs) / 60000);
+            if (
+                displayStartTs != null &&
+                displayEndTs != null &&
+                displayEndTs > displayStartTs
+            ) {
+                remainingMinutes = Math.round((displayEndTs - displayStartTs) / 60000);
             }
-    
+        
             return {
                 ...t,
                 when: whenStr,
-                _displayStartTs: prevBusEndTs,
-                _displayEndTs: nextBusStartTs,
+                _displayStartTs: displayStartTs,
+                _displayEndTs: displayEndTs,
                 _displayRemainingMinutes: remainingMinutes,
-                _hasAnyBus: prevBusEndTs != null || nextBusStartTs != null,
+                _hasAnyBus: displayStartTs != null || displayEndTs != null,
             };
         });
     
