@@ -9910,7 +9910,7 @@ const TransportApp = ({ userProfileData }) => {
                 )
                 : React.createElement(
                     'div',
-                    { className: 'max-h-[70vh] overflow-y-auto' },
+                    { className: 'w-full' },
                     React.createElement(
                         'table',
                         { className: 'w-full border-collapse text-sm' },
