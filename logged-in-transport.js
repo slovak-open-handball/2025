@@ -8554,23 +8554,20 @@ const TransportApp = ({ userProfileData }) => {
                 let firstUnassignedFallbackIdx = -1;
 
                 for (let i = 0; i < route.length - 1; i++) {
+                    const ft = finalTimes[i];
+                    if (!ft) continue;
+                
+                    // Preskoč segment, ak from === to
                     const fromLoc = String(route[i] || '').trim();
                     const toLoc = String(route[i + 1] || '').trim();
                     if (normalizePlaceName(fromLoc) === normalizePlaceName(toLoc)) continue;
-                    const text = `Presun z ${fromLoc} do ${toLoc}`;
-                    const key = buildTransferKey(t.category, t.teamName, t.when || '', text);
-
-                    // Pre PRVÝ segment použi `parentEffectiveWhen`, ostatné bez času
-                    const isFirst = firstUnassignedFallbackIdx === -1;
-                    if (isFirst) firstUnassignedFallbackIdx = i;
-
-                    const displayWhen = isFirst && parentEffectiveWhenFallback
-                        ? parentEffectiveWhenFallback
-                        : null;
-
+                
+                    // ============================================================
+                    // NOVÉ: Zisti, či je TENTO konkrétny segment označený ako peši
+                    // v parent.segments (rovnaká logika ako vo fallback vetve nižšie).
+                    // ============================================================
                     const parentSegmentForThisIdx = (() => {
                         if (!Array.isArray(t.segments)) return null;
-                        // Nájdi segment v parent.segments, ktorý zodpovedá aktuálnemu (fromLoc, toLoc)
                         const segFromNorm = normalizePlaceName(fromLoc);
                         const segToNorm = normalizePlaceName(toLoc);
                         return t.segments.find(
@@ -8578,25 +8575,47 @@ const TransportApp = ({ userProfileData }) => {
                                 && normalizePlaceName(s.to) === segToNorm
                         ) || null;
                     })();
-
+                
                     const isSegmentWalking =
                         (parentSegmentForThisIdx && parentSegmentForThisIdx.isWalking === true) ||
                         t.isWalking === true;
-
+                
+                    // ============================================================
+                    // NOVÉ: Ak je segment peši, NEPOČÍTAJ mu reálne časy ani
+                    // remainingMinutes – pešie segmenty patria do boxu "Peši".
+                    // ============================================================
+                    let hasRealTimeForSeg = hasRealTime;
+                    let whenStrForSeg = whenStr;
+                    let remainingMinutesForSeg = remainingMinutes;
+                
+                    if (isSegmentWalking) {
+                        hasRealTimeForSeg = false;
+                        whenStrForSeg = null;
+                        remainingMinutesForSeg = null;
+                    }
+                
+                    const text = `Presun z ${fromLoc} do ${toLoc}`;
+                    const key = buildTransferKey(
+                        t.category,
+                        t.teamName,
+                        whenStrForSeg || '',
+                        text
+                    );
+                
                     expandedTransfers.push({
                         ...t,
                         key,
-                        when: whenStr,
+                        when: whenStrForSeg,
                         text,
                         fromLocation: fromLoc,
                         toLocation: toLoc,
                         intermediateStops: [],
                         _parentKey: t.key,
                         _parentRoute: `${t.fromLocation} → ${t.toLocation}`,
-                        _remainingMinutes: remainingMinutes,
+                        _remainingMinutes: remainingMinutesForSeg,
                         _isAssigned: segmentAssigned[i],
-                        _hasRealTime: hasRealTime,
-                        isWalking: isSegmentWalking,
+                        _hasRealTime: hasRealTimeForSeg,
+                        isWalking: isSegmentWalking,   // ← OPRAVA
                     });
                 }
                 return;
