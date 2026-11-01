@@ -6109,7 +6109,13 @@ const TransportApp = ({ userProfileData }) => {
                     });
                     const realSegment = matchingSegs.find((s) => s.isWalking === true) || matchingSegs[0] || null;
         
-                    const isWalkingResolved = realSegment && realSegment.isWalking === true;
+                    const parentSegForThisIdx = Array.isArray(t.segments)
+                        ? t.segments.find((s) =>
+                            normalizePlaceName(s.from) === normalizePlaceName(route[i]) &&
+                            normalizePlaceName(s.to) === normalizePlaceName(route[i + 1])
+                        )
+                        : null;
+                    const isWalkingInParent = parentSegForThisIdx && parentSegForThisIdx.isWalking === true;
         
                     allSegments.push({
                         ...t,
