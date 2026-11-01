@@ -353,7 +353,6 @@ const TransportApp = ({ userProfileData }) => {
         const category = cleanCategory(transfer.category || '');
         const dayKey = transfer.dayKey || '';
     
-        // Nájdi parent záznam
         const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
         if (!parentRec) return null;
     
@@ -386,18 +385,7 @@ const TransportApp = ({ userProfileData }) => {
         if (!trRange || trRange.startTs == null) return null;
     
         // ============================================================
-        // KĽÚČOVÁ OPRAVA: Zoznam všetkých segmentov parenta
-        //
-        // Namiesto spoliehania sa len na `savedTransfers` (kde segmenty
-        // s `when: null` chýbajú), použijeme PRIAMO `parentRec.segments`,
-        // ktoré obsahujú VŠETKY segmenty vrátane tých s reálnymi časmi
-        // (startTs/endTs) a tých bez časov.
-        //
-        // Pre každý segment určíme:
-        //  - from / to (normalizované)
-        //  - range: { startTs, endTs } – z `when` alebo z reálnych časov
-        //  - isResolved: true, ak má reálne časy (startTs + endTs)
-        //               alebo ak je walking
+        // Zoznam všetkých segmentov parenta
         // ============================================================
         const parentSegments = [];
     
@@ -407,10 +395,6 @@ const TransportApp = ({ userProfileData }) => {
                 const segTo = String(seg.to || '').trim();
                 if (!segFrom || !segTo) return;
     
-                // Zisti rozsah:
-                //  1) Ak má segment reálne startTs + endTs → použi ich
-                //  2) Inak skús `when` string
-                //  3) Inak použi `trRange` parenta (ako fallback pre poradie)
                 let range = null;
                 if (seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs) {
                     range = { startTs: seg.startTs, endTs: seg.endTs };
@@ -424,23 +408,15 @@ const TransportApp = ({ userProfileData }) => {
                         range = { startTs: parsed.startTs, endTs: parsed.endTs };
                     }
                 }
-
-                // NOVÉ: Ak segment je walking a nemá reálne časy,
-                // NEPRIraďuj mu `range` (nemá časy).
-                // Inak by sa walking segment počítal ako "vyriešený s časom
-                // trRange", čo by spôsobilo, že pre nasledujúci segment sa
-                // prevResolvedEndTs nastaví na koniec parenta (nesprávne).
+    
                 if (!range) {
                     if (seg.isWalking === true) {
-                        // Walking segment nemá časy – range = null
                         range = { startTs: null, endTs: null };
                     } else {
-                        // Fallback pre nevyriešené segmenty bez času
                         range = { startTs: trRange.startTs, endTs: trRange.endTs };
                     }
                 }
     
-                // Je segment vyriešený?
                 const isResolvedWithTime =
                     (seg.busAssigned === true && seg.startTs != null && seg.endTs != null) ||
                     (seg.startTs != null && seg.endTs != null);
@@ -457,10 +433,6 @@ const TransportApp = ({ userProfileData }) => {
             });
         }
     
-        // ============================================================
-        // Ak parent.segments neobsahuje aktuálny segment (napr. staršie
-        // záznamy bez segments), pridaj ho manuálne s `trRange`.
-        // ============================================================
         const currentFromNorm = normalizePlaceName(transfer.fromLocation);
         const currentToNorm = normalizePlaceName(transfer.toLocation);
         const isCurrentInList = parentSegments.some(
@@ -481,9 +453,11 @@ const TransportApp = ({ userProfileData }) => {
         }
     
         parentSegments.sort((a, b) => (a.idx || 0) - (b.idx || 0));
-
+    
         // ============================================================
-        // Nájdi koncový čas PREDCHÁDZAJÚCEHO vyriešeného segmentu
+        // OPRAVA: Nájdi koncový čas PREDCHÁDZAJÚCEHO vyriešeného segmentu
+        // LEN ak je v rámci trRange (t.j. jeho endTs <= trRange.startTs).
+        // Inak ignoruj (je to segment z inej časti dňa).
         // ============================================================
         let prevResolvedEndTs = null;
         for (const seg of parentSegments) {
@@ -491,31 +465,44 @@ const TransportApp = ({ userProfileData }) => {
                 normalizePlaceName(seg.fromLocation) === currentFromNorm &&
                 normalizePlaceName(seg.toLocation) === currentToNorm;
             if (isCurrent) break;
-
+    
             if (seg.isResolvedWithTime) {
                 if (seg.range.endTs != null) {
-                    if (prevResolvedEndTs == null || seg.range.endTs > prevResolvedEndTs) {
-                        prevResolvedEndTs = seg.range.endTs;
+                    // OPRAVA: ber len ak je endTs pred začiatkom aktuálneho segmentu
+                    // (t.j. nepresahuje do aktuálneho intervalu)
+                    if (seg.range.endTs <= trRange.startTs) {
+                        if (prevResolvedEndTs == null || seg.range.endTs > prevResolvedEndTs) {
+                            prevResolvedEndTs = seg.range.endTs;
+                        }
                     }
                 }
             }
         }
     
         // ============================================================
-        // Nájdi začiatočný čas NASLEDUJÚCEHO vyriešeného segmentu
+        // OPRAVA: Nájdi začiatočný čas NASLEDUJÚCEHO vyriešeného segmentu
+        // LEN ak je v rámci trRange (t.j. jeho startTs >= trRange.startTs)
+        // a zároveň nasleduje po aktuálnom segmente v poradí.
         // ============================================================
         let nextResolvedStartTs = null;
+        let foundCurrent = false;
         for (const seg of parentSegments) {
             const isCurrent =
                 normalizePlaceName(seg.fromLocation) === currentFromNorm &&
                 normalizePlaceName(seg.toLocation) === currentToNorm;
-            if (isCurrent) continue;
-            if (seg.range.startTs <= trRange.startTs) continue;
+            if (isCurrent) {
+                foundCurrent = true;
+                continue;
+            }
+            if (!foundCurrent) continue;
     
+            // OPRAVA: ber len ak je startTs v rámci alebo za koncom aktuálneho intervalu
             if (seg.isResolvedWithTime) {
                 if (seg.range.startTs != null) {
-                    if (nextResolvedStartTs == null || seg.range.startTs < nextResolvedStartTs) {
-                        nextResolvedStartTs = seg.range.startTs;
+                    if (seg.range.startTs >= trRange.startTs) {
+                        if (nextResolvedStartTs == null || seg.range.startTs < nextResolvedStartTs) {
+                            nextResolvedStartTs = seg.range.startTs;
+                        }
                     }
                 }
             }
@@ -9163,9 +9150,10 @@ const TransportApp = ({ userProfileData }) => {
         });
 
         // ============================================================
-        // NOVÉ: Výber prvého segmentu z každého parent bloku
+        // OPRAVA: Výber prvého segmentu z každého parent bloku
         // s prioritou:
         //   1) segment, ktorý začína na fromLocation parenta
+        //      A ZÁROVEŇ má najmenší index v parent.segments
         //   2) NAJMENŠÍ INDEX segmentu v parent.segments
         //      (t.j. najskorší v poradí trasy)
         //   3) až potom najmenší startTs (fallback)
@@ -9175,7 +9163,7 @@ const TransportApp = ({ userProfileData }) => {
         // nie ten neskorší, ktorý má len provizórny `when`.
         // ============================================================
         const firstSegmentPerParent = new Map();
-
+        
         // Pomocná: získa index segmentu (from → to) v parent.segments
         const getParentSegmentIndex = (t) => {
             if (!t._parentKey) return Number.POSITIVE_INFINITY;
@@ -9184,16 +9172,16 @@ const TransportApp = ({ userProfileData }) => {
             const idx = findSegmentIndex(parent.segments, t.fromLocation, t.toLocation);
             return idx === -1 ? Number.POSITIVE_INFINITY : idx;
         };
-
+        
         baseFiltered.forEach((t) => {
             const blockKey = t._parentKey
                 ? `${t._parentKey}||${cleanCategory(t.category || '')}||${String(t.teamName || '').trim()}`
                 : `solo||${t.key}`;
-
+        
             const trRange = parseTransferWhenToRange(t.when);
             const startTs = trRange ? trRange.startTs : Number.POSITIVE_INFINITY;
             const segmentIdx = getParentSegmentIndex(t);
-
+        
             // Zisti, či tento segment začína na fromLocation parenta
             let isFirstFromParent = false;
             if (t._parentKey) {
@@ -9206,13 +9194,13 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 }
             }
-
+        
             const existing = firstSegmentPerParent.get(blockKey);
             if (!existing) {
                 firstSegmentPerParent.set(blockKey, { segment: t, startTs, isFirstFromParent, segmentIdx });
                 return;
             }
-
+        
             // Priorita 1: segment, ktorý začína na fromLocation parenta
             if (isFirstFromParent && !existing.isFirstFromParent) {
                 firstSegmentPerParent.set(blockKey, { segment: t, startTs, isFirstFromParent, segmentIdx });
@@ -9221,7 +9209,7 @@ const TransportApp = ({ userProfileData }) => {
             if (!isFirstFromParent && existing.isFirstFromParent) {
                 return;
             }
-
+        
             // Priorita 2: NAJMENŠÍ INDEX segmentu v parent.segments
             // (t.j. najskorší segment v poradí trasy)
             if (segmentIdx < existing.segmentIdx) {
@@ -9231,13 +9219,12 @@ const TransportApp = ({ userProfileData }) => {
             if (segmentIdx > existing.segmentIdx) {
                 return;
             }
-
+        
             // Priorita 3 (fallback): najmenší startTs
             if (startTs < existing.startTs) {
                 firstSegmentPerParent.set(blockKey, { segment: t, startTs, isFirstFromParent, segmentIdx });
             }
         });
-
         const allowedKeys = new Set();
         firstSegmentPerParent.forEach(({ segment }) => {
             allowedKeys.add(segment.key);
