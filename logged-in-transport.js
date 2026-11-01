@@ -9053,29 +9053,25 @@ const TransportApp = ({ userProfileData }) => {
         // k inému parentovi).
         // ============================================================
         const fullyAssignedParentKeys = new Set();
-        const parentSegmentsMap = new Map(); // parentBlockKey → [segmenty]
 
+        const parentKeysInExpanded = new Set();
         expandedTransfers.forEach((t) => {
-            if (!t._parentKey) return;
-            const blockKey = `${t._parentKey}||${cleanCategory(t.category || '')}||${String(t.teamName || '').trim()}`;
-            if (!parentSegmentsMap.has(blockKey)) parentSegmentsMap.set(blockKey, []);
-            parentSegmentsMap.get(blockKey).push(t);
+            if (t._parentKey) parentKeysInExpanded.add(t._parentKey);
         });
 
-        parentSegmentsMap.forEach((segments, blockKey) => {
-            const parentKey = blockKey.split('||')[0];
+        parentKeysInExpanded.forEach((parentKey) => {
             const parent = savedTransfers.find((s) => s.key === parentKey);
             if (!parent || !Array.isArray(parent.segments)) return;
-
+        
             // Parent je úplne priradený, ak KAŽDÝ segment v parent.segments
-            // je buď walking alebo má reálne časy z busu (busAssigned + startTs/endTs).
+            // je buď walking alebo má reálne časy z busu.
             const allAssigned = parent.segments.every((seg) => {
                 if (!seg) return false;
                 if (seg.isWalking === true) return true;
                 if (seg.busAssigned === true && seg.startTs != null && seg.endTs != null) return true;
                 return false;
             });
-            if (allAssigned) fullyAssignedParentKeys.add(blockKey);
+            if (allAssigned) fullyAssignedParentKeys.add(parentKey);
         });
 
         const baseFiltered = expandedTransfers.filter((t) => {
@@ -9117,8 +9113,7 @@ const TransportApp = ({ userProfileData }) => {
 
                 // Skontroluj, či je parent úplne priradený (všetky segmenty
                 // walking alebo priradené k busu) – v takom prípade ho skry.
-                const blockKey = `${t._parentKey}||${cleanCategory(t.category || '')}||${String(t.teamName || '').trim()}`;
-                if (fullyAssignedParentKeys.has(blockKey)) return false;
+                if (t._parentKey && fullyAssignedParentKeys.has(t._parentKey)) return false;
                 return true;
             }
         
