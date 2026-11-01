@@ -8538,7 +8538,7 @@ const TransportApp = ({ userProfileData }) => {
             const fromLoc = normalizePlaceName(t.fromLocation || '');
             const toLoc = normalizePlaceName(t.toLocation || '');
             if (!fromLoc || !toLoc) return false;
-
+        
             // 1) Presná zhoda (tím nastúpil/vystúpil presne na týchto zastávkach)
             const key = `${dayKey}|${tn}|${cat}`;
             const list = assignedSegmentsByTeam.get(key) || [];
@@ -8546,15 +8546,17 @@ const TransportApp = ({ userProfileData }) => {
             if (exactMatch) return true;
         
             // ============================================================
-            // 2) NOVÉ: Fallback – segment môže byť pokrytý trasou busu,
-            // aj keď tím nastúpil/vystúpil na iných zastávkach.
+            // ODSTRÁNENÉ: Fallback cez isSegmentCoveredByBusPath
             //
-            // Príklad: tím nastúpil na Rosinská a vystúpil na Tulipánová.
-            // Segment Rosinská → Internátna NIE JE presná zhoda (lebo
-            // výstup bol Tulipánová), ale bus prešiel cez Internátnu –
-            // takže segment je pokrytý a nemá sa zobrazovať.
+            // DÔVOD: Ak tím v buse absolvoval dlhšiu trasu (napr. Hájik →
+            // Internátna → UNIZA), tak segment Hájik → Internátna je
+            // "pokrytý" trasou busu, ale NIE JE priradený k busu v zmysle
+            // "tím na tomto segmente nastúpil a vystúpil". Preto sa má
+            // zobraziť v boxe vygenerovaných presunov ako nepriradený.
             // ============================================================
-            return isSegmentCoveredByBusPath(dayKey, tn, cat, t.fromLocation, t.toLocation);
+            // return isSegmentCoveredByBusPath(dayKey, tn, cat, t.fromLocation, t.toLocation);
+        
+            return false;
         };
     
         // ============================================================
