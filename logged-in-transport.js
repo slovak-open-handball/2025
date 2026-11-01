@@ -6716,15 +6716,62 @@ const TransportApp = ({ userProfileData }) => {
             // Po zápise teamsIn/teamsOut do busRows:
             await new Promise((r) => setTimeout(r, 300));
     
+            // ============================================================
+            // NOVÉ: Vypočítaj reálne časy pre segment PRIAMO z vybraných
+            // nástupných/výstupných riadkov autobusu (busId, startTs, endTs)
+            // a zapíš ich do segmentu v parent zázname.
+            // ============================================================
+            const computeSegmentTimesFromRows = () => {
+                let startTs = null;
+                let endTs = null;
+
+                if (boardingRow && boardingRow.timeFrom) {
+                    startTs = timeOnDayKeyToTs(trDayKey, boardingRow.timeFrom);
+                }
+                if (alightingRow && alightingRow.timeTo) {
+                    endTs = timeOnDayKeyToTs(trDayKey, alightingRow.timeTo);
+                }
+
+                // Ak chýba nástupný alebo výstupný čas, skús dopočítať z trvania jázdy
+                if (startTs != null && endTs == null) {
+                    const mins = getTravelMinutes(transfer.fromLocation, transfer.toLocation);
+                    if (mins != null) endTs = startTs + mins * 60000;
+                }
+                if (endTs != null && startTs == null) {
+                    const mins = getTravelMinutes(transfer.fromLocation, transfer.toLocation);
+                    if (mins != null) startTs = endTs - mins * 60000;
+                }
+
+                return { startTs, endTs };
+            };
+
+            const segTimes = computeSegmentTimesFromRows();
+
             const parentKey = transfer._parentKey || transfer.key;
             await updateParentTransfer(parentKey, (draft) => {
                 const segIdx = findSegmentIndex(draft.segments, transfer.fromLocation, transfer.toLocation);
                 if (segIdx !== -1) {
                     draft.segments[segIdx].busAssigned = true;
                     draft.segments[segIdx].isWalking = false;
-                    // NOVÉ: ulož busId priamo do segmentu (pre prípad, že by sa
-                    // nenašiel v busRows pri recompute – napr. po odstránení tímu)
                     draft.segments[segIdx].busId = busId || null;
+
+                    // ============================================================
+                    // NOVÉ: Zapíš reálne časy začiatku a konca presunu v buse
+                    // priamo do segmentu.
+                    // ============================================================
+                    if (segTimes.startTs != null && segTimes.endTs != null) {
+                        draft.segments[segIdx].startTs = segTimes.startTs;
+                        draft.segments[segIdx].endTs = segTimes.endTs;
+                        draft.segments[segIdx].when = `${formatTsLocal(segTimes.startTs)} – ${formatTsLocal(segTimes.endTs)}`;
+                    } else if (segTimes.startTs != null) {
+                        draft.segments[segIdx].startTs = segTimes.startTs;
+                        draft.segments[segIdx].endTs = null;
+                        draft.segments[segIdx].when = formatTsLocal(segTimes.startTs);
+                    } else if (segTimes.endTs != null) {
+                        draft.segments[segIdx].startTs = null;
+                        draft.segments[segIdx].endTs = segTimes.endTs;
+                        draft.segments[segIdx].when = formatTsLocal(segTimes.endTs);
+                    }
                 }
             });
     
