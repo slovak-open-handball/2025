@@ -10583,15 +10583,6 @@ const TransportApp = ({ userProfileData }) => {
                     const transportColor = getTransportColorForCategory(tr.category);
                     const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
                 
-                    // Vypočítaj trvanie presunu v minútach
-                    let durationMinutes = null;
-                    if (displayWhen) {
-                        const range = parseWhenRangeToTs(displayWhen);
-                        if (range && range.startTs != null && range.endTs != null && range.endTs > range.startTs) {
-                            durationMinutes = Math.round((range.endTs - range.startTs) / 60000);
-                        }
-                    }
-                
                     return React.createElement(
                         'div',
                         {
