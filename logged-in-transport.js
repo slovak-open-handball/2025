@@ -9253,7 +9253,7 @@ const TransportApp = ({ userProfileData }) => {
                                     let displayTitle = null;
     
                                     if (totalMembers != null) {
-                                        valueText = `${totalMembers}`;
+                                        valueText = `${totalMembers} členov`;
                                     } else {
                                         const avg = getCategoryAverageForTransfer(t.category);
                                         if (avg != null) {
