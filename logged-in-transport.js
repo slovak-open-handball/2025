@@ -6123,7 +6123,7 @@ const TransportApp = ({ userProfileData }) => {
                         range: { startTs: segStartTs, endTs: segEndTs },
                         fromLocation: route[i],
                         toLocation: route[i + 1],
-                        isWalking: t.isWalking === true || isWalkingResolved,
+                        isWalking: t.isWalking === true || isWalkingInParent,
                         _parentKey: t.key,
                         _isAssigned: boardingTs != null || alightingTs != null,
                     });
