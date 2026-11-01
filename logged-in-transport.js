@@ -661,6 +661,7 @@ const TransportApp = ({ userProfileData }) => {
     // ==== ROZHODOVACIE MODÁLNE OKNO PO KLIKNUTÍ NA PRESUN ====
     const [transferActionModal, setTransferActionModal] = useState(null); // { transfer }
     const [showAssignBusModal, setShowAssignBusModal] = useState(false);
+    const [assignBusTransfer, setAssignBusTransfer] = useState(null);
     const [assignBusMatches, setAssignBusMatches] = useState([]); // pole { bus, row, side } – side = 'in' | 'out'
     const [assignBusSelectedKey, setAssignBusSelectedKey] = useState(''); // `${busId}|${rowId}|${side}`
     const [assignBusSaving, setAssignBusSaving] = useState(false);
@@ -6851,8 +6852,8 @@ const TransportApp = ({ userProfileData }) => {
     // PRIRADENIE PRESUNU K AUTOBUSU
     // ============================================================
     const assignTransferToBus = async () => {
-        if (!window.db || !transferActionModal?.transfer) return;
-        const transfer = transferActionModal.transfer;
+        if (!window.db || !assignBusTransfer) return;
+        const transfer = assignBusTransfer;
     
         if (!arePreviousSegmentsResolved(transfer)) {
             window.showGlobalNotification(
@@ -7016,6 +7017,7 @@ const TransportApp = ({ userProfileData }) => {
     
             setShowAssignBusModal(false);
             setTransferActionModal(null);
+            setAssignBusTransfer(null);
             setAssignBusMatches([]);
             setAssignBusSelectedKey('');
         } catch (err) {
@@ -11008,6 +11010,7 @@ const TransportApp = ({ userProfileData }) => {
                                         ? `${matches[0].bus.id}|${matches[0].boardingRow?.id || ''}|${matches[0].alightingRow?.id || ''}|${matches[0].side}`
                                         : ''
                                 );
+                                setAssignBusTransfer(transferToAssign);
                                 setTransferActionModal(null);
                                 setShowAssignBusModal(true);
                             },
@@ -11054,11 +11057,14 @@ const TransportApp = ({ userProfileData }) => {
                 )
             )
         ),
-        showAssignBusModal && transferActionModal?.transfer && React.createElement(
+        showAssignBusModal && assignBusTransfer && React.createElement(
             'div',
             {
                 className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100001] p-4',
-                onClick: () => setShowAssignBusModal(false)
+                onClick: () => {
+                    setShowAssignBusModal(false);
+                    setAssignBusTransfer(null);
+                },
             },
             React.createElement(
                 'div',
@@ -11400,7 +11406,10 @@ const TransportApp = ({ userProfileData }) => {
                         'button',
                         {
                             type: 'button',
-                            onClick: () => setShowAssignBusModal(false),
+                            onClick: () => {
+                                setShowAssignBusModal(false);
+                                setAssignBusTransfer(null);
+                            },
                             disabled: assignBusSaving,
                             className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
                         },
