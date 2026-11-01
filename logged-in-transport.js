@@ -11169,20 +11169,10 @@ const TransportApp = ({ userProfileData }) => {
                                 ...(boxBg ? { backgroundColor: boxBg } : { backgroundColor: '#f5f3ff' }),
                             },
                         },
-                        // 1. riadok – kategória • tím • počet
+                        // 1. riadok – tím • počet
                         React.createElement(
                             'div',
                             { className: 'flex flex-wrap items-center gap-x-2 gap-y-1' },
-                            tr.category &&
-                                React.createElement(
-                                    'span',
-                                    {
-                                        className: 'text-sm font-semibold',
-                                        style: { color: transportColor || '#5b21b6' },
-                                        title: 'Kategória',
-                                    },
-                                    tr.category
-                                ),
                             tr.teamName &&
                                 React.createElement(
                                     'span',
