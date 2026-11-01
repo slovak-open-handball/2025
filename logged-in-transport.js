@@ -8576,10 +8576,23 @@ const TransportApp = ({ userProfileData }) => {
             const fromLoc = normalizePlaceName(t.fromLocation || '');
             const toLoc = normalizePlaceName(t.toLocation || '');
             if (!fromLoc || !toLoc) return false;
-        
+
+            // 1) Presná zhoda (tím nastúpil/vystúpil presne na týchto zastávkach)
             const key = `${dayKey}|${tn}|${cat}`;
             const list = assignedSegmentsByTeam.get(key) || [];
-            return list.some((s) => s.from === fromLoc && s.to === toLoc);
+            const exactMatch = list.some((s) => s.from === fromLoc && s.to === toLoc);
+            if (exactMatch) return true;
+        
+            // ============================================================
+            // 2) NOVÉ: Fallback – segment môže byť pokrytý trasou busu,
+            // aj keď tím nastúpil/vystúpil na iných zastávkach.
+            //
+            // Príklad: tím nastúpil na Rosinská a vystúpil na Tulipánová.
+            // Segment Rosinská → Internátna NIE JE presná zhoda (lebo
+            // výstup bol Tulipánová), ale bus prešiel cez Internátnu –
+            // takže segment je pokrytý a nemá sa zobrazovať.
+            // ============================================================
+            return isSegmentCoveredByBusPath(dayKey, tn, cat, t.fromLocation, t.toLocation);
         };
     
         // ============================================================
