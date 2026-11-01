@@ -2802,9 +2802,10 @@ const TransportApp = ({ userProfileData }) => {
                                 const newKeys = new Set();
                     
                                 transfersForTeam.forEach((ev) => {
-                                    const key = buildTransferKey(category, teamName, ev.when, ev.text);
-                                    newKeys.add(key);
-                    
+                                    // ============================================================
+                                    // NOVÉ: Najprv zisti from/to z textu – potrebujeme ich
+                                    // na vyhľadanie existujúceho parent záznamu s medzizastávkami.
+                                    // ============================================================
                                     let fromLocation = '';
                                     let toLocation = '';
                                     const m = /^Presun z (.+?) do (.+)$/.exec(String(ev.text || ''));
@@ -2812,8 +2813,41 @@ const TransportApp = ({ userProfileData }) => {
                                         fromLocation = m[1].trim();
                                         toLocation = m[2].trim();
                                     }
-                                        
-                                    const existingSaved = savedTransfers.find((s) => s.key === key);
+
+                                    const evDayKey = extractDayKeyFromWhen(ev.when) || null;
+
+                                    // ============================================================
+                                    // NOVÉ: Skontroluj, či už existuje PARENT záznam
+                                    // s rovnakou kategóriou, tímom, fromLocation, toLocation
+                                    // a dayKey, ktorý má intermediateStops (medzizastávky).
+                                    //
+                                    // Ak áno, MUSÍME zachovať JEHO kľúč (a jeho úpravy),
+                                    // inak by sa vygeneroval nový duplicitný záznam a starý
+                                    // (s medzizastávkami) by zostal v DB.
+                                    // ============================================================
+                                    const existingParentWithStops = (savedTransfers || []).find((s) => {
+                                        if (cleanCategory(s.category || '') !== cleanCategory(category)) return false;
+                                        if (String(s.teamName || '').trim() !== teamName) return false;
+                                        if (normalizePlaceName(s.fromLocation || '') !== normalizePlaceName(fromLocation)) return false;
+                                        if (normalizePlaceName(s.toLocation || '') !== normalizePlaceName(toLocation)) return false;
+                                        if ((s.dayKey || '') !== (evDayKey || '')) return false;
+                                        // Musí ísť o parent záznam (nie segment)
+                                        if (s._parentKey && s._parentKey !== s.key) return false;
+                                        // Musí mať medzizastávky
+                                        if (!Array.isArray(s.intermediateStops) || s.intermediateStops.length === 0) return false;
+                                        return true;
+                                    });
+
+                                    // ============================================================
+                                    // KĽÚČ: Ak existuje parent s medzizastávkami, použi
+                                    // JEHO kľúč. Inak vytvor nový kľúč cez buildTransferKey.
+                                    // ============================================================
+                                    const key = existingParentWithStops
+                                        ? existingParentWithStops.key
+                                        : buildTransferKey(category, teamName, ev.when, ev.text);
+                                    newKeys.add(key);
+
+                                    const existingSaved = existingParentWithStops || savedTransfers.find((s) => s.key === key);
                                     
                                     // Základný záznam (bez segments – tie dopočítame nižšie)
                                     const baseRecord = {
