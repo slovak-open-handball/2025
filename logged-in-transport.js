@@ -9367,7 +9367,7 @@ const TransportApp = ({ userProfileData }) => {
                                 else if (st) timeLabel = st;
                                 else if (et) timeLabel = et;
                             } else if (t.when && String(t.when).trim() !== '') {
-                                // NOVÉ: z `t.when` zobraz iba časy (bez dátumu)
+                                // z `t.when` zobraz iba časy (bez dátumu)
                                 timeLabel = extractTimesOnly(t.when) || String(t.when).trim();
                             } else if (Array.isArray(t.segments) && t.segments.length > 0) {
                                 // skús vytiahnuť aspoň HH:MM z reálnych časov segmentov
@@ -9388,6 +9388,29 @@ const TransportApp = ({ userProfileData }) => {
                                 if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
                                 else if (startTime) timeLabel = startTime;
                                 else if (endTime) timeLabel = endTime;
+                            }
+
+                            // ============================================================
+                            // NOVÉ: Ak stále nemáme čas, skús PROVIZÓRNY interval
+                            // (rovnaká logika ako v modálnom okne „Priradiť presun
+                            //  k autobusu" a v „Upraviť presun").
+                            //
+                            // Tým sa zabezpečí, že v zozname sa zobrazí ROVNAKÝ
+                            // čas, aký sa zobrazí po kliknutí na presun v modálnom
+                            // okne (napr. pri nepriradenom segmente parenta,
+                            // ktorý má provizórny interval z okolitých segmentov).
+                            // ============================================================
+                            if (!timeLabel && t._parentKey) {
+                                const provisional = computeProvisionalSegmentRange(t);
+                                if (provisional) {
+                                    const startFmt = formatTsLocal(provisional.startTs);
+                                    const endFmt = formatTsLocal(provisional.endTs);
+                                    const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
+                                    const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
+                                    if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
+                                    else if (startTime) timeLabel = startTime;
+                                    else if (endTime) timeLabel = endTime;
+                                }
                             }
                             
                             if (!timeLabel && t.dayKey) {
