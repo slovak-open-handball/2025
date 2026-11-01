@@ -6727,21 +6727,50 @@ const TransportApp = ({ userProfileData }) => {
             // ============================================================
             if (transfer._parentKey) {
                 const teamKey = `${transfer.teamName}|${transfer.category || ''}`;
+                const trFrom = normalizePlaceName(transfer.fromLocation);
+                const trTo = normalizePlaceName(transfer.toLocation);
                 const rowsUpdates = {};
-    
+            
+                // Nájdi konkrétny segment v parent zázname, aby sme zistili,
+                // do ktorého busu bol priradený a aké mal časy.
+                const parentRec = savedTransfersRef.current.find((s) => s.key === parentKey);
+                let targetSeg = null;
+                if (parentRec && Array.isArray(parentRec.segments)) {
+                    const segIdx = findSegmentIndex(parentRec.segments, transfer.fromLocation, transfer.toLocation);
+                    if (segIdx !== -1) targetSeg = parentRec.segments[segIdx];
+                }
+            
                 Object.entries(busRows || {}).forEach(([busKey, rows]) => {
+                    const [busId, dayKey] = busKey.split('|');
+                    if (dayKey !== (transfer.dayKey || '')) return;
+            
+                    // Ak máme informáciu o buse pre tento segment, filtruj len
+                    // riadky v tomto buse. Inak (nemáme info) prejdi všetky.
+                    if (targetSeg && targetSeg.busId && busId !== targetSeg.busId) return;
+            
                     (rows || []).forEach((row) => {
+                        const rowFrom = normalizePlaceName(row.placeFrom);
+                        const rowTo = normalizePlaceName(row.placeTo);
+            
+                        // Odstráň tím LEN z riadkov, ktoré zodpovedajú tomuto
+                        // segmentu: nástupný riadok (placeFrom === trFrom) alebo
+                        // výstupný riadok (placeTo === trTo).
+                        const isBoardingRow = rowFrom === trFrom;
+                        const isAlightingRow = rowTo === trTo;
+            
+                        if (!isBoardingRow && !isAlightingRow) return;
+            
                         const hasIn = (row.teamsIn || []).some((t) => String(t) === teamKey);
                         const hasOut = (row.teamsOut || []).some((t) => String(t) === teamKey);
-                        if (hasIn || hasOut) {
-                            rowsUpdates[row.id] = {
-                                teamsIn: (row.teamsIn || []).filter((t) => String(t) !== teamKey),
-                                teamsOut: (row.teamsOut || []).filter((t) => String(t) !== teamKey),
-                            };
-                        }
+                        if (!hasIn && !hasOut) return;
+            
+                        rowsUpdates[row.id] = {
+                            teamsIn: (row.teamsIn || []).filter((t) => String(t) !== teamKey),
+                            teamsOut: (row.teamsOut || []).filter((t) => String(t) !== teamKey),
+                        };
                     });
                 });
-    
+            
                 if (Object.keys(rowsUpdates).length > 0) {
                     await Promise.all(
                         Object.entries(rowsUpdates).map(([rid, data]) =>
