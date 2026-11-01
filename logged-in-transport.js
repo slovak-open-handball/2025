@@ -10162,7 +10162,7 @@ const TransportApp = ({ userProfileData }) => {
                                                         style: { color: remainingMinutes != null ? '#b45309' : '#9ca3af' },
                                                         title: 'Zvyšný čas na presun (od konca predchádzajúceho busu po začiatok nasledujúceho busu)'
                                                     },
-                                                    remainingMinutes != null ? `${remainingMinutes} min` : '—'
+                                                    remainingMinutes != null ? `${remainingMinutes}` : '—'
                                                 ),
                                                 // 7. mazanie (X) – odstráni príznak „peši"
                                                 React.createElement(
