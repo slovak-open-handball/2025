@@ -6998,13 +6998,13 @@ const TransportApp = ({ userProfileData }) => {
             };
         })();
     
-        if (!arePreviousSegmentsResolved(transfer)) {
-            window.showGlobalNotification(
-                'Najprv musíte priradiť predchádzajúce segmenty tohto presunu (alebo ich označiť ako „peši").',
-                'error'
-            );
-            return;
-        }
+//        if (!arePreviousSegmentsResolved(transfer)) {
+//            window.showGlobalNotification(
+//                'Najprv musíte priradiť predchádzajúce segmenty tohto presunu (alebo ich označiť ako „peši").',
+//                'error'
+//            );
+//            return;
+//        }
     
         if (!assignBusSelectedKey) {
             window.showGlobalNotification('Vyberte autobus/riadok.', 'error');
