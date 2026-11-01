@@ -9879,7 +9879,7 @@ const TransportApp = ({ userProfileData }) => {
         return React.createElement(
             'div',
             {
-                className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
+                className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0 pb-4',
                 style: { width: '720px', maxWidth: '100%' }
             },
             // Hlavička
