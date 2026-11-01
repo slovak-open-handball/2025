@@ -6295,7 +6295,7 @@ const TransportApp = ({ userProfileData }) => {
             const toNorm = normalizePlaceName(toLoc);
             let boardingTs = null;
             let alightingTs = null;
-            let busId = null;   // ← NOVÉ
+            let busId = null;
             allBusRowsForDay.forEach((row) => {
                 const rowFrom = normalizePlaceName(row.placeFrom);
                 const rowTo = normalizePlaceName(row.placeTo);
@@ -6306,7 +6306,6 @@ const TransportApp = ({ userProfileData }) => {
                     if (dm) {
                         const [h, mi] = row.timeFrom.split(':').map(Number);
                         boardingTs = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
-                        // busId z kľúča busRow (formát "busId|dayKey")
                         busId = row._busKey ? String(row._busKey).split('|')[0] : null;
                     }
                 }
@@ -6324,8 +6323,28 @@ const TransportApp = ({ userProfileData }) => {
         // ============================================================
         // NOVÉ: Segmenty dostanú časy LEN ak sú priradené k busu.
         // Pešie segmenty a nepriradené segmenty NEMAJÚ časy.
+        //
+        // DÔLEŽITÉ: Ak segment už má explicitne nastavené busId a časy
+        // (napr. z assignTransferToBus), ZACHOVAJ ich – nehľadaj znova
+        // v busRows (mohli by byť ešte neaktualizované kvôli onSnapshot).
         // ============================================================
         draft.segments = draft.segments.map((seg) => {
+            // Ak segment už má explicitne nastavené busId + startTs + endTs,
+            // zachovaj ich (neprepisuj na null).
+            if (
+                seg.busAssigned === true &&
+                seg.busId != null &&
+                seg.startTs != null &&
+                seg.endTs != null &&
+                seg.endTs > seg.startTs
+            ) {
+                return {
+                    ...seg,
+                    isWalking: false,
+                    when: `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`,
+                };
+            }
+        
             const busTimes = findBusTimesForSegment(seg.from, seg.to);
             if (busTimes.boardingTs != null && busTimes.alightingTs != null && busTimes.alightingTs > busTimes.boardingTs) {
                 return {
@@ -6335,16 +6354,16 @@ const TransportApp = ({ userProfileData }) => {
                     when: `${formatTsLocal(busTimes.boardingTs)} – ${formatTsLocal(busTimes.alightingTs)}`,
                     isWalking: false,
                     busAssigned: true,
-                    busId: busTimes.busId || null,   // ← NOVÉ
+                    busId: busTimes.busId || seg.busId || null,
                 };
             }
             // ============================================================
             // NOVÉ: Nepriradené segmenty (ani bus, ani walking)
-            // NEDOSTÁVAJÚ žiadne časy. Čas sa im priradí až keď ich
-            // používateľ priradí k busu alebo označí ako peši.
-            //
+            // NEDOSTÁVAJÚ žiadne časy.
             // POZOR: ak segment NEBOL nájdený v buse, musíme odstrániť
             // aj busId (inak by tam zostal starý záznam).
+            // ALE: ak má segment explicitné busId z assignTransferToBus
+            // (a nemá časy), zachovaj aspoň busId – časy sa doplnia neskôr.
             // ============================================================
             return {
                 ...seg,
@@ -6352,21 +6371,13 @@ const TransportApp = ({ userProfileData }) => {
                 endTs: null,
                 when: null,
                 busAssigned: false,
-                busId: null,   // ← NOVÉ: odstráni staré busId
+                busId: null,
             };
         });
     
         // ============================================================
         // NOVÉ: Celkový `when` parenta sa NIKDY nemení pri úprave
         // medzizastávok. Zachová sa pôvodný `when` (ak existoval).
-        //
-        // PRAVIDLÁ:
-        //  1) Ak máme pôvodný `when` (originalWhenFromDraft) → ZACHOVAJ ho.
-        //  2) Ak nemáme pôvodný `when`:
-        //     a) Ak má parent aspoň jeden bus segment → dopočítaj when
-        //        z min/max časov bus segmentov.
-        //     b) Ak je celý parent walking → when = ''.
-        //     c) Inak → when = '' (nedopočítavame z trvaní jázd).
         // ============================================================
         const nonWalkingSegments = draft.segments.filter((s) => s.isWalking !== true);
         const busSegments = nonWalkingSegments.filter((s) => s.busAssigned === true);
@@ -6375,7 +6386,6 @@ const TransportApp = ({ userProfileData }) => {
             draft.segments.length > 0 &&
             draft.segments.every((s) => s.isWalking === true);
         
-        // NOVÉ: Skús získať pôvodný `when` zo savedTransfers
         const savedParentWhen = (() => {
             if (!draft.key) return null;
             const savedRec = (savedTransfersRef.current || []).find((s) => s.key === draft.key);
@@ -6386,15 +6396,12 @@ const TransportApp = ({ userProfileData }) => {
         })();
         
         if (originalWhenFromDraft && String(originalWhenFromDraft).trim() !== '') {
-            // Pôvodný when existuje → VŽDY ho zachovaj
             draft.when = originalWhenFromDraft;
         } else if (savedParentWhen) {
-            // Parent mal `when` v DB → zachovaj ho
             draft.when = savedParentWhen;
         } else if (parentIsFullyWalking) {
             draft.when = '';
         } else if (busSegments.length > 0) {
-            // Máme aspoň jeden bus segment → dopočítaj when z reálnych časov
             const busStart = busSegments.map((s) => s.startTs).filter((ts) => ts != null);
             const busEnd = busSegments.map((s) => s.endTs).filter((ts) => ts != null);
             if (busStart.length > 0 && busEnd.length > 0) {
@@ -6403,12 +6410,6 @@ const TransportApp = ({ userProfileData }) => {
                 draft.when = '';
             }
         } else {
-            // ============================================================
-            // NOVÉ: Žiadny bus, žiadny walking, žiadny pôvodný when.
-            // Skús poskladať `when` z REÁLNYCH časov segmentov
-            // (napr. keď parent má intermediateStops a segmenty ešte
-            // neboli priradené, ale mali by sme poznať celkový interval).
-            // ============================================================
             const allSegStart = draft.segments.map((s) => s.startTs).filter((ts) => ts != null);
             const allSegEnd = draft.segments.map((s) => s.endTs).filter((ts) => ts != null);
             if (allSegStart.length > 0 && allSegEnd.length > 0) {
@@ -6491,12 +6492,6 @@ const TransportApp = ({ userProfileData }) => {
             payload.intermediateStops = deleteField();
         }
     
-        // ============================================================
-        // NOVÉ: Peší presun NEMÁ ČASY.
-        // - `when` = ''
-        // - všetky segments majú startTs/endTs = null
-        // - `isWalking: true` sa uloží
-        // ============================================================
         if (draft.isWalking === true) {
             payload.when = '';
             payload.segments = (draft.segments || []).map((s) => ({
@@ -6714,7 +6709,9 @@ const TransportApp = ({ userProfileData }) => {
             );
     
             // Po zápise teamsIn/teamsOut do busRows:
-            await new Promise((r) => setTimeout(r, 300));
+            // NOVÉ: Počkaj dostatočne dlho, aby onSnapshot stihol aktualizovať busRows
+            // (inak recomputeParentSegmentsInPlace nenájde tím v busRows a prepíše časy na null)
+            await new Promise((r) => setTimeout(r, 600));
     
             // ============================================================
             // NOVÉ: Vypočítaj reálne časy pre segment PRIAMO z vybraných
