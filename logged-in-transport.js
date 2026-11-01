@@ -10633,15 +10633,12 @@ const TransportApp = ({ userProfileData }) => {
                             { className: 'text-sm text-gray-900 font-medium' },
                             `${tr.fromLocation || '?'} → ${tr.toLocation || '?'}`
                         ),
-                        // 3. riadok – dátum, čas a trvanie
-                        (displayWhen || durationMinutes != null) &&
+                        // 3. riadok – dátum a čas
+                        displayWhen &&
                             React.createElement(
                                 'span',
                                 { className: 'text-sm text-gray-600' },
-                                [
-                                    displayWhen || null,
-                                    durationMinutes != null ? `trvanie: ${durationMinutes} min` : null
-                                ].filter(Boolean).join(' • ')
+                                displayWhen
                             )
                     );
                 })(),
