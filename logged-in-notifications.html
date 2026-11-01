@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOH 2025 - Upozornenia</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- GitHub Pages - development only -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding-top: 64px;
+            box-sizing: border-box; 
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+    </style>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="clear-console.js"></script>
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="logged-in-left-menu.js"></script>
+    <script type="module" src="logged-in-notifications.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="header-placeholder"></div>
+    <div id="menu-placeholder"></div>
+    <main id="main-content-area" class="flex-grow flex">
+        <div class="flex-shrink-0 w-16 transition-all duration-300"></div>
+        <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex justify-center pt-16">
+                <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+            </div>
+        </div>
+    </main>
+    </div>
+    <script type="module">
+        window.addEventListener('DOMContentLoaded', async () => {
+            const headerPlaceholder = document.getElementById('header-placeholder');
+            const menuPlaceholder = document.getElementById('menu-placeholder');
+            try {
+                const headerResponse = await fetch('header.html');
+                if (!headerResponse.ok) throw new Error('Network response for header was not ok.');
+                const headerHtml = await headerResponse.text();
+                if (headerPlaceholder) {
+                    headerPlaceholder.innerHTML = headerHtml;
+                }
+            } catch (error) {
+            }
+            try {
+                const menuResponse = await fetch('logged-in-left-menu.html');
+                if (!menuResponse.ok) throw new Error('Network response for menu was not ok.');
+                const menuHtml = await menuResponse.text();
+                if (menuPlaceholder) {
+                    menuPlaceholder.innerHTML = menuHtml;
+                }
+            } catch (error) {
+            }
+            const renderApp = () => {
+                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                    return;
+                }
+                if (typeof NotificationsApp === 'undefined') {
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                    return;
+                }
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(NotificationsApp, null));
+            };    
+            window.addEventListener('globalDataUpdated', (event) => {
+                if (event.detail) {
+                    renderApp();
+                }
+            });
+            if (window.isGlobalAuthReady && window.globalUserProfileData) {
+                renderApp();
+            } else if (window.isGlobalAuthReady && !window.globalUserProfileData) {
+                window.location.href = 'login.html';
+            }
+            const headerScript = document.createElement('script');
+            headerScript.type = 'module';
+            headerScript.src = 'header.js';
+            document.body.appendChild(headerScript);
+        });
+    </script>
+</body>
+</html>

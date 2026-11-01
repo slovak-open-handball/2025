@@ -1,0 +1,1410 @@
+// logged-in-users.js (teraz obsahuje UsersManagementApp pre správu používateľov)
+// Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
+// sú globálne definované v <head> logged-in-users.html.
+// Všetky komponenty a logika pre správu používateľov sú teraz v tomto súbore.
+// NOVINKA: Nový stĺpec "Stav" so zeleným/červeným kruhom podľa lastLoginAt vs lastLogoutAt.
+
+// Imports for necessary Firebase functions
+import {
+  collection,
+  query,
+  onSnapshot,
+  doc,
+  updateDoc,
+  deleteDoc,
+  getDoc,
+  increment,
+  setDoc,
+  serverTimestamp,
+  deleteField,
+  getDocs,
+  addDoc,
+  documentId,
+  where  
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// NotificationModal Component
+function NotificationModal({ message, onClose, type = 'info' }) {
+  const [show, setShow] = React.useState(false);
+  const timerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (message) {
+      setShow(true);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
+        setShow(false);
+        setTimeout(onClose, 500);
+      }, 10000);
+    } else {
+      setShow(false);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [message, onClose]);
+
+  if (!show && !message) return null;
+
+  const baseClasses = "fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-opacity duration-300";
+  const typeClasses = {
+    'info': 'bg-blue-500 text-white',
+    'success': 'bg-green-500 text-white',
+    'warning': 'bg-yellow-500 text-black',
+    'error': 'bg-red-500 text-white',
+  };
+
+  const notificationClass = `${baseClasses} ${typeClasses[type]} ${show ? 'opacity-100' : 'opacity-0'}`;
+
+  return React.createElement(
+    'div',
+    { className: notificationClass },
+    React.createElement('span', null, message)
+  );
+}
+
+// Global notification function
+window.showGlobalNotification = (message, type = 'success') => {
+  let notificationElement = document.getElementById('global-notification-root');
+  if (!notificationElement) {
+    notificationElement = document.createElement('div');
+    notificationElement.id = 'global-notification-root';
+    document.body.appendChild(notificationElement);
+  }
+
+  const root = ReactDOM.createRoot(notificationElement);
+  root.render(React.createElement(NotificationModal, { message, type, onClose: () => root.render(null) }));
+};
+
+const { useState, useEffect, useRef } = React;
+
+// Pomocná funkcia: bezpečný prevod Timestamp/Date/seconds na Date
+const toDateSafe = (value) => {
+  if (!value) return null;
+  if (typeof value.toDate === 'function') {
+    try { return value.toDate(); } catch (e) { return null; }
+  }
+  if (value instanceof Date) return value;
+  if (typeof value.seconds === 'number') return new Date(value.seconds * 1000);
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+// Pomocná funkcia: vráti true, ak je používateľ aktuálne prihlásený
+// (lastLoginAt existuje a je novší ako lastLogoutAt, alebo lastLogoutAt chýba)
+const getLoginStatus = (user) => {
+  const login = toDateSafe(user?.lastLoginAt);
+  const logout = toDateSafe(user?.lastLogoutAt);
+
+  // Ak nikdy nebol prihlásený -> červený
+  if (!login) return false;
+
+  // Ak sa ešte nikdy neodhlásil a má login -> zelený
+  if (!logout) return true;
+
+  // Zelený len ak je login striktne neskôr ako logout
+  return login.getTime() > logout.getTime();
+};
+
+// Funkcia na kopírovanie textu do schránky
+const copyToClipboard = (text) => {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+      })
+      .catch(err => {
+        fallbackCopyTextToClipboard(text);
+      });
+  } else {
+    fallbackCopyTextToClipboard(text);
+  }
+};
+
+// Fallback metóda pre staršie prehliadače
+const fallbackCopyTextToClipboard = (text) => {
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'fixed';
+  textArea.style.left = '-999999px';
+  textArea.style.top = '-999999px';
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  
+  try {
+    document.execCommand('copy');
+  } catch (err) {
+  }
+  
+  document.body.removeChild(textArea);
+};
+
+// Komponent pre potvrdzovacie modálne okno
+function ConfirmationModal({ message, onConfirm, onCancel, userEmail }) {
+  return React.createElement(
+    'div',
+    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
+    React.createElement(
+      'div',
+      { className: 'bg-white p-8 rounded-lg shadow-xl w-96' },
+      React.createElement('h2', { className: 'text-xl font-bold mb-4' }, 'Potvrdenie'),
+      React.createElement('p', { className: 'mb-4' }, message),
+      userEmail && React.createElement(
+        'div',
+        { className: 'mb-4 p-3 bg-blue-50 rounded border border-blue-200' },
+        React.createElement('p', { className: 'text-sm text-blue-800 font-semibold' }, 'E-mail bude skopírovaný:'),
+        React.createElement('p', { className: 'text-sm text-blue-600 break-all' }, userEmail)
+      ),
+      React.createElement('div', { className: 'flex justify-end' },
+        React.createElement(
+          'button',
+          {
+            onClick: onCancel,
+            className: 'bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2 hover:bg-gray-400 transition-colors'
+          },
+          'Zrušiť'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: onConfirm,
+            className: 'bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors'
+          },
+          'Potvrdiť'
+        )
+      )
+    )
+  );
+}
+
+// Komponent pre modálne okno na zmenu roly
+function ChangeRoleModal({ user, onClose, onRoleChange }) {
+  const [selectedRole, setSelectedRole] = useState(user.role);
+
+  const handleSave = () => {
+    onRoleChange(user, selectedRole);
+    onClose();
+  };
+
+  return React.createElement(
+    'div',
+    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
+    React.createElement(
+      'div',
+      { className: 'bg-white p-8 rounded-lg shadow-xl w-96' },
+      React.createElement('h2', { className: 'text-2xl font-bold mb-4' }, `Zmeniť rolu pre ${user.firstName} ${user.lastName}`),
+      React.createElement('div', { className: 'mb-4' },
+        ['admin', 'club', 'hall', 'referee', 'volunteer'].map(role =>
+          React.createElement('div', { key: role, className: 'flex items-center mb-2' },
+            React.createElement('input', {
+              type: 'radio',
+              id: role,
+              name: 'role',
+              value: role,
+              checked: selectedRole === role,
+              onChange: (e) => setSelectedRole(e.target.value),
+              className: 'form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out'
+            }),
+            React.createElement('label', { htmlFor: role, className: 'ml-2 text-gray-700' },
+              role === 'admin' ? 'Administrátor' : role === 'hall' ? 'Športová hala' : role === 'referee' ? 'Rozhodca' : role === 'volunteer' ? 'Dobrovoľník' : 'Klub'
+            )
+          )
+        )
+      ),
+      React.createElement('div', { className: 'flex justify-end' },
+        React.createElement(
+          'button',
+          {
+            onClick: onClose,
+            className: 'bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2'
+          },
+          'Zrušiť'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: handleSave,
+            className: 'bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700'
+          },
+          'Uložiť'
+        )
+      )
+    )
+  );
+}
+
+// Nový komponent pre modálne okno na výber športovej haly
+function AssignHallModal({ user, onClose, onAssign }) {
+  const [halls, setHalls] = useState([]);
+  const [selectedHallId, setSelectedHallId] = useState(user.hallId || '');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHalls = async () => {
+      try {
+        setLoading(true);
+        const placesRef = collection(window.db, 'places');
+        const q = query(placesRef);
+        const querySnapshot = await getDocs(q);
+        
+        const hallsList = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.type === 'sportova_hala') {
+            hallsList.push({
+              id: doc.id,
+              name: data.name || 'Neznámy názov',
+              ...data
+            });
+          }
+        });
+        
+        // Zoradenie podľa názvu
+        hallsList.sort((a, b) => a.name.localeCompare(b.name, 'sk'));
+        setHalls(hallsList);
+      } catch (error) {
+        window.showGlobalNotification('Nepodarilo sa načítať zoznam hál', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHalls();
+  }, []);
+
+  const handleSave = () => {
+    onAssign(user, selectedHallId);
+    onClose();
+  };
+
+  return React.createElement(
+    'div',
+    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
+    React.createElement(
+      'div',
+      { className: 'bg-white p-8 rounded-lg shadow-xl w-96 max-h-[80vh] overflow-y-auto' },
+      React.createElement('h2', { className: 'text-2xl font-bold mb-4' }, `Priradiť halu pre ${user.firstName} ${user.lastName}`),
+      
+      loading ? React.createElement('div', { className: 'flex justify-center py-8' },
+        React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500' })
+      ) : React.createElement('div', { className: 'mb-4' },
+        halls.length === 0 ? React.createElement('p', { className: 'text-gray-500 text-center py-4' },
+          'Žiadne športové haly nie sú k dispozícii'
+        ) : React.createElement('div', { className: 'space-y-2' },
+          React.createElement('div', { key: 'none', className: 'flex items-center p-2 hover:bg-gray-50 rounded' },
+            React.createElement('input', {
+              type: 'radio',
+              id: 'no-hall',
+              name: 'hall',
+              value: '',
+              checked: selectedHallId === '',
+              onChange: () => setSelectedHallId(''),
+              className: 'form-radio h-4 w-4 text-brown-600 mr-3'
+            }),
+            React.createElement('label', { htmlFor: 'no-hall', className: 'text-gray-700' },
+              'Žiadna hala'
+            )
+          ),
+          halls.map(hall => React.createElement('div', { key: hall.id, className: 'flex items-center p-2 hover:bg-gray-50 rounded' },
+            React.createElement('input', {
+              type: 'radio',
+              id: hall.id,
+              name: 'hall',
+              value: hall.id,
+              checked: selectedHallId === hall.id,
+              onChange: () => setSelectedHallId(hall.id),
+              className: 'form-radio h-4 w-4 text-brown-600 mr-3'
+            }),
+            React.createElement('label', { htmlFor: hall.id, className: 'text-gray-700' },
+              hall.name
+            )
+          ))
+        )
+      ),
+      
+      React.createElement('div', { className: 'flex justify-end mt-6' },
+        React.createElement(
+          'button',
+          {
+            onClick: onClose,
+            className: 'bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2 hover:bg-gray-400 transition-colors'
+          },
+          'Zrušiť'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: handleSave,
+            disabled: loading,
+            className: 'bg-brown-600 text-white px-4 py-2 rounded-md hover:bg-brown-700 transition-colors disabled:bg-brown-300'
+          },
+          'Uložiť'
+        )
+      )
+    )
+  );
+}
+
+// Komponent pre modálne okno na filtrovanie rolí
+function FilterRolesModal({ onClose, onApplyFilter, initialRoles }) {
+    const [selectedRoles, setSelectedRoles] = useState(initialRoles);
+
+    const handleRoleChange = (role) => {
+        setSelectedRoles(prevRoles =>
+            prevRoles.includes(role)
+                ? prevRoles.filter(r => r !== role)
+                : [...prevRoles, role]
+        );
+    };
+
+    const handleApply = () => {
+        onApplyFilter(selectedRoles);
+        onClose();
+    };
+
+    const handleClear = () => {
+        onApplyFilter([]);
+        onClose();
+    };
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
+        React.createElement(
+            'div',
+            { className: 'bg-white p-8 rounded-lg shadow-xl w-96' },
+            React.createElement('h2', { className: 'text-2xl font-bold mb-4' }, 'Filtrovať podľa roly'),
+            React.createElement('div', { className: 'mb-4' },
+                React.createElement('div', { className: 'flex items-center mb-2' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'filter-admin',
+                        checked: selectedRoles.includes('admin'),
+                        onChange: () => handleRoleChange('admin'),
+                        className: 'form-checkbox h-4 w-4 text-indigo-600'
+                    }),
+                    React.createElement('label', { htmlFor: 'filter-admin', className: 'ml-2 text-gray-700' }, 'Administrátor')
+                ),
+                React.createElement('div', { className: 'flex items-center mb-2' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'filter-hall',
+                        checked: selectedRoles.includes('hall'),
+                        onChange: () => handleRoleChange('hall'),
+                        className: 'form-checkbox h-4 w-4 text-indigo-600'
+                    }),
+                    React.createElement('label', { htmlFor: 'filter-hall', className: 'ml-2 text-gray-700' }, 'Športová hala')
+                ),
+                React.createElement('div', { className: 'flex items-center mb-2' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'filter-club',
+                        checked: selectedRoles.includes('club'),
+                        onChange: () => handleRoleChange('club'),
+                        className: 'form-checkbox h-4 w-4 text-indigo-600'
+                    }),
+                    React.createElement('label', { htmlFor: 'filter-club', className: 'ml-2 text-gray-700' }, 'Klub')
+                ),
+                React.createElement('div', { className: 'flex items-center mb-2' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'filter-referee',
+                        checked: selectedRoles.includes('referee'),
+                        onChange: () => handleRoleChange('referee'),
+                        className: 'form-checkbox h-4 w-4 text-indigo-600'
+                    }),
+                    React.createElement('label', { htmlFor: 'filter-referee', className: 'ml-2 text-gray-700' }, 'Rozhodca')
+                ),
+                React.createElement('div', { className: 'flex items-center mb-2' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'filter-volunteer',
+                        checked: selectedRoles.includes('volunteer'),
+                        onChange: () => handleRoleChange('volunteer'),
+                        className: 'form-checkbox h-4 w-4 text-indigo-600'
+                    }),
+                    React.createElement('label', { htmlFor: 'filter-volunteer', className: 'ml-2 text-gray-700' }, 'Dobrovoľník')
+                )
+            ),
+            React.createElement('div', { className: 'flex justify-end' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleClear,
+                        className: 'bg-red-500 text-white px-4 py-2 rounded-md mr-2'
+                    },
+                    'Vymazať filter'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleApply,
+                        className: 'bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700'
+                    },
+                    'Potvrdiť'
+                )
+            )
+        )
+    );
+}
+
+// Komponent pre modálne okno na úpravu dátumu
+function EditDateModal({ user, dateType, currentDate, onClose, onSave }) {
+    const formatDateForInput = (dateValue) => {
+        if (!dateValue) return '';
+        
+        let date;
+        
+        // Firebase Timestamp
+        if (dateValue && typeof dateValue.toDate === 'function') {
+            date = dateValue.toDate();
+        } 
+        // Timestamp objekt (seconds)
+        else if (dateValue && typeof dateValue.seconds === 'number') {
+            date = new Date(dateValue.seconds * 1000);
+        } 
+        // Už je Date
+        else if (dateValue instanceof Date) {
+            date = dateValue;
+        } 
+        else {
+            date = new Date(dateValue);
+        }
+
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+            return '';
+        }
+
+        // Formát pre datetime-local input (YYYY-MM-DDTHH:MM)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    const [selectedDate, setSelectedDate] = useState(formatDateForInput(currentDate));
+
+    const handleSave = () => {
+        if (!selectedDate) return;
+        const newDate = new Date(selectedDate);
+        onSave(user, dateType, newDate);
+        onClose();
+    };
+
+    const title = dateType === 'dataEditDeadline' 
+        ? 'Úprava dátumu pre úpravu údajov' 
+        : 'Úprava dátumu pre úpravu súpisiek';
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
+        React.createElement(
+            'div',
+            { className: 'bg-white p-8 rounded-lg shadow-xl max-w-fit' },
+            React.createElement('h2', { className: 'text-2xl font-bold mb-4 whitespace-nowrap' }, title),
+            React.createElement('p', { className: 'mb-4' }, `Používateľ: ${user.firstName} ${user.lastName}`),
+            React.createElement('div', { className: 'mb-4' },
+                React.createElement('label', { htmlFor: 'date-input', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Vyberte dátum a čas:'),
+                React.createElement('input', {
+                    type: 'datetime-local',
+                    id: 'date-input',
+                    value: selectedDate,
+                    onChange: (e) => setSelectedDate(e.target.value),
+                    className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'
+                })
+            ),
+            React.createElement('div', { className: 'flex justify-end space-x-2' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'bg-gray-300 text-gray-800 px-4 py-2 rounded-md'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleSave,
+                        className: 'bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700'
+                    },
+                    'Uložiť'
+                )
+            )
+        )
+    );
+}
+
+
+function UsersManagementApp() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState({ message: '', type: 'info' });
+  const [userToEdit, setUserToEdit] = useState(null);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [userToAssignHall, setUserToAssignHall] = useState(null);
+  const [oldestAdminId, setOldestAdminId] = useState(null);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [selectedRoles, setSelectedRoles] = useState([]);
+  const [hallNames, setHallNames] = useState({}); // Nový stav pre uchovávanie názvov hál
+  // Nové stavy pre modálne okno úpravy dátumu
+  const [showDateEditModal, setShowDateEditModal] = useState(false);
+  const [dateToEditUser, setDateToEditUser] = useState(null);
+  const [dateToEditType, setDateToEditType] = useState('');
+  const [dateToEditCurrentValue, setDateToEditCurrentValue] = useState(null);
+  
+  const googleScriptUrl_for_email = 'https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec';
+  const db = window.db;
+  const appId = window.appId;
+  const auth = window.auth;
+  const globalUserProfileData = window.globalUserProfileData;
+
+  const [defaultDeadlines, setDefaultDeadlines] = useState({
+    dataEditDeadline: null,
+    rosterEditDeadline: null
+  });
+
+  // Funkcia na načítanie názvov hál podľa ID
+  const fetchHallNames = async (hallIds) => {
+    const uniqueHallIds = [...new Set(hallIds.filter(id => id))];
+    const newHallNames = { ...hallNames };
+    
+    for (const hallId of uniqueHallIds) {
+      if (!newHallNames[hallId]) {
+        try {
+          const hallDoc = await getDoc(doc(db, 'places', hallId));
+          if (hallDoc.exists()) {
+            newHallNames[hallId] = hallDoc.data().name || 'Neznámy názov';
+          } else {
+            newHallNames[hallId] = 'Neznáma hala';
+          }
+        } catch (error) {
+          newHallNames[hallId] = 'Chyba načítania';
+        }
+      }
+    }
+    
+    setHallNames(newHallNames);
+  };
+
+  // Funkcia na preklad anglických rolí na slovenské
+  const getTranslatedRole = (role) => {
+    switch (role) {
+      case 'admin':
+        return 'Administrátor';
+      case 'club':
+        return 'Klub';
+      case 'hall':
+        return 'Športová hala';
+      case 'referee':
+        return 'Rozhodca';
+      case 'volunteer':
+        return 'Dobrovoľník';
+      default:
+        return role;
+    }
+  };
+
+  // Funkcia na logovanie zmien do kolekcie 'notifications'
+  const logChanges = async (changes) => {
+    try {
+      if (!auth.currentUser || !globalUserProfileData || !db) {
+        return;
+      }
+      const notificationsRef = collection(db, `notifications`);
+      await addDoc(notificationsRef, {
+        changes: changes,
+        timestamp: serverTimestamp(),
+        userId: globalUserProfileData.id,
+        userEmail: globalUserProfileData.email,
+        userName: `${globalUserProfileData.firstName} ${globalUserProfileData.lastName}`
+      });
+    } catch (error) {
+    }
+  };
+
+  useEffect(() => {
+    const settingsDocRef = doc(db, 'settings', 'registration');
+    const unsubscribe = onSnapshot(settingsDocRef, (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        const data = docSnapshot.data();
+        setDefaultDeadlines({
+          dataEditDeadline: data.dataEditDeadline?.toDate() || new Date(),
+          rosterEditDeadline: data.rosterEditDeadline?.toDate() || new Date()
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, [db]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+  
+      if (!globalUserProfileData || !defaultDeadlines.dataEditDeadline || !defaultDeadlines.rosterEditDeadline) {
+        setLoading(false);
+        return;
+      }
+  
+      const isUserAdmin = globalUserProfileData?.role === 'admin' && globalUserProfileData?.approved === true;
+      window.isCurrentUserAdmin = isUserAdmin;
+      window.currentUserId = auth.currentUser?.uid;
+  
+      if (isUserAdmin) {
+        const usersCol = collection(db, 'users');
+        const adminCountRef = doc(db, 'settings', 'adminCount');
+        
+        // Nepoužívame unsubscribeAdminCount, lebo ho nepotrebujeme
+        const q = query(usersCol);
+  
+        const unsubscribeUsers = onSnapshot(q, async (snapshot) => {
+          const usersList = await Promise.all(snapshot.docs.map(async (docSnapshot) => {
+            let userData = {
+              id: docSnapshot.id,
+              ...docSnapshot.data()
+            };
+
+            if (userData.hasOwnProperty('email')) {
+                await updateDoc(doc(db, 'users', userData.id), { email: deleteField() });
+                delete userData.email;
+              }
+  
+            // === SPRÁVNE SPRACOVANIE DEADLINOV ===
+            if (userData.role === 'admin' || userData.role === 'hall') {
+              const updateData = {};
+              if (userData.hasOwnProperty('dataEditDeadline')) {
+                updateData.dataEditDeadline = deleteField();
+              }
+              if (userData.hasOwnProperty('rosterEditDeadline')) {
+                updateData.rosterEditDeadline = deleteField();
+              }
+              if (Object.keys(updateData).length > 0) {
+                await updateDoc(doc(db, 'users', userData.id), updateData);
+              }
+            } 
+            else if (userData.role === 'club' || userData.role === 'referee' || userData.role === 'volunteer') {
+              const updateData = {};
+              let needsUpdate = false;
+  
+              const defaultDataDeadline = defaultDeadlines.dataEditDeadline;
+              const defaultRosterDeadline = defaultDeadlines.rosterEditDeadline;
+  
+              // dataEditDeadline
+              if (!userData.dataEditDeadline || 
+                  (userData.dataEditDeadline?.toDate && userData.dataEditDeadline.toDate() < defaultDataDeadline)) {
+                updateData.dataEditDeadline = defaultDataDeadline;
+                needsUpdate = true;
+              }
+  
+              // rosterEditDeadline
+              if (userData.role === 'club') {
+                if (!userData.rosterEditDeadline || 
+                    (userData.rosterEditDeadline?.toDate && userData.rosterEditDeadline.toDate() < defaultRosterDeadline)) {
+                  updateData.rosterEditDeadline = defaultRosterDeadline;
+                  needsUpdate = true;
+                }
+              } else {
+                if (userData.hasOwnProperty('rosterEditDeadline')) {
+                  updateData.rosterEditDeadline = deleteField();
+                  needsUpdate = true;
+                }
+              }
+  
+              if (needsUpdate) {
+                await updateDoc(doc(db, 'users', userData.id), updateData);
+              }
+            }
+  
+            return userData;
+          }));
+
+          await Promise.all(usersList.map(async (u) => {
+            try {
+              const privateDoc = await getDoc(doc(db, 'usersprivate', u.id));
+              u.email = privateDoc.exists() ? (privateDoc.data().email || '') : '';
+            } catch (e) {
+              u.email = '';
+            }
+          }));
+  
+          // Nastavenie najstaršieho admina
+          const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
+          if (adminUsers.length > 0) {
+            const validAdminUsers = adminUsers.filter(u => u.registrationDate?.seconds && u.registrationDate.seconds > 0);
+            
+            if (validAdminUsers.length > 0) {
+              validAdminUsers.sort((a, b) => (a.registrationDate.seconds || 0) - (b.registrationDate.seconds || 0));
+              setOldestAdminId(validAdminUsers[0].id);
+            } else {
+              setOldestAdminId(adminUsers[0].id);
+            }
+          }
+  
+          setUsers(usersList);
+  
+          // Načítanie názvov hál
+          const hallIds = usersList.map(user => user.hallId).filter(id => id);
+          if (hallIds.length > 0) {
+            fetchHallNames(hallIds);
+          }
+  
+          setLoading(false);
+        }, (error) => {
+          console.error("Chyba pri načítaní užívateľov:", error);
+          setLoading(false);
+          setNotification({ message: 'Chyba pri načítaní užívateľov.', type: 'error' });
+        });
+  
+        return () => unsubscribeUsers();
+      } else {
+        setLoading(false);
+      }
+    };
+  
+    fetchData();
+  }, [globalUserProfileData, defaultDeadlines]);
+
+  // Funkcia na úpravu roly
+  const handleChangeRole = async (userToUpdate, newRole) => {
+    try {
+      // 1. Získame referencie na dokumenty a ich dáta
+      const userDocRef = doc(db, `users`, userToUpdate.id);
+      const oldRole = userToUpdate.role;
+      const wasApproved = userToUpdate.approved; // Získame pôvodný stav schválenia
+      
+      // 2. Skontrolujeme, či došlo k zmene roly z 'admin'
+      const isApproved = newRole !== 'admin';
+      
+      // Ak meníme rolu z 'admin' na inú a používateľ bol schválený, znížime počítadlo adminov
+      if (oldRole === 'admin' && newRole !== 'admin' && wasApproved) {
+        const adminCountRef = doc(db, `settings`, `adminCount`);
+        const adminCountSnap = await getDoc(adminCountRef);
+
+        const currentAdminCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
+        const newCount = Math.max(1, currentAdminCount - 1);        
+          
+        await updateDoc(adminCountRef, {
+            count: newCount
+        });
+      }
+
+      // 3. Nová logika na odstránenie dátumov pre admin, hall, referee a volunteer a nastavenie pre club
+      const updateData = {
+          role: newRole,
+          approved: isApproved
+      };
+      
+      if (newRole === 'admin' || newRole === 'hall') {
+          updateData.dataEditDeadline = deleteField();
+          updateData.rosterEditDeadline = deleteField();
+      } else if (newRole === 'club') {
+           updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
+           updateData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline;
+      } else if (newRole === 'referee' || newRole === 'volunteer') {
+          updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
+          updateData.rosterEditDeadline = deleteField();
+      }
+      
+      await updateDoc(userDocRef, updateData);
+      
+      setNotification({ message: `Rola používateľa bola zmenená na ${getTranslatedRole(newRole)}.`, type: 'success' });
+      
+      // Log notification s preloženými názvami
+      await logChanges([`Zmena roly pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${getTranslatedRole(oldRole)}' na '${getTranslatedRole(newRole)}'`]);
+    } catch (error) {
+      setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
+    }
+  };
+  
+  // Nová funkcia na priradenie haly
+  const handleAssignHall = async (userToUpdate, hallId) => {
+    try {
+      const userDocRef = doc(db, `users`, userToUpdate.id);
+      const oldHallId = userToUpdate.hallId || 'žiadna';
+      
+      // Získanie názvu haly pre logovanie (ak je hallId prázdne, použijeme 'žiadna')
+      let hallNameForLog = 'žiadna';
+      if (hallId) {
+        try {
+          const hallDoc = await getDoc(doc(db, 'places', hallId));
+          if (hallDoc.exists()) {
+            hallNameForLog = hallDoc.data().name || 'neznáma hala';
+            // Aktualizujeme stav s názvami hál
+            setHallNames(prev => ({
+              ...prev,
+              [hallId]: hallNameForLog
+            }));
+          }
+        } catch (error) {
+        }
+      }
+      
+      const updateData = {};
+      if (hallId) {
+        updateData.hallId = hallId;
+      } else {
+        updateData.hallId = deleteField();
+      }
+      
+      await updateDoc(userDocRef, updateData);
+      
+      const oldHallName = oldHallId === 'žiadna' ? 'žiadna' : (hallNames[oldHallId] || oldHallId);
+      
+      setNotification({ message: `Hala bola ${hallId ? 'priradená' : 'odstránená'} pre používateľa ${userToUpdate.firstName} ${userToUpdate.lastName}.`, type: 'success' });
+      
+      await logChanges([`Zmena priradenej haly pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${oldHallName}' na: '${hallNameForLog}'`]);
+    } catch (error) {
+      setNotification({ message: 'Nepodarilo sa priradiť halu.', type: 'error' });
+    }
+  };
+  
+  // ============================================================
+  // UPRAVENÁ FUNKCIA handleDeleteUser - maže aj z usersprivate
+  // ============================================================
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+  
+    // Skopírujeme e-mail používateľa do schránky
+    if (userToDelete.email) {
+      copyToClipboard(userToDelete.email);
+      window.showGlobalNotification(`E-mail ${userToDelete.email} bol skopírovaný do schránky`, 'info');
+    }
+  
+    try {
+      // 1. Získame referencie na dokumenty
+      const userDocRef = doc(db, `users`, userToDelete.id);
+      const userPrivateDocRef = doc(db, `usersprivate`, userToDelete.id);
+      
+      // 2. AKTUALIZÁCIA adminCount - znížime hodnotu iba ak mažeme SCHVÁLENÉHO admina
+      // Dôležité: kontrolujeme aj či je používateľ schválený (approved === true)
+      if (userToDelete.role === 'admin' && userToDelete.approved === true) {
+        const adminCountRef = doc(db, `settings`, `adminCount`);
+        const adminCountSnap = await getDoc(adminCountRef);
+        
+        const currentAdminCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
+        
+        // Znížime hodnotu, ale zabezpečíme, že neklesne pod 1
+        // (minimálne 1 admin musí vždy zostať)
+        const newCount = Math.max(1, currentAdminCount - 1);  
+        
+        await updateDoc(adminCountRef, {
+            count: newCount
+        });        
+      }
+      
+      // 3. VYMAŽEME DOKUMENT Z KOLEKCIE users
+      await deleteDoc(userDocRef);
+  
+      // 4. VYMAŽEME DOKUMENT Z KOLEKCIE usersprivate (ak existuje)
+      try {
+        const privateDocSnapshot = await getDoc(userPrivateDocRef);
+        if (privateDocSnapshot.exists()) {
+          await deleteDoc(userPrivateDocRef);
+        }
+      } catch (privateError) {
+      }
+  
+      // Pridaná funkčnosť: Po úspešnom odstránení používateľa otvoríme novú kartu s Firebase Console
+      if (window.firebaseConfig && window.firebaseConfig.projectId) {
+        const projectId = window.firebaseConfig.projectId;
+        const firebaseConsoleUrl = `https://console.firebase.google.com/project/${projectId}/authentication/users`;
+        window.open(firebaseConsoleUrl, '_blank');
+      }
+  
+      setNotification({ message: `Používateľ ${userToDelete.firstName} bol odstránený. E-mail bol skopírovaný do schránky.`, type: 'success' });
+  
+      // Log changes
+      await logChanges([`Odstránenie používateľa: ${userToDelete.firstName} ${userToDelete.lastName}. E-mail: ${userToDelete.email}`]);
+    } catch (error) {
+      setNotification({ message: 'Nepodarilo sa odstrániť používateľa.', type: 'error' });
+    } finally {
+      setUserToDelete(null);
+    }
+  };
+
+  const sendApprovalEmail = async (userEmail) => {
+    if (!googleScriptUrl_for_email) {
+      setNotification({ message: 'Chyba: URL skriptu nebola nájdená.', type: 'error' });
+      return;
+    }
+  
+    try {
+      const payload = {
+        action: 'sendAdminApprovalEmail',
+        email: userEmail,
+        firstName: users.find(u => u.email === userEmail)?.firstName,
+        lastName: users.find(u => u.email === userEmail)?.lastName,
+      };
+  
+      const response = await fetch(googleScriptUrl_for_email, {
+        method: 'POST',
+        mode: 'no-cors',
+        cache: 'no-cache',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      setNotification({ message: `E-mail o schválení bol odoslaný na ${userEmail}.`, type: 'success' });
+    } catch (error) {
+      setNotification({ message: 'Nepodarilo sa odoslať e-mail o schválení.', type: 'error' });
+    }
+  };
+  
+
+  const handleApproveAdmin = async (userId, userEmail) => {
+    try {
+      const userDocRef = doc(db, `users`, userId);
+      const adminCountRef = doc(db, `settings`, `adminCount`);
+      
+      await updateDoc(userDocRef, {
+        approved: true
+      });
+      
+      const adminCountSnap = await getDoc(adminCountRef);
+      
+      if (adminCountSnap.exists()) {
+        const currentAdminCount = adminCountSnap.data().count;
+        
+        await updateDoc(adminCountRef, {
+          count: increment(1)
+        });
+      } else {
+        await setDoc(adminCountRef, {
+          count: 1
+        });
+      }
+      
+      await sendApprovalEmail(userEmail);
+      
+      setNotification({ message: `Admin bol schválený a e-mail bol odoslaný.`, type: 'success' });
+      
+      // Log changes
+      const userToApprove = users.find(u => u.id === userId);
+      if (userToApprove) {
+        await logChanges([`Schválenie admina: ${userToApprove.firstName} ${userToApprove.lastName}.`]);
+      }
+    } catch (error) {
+      setNotification({ message: 'Nepodarilo sa schváliť admina.', type: 'error' });
+    }
+  };
+
+  const getRoleColor = (role) => {
+      switch (role) {
+        case 'admin':
+          return '#47b3ff';
+        case 'hall':
+          return '#b06835';
+        case 'club':
+          return '#9333EA';
+        case 'referee':
+          return '#007800';
+        case 'volunteer':
+          return '#FFAC1C';
+        default:
+          return '#1D4ED8';
+        }
+  };
+
+  const getTranslatedRoleForDisplay = (role, isUserOldestAdmin, isCurrentUserOldestAdmin) => {
+      if (isUserOldestAdmin && isCurrentUserOldestAdmin) {
+          return 'Superadministrátor';
+      }
+      switch (role) {
+          case 'admin':
+              return 'Administrátor';
+          case 'hall':
+              return 'Športová hala';
+          case 'club':
+              return 'Klub';
+          case 'referee':
+              return 'Rozhodca';
+          case 'volunteer':
+              return 'Dobrovoľník';
+          default:
+              return role;
+      }
+  };
+
+  const formatDate = (dateValue) => {
+      if (!dateValue) return '-';
+    
+      let date;
+    
+      // Firebase Timestamp
+      if (dateValue && typeof dateValue.toDate === 'function') {
+          date = dateValue.toDate();
+      } 
+      // Plain Date object
+      else if (dateValue instanceof Date) {
+          date = dateValue;
+      } 
+      // Timestamp objekt z JSON (seconds + nanoseconds)
+      else if (dateValue && typeof dateValue.seconds === 'number') {
+          date = new Date(dateValue.seconds * 1000);
+      } 
+      else {
+          date = new Date(dateValue);
+      }
+  
+      if (!(date instanceof Date) || isNaN(date.getTime())) {
+          return '-';
+      }
+  
+      return date.toLocaleDateString('sk-SK', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit', 
+          hour: '2-digit', 
+          minute: '2-digit' 
+      });
+  };
+
+  // Funkcia na otvorenie modálneho okna pre úpravu dátumu
+  const handleEditDateClick = (user, dateType, currentValue) => {
+    setDateToEditUser(user);
+    setDateToEditType(dateType);
+    setDateToEditCurrentValue(currentValue);
+    setShowDateEditModal(true);
+  };
+
+  // Funkcia na uloženie upraveného dátumu do Firestore
+  const handleDateSave = async (userToUpdate, dateType, newDate) => {
+    try {
+      const userDocRef = doc(db, `users`, userToUpdate.id);
+      
+      // Získanie pôvodnej hodnoty pre logovanie
+      const oldDate = userToUpdate[dateType];
+      const formattedOldDate = formatDate(oldDate);
+      const formattedNewDate = formatDate(newDate);
+
+      await updateDoc(userDocRef, {
+        [dateType]: newDate // Dynamicky nastaví názov poľa
+      });
+      setNotification({ message: `Dátum bol aktualizovaný pre ${userToUpdate.firstName} ${userToUpdate.lastName}.`, type: 'success' });
+
+      // Log changes s pôvodnou a novou hodnotou
+      const dateTypeString = dateType === 'dataEditDeadline' ? 'údajov' : 'súpisiek';
+      const change = `Aktualizácia dátumu pre úpravu ${dateTypeString} pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${formattedOldDate} hod.' na '${formattedNewDate} hod.'`;
+      await logChanges([change]);
+    } catch (error) {
+      setNotification({ message: 'Nepodarilo sa aktualizovať dátum.', type: 'error' });
+    } finally {
+      setShowDateEditModal(false);
+      setDateToEditUser(null);
+      setDateToEditType('');
+      setDateToEditCurrentValue(null);
+    }
+  };
+
+
+  if (loading) {
+    return React.createElement(
+      'div', { className: 'flex justify-center pt-16' },
+      React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+    );
+  }
+
+  if (window.isCurrentUserAdmin === false) {
+    return React.createElement(
+      'div', { className: 'flex items-center justify-center h-full' },
+      React.createElement('h1', { className: 'text-3xl font-bold text-gray-700' }, 'Nemáte oprávnenie na zobrazenie tejto stránky.')
+    );
+  }
+  
+  const isCurrentUserOldestAdmin = globalUserProfileData?.id === oldestAdminId;
+  
+  // Funkcia na triedenie používateľov
+  const sortUsers = (usersList) => {
+      const oldestAdmin = usersList.find(u => u.id === oldestAdminId);
+      const currentUser = usersList.find(u => u.id === window.currentUserId);
+      const otherUsers = usersList.filter(u => u.id !== oldestAdminId && u.id !== window.currentUserId);
+
+      // Triedenie ostatných používateľov podľa slovenskej abecedy
+      otherUsers.sort((a, b) => {
+          const lastNameComparison = a.lastName.localeCompare(b.lastName, 'sk');
+          if (lastNameComparison !== 0) {
+              return lastNameComparison;
+          }
+          return a.firstName.localeCompare(b.firstName, 'sk');
+      });
+
+      // Zostavenie finálneho poľa
+      const sortedList = [];
+      if (oldestAdmin) {
+          sortedList.push(oldestAdmin);
+      }
+      if (currentUser && currentUser.id !== oldestAdminId) {
+          sortedList.push(currentUser);
+      }
+      return [...sortedList, ...otherUsers];
+  };
+
+  const sortedUsers = sortUsers(users);
+  
+  const filteredUsers = selectedRoles.length > 0 ? sortedUsers.filter(user => selectedRoles.includes(user.role)) : sortedUsers;
+
+  return React.createElement(
+    'div',
+    { className: 'flex-grow p-4 md:p-8 bg-gray-100 rounded-lg shadow-inner' },
+    React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-6 text-center' }, 'Správa používateľov'),
+    React.createElement(
+      'div',
+      { className: 'overflow-x-auto bg-white rounded-lg shadow' },
+      React.createElement(
+        'table',
+        { className: 'min-w-full divide-y divide-gray-200' },
+        React.createElement(
+          'thead',
+          { className: 'bg-gray-50' },
+          React.createElement(
+            'tr',
+            null,
+            // NOVINKA: Stĺpec "Stav" pred menom
+            React.createElement('th', { className: 'px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Stav'),
+            React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Meno'),
+            React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'E-mail'),
+            React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer', onClick: () => setShowFilterModal(true) }, 'Rola'),
+            (window.isCurrentUserAdmin) && React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Úprava údajov'),
+            (window.isCurrentUserAdmin) && React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Úprava súpisiek'),
+            React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Akcie')
+          )
+        ),
+        React.createElement(
+          'tbody',
+          { className: 'bg-white divide-y divide-gray-200' },
+          filteredUsers.map(user => {
+            const isNotCurrentUser = user.id !== window.currentUserId;
+            const isUserOldestAdmin = user.id === oldestAdminId;
+            const canChangeRole = window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin;
+            const canEditDataDeadline = ['club', 'referee', 'volunteer'].includes(user.role);
+            const canEditRosterDeadline = ['club'].includes(user.role);
+            const isHall = user.role === 'hall'; // Zistenie, či ide o používateľa s rolou hall
+            
+            // NOVINKA: Výpočet stavu prihlásenia
+            const isOnline = getLoginStatus(user);
+            const lastLoginDate = toDateSafe(user.lastLoginAt);
+            const lastLogoutDate = toDateSafe(user.lastLogoutAt);
+            const statusTitle = isOnline
+              ? `Posledné prihlásenie: ${lastLoginDate ? lastLoginDate.toLocaleString('sk-SK') : '—'}`
+              : [
+                  `Posledné prihlásenie: ${lastLoginDate ? lastLoginDate.toLocaleString('sk-SK') : '—'}`,
+                  `Posledné odhlásenie: ${lastLogoutDate ? lastLogoutDate.toLocaleString('sk-SK') : '—'}`
+                ].join('\n');
+            
+            // Logika na skrytie riadku pre ostatných používateľov
+            if (isUserOldestAdmin && !isCurrentUserOldestAdmin) {
+              return null;
+            }
+            
+            return React.createElement(
+              'tr',
+              { key: user.id },
+              // NOVINKA: Bunka so stavovým kruhom
+              React.createElement(
+                'td',
+                { className: 'px-3 py-4 whitespace-nowrap' },
+                React.createElement(
+                  'span',
+                  {
+                    title: statusTitle,
+                    className: 'inline-block w-3 h-3 rounded-full',
+                    style: { backgroundColor: isOnline ? '#22c55e' : '#ef4444' }
+                  }
+                )
+              ),
+              React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900' }, `${user.firstName} ${user.lastName}`),
+              React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500' }, user.email),
+              React.createElement(
+                'td',
+                { className: 'px-6 py-4 whitespace-nowrap text-sm' },
+                React.createElement(
+                  'span',
+                  { style: { color: getRoleColor(user.role) }, className: 'font-semibold' },
+                  getTranslatedRoleForDisplay(user.role, isUserOldestAdmin, isCurrentUserOldestAdmin)
+                )
+              ),
+              
+              // PRE HALL: Zlúčené bunky pre dátumy
+              (window.isCurrentUserAdmin && isHall) && React.createElement(
+                'td',
+                { 
+                  colSpan: "2",
+                  className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium'
+                },
+                user.hallId ? (hallNames[user.hallId] || '') : 'Žiadna priradená hala'
+              ),
+              
+              // Úprava údajov
+              (window.isCurrentUserAdmin && !isHall) && React.createElement(
+                  'td',
+                  {
+                      className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${canEditDataDeadline ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                      onClick: () => canEditDataDeadline && handleEditDateClick(user, 'dataEditDeadline', user.dataEditDeadline)
+                  },
+                  formatDate(user.dataEditDeadline)
+              ),
+              
+              // Úprava súpisiek
+              (window.isCurrentUserAdmin && !isHall) && React.createElement(
+                  'td',
+                  {
+                      className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${canEditRosterDeadline ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                      onClick: () => canEditRosterDeadline && handleEditDateClick(user, 'rosterEditDeadline', user.rosterEditDeadline)
+                  },
+                  formatDate(user.rosterEditDeadline)
+              ),
+              
+              React.createElement(
+                'td',
+                { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
+                // Akcie s tlacitkami su podmienene na zaklade roly a schvalenia
+                isNotCurrentUser ?
+                  React.createElement(React.Fragment, null,
+                    // Tlačidlo "Odstrániť" sa zobrazí len pre superadministrátora, a to pre všetkých ostatných používateľov okrem neho samotného
+                    (isCurrentUserOldestAdmin && user.id !== window.currentUserId) && React.createElement(
+                      'button',
+                      {
+                        onClick: () => setUserToDelete(user),
+                        className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out mr-2'
+                      },
+                      'Odstrániť'
+                    ),
+                    // Tlacidlo "Upravit rolu" je viditelne pre schvalenych adminov (okrem najstarsiho) a pre neschvalenych adminov
+                    ((canChangeRole) || (window.isCurrentUserAdmin && user.role === 'admin' && !user.approved)) && React.createElement(
+                      'button',
+                      {
+                        onClick: () => setUserToEdit(user),
+                        className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
+                      },
+                      'Upraviť rolu'
+                    ),
+                    // Tlacidlo "Schvalit" je viditelne pre schvalenych adminov a len pre Neschvalenych adminov
+                    (window.isCurrentUserAdmin && user.role === 'admin' && !user.approved) && React.createElement(
+                      'button',
+                      {
+                        onClick: () => handleApproveAdmin(user.id, user.email),
+                        className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
+                      },
+                      'Schváliť'
+                    ),
+                    // UPRAVENÉ: Tlačidlo "Priradiť halu" / "Upraviť halu" - zobrazí sa IBA pre používateľov s rolou 'hall'
+                    (window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin && user.role === 'hall') && React.createElement(
+                      'button',
+                      {
+                        onClick: () => setUserToAssignHall(user),
+                        className: 'bg-brown-600 text-white px-4 py-2 rounded-full shadow-md hover:bg-brown-700 transition-colors duration-200 ease-in-out mr-2'
+                      },
+                      user.hallId ? 'Upraviť halu' : 'Priradiť halu'
+                    )
+                  ) : null
+              )
+            )
+          })
+        )
+      )
+    ),
+    React.createElement(NotificationModal, { message: notification.message, onClose: () => setNotification({ message: '', type: 'info' }), type: notification.type }),
+    userToEdit && React.createElement(ChangeRoleModal, {
+      user: userToEdit,
+      onClose: () => setUserToEdit(null),
+      onRoleChange: handleChangeRole
+    }),
+    userToAssignHall && React.createElement(AssignHallModal, {
+      user: userToAssignHall,
+      onClose: () => setUserToAssignHall(null),
+      onAssign: handleAssignHall
+    }),
+    userToDelete && React.createElement(ConfirmationModal, {
+      message: `Naozaj chcete odstrániť používateľa ${userToDelete.firstName} ${userToDelete.lastName}? Táto akcia je nezvratná.`,
+      onConfirm: handleDeleteUser,
+      onCancel: () => setUserToDelete(null),
+      userEmail: userToDelete.email
+    }),
+    showFilterModal && React.createElement(FilterRolesModal, {
+        onClose: () => setShowFilterModal(false),
+        onApplyFilter: (roles) => {
+            setSelectedRoles(roles);
+            setShowFilterModal(false);
+        },
+        initialRoles: selectedRoles
+    }),
+    showDateEditModal && React.createElement(EditDateModal, {
+      user: dateToEditUser,
+      dateType: dateToEditType,
+      currentDate: dateToEditCurrentValue,
+      onClose: () => setShowDateEditModal(false),
+      onSave: handleDateSave
+    })
+  );
+}
+
+// Funkcia na inicializáciu a vykreslenie React aplikácie
+const initializeAndRenderApp = () => {
+  const rootElement = document.getElementById('users-management-root');
+
+  if (!window.isGlobalAuthReady || !window.globalUserProfileData) {
+    return;
+  }
+
+  window.removeEventListener('globalDataUpdated', initializeAndRenderApp);
+
+  if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+    if (rootElement) {
+      rootElement.innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+    }
+    return;
+  }
+
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(React.createElement(UsersManagementApp, null));
+};
+
+// Pridanie štýlov pre hnedú farbu (ak ešte nie sú definované)
+const style = document.createElement('style');
+style.textContent = `
+  .bg-brown-600 { background-color: #8B4513; }
+  .bg-brown-700 { background-color: #5D3A1A; }
+  .bg-brown-300 { background-color: #D2B48C; }
+  .text-brown-600 { color: #8B4513; }
+  .hover\\:bg-brown-700:hover { background-color: #5D3A1A; }
+  .disabled\\:bg-brown-300:disabled { background-color: #D2B48C; }
+`;
+document.head.appendChild(style);
+
+// Vykreslíme loader a zaregistrujeme poslucháča udalostí
+const rootElement = document.getElementById('users-management-root');
+if (rootElement) {
+    rootElement.innerHTML = `
+        <div class="flex justify-center pt-16">
+            <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+        </div>
+    `;
+}
+window.addEventListener('globalDataUpdated', initializeAndRenderApp);
+
+// Pre prípad, že udalosť už prebehla
+if (window.isGlobalAuthReady && window.globalUserProfileData) {
+    initializeAndRenderApp();
+}

@@ -1,0 +1,768 @@
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+export function PackageSettings({ db, userProfileData, tournamentStartDate, tournamentEndDate, showNotification, sendAdminNotification }) {
+  const [packages, setPackages] = React.useState([]);
+  const [accommodations, setAccommodations] = React.useState([]);
+  const [showPackageModal, setShowPackageModal] = React.useState(false);
+  const [currentPackageEdit, setCurrentPackageEdit] = React.useState(null);
+  const [newPackageName, setNewPackageName] = React.useState('');
+  const [newPackagePrice, setNewPackagePrice] = React.useState(0);
+  const [selectedAccommodations, setSelectedAccommodations] = React.useState([]);
+  const [packageModalMode, setPackageModalMode] = React.useState('add');
+  const [showConfirmDeletePackageModal, setShowConfirmDeletePackageModal] = React.useState(false);
+  const [packageToDelete, setPackageToDelete] = React.useState(null);
+
+  const [packageMeals, setPackageMeals] = React.useState({});
+  const [packageRefreshments, setPackageRefreshments] = React.useState([]);
+
+  const [showRefreshmentColumn, setShowRefreshmentColumn] = React.useState(false);
+  const [hasParticipantCard, setHasParticipantCard] = React.useState(false);
+
+  // Konštanta pre typ "bez ubytovania"
+  const NO_ACCOMMODATION_TYPE = "bez ubytovania";
+
+  const getDaysBetween = (start, end) => {
+    const dates = [];
+    const [startYear, startMonth, startDay] = start.split('-').map(Number);
+    const [endYear, endMonth, endDay] = end.split('-').map(Number);
+
+    let currentDate = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+    const endDateAdjusted = new Date(Date.UTC(endYear, endMonth - 1, endDay));
+
+    while (currentDate <= endDateAdjusted) {
+      dates.push(currentDate.toISOString().split('T')[0]);
+      currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+    }
+    return dates;
+  };
+
+  const tournamentDays = React.useMemo(() => {
+    const startDate = tournamentStartDate ? new Date(tournamentStartDate) : null;
+    const endDate = tournamentEndDate ? new Date(tournamentEndDate) : null;
+    if (startDate && endDate && !isNaN(startDate) && !isNaN(endDate)) {
+        return getDaysBetween(startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
+    }
+    return [];
+  }, [tournamentStartDate, tournamentEndDate]);
+
+  // Načítanie balíčkov
+  React.useEffect(() => {
+    let unsubscribePackages;
+    const fetchPackages = async () => {
+        if (!db || !userProfileData || userProfileData.role !== 'admin') {
+            return;
+        }
+        try {
+            const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
+            unsubscribePackages = onSnapshot(packagesCollectionRef, (snapshot) => {
+                const fetchedPackages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                fetchedPackages.sort((a, b) => a.name.localeCompare(b.name));
+                setPackages(fetchedPackages);
+            }, (error) => {
+                if (typeof showNotification === 'function') {
+                    showNotification(`Chyba pri načítaní balíčkov: ${error.message}`, 'error');
+                } else {
+                    console.error("Chyba pri načítaní balíčkov a showNotification nie je funkcia:", error);
+                }
+            });
+        } catch (e) {
+            if (typeof showNotification === 'function') {
+                showNotification(`Chyba pri nastavovaní poslucháča pre balíčky: ${e.message}`, 'error');
+            } else {
+                console.error("Chyba pri nastavovaní poslucháča pre balíčky a showNotification nie je funkcia:", e);
+            }
+        }
+
+        return () => {
+            if (unsubscribePackages) {
+                unsubscribePackages();
+            }
+        };
+    };
+
+    fetchPackages();
+  }, [db, userProfileData, showNotification]);
+
+  // Načítanie typov ubytovania
+  React.useEffect(() => {
+    let unsubscribeAccommodation;
+    const fetchAccommodations = async () => {
+      if (!db || !userProfileData || userProfileData.role !== 'admin') {
+        return;
+      }
+
+      try {
+        const accommodationDocRef = doc(db, 'settings', 'accommodation');
+        unsubscribeAccommodation = onSnapshot(accommodationDocRef, docSnapshot => {
+          if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            const sortedAccommodations = (data.types || []).sort((a, b) => a.type.localeCompare(b.type));
+            setAccommodations(sortedAccommodations);
+          } else {
+            setAccommodations([]);
+          }
+        }, error => {
+          if (typeof showNotification === 'function') {
+            showNotification(`Chyba pri načítaní typov ubytovania: ${error.message}`, 'error');
+          }
+        });
+
+        return () => {
+          if (unsubscribeAccommodation) {
+            unsubscribeAccommodation();
+          }
+        };
+      } catch (e) {
+        if (typeof showNotification === 'function') {
+          showNotification(`Chyba pri nastavovaní poslucháča pre ubytovanie: ${e.message}`, 'error');
+        }
+      }
+    };
+
+    fetchAccommodations();
+  }, [db, userProfileData, showNotification]);
+
+  React.useEffect(() => {
+    const updatePackagesBasedOnTournamentDates = async () => {
+        if (!db || !userProfileData || userProfileData.role !== 'admin' || !tournamentStartDate || !tournamentEndDate) {
+            return;
+        }
+
+        const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
+        const querySnapshot = await getDocs(packagesCollectionRef);
+
+        const newTournamentDays = tournamentDays;
+        
+        querySnapshot.forEach(async (pkgDoc) => {
+            const pkgData = pkgDoc.data();
+            const currentMeals = pkgData.meals || {};
+            const oldMealDays = Object.keys(currentMeals).filter(day => day !== 'participantCard').sort();
+            
+            const datesAreIdentical = JSON.stringify(oldMealDays) === JSON.stringify(newTournamentDays);
+            
+            if (!datesAreIdentical) {
+                const updatedMeals = {};
+                
+                if (currentMeals.participantCard === 1) {
+                    updatedMeals.participantCard = 1;
+                }
+
+                if (oldMealDays.length === newTournamentDays.length) {
+                    oldMealDays.forEach((oldDay, index) => {
+                        const newDay = newTournamentDays[index];
+                        const oldDayMeals = currentMeals[oldDay] || { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
+                        updatedMeals[newDay] = oldDayMeals;
+                    });
+                } else {
+                    newTournamentDays.forEach(day => {
+                        if (currentMeals[day]) {
+                            updatedMeals[day] = currentMeals[day];
+                        } else {
+                            updatedMeals[day] = { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
+                        }
+                    });
+                }
+
+                try {
+                    await updateDoc(doc(db, 'settings', 'packages', 'list', pkgDoc.id), {
+                        meals: updatedMeals,
+                        updatedAt: Timestamp.fromDate(new Date())
+                    });
+                    console.log(`Balíček ${pkgData.name} bol aktualizovaný na nové dátumy turnaja.`);
+                } catch (error) {
+                    console.error(`Chyba pri aktualizácii balíčka ${pkgData.name}:`, error);
+                    showNotification(`Chyba pri aktualizácii balíčka ${pkgData.name} s novými dátumami: ${error.message}`, 'error');
+                }
+            }
+        });
+    };
+    updatePackagesBasedOnTournamentDates();
+  }, [tournamentStartDate, tournamentEndDate, db, userProfileData]);
+
+  const handleOpenAddPackageModal = () => {
+    setPackageModalMode('add');
+    setNewPackageName('');
+    setNewPackagePrice(0);
+    setSelectedAccommodations([]);
+    setPackageMeals({});
+    setPackageRefreshments([]);
+    setCurrentPackageEdit(null);
+    setShowPackageModal(true);
+    setShowRefreshmentColumn(false);
+    setHasParticipantCard(false);
+  };
+
+  const handleOpenEditPackageModal = (pkg) => {
+    setPackageModalMode('edit');
+    setNewPackageName(pkg.name);
+    setNewPackagePrice(pkg.price);
+    setSelectedAccommodations(pkg.accommodationTypes || []);
+    
+    const initialMeals = {};
+    tournamentDays.forEach(day => {
+        initialMeals[day] = pkg.meals[day] || { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
+    });
+    if (pkg.meals?.participantCard === 1) {
+        initialMeals.participantCard = 1;
+    } else {
+        delete initialMeals.participantCard;
+    }
+    setPackageMeals(initialMeals);
+    
+    setPackageRefreshments([]);
+    setCurrentPackageEdit(pkg);
+    setShowPackageModal(true);
+    const hasRefreshment = tournamentDays.some(date => (pkg.meals || {})[date]?.refreshment === 1);
+    setShowRefreshmentColumn(hasRefreshment);
+    setHasParticipantCard(pkg.meals?.participantCard === 1);
+  };
+
+  const handleClosePackageModal = () => {
+    setShowPackageModal(false);
+    setNewPackageName('');
+    setNewPackagePrice(0);
+    setSelectedAccommodations([]);
+    setPackageMeals({});
+    setPackageRefreshments([]);
+    setCurrentPackageEdit(null);
+    setPackageModalMode('add');
+    setShowRefreshmentColumn(false);
+    setHasParticipantCard(false);
+  };
+
+  const handleMealChange = (date, mealType, isChecked) => {
+    setPackageMeals(prevMeals => ({
+      ...prevMeals,
+      [date]: {
+        ...(prevMeals[date] || {}),
+        [mealType]: isChecked ? 1 : 0
+      }
+    }));
+  };
+
+  const handleParticipantCardChange = (isChecked) => {
+    setHasParticipantCard(isChecked);
+    setPackageMeals(prevMeals => ({
+      ...prevMeals,
+      participantCard: isChecked ? 1 : 0
+    }));
+  };
+
+  const handleAccommodationChange = (accommodationType, isChecked) => {
+    if (isChecked) {
+      setSelectedAccommodations(prev => [...prev, accommodationType]);
+    } else {
+      setSelectedAccommodations(prev => prev.filter(type => type !== accommodationType));
+    }
+  };
+
+  const handleAddRefreshment = (date) => { };
+  const handleRemoveRefreshment = (date, itemIndex) => { };
+  const handleRefreshmentItemChange = (date, itemIndex, field, value) => { };
+
+  const handleSavePackage = async () => {
+    if (typeof showNotification !== 'function') {
+        console.error("DEBUG: showNotification prop is not a function in handleSavePackage!");
+        return; 
+    }
+    if (typeof sendAdminNotification !== 'function') {
+        console.error("DEBUG: sendAdminNotification prop is not a function in handleSavePackage!");
+    }
+
+    if (!db || !userProfileData || userProfileData.role !== 'admin') {
+      showNotification("Nemáte oprávnenie na zmenu nastavení balíčkov.", 'error');
+      return;
+    }
+
+    const trimmedName = newPackageName.trim();
+    if (!trimmedName) {
+      showNotification("Názov balíčka nemôže byť prázdny.", 'error');
+      return;
+    }
+    if (newPackagePrice < 0) {
+      showNotification("Cena balíčka nemôže byť záporná.", 'error');
+      return;
+    }
+
+    const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
+
+    try {
+      const mealsToSave = { ...packageMeals };
+      if (hasParticipantCard) {
+        mealsToSave.participantCard = 1;
+      } else {
+        delete mealsToSave.participantCard;
+      }
+
+      if (packageModalMode === 'add') {
+        if (packages.some(pkg => pkg.name === trimmedName)) {
+          showNotification(`Balíček "${trimmedName}" už existuje.`, 'error');
+          return;
+        }
+        
+        await addDoc(packagesCollectionRef, {
+          name: trimmedName,
+          price: newPackagePrice,
+          accommodationTypes: selectedAccommodations,
+          meals: mealsToSave,
+          refreshments: [],
+          createdAt: Timestamp.fromDate(new Date())
+        });
+        showNotification(`Balíček "${trimmedName}" úspešne pridaný!`, 'success');
+        
+        if (typeof sendAdminNotification === 'function') {
+          await sendAdminNotification({
+            type: 'createPackage',
+            data: {
+              name: trimmedName,
+              price: newPackagePrice,
+              accommodationTypes: selectedAccommodations,
+              meals: mealsToSave,
+              hasParticipantCard: hasParticipantCard
+            }
+          });
+        }
+
+      } else if (packageModalMode === 'edit') {
+        if (trimmedName !== currentPackageEdit.name && packages.some(pkg => pkg.name === trimmedName)) {
+            showNotification(`Balíček "${trimmedName}" už existuje.`, 'error');
+            return;
+        }
+        const packageDocRef = doc(db, 'settings', 'packages', 'list', currentPackageEdit.id);
+        
+        const originalPkgData = currentPackageEdit || {};
+        originalPkgData.meals = originalPkgData.meals || {}; 
+        originalPkgData.name = originalPkgData.name || ''; 
+        originalPkgData.price = originalPkgData.price || 0; 
+        originalPkgData.accommodationTypes = originalPkgData.accommodationTypes || [];
+
+        // Uložíme pôvodné hodnoty pre notifikáciu
+        const oldData = {
+          name: originalPkgData.name,
+          price: originalPkgData.price,
+          accommodationTypes: [...originalPkgData.accommodationTypes],
+          meals: JSON.parse(JSON.stringify(originalPkgData.meals)),
+          hasParticipantCard: originalPkgData.meals?.participantCard === 1
+        };
+
+        await updateDoc(packageDocRef, {
+          name: trimmedName,
+          price: newPackagePrice,
+          accommodationTypes: selectedAccommodations,
+          meals: mealsToSave,
+          refreshments: [],
+          updatedAt: Timestamp.fromDate(new Date())
+        });
+        showNotification(`Balíček "${currentPackageEdit.name}" úspešne zmenený na "${trimmedName}"!`, 'success');
+
+        // --- KOMPLETNÁ NOTIFIKÁCIA PRE ÚPRAVU ---
+        if (typeof sendAdminNotification === 'function') {
+          const newData = {
+            name: trimmedName,
+            price: newPackagePrice,
+            accommodationTypes: selectedAccommodations,
+            meals: mealsToSave,
+            hasParticipantCard: hasParticipantCard
+          };
+
+          await sendAdminNotification({
+            type: 'editPackage',
+            data: {
+              originalPackage: oldData,
+              newPackage: newData,
+              originalName: oldData.name // Pre prípad chyby
+            }
+          });
+        }
+        // --- KONIEC NOTIFIKÁCIE ---
+      }
+      handleClosePackageModal();
+    } catch (e) {
+      showNotification(`Chyba pri ukladaní balíčka: ${e.message}`, 'error');
+    }
+  };
+
+  const handleOpenConfirmDeletePackageModal = (pkg) => {
+    setPackageToDelete(pkg);
+    setShowConfirmDeletePackageModal(true);
+  };
+
+  const handleCloseConfirmDeletePackageModal = () => {
+    setShowConfirmDeletePackageModal(false);
+    setPackageToDelete(null);
+  };
+
+  const handleDeletePackage = async () => {
+    if (typeof showNotification !== 'function') {
+        console.error("DEBUG: showNotification prop is not a function in handleDeletePackage!");
+        return; 
+    }
+    if (typeof sendAdminNotification !== 'function') {
+        console.error("DEBUG: sendAdminNotification prop is not a function in handleDeletePackage!");
+    }
+
+    if (!db || !userProfileData || userProfileData.role !== 'admin') {
+      showNotification("Nemáte oprávnenie na zmazanie balíčka.", 'error');
+      return;
+    }
+    if (!packageToDelete) return;
+
+    try {
+      const packageDocRef = doc(db, 'settings', 'packages', 'list', packageToDelete.id);
+      await deleteDoc(packageDocRef);
+      showNotification(`Balíček "${packageToDelete.name}" úspešne zmazaný!`, 'success');
+
+      if (typeof sendAdminNotification === 'function') {
+        await sendAdminNotification({
+          type: 'deletePackage',
+          data: {
+            deletedName: packageToDelete.name,
+            deletedPrice: packageToDelete.price,
+            deletedData: packageToDelete // Pôvodné dáta pre prípad potreby
+          }
+        });
+      }
+
+      handleCloseConfirmDeletePackageModal();
+    } catch (e) {
+      showNotification(`Chyba pri mazaní balíčka: ${e.message}`, 'error');
+    }
+  };
+
+  // Vytvorenie zoznamu všetkých možností ubytovania vrátane "bez ubytovania"
+  const allAccommodationOptions = React.useMemo(() => {
+    const options = [...accommodations];
+    // Pridáme "bez ubytovania" ako špeciálny typ
+    options.push({ 
+      type: NO_ACCOMMODATION_TYPE, 
+      capacity: 'neobmedzená',
+      isSpecialType: true // Pre prípadné špeciálne spracovanie
+    });
+    return options;
+  }, [accommodations]);
+
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement(
+        'div',
+        { className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm mt-8' },
+        React.createElement('h2', { className: 'text-2xl font-semibold text-gray-700 mb-4' }, 'Nastavenia balíčkov (stravovanie a občerstvenie)'),
+        React.createElement(
+            'div',
+            { className: 'space-y-3' },
+            packages.length > 0 ? (
+                packages.map((pkg) => (
+                    React.createElement(
+                        'div',
+                        { key: pkg.id, className: 'flex justify-between items-center bg-gray-50 p-3 rounded-md shadow-sm mb-2 flex-wrap' },
+                        React.createElement('div', { className: 'w-full md:w-auto' },
+                            React.createElement('span', { className: 'text-gray-800 font-medium' }, `${pkg.name} - ${pkg.price} €`),
+                            pkg.accommodationTypes && pkg.accommodationTypes.length > 0 && (
+                                React.createElement('div', { className: 'text-sm text-gray-600 mt-1' },
+                                    React.createElement('span', { className: 'font-semibold' }, 'Ubytovanie: '),
+                                    pkg.accommodationTypes.join(', ')
+                                )
+                            )
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'text-sm text-gray-600 w-full mt-2 md:mt-0' },
+                            Object.keys(pkg.meals || {})
+                                .filter(date => date !== 'participantCard' && tournamentDays.includes(date))
+                                .sort()
+                                .map(date => {
+                                const mealsForDay = pkg.meals[date];
+                                const includedItems = [];
+                                if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('raňajky');
+                                if (mealsForDay && mealsForDay.lunch === 1) includedItems.push('obed');
+                                if (mealsForDay && mealsForDay.dinner === 1) includedItems.push('večera');
+                                if (mealsForDay && mealsForDay.refreshment === 1) includedItems.push('občerstvenie');
+
+                                if (includedItems.length > 0) {
+                                    const displayDate = new Date(date).toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
+                                    return React.createElement('p', { key: date, className: 'ml-4' }, `${displayDate}: ${includedItems.join(', ')}`);
+                                }
+                                return null;
+                            }),
+                            (pkg.meals && pkg.meals.participantCard === 1) &&
+                                React.createElement('p', { className: 'ml-4 font-bold text-gray-700' }, 'zahŕňa účastnícku kartu')
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'flex space-x-2 mt-2 w-full md:w-auto md:mt-0 md:ml-auto justify-end' },
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => handleOpenEditPackageModal(pkg),
+                                    className: 'bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-bold py-1 px-3 rounded-lg transition-colors duration-200 focus:outline-none focus:shadow-outline'
+                                },
+                                'Upraviť'
+                            ),
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => handleOpenConfirmDeletePackageModal(pkg),
+                                    className: 'bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-1 px-3 rounded-lg transition-colors duration-200 focus:outline-none focus:shadow-outline'
+                                },
+                                'Vymazať'
+                            )
+                        )
+                    )
+                ))
+            ) : (
+                React.createElement('p', { className: 'text-gray-500 text-center' }, 'Zatiaľ nie sú definované žiadne balíčky.')
+            )
+        ),
+        React.createElement(
+            'div',
+            { className: 'flex justify-center mt-4' },
+            React.createElement(
+                'button',
+                {
+                    type: 'button',
+                    onClick: handleOpenAddPackageModal,
+                    className: 'bg-green-500 hover:bg-green-600 text-white font-bold p-3 rounded-full shadow-lg transition-colors duration-200 focus:outline-none focus:shadow-outline w-12 h-12 flex items-center justify-center'
+                },
+                React.createElement('span', { className: 'text-xl' }, '+')
+            )
+        )
+    ),
+
+    showPackageModal && React.createElement(
+      'div',
+      { className: 'modal' },
+      React.createElement(
+        'div',
+        { className: 'modal-content max-w-4xl' },
+        React.createElement('h3', { className: 'text-xl font-bold mb-4' }, packageModalMode === 'add' ? 'Pridať nový balíček' : `Upraviť balíček: ${currentPackageEdit?.name}`),
+        
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'newPackageName' }, 'Názov balíčka'),
+        React.createElement(
+          'input',
+          {
+            type: 'text',
+            id: 'newPackageName',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-4',
+            placeholder: 'Zadajte názov balíčka',
+            value: newPackageName,
+            onChange: (e) => setNewPackageName(e.target.value),
+          }
+        ),
+        
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'newPackagePrice' }, 'Cena balíčka'),
+        React.createElement(
+            'div',
+            { className: 'flex items-center mb-4' },
+            React.createElement(
+                'input',
+                {
+                  type: 'number',
+                  id: 'newPackagePrice',
+                  className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mr-2',
+                  placeholder: 'Zadajte cenu balíčka',
+                  value: newPackagePrice,
+                  onChange: (e) => setNewPackagePrice(parseFloat(e.target.value) || 0),
+                  min: 0,
+                  step: 0.01
+                }
+            ),
+            React.createElement('span', { className: 'text-gray-700 font-semibold text-lg' }, '€')
+        ),
+
+        React.createElement('h4', { className: 'text-lg font-semibold mb-2' }, 'Dostupné pre typy ubytovania:'),
+        React.createElement(
+          'div',
+          { className: 'grid grid-cols-2 md:grid-cols-3 gap-3 mb-4 p-3 border border-gray-200 rounded-lg bg-gray-50' },
+          // Zobrazíme bežné typy ubytovania
+          accommodations.map(acc => (
+            React.createElement(
+              'label',
+              { key: acc.type, className: 'flex items-center space-x-2 cursor-pointer' },
+              React.createElement('input', {
+                type: 'checkbox',
+                className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                checked: selectedAccommodations.includes(acc.type),
+                onChange: (e) => handleAccommodationChange(acc.type, e.target.checked)
+              }),
+              React.createElement('span', { className: 'text-gray-700' }, `${acc.type} (kapacita: ${acc.capacity})`)
+            )
+          )),
+          // Pridáme typ "bez ubytovania" medzi ostatné typy
+          React.createElement(
+            'label',
+            { key: NO_ACCOMMODATION_TYPE, className: 'flex items-center space-x-2 cursor-pointer' },
+            React.createElement('input', {
+              type: 'checkbox',
+              className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+              checked: selectedAccommodations.includes(NO_ACCOMMODATION_TYPE),
+              onChange: (e) => handleAccommodationChange(NO_ACCOMMODATION_TYPE, e.target.checked)
+            }),
+            React.createElement('span', { className: 'text-gray-700' }, `${NO_ACCOMMODATION_TYPE}`)
+          )
+        ),
+
+        React.createElement('h4', { className: 'text-lg font-semibold mb-2' }, 'Stravovanie na deň:'),
+        tournamentDays.length > 0 ? (
+            React.createElement(
+                React.Fragment,
+                null,
+                React.createElement(
+                    'div',
+                    { className: 'overflow-x-auto mb-4' },
+                    React.createElement(
+                        'table',
+                        { className: 'min-w-full bg-white border border-gray-200 rounded-lg shadow-sm' },
+                        React.createElement(
+                            'thead',
+                            null,
+                            React.createElement(
+                                'tr',
+                                { className: 'bg-gray-100' },
+                                React.createElement('th', { className: 'py-2 px-1 border-b text-left text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'Dátum'),
+                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'raňajky'),
+                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'obed'),
+                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'večera'),
+                                showRefreshmentColumn && React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'občerstvenie')
+                            )
+                        ),
+                        React.createElement(
+                            'tbody',
+                            null,
+                            tournamentDays.map(date => (
+                                React.createElement(
+                                    'tr',
+                                    { key: date, className: 'hover:bg-gray-50' },
+                                    React.createElement('td', { className: 'py-2 px-1 border-b text-gray-700' },
+                                        new Date(date).toLocaleDateString('sk-SK'),
+                                        React.createElement('br'),
+                                        React.createElement('span', {className: 'text-xs text-gray-500'}, new Date(date).toLocaleDateString('sk-SK', { weekday: 'short' }))
+                                    ),
+                                    React.createElement('td', { className: 'py-2 px-1 border-b text-center' },
+                                        React.createElement('input', {
+                                            type: 'checkbox',
+                                            className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                                            checked: packageMeals[date]?.breakfast === 1,
+                                            onChange: (e) => handleMealChange(date, 'breakfast', e.target.checked),
+                                        })
+                                    ),
+                                    React.createElement('td', { className: 'py-2 px-1 border-b text-center' },
+                                        React.createElement('input', {
+                                            type: 'checkbox',
+                                            className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                                            checked: packageMeals[date]?.lunch === 1,
+                                            onChange: (e) => handleMealChange(date, 'lunch', e.target.checked),
+                                        })
+                                    ),
+                                    React.createElement('td', { className: 'py-2 px-1 border-b text-center' },
+                                        React.createElement('input', {
+                                            type: 'checkbox',
+                                            className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                                            checked: packageMeals[date]?.dinner === 1,
+                                            onChange: (e) => handleMealChange(date, 'dinner', e.target.checked),
+                                        })
+                                    ),
+                                    showRefreshmentColumn && React.createElement('td', { className: 'py-2 px-1 border-b text-center' },
+                                        React.createElement('input', {
+                                            type: 'checkbox',
+                                            className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                                            checked: packageMeals[date]?.refreshment === 1,
+                                            onChange: (e) => handleMealChange(date, 'refreshment', e.target.checked),
+                                        })
+                                    )
+                                )
+                            ))
+                        )
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center mt-4' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'toggleRefreshmentColumn',
+                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                        checked: showRefreshmentColumn,
+                        onChange: (e) => setShowRefreshmentColumn(e.target.checked),
+                    }),
+                    React.createElement('label', { htmlFor: 'toggleRefreshmentColumn', className: 'ml-2 text-gray-700' }, 'zobraziť stĺpec občerstvenie')
+                )
+            )
+        ) : (
+            React.createElement('p', { className: 'text-gray-500 text-center' }, 'Pre konfiguráciu stravovania najprv nastavte dátumy začiatku a konca turnaja vo všeobecných nastaveniach.')
+        ),
+
+        React.createElement(
+            'div',
+            { className: 'flex items-center mt-4 border-t border-gray-200 pt-4' },
+            React.createElement('input', {
+                type: 'checkbox',
+                id: 'hasParticipantCard',
+                className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                checked: hasParticipantCard,
+                onChange: (e) => handleParticipantCardChange(e.target.checked),
+            }),
+            React.createElement('label', { htmlFor: 'hasParticipantCard', className: 'ml-2 text-gray-700 font-bold' }, 'zahŕňa účastnícku kartu')
+        ),
+
+        React.createElement(
+          'div',
+          { className: 'flex justify-end space-x-3 mt-4' },
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: handleClosePackageModal,
+              className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+            },
+            'Zrušiť'
+          ),
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: handleSavePackage,
+              className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+            },
+            packageModalMode === 'add' ? 'Pridať' : 'Uložiť'
+          )
+        )
+      )
+    ),
+
+    showConfirmDeletePackageModal && React.createElement(
+      'div',
+      { className: 'modal' },
+      React.createElement(
+        'div',
+        { className: 'modal-content' },
+        React.createElement('h3', { className: 'text-xl font-bold mb-4' }, 'Potvrdiť zmazanie'),
+        React.createElement('p', { className: 'text-gray-700 mb-6' }, `Naozaj chcete zmazať balíček "${packageToDelete?.name}" (cena: ${packageToDelete?.price} €)?`),
+        React.createElement(
+          'div',
+          { className: 'flex justify-end space-x-3' },
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: handleCloseConfirmDeletePackageModal,
+              className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+            },
+            'Zrušiť'
+          ),
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: handleDeletePackage,
+              className: 'bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+            },
+            'Zmazať'
+          )
+        )
+      )
+    )
+  );
+}

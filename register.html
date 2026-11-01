@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOH 2025 - Registrácia</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- GitHub Pages - development only -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+        }
+        /* Štýly pre modálne okná */
+        .modal {
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            animation: fadeIn 0.3s ease-out;
+            max-width: 500px;
+            width: 90%;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Štýly pre scrollbar v CountryCodeModal */
+        .max-h-80::-webkit-scrollbar {
+            width: 8px;
+        }
+        .max-h-80::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .max-h-80::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .max-h-80::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <!-- Zástupný element, kam header.js načíta obsah header.html -->
+    <div id="header-placeholder"></div>
+
+    <!-- Hlavný obsah React aplikácie -->
+    <div id="root"></div>
+
+    <!-- React a ReactDOM -->
+    <script src="https://unpkg.com/react@18.2.0/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js" crossorigin></script>
+    
+    <!-- reCAPTCHA v3 -->
+    <script src="https://www.google.com/recaptcha/api.js?render=6Lc5mPAsAAAAAJhSEytDinjEsUNn8q1A3DeaZc6x"></script>
+
+    <!-- Global Firebase config and initialization variables for authentication.js -->
+    <script type="text/javascript">
+        // Tieto premenné sú definované globálne a budú použité v authentication.js
+        // __app_id a __firebase_config_string sú teraz definované výlučne v authentication.js
+        const __initial_auth_token = null; // Pre túto aplikáciu nie je potrebný počiatočný auth token
+    </script>
+
+    <script src="clear-console.js"></script>
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
+    <script type="module" src="loader.js"></script>
+    <script type="module" src="register-page1.js"></script>
+    <script type="module" src="register-page2.js"></script>
+    <script type="module" src="register-page3.js"></script>
+    <script type="module" src="register-page4.js"></script>
+    <script type="module" src="register-page5.js"></script>
+    <script type="module" src="register-page6.js"></script>
+    <script type="module" src="register.js"></script>
+
+    <script type="text/javascript">
+    </script>
+</body>
+</html>

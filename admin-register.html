@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOH 2025 - Registrácia administrátora</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- GitHub Pages - development only -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+        }
+        /* Styles for modal windows (if used in the future) */
+        .modal {
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+            text-align: left;
+        }
+    </style>
+    <!-- React and ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <!-- reCAPTCHA v3 -->
+    <script src="https://www.google.com/recaptcha/api.js?render=6Lc5mPAsAAAAAJhSEytDinjEsUNn8q1A3DeaZc6x"></script>
+</head>
+<body class="bg-gray-100">
+    <!-- Header will be loaded dynamically -->
+    <div id="header-placeholder"></div>
+
+    <div id="root">
+        <!-- React application will be rendered here -->
+    </div>
+
+    <!-- Load authentication.js first to ensure Firebase is initialized and globally available -->
+    <script src="clear-console.js"></script>
+    <script type="module" src="authentication.js"></script> 
+    <!-- Then load the main React component for this page as a module -->
+    <script type="module" src="admin-register.js"></script>
+    <script>
+        // Function to load the header (if needed, otherwise you can remove it)
+        async function loadHeader() {
+            try {
+                const response = await fetch('header.html');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const headerHtml = await response.text();
+                document.getElementById('header-placeholder').innerHTML = headerHtml;
+            } catch (error) {
+                console.error("Error loading header:", error);
+                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Error loading header.</div>';
+            }
+        }
+
+        // This script runs after DOM is loaded and all scripts, including admin-register.js
+        window.onload = function() {
+            // Wait for global authentication to be ready
+            const renderApp = () => {
+                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                    console.error("Error: React or ReactDOM are not loaded. Check script order.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error loading application. Please try again later.</div>';
+                    return;
+                }
+                if (typeof App === 'undefined') {
+                    console.error("Error: App component is not defined. Check admin-register.js.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error loading application component.</div>';
+                    return;
+                }
+                if (!window.isGlobalAuthReady) {
+                    console.log("Waiting for global authentication to be ready...");
+                    setTimeout(renderApp, 100); // Retry after 100ms
+                    return;
+                }
+
+                // If both React components and global auth are ready, render the App
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(App, null));
+            };
+
+            // Initial call to render the app
+            renderApp();
+        };
+    </script>
+</body>
+</html>

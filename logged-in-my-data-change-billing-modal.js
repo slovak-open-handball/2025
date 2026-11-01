@@ -1,0 +1,604 @@
+// Importy pre Firebase funkcie
+import { doc, getFirestore, updateDoc, collection, addDoc, serverTimestamp, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const { useState, useEffect, useRef } = React;
+
+/**
+ * Modálny komponent pre zmenu fakturačných údajov.
+ */
+export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }) => {
+    // Ak je rola používateľa 'admin' alebo 'hall', nezobrazíme modál.
+    if (userProfileData?.role === 'admin' || userProfileData?.role === 'hall' || userProfileData?.role === 'referee' || userProfileData?.role === 'volunteer') {
+        return null;
+    }
+    
+    const db = window.db;
+
+    // Stavy pre formulár, inicializované ako prázdne
+    const [clubName, setClubName] = useState('');
+    const [street, setStreet] = useState('');
+    const [houseNumber, setHouseNumber] = useState('');
+    const [city, setCity] = useState('');
+    const [postalCode, setPostalCode] = useState('');
+    const [country, setCountry] = useState('');
+    const [ico, setIco] = useState('');
+    const [dic, setDic] = useState('');
+    const [icDph, setIcDph] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    // Ref pre uloženie pôvodných hodnôt pre porovnanie
+    const originalDataRef = useRef({});
+    // Ref pre sledovanie, či ide o počiatočné načítanie formulára
+    const isInitialLoad = useRef(true);
+
+    // Načítanie počiatočných hodnôt z `userProfileData` do ref a vyčistenie formulára
+    useEffect(() => {
+        if (show && userProfileData) {
+            // Získame adresu z usersprivate (address)
+            const address = userProfileData.address || {};
+        
+            console.log('ChangeBillingModal - Načítavam dáta:', {
+                address: address,
+                billing: userProfileData.billing,
+                userProfileData: userProfileData
+            });
+        
+            // Uložíme pôvodné dáta do ref pre neskoršie porovnanie
+            originalDataRef.current = {
+                clubName: userProfileData.billing?.clubName || '',
+                street: address.street || '',
+                houseNumber: address.houseNumber || '',
+                city: address.city || '',
+                postalCode: address.postalCode || '',
+                country: address.country || '',
+                ico: userProfileData.billing?.ico || '',
+                dic: userProfileData.billing?.dic || '',
+                icDph: userProfileData.billing?.icDph || ''
+            };
+        
+            // NAČÍTAME HODNOTY DO FORMULÁRA
+            setClubName(userProfileData.billing?.clubName || '');
+            setStreet(address.street || '');
+            setHouseNumber(address.houseNumber || '');
+            setCity(address.city || '');
+            setPostalCode(address.postalCode || '');
+            setCountry(address.country || '');
+            setIco(userProfileData.billing?.ico || '');
+            setDic(userProfileData.billing?.dic || '');
+            setIcDph(userProfileData.billing?.icDph || '');
+            setError(null);
+        
+            isInitialLoad.current = true;
+        }
+    }, [show, userProfileData]);
+
+    // Funkcia na normalizáciu hodnôt pre bezpečné porovnanie,
+    // ošetruje undefined/null a biele znaky.
+    const getNormalizedValue = (value) => {
+        return String(value || '').replace(/\s/g, '');
+    };
+
+    // Kontrola, či sa zmenil formulár
+    const isFormChanged = () => {
+        // Ak je to počiatočné načítanie modalu, neboli vykonané žiadne zmeny.
+        if (isInitialLoad.current) {
+            return false;
+        }
+        
+        const originalData = originalDataRef.current;
+        
+        // Ak ešte nie sú načítané pôvodné dáta, nedá sa porovnávať.
+        if (!originalData.clubName && !originalData.street && !originalData.houseNumber && !originalData.city && !originalData.postalCode && !originalData.country && !originalData.ico && !originalData.dic && !originalData.icDph) {
+            return false;
+        }
+
+        return (
+            getNormalizedValue(clubName) !== getNormalizedValue(originalData.clubName) ||
+            getNormalizedValue(street) !== getNormalizedValue(originalData.street) ||
+            getNormalizedValue(houseNumber) !== getNormalizedValue(originalData.houseNumber) ||
+            getNormalizedValue(city) !== getNormalizedValue(originalData.city) ||
+            getNormalizedValue(postalCode) !== getNormalizedValue(originalData.postalCode) ||
+            getNormalizedValue(country) !== getNormalizedValue(originalData.country) ||
+            getNormalizedValue(ico) !== getNormalizedValue(originalData.ico) ||
+            getNormalizedValue(dic) !== getNormalizedValue(originalData.dic) ||
+            getNormalizedValue(icDph) !== getNormalizedValue(originalData.icDph)
+        );
+    };
+
+    // OPRAVENÁ: Pomocná funkcia na vytvorenie objektu pre updateDoc
+    // Teraz vracia objekt s dotovou notáciou pre deleteField()
+    const createUpdateObject = (data, originalData, prefix) => {
+        const updateObj = {};
+        
+        for (const [key, value] of Object.entries(data)) {
+            const originalValue = originalData[key] || '';
+            const newValue = value || '';
+            
+            // Ak sa hodnota zmenila
+            if (getNormalizedValue(newValue) !== getNormalizedValue(originalValue)) {
+                const path = prefix ? `${prefix}.${key}` : key;
+                if (newValue === '') {
+                    // Ak je nová hodnota prázdna, použijeme deleteField() na odstránenie z databázy
+                    updateObj[path] = deleteField();
+                } else {
+                    updateObj[path] = newValue;
+                }
+            }
+        }
+        
+        return updateObj;
+    };
+
+    const handleUpdateBilling = async (event) => {
+        event.preventDefault();
+        setLoading(true);
+        setError(null);
+    
+        const user = window.auth.currentUser;
+        if (!user) {
+            window.showGlobalNotification('Používateľ nie je prihlásený.', 'error');
+            setLoading(false);
+            return;
+        }
+    
+        if (!isFormChanged()) {
+            window.showGlobalNotification('Žiadne zmeny na uloženie.', 'info');
+            setLoading(false);
+            onClose();
+            return;
+        }
+    
+        // Validácia IČ DPH pred odoslaním - ak nie je prázdne
+        if (icDph && !/^[A-Z]{2}\d+$/.test(icDph)) {
+            setError('IČ DPH musí začínať dvoma veľkými písmenami a obsahovať iba číslice.');
+            setLoading(false);
+            return;
+        }
+        
+        try {
+            // Normalizujeme PSČ (odstránime medzery)
+            const normalizedPostalCode = postalCode.replace(/\s/g, '');
+            
+            // Pôvodné dáta pre porovnanie
+            const originalData = originalDataRef.current;
+            
+            // ----- PRÍPRAVA DÁT PRE KOLEKCIU 'users' (BILLING) -----
+            const billingData = {
+                clubName: clubName,
+                ico: ico,
+                dic: dic,
+                icDph: icDph
+            };
+            
+            // Vytvoríme update objekt pre billing s prefixom 'billing'
+            // Prázdne polia sa odstránia pomocou deleteField() s dotovou notáciou
+            const userUpdate = createUpdateObject(billingData, {
+                clubName: originalData.clubName,
+                ico: originalData.ico,
+                dic: originalData.dic,
+                icDph: originalData.icDph
+            }, 'billing');
+            
+            // ----- PRÍPRAVA DÁT PRE KOLEKCIU 'usersprivate' (ADRESA) -----
+            const addressData = {
+                street: street,
+                houseNumber: houseNumber,
+                city: city,
+                postalCode: normalizedPostalCode,
+                country: country
+            };
+            
+            // Vytvoríme update objekt pre adresu s prefixom 'address'
+            // Prázdne polia sa odstránia pomocou deleteField() s dotovou notáciou
+            const privateUpdate = createUpdateObject(addressData, {
+                street: originalData.street,
+                houseNumber: originalData.houseNumber,
+                city: originalData.city,
+                postalCode: originalData.postalCode,
+                country: originalData.country
+            }, 'address');
+            
+            // ----- ZMENA: ZISTÍME, ČI NAOZAJ DOŠLO K ZMENÁM -----
+            if (Object.keys(userUpdate).length === 0 && Object.keys(privateUpdate).length === 0) {
+                window.showGlobalNotification('Žiadne zmeny na uloženie.', 'info');
+                setLoading(false);
+                onClose();
+                return;
+            }
+            
+            // ----- GENEROVANIE NOTIFIKÁCIÍ -----
+            const changeMessages = [];
+            const fieldNames = {
+                'clubName': 'Názov klubu',
+                'ico': 'IČO',
+                'dic': 'DIČ',
+                'icDph': 'IČ DPH',
+                'street': 'Ulica',
+                'houseNumber': 'Číslo domu',
+                'city': 'Mesto',
+                'postalCode': 'PSČ',
+                'country': 'Krajina',
+            };
+
+            // Spracujeme zmeny v billing
+            for (const [key, value] of Object.entries(billingData)) {
+                const originalValue = originalData[key] || '';
+                const newValue = value || '';
+                
+                if (getNormalizedValue(newValue) !== getNormalizedValue(originalValue)) {
+                    const fieldName = fieldNames[key] || key;
+                    const oldVal = originalValue || 'prázdne';
+                    const newVal = newValue || 'prázdne';
+                    changeMessages.push(`Zmena ${fieldName}: z '${oldVal}' na '${newVal}'`);
+                }
+            }
+
+            // Spracujeme zmeny v adrese
+            for (const [key, value] of Object.entries(addressData)) {
+                const originalValue = originalData[key] || '';
+                const newValue = value || '';
+                
+                if (getNormalizedValue(newValue) !== getNormalizedValue(originalValue)) {
+                    const fieldName = fieldNames[key] || key;
+                    const oldVal = originalValue || 'prázdne';
+                    const newVal = newValue || 'prázdne';
+                    changeMessages.push(`Zmena ${fieldName}: z '${oldVal}' na '${newVal}'`);
+                }
+            }
+    
+            // Uložíme zmeny do notifikácií
+            if (changeMessages.length > 0) {
+                await addDoc(collection(db, 'notifications'), {
+                    userEmail: user.email,
+                    changes: changeMessages,
+                    timestamp: serverTimestamp(),
+                });
+            }
+            
+            // ----- AKTUALIZÁCIA KOLEKCIE 'users' (BILLING) -----
+            if (Object.keys(userUpdate).length > 0) {
+                await updateDoc(doc(db, "users", user.uid), userUpdate);
+            }
+            
+            // ----- AKTUALIZÁCIA KOLEKCIE 'usersprivate' (ADRESA) -----
+            if (Object.keys(privateUpdate).length > 0) {
+                await updateDoc(doc(db, "usersprivate", user.uid), privateUpdate);
+            }
+            
+            window.showGlobalNotification('Fakturačné údaje boli aktualizované!', 'success');
+            onClose();
+    
+        } catch (e) {
+            console.error("Chyba pri aktualizácii fakturačných údajov:", e);
+            setError('Nepodarilo sa aktualizovať fakturačné údaje. Skúste to prosím neskôr.');
+            window.showGlobalNotification('Nepodarilo sa aktualizovať fakturačné údaje. Skúste to prosím neskôr.', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Funkcia na formátovanie PSČ do formátu "XXX XX"
+    const formatPostalCodeDisplay = (code) => {
+        if (!code) {
+            return '';
+        }
+        const sanitized = code.replace(/\s/g, '').replace(/[^0-9]/g, '');
+        if (sanitized.length > 3) {
+            return sanitized.substring(0, 3) + ' ' + sanitized.substring(3, 5);
+        }
+        return sanitized;
+    };
+
+    // Nový handler, ktorý zruší počiatočný stav načítania
+    const handleValueChange = (setter, value) => {
+        isInitialLoad.current = false;
+        setter(value);
+    };
+
+    // Funkcia pre formátovanie PSČ (pre input)
+    const handlePostalCodeChange = (e) => {
+        isInitialLoad.current = false;
+        const input = e.target.value.replace(/\s/g, ''); // Odstránime medzery
+        const sanitized = input.replace(/[^0-9]/g, ''); // Ponecháme len číslice
+        
+        let formatted = '';
+        if (sanitized.length > 3) {
+            formatted = sanitized.substring(0, 3) + ' ' + sanitized.substring(3, 5);
+        } else {
+            formatted = sanitized;
+        }
+
+        setPostalCode(formatted);
+    };
+
+    // Funkcia pre formátovanie IČ DPH počas zadávania
+    const handleIcDphChange = (e) => {
+        isInitialLoad.current = false;
+        const input = e.target.value;
+        const sanitized = input.replace(/[^a-zA-Z0-9]/g, ''); // Odstránime všetko okrem písmen a číslic
+        let formatted = '';
+
+        // Prvé dva znaky musia byť písmená, prevedieme ich na veľké
+        const letters = sanitized.substring(0, 2).toUpperCase().replace(/[^A-Z]/g, '');
+        // Zvyšné znaky musia byť číslice
+        const digits = sanitized.substring(2).replace(/[^0-9]/g, '');
+
+        formatted = letters + digits;
+
+        setIcDph(formatted);
+    };
+
+    // Handler na zatvorenie modalu s kontrolou zmien
+    const handleCloseWithCheck = () => {
+        // Ak boli vykonané zmeny, najskôr zatvoríme modal, potom zobrazíme notifikáciu
+        if (isFormChanged()) {
+            onClose(); // Zatvorenie modalu
+            // Zobrazíme notifikáciu s krátkym oneskorením, aby sa modal stihol zatvoriť
+            setTimeout(() => {
+                window.showGlobalNotification('Fakturačné údaje neboli aktualizované!', 'error');
+            }, 50); 
+        } else {
+            // Ak sa žiadne zmeny neuskutočnili, modal sa zatvorí bez upozornenia
+            onClose();
+        }
+    };
+    
+    // Nadpis modálneho okna
+    const ModalHeader = React.createElement(
+        'div',
+        { className: 'flex justify-between items-center px-6 py-4 border-b rounded-t-xl sticky top-0 z-10', style: { backgroundColor: roleColor } },
+        React.createElement('h3', { className: 'text-2xl font-bold text-white' }, 'Upraviť fakturačné údaje'),
+        React.createElement(
+            'button',
+            {
+                onClick: handleCloseWithCheck,
+                className: 'text-white hover:text-gray-200'
+            },
+            React.createElement('svg', { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M6 18L18 6M6 6l12 12' })
+            )
+        )
+    );
+
+    // Tlačidlo na uloženie zmien
+    const isButtonEnabled = isFormChanged();
+    const buttonStyle = {
+        backgroundColor: isButtonEnabled ? roleColor : 'white',
+        color: isButtonEnabled ? 'white' : roleColor,
+        border: isButtonEnabled ? 'none' : `2px solid ${roleColor}`,
+        cursor: isButtonEnabled && !loading ? 'pointer' : 'not-allowed',
+        boxShadow: isButtonEnabled ? '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' : 'none',
+    };
+
+    const ModalContent = React.createElement(
+        'div',
+        { className: 'p-6 h-full overflow-y-auto' },
+        error && React.createElement(
+            'div',
+            { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
+            error
+        ),
+        React.createElement(
+            'form',
+            {
+                onSubmit: handleUpdateBilling
+            },
+            React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement(
+                    'label',
+                    { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'clubName' },
+                    'Oficiálny názov klubu'
+                ),
+                React.createElement('input', {
+                    type: 'text',
+                    id: 'clubName',
+                    value: clubName,
+                    onChange: (e) => handleValueChange(setClubName, e.target.value),
+                    placeholder: userProfileData.billing?.clubName || '-',
+                    className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                    style: { borderColor: roleColor, boxShadow: 'none' }
+                })
+            ),
+            React.createElement(
+                'div',
+                { className: 'flex mb-4 space-x-4' },
+                React.createElement(
+                    'div',
+                    { className: 'w-2/3' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'street' },
+                        'Ulica'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'street',
+                        value: street,
+                        onChange: (e) => handleValueChange(setStreet, e.target.value),
+                        placeholder: userProfileData.address?.street || '-',
+                        className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                        style: { borderColor: roleColor, boxShadow: 'none' }
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'w-1/3' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'houseNumber' },
+                        'Číslo domu'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'houseNumber',
+                        value: houseNumber,
+                        onChange: (e) => handleValueChange(setHouseNumber, e.target.value),
+                        placeholder: userProfileData.address?.houseNumber || '-',
+                        className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                        style: { borderColor: roleColor, boxShadow: 'none' }
+                    })
+                )
+            ),
+            React.createElement(
+                'div',
+                { className: 'flex mb-4 space-x-4' },
+                React.createElement(
+                    'div',
+                    { className: 'w-2/3' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'city' },
+                        'Mesto'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'city',
+                        value: city,
+                        onChange: (e) => handleValueChange(setCity, e.target.value),
+                        placeholder: userProfileData.address?.city || '-',
+                        className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                        style: { borderColor: roleColor, boxShadow: 'none' }
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'w-1/3' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'postalCode' },
+                        'PSČ'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'postalCode',
+                        value: postalCode,
+                        onChange: handlePostalCodeChange,
+                        placeholder: userProfileData.address?.postalCode
+                            ? formatPostalCodeDisplay(userProfileData.address.postalCode)
+                            : '-',
+                        className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                        style: { borderColor: roleColor, boxShadow: 'none' }
+                    })
+                )
+            ),
+            React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement(
+                    'label',
+                    { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'country' },
+                    'Krajina'
+                ),
+                React.createElement('input', {
+                    type: 'text',
+                    id: 'country',
+                    value: country,
+                    onChange: (e) => handleValueChange(setCountry, e.target.value),
+                    placeholder: userProfileData.address?.country || '-',
+                    className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                    style: { borderColor: roleColor, boxShadow: 'none' }
+                })
+            ),
+            React.createElement(
+                'div',
+                { className: 'flex mb-4 space-x-4' },
+                // IČO
+                React.createElement(
+                    'div',
+                    { className: 'w-1/3' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'ico' },
+                        'IČO'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'ico',
+                        value: ico,
+                        onChange: (e) => handleValueChange(setIco, e.target.value.replace(/[^0-9]/g, '')),
+                        placeholder: userProfileData.billing?.ico || '-',
+                        className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                        style: { borderColor: roleColor, boxShadow: 'none' }
+                    })
+                ),
+                // DIČ
+                React.createElement(
+                    'div',
+                    { className: 'w-1/3' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'dic' },
+                        'DIČ'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'dic',
+                        value: dic,
+                        onChange: (e) => handleValueChange(setDic, e.target.value.replace(/[^0-9]/g, '')),
+                        placeholder: userProfileData.billing?.dic || '-',
+                        className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                        style: { borderColor: roleColor, boxShadow: 'none' }
+                    })
+                ),
+                // IČ DPH
+                React.createElement(
+                    'div',
+                    { className: 'w-1/3' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'icDph' },
+                        'IČ DPH'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'icDph',
+                        value: icDph,
+                        onChange: handleIcDphChange,
+                        placeholder: userProfileData.billing?.icDph || '-',
+                        className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                        style: { borderColor: roleColor, boxShadow: 'none' }
+                    })
+                )
+            ),
+            React.createElement(
+                'div',
+                { className: 'flex justify-end mt-6' },
+                React.createElement(
+                    'button',
+                    {
+                        type: 'submit',
+                        className: `px-8 py-3 rounded-full font-bold text-lg transition-all duration-300 ${isButtonEnabled ? 'hover:scale-105' : 'cursor-not-allowed'} focus:outline-none`,
+                        disabled: !isButtonEnabled || loading,
+                        style: buttonStyle
+                    },
+                    loading ? 'Ukladam...' : 'Uložiť zmeny'
+                )
+            )
+        )
+    );
+
+    const modal = show ? React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[10000] p-4',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) {
+                    handleCloseWithCheck();
+                }
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-xl w-full max-w-lg mx-auto flex flex-col max-h-[90vh]' },
+            ModalHeader,
+            React.createElement('div', { className: 'flex-grow overflow-y-auto' },
+                ModalContent
+            )
+        )
+    ) : null;
+
+    return ReactDOM.createPortal(modal, document.body);
+};
