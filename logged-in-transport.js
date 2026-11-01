@@ -5369,51 +5369,59 @@ const TransportApp = ({ userProfileData }) => {
                     return total > 0 ? total : React.createElement('span', { className: 'text-gray-400' }, '—');
                 })()
             ),
-            // 8. trvanie v min (read-only, z travelTimes)
+            // 8. trvanie v min (read-only, VYPOČÍTANÉ zo zobrazených časov Od / Do)
+            //    Min = timeTo − timeFrom (s prechodom cez polnoc)
             //    Ak je timeFrom > timeTo → zobraz "chyba" (červené)
-            //    Inak zobraz travelMinutes (rovnaká farba ako v boxe "Peši" – #b45309)
-            //    alebo "—" (sivé, ak trvanie nie je nastavené)
+            //    Ak chýba čas Od alebo Do → zobraz "—" (sivé)
             React.createElement('td', {
                 className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold',
                 style: {
                     color: (() => {
-                        // Skontroluj, či timeFrom > timeTo
                         const timeRe = /^\d{1,2}:\d{2}$/;
-                        if (row.timeFrom && row.timeTo &&
-                            timeRe.test(row.timeFrom) && timeRe.test(row.timeTo)) {
-                            const [fh, fm] = row.timeFrom.split(':').map(Number);
-                            const [th, tm] = row.timeTo.split(':').map(Number);
-                            const fromMin = fh * 60 + fm;
-                            const toMin = th * 60 + tm;
-                            if (fromMin > toMin) return '#dc2626'; // červená
+                        if (!row.timeFrom || !row.timeTo ||
+                            !timeRe.test(row.timeFrom) || !timeRe.test(row.timeTo)) {
+                            return '#9ca3af';
                         }
-                        return travelMinutes != null ? '#b45309' : '#9ca3af';
+                        const [fh, fm] = row.timeFrom.split(':').map(Number);
+                        const [th, tm] = row.timeTo.split(':').map(Number);
+                        const fromMin = fh * 60 + fm;
+                        const toMin = th * 60 + tm;
+                        if (fromMin > toMin) return '#dc2626'; // červená
+                        return '#b45309';
                     })(),
                 },
                 title: (() => {
                     const timeRe = /^\d{1,2}:\d{2}$/;
-                    if (row.timeFrom && row.timeTo &&
-                        timeRe.test(row.timeFrom) && timeRe.test(row.timeTo)) {
-                        const [fh, fm] = row.timeFrom.split(':').map(Number);
-                        const [th, tm] = row.timeTo.split(':').map(Number);
-                        if (fh * 60 + fm > th * 60 + tm) {
-                            return `Chyba: čas od (${row.timeFrom}) je neskorší ako čas do (${row.timeTo})`;
-                        }
+                    if (!row.timeFrom || !row.timeTo ||
+                        !timeRe.test(row.timeFrom) || !timeRe.test(row.timeTo)) {
+                        return 'Trvanie sa počíta zo zobrazených časov Od a Do – jeden z nich chýba';
                     }
-                    return travelMinutes != null ? 'Trvanie z Nastavení' : 'Trvanie nie je nastavené';
-                })(),
-            }, (() => {
-                // Skontroluj, či timeFrom > timeTo
-                const timeRe = /^\d{1,2}:\d{2}$/;
-                if (row.timeFrom && row.timeTo &&
-                    timeRe.test(row.timeFrom) && timeRe.test(row.timeTo)) {
                     const [fh, fm] = row.timeFrom.split(':').map(Number);
                     const [th, tm] = row.timeTo.split(':').map(Number);
                     if (fh * 60 + fm > th * 60 + tm) {
-                        return 'chyba';
+                        return `Chyba: čas od (${row.timeFrom}) je neskorší ako čas do (${row.timeTo})`;
                     }
+                    return `Trvanie vypočítané zo zobrazených časov: ${row.timeFrom} → ${row.timeTo}`;
+                })(),
+            }, (() => {
+                const timeRe = /^\d{1,2}:\d{2}$/;
+                // Ak chýba čas Od alebo Do → "—"
+                if (!row.timeFrom || !row.timeTo ||
+                    !timeRe.test(row.timeFrom) || !timeRe.test(row.timeTo)) {
+                    return '—';
                 }
-                return travelMinutes != null ? travelMinutes : '—';
+                const [fh, fm] = row.timeFrom.split(':').map(Number);
+                const [th, tm] = row.timeTo.split(':').map(Number);
+                const fromMin = fh * 60 + fm;
+                const toMin = th * 60 + tm;
+                // Ak je čas Od > čas Do → "chyba"
+                if (fromMin > toMin) {
+                    return 'chyba';
+                }
+                // Inak vráť rozdiel v minútach (s prechodom cez polnoc)
+                let diff = toMin - fromMin;
+                if (diff < 0) diff += 24 * 60;
+                return diff;
             })()),
             // 9. mazanie riadku
             React.createElement('td', { className: 'border border-gray-300 p-1 text-center' },
