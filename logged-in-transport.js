@@ -9253,7 +9253,7 @@ const TransportApp = ({ userProfileData }) => {
                                     let displayTitle = null;
     
                                     if (totalMembers != null) {
-                                        valueText = `${totalMembers} členov`;
+                                        valueText = `${totalMembers}`;
                                     } else {
                                         const avg = getCategoryAverageForTransfer(t.category);
                                         if (avg != null) {
@@ -9263,7 +9263,7 @@ const TransportApp = ({ userProfileData }) => {
                                     }
     
                                     const teamLabel = t.teamName || '(neznámy tím)';
-                                    const fullText = valueText ? `${teamLabel} ● ${valueText}` : teamLabel;
+                                    const fullText = valueText ? `${teamLabel} ● ${valueText} členov` : teamLabel;
     
                                     return React.createElement(
                                         'span',
