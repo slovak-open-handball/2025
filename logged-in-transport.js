@@ -451,12 +451,8 @@ const TransportApp = ({ userProfileData }) => {
             });
         }
     
-        // Zoraď podľa `startTs`, potom podľa `idx` (pre segmenty s rovnakým startTs)
-        parentSegments.sort((a, b) => {
-            if (a.range.startTs !== b.range.startTs) return a.range.startTs - b.range.startTs;
-            return (a.idx || 0) - (b.idx || 0);
-        });
-    
+        parentSegments.sort((a, b) => (a.idx || 0) - (b.idx || 0));
+
         // ============================================================
         // Nájdi koncový čas PREDCHÁDZAJÚCEHO vyriešeného segmentu
         // ============================================================
@@ -466,11 +462,35 @@ const TransportApp = ({ userProfileData }) => {
                 normalizePlaceName(seg.fromLocation) === currentFromNorm &&
                 normalizePlaceName(seg.toLocation) === currentToNorm;
             if (isCurrent) break;
-    
+
             if (seg.isResolved) {
                 if (seg.range.endTs != null) {
                     if (prevResolvedEndTs == null || seg.range.endTs > prevResolvedEndTs) {
                         prevResolvedEndTs = seg.range.endTs;
+                    }
+                }
+            }
+        }
+
+        // ============================================================
+        // Nájdi začiatočný čas NASLEDUJÚCEHO vyriešeného segmentu
+        // ============================================================
+        let nextResolvedStartTs = null;
+        let foundCurrent = false;
+        for (const seg of parentSegments) {
+            const isCurrent =
+                normalizePlaceName(seg.fromLocation) === currentFromNorm &&
+                normalizePlaceName(seg.toLocation) === currentToNorm;
+            if (isCurrent) {
+                foundCurrent = true;
+                continue;
+            }
+            if (!foundCurrent) continue;
+
+            if (seg.isResolved) {
+                if (seg.range.startTs != null) {
+                    if (nextResolvedStartTs == null || seg.range.startTs < nextResolvedStartTs) {
+                        nextResolvedStartTs = seg.range.startTs;
                     }
                 }
             }
