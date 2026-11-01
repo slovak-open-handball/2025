@@ -4749,7 +4749,12 @@ const TransportApp = ({ userProfileData }) => {
         const currentRow = allRows[currentIdx];
         (currentRow.teamsIn || []).forEach((t) => inBus.add(String(t)));
 
-        return [...inBus];
+        return [...inBus].filter((teamKey) => {
+            if (!selectedCategoryFilter) return true;
+            const parts = String(teamKey).split('|');
+            const cat = cleanCategory(parts[1] || '');
+            return cat === cleanCategory(selectedCategoryFilter);
+        });
     };
 
     // ============================================================
@@ -4865,6 +4870,17 @@ const TransportApp = ({ userProfileData }) => {
     
         const inputCls = 'w-full px-1 py-1 text-sm border border-gray-300 rounded text-black focus:outline-none focus:ring-2 focus:ring-green-500';
         const selectCls = 'w-full px-1 py-1 text-sm border border-gray-300 rounded text-black bg-white focus:outline-none focus:ring-2 focus:ring-green-500';
+
+        const filterTeamsByCategory = (teams) => {
+            if (!Array.isArray(teams)) return [];
+            if (!selectedCategoryFilter) return teams;
+            const targetCat = cleanCategory(selectedCategoryFilter);
+            return teams.filter((teamKey) => {
+                const parts = String(teamKey).split('|');
+                const cat = cleanCategory(parts[1] || '');
+            return cat === targetCat;
+            });    
+        };
     
         // Všetky zastávky pre "Miesto od"
         const stopOptionsFrom = stopsList.map((s) =>
@@ -5256,12 +5272,15 @@ const TransportApp = ({ userProfileData }) => {
             ),
             // 5. tímy nástup (len text vo farbe kategórie, bez pozadia a rámčeka)
             React.createElement('td', { className: 'border border-gray-300 p-1 align-middle whitespace-nowrap' },
-                (row.teamsIn || []).length === 0
-                    ? React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—')
-                    : React.createElement(
+                (() => {
+                    const filteredTeamsIn = filterTeamsByCategory(row.teamsIn);
+                    if (filteredTeamsIn.length === 0) {
+                        return React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—');
+                    }
+                    return React.createElement(
                         'div',
                         { className: 'flex flex-nowrap gap-2 items-center' },
-                        (row.teamsIn || []).map((tn, i) => {
+                        filteredTeamsIn.map((tn, i) => {
                             const parts = String(tn).split('|');
                             const teamName = parts[0] || tn;
                             const teamCategory = parts[1] || '';
@@ -5280,16 +5299,20 @@ const TransportApp = ({ userProfileData }) => {
                                 teamLabel
                             );
                         })
-                    )
+                    );
+                })()
             ),
             // 6. tímy výstup (len text vo farbe kategórie, bez pozadia a rámčeka)
             React.createElement('td', { className: 'border border-gray-300 p-1 align-middle whitespace-nowrap' },
-                (row.teamsOut || []).length === 0
-                    ? React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—')
-                    : React.createElement(
+                (() => {
+                    const filteredTeamsOut = filterTeamsByCategory(row.teamsOut);
+                    if (filteredTeamsOut.length === 0) {
+                        return React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—');
+                    }
+                    return React.createElement(
                         'div',
                         { className: 'flex flex-nowrap gap-2 items-center' },
-                        (row.teamsOut || []).map((tn, i) => {
+                        filteredTeamsOut.map((tn, i) => {
                             const parts = String(tn).split('|');
                             const teamName = parts[0] || tn;
                             const teamCategory = parts[1] || '';
@@ -5308,7 +5331,8 @@ const TransportApp = ({ userProfileData }) => {
                                 teamLabel
                             );
                         })
-                    )
+                    );
+                })()
             ),
             // 7. počet (AUTOMATICKY – súčet členov tímov v autobuse, s fallbackom na priemer kategórie)
             React.createElement('td', {
@@ -9564,9 +9588,11 @@ const TransportApp = ({ userProfileData }) => {
         //    isWalking: true → rozlož na walking segmenty v pamäti
         // ============================================================
         const walkingTransfers = [];
-    
+
         savedTransfers.forEach((t) => {
             if (selectedDayKey && t.dayKey !== selectedDayKey) return;
+            // === NOVÉ: Filter podľa kategórie ===
+            if (selectedCategoryFilter && cleanCategory(t.category || '') !== cleanCategory(selectedCategoryFilter)) return;
     
             const stops = Array.isArray(t.intermediateStops) ? t.intermediateStops : [];
             const segments = Array.isArray(t.segments) ? t.segments : [];
@@ -10214,11 +10240,11 @@ const TransportApp = ({ userProfileData }) => {
                     {
                         value: selectedBusId,
                         onChange: (e) => setSelectedBusId(e.target.value),
-                        disabled: filteredBuses.length === 0,
+                        disabled: buses.length === 0,
                         className: 'px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
                     },
                     React.createElement('option', { value: '' }, 'Všetky autobusy'),
-                    filteredBuses.map((bus) =>
+                    buses.map((bus) =>
                         React.createElement(
                             'option',
                             { key: bus.id, value: bus.id },
