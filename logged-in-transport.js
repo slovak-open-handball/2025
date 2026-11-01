@@ -9897,7 +9897,7 @@ const TransportApp = ({ userProfileData }) => {
                                             React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '200px' } }, 'Miesto od'),
                                             React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '200px' } }, 'Miesto do'),
                                             React.createElement('th', { className: 'border border-gray-300 px-2 py-1' }, 'Tím'),
-                                            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '80px' } }, 'Zvyšok'),
+                                            React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '80px' } }, 'Min'),
                                             React.createElement('th', { className: 'border border-gray-300 px-2 py-1', style: { width: '36px' } }, '')
                                         )
                                     );
