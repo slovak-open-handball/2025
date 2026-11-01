@@ -11645,13 +11645,18 @@ const TransportApp = ({ userProfileData }) => {
                         ),
                         (() => {
                             // ============================================================
-                            // NOVÉ: Zisti, či má byť tlačidlo zablokované
+                            // Zisti, či má byť tlačidlo zablokované.
+                            //
+                            // POZOR: Zámerne TU NIE JE kontrola
+                            // `!arePreviousSegmentsResolved(currentTransfer)`.
+                            // Tlačidlo „Priradiť" sa nemá blokovať kvôli
+                            // nevyriešeným predchádzajúcim segmentom – tie
+                            // sa dajú priradiť neskôr.
                             // ============================================================
                             const isBlocked =
                                 assignBusSaving ||
                                 !assignBusSelectedKey ||
-                                assignBusMatches.length === 0 ||
-                                !arePreviousSegmentsResolved(currentTransfer);
+                                assignBusMatches.length === 0;
                         
                             const baseCls =
                                 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2';
@@ -11669,7 +11674,7 @@ const TransportApp = ({ userProfileData }) => {
                                     onClick: assignTransferToBus,
                                     disabled: isBlocked,
                                     title: isBlocked
-                                        ? 'Tlačidlo je neaktívne – najprv vyberte autobus a vyriešte predchádzajúce segmenty.'
+                                        ? 'Tlačidlo je neaktívne – najprv vyberte autobus.'
                                         : undefined,
                                     className: `${baseCls} ${isBlocked ? blockedCls : enabledCls}`,
                                 },
