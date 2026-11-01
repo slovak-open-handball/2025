@@ -10843,7 +10843,7 @@ const TransportApp = ({ userProfileData }) => {
                 ),
                 // Info o presune – rovnaký box ako v "Priradiť presun k autobusu"
                 (() => {
-                    const tr = transferActionModal.transfer;
+                    const tr = assignBusTransfer;
                 
                     let displayWhen = null;
                 
@@ -10961,7 +10961,7 @@ const TransportApp = ({ userProfileData }) => {
                         {
                             type: 'button',
                             onClick: () => {
-                                const t = transferActionModal.transfer;
+                                const t = assignBusTransfer;
                                 
                                 // ============================================================
                                 // NOVÉ: Ak je to segment, pracuj s parent záznamom.
@@ -11003,8 +11003,8 @@ const TransportApp = ({ userProfileData }) => {
                         {
                             type: 'button',
                             onClick: () => {
-                                const transferToAssign = transferActionModal.transfer;
-                                const matches = findMatchingBusRows(transferActionModal.transfer);
+                                const transferToAssign = assignBusTransfer;
+                                const matches = findMatchingBusRows(assignBusTransfer);
                                 setAssignBusMatches(matches);
                                 setAssignBusSelectedKey(
                                     matches.length > 0
@@ -11030,7 +11030,7 @@ const TransportApp = ({ userProfileData }) => {
                         'button',
                         {
                             type: 'button',
-                            onClick: () => setTransferAsWalking(transferActionModal.transfer),
+                            onClick: () => setTransferAsWalking(assignBusTransfer),
                             className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors flex items-center gap-3'
                         },
                         React.createElement('i', { className: 'fa-solid fa-person-walking text-emerald-600 text-xl w-6 text-center' }),
@@ -11101,7 +11101,7 @@ const TransportApp = ({ userProfileData }) => {
                 // ============================================================
                 // VAROVANIE – presunuté DOVNÚTRA modálneho okna (pod hlavičku)
                 // ============================================================
-                !arePreviousSegmentsResolved(transferActionModal.transfer) &&
+                !arePreviousSegmentsResolved(assignBusTransfer) &&
                 React.createElement(
                     'div',
                     { className: 'mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm' },
@@ -11121,7 +11121,7 @@ const TransportApp = ({ userProfileData }) => {
                 // INFO O PRESUNE – rovnaká farba výplne ako box vo vygenerovaných presunoch
                 // ============================================================
                 (() => {
-                    const tr = transferActionModal.transfer;
+                    const tr = assignBusTransfer;
                 
                     let displayWhen = null;
                 
@@ -11233,7 +11233,7 @@ const TransportApp = ({ userProfileData }) => {
                 // DYNAMICKÝ VÝPOČET ZOZNAMU AUTOBUSOV
                 // ============================================================
                 (() => {
-                    const currentMatches = findMatchingBusRows(transferActionModal.transfer);
+                    const currentMatches = findMatchingBusRows(assignBusTransfer);
 
                     if (currentMatches.length === 0) {
                         return React.createElement(
@@ -11277,7 +11277,7 @@ const TransportApp = ({ userProfileData }) => {
                                 const hasAlighting = !!m.alightingRow;
                                 
                                 // Zisti, či tím už je v tomto buse na tomto segmente
-                                const teamKey = `${transferActionModal.transfer.teamName}|${transferActionModal.transfer.category || ''}`;
+                                const teamKey = `${assignBusTransfer.teamName}|${assignBusTransfer.category || ''}`;
                                 const isAlreadyInBus = 
                                     (m.boardingRow && (m.boardingRow.teamsIn || []).includes(teamKey)) ||
                                     (m.alightingRow && (m.alightingRow.teamsOut || []).includes(teamKey));
@@ -11421,7 +11421,7 @@ const TransportApp = ({ userProfileData }) => {
                         {
                             type: 'button',
                             onClick: assignTransferToBus,
-                            disabled: assignBusSaving || !assignBusSelectedKey || assignBusMatches.length === 0 || !arePreviousSegmentsResolved(transferActionModal.transfer),
+                            disabled: assignBusSaving || !assignBusSelectedKey || assignBusMatches.length === 0 || !arePreviousSegmentsResolved(assignBusTransfer),
                             className: 'px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 transition-colors disabled:opacity-60 flex items-center gap-2'
                         },
                         assignBusSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
