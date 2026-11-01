@@ -11640,16 +11640,7 @@ const TransportApp = ({ userProfileData }) => {
                                                         return React.createElement(
                                                             React.Fragment,
                                                             null,
-                                                            tripDurationMin != null &&
-                                                                React.createElement(
-                                                                    'span',
-                                                                    {
-                                                                        className: 'flex items-center gap-1 text-amber-700',
-                                                                        title: `Dĺžka jazdy: ${tripDurationMin} min (${boardingRow.timeFrom} → ${alightingRow.timeTo})`,
-                                                                    },
-                                                                    React.createElement('i', { className: 'fa-solid fa-clock' }),
-                                                                    `${tripDurationMin} min`
-                                                                ),
+                                                            // 1) Počet členov v autobuse (len ak > 0)
                                                             total > 0 &&
                                                                 React.createElement(
                                                                     'span',
@@ -11659,6 +11650,17 @@ const TransportApp = ({ userProfileData }) => {
                                                                     },
                                                                     React.createElement('i', { className: 'fa-solid fa-users' }),
                                                                     `${total}`
+                                                                ),
+                                                            // 2) Dĺžka jazdy (trvanie) – vždy, ak je vypočítateľná
+                                                            tripDurationMin != null &&
+                                                                React.createElement(
+                                                                    'span',
+                                                                    {
+                                                                        className: 'flex items-center gap-1 text-amber-700',
+                                                                        title: `Dĺžka jazdy: ${tripDurationMin} min (${boardingRow.timeFrom} → ${alightingRow.timeTo})`,
+                                                                    },
+                                                                    React.createElement('i', { className: 'fa-solid fa-clock' }),
+                                                                    `${tripDurationMin} min`
                                                                 )
                                                         );
                                                     })(),
