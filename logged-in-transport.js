@@ -11595,10 +11595,11 @@ const TransportApp = ({ userProfileData }) => {
                                                         // ============================================================
                                                         const computeTripDuration = () => {
                                                             const timeRe = /^\d{1,2}:\d{2}$/;
-                                                            if (!boardingRow?.timeFrom || !alightingRow?.timeTo) return null;
-                                                            if (!timeRe.test(boardingRow.timeFrom) || !timeRe.test(alightingRow.timeTo)) return null;
-                                                            const [bh, bm] = boardingRow.timeFrom.split(':').map(Number);
-                                                            const [ah, am] = alightingRow.timeTo.split(':').map(Number);
+                                                            const boardStr = String(m.boardingTime || '').trim();
+                                                            const alightStr = String(m.alightingTime || '').trim();
+                                                            if (!timeRe.test(boardStr) || !timeRe.test(alightStr)) return null;
+                                                            const [bh, bm] = boardStr.split(':').map(Number);
+                                                            const [ah, am] = alightStr.split(':').map(Number);
                                                             let diff = (ah * 60 + am) - (bh * 60 + bm);
                                                             if (diff < 0) diff += 24 * 60;
                                                             return diff > 0 ? diff : null;
