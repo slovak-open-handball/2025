@@ -10488,7 +10488,7 @@ const TransportApp = ({ userProfileData }) => {
         // ============================================================
         // MODÁLNE OKNO – Úprava vygenerovaného presunu (medzizastávky)
         // ============================================================
-        eeditingTransfer && React.createElement(
+        editingTransfer && React.createElement(
             'div',
             {
                 className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
