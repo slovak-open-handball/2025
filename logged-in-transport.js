@@ -8912,7 +8912,10 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
 
-            const isCurrentSegmentResolved = t._hasRealTime === true;
+            const isCurrentSegmentResolved =
+                t._isAssigned === true ||
+                (t.segments && Array.isArray(t.segments) && t.segments.some((s) => s.startTs != null && s.endTs != null)) ||
+                (t._hasRealTime === true && isSegmentAssigned(t));
             
             // ZAČIATOČNÝ ČAS: predchádzajúci vyriešený alebo pôvodný startTs parenta
             let startTsForDisplay;
@@ -8923,11 +8926,15 @@ const TransportApp = ({ userProfileData }) => {
                     ? prevResolvedEndTs
                     : trRange.startTs;
             }
-            
-            // KONCOVÝ ČAS: nasledujúci vyriešený alebo pôvodný endTs parenta
-            let endTsForDisplay = blockEndTs;
-            if (nextResolvedStartTs != null && nextResolvedStartTs < endTsForDisplay) {
+
+            // KONCOVÝ ČAS: pre nepriradený segment preferuj nasledujúci vyriešený segment
+            let endTsForDisplay;
+            if (nextResolvedStartTs != null) {
                 endTsForDisplay = nextResolvedStartTs;
+            } else if (isCurrentSegmentResolved) {
+                endTsForDisplay = trRange.endTs;
+            } else {
+                endTsForDisplay = blockEndTs;
             }
             
             // Bezpečnostná poistka: endTs musí byť > startTs
