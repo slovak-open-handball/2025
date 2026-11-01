@@ -8568,20 +8568,35 @@ const TransportApp = ({ userProfileData }) => {
                         ? parentEffectiveWhenFallback
                         : null;
 
+                    const parentSegmentForThisIdx = (() => {
+                        if (!Array.isArray(t.segments)) return null;
+                        // Nájdi segment v parent.segments, ktorý zodpovedá aktuálnemu (fromLoc, toLoc)
+                        const segFromNorm = normalizePlaceName(fromLoc);
+                        const segToNorm = normalizePlaceName(toLoc);
+                        return t.segments.find(
+                            (s) => normalizePlaceName(s.from) === segFromNorm
+                                && normalizePlaceName(s.to) === segToNorm
+                        ) || null;
+                    })();
+
+                    const isSegmentWalking =
+                        (parentSegmentForThisIdx && parentSegmentForThisIdx.isWalking === true) ||
+                        t.isWalking === true;
+
                     expandedTransfers.push({
                         ...t,
                         key,
-                        when: displayWhen,
+                        when: whenStr,
                         text,
                         fromLocation: fromLoc,
                         toLocation: toLoc,
                         intermediateStops: [],
                         _parentKey: t.key,
                         _parentRoute: `${t.fromLocation} → ${t.toLocation}`,
-                        _remainingMinutes: null,
-                        _isAssigned: false,
-                        _hasRealTime: displayWhen != null,
-                        isWalking: t.isWalking === true,
+                        _remainingMinutes: remainingMinutes,
+                        _isAssigned: segmentAssigned[i],
+                        _hasRealTime: hasRealTime,
+                        isWalking: isSegmentWalking,
                     });
                 }
                 return;
