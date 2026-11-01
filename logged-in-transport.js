@@ -8913,9 +8913,13 @@ const TransportApp = ({ userProfileData }) => {
             }
             
             // ZAČIATOČNÝ ČAS: predchádzajúci vyriešený alebo pôvodný startTs parenta
-            let startTsForDisplay = trRange.startTs;
-            if (prevResolvedEndTs != null && prevResolvedEndTs > startTsForDisplay) {
-                startTsForDisplay = prevResolvedEndTs;
+            let startTsForDisplay;
+            if (isCurrentSegmentResolved) {
+                startTsForDisplay = trRange.startTs;
+            } else {
+                startTsForDisplay = prevResolvedEndTs != null
+                    ? prevResolvedEndTs
+                    : trRange.startTs;
             }
             
             // KONCOVÝ ČAS: nasledujúci vyriešený alebo pôvodný endTs parenta
