@@ -9056,7 +9056,7 @@ const TransportApp = ({ userProfileData }) => {
                 // Skry len ak je segment SKUTOČNE priradený k busu
                 // (tím v ňom sedí podľa aktuálnych busRows).
                 // ============================================================
-//                if (isSegmentAssigned(t)) return false;
+                if (isSegmentAssigned(t)) return false;
 
                 // Skontroluj, či je parent úplne priradený (všetky segmenty
                 // walking alebo priradené k busu) – v takom prípade ho skry.
