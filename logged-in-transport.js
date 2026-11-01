@@ -5793,24 +5793,62 @@ const TransportApp = ({ userProfileData }) => {
         if (!transfer) return true;
     
         // ============================================================
-        // KĽÚČOVÉ: Definuj teamName / category / dayKey NA ZAČIATKU
-        // (predtým boli definované až nižšie v kóde, ale používame
-        //  ich už pri fallbacku pre `when`)
+        // NOVÉ: Vždy použi AKTUÁLNY parent záznam zo savedTransfers.
+        //
+        // DÔVOD: `transfer` (napr. assignBusTransfer) môže byť zastaraný
+        // snapshot z okamihu otvorenia modálneho okna. Ak sa medzitým
+        // zmenil parent (napr. si označil predchádzajúci segment ako
+        // peši), `transfer.segments` neobsahuje aktuálne `isWalking: true`.
+        //
+        // Preto VŽDY použijeme aktuálny parent z savedTransfersRef.current
+        // a z neho odvodíme `effectiveTransfer` (vrátane aktuálneho
+        // isWalking pre konkrétny segment).
         // ============================================================
-        const teamName = String(transfer.teamName || '').trim();
-        const category = cleanCategory(transfer.category || '');
-        const dayKey = transfer.dayKey || '';
+        const parentKey = transfer._parentKey || transfer.key;
+        const currentParent = (savedTransfersRef.current || []).find(
+            (s) => s.key === parentKey
+        );
+    
+        let effectiveTransfer = transfer;
+        if (currentParent) {
+            if (transfer._parentKey) {
+                // transfer je segment – nájdi ho v aktuálnom parentovi
+                const segIdx = findSegmentIndex(
+                    currentParent.segments || [],
+                    transfer.fromLocation,
+                    transfer.toLocation
+                );
+                const seg = segIdx !== -1 ? currentParent.segments[segIdx] : null;
+                effectiveTransfer = {
+                    ...transfer,
+                    segments: currentParent.segments,
+                    isWalking: seg ? seg.isWalking === true : false,
+                };
+            } else {
+                effectiveTransfer = {
+                    ...transfer,
+                    segments: currentParent.segments,
+                };
+            }
+        }
+    
+        // ============================================================
+        // OD TOHTO MOMENTU POUŽÍVAME LEN `effectiveTransfer` (NIE `transfer`)
+        // ============================================================
+        const teamName = String(effectiveTransfer.teamName || '').trim();
+        const category = cleanCategory(effectiveTransfer.category || '');
+        const dayKey = effectiveTransfer.dayKey || '';
     
         // ============================================================
         // Fallback pre `when` – rovnaká logika ako vo findMatchingBusRows
-        //  1) transfer.when
+        //  1) effectiveTransfer.when
         //  2) reálne časy segmentov
         //  3) `when` z PARENT záznamu
         // ============================================================
-        let effectiveWhen = transfer.when;
+        let effectiveWhen = effectiveTransfer.when;
     
         if (!effectiveWhen || String(effectiveWhen).trim() === '') {
-            const segs = Array.isArray(transfer.segments) ? transfer.segments : [];
+            const segs = Array.isArray(effectiveTransfer.segments) ? effectiveTransfer.segments : [];
             let earliestStart = null;
             let latestEnd = null;
             segs.forEach((s) => {
@@ -5828,7 +5866,6 @@ const TransportApp = ({ userProfileData }) => {
     
         // NOVÉ: fallback z parenta
         if (!effectiveWhen || String(effectiveWhen).trim() === '') {
-            const parentKey = transfer._parentKey || transfer.key;
             if (parentKey) {
                 const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
                 if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
@@ -5849,12 +5886,12 @@ const TransportApp = ({ userProfileData }) => {
     
         const trRange = parseTransferWhenToRange(effectiveWhen);
         if (!trRange) {
-            console.warn('[TRANSPORT][arePreviousSegmentsResolved] Žiadny trRange pre:', { transfer, effectiveWhen });
+            console.warn('[TRANSPORT][arePreviousSegmentsResolved] Žiadny trRange pre:', { transfer: effectiveTransfer, effectiveWhen });
             return true;
         }
     
         // ============================================================
-        // NOVÉ: Rozlož VŠETKY presuny toho istého tímu v ten istý deň
+        // Rozlož VŠETKY presuny toho istého tímu v ten istý deň
         // na segmenty (vrátane tých s intermediateStops), aby sme
         // videli aj predchádzajúce segmenty, ktoré sú súčasťou
         // rovnakého pôvodného presunu.
@@ -5869,7 +5906,7 @@ const TransportApp = ({ userProfileData }) => {
             )
             .forEach((t) => {
                 const stops = Array.isArray(t.intermediateStops) ? t.intermediateStops : [];
-        
+    
                 if (stops.length === 0) {
                     const range = parseTransferWhenToRange(t.when);
                     if (range) {
@@ -5884,7 +5921,7 @@ const TransportApp = ({ userProfileData }) => {
                     }
                     return;
                 }
-        
+    
                 // Rozlož parent s medzizastávkami na segmenty
                 const routeRaw = [t.fromLocation, ...stops, t.toLocation].filter(Boolean);
                 const route = [];
@@ -5894,12 +5931,12 @@ const TransportApp = ({ userProfileData }) => {
                         route.push(loc);
                     }
                 });
-        
+    
                 if (route.length < 2) return;
-        
+    
                 const timeRange = parseTransferWhenToRange(t.when);
                 if (!timeRange) return;
-        
+    
                 const teamKey = `${teamName}|${category}`;
                 const allBusRowsForDay = [];
                 Object.entries(busRows || {}).forEach(([busKey, rows]) => {
@@ -5909,7 +5946,7 @@ const TransportApp = ({ userProfileData }) => {
                         allBusRowsForDay.push(row);
                     });
                 });
-        
+    
                 const matchesTeam = (rowTeams) => {
                     if (!Array.isArray(rowTeams)) return false;
                     return rowTeams.some((tk) => {
@@ -5919,20 +5956,20 @@ const TransportApp = ({ userProfileData }) => {
                         return String(tn).trim() === teamName && cleanCategory(cat) === category;
                     });
                 };
-        
+    
                 for (let i = 0; i < route.length - 1; i++) {
                     const segFrom = normalizePlaceName(route[i]);
                     const segTo = normalizePlaceName(route[i + 1]);
-                
+    
                     let boardingTs = null;
                     let alightingTs = null;
-                
+    
                     allBusRowsForDay.forEach((row) => {
                         const rowFrom = normalizePlaceName(row.placeFrom);
                         const rowTo = normalizePlaceName(row.placeTo);
                         const hasTeamIn = matchesTeam(row.teamsIn);
                         const hasTeamOut = matchesTeam(row.teamsOut);
-                
+    
                         if (hasTeamIn && rowFrom === segFrom && row.timeFrom && boardingTs == null) {
                             const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
                             if (dm) {
@@ -5948,10 +5985,8 @@ const TransportApp = ({ userProfileData }) => {
                             }
                         }
                     });
-                
-                    // ============================================================
-                    // NOVÉ: Zisti isWalking z parent.segments – PRIORITNE
-                    // ============================================================
+    
+                    // Zisti isWalking z parent.segments – PRIORITNE
                     const parentSegForThisIdx = Array.isArray(t.segments)
                         ? t.segments.find((s) =>
                             normalizePlaceName(s.from) === normalizePlaceName(route[i]) &&
@@ -5960,12 +5995,7 @@ const TransportApp = ({ userProfileData }) => {
                         : null;
                     const isWalkingInParent = parentSegForThisIdx && parentSegForThisIdx.isWalking === true;
                     const isSegmentWalking = t.isWalking === true || isWalkingInParent;
-                
-                    // ============================================================
-                    // NOVÉ: Pre peší segment NEPOČÍTAJ range z timeRange
-                    // (aby peší segment "nepokrýval" veľkú časť intervalu).
-                    // Peší segment má trvanie 0 min → startTs = endTs.
-                    // ============================================================
+    
                     let segStartTs, segEndTs;
                     if (isSegmentWalking) {
                         // Peší segment: trvanie 0 min → startTs = endTs
@@ -5976,7 +6006,6 @@ const TransportApp = ({ userProfileData }) => {
                             segStartTs = alightingTs;
                             segEndTs = alightingTs;
                         } else {
-                            // Nemá reálny čas – použi začiatok parenta (alebo null)
                             segStartTs = timeRange.startTs;
                             segEndTs = timeRange.startTs;
                         }
@@ -5995,7 +6024,7 @@ const TransportApp = ({ userProfileData }) => {
                             : timeRange.startTs;
                         segEndTs = timeRange.endTs;
                     }
-                
+    
                     allSegments.push({
                         ...t,
                         key: buildTransferKey(t.category, t.teamName, `${formatTsLocal(segStartTs)} – ${formatTsLocal(segEndTs)}`, `Presun z ${route[i]} do ${route[i + 1]}`),
@@ -6012,26 +6041,26 @@ const TransportApp = ({ userProfileData }) => {
         allSegments.sort((a, b) => a.range.startTs - b.range.startTs);
     
         // ============================================================
-        // OPRAVA: Pre porovnanie aktuálneho segmentu použijeme `from` a `to`.
+        // Pre porovnanie aktuálneho segmentu použijeme `from` a `to`.
         // ============================================================
-        const transferFromNorm = normalizePlaceName(transfer.fromLocation || '');
-        const transferToNorm = normalizePlaceName(transfer.toLocation || '');
+        const transferFromNorm = normalizePlaceName(effectiveTransfer.fromLocation || '');
+        const transferToNorm = normalizePlaceName(effectiveTransfer.toLocation || '');
     
         for (const seg of allSegments) {
             // Preskoč samotný aktuálny transfer (podľa from → to)
             const segFromNorm = normalizePlaceName(seg.fromLocation || '');
             const segToNorm = normalizePlaceName(seg.toLocation || '');
             if (segFromNorm === transferFromNorm && segToNorm === transferToNorm) continue;
-        
+    
             // ============================================================
-            // NOVÉ: Peší segment NIKDY neblokuje priradenie.
+            // Peší segment NIKDY neblokuje priradenie.
             // (Kontrola musí byť PRED kontrolou "prvý segment parenta",
             //  aby sa peší segment, ktorý je prvý v parentovi, tiež preskočil.)
             // ============================================================
             if (seg.isWalking === true) continue;
-        
+    
             // ============================================================
-            // OPRAVA: Ak ide o prvý segment parenta (začína tam, kde parent),
+            // Ak ide o prvý segment parenta (začína tam, kde parent),
             // nemôže mať žiadny predchádzajúci segment. Tým pádom nemôže blokovať priradenie.
             // ============================================================
             if (seg._parentKey) {
@@ -6043,13 +6072,13 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 }
             }
-        
+    
             // Preskoč neskoršie segmenty
             if (seg.range.startTs >= trRange.startTs) continue;
-        
+    
             // Ak je segment priradený (má _isAssigned=true), je vyriešený
             if (seg._isAssigned === true) continue;
-        
+    
             // Inak over cez isSegmentCoveredByBus
             if (!isSegmentCoveredByBus(seg)) {
                 return false;
@@ -6888,7 +6917,34 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     const assignTransferToBus = async () => {
         if (!window.db || !assignBusTransfer) return;
-        const transfer = assignBusTransfer;
+    
+        // ============================================================
+        // NOVÉ: Obnov assignBusTransfer z aktuálneho savedTransfers
+        // (rovnaká logika ako v modálnom okne).
+        // ============================================================
+        const parentKeyForFresh = assignBusTransfer._parentKey || assignBusTransfer.key;
+        const freshParent = savedTransfersRef.current.find((s) => s.key === parentKeyForFresh);
+    
+        const transfer = (() => {
+            if (!freshParent) return assignBusTransfer;
+            if (assignBusTransfer._parentKey) {
+                const segIdx = findSegmentIndex(
+                    freshParent.segments || [],
+                    assignBusTransfer.fromLocation,
+                    assignBusTransfer.toLocation
+                );
+                const seg = segIdx !== -1 ? freshParent.segments[segIdx] : null;
+                return {
+                    ...assignBusTransfer,
+                    segments: freshParent.segments,
+                    isWalking: seg ? seg.isWalking === true : false,
+                };
+            }
+            return {
+                ...assignBusTransfer,
+                segments: freshParent.segments,
+            };
+        })();
     
         if (!arePreviousSegmentsResolved(transfer)) {
             window.showGlobalNotification(
@@ -11149,378 +11205,402 @@ const TransportApp = ({ userProfileData }) => {
                 )
             )
         ),
-        showAssignBusModal && assignBusTransfer && React.createElement(
-            'div',
-            {
-                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100001] p-4',
-                onClick: () => {
-                    setShowAssignBusModal(false);
-                    setAssignBusTransfer(null);
-                },
-            },
-            React.createElement(
+        showAssignBusModal && assignBusTransfer && (() => {
+            // ============================================================
+            // NOVÉ: Vždy obnov assignBusTransfer z aktuálneho savedTransfers.
+            //
+            // DÔVOD: assignBusTransfer je snapshot z okamihu otvorenia modálneho
+            // okna. Ak sa medzitým zmenil parent (napr. si označil predchádzajúci
+            // segment ako peši), assignBusTransfer neobsahuje aktuálne
+            // isWalking: true pre peší segment.
+            //
+            // Preto pri každom renderi modálneho okna obnovíme `currentTransfer`
+            // z aktuálneho savedTransfers a použijeme ho všade.
+            // ============================================================
+            const parentKey = assignBusTransfer._parentKey || assignBusTransfer.key;
+            const currentParent = savedTransfers.find((s) => s.key === parentKey);
+        
+            const currentTransfer = (() => {
+                if (!currentParent) return assignBusTransfer;
+                if (assignBusTransfer._parentKey) {
+                    const segIdx = findSegmentIndex(
+                        currentParent.segments || [],
+                        assignBusTransfer.fromLocation,
+                        assignBusTransfer.toLocation
+                    );
+                    const seg = segIdx !== -1 ? currentParent.segments[segIdx] : null;
+                    return {
+                        ...assignBusTransfer,
+                        segments: currentParent.segments,
+                        isWalking: seg ? seg.isWalking === true : false,
+                    };
+                }
+                return {
+                    ...assignBusTransfer,
+                    segments: currentParent.segments,
+                };
+            })();
+        
+            return React.createElement(
                 'div',
                 {
-                    className: 'bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto',
-                    onClick: (e) => e.stopPropagation()
+                    className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100001] p-4',
+                    onClick: () => {
+                        setShowAssignBusModal(false);
+                        setAssignBusTransfer(null);
+                    },
                 },
-                // ============================================================
-                // HLAVIČKA
-                // ============================================================
                 React.createElement(
                     'div',
-                    { className: 'flex items-start gap-3 mb-4' },
-                    React.createElement('i', {
-                        className: 'fa-solid fa-bus text-amber-600 text-2xl mt-0.5'
-                    }),
+                    {
+                        className: 'bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto',
+                        onClick: (e) => e.stopPropagation()
+                    },
+                    // ============================================================
+                    // HLAVIČKA
+                    // ============================================================
                     React.createElement(
                         'div',
-                        { className: 'flex-1' },
-                        React.createElement(
-                            'h3',
-                            { className: 'text-lg font-semibold text-gray-800' },
-                            'Priradiť presun k autobusu'
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'text-xs text-gray-500 mt-0.5' },
-                            'Zobrazujú sa len autobusy s riadkom, ktorý zodpovedá trase a času presunu.'
-                        )
-                    )
-                ),
-
-                // ============================================================
-                // VAROVANIE – presunuté DOVNÚTRA modálneho okna (pod hlavičku)
-                // ============================================================
-                !arePreviousSegmentsResolved(assignBusTransfer) &&
-                React.createElement(
-                    'div',
-                    { className: 'mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm' },
-                    React.createElement(
-                        'p',
-                        { className: 'text-amber-700 flex items-start gap-2' },
-                        React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
-                        React.createElement(
-                            'span',
-                            null,
-                            'Najprv musíte priradiť predchádzajúce segmenty tohto presunu (alebo ich označiť ako „peši"). ',
-                            'Tento presun začína neskôr, takže tím sa musí najprv dostať na miesto odchodu.'
-                        )
-                    )
-                ),
-                // ============================================================
-                // INFO O PRESUNE – rovnaká farba výplne ako box vo vygenerovaných presunoch
-                // ============================================================
-                (() => {
-                    const tr = assignBusTransfer;
-                
-                    let displayWhen = null;
-                
-                    if (tr.when && String(tr.when).trim() !== '') {
-                        displayWhen = tr.when;
-                    }
-                
-                    if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
-                        let earliestStart = null;
-                        let latestEnd = null;
-                        tr.segments.forEach((s) => {
-                            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                                earliestStart = s.startTs;
-                            }
-                            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                                latestEnd = s.endTs;
-                            }
-                        });
-                        if (earliestStart != null && latestEnd != null) {
-                            displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-                        } else if (earliestStart != null) {
-                            displayWhen = formatTsLocal(earliestStart);
-                        } else if (latestEnd != null) {
-                            displayWhen = formatTsLocal(latestEnd);
-                        }
-                    }
-                
-                    if (!displayWhen) {
-                        const provisional = computeProvisionalSegmentRange(tr);
-                        if (provisional) {
-                            displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
-                        }
-                    }
-                
-                    const counts = getTeamCountsForTransfer(tr.category, tr.teamName);
-                    let membersCount = null;
-                    let membersTitle = '';
-                    if (counts) {
-                        membersCount =
-                            (counts.players || 0) +
-                            (counts.menRT || 0) +
-                            (counts.womenRT || 0) +
-                            (counts.menDrivers || 0) +
-                            (counts.womenDrivers || 0);
-                        membersTitle = 'Počet členov tímu z users';
-                    } else {
-                        const avg = getCategoryAverageForTransfer(tr.category);
-                        if (avg != null) {
-                            membersCount = avg;
-                            membersTitle = `Priemer členov tímu v kategórii ${tr.category} (zaokrúhlené nahor)`;
-                        }
-                    }
-                
-                    const transportColor = getTransportColorForCategory(tr.category);
-                    const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
-                
-                    // Rovnaký štýl ako box vo vygenerovaných presunoch
-                    return React.createElement(
-                        'div',
-                        {
-                            className: 'mb-4 text-sm text-gray-700 flex flex-col leading-snug rounded-md px-3 py-2',
-                            style: {
-                                position: 'relative',
-                                borderLeft: transportColor ? `6px solid ${transportColor}` : '2px solid #c4b5fd',
-                                ...(boxBg ? { backgroundColor: boxBg } : { backgroundColor: '#f5f3ff' }),
-                            },
-                        },
-                        // 1. riadok – tím • počet
+                        { className: 'flex items-start gap-3 mb-4' },
+                        React.createElement('i', {
+                            className: 'fa-solid fa-bus text-amber-600 text-2xl mt-0.5'
+                        }),
                         React.createElement(
                             'div',
-                            { className: 'flex flex-wrap items-center gap-x-2 gap-y-1' },
-                            tr.teamName &&
-                                React.createElement(
-                                    'span',
-                                    {
-                                        className: 'text-sm font-semibold',
-                                        style: { color: transportColor || '#5b21b6' },
-                                        title: 'Tím',
-                                    },
-                                    tr.teamName
-                                ),
-                            membersCount != null &&
-                                React.createElement(
-                                    'span',
-                                    {
-                                        className: 'text-sm font-semibold',
-                                        style: { color: transportColor || '#5b21b6' },
-                                        title: membersTitle,
-                                    },
-                                    `• ${membersCount} členov`
-                                )
-                        ),
-                        // 2. riadok – trasa (rovnaká veľkosť / farba ako čas)
-                        React.createElement(
-                            'span',
-                            { className: 'text-sm text-gray-900 font-medium' },
-                            `${tr.fromLocation || '?'} → ${tr.toLocation || '?'}`
-                        ),
-                        // 3. riadok – čas
-                        displayWhen &&
+                            { className: 'flex-1' },
                             React.createElement(
-                                'span',
-                                { className: 'text-sm text-gray-600' },
-                                displayWhen
-                            )
-                    );
-                })(),
-                // ============================================================
-                // DYNAMICKÝ VÝPOČET ZOZNAMU AUTOBUSOV
-                // ============================================================
-                (() => {
-                    const currentMatches = findMatchingBusRows(assignBusTransfer);
-
-                    if (currentMatches.length === 0) {
-                        return React.createElement(
-                            'div',
-                            { className: 'mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm' },
+                                'h3',
+                                { className: 'text-lg font-semibold text-gray-800' },
+                                'Priradiť presun k autobusu'
+                            ),
                             React.createElement(
                                 'p',
-                                { className: 'text-red-700 flex items-start gap-2' },
-                                React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
+                                { className: 'text-xs text-gray-500 mt-0.5' },
+                                'Zobrazujú sa len autobusy s riadkom, ktorý zodpovedá trase a času presunu.'
+                            )
+                        )
+                    ),
+        
+                    // ============================================================
+                    // VAROVANIE – použijeme currentTransfer
+                    // ============================================================
+                    !arePreviousSegmentsResolved(currentTransfer) &&
+                    React.createElement(
+                        'div',
+                        { className: 'mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm' },
+                        React.createElement(
+                            'p',
+                            { className: 'text-amber-700 flex items-start gap-2' },
+                            React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
+                            React.createElement(
+                                'span',
+                                null,
+                                'Najprv musíte priradiť predchádzajúce segmenty tohto presunu (alebo ich označiť ako „peši"). ',
+                                'Tento presun začína neskôr, takže tím sa musí najprv dostať na miesto odchodu.'
+                            )
+                        )
+                    ),
+                    // ============================================================
+                    // INFO O PRESUNE
+                    // ============================================================
+                    (() => {
+                        const tr = currentTransfer;
+        
+                        let displayWhen = null;
+        
+                        if (tr.when && String(tr.when).trim() !== '') {
+                            displayWhen = tr.when;
+                        }
+        
+                        if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
+                            let earliestStart = null;
+                            let latestEnd = null;
+                            tr.segments.forEach((s) => {
+                                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                    earliestStart = s.startTs;
+                                }
+                                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                    latestEnd = s.endTs;
+                                }
+                            });
+                            if (earliestStart != null && latestEnd != null) {
+                                displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                            } else if (earliestStart != null) {
+                                displayWhen = formatTsLocal(earliestStart);
+                            } else if (latestEnd != null) {
+                                displayWhen = formatTsLocal(latestEnd);
+                            }
+                        }
+        
+                        if (!displayWhen) {
+                            const provisional = computeProvisionalSegmentRange(tr);
+                            if (provisional) {
+                                displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                            }
+                        }
+        
+                        const counts = getTeamCountsForTransfer(tr.category, tr.teamName);
+                        let membersCount = null;
+                        let membersTitle = '';
+                        if (counts) {
+                            membersCount =
+                                (counts.players || 0) +
+                                (counts.menRT || 0) +
+                                (counts.womenRT || 0) +
+                                (counts.menDrivers || 0) +
+                                (counts.womenDrivers || 0);
+                            membersTitle = 'Počet členov tímu z users';
+                        } else {
+                            const avg = getCategoryAverageForTransfer(tr.category);
+                            if (avg != null) {
+                                membersCount = avg;
+                                membersTitle = `Priemer členov tímu v kategórii ${tr.category} (zaokrúhlené nahor)`;
+                            }
+                        }
+        
+                        const transportColor = getTransportColorForCategory(tr.category);
+                        const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
+        
+                        return React.createElement(
+                            'div',
+                            {
+                                className: 'mb-4 text-sm text-gray-700 flex flex-col leading-snug rounded-md px-3 py-2',
+                                style: {
+                                    position: 'relative',
+                                    borderLeft: transportColor ? `6px solid ${transportColor}` : '2px solid #c4b5fd',
+                                    ...(boxBg ? { backgroundColor: boxBg } : { backgroundColor: '#f5f3ff' }),
+                                },
+                            },
+                            React.createElement(
+                                'div',
+                                { className: 'flex flex-wrap items-center gap-x-2 gap-y-1' },
+                                tr.teamName &&
+                                    React.createElement(
+                                        'span',
+                                        {
+                                            className: 'text-sm font-semibold',
+                                            style: { color: transportColor || '#5b21b6' },
+                                            title: 'Tím',
+                                        },
+                                        tr.teamName
+                                    ),
+                                membersCount != null &&
+                                    React.createElement(
+                                        'span',
+                                        {
+                                            className: 'text-sm font-semibold',
+                                            style: { color: transportColor || '#5b21b6' },
+                                            title: membersTitle,
+                                        },
+                                        `• ${membersCount} členov`
+                                    )
+                            ),
+                            React.createElement(
+                                'span',
+                                { className: 'text-sm text-gray-900 font-medium' },
+                                `${tr.fromLocation || '?'} → ${tr.toLocation || '?'}`
+                            ),
+                            displayWhen &&
                                 React.createElement(
                                     'span',
-                                    null,
-                                    'Pre tento presun neexistuje žiadny autobus s trasou, ktorá by zodpovedala miestam a času presunu. ',
-                                    'Najprv pridajte riadky do autobusu (v Plánovaní) tak, aby trasa autobusu obsahovala miesto odchodu a príchodu presunu.'
+                                    { className: 'text-sm text-gray-600' },
+                                    displayWhen
                                 )
-                            )
                         );
-                    }
-
-                    return React.createElement(
-                        'div',
-                        { className: 'mb-4' },
-                        React.createElement(
-                            'label',
-                            { className: 'block text-sm font-medium text-gray-700 mb-2' },
-                            'Vyberte autobus / trasu:'
-                        ),
-                        React.createElement(
-                            'ul',
-                            { className: 'space-y-2' },
-                            currentMatches.map((m, idx) => {
-                                if (!m || !m.bus || !m.trip) {
-                                    console.warn('[TRANSPORT] Neplatný výsledok v currentMatches:', m);
-                                    return null;
-                                }
-
-                                const key = `${m.bus.id}|${m.boardingRow?.id || ''}|${m.alightingRow?.id || ''}|${m.side}`;
-                                const isSelected = assignBusSelectedKey === key;
-
-                                const hasBoarding = !!m.boardingRow;
-                                const hasAlighting = !!m.alightingRow;
-                                
-                                // Zisti, či tím už je v tomto buse na tomto segmente
-                                const teamKey = `${assignBusTransfer.teamName}|${assignBusTransfer.category || ''}`;
-                                const isAlreadyInBus = 
-                                    (m.boardingRow && (m.boardingRow.teamsIn || []).includes(teamKey)) ||
-                                    (m.alightingRow && (m.alightingRow.teamsOut || []).includes(teamKey));
-
-                                return React.createElement(
-                                    'li',
-                                    { key },
+                    })(),
+                    // ============================================================
+                    // DYNAMICKÝ VÝPOČET ZOZNAMU AUTOBUSOV
+                    // ============================================================
+                    (() => {
+                        const currentMatches = findMatchingBusRows(currentTransfer);
+        
+                        if (currentMatches.length === 0) {
+                            return React.createElement(
+                                'div',
+                                { className: 'mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm' },
+                                React.createElement(
+                                    'p',
+                                    { className: 'text-red-700 flex items-start gap-2' },
+                                    React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
                                     React.createElement(
-                                        'button',
-                                        {
-                                            type: 'button',
-                                            onClick: () => setAssignBusSelectedKey(key),
-                                            className: `w-full text-left px-3 py-2 rounded-lg border-2 transition-colors ${
-                                                isSelected
-                                                    ? 'border-amber-500 bg-amber-50'
-                                                    : 'border-gray-200 bg-white hover:bg-gray-50'
-                                            }`
-                                        },
+                                        'span',
+                                        null,
+                                        'Pre tento presun neexistuje žiadny autobus s trasou, ktorá by zodpovedala miestam a času presunu. ',
+                                        'Najprv pridajte riadky do autobusu (v Plánovaní) tak, aby trasa autobusu obsahovala miesto odchodu a príchodu presunu.'
+                                    )
+                                )
+                            );
+                        }
+        
+                        return React.createElement(
+                            'div',
+                            { className: 'mb-4' },
+                            React.createElement(
+                                'label',
+                                { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                                'Vyberte autobus / trasu:'
+                            ),
+                            React.createElement(
+                                'ul',
+                                { className: 'space-y-2' },
+                                currentMatches.map((m, idx) => {
+                                    if (!m || !m.bus || !m.trip) {
+                                        console.warn('[TRANSPORT] Neplatný výsledok v currentMatches:', m);
+                                        return null;
+                                    }
+        
+                                    const key = `${m.bus.id}|${m.boardingRow?.id || ''}|${m.alightingRow?.id || ''}|${m.side}`;
+                                    const isSelected = assignBusSelectedKey === key;
+        
+                                    const hasBoarding = !!m.boardingRow;
+                                    const hasAlighting = !!m.alightingRow;
+        
+                                    const teamKey = `${currentTransfer.teamName}|${currentTransfer.category || ''}`;
+        
+                                    return React.createElement(
+                                        'li',
+                                        { key },
                                         React.createElement(
-                                            'div',
-                                            { className: 'flex items-center justify-between gap-2' },
+                                            'button',
+                                            {
+                                                type: 'button',
+                                                onClick: () => setAssignBusSelectedKey(key),
+                                                className: `w-full text-left px-3 py-2 rounded-lg border-2 transition-colors ${
+                                                    isSelected
+                                                        ? 'border-amber-500 bg-amber-50'
+                                                        : 'border-gray-200 bg-white hover:bg-gray-50'
+                                                }`
+                                            },
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex-1' },
+                                                { className: 'flex items-center justify-between gap-2' },
                                                 React.createElement(
                                                     'div',
-                                                    { className: 'font-semibold text-gray-800 text-sm' },
-                                                    m.bus.name
-                                                ),
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'text-xs text-gray-600 mt-0.5' },
-                                                    `${m.trip.fromPlace} → ${m.trip.toPlace}`
-                                                ),
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'text-xs text-gray-500 mt-0.5' },
-                                                    `Odchod: ${m.boardingTime || '—'}${m.alightingTime ? ` · Príchod: ${m.alightingTime}` : ''}`
-                                                )
-                                            ),
-                                            // ============================================================
-                                            // NOVÉ: Počet ľudí vľavo + Nástup/Výstup vpravo pod sebou
-                                            // ============================================================
-                                            React.createElement(
-                                                'div',
-                                                { className: 'flex flex-row items-center gap-6 text-xs font-semibold' },
-                                                // Počet ľudí v autobuse medzi nástupnou a výstupnou zastávkou
-                                                (() => {
-                                                    const busId = m.bus.id;
-                                                    const dayKey = m.trip?.dayKey;
-                                                    const boardingRow = m.boardingRow;
-                                                    const alightingRow = m.alightingRow;
-                                                    if (!busId || !dayKey || !boardingRow || !alightingRow) return null;
-
-                                                    const rowsKey = `${busId}|${dayKey}`;
-                                                    const allRows = (busRows[rowsKey] || [])
-                                                        .slice()
-                                                        .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-                                                    const boardIdx = allRows.findIndex((r) => r.id === boardingRow.id);
-                                                    const alightIdx = allRows.findIndex((r) => r.id === alightingRow.id);
-                                                    if (boardIdx === -1 || alightIdx === -1 || alightIdx < boardIdx) return null;
-
-                                                    const inBus = new Set();
-                                                    for (let i = 0; i <= boardIdx; i++) {
-                                                        const r = allRows[i];
-                                                        (r.teamsIn || []).forEach((t) => inBus.add(String(t)));
-                                                        (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
-                                                    }
-                                                    (boardingRow.teamsIn || []).forEach((t) => inBus.add(String(t)));
-                                                    for (let i = boardIdx + 1; i < alightIdx; i++) {
-                                                        const r = allRows[i];
-                                                        (r.teamsIn || []).forEach((t) => inBus.add(String(t)));
-                                                        (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
-                                                    }
-
-                                                    const total = [...inBus].reduce(
-                                                        (sum, tk) => sum + getTeamMembersCount(tk),
-                                                        0
-                                                    );
-
-                                                    if (total <= 0) return null;
-
-                                                    return React.createElement(
-                                                        'span',
-                                                        {
-                                                            className: 'flex items-center gap-1 text-blue-700',
-                                                            title: `V autobuse v tomto čase: ${total} členov`
-                                                        },
-                                                        React.createElement('i', { className: 'fa-solid fa-users' }),
-                                                        `${total}`
-                                                    );
-                                                })(),
-                                                // Nástup/Výstup pod sebou
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'flex flex-col items-end gap-1' },
-                                                    hasBoarding && React.createElement(
-                                                        'span',
-                                                        { className: 'flex items-center gap-1 text-emerald-600' },
-                                                        React.createElement('i', { className: 'fa-solid fa-right-to-bracket' }),
-                                                        'Nástup'
+                                                    { className: 'flex-1' },
+                                                    React.createElement(
+                                                        'div',
+                                                        { className: 'font-semibold text-gray-800 text-sm' },
+                                                        m.bus.name
                                                     ),
-                                                    hasAlighting && React.createElement(
-                                                        'span',
-                                                        { className: 'flex items-center gap-1 text-red-600' },
-                                                        React.createElement('i', { className: 'fa-solid fa-right-from-bracket' }),
-                                                        'Výstup'
+                                                    React.createElement(
+                                                        'div',
+                                                        { className: 'text-xs text-gray-600 mt-0.5' },
+                                                        `${m.trip.fromPlace} → ${m.trip.toPlace}`
+                                                    ),
+                                                    React.createElement(
+                                                        'div',
+                                                        { className: 'text-xs text-gray-500 mt-0.5' },
+                                                        `Odchod: ${m.boardingTime || '—'}${m.alightingTime ? ` · Príchod: ${m.alightingTime}` : ''}`
+                                                    )
+                                                ),
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'flex flex-row items-center gap-6 text-xs font-semibold' },
+                                                    (() => {
+                                                        const busId = m.bus.id;
+                                                        const dayKey = m.trip?.dayKey;
+                                                        const boardingRow = m.boardingRow;
+                                                        const alightingRow = m.alightingRow;
+                                                        if (!busId || !dayKey || !boardingRow || !alightingRow) return null;
+        
+                                                        const rowsKey = `${busId}|${dayKey}`;
+                                                        const allRows = (busRows[rowsKey] || [])
+                                                            .slice()
+                                                            .sort((a, b) => (a.order || 0) - (b.order || 0));
+        
+                                                        const boardIdx = allRows.findIndex((r) => r.id === boardingRow.id);
+                                                        const alightIdx = allRows.findIndex((r) => r.id === alightingRow.id);
+                                                        if (boardIdx === -1 || alightIdx === -1 || alightIdx < boardIdx) return null;
+        
+                                                        const inBus = new Set();
+                                                        for (let i = 0; i <= boardIdx; i++) {
+                                                            const r = allRows[i];
+                                                            (r.teamsIn || []).forEach((t) => inBus.add(String(t)));
+                                                            (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
+                                                        }
+                                                        (boardingRow.teamsIn || []).forEach((t) => inBus.add(String(t)));
+                                                        for (let i = boardIdx + 1; i < alightIdx; i++) {
+                                                            const r = allRows[i];
+                                                            (r.teamsIn || []).forEach((t) => inBus.add(String(t)));
+                                                            (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
+                                                        }
+        
+                                                        const total = [...inBus].reduce(
+                                                            (sum, tk) => sum + getTeamMembersCount(tk),
+                                                            0
+                                                        );
+        
+                                                        if (total <= 0) return null;
+        
+                                                        return React.createElement(
+                                                            'span',
+                                                            {
+                                                                className: 'flex items-center gap-1 text-blue-700',
+                                                                title: `V autobuse v tomto čase: ${total} členov`
+                                                            },
+                                                            React.createElement('i', { className: 'fa-solid fa-users' }),
+                                                            `${total}`
+                                                        );
+                                                    })(),
+                                                    React.createElement(
+                                                        'div',
+                                                        { className: 'flex flex-col items-end gap-1' },
+                                                        hasBoarding && React.createElement(
+                                                            'span',
+                                                            { className: 'flex items-center gap-1 text-emerald-600' },
+                                                            React.createElement('i', { className: 'fa-solid fa-right-to-bracket' }),
+                                                            'Nástup'
+                                                        ),
+                                                        hasAlighting && React.createElement(
+                                                            'span',
+                                                            { className: 'flex items-center gap-1 text-red-600' },
+                                                            React.createElement('i', { className: 'fa-solid fa-right-from-bracket' }),
+                                                            'Výstup'
+                                                        )
                                                     )
                                                 )
                                             )
                                         )
-                                    )
-                                );
-                            }).filter(Boolean)
-                        )
-                    );
-                })(),
-
-                // ============================================================
-                // TLAČIDLÁ
-                // ============================================================
-                React.createElement(
-                    'div',
-                    { className: 'flex justify-end gap-3' },
+                                    );
+                                }).filter(Boolean)
+                            )
+                        );
+                    })(),
+        
+                    // ============================================================
+                    // TLAČIDLÁ – used currentTransfer
+                    // ============================================================
                     React.createElement(
-                        'button',
-                        {
-                            type: 'button',
-                            onClick: () => {
-                                setShowAssignBusModal(false);
-                                setAssignBusTransfer(null);
+                        'div',
+                        { className: 'flex justify-end gap-3' },
+                        React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: () => {
+                                    setShowAssignBusModal(false);
+                                    setAssignBusTransfer(null);
+                                },
+                                disabled: assignBusSaving,
+                                className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
                             },
-                            disabled: assignBusSaving,
-                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
-                        },
-                        'Zrušiť'
-                    ),
-                    React.createElement(
-                        'button',
-                        {
-                            type: 'button',
-                            onClick: assignTransferToBus,
-                            disabled: assignBusSaving || !assignBusSelectedKey || assignBusMatches.length === 0 || !arePreviousSegmentsResolved(assignBusTransfer),
-                            className: 'px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 transition-colors disabled:opacity-60 flex items-center gap-2'
-                        },
-                        assignBusSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
-                        'Priradiť'
+                            'Zrušiť'
+                        ),
+                        React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: assignTransferToBus,
+                                disabled: assignBusSaving || !assignBusSelectedKey || assignBusMatches.length === 0 || !arePreviousSegmentsResolved(currentTransfer),
+                                className: 'px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 transition-colors disabled:opacity-60 flex items-center gap-2'
+                            },
+                            assignBusSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                            'Priradiť'
+                        )
                     )
                 )
-            )
-        ),
+            );
+        })() || null,
         // ============================================================
         // MODÁLNE OKNO – Odstrániť príznak "peši"
         // ============================================================
