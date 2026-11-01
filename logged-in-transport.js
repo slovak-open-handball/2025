@@ -10995,12 +10995,10 @@ const TransportApp = ({ userProfileData }) => {
                     // ============================================================
                     let displayWhen = null;
                 
-                    // 1) `tr.when` – prioritne (obsahuje provizórny interval)
                     if (tr.when && String(tr.when).trim() !== '') {
                         displayWhen = tr.when;
                     }
                 
-                    // 2) Reálne časy segmentov
                     if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
                         let earliestStart = null;
                         let latestEnd = null;
@@ -11021,7 +11019,6 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     }
                 
-                    // 3) Provizórny interval (posledná záchrana)
                     if (!displayWhen) {
                         const provisional = computeProvisionalSegmentRange(tr);
                         if (provisional) {
@@ -11029,9 +11026,75 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     }
                 
+                    // ============================================================
+                    // NOVÉ: Počet členov tímu (rovnaká logika ako v boxe vygenerovaných
+                    // presunov – buď z users, alebo priemer kategórie).
+                    // ============================================================
+                    const counts = getTeamCountsForTransfer(tr.category, tr.teamName);
+                    let membersCount = null;
+                    let membersTitle = '';
+                    if (counts) {
+                        membersCount =
+                            (counts.players || 0) +
+                            (counts.menRT || 0) +
+                            (counts.womenRT || 0) +
+                            (counts.menDrivers || 0) +
+                            (counts.womenDrivers || 0);
+                        membersTitle = 'Počet členov tímu z users';
+                    } else {
+                        const avg = getCategoryAverageForTransfer(tr.category);
+                        if (avg != null) {
+                            membersCount = avg;
+                            membersTitle = `Priemer členov tímu v kategórii ${tr.category} (zaokrúhlené nahor)`;
+                        }
+                    }
+                
+                    const teamColor = getCategoryTextColor(tr.category);
+                
                     return React.createElement(
                         'div',
                         { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm' },
+                        // ============================================================
+                        // NOVÉ: Riadok s kategóriou, tímom a počtom členov
+                        // (nad riadkom s trasou)
+                        // ============================================================
+                        React.createElement(
+                            'div',
+                            { className: 'flex flex-wrap items-center gap-x-2 gap-y-1 mb-1' },
+                            tr.category &&
+                                React.createElement(
+                                    'span',
+                                    {
+                                        className: 'text-xs font-semibold px-2 py-0.5 rounded',
+                                        style: {
+                                            color: teamColor,
+                                            backgroundColor: lightenHex(teamColor, 0.15) || '#f3f4f6',
+                                        },
+                                        title: 'Kategória',
+                                    },
+                                    tr.category
+                                ),
+                            tr.teamName &&
+                                React.createElement(
+                                    'span',
+                                    {
+                                        className: 'text-sm font-semibold',
+                                        style: { color: teamColor },
+                                        title: 'Tím',
+                                    },
+                                    tr.teamName
+                                ),
+                            membersCount != null &&
+                                React.createElement(
+                                    'span',
+                                    {
+                                        className: 'text-xs font-semibold text-gray-600',
+                                        title: membersTitle,
+                                    },
+                                    `• ${membersCount} členov`
+                                )
+                        ),
+                        // Riadok s trasou
                         React.createElement(
                             'div',
                             { className: 'text-gray-600 font-medium' },
