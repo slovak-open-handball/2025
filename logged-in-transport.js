@@ -8674,7 +8674,7 @@ const TransportApp = ({ userProfileData }) => {
         // NOVÉ: Výber prvého segmentu z každého parent bloku
         // s prioritou segmentu, ktorý začína na fromLocation parenta
         // ============================================================
-        const firstSegmentPerParent = new Map(); // parentKey → { segment, startTs, isFirstFromParent }
+        const firstSegmentPerParent = new Map();
 
         baseFiltered.forEach((t) => {
             const blockKey = t._parentKey
@@ -8709,16 +8709,15 @@ const TransportApp = ({ userProfileData }) => {
                 return;
             }
             if (!isFirstFromParent && existing.isFirstFromParent) {
-                return; // existujúci je lepší
+                return;
             }
 
-            // Priorita 2: najmenší startTs (pri zhode nechaj existujúci)
+            // Priorita 2: najmenší startTs
             if (startTs < existing.startTs) {
                 firstSegmentPerParent.set(blockKey, { segment: t, startTs, isFirstFromParent });
             }
         });
 
-        // Zoznam povolených segmentov (prvý z každého bloku)
         const allowedKeys = new Set();
         firstSegmentPerParent.forEach(({ segment }) => {
             allowedKeys.add(segment.key);
