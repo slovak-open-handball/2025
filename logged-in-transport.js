@@ -8552,14 +8552,6 @@ const TransportApp = ({ userProfileData }) => {
                 let whenStr = hasRealTime
                     ? `${formatTsLocal(ft.startTs)} – ${formatTsLocal(ft.endTs)}`
                     : null;
-
-                // ============================================================
-                // NOVÉ: Pre PRVÝ nepriradený segment použi `when` parenta
-                // (aby sa v boxe nezobrazilo "čas neurčený", keď parent mal čas).
-                // ============================================================
-                if (!whenStr && i === firstUnassignedIdx && parentEffectiveWhen) {
-                    whenStr = parentEffectiveWhen;
-                }
             
                 const text = `Presun z ${fromLoc} do ${toLoc}`;
                 const key = buildTransferKey(
@@ -10694,27 +10686,51 @@ const TransportApp = ({ userProfileData }) => {
                 (() => {
                     const tr = transferActionModal.transfer;
                     // NOVÉ: ak `when` je prázdny, poskladaj ho zo segmentov
-                    let displayWhen = tr.when;
-                    if (!displayWhen || String(displayWhen).trim() === '') {
-                        if (Array.isArray(tr.segments) && tr.segments.length > 0) {
-                            let earliestStart = null;
-                            let latestEnd = null;
-                            tr.segments.forEach((s) => {
-                                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                                    earliestStart = s.startTs;
-                                }
-                                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                                    latestEnd = s.endTs;
-                                }
-                            });
-                            if (earliestStart != null && latestEnd != null) {
-                                displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-                            } else if (earliestStart != null) {
-                                displayWhen = formatTsLocal(earliestStart);
-                            } else if (latestEnd != null) {
-                                displayWhen = formatTsLocal(latestEnd);
+                    let displayWhen = null;
+
+                    // 1) Skús reálne časy segmentu
+                    if (tr._parentKey) {
+                        const parentRec = savedTransfers.find((s) => s.key === tr._parentKey);
+                        if (parentRec && Array.isArray(parentRec.segments)) {
+                            const seg = parentRec.segments.find(
+                                (s) =>
+                                    normalizePlaceName(s.from) === normalizePlaceName(tr.fromLocation) &&
+                                    normalizePlaceName(s.to) === normalizePlaceName(tr.toLocation)
+                            );
+                            if (seg && seg.startTs != null && seg.endTs != null) {
+                                displayWhen = `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`;
+                            } else if (seg && seg.startTs != null) {
+                                displayWhen = formatTsLocal(seg.startTs);
+                            } else if (seg && seg.endTs != null) {
+                                displayWhen = formatTsLocal(seg.endTs);
                             }
                         }
+                    }
+                    
+                    // 2) Fallback – skús reálne časy segmentov priamo na objekte
+                    if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
+                        let earliestStart = null;
+                        let latestEnd = null;
+                        tr.segments.forEach((s) => {
+                            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                earliestStart = s.startTs;
+                            }
+                            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                latestEnd = s.endTs;
+                            }
+                        });
+                        if (earliestStart != null && latestEnd != null) {
+                            displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                        } else if (earliestStart != null) {
+                            displayWhen = formatTsLocal(earliestStart);
+                        } else if (latestEnd != null) {
+                            displayWhen = formatTsLocal(latestEnd);
+                        }
+                    }
+                    
+                    // 3) Fallback – `when` parenta
+                    if (!displayWhen && tr.when && String(tr.when).trim() !== '') {
+                        displayWhen = tr.when;
                     }
                     return React.createElement(
                         'div',
@@ -10920,27 +10936,51 @@ const TransportApp = ({ userProfileData }) => {
                     const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
                 
                     // NOVÉ: ak `when` je prázdny, poskladaj ho zo segmentov
-                    let displayWhen = tr.when;
-                    if (!displayWhen || String(displayWhen).trim() === '') {
-                        if (Array.isArray(tr.segments) && tr.segments.length > 0) {
-                            let earliestStart = null;
-                            let latestEnd = null;
-                            tr.segments.forEach((s) => {
-                                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                                    earliestStart = s.startTs;
-                                }
-                                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                                    latestEnd = s.endTs;
-                                }
-                            });
-                            if (earliestStart != null && latestEnd != null) {
-                                displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-                            } else if (earliestStart != null) {
-                                displayWhen = formatTsLocal(earliestStart);
-                            } else if (latestEnd != null) {
-                                displayWhen = formatTsLocal(latestEnd);
+                    let displayWhen = null;
+
+                    // 1) Skús reálne časy segmentu
+                    if (tr._parentKey) {
+                        const parentRec = savedTransfers.find((s) => s.key === tr._parentKey);
+                        if (parentRec && Array.isArray(parentRec.segments)) {
+                            const seg = parentRec.segments.find(
+                                (s) =>
+                                    normalizePlaceName(s.from) === normalizePlaceName(tr.fromLocation) &&
+                                    normalizePlaceName(s.to) === normalizePlaceName(tr.toLocation)
+                            );
+                            if (seg && seg.startTs != null && seg.endTs != null) {
+                                displayWhen = `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`;
+                            } else if (seg && seg.startTs != null) {
+                                displayWhen = formatTsLocal(seg.startTs);
+                            } else if (seg && seg.endTs != null) {
+                                displayWhen = formatTsLocal(seg.endTs);
                             }
                         }
+                    }
+                    
+                    // 2) Fallback – skús reálne časy segmentov priamo na objekte
+                    if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
+                        let earliestStart = null;
+                        let latestEnd = null;
+                        tr.segments.forEach((s) => {
+                            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                earliestStart = s.startTs;
+                            }
+                            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                latestEnd = s.endTs;
+                            }
+                        });
+                        if (earliestStart != null && latestEnd != null) {
+                            displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                        } else if (earliestStart != null) {
+                            displayWhen = formatTsLocal(earliestStart);
+                        } else if (latestEnd != null) {
+                            displayWhen = formatTsLocal(latestEnd);
+                        }
+                    }
+                    
+                    // 3) Fallback – `when` parenta
+                    if (!displayWhen && tr.when && String(tr.when).trim() !== '') {
+                        displayWhen = tr.when;
                     }
 
                     return React.createElement(
