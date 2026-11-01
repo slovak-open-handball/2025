@@ -11597,6 +11597,7 @@ const TransportApp = ({ userProfileData }) => {
                                                             const timeRe = /^\d{1,2}:\d{2}$/;
                                                             const boardStr = String(m.boardingTime || '').trim();
                                                             const alightStr = String(m.alightingTime || '').trim();
+                                                            console.log('[TRANSPORT][TRIP-DURATION] boardStr:', boardStr, 'alightStr:', alightStr);
                                                             if (!timeRe.test(boardStr) || !timeRe.test(alightStr)) return null;
                                                             const [bh, bm] = boardStr.split(':').map(Number);
                                                             const [ah, am] = alightStr.split(':').map(Number);
