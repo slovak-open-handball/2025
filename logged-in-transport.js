@@ -5325,7 +5325,8 @@ const TransportApp = ({ userProfileData }) => {
             ),
             // 8. trvanie v min (read-only, z travelTimes)
             //    Ak je timeFrom > timeTo → zobraz "chyba" (červené)
-            //    Inak zobraz travelMinutes (modré) alebo "—" (sivé, ak trvanie nie je nastavené)
+            //    Inak zobraz travelMinutes (rovnaká farba ako v boxe "Peši" – #b45309)
+            //    alebo "—" (sivé, ak trvanie nie je nastavené)
             React.createElement('td', {
                 className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold',
                 style: {
@@ -5340,7 +5341,7 @@ const TransportApp = ({ userProfileData }) => {
                             const toMin = th * 60 + tm;
                             if (fromMin > toMin) return '#dc2626'; // červená
                         }
-                        return travelMinutes != null ? '#1d4ed8' : '#9ca3af';
+                        return travelMinutes != null ? '#b45309' : '#9ca3af';
                     })(),
                 },
                 title: (() => {
