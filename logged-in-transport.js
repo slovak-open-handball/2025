@@ -11008,6 +11008,7 @@ const TransportApp = ({ userProfileData }) => {
                                         ? `${matches[0].bus.id}|${matches[0].boardingRow?.id || ''}|${matches[0].alightingRow?.id || ''}|${matches[0].side}`
                                         : ''
                                 );
+                                setTransferActionModal(null);
                                 setShowAssignBusModal(true);
                             },
                             className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors flex items-center gap-3'
