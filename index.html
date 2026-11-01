@@ -5,53 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Slovak Open Handball 2025</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <!-- GitHub Pages - development only -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
-            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            padding-top: 64px;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
         }
-        /* Štýly pre text s odpočtom, aby bol viditeľný a pekný */
         #registration-status-message p {
             margin-bottom: 0.5rem;
         }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
-
-    <!-- Zástupný element, kam header.js načíta obsah header.html -->
     <div id="header-placeholder"></div>
-
     <main class="flex-grow flex items-center justify-center p-4">
         <div id="root" class="bg-white p-8 rounded-lg shadow-xl text-center max-w-lg w-full">
-            <h1 class="text-4xl font-bold text-gray-800 mb-4">Slovak Open Handball 2025</h1>
-            
-            <!-- Správa o stave registrácie -->
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">Slovak Open Handball 2025</h1>            
             <div id="registration-status-message" class="text-gray-600 text-lg mb-6">
-                <!-- Obsah sa dynamicky doplní cez JavaScript -->
             </div>
-
-            <!-- Správa, že je používateľ prihlásený -->
             <div id="logged-in-message" class="text-green-600 font-semibold text-lg mb-6 hidden">
                 Vitajte, ste prihlásený!
             </div>
-
             <div class="space-x-4 flex justify-center flex-wrap">
-                <!-- Wrapper pre tlačidlo prihlásenia -->
                 <a id="login-button-wrapper" href="login.html" class="inline-block" style="display: none;">
                     <button id="login-button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
                         Prihlásenie
                     </button>
                 </a>
-                <!-- Wrapper pre tlačidlo registrácie na turnaj -->
                 <a id="tournament-registration-button-wrapper" href="register.html" class="inline-block" style="display: none;">
                     <button class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
                         Registrácia na turnaj
@@ -59,18 +45,12 @@
                 </a>
             </div>
         </div>
-    </main>
-    
-    <!-- Globálny element pre notifikácie -->
+    </main>    
     <div id="global-notification"></div>
-
-    <!-- Načítanie hlavných JavaScript súborov ako modulov. -->
-    <!-- Dôležité: authentication.js sa musí načítať ako prvý! -->
     <script src="clear-console.js"></script>
     <script type="module" src="loader.js"></script>
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
-    <!-- Načítanie hlavného skriptu pre túto stránku -->
     <script type="module" src="index.js"></script>
 </body>
 </html>
