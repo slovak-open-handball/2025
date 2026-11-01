@@ -320,7 +320,7 @@ const TransportApp = ({ userProfileData }) => {
             startTs: found[0],
             endTs: found.length > 1 ? found[1] : found[0],
         };
-    };
+    };    
 
     const computeProvisionalSegmentRange = (transfer) => {
         if (!transfer) return null;
@@ -9522,6 +9522,28 @@ const TransportApp = ({ userProfileData }) => {
             const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
             if (isNaN(d.getTime())) return '';
             return d.toLocaleDateString('sk-SK', { weekday: 'long' });
+        };
+
+        const parseWhenRangeToTs = (when) => {
+            if (!when) return null;
+            const s = String(when);
+            const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
+            const found = [];
+            let m;
+            while ((m = regex.exec(s)) !== null) {
+                const d = Number(m[1]);
+                const mo = Number(m[2]) - 1;
+                const y = Number(m[3]);
+                const hh = m[4] != null ? Number(m[4]) : 0;
+                const mi = m[5] != null ? Number(m[5]) : 0;
+                const ts = new Date(y, mo, d, hh, mi, 0, 0).getTime();
+                if (isFinite(ts)) found.push(ts);
+            }
+            if (found.length === 0) return null;
+            return {
+                startTs: found[0],
+                endTs: found.length > 1 ? found[1] : found[0],
+            };
         };
     
         const enrichedWalking = walkingTransfers.map((t) => {
