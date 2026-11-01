@@ -1,27 +1,13 @@
 // login.js
-// Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
-// sú globálne definované v <head> login.html.
-// Bol upravený tak, aby sa pri kliknutí na "Zabudli ste heslo?" skryl prihlasovací formulár
-// a namiesto neho sa zobrazil formulár na obnovenie hesla, bez použitia modálneho okna s tmavým pozadím.
-// Taktiež bola pridaná validácia e-mailu a štýlovanie tlačidla "Odoslať" aj do formulára na obnovenie hesla.
-// Teraz sa zobrazí červená chyba, ak sa účet s daným e-mailom nenájde.
-// V tejto verzii bol zmenený štýl zablokovaných tlačidiel podľa požiadavky používateľa.
-// NOVINKA: Po úspešnom prihlásení sa do dokumentu používateľa zapíše čas prihlásenia (lastLoginAt).
-
-// Importy pre potrebné Firebase funkcie
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
 const RECAPTCHA_SITE_KEY = "6LekXLgrAAAAAB6HYeGZG-tu_N42DER2fh1aVBjF";
-
-// SVG ikony pre zobrazenie/skrytie hesla
 const EyeIcon = React.createElement(
   'svg',
   { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
   React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
   React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' })
 );
-
 const EyeOffIcon = React.createElement(
   'svg',
   { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
@@ -29,8 +15,6 @@ const EyeOffIcon = React.createElement(
   React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
   React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
 );
-
-// Komponent PasswordInput pre polia s heslom s prepínačom viditeľnosti (prevedené na React.createElement)
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description, tabIndex }) {
     return React.createElement(
         'div',
@@ -76,42 +60,32 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         )
     );
 }
-
-// Funkcia na validáciu e-mailovej adresy
 const isEmailValid = (email) => {
-    // Regex na kontrolu formátu 'a@b.cd'
     const re = /\S+@\S+\.\S{2,}/;
     return re.test(email);
 };
-
-// Komponent pre obnovenie hesla
 const ResetPasswordForm = ({ onCancel }) => {
     const [email, setEmail] = React.useState('');
     const [message, setMessage] = React.useState('');
     const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState('');
-
     const handleResetPassword = async (e) => {
         e.preventDefault();
         setLoading(true);
         setMessage('');
         setError('');
-
         if (!isEmailValid(email)) {
             setError('Prosím, zadajte platnú e-mailovú adresu.');
             setLoading(false);
             return;
         }
-
         try {
             if (!window.auth) {
-                console.error("Firebase Auth nie je inicializovaný.");
                 return;
             }
             await sendPasswordResetEmail(window.auth, email);
             setMessage('Odkaz na obnovenie hesla bol odoslaný na váš e-mail.');
         } catch (err) {
-            console.error("Chyba pri odosielaní e-mailu na obnovenie hesla:", err);
             if (err.code === 'auth/user-not-found') {
                 setError('Nepodarilo sa nájsť účet s touto e-mailovou adresou.');
             } else {
@@ -121,9 +95,7 @@ const ResetPasswordForm = ({ onCancel }) => {
             setLoading(false);
         }
     };
-
     const isSendButtonDisabled = loading || !isEmailValid(email);
-
     return React.createElement(
         'div',
         { className: 'bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-4' },
@@ -194,9 +166,6 @@ const ResetPasswordForm = ({ onCancel }) => {
         )
     );
 };
-
-
-// Hlavný komponent aplikácie pre prihlasovaciu stránku (prevedený na React.createElement)
 const App = () => {
     const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
@@ -204,34 +173,23 @@ const App = () => {
     const [error, setError] = React.useState('');
     const [showPassword, setShowPassword] = React.useState(false);
     const [showResetPasswordForm, setShowResetPasswordForm] = React.useState(false);
-    // NOVINKA: Stav pre správu o neschválenom administrátorovi
     const [unapprovedAdminMessage, setUnapprovedAdminMessage] = React.useState('');
-
-    // Funkcia na prepínanie viditeľnosti hesla
     const toggleShowPassword = () => {
         setShowPassword(prevShowPassword => !prevShowPassword);
     };
-
-    // Validácia hesla
     const isPasswordValid = (password) => {
-        // Heslo musí mať aspoň 10 znakov
         return password.length >= 10;
     };
-
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
-        setUnapprovedAdminMessage(''); // Vymazať správu o neschválenom administrátorovi pri novom pokuse o prihlásenie
-
+        setUnapprovedAdminMessage(''); 
         try {
             if (!window.auth) {
                 throw new Error("Firebase Auth nie je inicializovaný.");
             }
             const userCredential = await signInWithEmailAndPassword(window.auth, email, password);
-
-            // NOVINKA: Zápis času prihlásenia do dokumentu používateľa
-            // Vykoná sa hneď po úspešnom prihlásení, kým máme user.uid a platnú auth session.
             try {
                 if (userCredential && userCredential.user && window.db) {
                     const userDocRef = doc(window.db, 'users', userCredential.user.uid);
@@ -240,15 +198,8 @@ const App = () => {
                     });
                 }
             } catch (firestoreErr) {
-                // Ak zápis zlyhá (napr. chýbajúci dokument, sieť, oprávnenia),
-                // prihlásenie aj tak pokračuje – nezablokujeme používateľa.
-                console.error("Nepodarilo sa zapísať čas prihlásenia:", firestoreErr);
             }
-
-            // Ak je prihlásenie úspešné, onAuthStateChanged listener v authentication.js
-            // sa postará o presmerovanie na index.html.
         } catch (err) {
-            console.error("Chyba pri prihlásení:", err);
             if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
                 setError('Nesprávny e-mail alebo heslo.');
             } else if (err.code === 'auth/invalid-email') {
@@ -260,43 +211,27 @@ const App = () => {
             setLoading(false);
         }
     };
-
-    // Vypočítame, či je tlačidlo povolené
     const isButtonDisabled = loading || !isEmailValid(email) || !isPasswordValid(password);
-
     React.useEffect(() => {
-        // Analýza URL pre parameter stavu pri načítaní komponentu
         const urlParams = new URLSearchParams(window.location.search);
         const status = urlParams.get('status');
         if (status === 'unapproved_admin') {
-            setUnapprovedAdminMessage("Váš účet bol zaregistrovaný ako administrátorský. Prosím, počkajte na schválenie. O stave vášho účtu vás budeme informovať.");
-            
-            // Nastaví časovač na vymazanie správy po 10 sekundách
+            setUnapprovedAdminMessage("Váš účet bol zaregistrovaný ako administrátorský. Prosím, počkajte na schválenie. O stave vášho účtu vás budeme informovať.");            
             const timer = setTimeout(() => {
-                setUnapprovedAdminMessage(''); // Vymaže správu
-                // Voliteľné: Ak chcete vyčistiť aj URL parameter, môžete to urobiť znova tu,
-                // ale je to už vyriešené na začiatku, takže to nie je nevyhnutné.
+                setUnapprovedAdminMessage(''); 
                 const newUrl = window.location.origin + window.location.pathname;
                 window.history.replaceState({}, document.title, newUrl);
-            }, 10000); // 10 sekúnd
-
-            // Vymaže časovač pri odpojení komponentu alebo pred novým nastavením správy
+            }, 10000);
             return () => clearTimeout(timer);
-
         } else {
-            // Ak stav nie je 'unapproved_admin', uistite sa, že správa nie je zobrazená
             setUnapprovedAdminMessage('');
         }
-
-        // Po vykreslení sa uistíme, že hlavička je viditeľná
         const header = document.querySelector('header');
         if (header) {
             header.classList.remove('invisible');
             header.classList.add('bg-blue-800');
-            console.log("login.js: Hlavička nastavená ako viditeľná.");
         }
-    }, []); // Ponechanie prázdneho poľa závislostí zabezpečí, že sa spustí len raz pri pripojení.
-
+    }, []); 
     return React.createElement(
         'div',
         { className: 'w-full max-w-md' },
@@ -315,7 +250,6 @@ const App = () => {
                         'Prihlásenie'
                     )
                 ),
-                // Zobrazenie správy o neschválenom administrátorovi
                 unapprovedAdminMessage && React.createElement(
                     'div',
                     { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -404,20 +338,13 @@ const App = () => {
         )
     );
 };
-
-// Funkcia na overenie, či sú všetky potrebné globálne premenné dostupné
 const renderApp = () => {
     try {
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(React.createElement(App, null));
-        console.log("login.js: React App vykreslená po prijatí udalosti 'globalDataUpdated'.");
     } catch (error) {
-        console.error("Chyba pri vykresľovaní React komponentu:", error);
     }
 };
-
-// Počkajte na udalosť 'globalDataUpdated' predtým, ako vykreslíme aplikáciu.
-// Ak sa udalosť už odohrala, vykreslíme okamžite.
 if (window.isGlobalAuthReady) {
     renderApp();
 } else {
