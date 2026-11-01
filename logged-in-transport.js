@@ -4742,6 +4742,7 @@ const TransportApp = ({ userProfileData }) => {
         const fromNorm = normalizePlaceName(fromLoc);
         const toNorm = normalizePlaceName(toLoc);
         if (!fromNorm || !toNorm) return false;
+        if (fromNorm === toNorm) return false;
     
         const teamKey = `${teamName}|${category}`;
     
@@ -4753,8 +4754,11 @@ const TransportApp = ({ userProfileData }) => {
             if (bDayKey !== dayKey) return;
     
             const sorted = (rows || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+            if (sorted.length === 0) return;
     
-            // Nájdi indexy, kde tím nastupuje a vystupuje
+            // ============================================================
+            // Nájdi indexy, kde tím NASTUPUJE a VYSTUPUJE v tomto buse.
+            // ============================================================
             const boardIdxs = [];
             const alightIdxs = [];
     
@@ -4773,23 +4777,51 @@ const TransportApp = ({ userProfileData }) => {
     
             if (boardIdxs.length === 0 || alightIdxs.length === 0) return;
     
-            // Pre každý nástup a každý výstup za ním over, či trasa pokrýva from→to
+            // ============================================================
+            // Pre každý nástup a každý výstup za ním over, či tím
+            // v buse SKUTOČNE SEDÍ medzi `from` a `to`.
+            //
+            // Znamená to:
+            //  - v trase od boardIdx po alightIdx sa nachádza `from`
+            //    (ako placeFrom alebo placeTo niektorého riadku)
+            //  - a ZÁROVEŇ sa v tej istej trase nachádza `to` (ako placeFrom
+            //    alebo placeTo) v správnom poradí (index `to` >= index `from`)
+            //  - a tím v buse sedí počas celého tohto úseku, t.j. boardIdx
+            //    je pred alebo na `from` a alightIdx je za alebo na `to`
+            // ============================================================
             boardIdxs.forEach((boardIdx) => {
                 alightIdxs.forEach((alightIdx) => {
                     if (alightIdx < boardIdx) return;
     
-                    // Prejdi trasu od boardIdx po alightIdx a hľadaj from a to v správnom poradí
+                    // Prejdi trasu od boardIdx po alightIdx a hľadaj `from` a `to`
+                    // v správnom poradí
                     let fromIdx = -1;
+                    let toIdx = -1;
+    
                     for (let i = boardIdx; i <= alightIdx; i++) {
                         const rowFromNorm = normalizePlaceName(sorted[i].placeFrom);
                         const rowToNorm = normalizePlaceName(sorted[i].placeTo);
-                        if (fromIdx === -1 && rowFromNorm === fromNorm) {
+    
+                        // `from` sa musí nachádzať ako placeFrom alebo placeTo
+                        // v niektorom riadku od boardIdx po alightIdx
+                        if (fromIdx === -1 && (rowFromNorm === fromNorm || rowToNorm === fromNorm)) {
                             fromIdx = i;
                         }
-                        if (fromIdx !== -1 && rowToNorm === toNorm && i >= fromIdx) {
-                            covered = true;
-                            return;
+    
+                        // `to` sa musí nachádzať ako placeFrom alebo placeTo
+                        // v niektorom riadku od boardIdx po alightIdx
+                        if (rowFromNorm === toNorm || rowToNorm === toNorm) {
+                            if (fromIdx !== -1 && i >= fromIdx) {
+                                toIdx = i;
+                            }
                         }
+                    }
+    
+                    // Segment je pokrytý len ak sa našiel `from` AJ `to`
+                    // v správnom poradí
+                    if (fromIdx !== -1 && toIdx !== -1 && toIdx >= fromIdx) {
+                        covered = true;
+                        return;
                     }
                 });
             });
