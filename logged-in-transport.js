@@ -5896,13 +5896,16 @@ const TransportApp = ({ userProfileData }) => {
         // videli aj predchádzajúce segmenty, ktoré sú súčasťou
         // rovnakého pôvodného presunu.
         // ============================================================
+
+        const targetParentKey = effectiveTransfer._parentKey || effectiveTransfer.key;
         const allSegments = [];
     
         savedTransfers
             .filter((t) =>
                 String(t.teamName || '').trim() === teamName &&
                 cleanCategory(t.category || '') === category &&
-                t.dayKey === dayKey
+                t.dayKey === dayKey &&
+                t.key === targetParentKey
             )
             .forEach((t) => {
                 const stops = Array.isArray(t.intermediateStops) ? t.intermediateStops : [];
@@ -6081,6 +6084,29 @@ const TransportApp = ({ userProfileData }) => {
     
             // Inak over cez isSegmentCoveredByBus
             if (!isSegmentCoveredByBus(seg)) {
+                // ============================================================
+                // NOVÉ: Debug log – aby si v konzole videl, KTORÝ segment
+                // blokuje priradenie.
+                // ============================================================
+                console.warn('[TRANSPORT][arePreviousSegmentsResolved] BLOKUJÚCI segment:', {
+                    seg,
+                    trRange,
+                    effectiveTransfer: {
+                        key: effectiveTransfer.key,
+                        _parentKey: effectiveTransfer._parentKey,
+                        fromLocation: effectiveTransfer.fromLocation,
+                        toLocation: effectiveTransfer.toLocation,
+                        when: effectiveTransfer.when,
+                    },
+                    allSegments: allSegments.map((s) => ({
+                        from: s.fromLocation,
+                        to: s.toLocation,
+                        isWalking: s.isWalking,
+                        _isAssigned: s._isAssigned,
+                        _parentKey: s._parentKey,
+                        range: s.range,
+                    })),
+                });
                 return false;
             }
         }
