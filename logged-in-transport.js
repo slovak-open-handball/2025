@@ -469,7 +469,9 @@ const TransportApp = ({ userProfileData }) => {
         // ============================================================
         let prevResolvedEndTs = null;
         for (const seg of parentSegments) {
-            const isCurrent = ...
+            const isCurrent =
+                normalizePlaceName(seg.fromLocation) === currentFromNorm &&
+                normalizePlaceName(seg.toLocation) === currentToNorm;
             if (isCurrent) break;
         
             // NOVÉ: Pešie segmenty preskoč – nemajú reálny časový interval
@@ -492,7 +494,9 @@ const TransportApp = ({ userProfileData }) => {
         let nextResolvedStartTs = null;
         let foundCurrent = false;
         for (const seg of parentSegments) {
-            const isCurrent = ...
+            const isCurrent =
+                normalizePlaceName(seg.fromLocation) === currentFromNorm &&
+                normalizePlaceName(seg.toLocation) === currentToNorm;
             if (isCurrent) { foundCurrent = true; continue; }
             if (!foundCurrent) continue;
         
@@ -8526,50 +8530,14 @@ const TransportApp = ({ userProfileData }) => {
     
             const timeRange = parseWhenRangeToTs(t.when);
             if (!timeRange || timeRange.startTs == null || timeRange.endTs == null || timeRange.endTs <= timeRange.startTs) {
-                // Fallback – nevieme vypočítať časy
-
-                // ============================================================
-                // NOVÉ: Zisti `parentEffectiveWhen` (rovnaká logika ako vyššie)
-                // ============================================================
-                const parentEffectiveWhenFallback = (() => {
-                    if (t.when && String(t.when).trim() !== '') return t.when;
-                    if (Array.isArray(t.segments) && t.segments.length > 0) {
-                        let earliestStart = null;
-                        let latestEnd = null;
-                        t.segments.forEach((s) => {
-                            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                                earliestStart = s.startTs;
-                            }
-                            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                                latestEnd = s.endTs;
-                            }
-                        });
-                        if (earliestStart != null && latestEnd != null) {
-                            return `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-                        } else if (earliestStart != null) {
-                            return formatTsLocal(earliestStart);
-                        } else if (latestEnd != null) {
-                            return formatTsLocal(latestEnd);
-                        }
-                    }
-                    return null;
-                })();
-
-                let firstUnassignedFallbackIdx = -1;
-
+                // Fallback – nevieme vypočítať časy parenta.
+                // Vytvor segmenty BEZ časov (zobrazia sa ako "čakajúce na priradenie").
                 for (let i = 0; i < route.length - 1; i++) {
-                    const ft = finalTimes[i];
-                    if (!ft) continue;
-                
-                    // Preskoč segment, ak from === to
                     const fromLoc = String(route[i] || '').trim();
                     const toLoc = String(route[i + 1] || '').trim();
                     if (normalizePlaceName(fromLoc) === normalizePlaceName(toLoc)) continue;
-                
-                    // ============================================================
-                    // NOVÉ: Zisti, či je TENTO konkrétny segment označený ako peši
-                    // v parent.segments (rovnaká logika ako vo fallback vetve).
-                    // ============================================================
+            
+                    // Zisti, či je tento segment označený ako peši
                     const parentSegmentForThisIdx = (() => {
                         if (!Array.isArray(t.segments)) return null;
                         const segFromNorm = normalizePlaceName(fromLoc);
@@ -8579,63 +8547,30 @@ const TransportApp = ({ userProfileData }) => {
                                 && normalizePlaceName(s.to) === segToNorm
                         ) || null;
                     })();
-                
+            
                     const isSegmentWalking =
                         (parentSegmentForThisIdx && parentSegmentForThisIdx.isWalking === true) ||
                         t.isWalking === true;
-                
-                    // ============================================================
-                    // NOVÉ: Pešie segmenty patria do boxu "Peši" – NEPRIDÁVAJ ich
-                    // do expandedTransfers, aby sa nezobrazili vo vygenerovaných presunoch.
-                    // ============================================================
-                    if (isSegmentWalking) {
-                        continue;
-                    }
-                
-                    const hasRealTime = ft.startTs != null && ft.endTs != null;
-                    let whenStr = hasRealTime
-                        ? `${formatTsLocal(ft.startTs)} – ${formatTsLocal(ft.endTs)}`
-                        : null;
-                
+            
+                    if (isSegmentWalking) continue;
+            
                     const text = `Presun z ${fromLoc} do ${toLoc}`;
-                    const key = buildTransferKey(
-                        t.category,
-                        t.teamName,
-                        whenStr || '',
-                        text
-                    );
-                
-                    let remainingMinutes = null;
-                
-                    if (hasRealTime && !segmentAssigned[i]) {
-                        let endTs = null;
-                        for (let k = i + 1; k < route.length - 1; k++) {
-                            if (segmentAssigned[k] && finalTimes[k] && finalTimes[k].startTs != null) {
-                                endTs = finalTimes[k].startTs;
-                                break;
-                            }
-                        }
-                        if (endTs == null) endTs = timeRange.endTs;
-                
-                        if (endTs != null && ft.startTs != null && endTs > ft.startTs) {
-                            remainingMinutes = Math.round((endTs - ft.startTs) / 60000);
-                        }
-                    }
-                
+                    const key = buildTransferKey(t.category, t.teamName, '', text);
+            
                     expandedTransfers.push({
                         ...t,
                         key,
-                        when: whenStr,
+                        when: null,
                         text,
                         fromLocation: fromLoc,
                         toLocation: toLoc,
                         intermediateStops: [],
                         _parentKey: t.key,
                         _parentRoute: `${t.fromLocation} → ${t.toLocation}`,
-                        _remainingMinutes: remainingMinutes,
-                        _isAssigned: segmentAssigned[i],
-                        _hasRealTime: hasRealTime,
-                        isWalking: false,   // sem sa dostanú len nepešie segmenty
+                        _remainingMinutes: null,
+                        _isAssigned: false,
+                        _hasRealTime: false,
+                        isWalking: false,
                     });
                 }
                 return;
