@@ -9010,6 +9010,14 @@ const TransportApp = ({ userProfileData }) => {
                         remainingMinutes = Math.round((endTs - ft.startTs) / 60000);
                     }
                 }
+
+                console.log('[TRANSPORT][EXPANDED] Pushing segment', {
+                    fromLoc,
+                    toLoc,
+                    isSegmentWalking,
+                    hasRealTime,
+                    whenStr,
+                });
             
                 expandedTransfers.push({
                     ...t,
