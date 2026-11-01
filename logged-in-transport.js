@@ -8531,22 +8531,28 @@ const TransportApp = ({ userProfileData }) => {
         
             teamsInThisBus.forEach(({ boardIdx, alightIdxs }, teamKey) => {
                 if (boardIdx == null || alightIdxs.length === 0) return;
-        
+            
                 const [teamName, category] = teamKey.split('|');
                 const tn = String(teamName).trim();
                 const cat = cleanCategory(category || '');
-        
+
                 alightIdxs.forEach((alightIdx) => {
                     if (alightIdx < boardIdx) return;
-        
-                    for (let i = boardIdx; i <= alightIdx; i++) {
-                        for (let j = i; j <= alightIdx; j++) {
-                            const fromLoc = sorted[i].placeFrom;
-                            const toLoc = sorted[j].placeTo;
-                            if (!fromLoc || !toLoc) continue;
-                            addAssignedSegment(dayKey, tn, cat, fromLoc, toLoc);
-                        }
-                    }
+
+                    // ============================================================
+                    // OPRAVA: Pridaj LEN presnú dvojicu (from → to), ktorá
+                    // zodpovedá nástupu a výstupu tímu v tomto buse.
+                    //
+                    // Predtým sa pridávali VŠETKY kombinácie [i, j] medzi
+                    // boardIdx a alightIdx, čo spôsobovalo, že sa ako
+                    // "priradené" označili aj segmenty, ktoré tím v buse
+                    // vôbec neabsolvoval (napr. Rosinská → Predmestská,
+                    // aj keď tím nastúpil inde a vystúpil inde).
+                    // ============================================================
+                    const fromLoc = sorted[boardIdx].placeFrom;
+                    const toLoc = sorted[alightIdx].placeTo;
+                    if (!fromLoc || !toLoc) return;
+                    addAssignedSegment(dayKey, tn, cat, fromLoc, toLoc);
                 });
             });
         });
