@@ -8890,17 +8890,21 @@ const TransportApp = ({ userProfileData }) => {
         });
 
         parentSegmentsMap.forEach((segments, blockKey) => {
-            // Parent je úplne priradený, ak VŠETKY jeho segmenty sú priradené/peši
-            const allAssigned = segments.every((t) => {
-                if (t.isWalking === true) return true;
-                if (t._isAssigned === true) return true;
-                if (isSegmentAssigned(t)) return true;
+            const parentKey = blockKey.split('||')[0];
+            const parent = savedTransfers.find((s) => s.key === parentKey);
+            if (!parent || !Array.isArray(parent.segments)) return;
+
+            // Parent je úplne priradený, ak KAŽDÝ segment v parent.segments
+            // je buď walking alebo má reálne časy z busu (busAssigned + startTs/endTs).
+            const allAssigned = parent.segments.every((seg) => {
+                if (!seg) return false;
+                if (seg.isWalking === true) return true;
+                if (seg.busAssigned === true && seg.startTs != null && seg.endTs != null) return true;
                 return false;
             });
             if (allAssigned) fullyAssignedParentKeys.add(blockKey);
         });
 
-        // Filtrovanie – skry len priradené segmenty
         const baseFiltered = expandedTransfers.filter((t) => {
             // Pešie segmenty patria do boxu "Peši"
             if (t.isWalking === true) return false;
@@ -8908,12 +8912,40 @@ const TransportApp = ({ userProfileData }) => {
             if (t._isAssigned === true) return false;
         
             if (t._parentKey) {
+                // Pre segmenty parenta: skry len ak je segment MANUÁLNE priradený
+                // (t.j. má reálne startTs/endTs z busu), NIE ak je len "pokrytý"
+                // trasou busu bez priradenia.
+                const parent = savedTransfers.find((s) => s.key === t._parentKey);
+                if (parent && Array.isArray(parent.segments)) {
+                    const segIdx = findSegmentIndex(parent.segments, t.fromLocation, t.toLocation);
+                    if (segIdx !== -1) {
+                        const seg = parent.segments[segIdx];
+                        // Skry len ak má reálne časy (je priradený) ALEBO je walking
+                        if (seg && (seg.busAssigned === true || seg.isWalking === true)) {
+                            return false;
+                        }
+                    }
+                }
+                // Skontroluj, či je parent úplne priradený
                 const blockKey = `${t._parentKey}||${cleanCategory(t.category || '')}||${String(t.teamName || '').trim()}`;
                 if (fullyAssignedParentKeys.has(blockKey)) return false;
                 return true;
             }
         
-            if (isSegmentAssigned(t)) return false;
+            // Pre samostatné (non-segment) presuny: skry len ak sú MANUÁLNE priradené
+            // (t.j. majú startTs/endTs), NIE len "pokryté" busom.
+            const teamName = String(t.teamName || '').trim();
+            const category = cleanCategory(t.category || '');
+            const parentRec = savedTransfers.find((s) => s.key === t.key);
+            if (parentRec && Array.isArray(parentRec.segments)) {
+                const segIdx = findSegmentIndex(parentRec.segments, t.fromLocation, t.toLocation);
+                if (segIdx !== -1) {
+                    const seg = parentRec.segments[segIdx];
+                    if (seg && (seg.busAssigned === true || seg.isWalking === true)) {
+                        return false;
+                    }
+                }
+            }
             if (t._remainingMinutes != null && t._remainingMinutes <= 0) {
                 return false;
             }
