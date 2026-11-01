@@ -6089,26 +6089,6 @@ const TransportApp = ({ userProfileData }) => {
                         segEndTs = timeRange.endTs;
                     }
         
-                    const segFromNorm = normalizePlaceName(route[i]);
-                    const segToNorm = normalizePlaceName(route[i + 1]);
-                    const matchingSegs = savedTransfers.filter((s) => {
-                        if (String(s.teamName || '').trim() !== teamName) return false;
-                        if (cleanCategory(s.category || '') !== category) return false;
-                        if ((s.dayKey || '') !== dayKey) return false;
-                        if (normalizePlaceName(s.fromLocation) !== segFromNorm) return false;
-                        if (normalizePlaceName(s.toLocation) !== segToNorm) return false;
-        
-                        if (s._parentKey && s._parentKey !== s.key) {
-                            const parentRec = savedTransfers.find((p) => p.key === s._parentKey);
-                            if (parentRec && parentRec.isWalking !== true) {
-                                return false;
-                            }
-                        }
-        
-                        return true;
-                    });
-                    const realSegment = matchingSegs.find((s) => s.isWalking === true) || matchingSegs[0] || null;
-        
                     const parentSegForThisIdx = Array.isArray(t.segments)
                         ? t.segments.find((s) =>
                             normalizePlaceName(s.from) === normalizePlaceName(route[i]) &&
