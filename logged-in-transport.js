@@ -609,6 +609,8 @@ const TransportApp = ({ userProfileData }) => {
     const [busSaving, setBusSaving] = useState(false);
     const [confirmModal, setConfirmModal] = useState(null);    
     const [selectedDayKey, setSelectedDayKey] = useState('');
+    const [selectedBusId, setSelectedBusId] = useState('');
+    const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
     const [savedTransfers, setSavedTransfers] = useState([]);
     // Farba dopravy pre kategórie (na re-render pri zmene)
     const [transportColors, setTransportColors] = useState({});
@@ -7974,9 +7976,13 @@ const TransportApp = ({ userProfileData }) => {
         const daysToRender = selectedDayKey
             ? tournamentDays.filter((d) => d.dayKey === selectedDayKey)
             : tournamentDays;
+        
+        const filteredBuses = selectedBusId
+            ? buses.filter((b) => b.id === selectedBusId)
+            : buses;
     
         const hasAnythingToRender =
-            buses.length > 0 ||
+            filteredBuses.length > 0 ||
             savedTransfers.some((t) => t.isWalking === true && (!selectedDayKey || t.dayKey === selectedDayKey));
     
         return React.createElement(
@@ -8016,7 +8022,7 @@ const TransportApp = ({ userProfileData }) => {
                     renderSavedTransfers(),
     
                     // === BOXY AUTOBUSOV ===
-                    buses.map((bus) =>
+                    filteredBuses.map((bus) =>
                         React.createElement(
                             'div',
                             {
@@ -8376,9 +8382,12 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     const renderSavedTransfers = () => {
         // Filtrovanie podľa zvoleného dňa
-        const filteredByDay = selectedDayKey
-            ? savedTransfers.filter((t) => t.dayKey === selectedDayKey)
-            : savedTransfers;
+        // === NOVÉ: Filter podľa dňa AJ kategórie ===
+        const filteredByDay = savedTransfers.filter((t) => {
+            if (selectedDayKey && t.dayKey !== selectedDayKey) return false;
+            if (selectedCategoryFilter && cleanCategory(t.category || '') !== cleanCategory(selectedCategoryFilter)) return false;
+            return true;
+        });
     
         // ============================================================
         // Pomocná: parsovanie "when" → čas od/do
@@ -10194,16 +10203,50 @@ const TransportApp = ({ userProfileData }) => {
                     'Nastavenia'
                 )
             ),
-            // === SELECTBOX S DŇAMI TURNAJA (len v režime Plánovanie) ===
+            // === SELECTBOXY (AUTOBUS, KATEGÓRIA, DEŇ) – len v režime Plánovanie ===
             activeView === 'planovanie' && React.createElement(
                 'div',
                 { className: 'w-full flex flex-wrap items-center justify-center gap-3 mb-6' },
+            
+                // === 1. SELECTBOX PRE AUTOBUS ===
                 React.createElement(
-                    'label',
-                    { className: 'flex items-center gap-2 text-sm font-medium text-gray-700' },
-                    React.createElement('i', { className: 'fa-solid fa-filter text-gray-500' }),
-                    'Zobraziť deň:'
+                    'select',
+                    {
+                        value: selectedBusId,
+                        onChange: (e) => setSelectedBusId(e.target.value),
+                        disabled: filteredBuses.length === 0,
+                        className: 'px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
+                    },
+                    React.createElement('option', { value: '' }, 'Všetky autobusy'),
+                    filteredBuses.map((bus) =>
+                        React.createElement(
+                            'option',
+                            { key: bus.id, value: bus.id },
+                            bus.name
+                        )
+                    )
                 ),
+            
+                // === 2. SELECTBOX PRE KATEGÓRIU ===
+                React.createElement(
+                    'select',
+                    {
+                        value: selectedCategoryFilter,
+                        onChange: (e) => setSelectedCategoryFilter(e.target.value),
+                        disabled: getAvailableCategories().length === 0,
+                        className: 'px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
+                    },
+                    React.createElement('option', { value: '' }, 'Všetky kategórie'),
+                    getAvailableCategories().map((cat) =>
+                        React.createElement(
+                            'option',
+                            { key: cat, value: cat },
+                            cat
+                        )
+                    )
+                ),
+            
+                // === 3. SELECTBOX PRE DEŇ ===
                 React.createElement(
                     'select',
                     {
@@ -10212,11 +10255,7 @@ const TransportApp = ({ userProfileData }) => {
                         disabled: tournamentDays.length === 0,
                         className: 'px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
                     },
-                    React.createElement(
-                        'option',
-                        { value: '' },
-                        'Všetky dni'
-                    ),
+                    React.createElement('option', { value: '' }, 'Všetky dni'),
                     tournamentDays.map((day) =>
                         React.createElement(
                             'option',
