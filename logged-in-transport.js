@@ -322,6 +322,175 @@ const TransportApp = ({ userProfileData }) => {
         };
     };
 
+    const computeProvisionalSegmentRange = (transfer) => {
+        if (!transfer) return null;
+        const parentKey = transfer._parentKey || transfer.key;
+        if (!parentKey) return null;
+    
+        const teamName = String(transfer.teamName || '').trim();
+        const category = cleanCategory(transfer.category || '');
+        const dayKey = transfer.dayKey || '';
+    
+        // Nájdi parent záznam
+        const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
+        if (!parentRec) return null;
+    
+        // `trRange` aktuálneho segmentu:
+        //  - skús reálny `when` segmentu
+        //  - inak `when` parenta
+        //  - inak poskladaj z reálnych časov segmentov parenta
+        let trRange = parseTransferWhenToRange(transfer.when);
+        if (!trRange || trRange.startTs == null) {
+            if (parentRec.when && String(parentRec.when).trim() !== '') {
+                trRange = parseTransferWhenToRange(parentRec.when);
+            } else if (Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
+                let earliestStart = null;
+                let latestEnd = null;
+                parentRec.segments.forEach((s) => {
+                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                        earliestStart = s.startTs;
+                    }
+                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                        latestEnd = s.endTs;
+                    }
+                });
+                if (earliestStart != null && latestEnd != null) {
+                    trRange = { startTs: earliestStart, endTs: latestEnd };
+                }
+            }
+        }
+        if (!trRange || trRange.startTs == null) return null;
+    
+        // ============================================================
+        // Zoznam všetkých segmentov parenta (parent + prípadné child segmenty)
+        // ============================================================
+        const parentSegments = [];
+        (savedTransfersRef.current || []).forEach((other) => {
+            if (String(other.teamName || '').trim() !== teamName) return;
+            if (cleanCategory(other.category || '') !== category) return;
+            if ((other.dayKey || '') !== dayKey) return;
+            const otherParentKey = other._parentKey || other.key;
+            if (otherParentKey !== parentKey) return;
+    
+            const r = parseTransferWhenToRange(other.when);
+            if (!r || r.startTs == null) return;
+            parentSegments.push({ ...other, range: r });
+        });
+    
+        // Ak aktuálny segment chýba v zozname (lebo má `when` null), pridaj ho
+        const currentFromNorm = normalizePlaceName(transfer.fromLocation);
+        const currentToNorm = normalizePlaceName(transfer.toLocation);
+        const isCurrentInList = parentSegments.some(
+            (seg) =>
+                normalizePlaceName(seg.fromLocation) === currentFromNorm &&
+                normalizePlaceName(seg.toLocation) === currentToNorm
+        );
+        if (!isCurrentInList) {
+            parentSegments.push({ ...transfer, range: trRange });
+        }
+    
+        parentSegments.sort((a, b) => a.range.startTs - b.range.startTs);
+    
+        // ============================================================
+        // Pomocná: zisti, či daný segment je vyriešený (bus alebo walking)
+        // ============================================================
+        const isSegResolved = (seg) => {
+            if (seg.isWalking === true) return true;
+    
+            // bus: buď explicitne _isAssigned, alebo cez isSegmentCoveredByBusPath
+            if (seg._isAssigned === true) return true;
+    
+            // 1) Skús reálne časy segmentov parenta (parentRec.segments)
+            const segFromNorm = normalizePlaceName(seg.fromLocation);
+            const segToNorm = normalizePlaceName(seg.toLocation);
+            if (Array.isArray(parentRec.segments)) {
+                const match = parentRec.segments.find(
+                    (s) =>
+                        normalizePlaceName(s.from) === segFromNorm &&
+                        normalizePlaceName(s.to) === segToNorm
+                );
+                if (match && match.startTs != null && match.endTs != null) return true;
+            }
+    
+            // 2) Skús isSegmentCoveredByBusPath
+            if (typeof isSegmentCoveredByBusPath === 'function') {
+                const fromLoc = seg.fromLocation;
+                const toLoc = seg.toLocation;
+                if (fromLoc && toLoc &&
+                    isSegmentCoveredByBusPath(dayKey, teamName, category, fromLoc, toLoc)) {
+                    return true;
+                }
+            }
+    
+            return false;
+        };
+    
+        // ============================================================
+        // Nájdi koncový čas PREDCHÁDZAJÚCEHO vyriešeného segmentu
+        // ============================================================
+        let prevResolvedEndTs = null;
+        for (const seg of parentSegments) {
+            const isCurrent =
+                normalizePlaceName(seg.fromLocation) === currentFromNorm &&
+                normalizePlaceName(seg.toLocation) === currentToNorm;
+            if (isCurrent) break;
+            if (seg.range.startTs >= trRange.startTs) break;
+    
+            if (isSegResolved(seg)) {
+                if (seg.range.endTs != null) {
+                    if (prevResolvedEndTs == null || seg.range.endTs > prevResolvedEndTs) {
+                        prevResolvedEndTs = seg.range.endTs;
+                    }
+                }
+            }
+        }
+    
+        // ============================================================
+        // Nájdi začiatočný čas NASLEDUJÚCEHO vyriešeného segmentu
+        // ============================================================
+        let nextResolvedStartTs = null;
+        for (const seg of parentSegments) {
+            const isCurrent =
+                normalizePlaceName(seg.fromLocation) === currentFromNorm &&
+                normalizePlaceName(seg.toLocation) === currentToNorm;
+            if (isCurrent) continue;
+            if (seg.range.startTs <= trRange.startTs) continue;
+    
+            if (isSegResolved(seg)) {
+                if (seg.range.startTs != null) {
+                    if (nextResolvedStartTs == null || seg.range.startTs < nextResolvedStartTs) {
+                        nextResolvedStartTs = seg.range.startTs;
+                    }
+                }
+            }
+        }
+    
+        // ============================================================
+        // Zostav výsledok
+        //  - startTsForDisplay = prevResolvedEndTs (alebo trRange.startTs)
+        //  - endTsForDisplay   = nextResolvedStartTs (alebo trRange.endTs)
+        // ============================================================
+        const startTsForDisplay =
+            prevResolvedEndTs != null ? prevResolvedEndTs : trRange.startTs;
+    
+        let endTsForDisplay;
+        if (nextResolvedStartTs != null && nextResolvedStartTs > startTsForDisplay) {
+            endTsForDisplay = nextResolvedStartTs;
+        } else {
+            endTsForDisplay = trRange.endTs;
+        }
+    
+        if (
+            startTsForDisplay == null ||
+            endTsForDisplay == null ||
+            endTsForDisplay <= startTsForDisplay
+        ) {
+            return null;
+        }
+    
+        return { startTs: startTsForDisplay, endTs: endTsForDisplay };
+    };
+
     // ============================================================
     // Pomocná: obohatí transfer o teamUid/teamIndex (ak chýbajú)
     // a odstráni teamName (neukladá sa do DB).
@@ -5912,17 +6081,21 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     const findMatchingBusRows = (transfer) => {
         if (!transfer) return [];
-        
+    
         // ============================================================
-        // NOVÉ: Fallback pre `when` v tomto poradí:
-        //  1) transfer.when (ak existuje)
-        //  2) reálne časy segmentov (startTs/endTs)
-        //  3) NOVÉ: `when` z PARENT záznamu (savedTransfers) – pre segmenty,
-        //     ktoré ešte neboli priradené (majú _parentKey, ale prázdny when)
+        // NOVÉ: Pre NEPRIradený segment (má _parentKey a nemá reálne časy)
+        // použi PROVIZÓRNY interval z computeProvisionalSegmentRange.
+        //
+        // Tým sa zabezpečí, že hľadanie autobusov pracuje s ROVNAKÝM
+        // intervalom, aký je zobrazený v boxe "Vygenerované presuny".
         // ============================================================
         let effectiveWhen = transfer.when;
     
-        if (!effectiveWhen || String(effectiveWhen).trim() === '') {
+        // 1) Ak segment má reálny `when`, použi ho
+        if (effectiveWhen && String(effectiveWhen).trim() !== '') {
+            // OK – použijeme transfer.when
+        } else {
+            // 2) Skús reálne časy segmentov (startTs/endTs)
             const segs = Array.isArray(transfer.segments) ? transfer.segments : [];
             let earliestStart = null;
             let latestEnd = null;
@@ -5944,7 +6117,21 @@ const TransportApp = ({ userProfileData }) => {
         }
     
         // ============================================================
-        // NOVÉ: Ak stále nemáme `when`, skús parent záznam
+        // NOVÉ: Ak stále nemáme `when` (nepriradený segment), použi
+        // PROVIZÓRNY interval – rovnaký, aký sa zobrazuje v boxe.
+        // ============================================================
+        if (!effectiveWhen || String(effectiveWhen).trim() === '') {
+            const provisional = computeProvisionalSegmentRange(transfer);
+            if (provisional) {
+                effectiveWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                console.log('[TRANSPORT][findMatchingBusRows] Použitý provizórny interval:', effectiveWhen);
+            }
+        }
+    
+        // ============================================================
+        // Posledný fallback – `when` z parenta (nemal by sa použiť, ak
+        // computeProvisionalSegmentRange vrátil hodnotu, ale necháme
+        // ako poistku).
         // ============================================================
         if (!effectiveWhen || String(effectiveWhen).trim() === '') {
             const parentKey = transfer._parentKey || transfer.key;
@@ -5952,23 +6139,6 @@ const TransportApp = ({ userProfileData }) => {
                 const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
                 if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
                     effectiveWhen = parentRec.when;
-                    console.log(`effectiveWhen (fallback z PARENTA):`, effectiveWhen);
-                } else if (parentRec && Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
-                    // Skús poskladať z reálnych časov segmentov parenta
-                    let earliestStart = null;
-                    let latestEnd = null;
-                    parentRec.segments.forEach((s) => {
-                        if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                            earliestStart = s.startTs;
-                        }
-                        if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                            latestEnd = s.endTs;
-                        }
-                    });
-                    if (earliestStart != null && latestEnd != null) {
-                        effectiveWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-                        console.log(`effectiveWhen (fallback z parent.segments):`, effectiveWhen);
-                    }
                 }
             }
         }
@@ -8727,277 +8897,29 @@ const TransportApp = ({ userProfileData }) => {
 
         const baseFilteredFirstOnly = baseFilteredFirstOnlyRaw.map((t) => {
             if (!t._parentKey) return t;
-        
-            const parentKey = t._parentKey;
-            const teamName = String(t.teamName || '').trim();
-            const category = cleanCategory(t.category || '');
-            const dayKey = t.dayKey || '';
-        
+
             // ============================================================
-            // NOVÉ: Získať parent záznam pre fallback `when`
+            // NOVÉ: Použi spoločnú pomocnú funkciu na výpočet provizórneho
+            // intervalu. Tá istá funkcia sa používa aj vo findMatchingBusRows,
+            // takže zobrazený čas a čas použitý pri hľadaní autobusov sú
+            // IDENTICKÉ.
             // ============================================================
-            const parentRec = savedTransfers.find((s) => s.key === parentKey);
-        
-            // ============================================================
-            // OPRAVA: `trRange` pre aktuálny segment
-            //  - Ak má segment reálny `when`, použi ho
-            //  - Inak použi `when` parenta (ak existuje)
-            //  - Inak skús poskladať z reálnych časov segmentov parenta
-            // ============================================================
-            let trRange = parseTransferWhenToRange(t.when);
-            if (!trRange || trRange.startTs == null) {
-                if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
-                    trRange = parseTransferWhenToRange(parentRec.when);
-                } else if (parentRec && Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
-                    let earliestStart = null;
-                    let latestEnd = null;
-                    parentRec.segments.forEach((s) => {
-                        if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                            earliestStart = s.startTs;
-                        }
-                        if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                            latestEnd = s.endTs;
-                        }
-                    });
-                    if (earliestStart != null && latestEnd != null) {
-                        trRange = { startTs: earliestStart, endTs: latestEnd };
-                    }
-                }
-            }
-            if (!trRange || trRange.startTs == null) return t;
-        
-            // ============================================================
-            // OPRAVA: Zoznam všetkých segmentov parenta
-            //
-            // Pre každý segment určíme efektívny `when`:
-            //  - Ak má segment reálny `when`, použijeme ho
-            //  - Inak skúsime `when` z parenta (rozložený podľa poradia)
-            //  - Inak skúsime reálne časy z parent.segments
-            //
-            // Tým sa zabezpečí, že aj nevyriešené segmenty majú
-            // aspoň približný interval (z parenta), aby sa dali
-            // správne vypočítať `prevResolvedEndTs` / `nextResolvedStartTs`.
-            // ============================================================
-            const parentSegments = [];
-            savedTransfers.forEach((other) => {
-                if (String(other.teamName || '').trim() !== teamName) return;
-                if (cleanCategory(other.category || '') !== category) return;
-                if ((other.dayKey || '') !== dayKey) return;
-                const otherParentKey = other._parentKey || other.key;
-                if (otherParentKey !== parentKey) return;
-        
-                const r = parseTransferWhenToRange(other.when);
-                if (!r || r.startTs == null) return;
-                parentSegments.push({
-                    ...other,
-                    range: r,
-                });
-            });
-        
-            // ============================================================
-            // NOVÉ: Ak `parentSegments` neobsahuje aktuálny segment (lebo
-            // jeho `when` je null), musíme ho pridať manuálne s fallback
-            // `when` z parenta. Inak by sa stratil z poradia a výpočet
-            // `prevResolvedEndTs` / `nextResolvedStartTs` by bol nesprávny.
-            // ============================================================
-            const currentSegmentInList = parentSegments.some(
-                (seg) => normalizePlaceName(seg.fromLocation) === normalizePlaceName(t.fromLocation)
-                    && normalizePlaceName(seg.toLocation) === normalizePlaceName(t.toLocation)
-            );
-            if (!currentSegmentInList && trRange) {
-                // Pridaj aktuálny segment s `trRange` (fallback z parenta)
-                parentSegments.push({
-                    ...t,
-                    range: trRange,
-                });
-            }
-        
-            parentSegments.sort((a, b) => a.range.startTs - b.range.startTs);
-        
-            // ============================================================
-            // NOVÉ: Zisti, či aktuálny segment je walking a či existuje
-            // nasledujúci PRIradený (bus) segment.
-            // ============================================================
-            const isCurrentWalking = t.isWalking === true;
-        
-            // Nájdi nasledujúci priradený (bus) segment za aktuálnym
-            let nextAssignedStartTs = null;
-            // Nájdi predchádzajúci priradený (bus) segment pred aktuálnym
-            let prevAssignedEndTs = null;
-        
-            for (const seg of parentSegments) {
-                // Preskoč samotný aktuálny segment
-                const isCurrentSegment = normalizePlaceName(seg.fromLocation) === normalizePlaceName(t.fromLocation)
-                    && normalizePlaceName(seg.toLocation) === normalizePlaceName(t.toLocation);
-                if (isCurrentSegment) continue;
-        
-                if (seg.range.startTs > trRange.startTs) {
-                    // Segment za aktuálnym
-                    if (nextAssignedStartTs == null) {
-                        const isAssigned = seg._isAssigned === true || isSegmentAssigned(seg);
-                        // Pre walking aktuálneho segmentu hľadáme PRVÝ bus segment
-                        // (pešie segmenty preskočíme, chceme čas odchodu busu)
-                        if (isCurrentWalking) {
-                            if (isAssigned && seg.isWalking !== true) {
-                                nextAssignedStartTs = seg.range.startTs;
-                            }
-                        } else {
-                            // Pre nebusový (nepriradený) segment – chceme najbližší
-                            // priradený segment (bus alebo walking)
-                            if (isAssigned || seg.isWalking === true) {
-                                nextAssignedStartTs = seg.range.startTs;
-                            }
-                        }
-                    }
-                } else if (seg.range.endTs != null && seg.range.endTs <= trRange.startTs) {
-                    // Segment pred aktuálnym
-                    const isAssigned = seg._isAssigned === true || isSegmentAssigned(seg);
-                    if (isAssigned && seg.range.endTs != null) {
-                        if (prevAssignedEndTs == null || seg.range.endTs > prevAssignedEndTs) {
-                            prevAssignedEndTs = seg.range.endTs;
-                        }
-                    }
-                }
-            }
-        
-            // ============================================================
-            // Vypočítaj blockEndTs – maximum z koncov všetkých segmentov
-            // ============================================================
-            let blockEndTs = null;
-            parentSegments.forEach((seg) => {
-                if (seg.range.endTs == null) return;
-                if (blockEndTs == null || seg.range.endTs > blockEndTs) {
-                    blockEndTs = seg.range.endTs;
-                }
-            });
-        
-            if (blockEndTs == null) return t;
-        
-            // ============================================================
-            // OPRAVA: Pre walking segment urči správny displayEndTs
-            // ============================================================
-            let displayEndTs = blockEndTs;
-        
-            if (isCurrentWalking) {
-                if (nextAssignedStartTs != null && nextAssignedStartTs >= trRange.startTs) {
-                    displayEndTs = nextAssignedStartTs;
-                } else {
-                    displayEndTs = blockEndTs;
-                }
-            } else {
-                if (nextAssignedStartTs != null && nextAssignedStartTs >= trRange.startTs) {
-                    displayEndTs = nextAssignedStartTs;
-                } else {
-                    displayEndTs = blockEndTs;
-                }
-            }
-        
-            if (displayEndTs != null && displayEndTs < trRange.startTs) {
-                displayEndTs = trRange.startTs;
-            }
-        
-            // ============================================================
-            // OPRAVA: Nájdi koncový čas PREDCHÁDZAJÚCEHO vyriešeného segmentu
-            //
-            // DÔLEŽITÉ: Pre aktuálny segment používame `prevResolvedEndTs`
-            // ako ZAČIATOČNÝ čas (t.j. koniec predchádzajúceho vyriešeného
-            // segmentu). Ak neexistuje, použijeme `trRange.startTs` (začiatok
-            // parenta).
-            // ============================================================
-            let prevResolvedEndTs = null;
-            for (const seg of parentSegments) {
-                const isCurrentSegment = normalizePlaceName(seg.fromLocation) === normalizePlaceName(t.fromLocation)
-                    && normalizePlaceName(seg.toLocation) === normalizePlaceName(t.toLocation);
-                if (isCurrentSegment) break;
-                if (seg.range.startTs >= trRange.startTs) break;
-        
-                const isAssigned = seg._isAssigned === true || isSegmentAssigned(seg);
-                if (isAssigned || seg.isWalking === true) {
-                    if (seg.range.endTs != null) {
-                        if (prevResolvedEndTs == null || seg.range.endTs > prevResolvedEndTs) {
-                            prevResolvedEndTs = seg.range.endTs;
-                        }
-                    }
-                }
-            }
-        
-            // ============================================================
-            // OPRAVA: Nájdi začiatočný čas NASLEDUJÚCEHO vyriešeného segmentu
-            // ============================================================
-            let nextResolvedStartTs = null;
-            for (const seg of parentSegments) {
-                const isCurrentSegment = normalizePlaceName(seg.fromLocation) === normalizePlaceName(t.fromLocation)
-                    && normalizePlaceName(seg.toLocation) === normalizePlaceName(t.toLocation);
-                if (isCurrentSegment) continue;
-                if (seg.range.startTs <= trRange.startTs) continue;
-        
-                const isAssigned = seg._isAssigned === true || isSegmentAssigned(seg);
-                if (isAssigned || seg.isWalking === true) {
-                    if (seg.range.startTs != null) {
-                        if (nextResolvedStartTs == null || seg.range.startTs < nextResolvedStartTs) {
-                            nextResolvedStartTs = seg.range.startTs;
-                        }
-                    }
-                }
-            }
-        
-            const isCurrentSegmentResolved =
-                t._isAssigned === true ||
-                (t.segments && Array.isArray(t.segments) && t.segments.some((s) => s.startTs != null && s.endTs != null)) ||
-                (t._hasRealTime === true && isSegmentAssigned(t));
-        
-            // ============================================================
-            // OPRAVA: Výpočet `startTsForDisplay` a `endTsForDisplay`
-            //
-            // Pre NEVYRIEŠENÝ segment:
-            //  - startTsForDisplay = koniec predchádzajúceho vyriešeného segmentu
-            //    (alebo začiatok parenta, ak neexistuje)
-            //  - endTsForDisplay   = začiatok nasledujúceho vyriešeného segmentu
-            //    (alebo koniec parenta, ak neexistuje)
-            //
-            // Tým sa zabezpečí, že segment má v boxe "Vygenerované presuny"
-            // zmysluplný interval, ktorý nadväzuje na predchádzajúce
-            // a nasledujúce časti presunu.
-            // ============================================================
-            let startTsForDisplay;
-            if (isCurrentSegmentResolved) {
-                startTsForDisplay = trRange.startTs;
-            } else {
-                startTsForDisplay = prevResolvedEndTs != null
-                    ? prevResolvedEndTs
-                    : trRange.startTs;
-            }
-        
-            let endTsForDisplay;
-            if (isCurrentSegmentResolved) {
-                endTsForDisplay = trRange.endTs;
-            } else if (nextResolvedStartTs != null && nextResolvedStartTs > startTsForDisplay) {
-                endTsForDisplay = nextResolvedStartTs;
-            } else {
-                endTsForDisplay = trRange.endTs;
-            }
-        
-            // Bezpečnostná poistka: endTs musí byť > startTs
-            if (
-                startTsForDisplay == null ||
-                endTsForDisplay == null ||
-                endTsForDisplay <= startTsForDisplay
-            ) {
+            const provisional = computeProvisionalSegmentRange(t);
+            if (!provisional) {
                 return {
                     ...t,
                     when: null,
                     _remainingMinutes: null,
                 };
             }
-        
-            // Zostav `when` string
-            const provisionalWhenStr = `${formatTsLocal(startTsForDisplay)} – ${formatTsLocal(endTsForDisplay)}`;
+
+            const provisionalWhenStr = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
         
             return {
                 ...t,
                 when: provisionalWhenStr,
                 _remainingMinutes: null,
-                _hasRealTime: false,   // stále false – segment nie je vyriešený
+                _hasRealTime: false,
             };
         });
         
@@ -10711,29 +10633,23 @@ const TransportApp = ({ userProfileData }) => {
                 // Info o presune
                 (() => {
                     const tr = transferActionModal.transfer;
-                    // NOVÉ: ak `when` je prázdny, poskladaj ho zo segmentov
-                    let displayWhen = null;
 
-                    // 1) Skús reálne časy segmentu
-                    if (tr._parentKey) {
-                        const parentRec = savedTransfers.find((s) => s.key === tr._parentKey);
-                        if (parentRec && Array.isArray(parentRec.segments)) {
-                            const seg = parentRec.segments.find(
-                                (s) =>
-                                    normalizePlaceName(s.from) === normalizePlaceName(tr.fromLocation) &&
-                                    normalizePlaceName(s.to) === normalizePlaceName(tr.toLocation)
-                            );
-                            if (seg && seg.startTs != null && seg.endTs != null) {
-                                displayWhen = `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`;
-                            } else if (seg && seg.startTs != null) {
-                                displayWhen = formatTsLocal(seg.startTs);
-                            } else if (seg && seg.endTs != null) {
-                                displayWhen = formatTsLocal(seg.endTs);
-                            }
-                        }
+                    // ============================================================
+                    // NOVÉ: Pre zobrazenie času použi rovnakú logiku ako v boxe:
+                    //  1) `tr.when` (ak existuje – pre nepriradené segmenty je to
+                    //     už provizórny interval z baseFilteredFirstOnly)
+                    //  2) reálne časy segmentov (startTs/endTs)
+                    //  3) `computeProvisionalSegmentRange` (pre istotu, ak by `tr.when`
+                    //     bolo null)
+                    // ============================================================
+                    let displayWhen = null;
+                
+                    // 1) `tr.when` – prioritne (obsahuje provizórny interval)
+                    if (tr.when && String(tr.when).trim() !== '') {
+                        displayWhen = tr.when;
                     }
-                    
-                    // 2) Fallback – skús reálne časy segmentov priamo na objekte
+                
+                    // 2) Reálne časy segmentov
                     if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
                         let earliestStart = null;
                         let latestEnd = null;
@@ -10753,11 +10669,15 @@ const TransportApp = ({ userProfileData }) => {
                             displayWhen = formatTsLocal(latestEnd);
                         }
                     }
-                    
-                    // 3) Fallback – `when` parenta
-                    if (!displayWhen && tr.when && String(tr.when).trim() !== '') {
-                        displayWhen = tr.when;
+                
+                    // 3) Provizórny interval (posledná záchrana)
+                    if (!displayWhen) {
+                        const provisional = computeProvisionalSegmentRange(tr);
+                        if (provisional) {
+                            displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                        }
                     }
+                
                     return React.createElement(
                         'div',
                         { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm' },
@@ -10940,50 +10860,23 @@ const TransportApp = ({ userProfileData }) => {
                 // ============================================================
                 (() => {
                     const tr = transferActionModal.transfer;
-                    const counts = getTeamCountsForTransfer(tr.category, tr.teamName);
-                    let membersCount = null;
-                    if (counts) {
-                        membersCount =
-                            (counts.players || 0) +
-                            (counts.menRT || 0) +
-                            (counts.womenRT || 0) +
-                            (counts.menDrivers || 0) +
-                            (counts.womenDrivers || 0);
-                    } else {
-                        const avg = getCategoryAverageForTransfer(tr.category);
-                        if (avg != null) membersCount = avg;
-                    }
-                    const teamLabel = membersCount != null
-                        ? `${tr.teamName || ''} • ${membersCount}`
-                        : (tr.teamName || '');
                 
-                    // Rovnaká logika ako v renderSavedTransfers
-                    const transportColor = getTransportColorForCategory(tr.category);
-                    const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
-                
-                    // NOVÉ: ak `when` je prázdny, poskladaj ho zo segmentov
+                    // ============================================================
+                    // NOVÉ: Pre zobrazenie času použi rovnakú logiku ako v boxe:
+                    //  1) `tr.when` (ak existuje – pre nepriradené segmenty je to
+                    //     už provizórny interval z baseFilteredFirstOnly)
+                    //  2) reálne časy segmentov (startTs/endTs)
+                    //  3) `computeProvisionalSegmentRange` (pre istotu, ak by `tr.when`
+                    //     bolo null)
+                    // ============================================================
                     let displayWhen = null;
-
-                    // 1) Skús reálne časy segmentu
-                    if (tr._parentKey) {
-                        const parentRec = savedTransfers.find((s) => s.key === tr._parentKey);
-                        if (parentRec && Array.isArray(parentRec.segments)) {
-                            const seg = parentRec.segments.find(
-                                (s) =>
-                                    normalizePlaceName(s.from) === normalizePlaceName(tr.fromLocation) &&
-                                    normalizePlaceName(s.to) === normalizePlaceName(tr.toLocation)
-                            );
-                            if (seg && seg.startTs != null && seg.endTs != null) {
-                                displayWhen = `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`;
-                            } else if (seg && seg.startTs != null) {
-                                displayWhen = formatTsLocal(seg.startTs);
-                            } else if (seg && seg.endTs != null) {
-                                displayWhen = formatTsLocal(seg.endTs);
-                            }
-                        }
+                
+                    // 1) `tr.when` – prioritne (obsahuje provizórny interval)
+                    if (tr.when && String(tr.when).trim() !== '') {
+                        displayWhen = tr.when;
                     }
-                    
-                    // 2) Fallback – skús reálne časy segmentov priamo na objekte
+                
+                    // 2) Reálne časy segmentov
                     if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
                         let earliestStart = null;
                         let latestEnd = null;
@@ -11003,28 +10896,29 @@ const TransportApp = ({ userProfileData }) => {
                             displayWhen = formatTsLocal(latestEnd);
                         }
                     }
-                    
-                    // 3) Fallback – `when` parenta
-                    if (!displayWhen && tr.when && String(tr.when).trim() !== '') {
-                        displayWhen = tr.when;
+                
+                    // 3) Provizórny interval (posledná záchrana)
+                    if (!displayWhen) {
+                        const provisional = computeProvisionalSegmentRange(tr);
+                        if (provisional) {
+                            displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                        }
                     }
-
+                
                     return React.createElement(
                         'div',
-                        {
-                            className: 'mb-4 p-3 rounded-lg text-sm text-gray-700' +
-                                (boxBg ? '' : ' bg-violet-50/40 border border-gray-200'),
-                            style: {
-                                borderLeft: transportColor
-                                    ? `6px solid ${transportColor}`
-                                    : '2px solid #c4b5fd',
-                                ...(boxBg ? { backgroundColor: boxBg } : {}),
-                            }
-                        },
-                        React.createElement('div', { className: 'font-medium' },
-                            `${tr.fromLocation} → ${tr.toLocation}`),
-                        React.createElement('div', { className: 'text-xs text-gray-500 mt-1' },
-                            `${teamLabel}${displayWhen ? ' • ' + displayWhen : ''}`)
+                        { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm' },
+                        React.createElement(
+                            'div',
+                            { className: 'text-gray-600 font-medium' },
+                            `${tr.fromLocation || '?'} → ${tr.toLocation || '?'}`
+                        ),
+                        displayWhen &&
+                            React.createElement(
+                                'div',
+                                { className: 'text-xs text-gray-500 mt-1' },
+                                displayWhen
+                            )
                     );
                 })(),
 
