@@ -5908,7 +5908,7 @@ const TransportApp = ({ userProfileData }) => {
             )
             .forEach((t) => {
                 const stops = Array.isArray(t.intermediateStops) ? t.intermediateStops : [];
-    
+        
                 if (stops.length === 0) {
                     const range = parseTransferWhenToRange(t.when);
                     if (range) {
@@ -5923,8 +5923,8 @@ const TransportApp = ({ userProfileData }) => {
                     }
                     return;
                 }
-    
-                // Rozlož na segmenty
+        
+                // Rozlož parent s medzizastávkami na segmenty
                 const routeRaw = [t.fromLocation, ...stops, t.toLocation].filter(Boolean);
                 const route = [];
                 routeRaw.forEach((loc) => {
@@ -5933,13 +5933,12 @@ const TransportApp = ({ userProfileData }) => {
                         route.push(loc);
                     }
                 });
-    
+        
                 if (route.length < 2) return;
-    
+        
                 const timeRange = parseTransferWhenToRange(t.when);
                 if (!timeRange) return;
-    
-                // Pre každý segment dopočítaj čas z busRows, ak je priradený
+        
                 const teamKey = `${teamName}|${category}`;
                 const allBusRowsForDay = [];
                 Object.entries(busRows || {}).forEach(([busKey, rows]) => {
@@ -5949,7 +5948,7 @@ const TransportApp = ({ userProfileData }) => {
                         allBusRowsForDay.push(row);
                     });
                 });
-    
+        
                 const matchesTeam = (rowTeams) => {
                     if (!Array.isArray(rowTeams)) return false;
                     return rowTeams.some((tk) => {
@@ -5959,86 +5958,84 @@ const TransportApp = ({ userProfileData }) => {
                         return String(tn).trim() === teamName && cleanCategory(cat) === category;
                     });
                 };
-    
+        
                 for (let i = 0; i < route.length - 1; i++) {
-                    const ft = finalTimes[i];
-                    if (!ft) continue;
-                
-                    // Preskoč segment, ak from === to
-                    const fromLoc = String(route[i] || '').trim();
-                    const toLoc = String(route[i + 1] || '').trim();
-                    if (normalizePlaceName(fromLoc) === normalizePlaceName(toLoc)) continue;
-                
-                    // ============================================================
-                    // NOVÉ: Zisti, či je TENTO konkrétny segment označený ako peši
-                    // v parent.segments (rovnaká logika ako vo fallback vetve).
-                    // ============================================================
-                    const parentSegmentForThisIdx = (() => {
-                        if (!Array.isArray(t.segments)) return null;
-                        const segFromNorm = normalizePlaceName(fromLoc);
-                        const segToNorm = normalizePlaceName(toLoc);
-                        return t.segments.find(
-                            (s) => normalizePlaceName(s.from) === segFromNorm
-                                && normalizePlaceName(s.to) === segToNorm
-                        ) || null;
-                    })();
-                
-                    const isSegmentWalking =
-                        (parentSegmentForThisIdx && parentSegmentForThisIdx.isWalking === true) ||
-                        t.isWalking === true;
-                
-                    // ============================================================
-                    // NOVÉ: Pešie segmenty patria do boxu "Peši" – NEPRIDÁVAJ ich
-                    // do expandedTransfers, aby sa nezobrazili vo vygenerovaných presunoch.
-                    // ============================================================
-                    if (isSegmentWalking) {
-                        continue;
-                    }
-                
-                    const hasRealTime = ft.startTs != null && ft.endTs != null;
-                    let whenStr = hasRealTime
-                        ? `${formatTsLocal(ft.startTs)} – ${formatTsLocal(ft.endTs)}`
-                        : null;
-                
-                    const text = `Presun z ${fromLoc} do ${toLoc}`;
-                    const key = buildTransferKey(
-                        t.category,
-                        t.teamName,
-                        whenStr || '',
-                        text
-                    );
-                
-                    let remainingMinutes = null;
-                
-                    if (hasRealTime && !segmentAssigned[i]) {
-                        let endTs = null;
-                        for (let k = i + 1; k < route.length - 1; k++) {
-                            if (segmentAssigned[k] && finalTimes[k] && finalTimes[k].startTs != null) {
-                                endTs = finalTimes[k].startTs;
-                                break;
+                    const segFrom = normalizePlaceName(route[i]);
+                    const segTo = normalizePlaceName(route[i + 1]);
+        
+                    let boardingTs = null;
+                    let alightingTs = null;
+        
+                    allBusRowsForDay.forEach((row) => {
+                        const rowFrom = normalizePlaceName(row.placeFrom);
+                        const rowTo = normalizePlaceName(row.placeTo);
+                        const hasTeamIn = matchesTeam(row.teamsIn);
+                        const hasTeamOut = matchesTeam(row.teamsOut);
+        
+                        if (hasTeamIn && rowFrom === segFrom && row.timeFrom && boardingTs == null) {
+                            const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+                            if (dm) {
+                                const [h, mi] = row.timeFrom.split(':').map(Number);
+                                boardingTs = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
                             }
                         }
-                        if (endTs == null) endTs = timeRange.endTs;
-                
-                        if (endTs != null && ft.startTs != null && endTs > ft.startTs) {
-                            remainingMinutes = Math.round((endTs - ft.startTs) / 60000);
+                        if (hasTeamOut && rowTo === segTo && row.timeTo && alightingTs == null) {
+                            const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+                            if (dm) {
+                                const [h, mi] = row.timeTo.split(':').map(Number);
+                                alightingTs = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
+                            }
                         }
+                    });
+        
+                    let segStartTs, segEndTs;
+                    if (boardingTs != null && alightingTs != null) {
+                        segStartTs = boardingTs;
+                        segEndTs = alightingTs;
+                    } else if (boardingTs != null) {
+                        segStartTs = boardingTs;
+                        segEndTs = timeRange.endTs;
+                    } else if (alightingTs != null) {
+                        segStartTs = timeRange.startTs;
+                        segEndTs = alightingTs;
+                    } else {
+                        segStartTs = (i > 0 && allSegments.length > 0)
+                            ? allSegments[allSegments.length - 1].range.endTs
+                            : timeRange.startTs;
+                        segEndTs = timeRange.endTs;
                     }
-                
-                    expandedTransfers.push({
+        
+                    const segFromNorm = normalizePlaceName(route[i]);
+                    const segToNorm = normalizePlaceName(route[i + 1]);
+                    const matchingSegs = savedTransfers.filter((s) => {
+                        if (String(s.teamName || '').trim() !== teamName) return false;
+                        if (cleanCategory(s.category || '') !== category) return false;
+                        if ((s.dayKey || '') !== dayKey) return false;
+                        if (normalizePlaceName(s.fromLocation) !== segFromNorm) return false;
+                        if (normalizePlaceName(s.toLocation) !== segToNorm) return false;
+        
+                        if (s._parentKey && s._parentKey !== s.key) {
+                            const parentRec = savedTransfers.find((p) => p.key === s._parentKey);
+                            if (parentRec && parentRec.isWalking !== true) {
+                                return false;
+                            }
+                        }
+        
+                        return true;
+                    });
+                    const realSegment = matchingSegs.find((s) => s.isWalking === true) || matchingSegs[0] || null;
+        
+                    const isWalkingResolved = realSegment && realSegment.isWalking === true;
+        
+                    allSegments.push({
                         ...t,
-                        key,
-                        when: whenStr,
-                        text,
-                        fromLocation: fromLoc,
-                        toLocation: toLoc,
-                        intermediateStops: [],
+                        key: buildTransferKey(t.category, t.teamName, `${formatTsLocal(segStartTs)} – ${formatTsLocal(segEndTs)}`, `Presun z ${route[i]} do ${route[i + 1]}`),
+                        range: { startTs: segStartTs, endTs: segEndTs },
+                        fromLocation: route[i],
+                        toLocation: route[i + 1],
+                        isWalking: t.isWalking === true || isWalkingResolved,
                         _parentKey: t.key,
-                        _parentRoute: `${t.fromLocation} → ${t.toLocation}`,
-                        _remainingMinutes: remainingMinutes,
-                        _isAssigned: segmentAssigned[i],
-                        _hasRealTime: hasRealTime,
-                        isWalking: false,   // sem sa dostanú len nepešie segmenty
+                        _isAssigned: boardingTs != null || alightingTs != null,
                     });
                 }
             });
