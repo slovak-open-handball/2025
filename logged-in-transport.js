@@ -9056,7 +9056,7 @@ const TransportApp = ({ userProfileData }) => {
                 // Skry len ak je segment SKUTOČNE priradený k busu
                 // (tím v ňom sedí podľa aktuálnych busRows).
                 // ============================================================
-                if (isSegmentAssigned(t)) return false;
+//                if (isSegmentAssigned(t)) return false;
 
                 // Skontroluj, či je parent úplne priradený (všetky segmenty
                 // walking alebo priradené k busu) – v takom prípade ho skry.
@@ -9286,6 +9286,11 @@ const TransportApp = ({ userProfileData }) => {
                     React.createElement('span', { className: 'whitespace-nowrap' }, 'Iba časti presunov')
                 )
             ),
+            console.log('[TRANSPORT][renderSavedTransfers] expandedTransfers:', expandedTransfers);
+            console.log('[TRANSPORT][renderSavedTransfers] baseFiltered:', baseFiltered);
+            console.log('[TRANSPORT][renderSavedTransfers] firstSegmentPerParent:', firstSegmentPerParent);
+            console.log('[TRANSPORT][renderSavedTransfers] baseFilteredFirstOnly:', baseFilteredFirstOnly);
+            console.log('[TRANSPORT][renderSavedTransfers] filtered:', filtered);
             filtered.length === 0
                 ? React.createElement(
                     'p',
