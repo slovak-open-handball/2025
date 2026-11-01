@@ -9038,50 +9038,71 @@ const TransportApp = ({ userProfileData }) => {
             // Pešie segmenty patria do boxu "Peši"
             if (t.isWalking === true) return false;
         
-            if (t._isAssigned === true) return false;
-        
             if (t._parentKey) {
-                // Pre segmenty parenta: skry len ak je segment MANUÁLNE priradený
-                // (t.j. má reálne startTs/endTs z busu), NIE ak je len "pokrytý"
-                // trasou busu bez priradenia.
+                // ============================================================
+                // Pre segmenty parenta:
+                //  - Ak je segment označený ako walking → patrí do boxu "Peši",
+                //    nie sem.
+                //  - Ak je segment MANUÁLNE priradený k busu (má reálne časy
+                //    z busu a tím v ňom SKUTOČNE sedí), skry ho.
+                //
+                // DÔLEŽITÉ: NEpoužívame `seg.busAssigned` z parent.segments,
+                // pretože ten sa môže stať nesynchronizovaným s aktuálnym
+                // stavom busRows (napr. po odstránení tímu z busu).
+                // Namiesto toho používame `isSegmentAssigned(t)`, ktorá
+                // pracuje s AKTUÁLNYMI busRows (cez assignedSegmentsByTeam
+                // a isSegmentCoveredByBusPath).
+                // ============================================================
                 const parent = savedTransfers.find((s) => s.key === t._parentKey);
                 if (parent && Array.isArray(parent.segments)) {
                     const segIdx = findSegmentIndex(parent.segments, t.fromLocation, t.toLocation);
                     if (segIdx !== -1) {
                         const seg = parent.segments[segIdx];
-                        // Skry len ak má reálne časy (je priradený) ALEBO je walking
-                        if (seg && (seg.busAssigned === true || seg.isWalking === true)) {
+                        // Walking segment patrí do boxu "Peši"
+                        if (seg && seg.isWalking === true) {
                             return false;
                         }
                     }
                 }
-                // Skontroluj, či je parent úplne priradený
+
+                // ============================================================
+                // Skry len ak je segment SKUTOČNE priradený k busu
+                // (tím v ňom sedí podľa aktuálnych busRows).
+                // ============================================================
+                if (isSegmentAssigned(t)) return false;
+
+                // Skontroluj, či je parent úplne priradený (všetky segmenty
+                // walking alebo priradené k busu) – v takom prípade ho skry.
                 const blockKey = `${t._parentKey}||${cleanCategory(t.category || '')}||${String(t.teamName || '').trim()}`;
                 if (fullyAssignedParentKeys.has(blockKey)) return false;
                 return true;
             }
         
-            // Pre samostatné (non-segment) presuny: skry len ak sú MANUÁLNE priradené
-            // (t.j. majú startTs/endTs), NIE len "pokryté" busom.
-            const teamName = String(t.teamName || '').trim();
-            const category = cleanCategory(t.category || '');
+            // ============================================================
+            // Pre samostatné (non-segment) presuny:
+            //  - Ak je walking → patrí do boxu "Peši".
+            //  - Skry len ak je SKUTOČNE priradený k busu.
+            // ============================================================
             const parentRec = savedTransfers.find((s) => s.key === t.key);
             if (parentRec && Array.isArray(parentRec.segments)) {
                 const segIdx = findSegmentIndex(parentRec.segments, t.fromLocation, t.toLocation);
                 if (segIdx !== -1) {
                     const seg = parentRec.segments[segIdx];
-                    if (seg && (seg.busAssigned === true || seg.isWalking === true)) {
+                    if (seg && seg.isWalking === true) {
                         return false;
                     }
                 }
             }
+
+            if (isSegmentAssigned(t)) return false;
+
             if (t._remainingMinutes != null && t._remainingMinutes <= 0) {
                 return false;
             }
             return true;
         });
 
-                // ============================================================
+        // ============================================================
         // NOVÉ: Výber prvého segmentu z každého parent bloku
         // s prioritou:
         //   1) segment, ktorý začína na fromLocation parenta
