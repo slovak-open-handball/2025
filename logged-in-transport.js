@@ -8911,6 +8911,8 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 }
             }
+
+            const isCurrentSegmentResolved = t._hasRealTime === true;
             
             // ZAČIATOČNÝ ČAS: predchádzajúci vyriešený alebo pôvodný startTs parenta
             let startTsForDisplay;
