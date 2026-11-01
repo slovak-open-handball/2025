@@ -11338,25 +11338,25 @@ const TransportApp = ({ userProfileData }) => {
                         )
                     ),
         
-                    // ============================================================
-                    // VAROVANIE – použijeme currentTransfer
-                    // ============================================================
-                    !arePreviousSegmentsResolved(currentTransfer) &&
-                    React.createElement(
-                        'div',
-                        { className: 'mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm' },
-                        React.createElement(
-                            'p',
-                            { className: 'text-amber-700 flex items-start gap-2' },
-                            React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
-                            React.createElement(
-                                'span',
-                                null,
-                                'Najprv musíte priradiť predchádzajúce segmenty tohto presunu (alebo ich označiť ako „peši"). ',
-                                'Tento presun začína neskôr, takže tím sa musí najprv dostať na miesto odchodu.'
-                            )
-                        )
-                    ),
+//                    // ============================================================
+//                    // VAROVANIE – použijeme currentTransfer
+//                    // ============================================================
+//                    !arePreviousSegmentsResolved(currentTransfer) &&
+//                    React.createElement(
+//                        'div',
+//                        { className: 'mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm' },
+//                        React.createElement(
+//                            'p',
+//                            { className: 'text-amber-700 flex items-start gap-2' },
+//                            React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
+//                            React.createElement(
+//                                'span',
+//                                null,
+//                                'Najprv musíte priradiť predchádzajúce segmenty tohto presunu (alebo ich označiť ako „peši"). ',
+//                                'Tento presun začína neskôr, takže tím sa musí najprv dostať na miesto odchodu.'
+//                            )
+//                        )
+//                    ),
                     // ============================================================
                     // INFO O PRESUNE
                     // ============================================================
