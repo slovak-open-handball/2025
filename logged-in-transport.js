@@ -5923,16 +5923,16 @@ const TransportApp = ({ userProfileData }) => {
                 for (let i = 0; i < route.length - 1; i++) {
                     const segFrom = normalizePlaceName(route[i]);
                     const segTo = normalizePlaceName(route[i + 1]);
-        
+                
                     let boardingTs = null;
                     let alightingTs = null;
-        
+                
                     allBusRowsForDay.forEach((row) => {
                         const rowFrom = normalizePlaceName(row.placeFrom);
                         const rowTo = normalizePlaceName(row.placeTo);
                         const hasTeamIn = matchesTeam(row.teamsIn);
                         const hasTeamOut = matchesTeam(row.teamsOut);
-        
+                
                         if (hasTeamIn && rowFrom === segFrom && row.timeFrom && boardingTs == null) {
                             const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
                             if (dm) {
@@ -5948,9 +5948,39 @@ const TransportApp = ({ userProfileData }) => {
                             }
                         }
                     });
-        
+                
+                    // ============================================================
+                    // NOVÉ: Zisti isWalking z parent.segments – PRIORITNE
+                    // ============================================================
+                    const parentSegForThisIdx = Array.isArray(t.segments)
+                        ? t.segments.find((s) =>
+                            normalizePlaceName(s.from) === normalizePlaceName(route[i]) &&
+                            normalizePlaceName(s.to) === normalizePlaceName(route[i + 1])
+                        )
+                        : null;
+                    const isWalkingInParent = parentSegForThisIdx && parentSegForThisIdx.isWalking === true;
+                    const isSegmentWalking = t.isWalking === true || isWalkingInParent;
+                
+                    // ============================================================
+                    // NOVÉ: Pre peší segment NEPOČÍTAJ range z timeRange
+                    // (aby peší segment "nepokrýval" veľkú časť intervalu).
+                    // Peší segment má trvanie 0 min → startTs = endTs.
+                    // ============================================================
                     let segStartTs, segEndTs;
-                    if (boardingTs != null && alightingTs != null) {
+                    if (isSegmentWalking) {
+                        // Peší segment: trvanie 0 min → startTs = endTs
+                        if (boardingTs != null) {
+                            segStartTs = boardingTs;
+                            segEndTs = boardingTs;
+                        } else if (alightingTs != null) {
+                            segStartTs = alightingTs;
+                            segEndTs = alightingTs;
+                        } else {
+                            // Nemá reálny čas – použi začiatok parenta (alebo null)
+                            segStartTs = timeRange.startTs;
+                            segEndTs = timeRange.startTs;
+                        }
+                    } else if (boardingTs != null && alightingTs != null) {
                         segStartTs = boardingTs;
                         segEndTs = alightingTs;
                     } else if (boardingTs != null) {
@@ -5965,22 +5995,14 @@ const TransportApp = ({ userProfileData }) => {
                             : timeRange.startTs;
                         segEndTs = timeRange.endTs;
                     }
-        
-                    const parentSegForThisIdx = Array.isArray(t.segments)
-                        ? t.segments.find((s) =>
-                            normalizePlaceName(s.from) === normalizePlaceName(route[i]) &&
-                            normalizePlaceName(s.to) === normalizePlaceName(route[i + 1])
-                        )
-                        : null;
-                    const isWalkingInParent = parentSegForThisIdx && parentSegForThisIdx.isWalking === true;
-        
+                
                     allSegments.push({
                         ...t,
                         key: buildTransferKey(t.category, t.teamName, `${formatTsLocal(segStartTs)} – ${formatTsLocal(segEndTs)}`, `Presun z ${route[i]} do ${route[i + 1]}`),
                         range: { startTs: segStartTs, endTs: segEndTs },
                         fromLocation: route[i],
                         toLocation: route[i + 1],
-                        isWalking: t.isWalking === true || isWalkingInParent,
+                        isWalking: isSegmentWalking,
                         _parentKey: t.key,
                         _isAssigned: boardingTs != null || alightingTs != null,
                     });
@@ -6000,7 +6022,14 @@ const TransportApp = ({ userProfileData }) => {
             const segFromNorm = normalizePlaceName(seg.fromLocation || '');
             const segToNorm = normalizePlaceName(seg.toLocation || '');
             if (segFromNorm === transferFromNorm && segToNorm === transferToNorm) continue;
-    
+        
+            // ============================================================
+            // NOVÉ: Peší segment NIKDY neblokuje priradenie.
+            // (Kontrola musí byť PRED kontrolou "prvý segment parenta",
+            //  aby sa peší segment, ktorý je prvý v parentovi, tiež preskočil.)
+            // ============================================================
+            if (seg.isWalking === true) continue;
+        
             // ============================================================
             // OPRAVA: Ak ide o prvý segment parenta (začína tam, kde parent),
             // nemôže mať žiadny predchádzajúci segment. Tým pádom nemôže blokovať priradenie.
@@ -6010,20 +6039,17 @@ const TransportApp = ({ userProfileData }) => {
                 if (parent) {
                     const pFromNorm = normalizePlaceName(parent.fromLocation || '');
                     if (segFromNorm === pFromNorm) {
-                        continue; // Toto je prvý segment parenta, nie je to "predchádzajúci" pre nič.
+                        continue;
                     }
                 }
             }
-    
+        
             // Preskoč neskoršie segmenty
             if (seg.range.startTs >= trRange.startTs) continue;
-    
-            // Peši → vyriešené
-            if (seg.isWalking === true) continue;
-    
+        
             // Ak je segment priradený (má _isAssigned=true), je vyriešený
             if (seg._isAssigned === true) continue;
-    
+        
             // Inak over cez isSegmentCoveredByBus
             if (!isSegmentCoveredByBus(seg)) {
                 return false;
