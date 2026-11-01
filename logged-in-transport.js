@@ -471,30 +471,6 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
         }
-
-        // ============================================================
-        // Nájdi začiatočný čas NASLEDUJÚCEHO vyriešeného segmentu
-        // ============================================================
-        let nextResolvedStartTs = null;
-        let foundCurrent = false;
-        for (const seg of parentSegments) {
-            const isCurrent =
-                normalizePlaceName(seg.fromLocation) === currentFromNorm &&
-                normalizePlaceName(seg.toLocation) === currentToNorm;
-            if (isCurrent) {
-                foundCurrent = true;
-                continue;
-            }
-            if (!foundCurrent) continue;
-
-            if (seg.isResolved) {
-                if (seg.range.startTs != null) {
-                    if (nextResolvedStartTs == null || seg.range.startTs < nextResolvedStartTs) {
-                        nextResolvedStartTs = seg.range.startTs;
-                    }
-                }
-            }
-        }
     
         // ============================================================
         // Nájdi začiatočný čas NASLEDUJÚCEHO vyriešeného segmentu
