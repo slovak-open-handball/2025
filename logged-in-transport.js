@@ -9286,11 +9286,6 @@ const TransportApp = ({ userProfileData }) => {
                     React.createElement('span', { className: 'whitespace-nowrap' }, 'Iba časti presunov')
                 )
             ),
-            console.log('[TRANSPORT][renderSavedTransfers] expandedTransfers:', expandedTransfers);
-            console.log('[TRANSPORT][renderSavedTransfers] baseFiltered:', baseFiltered);
-            console.log('[TRANSPORT][renderSavedTransfers] firstSegmentPerParent:', firstSegmentPerParent);
-            console.log('[TRANSPORT][renderSavedTransfers] baseFilteredFirstOnly:', baseFilteredFirstOnly);
-            console.log('[TRANSPORT][renderSavedTransfers] filtered:', filtered);
             filtered.length === 0
                 ? React.createElement(
                     'p',
