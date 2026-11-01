@@ -4754,9 +4754,7 @@ const TransportApp = ({ userProfileData }) => {
             const sorted = (rows || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
             if (sorted.length === 0) return;
     
-            // ============================================================
-            // Nájdi indexy, kde tím NASTUPUJE a VYSTUPUJE v tomto buse.
-            // ============================================================
+            // Nájdi všetky nástupy a výstupy tímu
             const boardIdxs = [];
             const alightIdxs = [];
     
@@ -4775,45 +4773,33 @@ const TransportApp = ({ userProfileData }) => {
     
             if (boardIdxs.length === 0 || alightIdxs.length === 0) return;
     
-            // ============================================================
-            // Pre každý nástup a každý výstup za ním over, či tím
-            // v buse SKUTOČNE SEDÍ medzi `from` a `to`.
-            //
-            // Znamená to:
-            //  - `from` sa musí nachádzať ako placeFrom alebo placeTo
-            //    v niektorom riadku od boardIdx po alightIdx (vrátane)
-            //  - a ZÁROVEŇ `to` sa musí nachádzať ako placeFrom alebo placeTo
-            //    v niektorom riadku od boardIdx po alightIdx (vrátane),
-            //    pričom index riadku s `to` musí byť >= index riadku s `from`
-            // ============================================================
+            // Pre každý nástup nájdi NAJBLIŽŠÍ výstup po ňom (súvislý pobyt)
             boardIdxs.forEach((boardIdx) => {
-                alightIdxs.forEach((alightIdx) => {
-                    if (alightIdx < boardIdx) return;
+                if (covered) return;
+                // Nájdi prvý alightIdx >= boardIdx
+                const nextAlight = alightIdxs.find((ai) => ai >= boardIdx);
+                if (nextAlight == null) return;
     
-                    let fromIdx = -1;
-                    let toIdx = -1;
+                // Over, či sa from a to nachádzajú v riadkoch medzi boardIdx a nextAlight (vrátane)
+                // v správnom poradí
+                let fromIdx = -1;
+                let toIdx = -1;
     
-                    for (let i = boardIdx; i <= alightIdx; i++) {
-                        const rowFromNorm = normalizePlaceName(sorted[i].placeFrom);
-                        const rowToNorm = normalizePlaceName(sorted[i].placeTo);
+                for (let i = boardIdx; i <= nextAlight; i++) {
+                    const rowFromNorm = normalizePlaceName(sorted[i].placeFrom);
+                    const rowToNorm = normalizePlaceName(sorted[i].placeTo);
     
-                        // `from` sa musí nachádzať v niektorom riadku
-                        // od boardIdx po alightIdx
-                        if (fromIdx === -1 && (rowFromNorm === fromNorm || rowToNorm === fromNorm)) {
-                            fromIdx = i;
-                        }
-    
-                        // `to` sa musí nachádzať v niektorom riadku
-                        // od boardIdx po alightIdx, pričom i >= fromIdx
-                        if (fromIdx !== -1 && (rowFromNorm === toNorm || rowToNorm === toNorm)) {
-                            toIdx = i;
-                        }
+                    if (fromIdx === -1 && (rowFromNorm === fromNorm || rowToNorm === fromNorm)) {
+                        fromIdx = i;
                     }
-    
-                    if (fromIdx !== -1 && toIdx !== -1 && toIdx >= fromIdx) {
-                        covered = true;
+                    if (fromIdx !== -1 && (rowFromNorm === toNorm || rowToNorm === toNorm)) {
+                        if (toIdx === -1) toIdx = i;
                     }
-                });
+                }
+    
+                if (fromIdx !== -1 && toIdx !== -1 && toIdx >= fromIdx) {
+                    covered = true;
+                }
             });
         });
     
