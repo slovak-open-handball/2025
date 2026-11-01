@@ -10978,21 +10978,12 @@ const TransportApp = ({ userProfileData }) => {
                         )
                     )
                 ),
-
                 // ============================================================
                 // INFO O PRESUNE – rovnaká farba výplne ako box vo vygenerovaných presunoch
                 // ============================================================
                 (() => {
                     const tr = transferActionModal.transfer;
                 
-                    // ============================================================
-                    // NOVÉ: Pre zobrazenie času použi rovnakú logiku ako v boxe:
-                    //  1) `tr.when` (ak existuje – pre nepriradené segmenty je to
-                    //     už provizórny interval z baseFilteredFirstOnly)
-                    //  2) reálne časy segmentov (startTs/endTs)
-                    //  3) `computeProvisionalSegmentRange` (pre istotu, ak by `tr.when`
-                    //     bolo null)
-                    // ============================================================
                     let displayWhen = null;
                 
                     if (tr.when && String(tr.when).trim() !== '') {
@@ -11026,10 +11017,6 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     }
                 
-                    // ============================================================
-                    // NOVÉ: Počet členov tímu (rovnaká logika ako v boxe vygenerovaných
-                    // presunov – buď z users, alebo priemer kategórie).
-                    // ============================================================
                     const counts = getTeamCountsForTransfer(tr.category, tr.teamName);
                     let membersCount = null;
                     let membersTitle = '';
@@ -11049,27 +11036,30 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     }
                 
-                    const teamColor = getCategoryTextColor(tr.category);
+                    const transportColor = getTransportColorForCategory(tr.category);
+                    const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
                 
+                    // Rovnaký štýl ako box vo vygenerovaných presunoch
                     return React.createElement(
                         'div',
-                        { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm' },
-                        // ============================================================
-                        // NOVÉ: Riadok s kategóriou, tímom a počtom členov
-                        // (nad riadkom s trasou)
-                        // ============================================================
+                        {
+                            className: 'mb-4 text-sm text-gray-700 flex flex-col leading-snug rounded-md px-3 py-2',
+                            style: {
+                                position: 'relative',
+                                borderLeft: transportColor ? `6px solid ${transportColor}` : '2px solid #c4b5fd',
+                                ...(boxBg ? { backgroundColor: boxBg } : { backgroundColor: '#f5f3ff' }),
+                            },
+                        },
+                        // 1. riadok – kategória • tím • počet
                         React.createElement(
                             'div',
-                            { className: 'flex flex-wrap items-center gap-x-2 gap-y-1 mb-1' },
+                            { className: 'flex flex-wrap items-center gap-x-2 gap-y-1' },
                             tr.category &&
                                 React.createElement(
                                     'span',
                                     {
-                                        className: 'text-xs font-semibold px-2 py-0.5 rounded',
-                                        style: {
-                                            color: teamColor,
-                                            backgroundColor: lightenHex(teamColor, 0.15) || '#f3f4f6',
-                                        },
+                                        className: 'text-sm font-semibold',
+                                        style: { color: transportColor || '#5b21b6' },
                                         title: 'Kategória',
                                     },
                                     tr.category
@@ -11079,7 +11069,7 @@ const TransportApp = ({ userProfileData }) => {
                                     'span',
                                     {
                                         className: 'text-sm font-semibold',
-                                        style: { color: teamColor },
+                                        style: { color: transportColor || '#5b21b6' },
                                         title: 'Tím',
                                     },
                                     tr.teamName
@@ -11088,27 +11078,28 @@ const TransportApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'span',
                                     {
-                                        className: 'text-xs font-semibold text-gray-600',
+                                        className: 'text-sm font-semibold',
+                                        style: { color: transportColor || '#5b21b6' },
                                         title: membersTitle,
                                     },
-                                    `• ${membersCount} členov`
+                                    `• ${membersCount}`
                                 )
                         ),
-                        // Riadok s trasou
+                        // 2. riadok – trasa (rovnaká veľkosť / farba ako čas)
                         React.createElement(
-                            'div',
-                            { className: 'text-gray-600 font-medium' },
+                            'span',
+                            { className: 'text-sm text-gray-900 font-medium' },
                             `${tr.fromLocation || '?'} → ${tr.toLocation || '?'}`
                         ),
+                        // 3. riadok – čas
                         displayWhen &&
                             React.createElement(
-                                'div',
-                                { className: 'text-xs text-gray-500 mt-1' },
+                                'span',
+                                { className: 'text-sm text-gray-600' },
                                 displayWhen
                             )
                     );
                 })(),
-
                 // ============================================================
                 // DYNAMICKÝ VÝPOČET ZOZNAMU AUTOBUSOV
                 // ============================================================
