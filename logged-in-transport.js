@@ -4985,10 +4985,96 @@ const TransportApp = ({ userProfileData }) => {
                             return true;
                         });
 
-                    // 2) Pre každý parent prepočítaj segments a zapíš do DB
+                    // ============================================================
+                    // NOVÉ: Pre každý parent:
+                    //  1) Explicitne vynuluj časy všetkých segmentov, ktoré
+                    //     zodpovedajú odstránenému tímu (from → to mohol byť
+                    //     priradený k tomuto busu). Tým sa zaručí, že časy
+                    //     zmiznú z DB aj v prípade, že recomputeParentSegmentsInPlace
+                    //     by ich našiel v ešte neaktualizovanom busRows.
+                    //  2) Potom zavolaj recomputeParentSegments, ktorá dopočíta
+                    //     časy pre ostatné segmenty (ak sú priradené k iným busom).
+                    // ============================================================
                     for (const parent of parentCandidates) {
                         try {
-                            await recomputeParentSegments(parent);
+                            const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+                            const draft = {
+                                ...parent,
+                                segments: Array.isArray(parent.segments)
+                                    ? parent.segments.map((s) => ({ ...s }))
+                                    : buildDefaultSegments(parent),
+                            };
+
+                            // Vynuluj časy pre segmenty, ktoré zodpovedajú
+                            // odstránenému tímu. Keďže parent patrí tomuto tímu,
+                            // vynulujeme VŠETKY segmenty, ktoré mali priradenie
+                            // k tomuto busu (busId === busId, alebo ak busId chýba,
+                            // tak všetky s reálnymi časmi).
+                            let changed = false;
+                            draft.segments = draft.segments.map((seg) => {
+                                if (!seg) return seg;
+                                // Ak segment bol priradený k tomuto busu (alebo nemá
+                                // busId, ale má časy – pre istotu vynuluj), vymaž časy.
+                                const wasAssignedToThisBus =
+                                    seg.busId === busId ||
+                                    (seg.busId == null && (seg.startTs != null || seg.endTs != null));
+                                if (!wasAssignedToThisBus) return seg;
+
+                                // Ak segment má reálne časy, treba ich vymazať.
+                                if (
+                                    seg.startTs != null ||
+                                    seg.endTs != null ||
+                                    seg.when != null ||
+                                    seg.busAssigned === true ||
+                                    seg.busId != null
+                                ) {
+                                    changed = true;
+                                    return {
+                                        ...seg,
+                                        startTs: null,
+                                        endTs: null,
+                                        when: null,
+                                        busAssigned: false,
+                                        busId: null,
+                                    };
+                                }
+                                return seg;
+                            });
+
+                            // Zapíš vynulované segmenty do DB okamžite
+                            if (changed) {
+                                const payload = {
+                                    category: draft.category,
+                                    teamUid: draft.teamUid,
+                                    teamIndex: draft.teamIndex,
+                                    dayKey: draft.dayKey,
+                                    fromLocation: draft.fromLocation,
+                                    toLocation: draft.toLocation,
+                                    when: draft.when,
+                                    text: draft.text,
+                                    segments: draft.segments,
+                                };
+                                if (Array.isArray(draft.intermediateStops) && draft.intermediateStops.length > 0) {
+                                    payload.intermediateStops = draft.intermediateStops;
+                                }
+                                if (draft.isWalking === true) {
+                                    payload.isWalking = true;
+                                    payload.walkingSetAt = draft.walkingSetAt || null;
+                                    payload.walkingSetBy = draft.walkingSetBy || null;
+                                }
+                                await setDoc(
+                                    docRef,
+                                    { [TRANSPORT_TRANSFERS_FIELD]: { [parent.key]: payload } },
+                                    { merge: true }
+                                );
+                            }
+
+                            // 3) Prepočítaj parent (dopočíta časy pre ostatné
+                            //    segmenty, ktoré sú priradené k iným busom).
+                            await recomputeParentSegments({
+                                ...parent,
+                                segments: draft.segments,
+                            });
                         } catch (e) {
                             console.error('[TRANSPORT] Chyba pri prepočte parent segmentov po odstránení z busu:', e);
                         }
