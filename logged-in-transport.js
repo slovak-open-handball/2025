@@ -9951,10 +9951,13 @@ const TransportApp = ({ userProfileData }) => {
                     type: 'transfer',
                     text: `Presun: ${routeLabel}${busName ? ` (${busName})` : ''}`,
                     location: null,
+                    // NOVÉ: samostatné príznaky pre ikonu
                     _isAssigned: hasRealTimes,
                     _isWalking: isWalking,
                     _busName: busName,
                     _routeLabel: routeLabel,
+                    _fromLocation: fromLoc,
+                    _toLocation: toLoc,
                     _dayKey: dayKey,
                     _isTransferRow: true,  // príznak pre oranžové zafarbenie
                 });
@@ -11505,7 +11508,7 @@ const TransportApp = ({ userProfileData }) => {
                                 // ------------------------------------------------------------
                                 // Pomocná: meta informácie podľa typu udalosti
                                 // ------------------------------------------------------------
-                                const getEventMeta = (type) => {
+                                const getEventMeta = (type, ev) => {
                                     switch (type) {
                                         case 'match':
                                             return { icon: 'fa-hockey-puck', color: '#2563eb', label: 'Zápas', bg: '#eff6ff', border: '#bfdbfe', placeIcon: 'fa-location-dot' };
@@ -11515,26 +11518,39 @@ const TransportApp = ({ userProfileData }) => {
                                             return { icon: 'fa-bus', color: '#ea580c', label: 'Príchod', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
                                         case 'accommodation':
                                             return { icon: 'fa-bed', color: '#7c3aed', label: 'Ubytovanie', bg: '#f5f3ff', border: '#ddd6fe', placeIcon: 'fa-location-dot' };
-                                        case 'transfer':
-                                            // NOVÉ: Presun má rovnaký oranžový box a čierny text ako Príchod
+                                        case 'transfer': {
+                                            // ============================================================
+                                            // NOVÉ: Ikona podľa stavu presunu:
+                                            //  - peši → ikona chôdze
+                                            //  - busom/priradený → ikona busu (rovnaká ako Príchod)
+                                            //  - nepriradený → ikona otáznika
+                                            // ============================================================
+                                            if (ev && ev._isWalking) {
+                                                return { icon: 'fa-person-walking', color: '#ea580c', label: 'Presun (peši)', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
+                                            }
+                                            if (ev && ev._isAssigned) {
+                                                return { icon: 'fa-bus', color: '#ea580c', label: 'Presun (bus)', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
+                                            }
                                             return { icon: 'fa-van-shuttle', color: '#ea580c', label: 'Presun', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
+                                        }
                                         default:
                                             return { icon: 'fa-circle-dot', color: '#6b7280', label: 'Udalosť', bg: '#f9fafb', border: '#e5e7eb', placeIcon: 'fa-location-dot' };
                                     }
                                 };
-                    
+
                                 // ------------------------------------------------------------
                                 // Pomocná: vytiahne z textu udalosti názov miesta (ak existuje)
                                 //   - match:      "Tím A vs Tím B [..] | HALA"  → "HALA"
                                 //   - catering:   "Obed (12:00 – 12:30) → JEDÁLEŇ" → "JEDÁLEŇ"
                                 //   - accommodation: "Ubytovanie: UBytovňa X (typ: ...)" → "UBytovňa X"
                                 //   - arrival:    "Doprava / príchod: ..."  → null (nemá miesto)
+                                //   - transfer:   z parenta zobraz medzizastávky + from + to
                                 // ------------------------------------------------------------
                                 const extractPlaceFromEvent = (ev) => {
                                     if (!ev) return null;
                                     const text = String(ev.text || '').trim();
                                     if (!text) return null;
-                    
+
                                     if (ev.type === 'match') {
                                         // Za posledným "|" je názov haly
                                         const idx = text.lastIndexOf('|');
@@ -11544,7 +11560,7 @@ const TransportApp = ({ userProfileData }) => {
                                         }
                                         return ev.location || null;
                                     }
-                    
+
                                     if (ev.type === 'catering') {
                                         // Za "→" je názov jedálne
                                         const idx = text.lastIndexOf('→');
@@ -11554,18 +11570,32 @@ const TransportApp = ({ userProfileData }) => {
                                         }
                                         return ev.location || null;
                                     }
-                    
+
                                     if (ev.type === 'accommodation') {
                                         // "Ubytovanie: NÁZOV (typ: ...)"
                                         const m = /^Ubytovanie:\s*(.+?)(?:\s*\(typ:.*\))?$/i.exec(text);
                                         if (m && m[1]) return m[1].trim();
                                         return ev.location || null;
                                     }
-                    
+
                                     // arrival a ostatné – použi location, ak existuje
                                     return ev.location || null;
                                 };
-        
+
+                                // ============================================================
+                                // NOVÉ: Pre presun vráti zoznam miest (from, medzizastávky, to)
+                                // pre zobrazenie v poslednom stĺpci – každé na samostatnom riadku
+                                // ============================================================
+                                const extractPlacesForTransferEvent = (ev) => {
+                                    if (!ev || ev.type !== 'transfer') return [];
+                                    const places = [];
+                                    const fromLoc = String(ev._fromLocation || '').trim();
+                                    const toLoc = String(ev._toLocation || '').trim();
+                                    if (fromLoc) places.push(fromLoc);
+                                    if (toLoc) places.push(toLoc);
+                                    return places;
+                                };
+                                
                                 const buildEventDescription = (ev) => {
                                     if (!ev) return '';
                                     const raw = String(ev.text || '').trim();
@@ -11696,18 +11726,28 @@ const TransportApp = ({ userProfileData }) => {
                                                 'div',
                                                 { className: 'space-y-1' },
                                                 items.map((ev, idx) => {
-                                                    const meta = getEventMeta(ev.type);
+                                                    const meta = getEventMeta(ev.type, ev);
                                                     const timeLabel = extractTimeLabel(ev.when);
                                                     const text = buildEventDescription(ev);
-                                                    const placeName = extractPlaceFromEvent(ev);
                                                 
+                                                    // ============================================================
+                                                    // NOVÉ: Miesta pre posledný stĺpec
+                                                    //  - presun → zoznam miest (from, medzizastávky, to) – každé na samostatnom riadku
+                                                    //  - ostatné → jedno miesto (placeName)
+                                                    // ============================================================
+                                                    const isTransferEvent = ev.type === 'transfer';
+                                                    const transferPlaces = isTransferEvent ? extractPlacesForTransferEvent(ev) : [];
+                                                    const placeName = !isTransferEvent ? extractPlaceFromEvent(ev) : null;
+                                                    const hasAnyPlace = isTransferEvent
+                                                        ? transferPlaces.length > 0
+                                                        : !!placeName;
+
                                                     // ============================================================
                                                     // NOVÉ: Presun má oranžový box a čierny text (rovnako ako Príchod)
                                                     // ============================================================
-                                                    const isTransferEvent = ev.type === 'transfer';
                                                     const textColor = isTransferEvent ? '#000000' : '#1f2937';
                                                     const metaTextColor = isTransferEvent ? '#000000' : meta.color;
-                                                
+
                                                     return React.createElement(
                                                         'div',
                                                         {
@@ -11789,7 +11829,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                                 color: textColor,
                                                                             },
                                                                         },
-                                                                        // Domáci – vpravo (zarovnané na pravý okraj svojho stĺpca)
                                                                         React.createElement(
                                                                             'span',
                                                                             {
@@ -11802,7 +11841,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                             },
                                                                             teams.home
                                                                         ),
-                                                                        // Hostia – vľavo (zarovnané na ľavý okraj svojho stĺpca)
                                                                         React.createElement(
                                                                             'span',
                                                                             {
@@ -11818,7 +11856,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                     );
                                                                 }
                                                             }
-        
+
                                                             // ============================================================
                                                             // NOVÉ: Presun – zobrazí sa každý segment osobitne,
                                                             // s názvom busu (ak je priradený) alebo "PEŠI"
@@ -11828,7 +11866,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                 let rowBg = '#fff7ed'; // oranžová (default, ako príchod)
                                                                 let borderColor = '#fed7aa';
                                                                 let textColor = '#000000'; // NOVÉ: čierny text
-        
+
                                                                 if (ev._isWalking) {
                                                                     // Peši – zelená
                                                                     rowBg = '#f0fdf4';
@@ -11840,7 +11878,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                     borderColor = '#fed7aa';
                                                                     textColor = '#000000'; // NOVÉ: čierny text
                                                                 }
-        
+
                                                                 return React.createElement(
                                                                     'div',
                                                                     {
@@ -11901,33 +11939,76 @@ const TransportApp = ({ userProfileData }) => {
                                                             }
                                                         })(),
                                                         // 4) Miesto – vpravo s ikonou
+                                                        // ============================================================
+                                                        // NOVÉ:
+                                                        //  - Ubytovanie je zarovnané rovnako ako miesto zápasov (vpravo, truncated).
+                                                        //  - Presun má VŽDY miesta v poslednom stĺpci,
+                                                        //    každé na samostatnom riadku (from, medzizastávky, to).
+                                                        // ============================================================
                                                         React.createElement(
                                                             'div',
                                                             {
                                                                 className: 'flex-shrink-0 pt-0.5 text-right',
                                                                 style: { width: '160px', minWidth: '160px' },
-                                                                title: placeName ? `Miesto: ${placeName}` : 'Miesto nie je určené'
+                                                                title: hasAnyPlace
+                                                                    ? `Miesto: ${isTransferEvent ? transferPlaces.join(' → ') : placeName}`
+                                                                    : 'Miesto nie je určené'
                                                             },
-                                                            placeName
-                                                                ? React.createElement(
-                                                                    'span',
-                                                                    {
-                                                                        className: 'inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded',
-                                                                        style: {
-                                                                            color: isTransferEvent ? '#000000' : meta.color,
-                                                                            backgroundColor: isTransferEvent ? '#ea580c11' : meta.color + '11',
-                                                                        }
-                                                                    },
-                                                                    React.createElement('i', { className: `fa-solid ${meta.placeIcon} text-[10px]` }),
-                                                                    React.createElement(
+                                                            hasAnyPlace
+                                                                ? (isTransferEvent
+                                                                    // Presun – každé miesto na samostatnom riadku
+                                                                    ? React.createElement(
+                                                                        'div',
+                                                                        {
+                                                                            className: 'flex flex-col items-end gap-0.5',
+                                                                        },
+                                                                        transferPlaces.map((p, pIdx) =>
+                                                                            React.createElement(
+                                                                                'span',
+                                                                                {
+                                                                                    key: `tp-${pIdx}`,
+                                                                                    className: 'inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded max-w-full',
+                                                                                    style: {
+                                                                                        color: '#000000',
+                                                                                        backgroundColor: '#ea580c11',
+                                                                                        maxWidth: '100%',
+                                                                                    }
+                                                                                },
+                                                                                React.createElement('i', { className: `fa-solid ${meta.placeIcon} text-[10px] flex-shrink-0` }),
+                                                                                React.createElement(
+                                                                                    'span',
+                                                                                    {
+                                                                                        className: 'truncate',
+                                                                                        style: { maxWidth: '130px' },
+                                                                                        title: p,
+                                                                                    },
+                                                                                    p
+                                                                                )
+                                                                            )
+                                                                        )
+                                                                    )
+                                                                    // Ostatné – jedno miesto (rovnaké zarovnanie ako doteraz)
+                                                                    : React.createElement(
                                                                         'span',
                                                                         {
-                                                                            className: 'truncate',
-                                                                            style: { maxWidth: '140px' }
+                                                                            className: 'inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded max-w-full',
+                                                                            style: {
+                                                                                color: '#1f2937',
+                                                                                backgroundColor: meta.color + '11',
+                                                                                maxWidth: '100%',
+                                                                            },
+                                                                            title: placeName || ''
                                                                         },
-                                                                        placeName
-                                                                    )
-                                                                )
+                                                                        React.createElement('i', { className: `fa-solid ${meta.placeIcon} text-[10px] flex-shrink-0` }),
+                                                                        React.createElement(
+                                                                            'span',
+                                                                            {
+                                                                                className: 'truncate',
+                                                                                style: { maxWidth: '130px' }
+                                                                            },
+                                                                            placeName
+                                                                        )
+                                                                    ))
                                                                 : React.createElement(
                                                                     'span',
                                                                     {
