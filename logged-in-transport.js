@@ -10127,13 +10127,34 @@ const TransportApp = ({ userProfileData }) => {
             //    parent aspoň jeden bus segment (t.j. má intermediateStops).
             // ------------------------------------------------------------
             if (!t._parentKey) {
+                // ============================================================
+                // NOVÉ: Aj celý parent walking (bez medzizastávok) sa má
+                // zobraziť v boxe "Peši". Skús získať časy z parent.when,
+                // inak použi null (riadok sa zobrazí s "—").
+                // ============================================================
+                const parentRec = savedTransfers.find((s) => s.key === t.key) || t;
+                const parsed = parseWhenRangeToTs(parentRec.when);
+                const startTs = parsed && parsed.startTs != null ? parsed.startTs : null;
+                const endTs = parsed && parsed.endTs != null ? parsed.endTs : null;
+                let whenStr = null;
+                if (startTs != null && endTs != null) {
+                    whenStr = `${formatTsLocal(startTs)} – ${formatTsLocal(endTs)}`;
+                } else if (startTs != null) {
+                    whenStr = formatTsLocal(startTs);
+                } else if (endTs != null) {
+                    whenStr = formatTsLocal(endTs);
+                }
+                const remainingMinutes =
+                    startTs != null && endTs != null && endTs > startTs
+                        ? Math.round((endTs - startTs) / 60000)
+                        : null;
                 return {
                     ...t,
-                    when: null,
-                    _displayStartTs: null,
-                    _displayEndTs: null,
-                    _displayRemainingMinutes: null,
-                    _hasAnyBus: false,
+                    when: whenStr,
+                    _displayStartTs: startTs,
+                    _displayEndTs: endTs,
+                    _displayRemainingMinutes: remainingMinutes,
+                    _hasAnyBus: true,   // ← VŽDY zobraziť
                 };
             }
         
@@ -10299,7 +10320,7 @@ const TransportApp = ({ userProfileData }) => {
                 _displayStartTs: displayStartTs,
                 _displayEndTs: displayEndTs,
                 _displayRemainingMinutes: remainingMinutes,
-                _hasAnyBus: displayStartTs != null || displayEndTs != null,
+                _hasAnyBus: true,
             };
         });
     
@@ -10307,7 +10328,7 @@ const TransportApp = ({ userProfileData }) => {
         // 4) FILTRÁCIA – zobraz len tie, ktoré majú aspoň jeden bus čas
         // (inak by riadok nemal čo ukázať – žiadny čas)
         // ============================================================
-        const filteredWalking = enrichedWalking.filter((t) => t._hasAnyBus === true);
+        const filteredWalking = enrichedWalking;
     
         // ============================================================
         // 5) ZORADENIE podľa času začiatku (startTs), potom podľa tímu
