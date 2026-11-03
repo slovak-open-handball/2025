@@ -8624,7 +8624,7 @@ const TransportApp = ({ userProfileData }) => {
                 .replace(/\bubytovania\b/gi, 'ubytovňa')
                 .replace(/\bubytovanie\b/gi, 'ubytovňa')
                 .replace(/\bzastávky\b/gi, 'zastávka')
-                .replace(/\bzastávok\b/gi, 'zastávka');
+                .replace(/\bzastávok\b/gi, 'zastávka')
                 .replace(/\bmiesta zrazu\b/gi, 'miesto zrazu')
                 .replace(/\bmiesto zrazu\b/gi, 'miesto zrazu');
     
@@ -9813,7 +9813,7 @@ const TransportApp = ({ userProfileData }) => {
                 .replace(/\bubytovania\b/gi, 'ubytovňa')
                 .replace(/\bubytovanie\b/gi, 'ubytovňa')
                 .replace(/\bzastávky\b/gi, 'zastávka')
-                .replace(/\bzastávok\b/gi, 'zastávka');
+                .replace(/\bzastávok\b/gi, 'zastávka')
             return {
                 from: normalizePlace(m[1].trim()),
                 to: normalizePlace(m[2].trim()),
