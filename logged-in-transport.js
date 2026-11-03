@@ -8597,7 +8597,7 @@ const TransportApp = ({ userProfileData }) => {
                         className: 'relative px-5 py-3 flex items-center justify-center text-white',
                         style: { backgroundColor: '#7c3aed' }
                     },
-                    React.createElement('i', { className: 'fa-solid fa-van-shuttle mr-2' }),
+                    React.createElement('i', { className: 'fa-solid fa-bus mr-2' }),
                     React.createElement(
                         'h3',
                         { className: 'text-lg font-bold text-center' },
@@ -9424,7 +9424,7 @@ const TransportApp = ({ userProfileData }) => {
                     className: 'relative px-5 py-3 flex items-center justify-center text-white',
                     style: { backgroundColor: '#7c3aed' }
                 },
-                React.createElement('i', { className: 'fa-solid fa-van-shuttle mr-2' }),
+                React.createElement('i', { className: 'fa-solid fa-bus mr-2' }),
                 React.createElement(
                     'h3',
                     { className: 'text-lg font-bold text-center' },
@@ -11545,7 +11545,7 @@ const TransportApp = ({ userProfileData }) => {
                                             if (ev && ev._isAssigned) {
                                                 return { icon: 'fa-bus', color: '#ea580c', label: 'Presun', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
                                             }
-                                            return { icon: 'fa-van-shuttle', color: '#ea580c', label: 'Presun', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
+                                            return { icon: 'fa-bus', color: '#ea580c', label: 'Presun', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
                                         }
                                         default:
                                             return { icon: 'fa-circle-dot', color: '#6b7280', label: 'Udalosť', bg: '#f9fafb', border: '#e5e7eb', placeIcon: 'fa-location-dot' };
