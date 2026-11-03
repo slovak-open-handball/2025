@@ -98,6 +98,8 @@ const normalizePlaceName = (name) => {
         .replace(/^ubytovanie\s+/i, '')
         .replace(/^ubytovňa\s+/i, '')
         .replace(/^ubytovna\s+/i, '')
+        .replace(/^miesto\s+zrazu\s+/i, '')
+        .replace(/^miesta\s+zrazu\s+/i, '')
         .trim();
 };
 
