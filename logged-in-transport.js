@@ -11916,8 +11916,9 @@ const TransportApp = ({ userProfileData }) => {
                                                                 }
                                                         
                                                                 // ------------------------------------------------------------
-                                                                // PRESUN – colspan 2, centrované na stred
-                                                                // NOVÉ: zobraz badge (bus / PEŠI / nepriradený) AJ zoznam miest
+                                                                // PRESUN – colspan 2
+                                                                // NOVÉ: zarovnané vpravo ako ostatné miesta (badge na konci riadku),
+                                                                // každé miesto na samostatnom riadku, BEZ ikony pred názvom.
                                                                 // ------------------------------------------------------------
                                                                 if (ev.type === 'transfer') {
                                                                     // Zoznam miest pre tento presun (celá trasa parenta)
@@ -11926,62 +11927,84 @@ const TransportApp = ({ userProfileData }) => {
                                                                     return React.createElement(
                                                                         'div',
                                                                         {
-                                                                            className: 'flex-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5',
+                                                                            className: 'flex-1 flex flex-col items-end gap-0.5',
                                                                             style: { minWidth: 0 }
                                                                         },
-                                                                        // Názov busu
-                                                                        ev._busName &&
-                                                                            React.createElement(
-                                                                                'span',
-                                                                                {
-                                                                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
-                                                                                    style: { backgroundColor: '#fed7aa', color: '#9a3412' },
-                                                                                    title: 'Priradené k autobusu'
-                                                                                },
-                                                                                React.createElement('i', { className: 'fa-solid fa-bus text-[9px]' }),
-                                                                                ev._busName
-                                                                            ),
-                                                                        // PEŠI badge
-                                                                        ev._isWalking &&
-                                                                            React.createElement(
-                                                                                'span',
-                                                                                {
-                                                                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
-                                                                                    style: { backgroundColor: '#bbf7d0', color: '#15803d' },
-                                                                                    title: 'Peší presun'
-                                                                                },
-                                                                                React.createElement('i', { className: 'fa-solid fa-person-walking text-[9px]' }),
-                                                                                'PEŠI'
-                                                                            ),
-                                                                        // Nepriradený badge
-                                                                        !ev._isWalking && !ev._isAssigned &&
-                                                                            React.createElement(
-                                                                                'span',
-                                                                                {
-                                                                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
-                                                                                    style: { backgroundColor: '#fef3c7', color: '#92400e' },
-                                                                                    title: 'Nepriradený k autobusu'
-                                                                                },
-                                                                                React.createElement('i', { className: 'fa-solid fa-question text-[9px]' }),
-                                                                                'nepriradený'
-                                                                            ),
-                                                                        // NOVÉ: Zoznam miest (from → medzizastávky → to) – na konci riadku
-                                                                        places.length > 0 &&
-                                                                            React.createElement(
-                                                                                'span',
-                                                                                {
-                                                                                    className: 'inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded',
-                                                                                    style: { color: '#1f2937', backgroundColor: '#fed7aa66' },
-                                                                                    title: places.join(' → '),
-                                                                                },
-                                                                                React.createElement('i', { className: 'fa-solid fa-location-dot text-[9px]' }),
+                                                                        // Badge riadok (bus / PEŠI / nepriradený) – zostáva hore
+                                                                        React.createElement(
+                                                                            'div',
+                                                                            {
+                                                                                className: 'flex flex-wrap items-center justify-end gap-x-2 gap-y-0.5',
+                                                                                style: { minWidth: 0 }
+                                                                            },
+                                                                            // Názov busu
+                                                                            ev._busName &&
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     {
-                                                                                        className: 'truncate',
-                                                                                        style: { maxWidth: '220px' },
+                                                                                        className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                                                                        style: { backgroundColor: '#fed7aa', color: '#9a3412' },
+                                                                                        title: 'Priradené k autobusu'
                                                                                     },
-                                                                                    places.join(' → ')
+                                                                                    React.createElement('i', { className: 'fa-solid fa-bus text-[9px]' }),
+                                                                                    ev._busName
+                                                                                ),
+                                                                            // PEŠI badge
+                                                                            ev._isWalking &&
+                                                                                React.createElement(
+                                                                                    'span',
+                                                                                    {
+                                                                                        className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                                                                        style: { backgroundColor: '#bbf7d0', color: '#15803d' },
+                                                                                        title: 'Peší presun'
+                                                                                    },
+                                                                                    React.createElement('i', { className: 'fa-solid fa-person-walking text-[9px]' }),
+                                                                                    'PEŠI'
+                                                                                ),
+                                                                            // Nepriradený badge
+                                                                            !ev._isWalking && !ev._isAssigned &&
+                                                                                React.createElement(
+                                                                                    'span',
+                                                                                    {
+                                                                                        className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                                                                        style: { backgroundColor: '#fef3c7', color: '#92400e' },
+                                                                                        title: 'Nepriradený k autobusu'
+                                                                                    },
+                                                                                    React.createElement('i', { className: 'fa-solid fa-question text-[9px]' }),
+                                                                                    'nepriradený'
+                                                                                )
+                                                                        ),
+                                                                        // NOVÉ: Zoznam miest – každé na samostatnom riadku, vpravo,
+                                                                        // BEZ ikony pred názvom miesta
+                                                                        places.length > 0 &&
+                                                                            React.createElement(
+                                                                                'div',
+                                                                                {
+                                                                                    className: 'flex flex-col items-end gap-0.5',
+                                                                                    style: { minWidth: 0 }
+                                                                                },
+                                                                                places.map((place, placeIdx) =>
+                                                                                    React.createElement(
+                                                                                        'span',
+                                                                                        {
+                                                                                            key: `place-${placeIdx}`,
+                                                                                            className: 'inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded',
+                                                                                            style: {
+                                                                                                color: '#1f2937',
+                                                                                                backgroundColor: '#fed7aa66',
+                                                                                                maxWidth: '220px',
+                                                                                            },
+                                                                                            title: place,
+                                                                                        },
+                                                                                        React.createElement(
+                                                                                            'span',
+                                                                                            {
+                                                                                                className: 'truncate',
+                                                                                                style: { maxWidth: '220px' },
+                                                                                            },
+                                                                                            place
+                                                                                        )
+                                                                                    )
                                                                                 )
                                                                             )
                                                                     );
