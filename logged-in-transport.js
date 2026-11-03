@@ -9863,6 +9863,19 @@ const TransportApp = ({ userProfileData }) => {
             const parentSegments = Array.isArray(t.segments) ? t.segments : [];
             const parentWhenRange = parseTransferWhenToRange(t.when);
 
+            const parentRoutePlaces = (() => {
+                const places = [];
+                const fromLoc = String(t.fromLocation || '').trim();
+                const toLoc = String(t.toLocation || '').trim();
+                if (fromLoc) places.push(fromLoc);
+                stops.forEach((s) => {
+                    const v = String(s || '').trim();
+                    if (v) places.push(v);
+                });
+                if (toLoc) places.push(toLoc);
+                return places;
+            })();
+
             // Pre každý segment (from → to)
             for (let i = 0; i < route.length - 1; i++) {
                 const fromLoc = String(route[i] || '').trim();
@@ -9960,6 +9973,7 @@ const TransportApp = ({ userProfileData }) => {
                     _toLocation: toLoc,
                     _dayKey: dayKey,
                     _isTransferRow: true,  // príznak pre oranžové zafarbenie
+                    _routePlaces: parentRoutePlaces,
                 });
             }
         });
@@ -11588,6 +11602,11 @@ const TransportApp = ({ userProfileData }) => {
                                 // ============================================================
                                 const extractPlacesForTransferEvent = (ev) => {
                                     if (!ev || ev.type !== 'transfer') return [];
+                                    // Ak má event uloženú celú trasu parenta, použi ju
+                                    if (Array.isArray(ev._routePlaces) && ev._routePlaces.length > 0) {
+                                        return ev._routePlaces;
+                                    }
+                                    // Fallback – aspoň from a to
                                     const places = [];
                                     const fromLoc = String(ev._fromLocation || '').trim();
                                     const toLoc = String(ev._toLocation || '').trim();
@@ -11901,9 +11920,9 @@ const TransportApp = ({ userProfileData }) => {
                                                                 // NOVÉ: zobraz badge (bus / PEŠI / nepriradený) AJ zoznam miest
                                                                 // ------------------------------------------------------------
                                                                 if (ev.type === 'transfer') {
-                                                                    // Zoznam miest pre tento presun
+                                                                    // Zoznam miest pre tento presun (celá trasa parenta)
                                                                     const places = extractPlacesForTransferEvent(ev);
-                                                        
+                                                                
                                                                     return React.createElement(
                                                                         'div',
                                                                         {
@@ -11916,10 +11935,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                                 'span',
                                                                                 {
                                                                                     className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
-                                                                                    style: {
-                                                                                        backgroundColor: '#fed7aa',
-                                                                                        color: '#9a3412',
-                                                                                    },
+                                                                                    style: { backgroundColor: '#fed7aa', color: '#9a3412' },
                                                                                     title: 'Priradené k autobusu'
                                                                                 },
                                                                                 React.createElement('i', { className: 'fa-solid fa-bus text-[9px]' }),
@@ -11931,10 +11947,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                                 'span',
                                                                                 {
                                                                                     className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
-                                                                                    style: {
-                                                                                        backgroundColor: '#bbf7d0',
-                                                                                        color: '#15803d',
-                                                                                    },
+                                                                                    style: { backgroundColor: '#bbf7d0', color: '#15803d' },
                                                                                     title: 'Peší presun'
                                                                                 },
                                                                                 React.createElement('i', { className: 'fa-solid fa-person-walking text-[9px]' }),
@@ -11946,25 +11959,19 @@ const TransportApp = ({ userProfileData }) => {
                                                                                 'span',
                                                                                 {
                                                                                     className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
-                                                                                    style: {
-                                                                                        backgroundColor: '#fef3c7',
-                                                                                        color: '#92400e',
-                                                                                    },
+                                                                                    style: { backgroundColor: '#fef3c7', color: '#92400e' },
                                                                                     title: 'Nepriradený k autobusu'
                                                                                 },
                                                                                 React.createElement('i', { className: 'fa-solid fa-question text-[9px]' }),
                                                                                 'nepriradený'
                                                                             ),
-                                                                        // NOVÉ: Zoznam miest (from → medzizastávky → to)
+                                                                        // NOVÉ: Zoznam miest (from → medzizastávky → to) – na konci riadku
                                                                         places.length > 0 &&
                                                                             React.createElement(
                                                                                 'span',
                                                                                 {
                                                                                     className: 'inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded',
-                                                                                    style: {
-                                                                                        color: '#1f2937',
-                                                                                        backgroundColor: '#fed7aa66',
-                                                                                    },
+                                                                                    style: { color: '#1f2937', backgroundColor: '#fed7aa66' },
                                                                                     title: places.join(' → '),
                                                                                 },
                                                                                 React.createElement('i', { className: 'fa-solid fa-location-dot text-[9px]' }),
