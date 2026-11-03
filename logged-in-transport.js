@@ -11603,6 +11603,30 @@ const TransportApp = ({ userProfileData }) => {
                                 const extractPlacesForTransferEvent = (ev) => {
                                     if (!ev || ev.type !== 'transfer') return [];
                                     const places = [];
+                                
+                                    // Reálne časy z busu → ide o priradenú konkrétnu časť presunu
+                                    const isAssignedToBus = ev._isAssigned === true;
+                                
+                                    if (isAssignedToBus) {
+                                        // Priradená časť presunu → len from a to tohto segmentu
+                                        const fromLoc = String(ev._fromLocation || '').trim();
+                                        const toLoc = String(ev._toLocation || '').trim();
+                                        if (fromLoc) places.push(fromLoc);
+                                        if (toLoc) places.push(toLoc);
+                                        return places;
+                                    }
+                                
+                                    // Nepriradený presun → všetky zastávky celej trasy parenta
+                                    const routePlaces = Array.isArray(ev._routePlaces) ? ev._routePlaces : [];
+                                    if (routePlaces.length > 0) {
+                                        routePlaces.forEach((p) => {
+                                            const v = String(p || '').trim();
+                                            if (v) places.push(v);
+                                        });
+                                        return places;
+                                    }
+                                
+                                    // Fallback – aspoň from a to
                                     const fromLoc = String(ev._fromLocation || '').trim();
                                     const toLoc = String(ev._toLocation || '').trim();
                                     if (fromLoc) places.push(fromLoc);
