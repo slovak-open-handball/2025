@@ -11054,7 +11054,7 @@ const TransportApp = ({ userProfileData }) => {
                             onClick: () => setStopTypeModal(null),
                             className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
                         },
-                        'Zavrieť'
+                        'Zatvoriť'
                     )
                 )
             )
@@ -11958,7 +11958,7 @@ const TransportApp = ({ userProfileData }) => {
                                 },
                                 className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
                             },
-                            'Zavrieť'
+                            'Zatvoriť'
                         )
                     )
                 )
@@ -12519,7 +12519,7 @@ const TransportApp = ({ userProfileData }) => {
                         )
                     )
                 ),
-                // Zavrieť
+                // Zatvoriť
                 React.createElement(
                     'div',
                     { className: 'flex justify-end' },
@@ -12530,7 +12530,7 @@ const TransportApp = ({ userProfileData }) => {
                             onClick: () => setTransferActionModal(null),
                             className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
                         },
-                        'Zavrieť'
+                        'Zatvoriť'
                     )
                 )
             )
