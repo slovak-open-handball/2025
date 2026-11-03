@@ -608,6 +608,7 @@ const TransportApp = ({ userProfileData }) => {
     const [tournamentDaysLoaded, setTournamentDaysLoaded] = useState(false);
     const [busSaving, setBusSaving] = useState(false);
     const [confirmModal, setConfirmModal] = useState(null);    
+    const [stopTypeModal, setStopTypeModal] = useState(null); 
     const [selectedDayKey, setSelectedDayKey] = useState('');
     const [selectedBusId, setSelectedBusId] = useState('');
     const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
@@ -3103,6 +3104,7 @@ const TransportApp = ({ userProfileData }) => {
                         headerColor: data.headerColor || '#1e40af',
                         headerTextColor: data.headerTextColor || '#000000',
                         isExternalArrivalStop: data.isExternalArrivalStop === true,
+                        isMeetingPointStop: data.isMeetingPointStop === true,
                     });
                 });
                 list.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
@@ -7474,12 +7476,38 @@ const TransportApp = ({ userProfileData }) => {
                     });
                 }
             }
-
+    
             await batch.commit();
             window.showGlobalNotification('Nástupná/výstupná zastávka bola zmenená.', 'success');
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri nastavovaní nástupnej zastávky:', err);
             window.showGlobalNotification('Nepodarilo sa zmeniť nástupnú zastávku.', 'error');
+        }
+    };
+    
+    // ============================================================
+    // NOVÉ: NASTAVENIE ZASTÁVKY AKO "MIESTO ZRAZU"
+    // ============================================================
+    const setMeetingPointStop = async (placeId) => {
+        if (!window.db) return;
+        try {
+            const batch = writeBatch(window.db);
+    
+            for (const p of allPlaces) {
+                if (p.type !== 'zastavka') continue;
+                const shouldBe = p.id === placeId;
+                if (p.isMeetingPointStop !== shouldBe) {
+                    batch.update(doc(window.db, 'places', p.id), {
+                        isMeetingPointStop: shouldBe,
+                    });
+                }
+            }
+    
+            await batch.commit();
+            window.showGlobalNotification('Miesto zrazu bolo zmenené.', 'success');
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri nastavovaní miesta zrazu:', err);
+            window.showGlobalNotification('Nepodarilo sa zmeniť miesto zrazu.', 'error');
         }
     };
     
@@ -7527,16 +7555,9 @@ const TransportApp = ({ userProfileData }) => {
         // ============================================================
         // NOVÉ: Kliknutie na hlavičkovú bunku (riadok/stĺpec) zastávky
         // ============================================================
-        const handleStopHeaderClick = async (stop) => {
-            if (stop.isExternalArrivalStop) {
-                // už je nastavená – nič nerob
-                return;
-            }
-            const ok = await askConfirm(
-                `Chcete nastaviť zastávku "${stop.name}" ako nástupnú/výstupnú zastávku pre externé tímy?`
-            );
-            if (!ok) return;
-            setExternalArrivalStop(stop.id);
+        const handleStopHeaderClick = (stop) => {
+            // Otvor modálne okno pre výber typu zastávky
+            setStopTypeModal({ stop });
         };
 
         // ============================================================
@@ -7544,6 +7565,8 @@ const TransportApp = ({ userProfileData }) => {
         // ============================================================
         const renderStopLabel = (stop) => {
             const isExternal = stop.isExternalArrivalStop === true;
+            const isMeeting = stop.isMeetingPointStop === true;
+        
             return React.createElement(
                 'span',
                 { className: 'inline-flex flex-col items-center gap-1' },
@@ -7563,6 +7586,17 @@ const TransportApp = ({ userProfileData }) => {
                         },
                         React.createElement('i', { className: 'fa-solid fa-right-to-bracket' }),
                         'NÁSTUPNÁ/VÝSTUPNÁ'
+                    ),
+                isMeeting &&
+                    React.createElement(
+                        'span',
+                        {
+                            className:
+                                'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300',
+                            title: 'Miesto zrazu'
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-people-group' }),
+                        'MIESTO ZRAZU'
                     )
             );
         };
@@ -10568,6 +10602,127 @@ const TransportApp = ({ userProfileData }) => {
                             className: 'px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors'
                         },
                         'Potvrdiť'
+                    )
+                )
+            )
+        ),
+        // ============================================================
+        // NOVÉ: MODÁLNE OKNO – Výber typu zastávky (nástupná/výstupná alebo miesto zrazu)
+        // ============================================================
+        stopTypeModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
+                onClick: () => setStopTypeModal(null)
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-bus text-blue-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-800' },
+                        'Nastaviť typ zastávky'
+                    )
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-700 mb-4 text-sm' },
+                    `Zastávka: „${stopTypeModal.stop.name}"`
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'space-y-2 mb-4' },
+                    // 1) Nástupná/výstupná
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            disabled: stopTypeModal.stop.isExternalArrivalStop === true,
+                            onClick: async () => {
+                                const stop = stopTypeModal.stop;
+                                setStopTypeModal(null);
+                                const ok = await askConfirm(
+                                    `Nastaviť zastávku „${stop.name}" ako nástupnú/výstupnú pre externé tímy?`
+                                );
+                                if (!ok) return;
+                                setExternalArrivalStop(stop.id);
+                            },
+                            className: `w-full text-left px-4 py-3 rounded-lg border-2 transition-colors flex items-center gap-3 ${
+                                stopTypeModal.stop.isExternalArrivalStop === true
+                                    ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+                                    : 'border-amber-200 bg-amber-50 hover:bg-amber-100'
+                            }`
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-right-to-bracket text-amber-600 text-xl w-6 text-center' }),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement('div', { className: 'font-semibold text-gray-800' }, 'Nástupná/výstupná zastávka'),
+                            React.createElement(
+                                'div',
+                                { className: 'text-xs text-gray-500' },
+                                stopTypeModal.stop.isExternalArrivalStop === true
+                                    ? 'Táto zastávka je už nastavená ako nástupná/výstupná.'
+                                    : 'Pre externé tímy (príchod/odchod).'
+                            )
+                        )
+                    ),
+                    // 2) Miesto zrazu
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            disabled: stopTypeModal.stop.isMeetingPointStop === true,
+                            onClick: async () => {
+                                const stop = stopTypeModal.stop;
+                                setStopTypeModal(null);
+                                const ok = await askConfirm(
+                                    `Nastaviť zastávku „${stop.name}" ako miesto zrazu?`
+                                );
+                                if (!ok) return;
+                                setMeetingPointStop(stop.id);
+                            },
+                            className: `w-full text-left px-4 py-3 rounded-lg border-2 transition-colors flex items-center gap-3 ${
+                                stopTypeModal.stop.isMeetingPointStop === true
+                                    ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+                                    : 'border-emerald-200 bg-emerald-50 hover:bg-emerald-100'
+                            }`
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-people-group text-emerald-600 text-xl w-6 text-center' }),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement('div', { className: 'font-semibold text-gray-800' }, 'Miesto zrazu'),
+                            React.createElement(
+                                'div',
+                                { className: 'text-xs text-gray-500' },
+                                stopTypeModal.stop.isMeetingPointStop === true
+                                    ? 'Táto zastávka je už nastavená ako miesto zrazu.'
+                                    : 'Miesto, kde sa tím/tímy stretávajú.'
+                            )
+                        )
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setStopTypeModal(null),
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
+                        },
+                        'Zavrieť'
                     )
                 )
             )
