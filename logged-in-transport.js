@@ -11425,6 +11425,46 @@ const TransportApp = ({ userProfileData }) => {
                                     // arrival a ostatné – použi location, ak existuje
                                     return ev.location || null;
                                 };
+
+                                const buildEventDescription = (ev) => {
+                                    if (!ev) return '';
+                                    const raw = String(ev.text || '').trim();
+                                
+                                    if (ev.type === 'match') {
+                                        // Odrež všetko za posledným "|" (názov haly)
+                                        const idx = raw.lastIndexOf('|');
+                                        if (idx !== -1) return raw.slice(0, idx).trim();
+                                        return raw;
+                                    }
+                                
+                                    if (ev.type === 'catering') {
+                                        // Odrež všetko za "→" (názov jedálne)
+                                        const idx = raw.lastIndexOf('→');
+                                        if (idx !== -1) return raw.slice(0, idx).trim();
+                                        return raw;
+                                    }
+                                
+                                    if (ev.type === 'accommodation') {
+                                        // "Ubytovanie: NÁZOV (typ: TYP)"  →  "Ubytovanie (typ: TYP)"
+                                        const m = /^Ubytovanie:\s*(.+?)\s*\(typ:\s*(.+?)\)\s*$/i.exec(raw);
+                                        if (m) {
+                                            return `Ubytovanie (typ: ${m[2].trim()})`;
+                                        }
+                                        // Ak nemá "(typ: ...)", skús aspoň odrezať názov za dvojbodkou
+                                        const m2 = /^Ubytovanie:\s*(.+)$/i.exec(raw);
+                                        if (m2) {
+                                            const typMatch = /\(typ:\s*(.+?)\)/i.exec(m2[1]);
+                                            if (typMatch) {
+                                                return `Ubytovanie (typ: ${typMatch[1].trim()})`;
+                                            }
+                                            return 'Ubytovanie';
+                                        }
+                                        return raw;
+                                    }
+                                
+                                    // arrival a ostatné – ponechaj pôvodný text
+                                    return raw;
+                                };
                     
                                 // ------------------------------------------------------------
                                 // Zoskup udalosti podľa dňa (dayKey), zachovaj poradie
@@ -11491,7 +11531,7 @@ const TransportApp = ({ userProfileData }) => {
                                                 items.map((ev, idx) => {
                                                     const meta = getEventMeta(ev.type);
                                                     const timeLabel = extractTimeLabel(ev.when);
-                                                    const text = ev.text || '';
+                                                    const text = buildEventDescription(ev);
                                                     const placeName = extractPlaceFromEvent(ev);
                     
                                                     return React.createElement(
