@@ -11988,23 +11988,23 @@ const TransportApp = ({ userProfileData }) => {
                                                                 }
                                                         
                                                                 // ------------------------------------------------------------
-                                                                // STRAVOVANIE / UBYTOVANIE / PRÍCHOD – colspan 2, centrované
+                                                                // STRAVOVANIE / UBYTOVANIE / PRÍCHOD – colspan 2
+                                                                // NOVÉ: zarovnané rovnako ako zápas – vpravo (badge na konci riadku)
                                                                 // ------------------------------------------------------------
                                                                 return React.createElement(
                                                                     'div',
                                                                     {
-                                                                        className: 'flex-1 flex items-center justify-center',
+                                                                        className: 'flex-1 flex items-center justify-end gap-2',
                                                                         style: { minWidth: 0 }
                                                                     },
                                                                     hasAnyPlace
                                                                         ? React.createElement(
                                                                             'span',
                                                                             {
-                                                                                className: 'inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded max-w-full',
+                                                                                className: 'inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0',
                                                                                 style: {
                                                                                     color: '#1f2937',
                                                                                     backgroundColor: meta.color + '11',
-                                                                                    maxWidth: '100%',
                                                                                 },
                                                                                 title: placeName || ''
                                                                             },
