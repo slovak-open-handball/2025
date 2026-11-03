@@ -11572,7 +11572,7 @@ const TransportApp = ({ userProfileData }) => {
                                     }
 
                                     if (ev.type === 'accommodation') {
-                                        // "Ubytovanie: NÁZOV (typ: ...)"
+                                        // "Ubytovanie: NÁZOV (typ: ...)" → "NÁZOV"
                                         const m = /^Ubytovanie:\s*(.+?)(?:\s*\(typ:.*\))?$/i.exec(text);
                                         if (m && m[1]) return m[1].trim();
                                         return ev.location || null;
@@ -11862,21 +11862,12 @@ const TransportApp = ({ userProfileData }) => {
                                                             // s názvom busu (ak je priradený) alebo "PEŠI"
                                                             // ============================================================
                                                             if (ev.type === 'transfer') {
-                                                                // Zisti farbu pozadia podľa stavu
-                                                                let rowBg = '#fff7ed'; // oranžová (default, ako príchod)
-                                                                let borderColor = '#fed7aa';
-                                                                let textColor = '#000000'; // NOVÉ: čierny text
-
-                                                                if (ev._isWalking) {
-                                                                    // Peši – zelená
-                                                                    rowBg = '#f0fdf4';
-                                                                    borderColor = '#bbf7d0';
-                                                                    textColor = '#15803d';
-                                                                } else if (ev._isAssigned && ev._busName) {
-                                                                    // Priradený k busu – oranžová (rovnako ako príchod)
-                                                                    rowBg = '#fff7ed';
-                                                                    borderColor = '#fed7aa';
-                                                                    textColor = '#000000'; // NOVÉ: čierny text
+                                                                // Ak nie je čo zobraziť (žiadny badge), vráť prázdny span
+                                                                if (!ev._busName && !ev._isWalking && ev._isAssigned) {
+                                                                    return React.createElement('div', {
+                                                                        className: 'flex-1 pt-0.5',
+                                                                        style: { minWidth: 0 }
+                                                                    });
                                                                 }
 
                                                                 return React.createElement(
@@ -11885,11 +11876,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                         className: 'flex-1 break-words leading-snug pt-0.5 flex flex-wrap items-center gap-x-2',
                                                                         style: { minWidth: 0 }
                                                                     },
-                                                                    React.createElement(
-                                                                        'span',
-                                                                        { style: { color: textColor, fontWeight: '600' } },
-                                                                        ev._routeLabel || ev.text
-                                                                    ),
                                                                     // Názov busu (ak je priradený)
                                                                     ev._busName &&
                                                                         React.createElement(
