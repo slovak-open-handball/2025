@@ -12090,7 +12090,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     style: {
                                                                                         position: 'absolute',
                                                                                         right: 0,
-                                                                                        bottom: 0,
                                                                                         transform: 'translateY(-50%)',
                                                                                         color: '#1f2937',
                                                                                         backgroundColor: meta.color + '11',
@@ -12170,7 +12169,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     style: {
                                                                                         position: 'absolute',
                                                                                         right: 0,
-                                                                                        bottom: 0,
                                                                                         transform: 'translateY(-50%)',
                                                                                         minWidth: 0,
                                                                                         maxWidth: '220px',
