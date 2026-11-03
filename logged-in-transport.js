@@ -11843,7 +11843,7 @@ const TransportApp = ({ userProfileData }) => {
                                                             (() => {
                                                                 // ------------------------------------------------------------
                                                                 // ZÁPAS – domáci vľavo, hostia vpravo (dva flex stĺpce)
-                                                                // + NOVÉ: názov haly pod tímami (v poslednom stĺpci)
+                                                                // + názov haly vpravo (bez ikony)
                                                                 // ------------------------------------------------------------
                                                                 if (ev.type === 'match') {
                                                                     const teams = matchTeamsForRow;
@@ -11851,8 +11851,8 @@ const TransportApp = ({ userProfileData }) => {
                                                                         const selectedTeam = String(customTransferTeamName || '').trim();
                                                                         const isHomeSelected = teams.home === selectedTeam;
                                                                         const isAwaySelected = teams.away === selectedTeam;
-                                                        
-                                                                        // NOVÉ: vytiahni názov haly z textu (za posledným "|")
+                                                            
+                                                                        // Názov haly z textu (za posledným "|")
                                                                         const hallName = (() => {
                                                                             const raw = String(ev.text || '').trim();
                                                                             const idx = raw.lastIndexOf('|');
@@ -11862,11 +11862,11 @@ const TransportApp = ({ userProfileData }) => {
                                                                             }
                                                                             return ev.location || null;
                                                                         })();
-                                                        
+                                                            
                                                                         return React.createElement(
                                                                             React.Fragment,
                                                                             null,
-                                                                            // Domáci – vpravo (zarovnané na pravý okraj svojho stĺpca)
+                                                                            // Domáci – vpravo
                                                                             React.createElement(
                                                                                 'div',
                                                                                 {
@@ -11879,7 +11879,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                                 },
                                                                                 teams.home
                                                                             ),
-                                                                            // Hostia – vľavo (zarovnané na ľavý okraj svojho stĺpca)
+                                                                            // Hostia – vľavo
                                                                             React.createElement(
                                                                                 'div',
                                                                                 {
@@ -11892,19 +11892,19 @@ const TransportApp = ({ userProfileData }) => {
                                                                                 },
                                                                                 teams.away
                                                                             ),
-                                                                            // NOVÉ: názov haly – malý badge vpravo
+                                                                            // Názov haly – malý badge vpravo, BEZ ikony
                                                                             hallName &&
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     {
-                                                                                        className: 'inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0',
+                                                                                        className: 'inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0',
                                                                                         style: {
                                                                                             color: '#1f2937',
                                                                                             backgroundColor: meta.color + '11',
+                                                                                            maxWidth: '140px',
                                                                                         },
                                                                                         title: hallName,
                                                                                     },
-                                                                                    React.createElement('i', { className: `fa-solid ${meta.placeIcon} text-[9px]` }),
                                                                                     React.createElement(
                                                                                         'span',
                                                                                         { className: 'truncate', style: { maxWidth: '140px' } },
@@ -11914,30 +11914,26 @@ const TransportApp = ({ userProfileData }) => {
                                                                         );
                                                                     }
                                                                 }
-                                                        
+                                                            
                                                                 // ------------------------------------------------------------
-                                                                // PRESUN – colspan 2
-                                                                // NOVÉ: zarovnané vpravo ako ostatné miesta (badge na konci riadku),
-                                                                // každé miesto na samostatnom riadku, BEZ ikony pred názvom.
+                                                                // PRESUN – vpravo, každé miesto na samostatnom riadku, BEZ ikony
                                                                 // ------------------------------------------------------------
                                                                 if (ev.type === 'transfer') {
-                                                                    // Zoznam miest pre tento presun (celá trasa parenta)
                                                                     const places = extractPlacesForTransferEvent(ev);
-                                                                
+                                                            
                                                                     return React.createElement(
                                                                         'div',
                                                                         {
                                                                             className: 'flex-1 flex flex-col items-end gap-0.5',
                                                                             style: { minWidth: 0 }
                                                                         },
-                                                                        // Badge riadok (bus / PEŠI / nepriradený) – zostáva hore
+                                                                        // Badge riadok (bus / PEŠI / nepriradený)
                                                                         React.createElement(
                                                                             'div',
                                                                             {
                                                                                 className: 'flex flex-wrap items-center justify-end gap-x-2 gap-y-0.5',
                                                                                 style: { minWidth: 0 }
                                                                             },
-                                                                            // Názov busu
                                                                             ev._busName &&
                                                                                 React.createElement(
                                                                                     'span',
@@ -11949,7 +11945,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     React.createElement('i', { className: 'fa-solid fa-bus text-[9px]' }),
                                                                                     ev._busName
                                                                                 ),
-                                                                            // PEŠI badge
                                                                             ev._isWalking &&
                                                                                 React.createElement(
                                                                                     'span',
@@ -11961,7 +11956,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     React.createElement('i', { className: 'fa-solid fa-person-walking text-[9px]' }),
                                                                                     'PEŠI'
                                                                                 ),
-                                                                            // Nepriradený badge
                                                                             !ev._isWalking && !ev._isAssigned &&
                                                                                 React.createElement(
                                                                                     'span',
@@ -11974,8 +11968,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     'nepriradený'
                                                                                 )
                                                                         ),
-                                                                        // NOVÉ: Zoznam miest – každé na samostatnom riadku, vpravo,
-                                                                        // BEZ ikony pred názvom miesta
+                                                                        // Zoznam miest – každé na samostatnom riadku, vpravo, BEZ ikony
                                                                         places.length > 0 &&
                                                                             React.createElement(
                                                                                 'div',
@@ -11998,10 +11991,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                                         },
                                                                                         React.createElement(
                                                                                             'span',
-                                                                                            {
-                                                                                                className: 'truncate',
-                                                                                                style: { maxWidth: '220px' },
-                                                                                            },
+                                                                                            { className: 'truncate', style: { maxWidth: '220px' } },
                                                                                             place
                                                                                         )
                                                                                     )
@@ -12009,10 +11999,9 @@ const TransportApp = ({ userProfileData }) => {
                                                                             )
                                                                     );
                                                                 }
-                                                        
+                                                            
                                                                 // ------------------------------------------------------------
-                                                                // STRAVOVANIE / UBYTOVANIE / PRÍCHOD – colspan 2
-                                                                // NOVÉ: zarovnané rovnako ako zápas – vpravo (badge na konci riadku)
+                                                                // STRAVOVANIE / UBYTOVANIE / PRÍCHOD – vpravo, BEZ ikony
                                                                 // ------------------------------------------------------------
                                                                 return React.createElement(
                                                                     'div',
@@ -12024,29 +12013,23 @@ const TransportApp = ({ userProfileData }) => {
                                                                         ? React.createElement(
                                                                             'span',
                                                                             {
-                                                                                className: 'inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0',
+                                                                                className: 'inline-flex items-center text-[11px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0',
                                                                                 style: {
                                                                                     color: '#1f2937',
                                                                                     backgroundColor: meta.color + '11',
+                                                                                    maxWidth: '220px',
                                                                                 },
                                                                                 title: placeName || ''
                                                                             },
-                                                                            React.createElement('i', { className: `fa-solid ${meta.placeIcon} text-[10px] flex-shrink-0` }),
                                                                             React.createElement(
                                                                                 'span',
-                                                                                {
-                                                                                    className: 'truncate',
-                                                                                    style: { maxWidth: '220px' }
-                                                                                },
+                                                                                { className: 'truncate', style: { maxWidth: '220px' } },
                                                                                 placeName
                                                                             )
                                                                         )
                                                                         : React.createElement(
                                                                             'span',
-                                                                            {
-                                                                                className: 'text-[11px] italic',
-                                                                                style: { color: '#9ca3af' }
-                                                                            },
+                                                                            { className: 'text-[11px] italic', style: { color: '#9ca3af' } },
                                                                             '—'
                                                                         )
                                                                 );
