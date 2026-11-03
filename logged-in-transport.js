@@ -11556,7 +11556,7 @@ const TransportApp = ({ userProfileData }) => {
                                                     const timeLabel = extractTimeLabel(ev.when);
                                                     const text = buildEventDescription(ev);
                                                     const placeName = extractPlaceFromEvent(ev);
-                    
+                                                
                                                     return React.createElement(
                                                         'div',
                                                         {
@@ -11573,7 +11573,7 @@ const TransportApp = ({ userProfileData }) => {
                                                             'div',
                                                             {
                                                                 className: 'flex flex-col items-center justify-start flex-shrink-0 pt-0.5',
-                                                                style: { width: '54px' }
+                                                                style: { width: '54px', minWidth: '54px' }
                                                             },
                                                             React.createElement(
                                                                 'div',
@@ -11595,19 +11595,26 @@ const TransportApp = ({ userProfileData }) => {
                                                                 meta.label
                                                             )
                                                         ),
-                                                        // 2) Čas (ak existuje)
-                                                        timeLabel &&
-                                                            React.createElement(
+                                                        // 2) Čas (ak existuje) – pevná šírka + oddelenie
+                                                        timeLabel
+                                                            ? React.createElement(
                                                                 'div',
                                                                 {
-                                                                    className: 'flex-shrink-0 font-mono font-semibold text-gray-700 pt-0.5 whitespace-nowrap',
-                                                                    style: { width: '78px' }
+                                                                    className: 'flex-shrink-0 font-mono font-semibold text-gray-700 pt-0.5 whitespace-nowrap text-center',
+                                                                    style: { width: '84px', minWidth: '84px' }
                                                                 },
                                                                 timeLabel
+                                                            )
+                                                            : React.createElement(
+                                                                'div',
+                                                                {
+                                                                    className: 'flex-shrink-0 pt-0.5',
+                                                                    style: { width: '84px', minWidth: '84px' }
+                                                                }
                                                             ),
                                                         // 3) Popis
                                                         (() => {
-                                                            // Pre zápas: domáci vpravo, hostia vľavo, vybraný tím boldom
+                                                            // Pre zápas: domáci vľavo, hostia vpravo, vybraný tím boldom
                                                             if (ev.type === 'match') {
                                                                 const teams = parseMatchTeams(ev);
                                                                 if (teams) {
@@ -11623,9 +11630,10 @@ const TransportApp = ({ userProfileData }) => {
                                                                                 alignItems: 'center',
                                                                                 justifyContent: 'space-between',
                                                                                 gap: '8px',
+                                                                                minWidth: 0,
                                                                             },
                                                                         },
-                                                                        // Domáci – vpravo (zarovnané na pravý okraj svojho stĺpca)
+                                                                        // Domáci – vľavo
                                                                         React.createElement(
                                                                             'span',
                                                                             {
@@ -11638,6 +11646,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                             },
                                                                             teams.home
                                                                         ),
+                                                                        // Hostia – vpravo
                                                                         React.createElement(
                                                                             'span',
                                                                             {
@@ -11653,11 +11662,11 @@ const TransportApp = ({ userProfileData }) => {
                                                                     );
                                                                 }
                                                             }
-
+                                                
                                                             // Ostatné typy udalostí – pôvodný text
                                                             return React.createElement(
                                                                 'div',
-                                                                { className: 'flex-1 text-gray-800 break-words leading-snug pt-0.5' },
+                                                                { className: 'flex-1 text-gray-800 break-words leading-snug pt-0.5', style: { minWidth: 0 } },
                                                                 text
                                                             );
                                                         })(),
