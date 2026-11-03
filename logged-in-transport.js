@@ -9737,6 +9737,15 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     // NOVÉ: Získa zoznam udalostí pre daný tím (rovnaký ako v konzole)
     // + doplní vygenerované presuny (parent záznamy zo savedTransfers)
+    //
+    // DÔLEŽITÉ: Presuny sa musia zoradiť CHRONOLOGICKY medzi ostatné
+    // udalosti tímu. Preto:
+    //  - Ak je presun priradený (má reálne časy), použijeme startTs.
+    //  - Ak nie je priradený, použijeme `when` parenta (ak existuje)
+    //    alebo provizórny interval z okolitých segmentov na výpočet
+    //    približného startTs, aby sa zaradil správne.
+    //  - dayKey určíme prednostne z `when` parenta, potom z reálnych
+    //    časov segmentov, potom z provizórneho intervalu.
     // ============================================================
     const getTeamEventsForCustomTransfer = (category, teamName) => {
         if (!category || !teamName) return [];
@@ -9831,9 +9840,10 @@ const TransportApp = ({ userProfileData }) => {
         // Pravidlá:
         //  - Berieme LEN parent záznamy (nie segmenty) pre tento tím/kategóriu.
         //  - Ak je parent priradený k autobusu (má reálne časy), zobrazíme
-        //    KONKRÉTNY čas (startTs – endTs).
-        //  - Ak nie je priradený, zobrazíme VŠEOBECNE (bez konkrétneho času,
-        //    s textom „nepriradený").
+        //    KONKRÉTNY čas (startTs – endTs) a zaradíme podľa startTs.
+        //  - Ak nie je priradený, zobrazíme VŠEOBECNE, ale stále sa ho
+        //    pokúsime zaradiť chronologicky – použijeme `when` parenta
+        //    alebo provizórny interval z okolitých segmentov.
         // ============================================================
         (savedTransfersRef.current || []).forEach((t) => {
             if (cleanCategory(t.category || '') !== cat) return;
@@ -9862,7 +9872,9 @@ const TransportApp = ({ userProfileData }) => {
 
             const isAssigned = assignedSegments.length > 0;
 
-            // Vypočítaj reálny čas začiatku a konca (z reálnych segmentov)
+            // ============================================================
+            // Vypočítaj reálny čas začiatku a konca
+            // ============================================================
             let startTs = null;
             let endTs = null;
             if (isAssigned) {
@@ -9872,24 +9884,104 @@ const TransportApp = ({ userProfileData }) => {
                 if (ends.length > 0) endTs = Math.max(...ends);
             }
 
+            // ============================================================
+            // NOVÉ: Ak nie je priradený, skús určiť aspoň približný startTs
+            // z `when` parenta alebo z provizórneho intervalu, aby sa
+            // presun zaradil chronologicky medzi ostatné udalosti.
+            //
+            // Priorita:
+            //  1) reálne časy segmentov (ak je priradený)
+            //  2) `when` parenta (parseTransferWhenToRange)
+            //  3) provizórny interval z computeProvisionalSegmentRange
+            //     pre PRVÝ segment parenta
+            // ============================================================
+            let sortTs = startTs;
+
+            if (sortTs == null) {
+                // Skús `when` parenta
+                const parentRange = parseTransferWhenToRange(t.when);
+                if (parentRange && parentRange.startTs != null) {
+                    sortTs = parentRange.startTs;
+                    if (endTs == null && parentRange.endTs != null) {
+                        endTs = parentRange.endTs;
+                    }
+                }
+            }
+
+            if (sortTs == null) {
+                // Skús provizórny interval pre PRVÝ segment parenta
+                // (to je to, čo sa reálne zobrazuje v boxe "Vygenerované presuny")
+                try {
+                    const firstSeg = (segments && segments.length > 0) ? segments[0] : null;
+                    if (firstSeg) {
+                        const provisional = computeProvisionalSegmentRange({
+                            ...t,
+                            fromLocation: firstSeg.from,
+                            toLocation: firstSeg.to,
+                            _parentKey: t.key,
+                        });
+                        if (provisional && provisional.startTs != null) {
+                            sortTs = provisional.startTs;
+                            if (endTs == null && provisional.endTs != null) {
+                                endTs = provisional.endTs;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
             let whenStr;
             if (isAssigned && startTs != null && endTs != null) {
                 // KONKRÉTNY presun – zobraz reálny čas
                 whenStr = `${formatTsLocal(startTs)} – ${formatTsLocal(endTs)}`;
+            } else if (sortTs != null) {
+                // VŠEOBECNÝ presun – ale máme aspoň približný čas začiatku
+                // (z `when` parenta alebo z provizórneho intervalu)
+                const approxStartStr = formatTsLocal(sortTs);
+                if (endTs != null && endTs > sortTs) {
+                    whenStr = `${approxStartStr} – ${formatTsLocal(endTs)}`;
+                } else {
+                    whenStr = approxStartStr;
+                }
             } else {
-                // VŠEOBECNÝ presun – bez konkrétneho času
+                // Úplne bez času – zobraz ako "nepriradený"
                 whenStr = 'nepriradený';
             }
 
-            // dayKey pre zoskupenie
+            // ============================================================
+            // dayKey pre zoskupenie – prednostne z `when` parenta,
+            // potom z reálnych časov segmentov, potom z `sortTs`.
+            // ============================================================
             let dayKey = t.dayKey || null;
-            if (!dayKey && startTs != null) {
-                const d = new Date(startTs);
+
+            if (!dayKey && t.when) {
+                const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(t.when));
+                if (m) {
+                    const d = String(m[1]).padStart(2, '0');
+                    const mo = String(m[2]).padStart(2, '0');
+                    const y = m[3];
+                    dayKey = `${y}-${mo}-${d}`;
+                }
+            }
+
+            if (!dayKey && sortTs != null) {
+                const d = new Date(sortTs);
                 dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             }
 
+            // ============================================================
+            // KĽÚČOVÉ: Pre zoradenie v rámci dňa použijeme `sortTs` (ak
+            // existuje). Ak nie, použijeme `Number.POSITIVE_INFINITY`,
+            // aby sa presun zobrazil na konci dňa (nemá lepší čas).
+            //
+            // POZOR: `ts` musí byť timestamp, aby sa dal porovnať s
+            // ostatnými udalosťami. Pre nepriradené presuny s `sortTs`
+            // teda použijeme `sortTs` – tým sa zaradia chronologicky.
+            // ============================================================
             events.push({
-                ts: startTs != null ? startTs : Number.POSITIVE_INFINITY,
+                ts: sortTs != null ? sortTs : Number.POSITIVE_INFINITY,
                 startTs: startTs,
                 endTs: endTs,
                 when: whenStr,
