@@ -6853,7 +6853,20 @@ const TransportApp = ({ userProfileData }) => {
         } else if (savedParentWhen) {
             draft.when = savedParentWhen;
         } else if (parentIsFullyWalking) {
-            draft.when = '';
+            // ============================================================
+            // NOVÉ: Pri plne walking parentovi ZACHOVAJ pôvodný `when`
+            // (aby sa v boxe "Peši" dali zobraziť celé časy presunu).
+            // ============================================================
+            const savedRec = draft.key
+                ? (savedTransfersRef.current || []).find((s) => s.key === draft.key)
+                : null;
+            if (savedRec && savedRec.when && String(savedRec.when).trim() !== '') {
+                draft.when = savedRec.when;
+            } else if (originalWhenFromDraft && String(originalWhenFromDraft).trim() !== '') {
+                draft.when = originalWhenFromDraft;
+            } else {
+                draft.when = '';
+            }
         } else if (busSegments.length > 0) {
             const busStart = busSegments.map((s) => s.startTs).filter((ts) => ts != null);
             const busEnd = busSegments.map((s) => s.endTs).filter((ts) => ts != null);
@@ -6946,7 +6959,9 @@ const TransportApp = ({ userProfileData }) => {
         }
     
         if (draft.isWalking === true) {
-            payload.when = '';
+            payload.when = (draft.when && String(draft.when).trim() !== '')
+                ? draft.when
+                : (parent.when && String(parent.when).trim() !== '' ? parent.when : '');
             payload.segments = (draft.segments || []).map((s) => ({
                 ...s,
                 startTs: null,
@@ -7055,6 +7070,11 @@ const TransportApp = ({ userProfileData }) => {
                         s.walkingSetAt = Timestamp.fromDate(new Date());
                         s.walkingSetBy = (userProfileData && userProfileData.email) || null;
                     });
+                    if (draft.when && String(draft.when).trim() !== '') {
+                        // ponechaj
+                    } else if (parent.when && String(parent.when).trim() !== '') {
+                        draft.when = parent.when;
+                    }
                     draft.isWalking = true;
                     draft.walkingSetAt = Timestamp.fromDate(new Date());
                     draft.walkingSetBy = (userProfileData && userProfileData.email) || null;
@@ -10133,7 +10153,42 @@ const TransportApp = ({ userProfileData }) => {
                 // inak použi null (riadok sa zobrazí s "—").
                 // ============================================================
                 const parentRec = savedTransfers.find((s) => s.key === t.key) || t;
-                const parsed = parseWhenRangeToTs(parentRec.when);
+
+                // ============================================================
+                // NOVÉ: Skús `when` parenta. Ak chýba, skús poskladať aspoň
+                // z reálnych časov segmentov (startTs/endTs). Ak ani tie nie sú,
+                // použi `dayKey` (aby sa aspoň dátum zobrazil).
+                // ============================================================
+                let parsed = parseWhenRangeToTs(parentRec.when);
+                
+                if (!parsed && Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
+                    let earliestStart = null;
+                    let latestEnd = null;
+                    parentRec.segments.forEach((s) => {
+                        if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                            earliestStart = s.startTs;
+                        }
+                        if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                            latestEnd = s.endTs;
+                        }
+                    });
+                    if (earliestStart != null && latestEnd != null) {
+                        parsed = { startTs: earliestStart, endTs: latestEnd };
+                    } else if (earliestStart != null) {
+                        parsed = { startTs: earliestStart, endTs: earliestStart };
+                    } else if (latestEnd != null) {
+                        parsed = { startTs: latestEnd, endTs: latestEnd };
+                    }
+                }
+                
+                // Fallback – ak stále nemáme časy, ale máme dayKey, použi aspoň deň (00:00–23:59)
+                if (!parsed && parentRec.dayKey) {
+                    const dayTs = dayKeyAndSlotToTimestamp(parentRec.dayKey, '00:00');
+                    if (dayTs != null) {
+                        parsed = { startTs: dayTs, endTs: dayTs + 24 * 60 * 60 * 1000 - 60000 };
+                    }
+                }
+                
                 const startTs = parsed && parsed.startTs != null ? parsed.startTs : null;
                 const endTs = parsed && parsed.endTs != null ? parsed.endTs : null;
                 let whenStr = null;
