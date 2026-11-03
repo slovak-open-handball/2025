@@ -11241,7 +11241,7 @@ const TransportApp = ({ userProfileData }) => {
                 React.createElement(
                     'div',
                     {
-                        className: 'bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto',
+                        className: 'bg-white rounded-xl shadow-2xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto',
                         onClick: (e) => e.stopPropagation()
                     },
                     React.createElement(
