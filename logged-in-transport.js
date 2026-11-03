@@ -11471,6 +11471,23 @@ const TransportApp = ({ userProfileData }) => {
                                     // arrival a ostatné – ponechaj pôvodný text
                                     return raw;
                                 };
+
+                                const parseMatchTeams = (ev) => {
+                                    if (!ev || ev.type !== 'match') return null;
+                                    const raw = String(ev.text || '').trim();
+                                    // "Tím A vs Tím B [..] | Hala" – najprv odrež haly (za posledným "|")
+                                    let s = raw;
+                                    const pipeIdx = s.lastIndexOf('|');
+                                    if (pipeIdx !== -1) s = s.slice(0, pipeIdx).trim();
+                                
+                                    // Nájdi " vs " (prípadne " VS ", " Vs ")
+                                    const vsMatch = /\s+vs\.?\s+/i.exec(s);
+                                    if (!vsMatch) return null;
+                                
+                                    const home = s.slice(0, vsMatch.index).trim();
+                                    const away = s.slice(vsMatch.index + vsMatch[0].length).trim();
+                                    return { home, away };
+                                };
                     
                                 // ------------------------------------------------------------
                                 // Zoskup udalosti podľa dňa (dayKey), zachovaj poradie
@@ -11589,11 +11606,61 @@ const TransportApp = ({ userProfileData }) => {
                                                                 timeLabel
                                                             ),
                                                         // 3) Popis
-                                                        React.createElement(
-                                                            'div',
-                                                            { className: 'flex-1 text-gray-800 break-words leading-snug pt-0.5' },
-                                                            text
-                                                        ),
+                                                        (() => {
+                                                            // Pre zápas: domáci vpravo, hostia vľavo, vybraný tím boldom
+                                                            if (ev.type === 'match') {
+                                                                const teams = parseMatchTeams(ev);
+                                                                if (teams) {
+                                                                    const selectedTeam = String(customTransferTeamName || '').trim();
+                                                                    const isHomeSelected = teams.home === selectedTeam;
+                                                                    const isAwaySelected = teams.away === selectedTeam;
+                                                                    return React.createElement(
+                                                                        'div',
+                                                                        {
+                                                                            className: 'flex-1 text-gray-800 leading-snug pt-0.5',
+                                                                            style: {
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'space-between',
+                                                                                gap: '8px',
+                                                                            },
+                                                                        },
+                                                                        // Domáci – vpravo (zarovnané na pravý okraj svojho stĺpca)
+                                                                        React.createElement(
+                                                                            'span',
+                                                                            {
+                                                                                className: 'text-left flex-1 truncate',
+                                                                                style: {
+                                                                                    fontWeight: isHomeSelected ? '700' : '400',
+                                                                                    minWidth: 0,
+                                                                                },
+                                                                                title: teams.home,
+                                                                            },
+                                                                            teams.home
+                                                                        ),
+                                                                        React.createElement(
+                                                                            'span',
+                                                                            {
+                                                                                className: 'text-right flex-1 truncate',
+                                                                                style: {
+                                                                                    fontWeight: isAwaySelected ? '700' : '400',
+                                                                                    minWidth: 0,
+                                                                                },
+                                                                                title: teams.away,
+                                                                            },
+                                                                            teams.away
+                                                                        )
+                                                                    );
+                                                                }
+                                                            }
+
+                                                            // Ostatné typy udalostí – pôvodný text
+                                                            return React.createElement(
+                                                                'div',
+                                                                { className: 'flex-1 text-gray-800 break-words leading-snug pt-0.5' },
+                                                                text
+                                                            );
+                                                        })(),
                                                         // 4) Miesto – vpravo s ikonou
                                                         React.createElement(
                                                             'div',
