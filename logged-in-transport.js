@@ -584,6 +584,8 @@ const TransportApp = ({ userProfileData }) => {
 
     const teamsLookupLoadedRef = useRef(false);
 
+    const travelTimesLoadedRef = useRef(false);
+
     // UI prepínač: 'planovanie' | 'nastavenia'
     const [activeView, setActiveView] = useState('planovanie');
 
@@ -2894,7 +2896,7 @@ const TransportApp = ({ userProfileData }) => {
                                 // inak by sa vygeneroval nový duplicitný záznam a starý
                                 // (s medzizastávkami) by zostal v DB.
                                 // ============================================================
-                                const existingParentWithStops = (savedTransfers || []).find((s) => {
+                                const existingParentWithStops = (savedTransfersRef.current || []).find((s) => {
                                     if (cleanCategory(s.category || '') !== cleanCategory(category)) return false;
                                     if (String(s.teamName || '').trim() !== teamName) return false;
                                     if (normalizePlaceName(s.fromLocation || '') !== normalizePlaceName(fromLocation)) return false;
@@ -2916,7 +2918,7 @@ const TransportApp = ({ userProfileData }) => {
                                     : buildTransferKey(category, teamName, ev.when, ev.text);
                                 newKeys.add(key);
                     
-                                const existingSaved = existingParentWithStops || savedTransfers.find((s) => s.key === key);
+                                const existingSaved = existingParentWithStops || (savedTransfersRef.current || []).find((s) => s.key === key);
                     
                                 // Základný záznam (bez segments – tie dopočítame nižšie)
                                 const baseRecord = {
@@ -3039,7 +3041,7 @@ const TransportApp = ({ userProfileData }) => {
                             // cez teamUid/teamIndex, alebo (pre superstructure) cez teamName.
                             // ============================================================
                             const categoryClean = cleanCategory(category);
-                            savedTransfers.forEach((s) => {
+                            (savedTransfersRef.current || []).forEach((s) => {
                                 if (cleanCategory(s.category || '') !== categoryClean) return;
                     
                                 // Musí ísť o rovnaký tím – buď cez teamUid/teamIndex,
@@ -3057,7 +3059,7 @@ const TransportApp = ({ userProfileData }) => {
                                 if (Array.isArray(s.intermediateStops) && s.intermediateStops.length > 0) return;
                                 if (s._parentKey && s._parentKey !== s.key) {
                                     // Je to segment iného parenta – tiež zmaž, ak nový parent neexistuje
-                                    const parentExists = savedTransfers.some(
+                                    const parentExists = (savedTransfersRef.current || []).some(
                                         (p) => p.key === s._parentKey && Array.isArray(p.intermediateStops) && p.intermediateStops.length > 0
                                     );
                                     if (parentExists) return;
@@ -3243,6 +3245,7 @@ const TransportApp = ({ userProfileData }) => {
                 savedTransfersRef.current = transfers;
                 setSavedTransfers(transfers);
                 setTravelTimesLoaded(true);
+                travelTimesLoadedRef.current = true;
             }, (err) => {
                 console.error('[TRANSPORT] onSnapshot(settings/transportTravelTimes) error:', err);
             });
@@ -8565,6 +8568,38 @@ const TransportApp = ({ userProfileData }) => {
     // RENDER – ľavý stĺpec s uloženými vygenerovanými presunmi
     // ============================================================
     const renderSavedTransfers = () => {
+        // ============================================================
+        // NOVÉ: Kým nie je načítaný travelTimes, zobraz "Načítavam..."
+        // (inak by box mohol byť prázdny, kým sa načítajú dáta z DB)
+        // ============================================================
+        if (!travelTimesLoaded) {
+            return React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
+                    style: { width: '420px', maxWidth: '100%' }
+                },
+                React.createElement(
+                    'div',
+                    {
+                        className: 'relative px-5 py-3 flex items-center justify-center text-white',
+                        style: { backgroundColor: '#7c3aed' }
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-van-shuttle mr-2' }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-bold text-center' },
+                        'Vygenerované presuny'
+                    )
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-center text-gray-500 py-6 text-sm italic px-3' },
+                    'Načítavam presuny...'
+                )
+            );
+        }
+
         // Filtrovanie podľa zvoleného dňa
         // === NOVÉ: Filter podľa dňa AJ kategórie ===
         const filteredByDay = savedTransfers.filter((t) => {
@@ -8572,48 +8607,6 @@ const TransportApp = ({ userProfileData }) => {
             if (selectedCategoryFilter && cleanCategory(t.category || '') !== cleanCategory(selectedCategoryFilter)) return false;
             return true;
         });
-    
-        // ============================================================
-        // Pomocná: parsovanie "when" → čas od/do
-        // ============================================================
-        const parseWhenRangeFull = (when) => {
-            if (!when) return null;
-            const s = String(when);
-            const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
-            const found = [];
-            let m;
-            while ((m = regex.exec(s)) !== null) {
-                const d = String(m[1]).padStart(2, '0');
-                const mo = String(m[2]).padStart(2, '0');
-                const y = m[3];
-                const hh = m[4] != null ? String(m[4]).padStart(2, '0') : null;
-                const mi = m[5] != null ? String(m[5]).padStart(2, '0') : null;
-                found.push({
-                    dayKey: `${y}-${mo}-${d}`,
-                    label: `${d}. ${mo}. ${y}`,
-                    time: (hh != null && mi != null) ? `${hh}:${mi}` : null,
-                });
-            }
-            if (found.length === 0) return null;
-            if (found.length === 1) {
-                return {
-                    startDayKey: found[0].dayKey,
-                    endDayKey: found[0].dayKey,
-                    startLabel: found[0].label,
-                    endLabel: found[0].label,
-                    startTime: found[0].time,
-                    endTime: found[0].time,
-                };
-            }
-            return {
-                startDayKey: found[0].dayKey,
-                endDayKey: found[1].dayKey,
-                startLabel: found[0].label,
-                endLabel: found[1].label,
-                startTime: found[0].time,
-                endTime: found[1].time,
-            };
-        };
     
         // ============================================================
         // Pomocná: z textu "Presun z X do Y" vytiahne { from, to }.
