@@ -11748,6 +11748,13 @@ const TransportApp = ({ userProfileData }) => {
                                                     const textColor = isTransferEvent ? '#000000' : '#1f2937';
                                                     const metaTextColor = isTransferEvent ? '#000000' : meta.color;
 
+                                                    // ============================================================
+                                                    // NOVÉ: Rozdelenie popisu na dva stĺpce:
+                                                    //  - "Tím" (domáci/hostia pre zápas, inak prázdne)
+                                                    //  - "Miesto" (hala/jedáleň/ubytovanie/presun)
+                                                    // ============================================================
+                                                    const matchTeamsForRow = ev.type === 'match' ? parseMatchTeams(ev) : null;
+
                                                     return React.createElement(
                                                         'div',
                                                         {
@@ -11807,127 +11814,139 @@ const TransportApp = ({ userProfileData }) => {
                                                                     style: { width: '84px', minWidth: '84px' }
                                                                 }
                                                             ),
-                                                        // 3) Popis
-                                                        (() => {
-                                                            // Pre zápas: domáci vpravo, hostia vľavo, vybraný tím boldom
-                                                            if (ev.type === 'match') {
-                                                                const teams = parseMatchTeams(ev);
-                                                                if (teams) {
-                                                                    const selectedTeam = String(customTransferTeamName || '').trim();
-                                                                    const isHomeSelected = teams.home === selectedTeam;
-                                                                    const isAwaySelected = teams.away === selectedTeam;
+                                                        // 3) TÍM – pre zápas domáci/hostia, inak prázdne
+                                                        React.createElement(
+                                                            'div',
+                                                            {
+                                                                className: 'flex-1 leading-snug pt-0.5',
+                                                                style: { minWidth: 0, color: textColor },
+                                                            },
+                                                            (() => {
+                                                                // Pre zápas: domáci vľavo, hostia vpravo, vybraný tím boldom
+                                                                if (ev.type === 'match') {
+                                                                    const teams = matchTeamsForRow;
+                                                                    if (teams) {
+                                                                        const selectedTeam = String(customTransferTeamName || '').trim();
+                                                                        const isHomeSelected = teams.home === selectedTeam;
+                                                                        const isAwaySelected = teams.away === selectedTeam;
+                                                                        return React.createElement(
+                                                                            'div',
+                                                                            {
+                                                                                style: {
+                                                                                    display: 'flex',
+                                                                                    alignItems: 'center',
+                                                                                    justifyContent: 'space-between',
+                                                                                    gap: '8px',
+                                                                                    minWidth: 0,
+                                                                                },
+                                                                            },
+                                                                            React.createElement(
+                                                                                'span',
+                                                                                {
+                                                                                    className: 'text-left flex-1 truncate',
+                                                                                    style: {
+                                                                                        fontWeight: isHomeSelected ? '700' : '400',
+                                                                                        minWidth: 0,
+                                                                                    },
+                                                                                    title: teams.home,
+                                                                                },
+                                                                                teams.home
+                                                                            ),
+                                                                            React.createElement(
+                                                                                'span',
+                                                                                {
+                                                                                    className: 'text-right flex-1 truncate',
+                                                                                    style: {
+                                                                                        fontWeight: isAwaySelected ? '700' : '400',
+                                                                                        minWidth: 0,
+                                                                                    },
+                                                                                    title: teams.away,
+                                                                                },
+                                                                                teams.away
+                                                                            )
+                                                                        );
+                                                                    }
+                                                                }
+
+                                                                // ============================================================
+                                                                // NOVÉ: Presun – v stĺpci "Tím" sa zobrazia len badge:
+                                                                // názov busu / PEŠI / nepriradený
+                                                                // ============================================================
+                                                                if (ev.type === 'transfer') {
+                                                                    // Ak nie je čo zobraziť (žiadny badge), vráť prázdny div
+                                                                    if (!ev._busName && !ev._isWalking && ev._isAssigned) {
+                                                                        return React.createElement('div', {
+                                                                            className: 'pt-0.5',
+                                                                            style: { minWidth: 0 }
+                                                                        });
+                                                                    }
+
                                                                     return React.createElement(
                                                                         'div',
                                                                         {
-                                                                            className: 'flex-1 leading-snug pt-0.5',
-                                                                            style: {
-                                                                                display: 'flex',
-                                                                                alignItems: 'center',
-                                                                                justifyContent: 'space-between',
-                                                                                gap: '8px',
-                                                                                minWidth: 0,
-                                                                                color: textColor,
-                                                                            },
+                                                                            className: 'break-words leading-snug pt-0.5 flex flex-wrap items-center gap-x-2',
+                                                                            style: { minWidth: 0 }
                                                                         },
-                                                                        React.createElement(
-                                                                            'span',
-                                                                            {
-                                                                                className: 'text-right flex-1 truncate',
-                                                                                style: {
-                                                                                    fontWeight: isHomeSelected ? '700' : '400',
-                                                                                    minWidth: 0,
+                                                                        // Názov busu (ak je priradený)
+                                                                        ev._busName &&
+                                                                            React.createElement(
+                                                                                'span',
+                                                                                {
+                                                                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                                                                    style: {
+                                                                                        backgroundColor: '#fed7aa',
+                                                                                        color: '#9a3412',
+                                                                                    },
+                                                                                    title: 'Priradené k autobusu'
                                                                                 },
-                                                                                title: teams.home,
-                                                                            },
-                                                                            teams.home
-                                                                        ),
-                                                                        React.createElement(
-                                                                            'span',
-                                                                            {
-                                                                                className: 'text-left flex-1 truncate',
-                                                                                style: {
-                                                                                    fontWeight: isAwaySelected ? '700' : '400',
-                                                                                    minWidth: 0,
+                                                                                React.createElement('i', { className: 'fa-solid fa-bus text-[9px]' }),
+                                                                                ev._busName
+                                                                            ),
+                                                                        // PEŠI badge
+                                                                        ev._isWalking &&
+                                                                            React.createElement(
+                                                                                'span',
+                                                                                {
+                                                                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                                                                    style: {
+                                                                                        backgroundColor: '#bbf7d0',
+                                                                                        color: '#15803d',
+                                                                                    },
+                                                                                    title: 'Peší presun'
                                                                                 },
-                                                                                title: teams.away,
-                                                                            },
-                                                                            teams.away
-                                                                        )
+                                                                                React.createElement('i', { className: 'fa-solid fa-person-walking text-[9px]' }),
+                                                                                'PEŠI'
+                                                                            ),
+                                                                        // Nepriradený badge
+                                                                        !ev._isWalking && !ev._isAssigned &&
+                                                                            React.createElement(
+                                                                                'span',
+                                                                                {
+                                                                                    className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                                                                    style: {
+                                                                                        backgroundColor: '#fef3c7',
+                                                                                        color: '#92400e',
+                                                                                    },
+                                                                                    title: 'Nepriradený k autobusu'
+                                                                                },
+                                                                                React.createElement('i', { className: 'fa-solid fa-question text-[9px]' }),
+                                                                                'nepriradený'
+                                                                            )
                                                                     );
                                                                 }
-                                                            }
 
-                                                            // ============================================================
-                                                            // NOVÉ: Presun – zobrazí sa každý segment osobitne,
-                                                            // s názvom busu (ak je priradený) alebo "PEŠI"
-                                                            // ============================================================
-                                                            if (ev.type === 'transfer') {
-                                                                // Ak nie je čo zobraziť (žiadny badge), vráť prázdny span
-                                                                if (!ev._busName && !ev._isWalking && ev._isAssigned) {
-                                                                    return React.createElement('div', {
-                                                                        className: 'flex-1 pt-0.5',
-                                                                        style: { minWidth: 0 }
-                                                                    });
-                                                                }
-
-                                                                return React.createElement(
-                                                                    'div',
-                                                                    {
-                                                                        className: 'flex-1 break-words leading-snug pt-0.5 flex flex-wrap items-center gap-x-2',
-                                                                        style: { minWidth: 0 }
-                                                                    },
-                                                                    // Názov busu (ak je priradený)
-                                                                    ev._busName &&
-                                                                        React.createElement(
-                                                                            'span',
-                                                                            {
-                                                                                className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
-                                                                                style: {
-                                                                                    backgroundColor: '#fed7aa',
-                                                                                    color: '#9a3412',
-                                                                                },
-                                                                                title: 'Priradené k autobusu'
-                                                                            },
-                                                                            React.createElement('i', { className: 'fa-solid fa-bus text-[9px]' }),
-                                                                            ev._busName
-                                                                        ),
-                                                                    // PEŠI badge
-                                                                    ev._isWalking &&
-                                                                        React.createElement(
-                                                                            'span',
-                                                                            {
-                                                                                className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
-                                                                                style: {
-                                                                                    backgroundColor: '#bbf7d0',
-                                                                                    color: '#15803d',
-                                                                                },
-                                                                                title: 'Peší presun'
-                                                                            },
-                                                                            React.createElement('i', { className: 'fa-solid fa-person-walking text-[9px]' }),
-                                                                            'PEŠI'
-                                                                        ),
-                                                                    // Nepriradený badge
-                                                                    !ev._isWalking && !ev._isAssigned &&
-                                                                        React.createElement(
-                                                                            'span',
-                                                                            {
-                                                                                className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
-                                                                                style: {
-                                                                                    backgroundColor: '#fef3c7',
-                                                                                    color: '#92400e',
-                                                                                },
-                                                                                title: 'Nepriradený k autobusu'
-                                                                            },
-                                                                            React.createElement('i', { className: 'fa-solid fa-question text-[9px]' }),
-                                                                            'nepriradený'
-                                                                        )
-                                                                );
-                                                            }
-                                                        })(),
-                                                        // 4) Miesto – vpravo s ikonou
+                                                                // Pre stravovanie / ubytovanie / príchod – prázdny stĺpec "Tím"
+                                                                return React.createElement('div', {
+                                                                    className: 'pt-0.5',
+                                                                    style: { minWidth: 0 }
+                                                                });
+                                                            })()
+                                                        ),
+                                                        // 4) MIESTO – vpravo s ikonou
                                                         // ============================================================
                                                         // NOVÉ:
-                                                        //  - Ubytovanie je zarovnané rovnako ako miesto zápasov (vpravo, truncated).
+                                                        //  - Ubytovanie a stravovanie sú v TOM ISTOM stĺpci ako
+                                                        //    názov domáceho tímu v zápase (stĺpec "Miesto").
                                                         //  - Presun má VŽDY miesta v poslednom stĺpci,
                                                         //    každé na samostatnom riadku (from, medzizastávky, to).
                                                         // ============================================================
@@ -11973,7 +11992,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                             )
                                                                         )
                                                                     )
-                                                                    // Ostatné – jedno miesto (rovnaké zarovnanie ako doteraz)
+                                                                    // Ostatné – jedno miesto (rovnaké zarovnanie)
                                                                     : React.createElement(
                                                                         'span',
                                                                         {
