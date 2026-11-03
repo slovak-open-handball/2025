@@ -868,6 +868,10 @@ const TransportApp = ({ userProfileData }) => {
         if (!force && !timelineGenerationRequestedRef.current) return;
         if (!matchesLoadedRef.current || !cateringLoadedRef.current || !teamsLoadedRef.current) return;
         if (!teamsLookupLoadedRef.current) return;
+        if (!travelTimesLoaded) {
+            console.log('[TRANSPORT] rebuildAndLogTimeline: čakám na načítanie travelTimes');
+            return;
+        }
 
         const normalizedFilter = categoryFilter ? cleanCategory(categoryFilter) : null;
     
