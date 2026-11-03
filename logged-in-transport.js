@@ -643,6 +643,14 @@ const TransportApp = ({ userProfileData }) => {
     const [teamShortcuts, setTeamShortcuts] = useState({});
     const [teamShortcutsLoaded, setTeamShortcutsLoaded] = useState(false);
 
+    // ==== NOVÉ: Modálne okno pre výber typu presunu ====
+    const [showTransferTypeModal, setShowTransferTypeModal] = useState(false);
+
+    // ==== NOVÉ: Modálne okno pre vytvorenie vlastného presunu ====
+    const [showCustomTransferModal, setShowCustomTransferModal] = useState(false);
+    const [customTransferCategory, setCustomTransferCategory] = useState('');
+    const [customTransferTeamName, setCustomTransferTeamName] = useState('');
+
     // ==== NOVÉ: Modálne okno pre úpravu skratky tímu ====
     const [shortcutEditModal, setShortcutEditModal] = useState(null); // { category, teamName, shortcut }
     const [shortcutSaving, setShortcutSaving] = useState(false);
@@ -9727,6 +9735,105 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     // ============================================================
+    // NOVÉ: Získa zoznam udalostí pre daný tím (rovnaký ako v konzole)
+    // ============================================================
+    const getTeamEventsForCustomTransfer = (category, teamName) => {
+        if (!category || !teamName) return [];
+
+        const cat = cleanCategory(category);
+        const name = String(teamName || '').trim();
+
+        // Zber udalostí z matchesBufferRef
+        const events = [];
+
+        // 1) Zápasy
+        (matchesBufferRef.current || []).forEach((m) => {
+            if (cleanCategory(m.category) !== cat) return;
+            if (m.home !== name && m.away !== name) return;
+
+            const startTs = m.scheduledTs ?? null;
+            const endTs = m.scheduledEndTs ?? startTs;
+            const timeRange = m.scheduledTime
+                ? (m.scheduledEndTime ? `${m.scheduledTime} – ${m.scheduledEndTime}` : m.scheduledTime)
+                : 'nenaplánované';
+            const text = `${m.home} vs ${m.away}${m.special}${m.hallName ? ` | ${m.hallName}` : ''}`;
+
+            events.push({
+                ts: m.scheduledTs ?? Number.POSITIVE_INFINITY,
+                startTs,
+                endTs,
+                when: timeRange,
+                type: 'match',
+                text,
+                location: m.hallName || null,
+            });
+        });
+
+        // 2) Stravovania
+        (cateringBufferRef.current || []).forEach((c) => {
+            if (cleanCategory(c.category) !== cat) return;
+            if (c.teamName !== name) return;
+
+            const mealLabel = c.mealType === 'lunch' ? 'Obed' : c.mealType === 'dinner' ? 'Večera' : c.mealType;
+            const formattedDay = c.dayKey ? (formatDateDDMMYYYY(c.dayKey) || c.dayKey) : '?';
+            const timeRange = c.slotFrom
+                ? (c.slotTo ? `${c.slotFrom} – ${c.slotTo}` : c.slotFrom)
+                : '--:--';
+
+            const startTs = c.ts ?? null;
+            const endTs = c.slotToTs ?? startTs;
+
+            events.push({
+                ts: c.ts ?? Number.POSITIVE_INFINITY,
+                startTs,
+                endTs,
+                when: ` ${formattedDay} ${timeRange}`.trim(),
+                type: 'catering',
+                text: `${mealLabel} (${timeRange}) → ${c.placeName}`,
+                location: c.placeName || null,
+            });
+        });
+
+        // 3) Ubytovanie + príchod (z teamsArrivalBufferRef)
+        const teamInfo = (teamsArrivalBufferRef.current || []).find(
+            (t) => cleanCategory(t.category) === cat && t.teamName === name
+        );
+
+        if (teamInfo) {
+            if (teamInfo.accommodationName) {
+                events.push({
+                    ts: -Infinity,
+                    startTs: null,
+                    endTs: null,
+                    when: '—',
+                    type: 'accommodation',
+                    text: `Ubytovanie: ${teamInfo.accommodationName} (typ: ${teamInfo.accommodationType || 'neurčený'})`,
+                    location: teamInfo.accommodationName,
+                });
+            }
+            if (teamInfo.arrivalDisplay && teamInfo.arrivalDisplay !== '---') {
+                events.push({
+                    ts: -Infinity,
+                    startTs: null,
+                    endTs: null,
+                    when: '—',
+                    type: 'arrival',
+                    text: `Doprava / príchod: ${teamInfo.arrivalDisplay}`,
+                    location: null,
+                });
+            }
+        }
+
+        // Zoraď podľa ts
+        events.sort((a, b) => {
+            if (a.ts !== b.ts) return a.ts - b.ts;
+            return String(a.text).localeCompare(String(b.text), 'sk');
+        });
+
+        return events;
+    };
+
+    // ============================================================
     // RENDER – box pre pešie presuny (zobrazí sa vedľa autobusov)
     //
     // NOVÉ PRAVIDLÁ:
@@ -10559,8 +10666,7 @@ const TransportApp = ({ userProfileData }) => {
                                 window.showGlobalNotification('Nie sú dostupné žiadne kategórie.', 'error');
                                 return;
                             }
-                            setSelectedCategoryForTimeline(cats[0]);
-                            setShowCategoryModal(true);
+                            setShowTransferTypeModal(true);
                         },
                         className: 'w-full h-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0',
                         title: 'Vygenerovať presuny'
@@ -11010,6 +11116,264 @@ const TransportApp = ({ userProfileData }) => {
                 )
             )
         ),
+        // ============================================================
+        // NOVÉ: MODÁLNE OKNO – Výber typu presunu
+        // (po kliknutí na zelené "+")
+        // ============================================================
+        showTransferTypeModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100001] p-4',
+                onClick: () => setShowTransferTypeModal(false)
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-plus text-green-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-800' },
+                        'Vyberte typ presunu'
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'space-y-2 mb-4' },
+                    // 1) Generovanie potrebných presunov
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => {
+                                setShowTransferTypeModal(false);
+                                const cats = getAvailableCategories();
+                                if (cats.length === 0) {
+                                    window.showGlobalNotification('Nie sú dostupné žiadne kategórie.', 'error');
+                                    return;
+                                }
+                                setSelectedCategoryForTimeline(cats[0]);
+                                setShowCategoryModal(true);
+                            },
+                            className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-green-200 bg-green-50 hover:bg-green-100 transition-colors flex items-center gap-3'
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-wand-magic-sparkles text-green-600 text-xl w-6 text-center' }),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement('div', { className: 'font-semibold text-gray-800' }, 'Generovanie potrebných presunov'),
+                            React.createElement('div', { className: 'text-xs text-gray-500' }, 'Automaticky vygeneruje presuny z časovej osi')
+                        )
+                    ),
+                    // 2) Vytvoriť vlastný presun
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => {
+                                setShowTransferTypeModal(false);
+                                const cats = getAvailableCategories();
+                                setCustomTransferCategory(cats.length > 0 ? cats[0] : '');
+                                setCustomTransferTeamName('');
+                                setShowCustomTransferModal(true);
+                            },
+                            className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors flex items-center gap-3'
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-pen-to-square text-blue-600 text-xl w-6 text-center' }),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement('div', { className: 'font-semibold text-gray-800' }, 'Vytvoriť vlastný presun'),
+                            React.createElement('div', { className: 'text-xs text-gray-500' }, 'Manuálne zadáte trasu a čas presunu')
+                        )
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setShowTransferTypeModal(false),
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
+                        },
+                        'Zrušiť'
+                    )
+                )
+            )
+        ),
+        // ============================================================
+        // NOVÉ: MODÁLNE OKNO – Vytvoriť vlastný presun
+        // ============================================================
+        showCustomTransferModal && (() => {
+            // Zoznam tímov v zvolenej kategórii (z users + superstructure)
+            const teamsInCategory = (() => {
+                const cat = cleanCategory(customTransferCategory);
+                if (!cat) return [];
+                const set = new Set();
+                (teamsArrivalBufferRef.current || []).forEach((t) => {
+                    if (cleanCategory(t.category) !== cat) return;
+                    if (!t.teamName) return;
+                    set.add(String(t.teamName).trim());
+                });
+                return [...set].sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
+            })();
+
+            // Udalosti zvoleného tímu
+            const teamEvents = customTransferTeamName
+                ? getTeamEventsForCustomTransfer(customTransferCategory, customTransferTeamName)
+                : [];
+
+            return React.createElement(
+                'div',
+                {
+                    className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100002] p-4',
+                    onClick: () => setShowCustomTransferModal(false)
+                },
+                React.createElement(
+                    'div',
+                    {
+                        className: 'bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto',
+                        onClick: (e) => e.stopPropagation()
+                    },
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-start gap-3 mb-4' },
+                        React.createElement('i', {
+                            className: 'fa-solid fa-pen-to-square text-blue-600 text-2xl mt-0.5'
+                        }),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement(
+                                'h3',
+                                { className: 'text-lg font-semibold text-gray-800' },
+                                'Vytvoriť vlastný presun'
+                            ),
+                            React.createElement(
+                                'p',
+                                { className: 'text-xs text-gray-500 mt-0.5' },
+                                'Zvoľte kategóriu a tím. Zobrazí sa zoznam udalostí tímu.'
+                            )
+                        )
+                    ),
+                    // Selectbox kategórie
+                    React.createElement(
+                        'label',
+                        { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                        'Kategória'
+                    ),
+                    React.createElement(
+                        'select',
+                        {
+                            value: customTransferCategory,
+                            onChange: (e) => {
+                                setCustomTransferCategory(e.target.value);
+                                setCustomTransferTeamName('');
+                            },
+                            className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors mb-4'
+                        },
+                        React.createElement('option', { value: '' }, '— vyber kategóriu —'),
+                        getAvailableCategories().map((cat) =>
+                            React.createElement(
+                                'option',
+                                { key: cat, value: cat },
+                                cat
+                            )
+                        )
+                    ),
+                    // Selectbox tímu
+                    React.createElement(
+                        'label',
+                        { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                        'Tím'
+                    ),
+                    React.createElement(
+                        'select',
+                        {
+                            value: customTransferTeamName,
+                            onChange: (e) => setCustomTransferTeamName(e.target.value),
+                            disabled: !customTransferCategory || teamsInCategory.length === 0,
+                            className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors mb-4 disabled:opacity-60 disabled:cursor-not-allowed'
+                        },
+                        React.createElement('option', { value: '' }, '— vyber tím —'),
+                        teamsInCategory.map((tn) =>
+                            React.createElement(
+                                'option',
+                                { key: tn, value: tn },
+                                tn
+                            )
+                        )
+                    ),
+                    // Zoznam udalostí tímu
+                    customTransferTeamName && React.createElement(
+                        'div',
+                        { className: 'mb-4' },
+                        React.createElement(
+                            'div',
+                            { className: 'text-sm font-semibold text-gray-700 mb-2' },
+                            'Udalosti tímu (rovnaké ako v konzole):'
+                        ),
+                        teamEvents.length === 0
+                            ? React.createElement(
+                                'p',
+                                { className: 'text-xs text-gray-400 italic' },
+                                'Tím nemá žiadne udalosti.'
+                            )
+                            : React.createElement(
+                                'div',
+                                {
+                                    className: 'bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-[300px] overflow-y-auto'
+                                },
+                                React.createElement(
+                                    'ul',
+                                    { className: 'space-y-1 text-xs font-mono text-gray-700' },
+                                    teamEvents.map((ev, idx) => {
+                                        let icon = '•';
+                                        if (ev.type === 'match') icon = '🏑';
+                                        else if (ev.type === 'catering') icon = '🍽';
+                                        else if (ev.type === 'arrival') icon = '🚌';
+                                        else if (ev.type === 'accommodation') icon = '🛏';
+
+                                        return React.createElement(
+                                            'li',
+                                            {
+                                                key: idx,
+                                                className: 'whitespace-pre-wrap break-words'
+                                            },
+                                            `${icon} ${ev.when || '—'}  |  ${ev.text}`
+                                        );
+                                    })
+                                )
+                            )
+                    ),
+                    // Tlačidlá
+                    React.createElement(
+                        'div',
+                        { className: 'flex justify-end gap-3' },
+                        React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: () => {
+                                    setShowCustomTransferModal(false);
+                                },
+                                className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
+                            },
+                            'Zavrieť'
+                        )
+                    )
+                )
+            );
+        })(),
         // ============================================================
         // MODÁLNE OKNO – Úprava vygenerovaného presunu (medzizastávky)
         // ============================================================
