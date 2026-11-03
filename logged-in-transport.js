@@ -11313,47 +11313,197 @@ const TransportApp = ({ userProfileData }) => {
                             )
                         )
                     ),
-                    // Zoznam udalostí tímu
+                    // Zoznam udalostí tímu – prehľadne zoskupený podľa dní
                     customTransferTeamName && React.createElement(
                         'div',
                         { className: 'mb-4' },
                         React.createElement(
                             'div',
-                            { className: 'text-sm font-semibold text-gray-700 mb-2' },
-                            'Udalosti tímu (rovnaké ako v konzole):'
+                            { className: 'text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2' },
+                            React.createElement('i', { className: 'fa-solid fa-list-ul text-blue-600' }),
+                            'Udalosti tímu:',
+                            React.createElement(
+                                'span',
+                                { className: 'text-xs font-normal text-gray-500' },
+                                `(${teamEvents.length})`
+                            )
                         ),
                         teamEvents.length === 0
                             ? React.createElement(
                                 'p',
-                                { className: 'text-xs text-gray-400 italic' },
+                                { className: 'text-xs text-gray-400 italic px-1' },
                                 'Tím nemá žiadne udalosti.'
                             )
-                            : React.createElement(
-                                'div',
-                                {
-                                    className: 'bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-[300px] overflow-y-auto'
-                                },
-                                React.createElement(
-                                    'ul',
-                                    { className: 'space-y-1 text-xs font-mono text-gray-700' },
-                                    teamEvents.map((ev, idx) => {
-                                        let icon = '•';
-                                        if (ev.type === 'match') icon = '🏑';
-                                        else if (ev.type === 'catering') icon = '🍽';
-                                        else if (ev.type === 'arrival') icon = '🚌';
-                                        else if (ev.type === 'accommodation') icon = '🛏';
-
+                            : (() => {
+                                // ------------------------------------------------------------
+                                // Pomocná: z "when" vytiahne dayKey (YYYY-MM-DD)
+                                // ------------------------------------------------------------
+                                const extractDayKey = (when) => {
+                                    if (!when) return null;
+                                    const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(when));
+                                    if (!m) return null;
+                                    const d = String(m[1]).padStart(2, '0');
+                                    const mo = String(m[2]).padStart(2, '0');
+                                    const y = m[3];
+                                    return `${y}-${mo}-${d}`;
+                                };
+                    
+                                // ------------------------------------------------------------
+                                // Pomocná: z "when" vytiahne iba časť s časom (HH:MM – HH:MM)
+                                // ------------------------------------------------------------
+                                const extractTimeLabel = (when) => {
+                                    if (!when) return '';
+                                    const s = String(when);
+                                    const times = [];
+                                    const regex = /(\d{1,2}):(\d{2})/g;
+                                    let m;
+                                    while ((m = regex.exec(s)) !== null) {
+                                        times.push(`${String(m[1]).padStart(2, '0')}:${m[2]}`);
+                                    }
+                                    if (times.length === 0) return '';
+                                    if (times.length === 1) return times[0];
+                                    return `${times[0]} – ${times[1]}`;
+                                };
+                    
+                                // ------------------------------------------------------------
+                                // Pomocná: meta informácie podľa typu udalosti
+                                // ------------------------------------------------------------
+                                const getEventMeta = (type) => {
+                                    switch (type) {
+                                        case 'match':
+                                            return { icon: 'fa-hockey-puck', color: '#2563eb', label: 'Zápas', bg: '#eff6ff', border: '#bfdbfe' };
+                                        case 'catering':
+                                            return { icon: 'fa-utensils', color: '#16a34a', label: 'Stravovanie', bg: '#f0fdf4', border: '#bbf7d0' };
+                                        case 'arrival':
+                                            return { icon: 'fa-bus', color: '#ea580c', label: 'Príchod', bg: '#fff7ed', border: '#fed7aa' };
+                                        case 'accommodation':
+                                            return { icon: 'fa-bed', color: '#7c3aed', label: 'Ubytovanie', bg: '#f5f3ff', border: '#ddd6fe' };
+                                        default:
+                                            return { icon: 'fa-circle-dot', color: '#6b7280', label: 'Udalosť', bg: '#f9fafb', border: '#e5e7eb' };
+                                    }
+                                };
+                    
+                                // ------------------------------------------------------------
+                                // Zoskup udalosti podľa dňa (dayKey), zachovaj poradie
+                                // ------------------------------------------------------------
+                                const groups = new Map(); // dayKey → [event, ...]
+                                const order = [];         // poradie dayKey
+                                teamEvents.forEach((ev) => {
+                                    const dk = extractDayKey(ev.when) || '__none__';
+                                    if (!groups.has(dk)) {
+                                        groups.set(dk, []);
+                                        order.push(dk);
+                                    }
+                                    groups.get(dk).push(ev);
+                                });
+                    
+                                // ------------------------------------------------------------
+                                // Render
+                                // ------------------------------------------------------------
+                                return React.createElement(
+                                    'div',
+                                    {
+                                        className: 'bg-gray-50 border border-gray-200 rounded-lg p-2 max-h-[340px] overflow-y-auto'
+                                    },
+                                    order.map((dk) => {
+                                        const items = groups.get(dk) || [];
+                                        const dayLabel = dk !== '__none__'
+                                            ? (formatDateDDMMYYYY(dk) || dk)
+                                            : 'Bez dátumu';
+                    
                                         return React.createElement(
-                                            'li',
-                                            {
-                                                key: idx,
-                                                className: 'whitespace-pre-wrap break-words'
-                                            },
-                                            `${icon} ${ev.when || '—'}  |  ${ev.text}`
+                                            'div',
+                                            { key: dk, className: 'mb-2 last:mb-0' },
+                                            // Hlavička dňa
+                                            React.createElement(
+                                                'div',
+                                                {
+                                                    className: 'flex items-center gap-2 px-2 py-1 mb-1 rounded bg-gray-200/70'
+                                                },
+                                                React.createElement('i', { className: 'fa-regular fa-calendar text-gray-600 text-xs' }),
+                                                React.createElement(
+                                                    'span',
+                                                    { className: 'text-xs font-bold text-gray-700' },
+                                                    dayLabel
+                                                ),
+                                                React.createElement(
+                                                    'span',
+                                                    { className: 'text-[10px] text-gray-500 ml-auto' },
+                                                    `${items.length} udalostí`
+                                                )
+                                            ),
+                                            // Riadky udalostí
+                                            React.createElement(
+                                                'div',
+                                                { className: 'space-y-1' },
+                                                items.map((ev, idx) => {
+                                                    const meta = getEventMeta(ev.type);
+                                                    const timeLabel = extractTimeLabel(ev.when);
+                                                    // Z textu odstráň prípadný duplicitný čas/dátum – 
+                                                    // necháme celý text, ale vizuálne oddelíme čas
+                                                    const text = ev.text || '';
+                    
+                                                    return React.createElement(
+                                                        'div',
+                                                        {
+                                                            key: `${dk}-${idx}`,
+                                                            className: 'flex items-start gap-2 px-2 py-1.5 rounded border text-xs',
+                                                            style: {
+                                                                backgroundColor: meta.bg,
+                                                                borderColor: meta.border,
+                                                            },
+                                                            title: `${meta.label}: ${text}`
+                                                        },
+                                                        // 1) Ikona + typ
+                                                        React.createElement(
+                                                            'div',
+                                                            {
+                                                                className: 'flex flex-col items-center justify-start flex-shrink-0 pt-0.5',
+                                                                style: { width: '54px' }
+                                                            },
+                                                            React.createElement(
+                                                                'div',
+                                                                {
+                                                                    className: 'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0',
+                                                                    style: {
+                                                                        backgroundColor: meta.color + '22',
+                                                                        color: meta.color,
+                                                                    }
+                                                                },
+                                                                React.createElement('i', { className: `fa-solid ${meta.icon} text-[11px]` })
+                                                            ),
+                                                            React.createElement(
+                                                                'span',
+                                                                {
+                                                                    className: 'text-[9px] font-semibold mt-0.5 text-center leading-tight',
+                                                                    style: { color: meta.color }
+                                                                },
+                                                                meta.label
+                                                            )
+                                                        ),
+                                                        // 2) Čas (ak existuje)
+                                                        timeLabel &&
+                                                            React.createElement(
+                                                                'div',
+                                                                {
+                                                                    className: 'flex-shrink-0 font-mono font-semibold text-gray-700 pt-0.5',
+                                                                    style: { width: '78px' }
+                                                                },
+                                                                timeLabel
+                                                            ),
+                                                        // 3) Popis
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'flex-1 text-gray-800 break-words leading-snug pt-0.5' },
+                                                            text
+                                                        )
+                                                    );
+                                                })
+                                            )
                                         );
                                     })
-                                )
-                            )
+                                );
+                            })()
                     ),
                     // Tlačidlá
                     React.createElement(
