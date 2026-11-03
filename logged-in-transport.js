@@ -11900,8 +11900,8 @@ const TransportApp = ({ userProfileData }) => {
                                                     // ============================================================
                                                     // NOVÉ: Presun má oranžový box a čierny text (rovnako ako Príchod)
                                                     // ============================================================
-                                                    const textColor = isTransferEvent ? '#000000' : '#1f2937';
-                                                    const metaTextColor = isTransferEvent ? '#000000' : meta.color;
+                                                    const textColor = isTransferEvent ? '#ea580c' : '#1f2937';
+                                                    const metaTextColor = isTransferEvent ? '#ea580c' : meta.color;
         
                                                     // ============================================================
                                                     // NOVÉ: Rozdelenie popisu na dva stĺpce:
