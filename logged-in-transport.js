@@ -11974,16 +11974,14 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     React.createElement('i', { className: 'fa-solid fa-person-walking text-[9px]' }),
                                                                                     'PEŠI'
                                                                                 ),
-                                                                            // Nepriradený badge
+                                                                            // Nepriradený badge – BEZ ikony otáznika, iba text
                                                                             !ev._isWalking && !ev._isAssigned &&
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     {
-                                                                                        className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                                                                        className: 'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold',
                                                                                         style: { backgroundColor: '#fef3c7', color: '#92400e' },
-                                                                                        title: 'Nepriradený k autobusu'
                                                                                     },
-                                                                                    React.createElement('i', { className: 'fa-solid fa-question text-[9px]' }),
                                                                                     'nepriradený'
                                                                                 )
                                                                         ),
