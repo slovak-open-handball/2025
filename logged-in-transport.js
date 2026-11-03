@@ -11371,16 +11371,59 @@ const TransportApp = ({ userProfileData }) => {
                                 const getEventMeta = (type) => {
                                     switch (type) {
                                         case 'match':
-                                            return { icon: 'fa-hockey-puck', color: '#2563eb', label: 'Zápas', bg: '#eff6ff', border: '#bfdbfe' };
+                                            return { icon: 'fa-hockey-puck', color: '#2563eb', label: 'Zápas', bg: '#eff6ff', border: '#bfdbfe', placeIcon: 'fa-location-dot' };
                                         case 'catering':
-                                            return { icon: 'fa-utensils', color: '#16a34a', label: 'Stravovanie', bg: '#f0fdf4', border: '#bbf7d0' };
+                                            return { icon: 'fa-utensils', color: '#16a34a', label: 'Stravovanie', bg: '#f0fdf4', border: '#bbf7d0', placeIcon: 'fa-location-dot' };
                                         case 'arrival':
-                                            return { icon: 'fa-bus', color: '#ea580c', label: 'Príchod', bg: '#fff7ed', border: '#fed7aa' };
+                                            return { icon: 'fa-bus', color: '#ea580c', label: 'Príchod', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
                                         case 'accommodation':
-                                            return { icon: 'fa-bed', color: '#7c3aed', label: 'Ubytovanie', bg: '#f5f3ff', border: '#ddd6fe' };
+                                            return { icon: 'fa-bed', color: '#7c3aed', label: 'Ubytovanie', bg: '#f5f3ff', border: '#ddd6fe', placeIcon: 'fa-location-dot' };
                                         default:
-                                            return { icon: 'fa-circle-dot', color: '#6b7280', label: 'Udalosť', bg: '#f9fafb', border: '#e5e7eb' };
+                                            return { icon: 'fa-circle-dot', color: '#6b7280', label: 'Udalosť', bg: '#f9fafb', border: '#e5e7eb', placeIcon: 'fa-location-dot' };
                                     }
+                                };
+                    
+                                // ------------------------------------------------------------
+                                // Pomocná: vytiahne z textu udalosti názov miesta (ak existuje)
+                                //   - match:      "Tím A vs Tím B [..] | HALA"  → "HALA"
+                                //   - catering:   "Obed (12:00 – 12:30) → JEDÁLEŇ" → "JEDÁLEŇ"
+                                //   - accommodation: "Ubytovanie: UBytovňa X (typ: ...)" → "UBytovňa X"
+                                //   - arrival:    "Doprava / príchod: ..."  → null (nemá miesto)
+                                // ------------------------------------------------------------
+                                const extractPlaceFromEvent = (ev) => {
+                                    if (!ev) return null;
+                                    const text = String(ev.text || '').trim();
+                                    if (!text) return null;
+                    
+                                    if (ev.type === 'match') {
+                                        // Za posledným "|" je názov haly
+                                        const idx = text.lastIndexOf('|');
+                                        if (idx !== -1) {
+                                            const hall = text.slice(idx + 1).trim();
+                                            if (hall) return hall;
+                                        }
+                                        return ev.location || null;
+                                    }
+                    
+                                    if (ev.type === 'catering') {
+                                        // Za "→" je názov jedálne
+                                        const idx = text.lastIndexOf('→');
+                                        if (idx !== -1) {
+                                            const place = text.slice(idx + 1).trim();
+                                            if (place) return place;
+                                        }
+                                        return ev.location || null;
+                                    }
+                    
+                                    if (ev.type === 'accommodation') {
+                                        // "Ubytovanie: NÁZOV (typ: ...)"
+                                        const m = /^Ubytovanie:\s*(.+?)(?:\s*\(typ:.*\))?$/i.exec(text);
+                                        if (m && m[1]) return m[1].trim();
+                                        return ev.location || null;
+                                    }
+                    
+                                    // arrival a ostatné – použi location, ak existuje
+                                    return ev.location || null;
                                 };
                     
                                 // ------------------------------------------------------------
@@ -11414,7 +11457,7 @@ const TransportApp = ({ userProfileData }) => {
                                         return React.createElement(
                                             'div',
                                             { key: dk, className: 'mb-2 last:mb-0' },
-                                            // Hlavička dňa
+                                            // Hlavička dňa – vľavo dátum, vpravo "Miesto"
                                             React.createElement(
                                                 'div',
                                                 {
@@ -11428,8 +11471,17 @@ const TransportApp = ({ userProfileData }) => {
                                                 ),
                                                 React.createElement(
                                                     'span',
-                                                    { className: 'text-[10px] text-gray-500 ml-auto' },
+                                                    { className: 'text-[10px] text-gray-500 ml-2' },
                                                     `${items.length} udalostí`
+                                                ),
+                                                // "Miesto" – hlavička pravého stĺpca
+                                                React.createElement(
+                                                    'span',
+                                                    {
+                                                        className: 'ml-auto text-[10px] font-bold text-gray-600 uppercase tracking-wide flex items-center gap-1'
+                                                    },
+                                                    React.createElement('i', { className: 'fa-solid fa-location-dot' }),
+                                                    'Miesto'
                                                 )
                                             ),
                                             // Riadky udalostí
@@ -11439,9 +11491,8 @@ const TransportApp = ({ userProfileData }) => {
                                                 items.map((ev, idx) => {
                                                     const meta = getEventMeta(ev.type);
                                                     const timeLabel = extractTimeLabel(ev.when);
-                                                    // Z textu odstráň prípadný duplicitný čas/dátum – 
-                                                    // necháme celý text, ale vizuálne oddelíme čas
                                                     const text = ev.text || '';
+                                                    const placeName = extractPlaceFromEvent(ev);
                     
                                                     return React.createElement(
                                                         'div',
@@ -11496,6 +11547,40 @@ const TransportApp = ({ userProfileData }) => {
                                                             'div',
                                                             { className: 'flex-1 text-gray-800 break-words leading-snug pt-0.5' },
                                                             text
+                                                        ),
+                                                        // 4) Miesto – vpravo s ikonou
+                                                        React.createElement(
+                                                            'div',
+                                                            {
+                                                                className: 'flex-shrink-0 pt-0.5 text-right',
+                                                                style: { width: '160px', minWidth: '160px' },
+                                                                title: placeName ? `Miesto: ${placeName}` : 'Miesto nie je určené'
+                                                            },
+                                                            placeName
+                                                                ? React.createElement(
+                                                                    'span',
+                                                                    {
+                                                                        className: 'inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded',
+                                                                        style: {
+                                                                            color: meta.color,
+                                                                            backgroundColor: meta.color + '11',
+                                                                        }
+                                                                    },
+                                                                    React.createElement('i', { className: `fa-solid ${meta.placeIcon} text-[10px]` }),
+                                                                    React.createElement(
+                                                                        'span',
+                                                                        {
+                                                                            className: 'truncate',
+                                                                            style: { maxWidth: '140px' }
+                                                                        },
+                                                                        placeName
+                                                                    )
+                                                                )
+                                                                : React.createElement(
+                                                                    'span',
+                                                                    { className: 'text-[11px] italic text-gray-400' },
+                                                                    '—'
+                                                                )
                                                         )
                                                     );
                                                 })
