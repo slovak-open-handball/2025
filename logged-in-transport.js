@@ -8607,6 +8607,45 @@ const TransportApp = ({ userProfileData }) => {
             if (selectedCategoryFilter && cleanCategory(t.category || '') !== cleanCategory(selectedCategoryFilter)) return false;
             return true;
         });
+
+        const parseWhenRangeFull = (when) => {
+            if (!when) return null;
+            const s = String(when);
+            const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
+            const found = [];
+            let m;
+            while ((m = regex.exec(s)) !== null) {
+                const d = String(m[1]).padStart(2, '0');
+                const mo = String(m[2]).padStart(2, '0');
+                const y = m[3];
+                const hh = m[4] != null ? String(m[4]).padStart(2, '0') : null;
+                const mi = m[5] != null ? String(m[5]).padStart(2, '0') : null;
+                found.push({
+                    dayKey: `${y}-${mo}-${d}`,
+                    label: `${d}. ${mo}. ${y}`,
+                    time: (hh != null && mi != null) ? `${hh}:${mi}` : null,
+                });
+            }
+            if (found.length === 0) return null;
+            if (found.length === 1) {
+                return {
+                    startDayKey: found[0].dayKey,
+                    endDayKey: found[0].dayKey,
+                    startLabel: found[0].label,
+                    endLabel: found[0].label,
+                    startTime: found[0].time,
+                    endTime: found[0].time,
+                };
+            }
+            return {
+                startDayKey: found[0].dayKey,
+                endDayKey: found[1].dayKey,
+                startLabel: found[0].label,
+                endLabel: found[1].label,
+                startTime: found[0].time,
+                endTime: found[1].time,
+            };
+        };
     
         // ============================================================
         // Pomocná: z textu "Presun z X do Y" vytiahne { from, to }.
