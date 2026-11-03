@@ -9736,16 +9736,13 @@ const TransportApp = ({ userProfileData }) => {
 
     // ============================================================
     // NOVÉ: Získa zoznam udalostí pre daný tím (rovnaký ako v konzole)
-    // + doplní vygenerované presuny (parent záznamy zo savedTransfers)
+    // + doplní vygenerované presuny ROZLOŽENÉ NA SEGMENTY
     //
-    // DÔLEŽITÉ: Presuny sa musia zoradiť CHRONOLOGICKY medzi ostatné
-    // udalosti tímu. Preto:
-    //  - Ak je presun priradený (má reálne časy), použijeme startTs.
-    //  - Ak nie je priradený, použijeme `when` parenta (ak existuje)
-    //    alebo provizórny interval z okolitých segmentov na výpočet
-    //    približného startTs, aby sa zaradil správne.
-    //  - dayKey určíme prednostne z `when` parenta, potom z reálnych
-    //    časov segmentov, potom z provizórneho intervalu.
+    // Každý segment (časť presunu) je samostatná udalosť:
+    //  - ak je priradený k busu → zobrazí sa názov busu + čas
+    //  - ak je peši → zobrazí sa "PEŠI"
+    //  - ak nie je priradený → "nepriradený"
+    //  - všetky segmenty sú oranžové (rovnako ako príchod)
     // ============================================================
     const getTeamEventsForCustomTransfer = (category, teamName) => {
         if (!category || !teamName) return [];
@@ -9835,15 +9832,16 @@ const TransportApp = ({ userProfileData }) => {
         }
 
         // ============================================================
-        // NOVÉ: Doplniť vygenerované presuny (parent záznamy zo savedTransfers)
+        // NOVÉ: Doplniť vygenerované presuny ROZLOŽENÉ NA SEGMENTY
         //
-        // Pravidlá:
-        //  - Berieme LEN parent záznamy (nie segmenty) pre tento tím/kategóriu.
-        //  - Ak je parent priradený k autobusu (má reálne časy), zobrazíme
-        //    KONKRÉTNY čas (startTs – endTs) a zaradíme podľa startTs.
-        //  - Ak nie je priradený, zobrazíme VŠEOBECNE, ale stále sa ho
-        //    pokúsime zaradiť chronologicky – použijeme `when` parenta
-        //    alebo provizórny interval z okolitých segmentov.
+        // Pre každý parent záznam:
+        //  - zisti route (fromLocation → intermediateStops → toLocation)
+        //  - pre každý segment (from → to):
+        //      * ak je isWalking → "PEŠI"
+        //      * ak je busAssigned (má startTs/endTs a busId) → "Bus X" + čas
+        //      * inak → "nepriradený"
+        //  - každý segment je samostatná udalosť typu 'transfer'
+        //    s príznakom _isTransferRow = true (pre oranžové zafarbenie)
         // ============================================================
         (savedTransfersRef.current || []).forEach((t) => {
             if (cleanCategory(t.category || '') !== cat) return;
@@ -9862,136 +9860,105 @@ const TransportApp = ({ userProfileData }) => {
             });
             if (route.length < 2) return;
 
-            const routeLabel = route.join(' → ');
+            const parentSegments = Array.isArray(t.segments) ? t.segments : [];
+            const parentWhenRange = parseTransferWhenToRange(t.when);
 
-            // Zisti, či je parent priradený (má reálne časy segmentov)
-            const segments = Array.isArray(t.segments) ? t.segments : [];
-            const assignedSegments = segments.filter(
-                (s) => s && s.startTs != null && s.endTs != null && s.endTs > s.startTs
-            );
+            // Pre každý segment (from → to)
+            for (let i = 0; i < route.length - 1; i++) {
+                const fromLoc = String(route[i] || '').trim();
+                const toLoc = String(route[i + 1] || '').trim();
+                if (!fromLoc || !toLoc) continue;
+                if (normalizePlaceName(fromLoc) === normalizePlaceName(toLoc)) continue;
 
-            const isAssigned = assignedSegments.length > 0;
+                // Nájdi zodpovedajúci segment v parent.segments
+                const segIdx = findSegmentIndex(parentSegments, fromLoc, toLoc);
+                const seg = segIdx !== -1 ? parentSegments[segIdx] : null;
 
-            // ============================================================
-            // Vypočítaj reálny čas začiatku a konca
-            // ============================================================
-            let startTs = null;
-            let endTs = null;
-            if (isAssigned) {
-                const starts = assignedSegments.map((s) => s.startTs).filter((x) => x != null);
-                const ends = assignedSegments.map((s) => s.endTs).filter((x) => x != null);
-                if (starts.length > 0) startTs = Math.min(...starts);
-                if (ends.length > 0) endTs = Math.max(...ends);
-            }
+                const isWalking = !!(seg && seg.isWalking === true);
+                const hasRealTimes = !!(seg && seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs);
+                const busId = seg && seg.busId ? String(seg.busId) : null;
+                const busName = busId
+                    ? (buses.find((b) => b.id === busId)?.name || `Bus ${busId}`)
+                    : null;
 
-            // ============================================================
-            // NOVÉ: Ak nie je priradený, skús určiť aspoň približný startTs
-            // z `when` parenta alebo z provizórneho intervalu, aby sa
-            // presun zaradil chronologicky medzi ostatné udalosti.
-            //
-            // Priorita:
-            //  1) reálne časy segmentov (ak je priradený)
-            //  2) `when` parenta (parseTransferWhenToRange)
-            //  3) provizórny interval z computeProvisionalSegmentRange
-            //     pre PRVÝ segment parenta
-            // ============================================================
-            let sortTs = startTs;
+                // Zisti čas pre tento segment
+                let startTs = null;
+                let endTs = null;
+                let timeLabel = '';
 
-            if (sortTs == null) {
-                // Skús `when` parenta
-                const parentRange = parseTransferWhenToRange(t.when);
-                if (parentRange && parentRange.startTs != null) {
-                    sortTs = parentRange.startTs;
-                    if (endTs == null && parentRange.endTs != null) {
-                        endTs = parentRange.endTs;
-                    }
-                }
-            }
-
-            if (sortTs == null) {
-                // Skús provizórny interval pre PRVÝ segment parenta
-                // (to je to, čo sa reálne zobrazuje v boxe "Vygenerované presuny")
-                try {
-                    const firstSeg = (segments && segments.length > 0) ? segments[0] : null;
-                    if (firstSeg) {
+                if (isWalking) {
+                    // Peší segment – žiadne časy
+                    timeLabel = 'PEŠI';
+                } else if (hasRealTimes) {
+                    startTs = seg.startTs;
+                    endTs = seg.endTs;
+                    const startTime = /(\d{2}:\d{2})$/.exec(formatTsLocal(startTs) || '')?.[1] || '';
+                    const endTime = /(\d{2}:\d{2})$/.exec(formatTsLocal(endTs) || '')?.[1] || '';
+                    timeLabel = `${startTime} – ${endTime}`;
+                } else {
+                    // Nepriradený segment – skús provizórny interval
+                    try {
                         const provisional = computeProvisionalSegmentRange({
                             ...t,
-                            fromLocation: firstSeg.from,
-                            toLocation: firstSeg.to,
+                            fromLocation: fromLoc,
+                            toLocation: toLoc,
                             _parentKey: t.key,
                         });
                         if (provisional && provisional.startTs != null) {
-                            sortTs = provisional.startTs;
-                            if (endTs == null && provisional.endTs != null) {
-                                endTs = provisional.endTs;
-                            }
+                            const startTime = /(\d{2}:\d{2})$/.exec(formatTsLocal(provisional.startTs) || '')?.[1] || '';
+                            const endTime = provisional.endTs != null
+                                ? /(\d{2}:\d{2})$/.exec(formatTsLocal(provisional.endTs) || '')?.[1] || ''
+                                : '';
+                            timeLabel = endTime ? `${startTime} – ${endTime}` : startTime;
+                        }
+                    } catch (e) { /* ignore */ }
+                    if (!timeLabel) timeLabel = 'nepriradený';
+                }
+
+                // Zisti dayKey pre zoskupenie
+                let dayKey = t.dayKey || null;
+                if (!dayKey) {
+                    if (startTs != null) {
+                        const d = new Date(startTs);
+                        dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    } else if (parentWhenRange && parentWhenRange.startTs != null) {
+                        const d = new Date(parentWhenRange.startTs);
+                        dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    } else if (t.when) {
+                        const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(t.when));
+                        if (m) {
+                            const d = String(m[1]).padStart(2, '0');
+                            const mo = String(m[2]).padStart(2, '0');
+                            const y = m[3];
+                            dayKey = `${y}-${mo}-${d}`;
                         }
                     }
-                } catch (e) {
-                    // ignore
                 }
+
+                // Pre zoradenie použijeme startTs, inak parentRange.startTs,
+                // inak Number.POSITIVE_INFINITY
+                const sortTs = startTs != null
+                    ? startTs
+                    : (parentWhenRange && parentWhenRange.startTs != null ? parentWhenRange.startTs : Number.POSITIVE_INFINITY);
+
+                const routeLabel = `${fromLoc} → ${toLoc}`;
+
+                events.push({
+                    ts: sortTs,
+                    startTs: startTs,
+                    endTs: endTs,
+                    when: timeLabel,
+                    type: 'transfer',
+                    text: `Presun: ${routeLabel}${busName ? ` (${busName})` : ''}`,
+                    location: null,
+                    _isAssigned: hasRealTimes,
+                    _isWalking: isWalking,
+                    _busName: busName,
+                    _routeLabel: routeLabel,
+                    _dayKey: dayKey,
+                    _isTransferRow: true,  // príznak pre oranžové zafarbenie
+                });
             }
-
-            let whenStr;
-            if (isAssigned && startTs != null && endTs != null) {
-                // KONKRÉTNY presun – zobraz reálny čas
-                whenStr = `${formatTsLocal(startTs)} – ${formatTsLocal(endTs)}`;
-            } else if (sortTs != null) {
-                // VŠEOBECNÝ presun – ale máme aspoň približný čas začiatku
-                // (z `when` parenta alebo z provizórneho intervalu)
-                const approxStartStr = formatTsLocal(sortTs);
-                if (endTs != null && endTs > sortTs) {
-                    whenStr = `${approxStartStr} – ${formatTsLocal(endTs)}`;
-                } else {
-                    whenStr = approxStartStr;
-                }
-            } else {
-                // Úplne bez času – zobraz ako "nepriradený"
-                whenStr = 'nepriradený';
-            }
-
-            // ============================================================
-            // dayKey pre zoskupenie – prednostne z `when` parenta,
-            // potom z reálnych časov segmentov, potom z `sortTs`.
-            // ============================================================
-            let dayKey = t.dayKey || null;
-
-            if (!dayKey && t.when) {
-                const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(t.when));
-                if (m) {
-                    const d = String(m[1]).padStart(2, '0');
-                    const mo = String(m[2]).padStart(2, '0');
-                    const y = m[3];
-                    dayKey = `${y}-${mo}-${d}`;
-                }
-            }
-
-            if (!dayKey && sortTs != null) {
-                const d = new Date(sortTs);
-                dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            }
-
-            // ============================================================
-            // KĽÚČOVÉ: Pre zoradenie v rámci dňa použijeme `sortTs` (ak
-            // existuje). Ak nie, použijeme `Number.POSITIVE_INFINITY`,
-            // aby sa presun zobrazil na konci dňa (nemá lepší čas).
-            //
-            // POZOR: `ts` musí byť timestamp, aby sa dal porovnať s
-            // ostatnými udalosťami. Pre nepriradené presuny s `sortTs`
-            // teda použijeme `sortTs` – tým sa zaradia chronologicky.
-            // ============================================================
-            events.push({
-                ts: sortTs != null ? sortTs : Number.POSITIVE_INFINITY,
-                startTs: startTs,
-                endTs: endTs,
-                when: whenStr,
-                type: 'transfer',
-                text: `Presun: ${routeLabel}`,
-                location: null,
-                _isAssigned: isAssigned,
-                _routeLabel: routeLabel,
-                _dayKey: dayKey,
-            });
         });
 
         // Zoraď podľa ts
@@ -11836,27 +11803,85 @@ const TransportApp = ({ userProfileData }) => {
                                                             }
 
                                                             // ============================================================
-                                                            // NOVÉ: Presun – špeciálne zobrazenie
-                                                            //  - ak je priradený → konkrétny čas (už je vo `when`)
-                                                            //  - ak nie je priradený → všeobecne (bez času)
+                                                            // NOVÉ: Presun – zobrazí sa každý segment osobitne,
+                                                            // s názvom busu (ak je priradený) alebo "PEŠI"
                                                             // ============================================================
                                                             if (ev.type === 'transfer') {
+                                                                // Zisti farbu pozadia podľa stavu
+                                                                let rowBg = '#fff7ed'; // oranžová (default, ako príchod)
+                                                                let borderColor = '#fed7aa';
+                                                                let textColor = '#c2410c';
+
+                                                                if (ev._isWalking) {
+                                                                    // Peši – zelená
+                                                                    rowBg = '#f0fdf4';
+                                                                    borderColor = '#bbf7d0';
+                                                                    textColor = '#15803d';
+                                                                } else if (ev._isAssigned && ev._busName) {
+                                                                    // Priradený k busu – oranžová (rovnako ako príchod)
+                                                                    rowBg = '#fff7ed';
+                                                                    borderColor = '#fed7aa';
+                                                                    textColor = '#c2410c';
+                                                                }
+
                                                                 return React.createElement(
                                                                     'div',
                                                                     {
-                                                                        className: 'flex-1 text-gray-800 break-words leading-snug pt-0.5',
+                                                                        className: 'flex-1 break-words leading-snug pt-0.5 flex flex-wrap items-center gap-x-2',
                                                                         style: { minWidth: 0 }
                                                                     },
-                                                                    ev._routeLabel || ev.text
+                                                                    React.createElement(
+                                                                        'span',
+                                                                        { style: { color: textColor, fontWeight: '600' } },
+                                                                        ev._routeLabel || ev.text
+                                                                    ),
+                                                                    // Názov busu (ak je priradený)
+                                                                    ev._busName &&
+                                                                        React.createElement(
+                                                                            'span',
+                                                                            {
+                                                                                className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                                                                style: {
+                                                                                    backgroundColor: '#fed7aa',
+                                                                                    color: '#9a3412',
+                                                                                },
+                                                                                title: 'Priradené k autobusu'
+                                                                            },
+                                                                            React.createElement('i', { className: 'fa-solid fa-bus text-[9px]' }),
+                                                                            ev._busName
+                                                                        ),
+                                                                    // PEŠI badge
+                                                                    ev._isWalking &&
+                                                                        React.createElement(
+                                                                            'span',
+                                                                            {
+                                                                                className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                                                                style: {
+                                                                                    backgroundColor: '#bbf7d0',
+                                                                                    color: '#15803d',
+                                                                                },
+                                                                                title: 'Peší presun'
+                                                                            },
+                                                                            React.createElement('i', { className: 'fa-solid fa-person-walking text-[9px]' }),
+                                                                            'PEŠI'
+                                                                        ),
+                                                                    // Nepriradený badge
+                                                                    !ev._isWalking && !ev._isAssigned &&
+                                                                        React.createElement(
+                                                                            'span',
+                                                                            {
+                                                                                className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                                                                style: {
+                                                                                    backgroundColor: '#fef3c7',
+                                                                                    color: '#92400e',
+                                                                                },
+                                                                                title: 'Nepriradený k autobusu'
+                                                                            },
+                                                                            React.createElement('i', { className: 'fa-solid fa-question text-[9px]' }),
+                                                                            'nepriradený'
+                                                                        )
                                                                 );
                                                             }
-
-                                                            // Ostatné typy udalostí – pôvodný text
-                                                            return React.createElement(
-                                                                'div',
-                                                                { className: 'flex-1 text-gray-800 break-words leading-snug pt-0.5', style: { minWidth: 0 } },
-                                                                text
-                                                            );
                                                         })(),
                                                         // 4) Miesto – vpravo s ikonou
                                                         React.createElement(
