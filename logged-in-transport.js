@@ -11386,6 +11386,23 @@ const TransportApp = ({ userProfileData }) => {
                 ? getTeamEventsForCustomTransfer(customTransferCategory, customTransferTeamName)
                 : [];
         
+            // ============================================================
+            // NOVÉ: Zisti typ dopravy pre príchod zvoleného tímu
+            // (vlastná doprava / verejná doprava vlak/bus / bez dopravy)
+            // ============================================================
+            const arrivalTextForSelectedTeam = (() => {
+                if (!customTransferCategory || !customTransferTeamName) return null;
+                const cat = cleanCategory(customTransferCategory);
+                const name = String(customTransferTeamName || '').trim();
+                const teamInfo = (teamsArrivalBufferRef.current || []).find(
+                    (t) => cleanCategory(t.category) === cat && String(t.teamName || '').trim() === name
+                );
+                if (!teamInfo) return null;
+                const display = String(teamInfo.arrivalDisplay || '').trim();
+                if (!display || display === '---') return null;
+                return display;
+            })();
+        
             return React.createElement(
                 'div',
                 {
@@ -11501,7 +11518,7 @@ const TransportApp = ({ userProfileData }) => {
                                     const y = m[3];
                                     return `${y}-${mo}-${d}`;
                                 };
-                    
+        
                                 // ------------------------------------------------------------
                                 // Pomocná: z "when" vytiahne iba časť s časom (HH:MM – HH:MM)
                                 // ------------------------------------------------------------
@@ -11518,7 +11535,7 @@ const TransportApp = ({ userProfileData }) => {
                                     if (times.length === 1) return times[0];
                                     return `${times[0]} – ${times[1]}`;
                                 };
-                    
+        
                                 // ------------------------------------------------------------
                                 // Pomocná: meta informácie podľa typu udalosti
                                 // ------------------------------------------------------------
@@ -11551,7 +11568,7 @@ const TransportApp = ({ userProfileData }) => {
                                             return { icon: 'fa-circle-dot', color: '#6b7280', label: 'Udalosť', bg: '#f9fafb', border: '#e5e7eb', placeIcon: 'fa-location-dot' };
                                     }
                                 };
-
+        
                                 // ------------------------------------------------------------
                                 // Pomocná: vytiahne z textu udalosti názov miesta (ak existuje)
                                 //   - match:      "Tím A vs Tím B [..] | HALA"  → "HALA"
@@ -11564,7 +11581,7 @@ const TransportApp = ({ userProfileData }) => {
                                     if (!ev) return null;
                                     const text = String(ev.text || '').trim();
                                     if (!text) return null;
-
+        
                                     if (ev.type === 'match') {
                                         // Za posledným "|" je názov haly
                                         const idx = text.lastIndexOf('|');
@@ -11574,7 +11591,7 @@ const TransportApp = ({ userProfileData }) => {
                                         }
                                         return ev.location || null;
                                     }
-
+        
                                     if (ev.type === 'catering') {
                                         // Za "→" je názov jedálne
                                         const idx = text.lastIndexOf('→');
@@ -11584,18 +11601,18 @@ const TransportApp = ({ userProfileData }) => {
                                         }
                                         return ev.location || null;
                                     }
-
+        
                                     if (ev.type === 'accommodation') {
                                         // "Ubytovanie: NÁZOV (typ: ...)" → "NÁZOV"
                                         const m = /^Ubytovanie:\s*(.+?)(?:\s*\(typ:.*\))?$/i.exec(text);
                                         if (m && m[1]) return m[1].trim();
                                         return ev.location || null;
                                     }
-
+        
                                     // arrival a ostatné – použi location, ak existuje
                                     return ev.location || null;
                                 };
-
+        
                                 // ============================================================
                                 // NOVÉ: Pre presun vráti zoznam miest (from, medzizastávky, to)
                                 // pre zobrazenie v poslednom stĺpci – každé na samostatnom riadku
@@ -11603,10 +11620,10 @@ const TransportApp = ({ userProfileData }) => {
                                 const extractPlacesForTransferEvent = (ev) => {
                                     if (!ev || ev.type !== 'transfer') return [];
                                     const places = [];
-                                
+        
                                     // Reálne časy z busu → ide o priradenú konkrétnu časť presunu
                                     const isAssignedToBus = ev._isAssigned === true;
-                                
+        
                                     if (isAssignedToBus) {
                                         // Priradená časť presunu → len from a to tohto segmentu
                                         const fromLoc = String(ev._fromLocation || '').trim();
@@ -11615,7 +11632,7 @@ const TransportApp = ({ userProfileData }) => {
                                         if (toLoc) places.push(toLoc);
                                         return places;
                                     }
-                                
+        
                                     // Nepriradený presun → všetky zastávky celej trasy parenta
                                     const routePlaces = Array.isArray(ev._routePlaces) ? ev._routePlaces : [];
                                     if (routePlaces.length > 0) {
@@ -11625,7 +11642,7 @@ const TransportApp = ({ userProfileData }) => {
                                         });
                                         return places;
                                     }
-                                
+        
                                     // Fallback – aspoň from a to
                                     const fromLoc = String(ev._fromLocation || '').trim();
                                     const toLoc = String(ev._toLocation || '').trim();
@@ -11633,31 +11650,31 @@ const TransportApp = ({ userProfileData }) => {
                                     if (toLoc) places.push(toLoc);
                                     return places;
                                 };
-                                
+        
                                 const buildEventDescription = (ev) => {
                                     if (!ev) return '';
                                     const raw = String(ev.text || '').trim();
-                                
+        
                                     if (ev.type === 'match') {
                                         // Odrež všetko za posledným "|" (názov haly)
                                         const idx = raw.lastIndexOf('|');
                                         if (idx !== -1) return raw.slice(0, idx).trim();
                                         return raw;
                                     }
-                                
+        
                                     if (ev.type === 'catering') {
                                         // 1) Odrež všetko za "→" (názov jedálne)
                                         let s = raw;
                                         const arrowIdx = s.lastIndexOf('→');
                                         if (arrowIdx !== -1) s = s.slice(0, arrowIdx).trim();
-                                    
+        
                                         // 2) Odrež aj čas v zátvorke: "Obed (12:00 – 12:30)" → "Obed"
                                         //    (čas je už zobrazený v samostatnom stĺpci vľavo)
                                         s = s.replace(/\s*\(\s*\d{1,2}:\d{2}(?:\s*[–-]\s*\d{1,2}:\d{2})?\s*\)\s*$/, '').trim();
-                                    
+        
                                         return s;
                                     }
-                                
+        
                                     if (ev.type === 'accommodation') {
                                         // "Ubytovanie: NÁZOV (typ: TYP)"  →  "Ubytovanie (typ: TYP)"
                                         const m = /^Ubytovanie:\s*(.+?)\s*\(typ:\s*(.+?)\)\s*$/i.exec(raw);
@@ -11675,7 +11692,7 @@ const TransportApp = ({ userProfileData }) => {
                                         }
                                         return raw;
                                     }
-                                
+        
                                     // arrival a ostatné – ponechaj pôvodný text
                                     return raw;
                                 };
@@ -11687,16 +11704,16 @@ const TransportApp = ({ userProfileData }) => {
                                     let s = raw;
                                     const pipeIdx = s.lastIndexOf('|');
                                     if (pipeIdx !== -1) s = s.slice(0, pipeIdx).trim();
-                                
+        
                                     // Nájdi " vs " (prípadne " VS ", " Vs ")
                                     const vsMatch = /\s+vs\.?\s+/i.exec(s);
                                     if (!vsMatch) return null;
-                                
+        
                                     const home = s.slice(0, vsMatch.index).trim();
                                     const away = s.slice(vsMatch.index + vsMatch[0].length).trim();
                                     return { home, away };
                                 };
-                    
+        
                                 // ------------------------------------------------------------
                                 // Zoskup udalosti podľa dňa (dayKey), zachovaj poradie
                                 // ------------------------------------------------------------
@@ -11714,7 +11731,7 @@ const TransportApp = ({ userProfileData }) => {
                                     }
                                     groups.get(dk).push(ev);
                                 });
-                    
+        
                                 // ------------------------------------------------------------
                                 // Render
                                 // ------------------------------------------------------------
@@ -11728,7 +11745,13 @@ const TransportApp = ({ userProfileData }) => {
                                         const dayLabel = dk !== '__none__'
                                             ? (formatDateDDMMYYYY(dk) || dk)
                                             : 'Bez dátumu';
-                    
+        
+                                        // ============================================================
+                                        // NOVÉ: Ak je tento deň prvý a máme arrivalText, zobrazíme
+                                        // ho v samostatnom riadku ako colspan 2 (Príchod).
+                                        // ============================================================
+                                        const isFirstDayGroup = dk === order[0];
+        
                                         return React.createElement(
                                             'div',
                                             { key: dk, className: 'mb-2 last:mb-0' },
@@ -11763,11 +11786,76 @@ const TransportApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { className: 'space-y-1' },
+                                                // ============================================================
+                                                // NOVÉ: Prvý riadok pre príchod – text príchodu
+                                                // (vlastná doprava / verejná doprava vlak/bus / bez dopravy)
+                                                // uprostred, colspan 2.
+                                                // ============================================================
+                                                isFirstDayGroup && arrivalTextForSelectedTeam &&
+                                                    React.createElement(
+                                                        'div',
+                                                        {
+                                                            className: 'flex items-start gap-2 px-2 py-1.5 rounded border text-xs',
+                                                            style: {
+                                                                backgroundColor: '#fff7ed',
+                                                                borderColor: '#fed7aa',
+                                                            },
+                                                            title: `Príchod: ${arrivalTextForSelectedTeam}`
+                                                        },
+                                                        // 1) Ikona + typ (Príchod)
+                                                        React.createElement(
+                                                            'div',
+                                                            {
+                                                                className: 'flex flex-col items-center justify-start flex-shrink-0 pt-0.5',
+                                                                style: { width: '54px', minWidth: '54px' }
+                                                            },
+                                                            React.createElement(
+                                                                'div',
+                                                                {
+                                                                    className: 'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0',
+                                                                    style: {
+                                                                        backgroundColor: '#ea580c22',
+                                                                        color: '#ea580c',
+                                                                    }
+                                                                },
+                                                                React.createElement('i', { className: 'fa-solid fa-bus text-[11px]' })
+                                                            ),
+                                                            React.createElement(
+                                                                'span',
+                                                                {
+                                                                    className: 'text-[9px] font-semibold mt-0.5 text-center leading-tight',
+                                                                    style: { color: '#ea580c' }
+                                                                },
+                                                                'Príchod'
+                                                            )
+                                                        ),
+                                                        // 2) Text príchodu – colspan 2 (zaberá zvyšok riadku)
+                                                        React.createElement(
+                                                            'div',
+                                                            {
+                                                                className: 'flex-1 flex items-center justify-center pt-0.5',
+                                                                style: { minWidth: 0, color: '#000000' }
+                                                            },
+                                                            React.createElement(
+                                                                'span',
+                                                                {
+                                                                    className: 'text-[11px] font-semibold text-center px-1.5 py-0.5 rounded',
+                                                                    style: {
+                                                                        color: '#000000',
+                                                                        backgroundColor: '#fed7aa66',
+                                                                        maxWidth: '100%',
+                                                                        whiteSpace: 'normal',
+                                                                    }
+                                                                },
+                                                                arrivalTextForSelectedTeam
+                                                            )
+                                                        )
+                                                    ),
                                                 items.map((ev, idx) => {
                                                     const meta = getEventMeta(ev.type, ev);
                                                     const timeLabel = extractTimeLabel(ev.when);
                                                     const text = buildEventDescription(ev);
-                                                
+        
                                                     // ============================================================
                                                     // NOVÉ: Miesta pre posledný stĺpec
                                                     //  - presun → zoznam miest (from, medzizastávky, to) – každé na samostatnom riadku
@@ -11779,20 +11867,20 @@ const TransportApp = ({ userProfileData }) => {
                                                     const hasAnyPlace = isTransferEvent
                                                         ? transferPlaces.length > 0
                                                         : !!placeName;
-
+        
                                                     // ============================================================
                                                     // NOVÉ: Presun má oranžový box a čierny text (rovnako ako Príchod)
                                                     // ============================================================
                                                     const textColor = isTransferEvent ? '#000000' : '#1f2937';
                                                     const metaTextColor = isTransferEvent ? '#000000' : meta.color;
-
+        
                                                     // ============================================================
                                                     // NOVÉ: Rozdelenie popisu na dva stĺpce:
                                                     //  - "Tím" (domáci/hostia pre zápas, inak prázdne)
                                                     //  - "Miesto" (hala/jedáleň/ubytovanie/presun)
                                                     // ============================================================
                                                     const matchTeamsForRow = ev.type === 'match' ? parseMatchTeams(ev) : null;
-
+        
                                                     return React.createElement(
                                                         'div',
                                                         {
@@ -11870,7 +11958,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                         const selectedTeam = String(customTransferTeamName || '').trim();
                                                                         const isHomeSelected = teams.home === selectedTeam;
                                                                         const isAwaySelected = teams.away === selectedTeam;
-                                                            
+        
                                                                         // Názov haly z textu (za posledným "|")
                                                                         const hallName = (() => {
                                                                             const raw = String(ev.text || '').trim();
@@ -11881,7 +11969,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                             }
                                                                             return ev.location || null;
                                                                         })();
-                                                            
+        
                                                                         return React.createElement(
                                                                             React.Fragment,
                                                                             null,
@@ -11933,13 +12021,13 @@ const TransportApp = ({ userProfileData }) => {
                                                                         );
                                                                     }
                                                                 }
-                                                            
+        
                                                                 // ------------------------------------------------------------
                                                                 // PRESUN – vpravo, každé miesto na samostatnom riadku, BEZ ikony
                                                                 // ------------------------------------------------------------
                                                                 if (ev.type === 'transfer') {
                                                                     const places = extractPlacesForTransferEvent(ev);
-                                                                
+        
                                                                     return React.createElement(
                                                                         React.Fragment,
                                                                         null,
@@ -12021,7 +12109,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                         )
                                                                     );
                                                                 }
-                                                            
+        
                                                                 // ------------------------------------------------------------
                                                                 // STRAVOVANIE / UBYTOVANIE / PRÍCHOD – vpravo, BEZ ikony
                                                                 // ------------------------------------------------------------
