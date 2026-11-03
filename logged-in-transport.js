@@ -11920,20 +11920,18 @@ const TransportApp = ({ userProfileData }) => {
                                                                 // ------------------------------------------------------------
                                                                 if (ev.type === 'transfer') {
                                                                     const places = extractPlacesForTransferEvent(ev);
-                                                            
+                                                                
                                                                     return React.createElement(
-                                                                        'div',
-                                                                        {
-                                                                            className: 'flex-1 flex flex-col items-end gap-0.5',
-                                                                            style: { minWidth: 0 }
-                                                                        },
-                                                                        // Badge riadok (bus / PEŠI / nepriradený)
+                                                                        React.Fragment,
+                                                                        null,
+                                                                        // 1) ĽAVÝ STĹPEC (ako tímy pri zápase) – badge centrovane
                                                                         React.createElement(
                                                                             'div',
                                                                             {
-                                                                                className: 'flex flex-wrap items-center justify-end gap-x-2 gap-y-0.5',
+                                                                                className: 'flex-1 flex items-center justify-center',
                                                                                 style: { minWidth: 0 }
                                                                             },
+                                                                            // Názov busu
                                                                             ev._busName &&
                                                                                 React.createElement(
                                                                                     'span',
@@ -11945,6 +11943,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     React.createElement('i', { className: 'fa-solid fa-bus text-[9px]' }),
                                                                                     ev._busName
                                                                                 ),
+                                                                            // PEŠI badge
                                                                             ev._isWalking &&
                                                                                 React.createElement(
                                                                                     'span',
@@ -11956,6 +11955,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     React.createElement('i', { className: 'fa-solid fa-person-walking text-[9px]' }),
                                                                                     'PEŠI'
                                                                                 ),
+                                                                            // Nepriradený badge
                                                                             !ev._isWalking && !ev._isAssigned &&
                                                                                 React.createElement(
                                                                                     'span',
@@ -11968,15 +11968,15 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     'nepriradený'
                                                                                 )
                                                                         ),
-                                                                        // Zoznam miest – každé na samostatnom riadku, vpravo, BEZ ikony
-                                                                        places.length > 0 &&
-                                                                            React.createElement(
-                                                                                'div',
-                                                                                {
-                                                                                    className: 'flex flex-col items-end gap-0.5',
-                                                                                    style: { minWidth: 0 }
-                                                                                },
-                                                                                places.map((place, placeIdx) =>
+                                                                        // 2) PRAVÝ STĹPEC – zoznam miest, každé na samostatnom riadku, BEZ ikony
+                                                                        React.createElement(
+                                                                            'div',
+                                                                            {
+                                                                                className: 'flex-1 flex flex-col items-end gap-0.5',
+                                                                                style: { minWidth: 0 }
+                                                                            },
+                                                                            places.length > 0
+                                                                                ? places.map((place, placeIdx) =>
                                                                                     React.createElement(
                                                                                         'span',
                                                                                         {
@@ -11996,7 +11996,12 @@ const TransportApp = ({ userProfileData }) => {
                                                                                         )
                                                                                     )
                                                                                 )
-                                                                            )
+                                                                                : React.createElement(
+                                                                                    'span',
+                                                                                    { className: 'text-[11px] italic', style: { color: '#9ca3af' } },
+                                                                                    '—'
+                                                                                )
+                                                                        )
                                                                     );
                                                                 }
                                                             
