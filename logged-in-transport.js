@@ -11629,20 +11629,33 @@ const TransportApp = ({ userProfileData }) => {
                                 const extractPlacesForTransferEvent = (ev) => {
                                     if (!ev || ev.type !== 'transfer') return [];
                                     const places = [];
-        
-                                    // Reálne časy z busu → ide o priradenú konkrétnu časť presunu
-                                    const isAssignedToBus = ev._isAssigned === true;
-        
-                                    if (isAssignedToBus) {
-                                        // Priradená časť presunu → len from a to tohto segmentu
+                                
+                                    // ============================================================
+                                    // 1) PEŠÍ segment → iba from + to tohto konkrétneho pešieho segmentu
+                                    // ============================================================
+                                    if (ev._isWalking === true) {
                                         const fromLoc = String(ev._fromLocation || '').trim();
                                         const toLoc = String(ev._toLocation || '').trim();
                                         if (fromLoc) places.push(fromLoc);
                                         if (toLoc) places.push(toLoc);
                                         return places;
                                     }
-        
-                                    // Nepriradený presun → všetky zastávky celej trasy parenta
+                                
+                                    // ============================================================
+                                    // 2) Priradený (busom) segment → iba from + to tohto segmentu
+                                    // ============================================================
+                                    const isAssignedToBus = ev._isAssigned === true;
+                                    if (isAssignedToBus) {
+                                        const fromLoc = String(ev._fromLocation || '').trim();
+                                        const toLoc = String(ev._toLocation || '').trim();
+                                        if (fromLoc) places.push(fromLoc);
+                                        if (toLoc) places.push(toLoc);
+                                        return places;
+                                    }
+                                
+                                    // ============================================================
+                                    // 3) Nepriradený segment → všetky zastávky celej trasy parenta
+                                    // ============================================================
                                     const routePlaces = Array.isArray(ev._routePlaces) ? ev._routePlaces : [];
                                     if (routePlaces.length > 0) {
                                         routePlaces.forEach((p) => {
@@ -11651,7 +11664,7 @@ const TransportApp = ({ userProfileData }) => {
                                         });
                                         return places;
                                     }
-        
+                                
                                     // Fallback – aspoň from a to
                                     const fromLoc = String(ev._fromLocation || '').trim();
                                     const toLoc = String(ev._toLocation || '').trim();
@@ -12077,7 +12090,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     style: {
                                                                                         position: 'absolute',
                                                                                         right: 0,
-                                                                                        top: '50%',
+                                                                                        bottom: 0,
                                                                                         transform: 'translateY(-50%)',
                                                                                         color: '#1f2937',
                                                                                         backgroundColor: meta.color + '11',
@@ -12157,7 +12170,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     style: {
                                                                                         position: 'absolute',
                                                                                         right: 0,
-                                                                                        top: '50%',
+                                                                                        bottom: 0,
                                                                                         transform: 'translateY(-50%)',
                                                                                         minWidth: 0,
                                                                                         maxWidth: '220px',
