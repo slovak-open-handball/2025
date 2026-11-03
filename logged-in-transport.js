@@ -9818,17 +9818,6 @@ const TransportApp = ({ userProfileData }) => {
                     location: teamInfo.accommodationName,
                 });
             }
-            if (teamInfo.arrivalDisplay && teamInfo.arrivalDisplay !== '---') {
-                events.push({
-                    ts: -Infinity,
-                    startTs: null,
-                    endTs: null,
-                    when: '—',
-                    type: 'arrival',
-                    text: `Doprava / príchod: ${teamInfo.arrivalDisplay}`,
-                    location: null,
-                });
-            }
         }
 
         // ============================================================
@@ -12057,12 +12046,12 @@ const TransportApp = ({ userProfileData }) => {
                                                                     return React.createElement(
                                                                         React.Fragment,
                                                                         null,
-                                                                        // 1) Typ stravovania – štítok vľavo (colspan 1 z flex priestoru)
+                                                                        // 1) Typ stravovania – štítok VYSTREDENÝ (rovnako ako PEŠI/bus badge)
                                                                         mealTypeLabel &&
                                                                             React.createElement(
                                                                                 'div',
                                                                                 {
-                                                                                    className: 'flex-1 flex items-center justify-start',
+                                                                                    className: 'flex-1 flex items-center justify-center',   // ← ZMENA
                                                                                     style: { minWidth: 0 }
                                                                                 },
                                                                                 React.createElement(
