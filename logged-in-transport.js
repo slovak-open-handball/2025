@@ -11540,10 +11540,10 @@ const TransportApp = ({ userProfileData }) => {
                                             //  - nepriradený → ikona otáznika
                                             // ============================================================
                                             if (ev && ev._isWalking) {
-                                                return { icon: 'fa-person-walking', color: '#ea580c', label: 'Presun (peši)', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
+                                                return { icon: 'fa-person-walking', color: '#ea580c', label: 'Presun', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
                                             }
                                             if (ev && ev._isAssigned) {
-                                                return { icon: 'fa-bus', color: '#ea580c', label: 'Presun (bus)', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
+                                                return { icon: 'fa-bus', color: '#ea580c', label: 'Presun', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
                                             }
                                             return { icon: 'fa-van-shuttle', color: '#ea580c', label: 'Presun', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
                                         }
