@@ -3232,13 +3232,17 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     });
                     transfers.sort((a, b) => {
-                        if (a.category !== b.category) {
-                            return a.category.localeCompare(b.category, 'sk', { sensitivity: 'base' });
+                        const catA = String(a.category || '');
+                        const catB = String(b.category || '');
+                        if (catA !== catB) {
+                            return catA.localeCompare(catB, 'sk', { sensitivity: 'base' });
                         }
-                        if (a.teamName !== b.teamName) {
-                            return a.teamName.localeCompare(b.teamName, 'sk', { sensitivity: 'base' });
+                        const teamA = String(a.teamName || '');
+                        const teamB = String(b.teamName || '');
+                        if (teamA !== teamB) {
+                            return teamA.localeCompare(teamB, 'sk', { sensitivity: 'base' });
                         }
-                        return String(a.when).localeCompare(String(b.when), 'sk');
+                        return String(a.when || '').localeCompare(String(b.when || ''), 'sk');
                     });
                 }
                 setTravelTimes(map);
