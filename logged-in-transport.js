@@ -11367,6 +11367,9 @@ const TransportApp = ({ userProfileData }) => {
         // ============================================================
         // NOVÉ: MODÁLNE OKNO – Vytvoriť vlastný presun
         // ============================================================
+        // ============================================================
+        // NOVÉ: MODÁLNE OKNO – Vytvoriť vlastný presun
+        // ============================================================
         showCustomTransferModal && (() => {
             // Zoznam tímov v zvolenej kategórii (z users + superstructure)
             const teamsInCategory = (() => {
@@ -11611,6 +11614,23 @@ const TransportApp = ({ userProfileData }) => {
         
                                     // arrival a ostatné – použi location, ak existuje
                                     return ev.location || null;
+                                };
+        
+                                // ============================================================
+                                // NOVÉ: Pre stravovanie vráti typ stravovania
+                                // (Obed / Večera / Raňajky ...) – pre štítok v riadku
+                                // ============================================================
+                                const extractMealTypeLabel = (ev) => {
+                                    if (!ev || ev.type !== 'catering') return null;
+                                    const raw = String(ev.text || '').trim();
+                                    if (!raw) return null;
+                                    // Text začína typom jedla: "Obed (12:00 – 12:30) → JEDÁLEŇ"
+                                    // Odrežeme čas v zátvorke a všetko za "→"
+                                    let s = raw;
+                                    const arrowIdx = s.lastIndexOf('→');
+                                    if (arrowIdx !== -1) s = s.slice(0, arrowIdx).trim();
+                                    s = s.replace(/\s*\(\s*\d{1,2}:\d{2}(?:\s*[–-]\s*\d{1,2}:\d{2})?\s*\)\s*$/, '').trim();
+                                    return s || null;
                                 };
         
                                 // ============================================================
@@ -11862,11 +11882,18 @@ const TransportApp = ({ userProfileData }) => {
                                                     //  - ostatné → jedno miesto (placeName)
                                                     // ============================================================
                                                     const isTransferEvent = ev.type === 'transfer';
+                                                    const isCateringEvent = ev.type === 'catering';
                                                     const transferPlaces = isTransferEvent ? extractPlacesForTransferEvent(ev) : [];
                                                     const placeName = !isTransferEvent ? extractPlaceFromEvent(ev) : null;
                                                     const hasAnyPlace = isTransferEvent
                                                         ? transferPlaces.length > 0
                                                         : !!placeName;
+        
+                                                    // ============================================================
+                                                    // NOVÉ: Typ stravovania (Obed / Večera / Raňajky ...)
+                                                    // pre štítok v riadku stravovania
+                                                    // ============================================================
+                                                    const mealTypeLabel = isCateringEvent ? extractMealTypeLabel(ev) : null;
         
                                                     // ============================================================
                                                     // NOVÉ: Presun má oranžový box a čierny text (rovnako ako Príchod)
@@ -12023,6 +12050,74 @@ const TransportApp = ({ userProfileData }) => {
                                                                 }
         
                                                                 // ------------------------------------------------------------
+                                                                // STRAVOVANIE – typ stravovania v štítku (colspan 2)
+                                                                // + miesto (jedáleň) vpravo
+                                                                // ------------------------------------------------------------
+                                                                if (isCateringEvent) {
+                                                                    return React.createElement(
+                                                                        React.Fragment,
+                                                                        null,
+                                                                        // 1) Typ stravovania – štítok vľavo (colspan 1 z flex priestoru)
+                                                                        mealTypeLabel &&
+                                                                            React.createElement(
+                                                                                'div',
+                                                                                {
+                                                                                    className: 'flex-1 flex items-center justify-start',
+                                                                                    style: { minWidth: 0 }
+                                                                                },
+                                                                                React.createElement(
+                                                                                    'span',
+                                                                                    {
+                                                                                        className: 'inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded',
+                                                                                        style: {
+                                                                                            backgroundColor: '#bbf7d0',
+                                                                                            color: '#15803d',
+                                                                                            maxWidth: '160px',
+                                                                                        },
+                                                                                        title: `Typ stravovania: ${mealTypeLabel}`
+                                                                                    },
+                                                                                    React.createElement(
+                                                                                        'span',
+                                                                                        { className: 'truncate', style: { maxWidth: '160px' } },
+                                                                                        mealTypeLabel
+                                                                                    )
+                                                                                )
+                                                                            ),
+                                                                        // 2) Miesto (jedáleň) – vpravo, bez ikony
+                                                                        React.createElement(
+                                                                            'div',
+                                                                            {
+                                                                                className: 'flex-1 flex items-center justify-end gap-2',
+                                                                                style: { minWidth: 0 }
+                                                                            },
+                                                                            hasAnyPlace
+                                                                                ? React.createElement(
+                                                                                    'span',
+                                                                                    {
+                                                                                        className: 'inline-flex items-center text-[11px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0',
+                                                                                        style: {
+                                                                                            color: '#1f2937',
+                                                                                            backgroundColor: meta.color + '11',
+                                                                                            maxWidth: '220px',
+                                                                                        },
+                                                                                        title: placeName || ''
+                                                                                    },
+                                                                                    React.createElement(
+                                                                                        'span',
+                                                                                        { className: 'truncate', style: { maxWidth: '220px' } },
+                                                                                        placeName
+                                                                                    )
+                                                                                )
+                                                                                : React.createElement(
+                                                                                    'span',
+                                                                                    { className: 'text-[11px] italic', style: { color: '#9ca3af' } },
+                                                                                    '—'
+                                                                                )
+                                                                        )
+                                                                    );
+                                                                }
+        
+                                                                // ------------------------------------------------------------
                                                                 // PRESUN – vpravo, každé miesto na samostatnom riadku, BEZ ikony
                                                                 // ------------------------------------------------------------
                                                                 if (ev.type === 'transfer') {
@@ -12111,7 +12206,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                 }
         
                                                                 // ------------------------------------------------------------
-                                                                // STRAVOVANIE / UBYTOVANIE / PRÍCHOD – vpravo, BEZ ikony
+                                                                // UBYTOVANIE / PRÍCHOD – vpravo, BEZ ikony
                                                                 // ------------------------------------------------------------
                                                                 return React.createElement(
                                                                     'div',
