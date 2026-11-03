@@ -10241,15 +10241,19 @@ const TransportApp = ({ userProfileData }) => {
             }
         
             // ============================================================
-            // NOVÉ PRAVIDLÁ pre zobrazené časy:
+            // NOVÉ PRAVIDLÁ pre zobrazené časy pešieho segmentu:
             //
-            //  - PRVÝ walking segment (segmentIndex === 0 alebo nemá
-            //    predchádzajúci segment s časom):
+            //  - Ak je to JEDINÝ segment parenta (parent má len 1 segment
+            //    a ten je walking), použijeme CELÝ parent rozsah
+            //    (parentRange.startTs → parentRange.endTs).
+            //
+            //  - Ak je to PRVÝ walking segment (nemá predchádzajúci segment
+            //    s časom), použijeme:
             //      startTs = parentRange.startTs (začiatok celého presunu)
             //      endTs   = nextSegmentStartTs (začiatok nasledujúceho segmentu)
             //
-            //  - POSLEDNÝ walking segment (segmentIndex === parentSegments.length - 1
-            //    alebo nemá nasledujúci segment s časom):
+            //  - Ak je to POSLEDNÝ walking segment (nemá nasledujúci segment
+            //    s časom), použijeme:
             //      startTs = prevSegmentEndTs (koniec predchádzajúceho segmentu)
             //      endTs   = parentRange.endTs (koniec celého presunu)
             //
@@ -10257,41 +10261,47 @@ const TransportApp = ({ userProfileData }) => {
             //      startTs = prevSegmentEndTs
             //      endTs   = nextSegmentStartTs
             //
-            // Ak chýba parentRange alebo príslušný sused, použije sa
-            // fallback (null).
+            // Ak parentRange chýba, skúsime aspoň susedné segmenty.
             // ============================================================
-            const isFirstWalkingSegment =
-                prevSegmentEndTs == null && parentRange && parentRange.startTs != null;
-            const isLastWalkingSegment =
-                nextSegmentStartTs == null && parentRange && parentRange.endTs != null;
-        
+            const parentStartTs = parentRange && parentRange.startTs != null ? parentRange.startTs : null;
+            const parentEndTs = parentRange && parentRange.endTs != null ? parentRange.endTs : null;
+            
+            const isFirstWalkingSegment = prevSegmentEndTs == null && parentStartTs != null;
+            const isLastWalkingSegment = nextSegmentStartTs == null && parentEndTs != null;
+            
             let displayStartTs = null;
             let displayEndTs = null;
-        
+            
+            // 1) Štart
             if (isFirstWalkingSegment) {
-                displayStartTs = parentRange.startTs;
+                displayStartTs = parentStartTs;
             } else if (prevSegmentEndTs != null) {
                 displayStartTs = prevSegmentEndTs;
+            } else if (parentStartTs != null) {
+                // fallback – ak nemá suseda, ale parent má začiatok
+                displayStartTs = parentStartTs;
             }
-        
+            
+            // 2) Koniec
             if (isLastWalkingSegment) {
-                displayEndTs = parentRange.endTs;
+                displayEndTs = parentEndTs;
             } else if (nextSegmentStartTs != null) {
                 displayEndTs = nextSegmentStartTs;
+            } else if (parentEndTs != null) {
+                // fallback – ak nemá suseda, ale parent má koniec
+                displayEndTs = parentEndTs;
             }
-        
-            // Ak ide o jediný walking segment v parentovi (parent má len
-            // jeden segment a ten je walking), použijeme celý parent rozsah.
+            
+            // 3) Ak ide o jediný walking segment v parentovi (parent má len
+            //    jeden segment a ten je walking), použijeme celý parent rozsah.
             if (
                 parentSegments.length === 1 &&
-                parentRange &&
-                parentRange.startTs != null &&
-                parentRange.endTs != null
+                parentStartTs != null &&
+                parentEndTs != null
             ) {
-                displayStartTs = parentRange.startTs;
-                displayEndTs = parentRange.endTs;
-            }
-        
+                displayStartTs = parentStartTs;
+                displayEndTs = parentEndTs;
+            }        
             // ============================================================
             // Zostav when string
             // ============================================================
