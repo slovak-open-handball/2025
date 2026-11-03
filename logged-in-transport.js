@@ -11525,7 +11525,7 @@ const TransportApp = ({ userProfileData }) => {
                                 const getEventMeta = (type, ev) => {
                                     switch (type) {
                                         case 'match':
-                                            return { icon: 'fa-hockey-puck', color: '#2563eb', label: 'Zápas', bg: '#eff6ff', border: '#bfdbfe', placeIcon: 'fa-location-dot' };
+                                            return { icon: 'fa-futbol', color: '#2563eb', label: 'Zápas', bg: '#eff6ff', border: '#bfdbfe', placeIcon: 'fa-location-dot' };
                                         case 'catering':
                                             return { icon: 'fa-utensils', color: '#16a34a', label: 'Stravovanie', bg: '#f0fdf4', border: '#bbf7d0', placeIcon: 'fa-location-dot' };
                                         case 'arrival':
