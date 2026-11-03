@@ -11363,12 +11363,12 @@ const TransportApp = ({ userProfileData }) => {
                 });
                 return [...set].sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
             })();
-
+        
             // Udalosti zvoleného tímu
             const teamEvents = customTransferTeamName
                 ? getTeamEventsForCustomTransfer(customTransferCategory, customTransferTeamName)
                 : [];
-
+        
             return React.createElement(
                 'div',
                 {
@@ -11516,7 +11516,8 @@ const TransportApp = ({ userProfileData }) => {
                                         case 'accommodation':
                                             return { icon: 'fa-bed', color: '#7c3aed', label: 'Ubytovanie', bg: '#f5f3ff', border: '#ddd6fe', placeIcon: 'fa-location-dot' };
                                         case 'transfer':
-                                            return { icon: 'fa-van-shuttle', color: '#0d9488', label: 'Presun', bg: '#f0fdfa', border: '#99f6e4', placeIcon: 'fa-location-dot' };
+                                            // NOVÉ: Presun má rovnaký oranžový box a čierny text ako Príchod
+                                            return { icon: 'fa-van-shuttle', color: '#ea580c', label: 'Presun', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
                                         default:
                                             return { icon: 'fa-circle-dot', color: '#6b7280', label: 'Udalosť', bg: '#f9fafb', border: '#e5e7eb', placeIcon: 'fa-location-dot' };
                                     }
@@ -11564,7 +11565,7 @@ const TransportApp = ({ userProfileData }) => {
                                     // arrival a ostatné – použi location, ak existuje
                                     return ev.location || null;
                                 };
-
+        
                                 const buildEventDescription = (ev) => {
                                     if (!ev) return '';
                                     const raw = String(ev.text || '').trim();
@@ -11610,7 +11611,7 @@ const TransportApp = ({ userProfileData }) => {
                                     // arrival a ostatné – ponechaj pôvodný text
                                     return raw;
                                 };
-
+        
                                 const parseMatchTeams = (ev) => {
                                     if (!ev || ev.type !== 'match') return null;
                                     const raw = String(ev.text || '').trim();
@@ -11700,6 +11701,13 @@ const TransportApp = ({ userProfileData }) => {
                                                     const text = buildEventDescription(ev);
                                                     const placeName = extractPlaceFromEvent(ev);
                                                 
+                                                    // ============================================================
+                                                    // NOVÉ: Presun má oranžový box a čierny text (rovnako ako Príchod)
+                                                    // ============================================================
+                                                    const isTransferEvent = ev.type === 'transfer';
+                                                    const textColor = isTransferEvent ? '#000000' : '#1f2937';
+                                                    const metaTextColor = isTransferEvent ? '#000000' : meta.color;
+                                                
                                                     return React.createElement(
                                                         'div',
                                                         {
@@ -11723,8 +11731,8 @@ const TransportApp = ({ userProfileData }) => {
                                                                 {
                                                                     className: 'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0',
                                                                     style: {
-                                                                        backgroundColor: meta.color + '22',
-                                                                        color: meta.color,
+                                                                        backgroundColor: isTransferEvent ? '#ea580c22' : meta.color + '22',
+                                                                        color: metaTextColor,
                                                                     }
                                                                 },
                                                                 React.createElement('i', { className: `fa-solid ${meta.icon} text-[11px]` })
@@ -11733,7 +11741,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                 'span',
                                                                 {
                                                                     className: 'text-[9px] font-semibold mt-0.5 text-center leading-tight',
-                                                                    style: { color: meta.color }
+                                                                    style: { color: metaTextColor }
                                                                 },
                                                                 meta.label
                                                             )
@@ -11743,8 +11751,12 @@ const TransportApp = ({ userProfileData }) => {
                                                             ? React.createElement(
                                                                 'div',
                                                                 {
-                                                                    className: 'flex-shrink-0 font-mono font-semibold text-gray-700 pt-0.5 whitespace-nowrap text-center',
-                                                                    style: { width: '84px', minWidth: '84px' }
+                                                                    className: 'flex-shrink-0 font-mono font-semibold pt-0.5 whitespace-nowrap text-center',
+                                                                    style: {
+                                                                        width: '84px',
+                                                                        minWidth: '84px',
+                                                                        color: textColor,
+                                                                    }
                                                                 },
                                                                 timeLabel
                                                             )
@@ -11767,13 +11779,14 @@ const TransportApp = ({ userProfileData }) => {
                                                                     return React.createElement(
                                                                         'div',
                                                                         {
-                                                                            className: 'flex-1 text-gray-800 leading-snug pt-0.5',
+                                                                            className: 'flex-1 leading-snug pt-0.5',
                                                                             style: {
                                                                                 display: 'flex',
                                                                                 alignItems: 'center',
                                                                                 justifyContent: 'space-between',
                                                                                 gap: '8px',
                                                                                 minWidth: 0,
+                                                                                color: textColor,
                                                                             },
                                                                         },
                                                                         // Domáci – vpravo (zarovnané na pravý okraj svojho stĺpca)
@@ -11805,7 +11818,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                     );
                                                                 }
                                                             }
-
+        
                                                             // ============================================================
                                                             // NOVÉ: Presun – zobrazí sa každý segment osobitne,
                                                             // s názvom busu (ak je priradený) alebo "PEŠI"
@@ -11814,8 +11827,8 @@ const TransportApp = ({ userProfileData }) => {
                                                                 // Zisti farbu pozadia podľa stavu
                                                                 let rowBg = '#fff7ed'; // oranžová (default, ako príchod)
                                                                 let borderColor = '#fed7aa';
-                                                                let textColor = '#c2410c';
-
+                                                                let textColor = '#000000'; // NOVÉ: čierny text
+        
                                                                 if (ev._isWalking) {
                                                                     // Peši – zelená
                                                                     rowBg = '#f0fdf4';
@@ -11825,9 +11838,9 @@ const TransportApp = ({ userProfileData }) => {
                                                                     // Priradený k busu – oranžová (rovnako ako príchod)
                                                                     rowBg = '#fff7ed';
                                                                     borderColor = '#fed7aa';
-                                                                    textColor = '#c2410c';
+                                                                    textColor = '#000000'; // NOVÉ: čierny text
                                                                 }
-
+        
                                                                 return React.createElement(
                                                                     'div',
                                                                     {
@@ -11901,8 +11914,8 @@ const TransportApp = ({ userProfileData }) => {
                                                                     {
                                                                         className: 'inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded',
                                                                         style: {
-                                                                            color: meta.color,
-                                                                            backgroundColor: meta.color + '11',
+                                                                            color: isTransferEvent ? '#000000' : meta.color,
+                                                                            backgroundColor: isTransferEvent ? '#ea580c11' : meta.color + '11',
                                                                         }
                                                                     },
                                                                     React.createElement('i', { className: `fa-solid ${meta.placeIcon} text-[10px]` }),
@@ -11917,7 +11930,10 @@ const TransportApp = ({ userProfileData }) => {
                                                                 )
                                                                 : React.createElement(
                                                                     'span',
-                                                                    { className: 'text-[11px] italic text-gray-400' },
+                                                                    {
+                                                                        className: 'text-[11px] italic',
+                                                                        style: { color: isTransferEvent ? '#000000' : '#9ca3af' }
+                                                                    },
                                                                     '—'
                                                                 )
                                                         )
