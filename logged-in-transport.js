@@ -11634,7 +11634,11 @@ const TransportApp = ({ userProfileData }) => {
                                 const groups = new Map(); // dayKey → [event, ...]
                                 const order = [];         // poradie dayKey
                                 teamEvents.forEach((ev) => {
-                                    const dk = extractDayKey(ev.when) || '__none__';
+                                    // ============================================================
+                                    // NOVÉ: Pre presuny použi `_dayKey` (priradený v getTeamEventsForCustomTransfer),
+                                    // pretože `when` pri presune obsahuje iba čas (HH:MM – HH:MM) bez dátumu.
+                                    // ============================================================
+                                    const dk = ev._dayKey || extractDayKey(ev.when) || '__none__';
                                     if (!groups.has(dk)) {
                                         groups.set(dk, []);
                                         order.push(dk);
