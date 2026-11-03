@@ -2614,11 +2614,29 @@ const TransportApp = ({ userProfileData }) => {
                                             let departureTs;
                                             let departureStr;
                                             const teamArrivalTime = (arrivalTimeByTeam[category] && arrivalTimeByTeam[category][teamName]) || '';
+
                                             if (isExternalStop && teamArrivalTime && /^\d{1,2}:\d{2}$/.test(teamArrivalTime)) {
+                                                // Zastávka + vlastný čas príchodu tímu
                                                 const [h, mi] = teamArrivalTime.split(':').map(Number);
                                                 departureTs = timestampOnDay(dayRefTs, h, mi);
                                                 departureStr = formatFullFromTs(departureTs) || teamArrivalTime;
+                                            } else if (isMeetingPoint) {
+                                                // ============================================================
+                                                // NOVÉ: Miesto zrazu → použi GLOBÁLNY dátum a čas príchodu
+                                                // na turnaj (settings/registration → arrivalDate).
+                                                // ============================================================
+                                                const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
+                                            
+                                                if (globalArrivalTs != null && isFinite(globalArrivalTs)) {
+                                                    departureTs = globalArrivalTs;
+                                                    departureStr = formatFullFromTs(departureTs) || '—';
+                                                } else {
+                                                    // Fallback – ak arrivalDate nie je nastavený, použi začiatok dňa
+                                                    departureTs = timestampOnDay(dayRefTs, 0, 0);
+                                                    departureStr = formatFullFromTs(departureTs) || '00:00';
+                                                }
                                             } else {
+                                                // Ubytovanie (alebo iné) → začiatok dňa
                                                 departureTs = timestampOnDay(dayRefTs, 0, 0);
                                                 departureStr = formatFullFromTs(departureTs) || '00:00';
                                             }
@@ -3579,6 +3597,21 @@ const TransportApp = ({ userProfileData }) => {
                         dayName: dateObj.toLocaleDateString('sk-SK', { weekday: 'long' }),
                     });
                     cursor.setDate(cursor.getDate() + 1);
+                }
+                // ============================================================
+                // NOVÉ: Ulož globálny dátum a čas príchodu na turnaj (arrivalDate)
+                // pre použitie pri generovaní presunu z miesta zrazu.
+                // ============================================================
+                if (data.arrivalDate) {
+                    try {
+                        window.__transport_tournamentArrivalDate = typeof data.arrivalDate.toDate === 'function'
+                            ? data.arrivalDate.toDate().getTime()
+                            : new Date(data.arrivalDate).getTime();
+                    } catch (e) {
+                        window.__transport_tournamentArrivalDate = null;
+                    }
+                } else {
+                    window.__transport_tournamentArrivalDate = null;
                 }
                 setTournamentDays(days);
                 setTournamentDaysLoaded(true);
