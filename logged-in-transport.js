@@ -11843,11 +11843,11 @@ const TransportApp = ({ userProfileData }) => {
                                                                         return React.createElement(
                                                                             React.Fragment,
                                                                             null,
-                                                                            // Domáci – vľavo (zarovnané na ľavý okraj svojho stĺpca)
+                                                                            // Domáci – vpravo (zarovnané na pravý okraj svojho stĺpca)
                                                                             React.createElement(
                                                                                 'div',
                                                                                 {
-                                                                                    className: 'flex-1 text-left truncate',
+                                                                                    className: 'flex-1 text-right truncate',
                                                                                     style: {
                                                                                         fontWeight: isHomeSelected ? '700' : '400',
                                                                                         minWidth: 0,
@@ -11856,11 +11856,11 @@ const TransportApp = ({ userProfileData }) => {
                                                                                 },
                                                                                 teams.home
                                                                             ),
-                                                                            // Hostia – vpravo (zarovnané na pravý okraj svojho stĺpca)
+                                                                            // Hostia – vľavo (zarovnané na ľavý okraj svojho stĺpca)
                                                                             React.createElement(
                                                                                 'div',
                                                                                 {
-                                                                                    className: 'flex-1 text-right truncate',
+                                                                                    className: 'flex-1 text-left truncate',
                                                                                     style: {
                                                                                         fontWeight: isAwaySelected ? '700' : '400',
                                                                                         minWidth: 0,
