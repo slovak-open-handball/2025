@@ -11602,11 +11602,6 @@ const TransportApp = ({ userProfileData }) => {
                                 // ============================================================
                                 const extractPlacesForTransferEvent = (ev) => {
                                     if (!ev || ev.type !== 'transfer') return [];
-                                    // Ak má event uloženú celú trasu parenta, použi ju
-                                    if (Array.isArray(ev._routePlaces) && ev._routePlaces.length > 0) {
-                                        return ev._routePlaces;
-                                    }
-                                    // Fallback – aspoň from a to
                                     const places = [];
                                     const fromLoc = String(ev._fromLocation || '').trim();
                                     const toLoc = String(ev._toLocation || '').trim();
