@@ -11438,10 +11438,16 @@ const TransportApp = ({ userProfileData }) => {
                                     }
                                 
                                     if (ev.type === 'catering') {
-                                        // Odrež všetko za "→" (názov jedálne)
-                                        const idx = raw.lastIndexOf('→');
-                                        if (idx !== -1) return raw.slice(0, idx).trim();
-                                        return raw;
+                                        // 1) Odrež všetko za "→" (názov jedálne)
+                                        let s = raw;
+                                        const arrowIdx = s.lastIndexOf('→');
+                                        if (arrowIdx !== -1) s = s.slice(0, arrowIdx).trim();
+                                    
+                                        // 2) Odrež aj čas v zátvorke: "Obed (12:00 – 12:30)" → "Obed"
+                                        //    (čas je už zobrazený v samostatnom stĺpci vľavo)
+                                        s = s.replace(/\s*\(\s*\d{1,2}:\d{2}(?:\s*[–-]\s*\d{1,2}:\d{2})?\s*\)\s*$/, '').trim();
+                                    
+                                        return s;
                                     }
                                 
                                     if (ev.type === 'accommodation') {
@@ -11577,7 +11583,7 @@ const TransportApp = ({ userProfileData }) => {
                                                             React.createElement(
                                                                 'div',
                                                                 {
-                                                                    className: 'flex-shrink-0 font-mono font-semibold text-gray-700 pt-0.5',
+                                                                    className: 'flex-shrink-0 font-mono font-semibold text-gray-700 pt-0.5 whitespace-nowrap',
                                                                     style: { width: '78px' }
                                                                 },
                                                                 timeLabel
