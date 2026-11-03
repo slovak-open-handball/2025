@@ -884,6 +884,14 @@ const TransportApp = ({ userProfileData }) => {
             if (fromStops) return fromStops;
             return null;
         })();
+
+        const meetingPointStop = (() => {
+            const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isMeetingPointStop === true);
+            if (fromAllPlaces) return fromAllPlaces;
+            const fromStops = (stopsList || []).find((p) => p.isMeetingPointStop === true);
+            if (fromStops) return fromStops;
+            return null;
+        })();
     
         const ensure = (category, teamName) => {
             if (!grouped[category]) grouped[category] = {};
@@ -2497,6 +2505,22 @@ const TransportApp = ({ userProfileData }) => {
                                         return true;
                                     })();
                                 
+                                    // NOVÉ: Typ dopravy "vlastná doprava" alebo "bez dopravy"
+                                    const isOwnOrNoTransport = (() => {
+                                        if (!teamArrivalType) return false;
+                                        const norm = String(teamArrivalType)
+                                            .toLowerCase()
+                                            .normalize('NFD')
+                                            .replace(/[\u0300-\u036f]/g, '')
+                                            .trim();
+                                        if (!norm) return false;
+                                        if (norm.includes('vlastn')) return true;
+                                        if (norm.includes('bez dopravy')) return true;
+                                        if (norm.includes('ziadna')) return true;
+                                        if (norm.includes('žiadna')) return true;
+                                        return false;
+                                    })();
+                                
                                     const isGlobalFirstDay =
                                         currentDay != null &&
                                         globalFirstDay != null &&
@@ -2506,6 +2530,13 @@ const TransportApp = ({ userProfileData }) => {
                                         isGlobalFirstDay &&
                                         hasTransportType &&
                                         !!externalArrivalStop;
+                                
+                                    // NOVÉ: Prvý deň turnaja + vlastná doprava / bez dopravy
+                                    // → presun z miesta zrazu na miesto prvej udalosti dňa.
+                                    const useMeetingPointOnFirstDay =
+                                        isGlobalFirstDay &&
+                                        isOwnOrNoTransport &&
+                                        !!meetingPointStop;
                                 
                                     const useAccommodationAsSource = (() => {
                                         if (!isGlobalFirstDay) {
@@ -2517,7 +2548,7 @@ const TransportApp = ({ userProfileData }) => {
                                     })();
                                 
                                     const shouldGenerateMorningTransfer =
-                                        useExternalStopOnFirstDay || useAccommodationAsSource;
+                                        useExternalStopOnFirstDay || useAccommodationAsSource || useMeetingPointOnFirstDay;
                                 
                                     if (shouldGenerateMorningTransfer) {
                                         const morningFromLocations = (() => {
@@ -2525,21 +2556,35 @@ const TransportApp = ({ userProfileData }) => {
                                                 return [{
                                                     name: externalArrivalStop.name,
                                                     isExternalStop: true,
+                                                    isMeetingPoint: false,
+                                                }];
+                                            }
+                                            if (useMeetingPointOnFirstDay) {
+                                                return [{
+                                                    name: meetingPointStop.name,
+                                                    isExternalStop: false,
+                                                    isMeetingPoint: true,
                                                 }];
                                             }
                                             if (useAccommodationAsSource) {
-                                                return teamAccommodationsList.map((n) => ({ name: n, isExternalStop: false }));
+                                                return teamAccommodationsList.map((n) => ({
+                                                    name: n,
+                                                    isExternalStop: false,
+                                                    isMeetingPoint: false,
+                                                }));
                                             }
                                             return [];
                                         })();
                                 
-                                        morningFromLocations.forEach(({ name: fromLocationName, isExternalStop }) => {
+                                        morningFromLocations.forEach(({ name: fromLocationName, isExternalStop, isMeetingPoint }) => {
                                             if (!fromLocationName) return;
                                             if (fromLocationName === current.location) return;
                                 
                                             const fromLabel = isExternalStop
                                                 ? `zastávka ${fromLocationName}`
-                                                : `ubytovanie ${fromLocationName}`;
+                                                : isMeetingPoint
+                                                    ? `miesto zrazu ${fromLocationName}`
+                                                    : `ubytovanie ${fromLocationName}`;
                                 
                                             const dayRefTs =
                                                 current.startTs != null
