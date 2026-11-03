@@ -8625,6 +8625,8 @@ const TransportApp = ({ userProfileData }) => {
                 .replace(/\bubytovanie\b/gi, 'ubytovňa')
                 .replace(/\bzastávky\b/gi, 'zastávka')
                 .replace(/\bzastávok\b/gi, 'zastávka');
+                .replace(/\bmiesta zrazu\b/gi, 'miesto zrazu')
+                .replace(/\bmiesto zrazu\b/gi, 'miesto zrazu');
     
             return {
                 from: normalizePlace(m[1].trim()),
