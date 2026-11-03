@@ -12044,65 +12044,53 @@ const TransportApp = ({ userProfileData }) => {
                                                                 // ------------------------------------------------------------
                                                                 if (isCateringEvent) {
                                                                     return React.createElement(
-                                                                        React.Fragment,
-                                                                        null,
-                                                                        // 1) Typ stravovania – štítok VYSTREDENÝ (rovnako ako PEŠI/bus badge)
+                                                                        'div',
+                                                                        {
+                                                                            className: 'flex-1 flex items-center justify-center relative',   // ← zmena: jeden kontajner
+                                                                            style: { minWidth: 0 }
+                                                                        },
+                                                                        // 1) Typ stravovania – štítok VYSTREDENÝ (v celom priestore tímov)
                                                                         mealTypeLabel &&
                                                                             React.createElement(
-                                                                                'div',
+                                                                                'span',
                                                                                 {
-                                                                                    className: 'flex-1 flex items-center justify-center',   // ← ZMENA
-                                                                                    style: { minWidth: 0 }
+                                                                                    className: 'inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded',
+                                                                                    style: {
+                                                                                        backgroundColor: '#bbf7d0',
+                                                                                        color: '#15803d',
+                                                                                        maxWidth: '160px',
+                                                                                    },
+                                                                                    title: `Typ stravovania: ${mealTypeLabel}`
                                                                                 },
                                                                                 React.createElement(
                                                                                     'span',
-                                                                                    {
-                                                                                        className: 'inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded',
-                                                                                        style: {
-                                                                                            backgroundColor: '#bbf7d0',
-                                                                                            color: '#15803d',
-                                                                                            maxWidth: '160px',
-                                                                                        },
-                                                                                        title: `Typ stravovania: ${mealTypeLabel}`
-                                                                                    },
-                                                                                    React.createElement(
-                                                                                        'span',
-                                                                                        { className: 'truncate', style: { maxWidth: '160px' } },
-                                                                                        mealTypeLabel
-                                                                                    )
+                                                                                    { className: 'truncate', style: { maxWidth: '160px' } },
+                                                                                    mealTypeLabel
                                                                                 )
                                                                             ),
-                                                                        // 2) Miesto (jedáleň) – vpravo, bez ikony
-                                                                        React.createElement(
-                                                                            'div',
-                                                                            {
-                                                                                className: 'flex-1 flex items-center justify-end gap-2',
-                                                                                style: { minWidth: 0 }
-                                                                            },
-                                                                            hasAnyPlace
-                                                                                ? React.createElement(
-                                                                                    'span',
-                                                                                    {
-                                                                                        className: 'inline-flex items-center text-[11px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0',
-                                                                                        style: {
-                                                                                            color: '#1f2937',
-                                                                                            backgroundColor: meta.color + '11',
-                                                                                            maxWidth: '220px',
-                                                                                        },
-                                                                                        title: placeName || ''
+                                                                        // 2) Miesto (jedáleň) – vpravo, bez ikony (absolútne, aby neposúvalo badge zo stredu)
+                                                                        hasAnyPlace &&
+                                                                            React.createElement(
+                                                                                'span',
+                                                                                {
+                                                                                    className: 'inline-flex items-center text-[11px] font-semibold px-1.5 py-0.5 rounded',
+                                                                                    style: {
+                                                                                        position: 'absolute',
+                                                                                        right: 0,
+                                                                                        top: '50%',
+                                                                                        transform: 'translateY(-50%)',
+                                                                                        color: '#1f2937',
+                                                                                        backgroundColor: meta.color + '11',
+                                                                                        maxWidth: '220px',
                                                                                     },
-                                                                                    React.createElement(
-                                                                                        'span',
-                                                                                        { className: 'truncate', style: { maxWidth: '220px' } },
-                                                                                        placeName
-                                                                                    )
-                                                                                )
-                                                                                : React.createElement(
+                                                                                    title: placeName || ''
+                                                                                },
+                                                                                React.createElement(
                                                                                     'span',
-                                                                                    { className: 'text-[11px] italic', style: { color: '#9ca3af' } },
-                                                                                    '—'
+                                                                                    { className: 'truncate', style: { maxWidth: '220px' } },
+                                                                                    placeName
                                                                                 )
-                                                                        )
+                                                                            )
                                                                     );
                                                                 }
         
@@ -12111,15 +12099,18 @@ const TransportApp = ({ userProfileData }) => {
                                                                 // ------------------------------------------------------------
                                                                 if (ev.type === 'transfer') {
                                                                     const places = extractPlacesForTransferEvent(ev);
-        
+                                                                
                                                                     return React.createElement(
-                                                                        React.Fragment,
-                                                                        null,
-                                                                        // 1) ĽAVÝ STĹPEC (ako tímy pri zápase) – badge centrovane
+                                                                        'div',
+                                                                        {
+                                                                            className: 'flex-1 flex items-center justify-center relative',   // ← zmena: jeden kontajner
+                                                                            style: { minWidth: 0 }
+                                                                        },
+                                                                        // 1) Badge (bus / PEŠI / nepriradený) – VYSTREDENÝ v celom priestore tímov
                                                                         React.createElement(
                                                                             'div',
                                                                             {
-                                                                                className: 'flex-1 flex items-center justify-center',
+                                                                                className: 'flex items-center justify-center gap-1',
                                                                                 style: { minWidth: 0 }
                                                                             },
                                                                             // Názov busu
@@ -12146,7 +12137,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     React.createElement('i', { className: 'fa-solid fa-person-walking text-[9px]' }),
                                                                                     'PEŠI'
                                                                                 ),
-                                                                            // Nepriradený badge – BEZ ikony otáznika, iba text
+                                                                            // Nepriradený badge
                                                                             !ev._isWalking && !ev._isAssigned &&
                                                                                 React.createElement(
                                                                                     'span',
@@ -12157,15 +12148,22 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     'nepriradený'
                                                                                 )
                                                                         ),
-                                                                        // 2) PRAVÝ STĹPEC – zoznam miest, každé na samostatnom riadku, BEZ ikony
-                                                                        React.createElement(
-                                                                            'div',
-                                                                            {
-                                                                                className: 'flex-1 flex flex-col items-end gap-0.5',
-                                                                                style: { minWidth: 0 }
-                                                                            },
-                                                                            places.length > 0
-                                                                                ? places.map((place, placeIdx) =>
+                                                                        // 2) Miesto – vpravo (absolútne, aby neposúvalo badge zo stredu)
+                                                                        places.length > 0 &&
+                                                                            React.createElement(
+                                                                                'div',
+                                                                                {
+                                                                                    className: 'flex flex-col items-end gap-0.5',
+                                                                                    style: {
+                                                                                        position: 'absolute',
+                                                                                        right: 0,
+                                                                                        top: '50%',
+                                                                                        transform: 'translateY(-50%)',
+                                                                                        minWidth: 0,
+                                                                                        maxWidth: '220px',
+                                                                                    }
+                                                                                },
+                                                                                places.map((place, placeIdx) =>
                                                                                     React.createElement(
                                                                                         'span',
                                                                                         {
@@ -12185,12 +12183,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                                         )
                                                                                     )
                                                                                 )
-                                                                                : React.createElement(
-                                                                                    'span',
-                                                                                    { className: 'text-[11px] italic', style: { color: '#9ca3af' } },
-                                                                                    '—'
-                                                                                )
-                                                                        )
+                                                                            )
                                                                     );
                                                                 }
         
