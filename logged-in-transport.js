@@ -9736,6 +9736,7 @@ const TransportApp = ({ userProfileData }) => {
 
     // ============================================================
     // NOVÉ: Získa zoznam udalostí pre daný tím (rovnaký ako v konzole)
+    // + doplní vygenerované presuny (parent záznamy zo savedTransfers)
     // ============================================================
     const getTeamEventsForCustomTransfer = (category, teamName) => {
         if (!category || !teamName) return [];
@@ -9823,6 +9824,83 @@ const TransportApp = ({ userProfileData }) => {
                 });
             }
         }
+
+        // ============================================================
+        // NOVÉ: Doplniť vygenerované presuny (parent záznamy zo savedTransfers)
+        //
+        // Pravidlá:
+        //  - Berieme LEN parent záznamy (nie segmenty) pre tento tím/kategóriu.
+        //  - Ak je parent priradený k autobusu (má reálne časy), zobrazíme
+        //    KONKRÉTNY čas (startTs – endTs).
+        //  - Ak nie je priradený, zobrazíme VŠEOBECNE (bez konkrétneho času,
+        //    s textom „nepriradený").
+        // ============================================================
+        (savedTransfersRef.current || []).forEach((t) => {
+            if (cleanCategory(t.category || '') !== cat) return;
+            if (String(t.teamName || '').trim() !== name) return;
+            // Len parent záznamy (nie segmenty)
+            if (t._parentKey && t._parentKey !== t.key) return;
+
+            const stops = Array.isArray(t.intermediateStops) ? t.intermediateStops : [];
+            const routeRaw = [t.fromLocation, ...stops, t.toLocation].filter(Boolean);
+            const route = [];
+            routeRaw.forEach((loc) => {
+                const normalized = normalizePlaceName(loc);
+                if (route.length === 0 || normalizePlaceName(route[route.length - 1]) !== normalized) {
+                    route.push(loc);
+                }
+            });
+            if (route.length < 2) return;
+
+            const routeLabel = route.join(' → ');
+
+            // Zisti, či je parent priradený (má reálne časy segmentov)
+            const segments = Array.isArray(t.segments) ? t.segments : [];
+            const assignedSegments = segments.filter(
+                (s) => s && s.startTs != null && s.endTs != null && s.endTs > s.startTs
+            );
+
+            const isAssigned = assignedSegments.length > 0;
+
+            // Vypočítaj reálny čas začiatku a konca (z reálnych segmentov)
+            let startTs = null;
+            let endTs = null;
+            if (isAssigned) {
+                const starts = assignedSegments.map((s) => s.startTs).filter((x) => x != null);
+                const ends = assignedSegments.map((s) => s.endTs).filter((x) => x != null);
+                if (starts.length > 0) startTs = Math.min(...starts);
+                if (ends.length > 0) endTs = Math.max(...ends);
+            }
+
+            let whenStr;
+            if (isAssigned && startTs != null && endTs != null) {
+                // KONKRÉTNY presun – zobraz reálny čas
+                whenStr = `${formatTsLocal(startTs)} – ${formatTsLocal(endTs)}`;
+            } else {
+                // VŠEOBECNÝ presun – bez konkrétneho času
+                whenStr = 'nepriradený';
+            }
+
+            // dayKey pre zoskupenie
+            let dayKey = t.dayKey || null;
+            if (!dayKey && startTs != null) {
+                const d = new Date(startTs);
+                dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            }
+
+            events.push({
+                ts: startTs != null ? startTs : Number.POSITIVE_INFINITY,
+                startTs: startTs,
+                endTs: endTs,
+                when: whenStr,
+                type: 'transfer',
+                text: `Presun: ${routeLabel}`,
+                location: null,
+                _isAssigned: isAssigned,
+                _routeLabel: routeLabel,
+                _dayKey: dayKey,
+            });
+        });
 
         // Zoraď podľa ts
         events.sort((a, b) => {
@@ -11378,6 +11456,8 @@ const TransportApp = ({ userProfileData }) => {
                                             return { icon: 'fa-bus', color: '#ea580c', label: 'Príchod', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
                                         case 'accommodation':
                                             return { icon: 'fa-bed', color: '#7c3aed', label: 'Ubytovanie', bg: '#f5f3ff', border: '#ddd6fe', placeIcon: 'fa-location-dot' };
+                                        case 'transfer':
+                                            return { icon: 'fa-van-shuttle', color: '#0d9488', label: 'Presun', bg: '#f0fdfa', border: '#99f6e4', placeIcon: 'fa-location-dot' };
                                         default:
                                             return { icon: 'fa-circle-dot', color: '#6b7280', label: 'Udalosť', bg: '#f9fafb', border: '#e5e7eb', placeIcon: 'fa-location-dot' };
                                     }
@@ -11614,7 +11694,7 @@ const TransportApp = ({ userProfileData }) => {
                                                             ),
                                                         // 3) Popis
                                                         (() => {
-                                                            // Pre zápas: domáci vľavo, hostia vpravo, vybraný tím boldom
+                                                            // Pre zápas: domáci vpravo, hostia vľavo, vybraný tím boldom
                                                             if (ev.type === 'match') {
                                                                 const teams = parseMatchTeams(ev);
                                                                 if (teams) {
@@ -11633,11 +11713,11 @@ const TransportApp = ({ userProfileData }) => {
                                                                                 minWidth: 0,
                                                                             },
                                                                         },
-                                                                        // Domáci – vľavo
+                                                                        // Domáci – vpravo (zarovnané na pravý okraj svojho stĺpca)
                                                                         React.createElement(
                                                                             'span',
                                                                             {
-                                                                                className: 'text-left flex-1 truncate',
+                                                                                className: 'text-right flex-1 truncate',
                                                                                 style: {
                                                                                     fontWeight: isHomeSelected ? '700' : '400',
                                                                                     minWidth: 0,
@@ -11646,11 +11726,11 @@ const TransportApp = ({ userProfileData }) => {
                                                                             },
                                                                             teams.home
                                                                         ),
-                                                                        // Hostia – vpravo
+                                                                        // Hostia – vľavo (zarovnané na ľavý okraj svojho stĺpca)
                                                                         React.createElement(
                                                                             'span',
                                                                             {
-                                                                                className: 'text-right flex-1 truncate',
+                                                                                className: 'text-left flex-1 truncate',
                                                                                 style: {
                                                                                     fontWeight: isAwaySelected ? '700' : '400',
                                                                                     minWidth: 0,
@@ -11662,7 +11742,23 @@ const TransportApp = ({ userProfileData }) => {
                                                                     );
                                                                 }
                                                             }
-                                                
+
+                                                            // ============================================================
+                                                            // NOVÉ: Presun – špeciálne zobrazenie
+                                                            //  - ak je priradený → konkrétny čas (už je vo `when`)
+                                                            //  - ak nie je priradený → všeobecne (bez času)
+                                                            // ============================================================
+                                                            if (ev.type === 'transfer') {
+                                                                return React.createElement(
+                                                                    'div',
+                                                                    {
+                                                                        className: 'flex-1 text-gray-800 break-words leading-snug pt-0.5',
+                                                                        style: { minWidth: 0 }
+                                                                    },
+                                                                    ev._routeLabel || ev.text
+                                                                );
+                                                            }
+
                                                             // Ostatné typy udalostí – pôvodný text
                                                             return React.createElement(
                                                                 'div',
