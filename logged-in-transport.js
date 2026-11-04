@@ -3313,7 +3313,6 @@ const TransportApp = ({ userProfileData }) => {
                             placeFromId,
                             placeToId,
                             // Názov odvodíme VÝHRADNE z ID – NIE z data.placeFrom
-                            placeFrom: placeFromId ? (resolvePlaceNameById(placeFromId) || '') : '',
                             placeTo: placeToId ? (resolvePlaceNameById(placeToId) || '') : '',
                             teamsIn: Array.isArray(data.teamsIn) ? data.teamsIn : [],
                             teamsOut: Array.isArray(data.teamsOut) ? data.teamsOut : [],
