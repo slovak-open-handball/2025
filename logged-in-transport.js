@@ -5484,7 +5484,7 @@ const TransportApp = ({ userProfileData }) => {
                     style: { color: computedTimeTo ? '#1d4ed8' : '#9ca3af' },
                 })
             ),
-// 3. miesto od
+            // 3. miesto od
             React.createElement('td', { className: 'border border-gray-300 p-1' },
                 lockedPlaceFrom != null
                     ? React.createElement(
@@ -5500,45 +5500,26 @@ const TransportApp = ({ userProfileData }) => {
                         onChange: async (e) => {
                             const newPlaceFrom = e.target.value;
                             const oldPlaceFrom = row.placeFrom || '';
-
-                            console.log('[TRANSPORT][onChange placeFrom]', {
-                                rowId: row.id,
-                                newPlaceFrom,
-                                oldPlaceFrom,
-                            });
-
+                            if (newPlaceFrom === oldPlaceFrom) return;
+                        
                             await updateBusRowField(row.id, 'placeFrom', newPlaceFrom);
-
+                        
                             const newPlaceFromId = resolvePlaceIdByName(newPlaceFrom);
                             const currentPlaceToId = row.placeToId || resolvePlaceIdByName(row.placeTo);
-
-                            console.log('[TRANSPORT][onChange placeFrom] Po update:', {
-                                newPlaceFromId,
-                                currentPlaceToId,
-                                timeFrom: row.timeFrom,
-                            });
-
-                            if (newPlaceFromId && currentPlaceToId) {
+                        
+                            if (newPlaceFromId && currentPlaceToId && row.timeFrom && /^\d{1,2}:\d{2}$/.test(row.timeFrom)) {
                                 const travelMinutes = getTravelMinutes(newPlaceFromId, currentPlaceToId);
-                                console.log('[TRANSPORT][onChange placeFrom] travelMinutes =', travelMinutes);
-                                if (travelMinutes != null && row.timeFrom && /^\d{1,2}:\d{2}$/.test(row.timeFrom)) {
+                                if (travelMinutes != null) {
                                     const [h, m] = row.timeFrom.split(':').map(Number);
                                     let total = h * 60 + m + travelMinutes;
                                     total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
                                     const endH = Math.floor(total / 60);
                                     const endM = total % 60;
                                     const newTimeTo = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-
-                                    console.log('[TRANSPORT][onChange placeFrom] Nový timeTo =', newTimeTo, ' (pôvodný:', row.timeTo, ')');
-
                                     if (newTimeTo !== (row.timeTo || '')) {
                                         await updateBusRowField(row.id, 'timeTo', newTimeTo);
                                     }
-                                } else {
-                                    console.log('[TRANSPORT][onChange placeFrom] timeTo sa nepočíta (chýba travelMinutes alebo timeFrom)');
                                 }
-                            } else {
-                                console.log('[TRANSPORT][onChange placeFrom] Chýba newPlaceFromId alebo currentPlaceToId');
                             }
                         },
                         className: selectCls,
