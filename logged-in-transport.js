@@ -3293,14 +3293,13 @@ const TransportApp = ({ userProfileData }) => {
                         if (!rowsGrouped[key]) rowsGrouped[key] = [];
         
                         // ============================================================
-                        // NOVÉ: V DB sa NESMIE ukladať názov miesta (placeFrom /
-                        // placeTo). Ukladá sa LEN ID (placeFromId / placeToId).
+                        // V DB sa NESMIE ukladať názov miesta (placeFrom / placeTo).
+                        // Ukladá sa LEN ID (placeFromId / placeToId).
                         //
                         // Pri načítaní preto:
                         //  - primárne použijeme placeFromId / placeToId
                         //  - NÁZOV odvodíme VÝHRADNE z ID (cez resolvePlaceNameById)
                         //  - pole placeFrom / placeTo (názov) z DB IGNORUJEME
-                        //    (môže tam zostať zo starších verzií, ale nepoužívame ho)
                         // ============================================================
                         const placeFromId = data.placeFromId || null;
                         const placeToId = data.placeToId || null;
@@ -3312,7 +3311,8 @@ const TransportApp = ({ userProfileData }) => {
                             timeTo: data.timeTo || '',
                             placeFromId,
                             placeToId,
-                            // Názov odvodíme VÝHRADNE z ID – NIE z data.placeFrom
+                            // NÁZOV odvodíme VÝHRADNE z ID – NIE z data.placeFrom
+                            placeFrom: placeFromId ? (resolvePlaceNameById(placeFromId) || '') : '',
                             placeTo: placeToId ? (resolvePlaceNameById(placeToId) || '') : '',
                             teamsIn: Array.isArray(data.teamsIn) ? data.teamsIn : [],
                             teamsOut: Array.isArray(data.teamsOut) ? data.teamsOut : [],
@@ -4219,7 +4219,13 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
     
-            await addDoc(collection(window.db, 'transport'), {
+            // ============================================================
+            // NOVÉ: Namiesto addDoc použijeme setDoc s novým doc() –
+            // aby sme mohli explicitne použiť deleteField() pre placeFrom /
+            // placeTo (názov). Tie sa do DB NESMÚ ukladať.
+            // ============================================================
+            const newRowRef = doc(collection(window.db, 'transport'));
+            await setDoc(newRowRef, {
                 type: 'busRow',
                 busId: bus.id,
                 busName: bus.name,
@@ -4229,6 +4235,9 @@ const TransportApp = ({ userProfileData }) => {
                 timeTo: '',
                 placeFromId: initialPlaceFromId,
                 placeToId: null,
+                // Explicitne vymaž názvy (ak by tam niekedy boli)
+                placeFrom: deleteField(),
+                placeTo: deleteField(),
                 teamsIn: [],
                 teamsOut: [],
             });
@@ -4287,7 +4296,13 @@ const TransportApp = ({ userProfileData }) => {
             }
             await Promise.all(shiftPromises);
     
-            await addDoc(collection(window.db, 'transport'), {
+            // ============================================================
+            // NOVÉ: Namiesto addDoc použijeme setDoc s novým doc() –
+            // aby sme mohli explicitne použiť deleteField() pre placeFrom /
+            // placeTo (názov). Tie sa do DB NESMÚ ukladať.
+            // ============================================================
+            const newRowRef = doc(collection(window.db, 'transport'));
+            await setDoc(newRowRef, {
                 type: 'busRow',
                 busId: bus.id,
                 busName: bus.name,
@@ -4297,6 +4312,9 @@ const TransportApp = ({ userProfileData }) => {
                 timeTo: '',
                 placeFromId,
                 placeToId,
+                // Explicitne vymaž názvy (ak by tam niekedy boli)
+                placeFrom: deleteField(),
+                placeTo: deleteField(),
                 teamsIn: [],
                 teamsOut: [],
             });
