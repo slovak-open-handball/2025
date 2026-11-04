@@ -5374,9 +5374,6 @@ const TransportApp = ({ userProfileData }) => {
                 })
             ),
             // 3. miesto od
-            //    - Ak predchádzajúci riadok má vyplnené placeTo → READ-ONLY text
-            //      (hodnota = prevRow.placeTo, nedá sa meniť)
-            //    - Inak → SELECT (pôvodné správanie)
             React.createElement('td', { className: 'border border-gray-300 p-1' },
                 lockedPlaceFrom != null
                     ? React.createElement(
@@ -5389,7 +5386,32 @@ const TransportApp = ({ userProfileData }) => {
                     )
                     : React.createElement('select', {
                         value: row.placeFrom || '',
-                        onChange: (e) => updateBusRowField(row.id, 'placeFrom', e.target.value),
+                        onChange: async (e) => {
+                            const newPlaceFrom = e.target.value;
+                            const oldPlaceFrom = row.placeFrom || '';
+            
+                            await updateBusRowField(row.id, 'placeFrom', newPlaceFrom);
+            
+                            // ============================================================
+                            // NOVÉ: Ak už máme vyplnené "Miesto do", prepočítaj timeTo
+                            // s NOVÝM placeFrom (nie so starým row.placeFrom).
+                            // ============================================================
+                            if (newPlaceFrom !== oldPlaceFrom && newPlaceFrom && row.placeTo) {
+                                const travelMinutes = getTravelMinutes(newPlaceFrom, row.placeTo);
+                                if (travelMinutes != null && row.timeFrom && /^\d{1,2}:\d{2}$/.test(row.timeFrom)) {
+                                    const [h, m] = row.timeFrom.split(':').map(Number);
+                                    let total = h * 60 + m + travelMinutes;
+                                    total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
+                                    const endH = Math.floor(total / 60);
+                                    const endM = total % 60;
+                                    const newTimeTo = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+            
+                                    if (newTimeTo !== (row.timeTo || '')) {
+                                        await updateBusRowField(row.id, 'timeTo', newTimeTo);
+                                    }
+                                }
+                            }
+                        },
                         className: selectCls,
                     },
                         React.createElement('option', { value: '' }, '— vyber zastávku —'),
@@ -5403,29 +5425,43 @@ const TransportApp = ({ userProfileData }) => {
                     onChange: async (e) => {
                         const newPlaceTo = e.target.value;
                         const oldPlaceTo = row.placeTo || '';
-
+            
                         // Ulož novú hodnotu (updateBusRowField už prepočíta timeTo, ak sa dá)
                         await updateBusRowField(row.id, 'placeTo', newPlaceTo);
-
-                        // Ak sa zmenilo placeTo a nové placeTo nie je prázdne → skús dopočítať timeTo
+            
+                        // ============================================================
+                        // NOVÉ: Počkaj, kým onSnapshot aktualizuje busRows, aby sme
+                        // mali aktuálne placeFrom (mohlo sa zmeniť v predošlom kroku).
+                        // Potom prepočítaj timeTo s aktuálnymi hodnotami.
+                        // ============================================================
                         if (newPlaceTo !== oldPlaceTo && newPlaceTo) {
-                            const travelMinutes = getTravelMinutes(row.placeFrom, newPlaceTo);
-                            if (travelMinutes != null && row.timeFrom && /^\d{1,2}:\d{2}$/.test(row.timeFrom)) {
-                                const [h, m] = row.timeFrom.split(':').map(Number);
-                                let total = h * 60 + m + travelMinutes;
-                                total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
-                                const endH = Math.floor(total / 60);
-                                const endM = total % 60;
-                                const newTimeTo = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-                    
-                                if (newTimeTo !== (row.timeTo || '')) {
-                                    await updateBusRowField(row.id, 'timeTo', newTimeTo);
+                            // Malý delay, aby onSnapshot stihol doručiť nové busRows
+                            setTimeout(async () => {
+                                // Získať aktuálny riadok z busRows (nie zo starého `row`)
+                                const rowsKey = `${busId}|${dayKey}`;
+                                const currentRows = (busRows[rowsKey] || []);
+                                const currentRow = currentRows.find((r) => r.id === row.id);
+                                if (!currentRow) return;
+            
+                                const travelMinutes = getTravelMinutes(currentRow.placeFrom, newPlaceTo);
+                                if (travelMinutes != null && currentRow.timeFrom && /^\d{1,2}:\d{2}$/.test(currentRow.timeFrom)) {
+                                    const [h, m] = currentRow.timeFrom.split(':').map(Number);
+                                    let total = h * 60 + m + travelMinutes;
+                                    total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
+                                    const endH = Math.floor(total / 60);
+                                    const endM = total % 60;
+                                    const newTimeTo = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+            
+                                    if (newTimeTo !== (currentRow.timeTo || '')) {
+                                        await updateBusRowField(row.id, 'timeTo', newTimeTo);
+                                    }
                                 }
-                            }
-                    
-                            setTimeout(() => {
-                                resyncFollowingRowsAfterPlaceToChange(busId, dayKey, row.id);
-                            }, 300);
+            
+                                // Následné zosúladenie nasledujúcich riadkov
+                                setTimeout(() => {
+                                    resyncFollowingRowsAfterPlaceToChange(busId, dayKey, row.id);
+                                }, 300);
+                            }, 400);
                         }
                     },
                     className: selectCls,
@@ -5631,7 +5667,7 @@ const TransportApp = ({ userProfileData }) => {
             )
         );
     };
-
+    
     // ============================================================
     // PRIDANIE NOVÉHO AUTOBUSU
     // ============================================================
