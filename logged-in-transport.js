@@ -3271,10 +3271,10 @@ const TransportApp = ({ userProfileData }) => {
             unsubscribeBuses = onSnapshot(transportRef, (snapshot) => {
                 const busesList = [];
                 const rowsGrouped = {};
-
+        
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data() || {};
-
+        
                     // --- AUTOBUSY ---
                     if (data.type === 'bus') {
                         const num = Number(data.number);
@@ -3285,31 +3285,46 @@ const TransportApp = ({ userProfileData }) => {
                         });
                         return;
                     }
-
+        
                     // --- RIADKY AUTOBUSOV ---
                     if (data.type === 'busRow') {
                         if (!data.busId || !data.dayKey) return;
                         const key = `${data.busId}|${data.dayKey}`;
                         if (!rowsGrouped[key]) rowsGrouped[key] = [];
+        
+                        // ============================================================
+                        // NOVÉ: V DB sa NESMIE ukladať názov miesta (placeFrom /
+                        // placeTo). Ukladá sa LEN ID (placeFromId / placeToId).
+                        //
+                        // Pri načítaní preto:
+                        //  - primárne použijeme placeFromId / placeToId
+                        //  - NÁZOV odvodíme VÝHRADNE z ID (cez resolvePlaceNameById)
+                        //  - pole placeFrom / placeTo (názov) z DB IGNORUJEME
+                        //    (môže tam zostať zo starších verzií, ale nepoužívame ho)
+                        // ============================================================
+                        const placeFromId = data.placeFromId || null;
+                        const placeToId = data.placeToId || null;
+        
                         rowsGrouped[key].push({
                             id: docSnap.id,
                             order: Number(data.order) || 0,
                             timeFrom: data.timeFrom || '',
                             timeTo: data.timeTo || '',
-                            placeFromId: data.placeFromId || resolvePlaceIdByName(data.placeFrom),
-                            placeToId: data.placeToId || resolvePlaceIdByName(data.placeTo),
-                            placeFrom: resolvePlaceNameById(data.placeFromId) || data.placeFrom || '',
-                            placeTo: resolvePlaceNameById(data.placeToId) || data.placeTo || '',
+                            placeFromId,
+                            placeToId,
+                            // Názov odvodíme VÝHRADNE z ID – NIE z data.placeFrom
+                            placeFrom: placeFromId ? (resolvePlaceNameById(placeFromId) || '') : '',
+                            placeTo: placeToId ? (resolvePlaceNameById(placeToId) || '') : '',
                             teamsIn: Array.isArray(data.teamsIn) ? data.teamsIn : [],
                             teamsOut: Array.isArray(data.teamsOut) ? data.teamsOut : [],
                             count: data.count ?? null,
                         });
                     }
                 });
-
+        
                 busesList.sort((a, b) => a.number - b.number);
                 Object.values(rowsGrouped).forEach(arr => arr.sort((a, b) => a.order - b.order));
-
+        
                 setBuses(busesList);
                 setBusRows(rowsGrouped);
             }, (err) => {
