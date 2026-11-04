@@ -4303,10 +4303,47 @@ const TransportApp = ({ userProfileData }) => {
             if (field === 'placeFrom' || field === 'placeTo') {
                 const idField = field === 'placeFrom' ? 'placeFromId' : 'placeToId';
                 const placeId = resolvePlaceIdByName(value) || (value ? value : null);
-                await updateDoc(doc(window.db, 'transport', rowId), {
+    
+                // ============================================================
+                // NOVÉ: Po zmene miesta prepočítaj aj timeTo (ak sa dá).
+                // Potrebujeme aktuálny stav riadku – nájdeme ho v busRows.
+                // ============================================================
+                const patch = {
                     [idField]: placeId,
                     [field]: deleteField(),
+                };
+    
+                // Nájdi aktuálny riadok v busRows
+                let currentRow = null;
+                Object.values(busRows || {}).forEach((rows) => {
+                    if (currentRow) return;
+                    const found = (rows || []).find((r) => r.id === rowId);
+                    if (found) currentRow = found;
                 });
+    
+                if (currentRow) {
+                    // Nové hodnoty placeFrom / placeTo (podľa toho, ktoré sa mení)
+                    const newPlaceFrom = field === 'placeFrom' ? value : (currentRow.placeFrom || '');
+                    const newPlaceTo = field === 'placeTo' ? value : (currentRow.placeTo || '');
+    
+                    const travelMinutes = getTravelMinutes(newPlaceFrom, newPlaceTo);
+                    const timeFrom = currentRow.timeFrom || '';
+    
+                    // Ak máme timeFrom aj travelMinutes → dopočítaj timeTo
+                    if (travelMinutes != null && timeFrom && /^\d{1,2}:\d{2}$/.test(timeFrom)) {
+                        const [h, m] = timeFrom.split(':').map(Number);
+                        let total = h * 60 + m + travelMinutes;
+                        total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
+                        const endH = Math.floor(total / 60);
+                        const endM = total % 60;
+                        const newTimeTo = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+                        if (newTimeTo !== (currentRow.timeTo || '')) {
+                            patch.timeTo = newTimeTo;
+                        }
+                    }
+                }
+    
+                await updateDoc(doc(window.db, 'transport', rowId), patch);
                 return;
             }
             await updateDoc(doc(window.db, 'transport', rowId), { [field]: value });
@@ -5339,17 +5376,12 @@ const TransportApp = ({ userProfileData }) => {
                     onChange: async (e) => {
                         const newPlaceTo = e.target.value;
                         const oldPlaceTo = row.placeTo || '';
-                    
-                        // Ulož novú hodnotu
+
+                        // Ulož novú hodnotu (updateBusRowField už prepočíta timeTo, ak sa dá)
                         await updateBusRowField(row.id, 'placeTo', newPlaceTo);
 
-                        // Ak sa zmenilo placeTo a nové placeTo nie je prázdne → prepočítaj timeTo
-                        // a zosúlaď nasledujúce riadky
+                        // Ak sa zmenilo placeTo a nové placeTo nie je prázdne → skús dopočítať timeTo
                         if (newPlaceTo !== oldPlaceTo && newPlaceTo) {
-                            // Počkaj, kým sa timeTo uloží (useEffect ho dopočíta asynchrónne).
-                            // Radšej ho dopočítaj priamo tu a zapíš, aby bol konzistentný pred
-                            // zosúladením nasledujúcich riadkov.
-                    
                             const travelMinutes = getTravelMinutes(row.placeFrom, newPlaceTo);
                             if (travelMinutes != null && row.timeFrom && /^\d{1,2}:\d{2}$/.test(row.timeFrom)) {
                                 const [h, m] = row.timeFrom.split(':').map(Number);
@@ -5364,9 +5396,6 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                             }
                     
-                            // Počkaj jeden frame, aby sa busRows stihol aktualizovať z Firestore
-                            // (onSnapshot), inak by funkcia pracovala so starým busRows.
-                            // Použijeme menší delay (napr. 300 ms).
                             setTimeout(() => {
                                 resyncFollowingRowsAfterPlaceToChange(busId, dayKey, row.id);
                             }, 300);
@@ -5457,14 +5486,20 @@ const TransportApp = ({ userProfileData }) => {
                     return total > 0 ? total : React.createElement('span', { className: 'text-gray-400' }, '—');
                 })()
             ),
-            // 8. trvanie v min (read-only, VYPOČÍTANÉ zo zobrazených časov Od / Do)
-            //    Min = timeTo − timeFrom (s prechodom cez polnoc)
-            //    Ak je timeFrom > timeTo → zobraz "chyba" (červené)
-            //    Ak chýba čas Od alebo Do → zobraz "—" (sivé)
+            // 8. trvanie v min (read-only, VYPOČÍTANÉ)
+            //    Priorita:
+            //      1) Ak je nastavené trvanie jazdy medzi zastávkami (travelMinutes) → zobraz ho
+            //      2) Inak vypočítaj zo zobrazených časov Od / Do (timeTo − timeFrom, s prechodom cez polnoc)
+            //    Ak chýba čas Od alebo Do → "—"
+            //    Ak je timeFrom > timeTo a nemáme travelMinutes → "chyba"
             React.createElement('td', {
                 className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold',
                 style: {
                     color: (() => {
+                        // 1) Prioritne travelMinutes
+                        if (travelMinutes != null) {
+                            return '#b45309';
+                        }
                         const timeRe = /^\d{1,2}:\d{2}$/;
                         if (!row.timeFrom || !row.timeTo ||
                             !timeRe.test(row.timeFrom) || !timeRe.test(row.timeTo)) {
@@ -5474,11 +5509,15 @@ const TransportApp = ({ userProfileData }) => {
                         const [th, tm] = row.timeTo.split(':').map(Number);
                         const fromMin = fh * 60 + fm;
                         const toMin = th * 60 + tm;
-                        if (fromMin > toMin) return '#dc2626'; // červená
+                        if (fromMin > toMin) return '#dc2626';
                         return '#b45309';
                     })(),
                 },
                 title: (() => {
+                    // 1) Prioritne travelMinutes
+                    if (travelMinutes != null) {
+                        return `Trvanie jazdy nastavené v Nastaveniach: ${travelMinutes} min`;
+                    }
                     const timeRe = /^\d{1,2}:\d{2}$/;
                     if (!row.timeFrom || !row.timeTo ||
                         !timeRe.test(row.timeFrom) || !timeRe.test(row.timeTo)) {
@@ -5492,8 +5531,12 @@ const TransportApp = ({ userProfileData }) => {
                     return `Trvanie vypočítané zo zobrazených časov: ${row.timeFrom} → ${row.timeTo}`;
                 })(),
             }, (() => {
+                // 1) Prioritne travelMinutes – nastavené trvanie jazdy
+                if (travelMinutes != null) {
+                    return travelMinutes;
+                }
+                // 2) Fallback – vypočítaj zo zobrazených časov
                 const timeRe = /^\d{1,2}:\d{2}$/;
-                // Ak chýba čas Od alebo Do → "—"
                 if (!row.timeFrom || !row.timeTo ||
                     !timeRe.test(row.timeFrom) || !timeRe.test(row.timeTo)) {
                     return '—';
@@ -5502,11 +5545,9 @@ const TransportApp = ({ userProfileData }) => {
                 const [th, tm] = row.timeTo.split(':').map(Number);
                 const fromMin = fh * 60 + fm;
                 const toMin = th * 60 + tm;
-                // Ak je čas Od > čas Do → "chyba"
                 if (fromMin > toMin) {
                     return 'chyba';
                 }
-                // Inak vráť rozdiel v minútach (s prechodom cez polnoc)
                 let diff = toMin - fromMin;
                 if (diff < 0) diff += 24 * 60;
                 return diff;
