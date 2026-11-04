@@ -3386,7 +3386,7 @@ const TransportApp = ({ userProfileData }) => {
             });
         } catch (e) {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport (teamShortcuts):', e);
-        }     
+        }
         
         // 0a2) STRAVOVACIA JEDNOTKA (unitMinutes)
         try {
@@ -7328,7 +7328,7 @@ const TransportApp = ({ userProfileData }) => {
     
         // ============================================================
         // NOVÉ: Zisti teamUid + teamIndex pre daný tím z `users`.
-        // Tieto údaje sa ukladajú do DB namiesto `teamName`.
+        // Tieto údaje tvoria KĽÚČ záznamu v DB (namiesto teamName).
         // ============================================================
         const teamIds = findTeamIdentifiersByName(cat, name);
         if (!teamIds || teamIds.teamUid == null || teamIds.teamIndex == null) {
@@ -7338,6 +7338,12 @@ const TransportApp = ({ userProfileData }) => {
             );
             return;
         }
+    
+        // ============================================================
+        // NOVÉ: KĽÚČ záznamu = `${category}||${teamUid}||${teamIndex}`.
+        // Názov tímu sa do kľúča NEDÁVA.
+        // ============================================================
+        const docKey = `${cat}||${teamIds.teamUid}||${teamIds.teamIndex}`;
     
         const newShortcut = String(newShortcutRaw || '')
             .trim()
@@ -7400,16 +7406,24 @@ const TransportApp = ({ userProfileData }) => {
                 if (existingDocId) {
                     await updateDoc(doc(window.db, 'transport', existingDocId), {
                         shortcut: newShortcut,
-                        // NOVÉ: Uisti sa, že teamName v DB nie je (ak tam náhodou zostal)
+                        // Uisti sa, že teamName v DB nie je (ak tam náhodou zostal)
                         teamName: deleteField(),
+                        // A že v DB je správny kľúč (hoci document ID sa nemení)
+                        docKey: docKey,
                     });
                 } else {
                     // ============================================================
-                    // NOVÉ: Ukladáme IBA teamUid + teamIndex + category + shortcut.
+                    // NOVÉ: Ukladáme IBA docKey + category + teamUid + teamIndex + shortcut.
                     // NÁZOV TÍMU (teamName) sa NEUKLADÁ.
+                    //
+                    // `docKey` je aj v dátach (pre prípad, že by si ho chcel použiť
+                    // ako prefix pri vyhľadávaní), ale primárne je to document ID.
+                    //
+                    // Document ID = docKey, aby bol kľúč stabilný a neobsahoval názov tímu.
                     // ============================================================
-                    await addDoc(transportRef, {
+                    await setDoc(doc(transportRef, docKey), {
                         type: 'teamShortcut',
+                        docKey,
                         category: cat,
                         teamUid: teamIds.teamUid,
                         teamIndex: teamIds.teamIndex,
@@ -7445,20 +7459,41 @@ const TransportApp = ({ userProfileData }) => {
             return;
         }
     
+        // NOVÉ: docKey = `${category}||${teamUid}||${teamIndex}`
+        const docKey = `${cat}||${teamIds.teamUid}||${teamIds.teamIndex}`;
+    
         setDeleteShortcutSaving(true);
         try {
-            const transportRef = collection(window.db, 'transport');
-            const snap = await getDocs(transportRef);
+            // ============================================================
+            // NOVÉ: Primárne skús zmazať dokument podľa docKey (document ID).
+            // Ak neexistuje (napr. staré záznamy), prejdi kolekciu a nájdi
+            // záznam podľa teamUid + teamIndex.
+            // ============================================================
+            const directDocRef = doc(window.db, 'transport', docKey);
+            const directSnap = await getDoc(directDocRef);
     
             let existingDocId = null;
-            snap.forEach((docSnap) => {
-                const data = docSnap.data() || {};
-                if (data.type !== 'teamShortcut') return;
-                if (cleanCategory(data.category) !== cat) return;
-                if (data.teamUid !== teamIds.teamUid) return;
-                if ((data.teamIndex ?? null) !== teamIds.teamIndex) return;
-                existingDocId = docSnap.id;
-            });
+    
+            if (directSnap.exists()) {
+                const data = directSnap.data() || {};
+                if (data.type === 'teamShortcut') {
+                    existingDocId = directSnap.id;
+                }
+            }
+    
+            if (!existingDocId) {
+                // Fallback – prejdi kolekciu (pre staré záznamy, ktoré ešte nemajú docKey)
+                const transportRef = collection(window.db, 'transport');
+                const snap = await getDocs(transportRef);
+                snap.forEach((docSnap) => {
+                    const data = docSnap.data() || {};
+                    if (data.type !== 'teamShortcut') return;
+                    if (cleanCategory(data.category) !== cat) return;
+                    if (data.teamUid !== teamIds.teamUid) return;
+                    if ((data.teamIndex ?? null) !== teamIds.teamIndex) return;
+                    existingDocId = docSnap.id;
+                });
+            }
     
             if (!existingDocId) {
                 window.showGlobalNotification(
