@@ -231,42 +231,88 @@ const TransportApp = ({ userProfileData }) => {
 
     function resolvePlaceNameById(placeId) {
         if (!placeId) return '';
-        const name = placesMapRef.current[placeId];
-
-        // NOVÉ: diagnostický výpis
-        if (!name) {
-            console.warn('[TRANSPORT][resolvePlaceNameById] Nenájdený názov pre placeId:', {
-                placeId,
-                availableIds: Object.keys(placesMapRef.current || {}),
+    
+        const id = String(placeId);
+    
+        // 1) Primárne z placesMapRef
+        const fromMap = placesMapRef.current[id];
+        if (fromMap) return fromMap;
+    
+        // ============================================================
+        // NOVÉ: Fallback cez allPlacesRef (ak placesMapRef ešte nie je
+        // naplnený pri prvom renderi)
+        // ============================================================
+        const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.id === id);
+        if (fromAllPlaces) {
+            console.log('[TRANSPORT][resolvePlaceNameById] Fallback cez allPlacesRef:', {
+                placeId: id,
+                name: fromAllPlaces.name,
             });
-            return String(placeId);
+            return fromAllPlaces.name;
         }
-        return name;
+    
+        // ============================================================
+        // NOVÉ: Fallback cez stopsList (ak allPlacesRef ešte nie je)
+        // ============================================================
+        const fromStops = (stopsList || []).find((s) => s.id === id);
+        if (fromStops) {
+            console.log('[TRANSPORT][resolvePlaceNameById] Fallback cez stopsList:', {
+                placeId: id,
+                name: fromStops.name,
+            });
+            return fromStops.name;
+        }
+    
+        console.warn('[TRANSPORT][resolvePlaceNameById] Nenájdený názov pre placeId:', {
+            placeId: id,
+            availableIds: Object.keys(placesMapRef.current || {}),
+            allPlacesCount: (allPlacesRef.current || []).length,
+            stopsListCount: (stopsList || []).length,
+        });
+        return id;
     }
 
     function resolvePlaceIdByName(placeName) {
         if (!placeName) return null;
-        const norm = normalizePlaceName(placeName);
+    
+        const raw = String(placeName).trim();
+    
+        // ============================================================
+        // NOVÉ: Ak vstup UŽ JE ID (existuje v allPlacesRef ako p.id),
+        // vráť ho priamo – žiadny warn, žiadne hľadanie podľa názvu.
+        // ============================================================
+        const directById = (allPlacesRef.current || []).find((p) => p.id === raw);
+        if (directById) {
+            console.log('[TRANSPORT][resolvePlaceIdByName] Vstup je už ID, vraciam priamo:', {
+                input: raw,
+                id: directById.id,
+                name: directById.name,
+                type: directById.type,
+            });
+            return directById.id;
+        }
+    
+        const norm = normalizePlaceName(raw);
         const found = (allPlacesRef.current || []).find(
             (p) => normalizePlaceName(p.name) === norm
         );
-
+    
         if (!found) {
             console.warn('[TRANSPORT][resolvePlaceIdByName] Nenájdené miesto podľa názvu:', {
-                placeName,
+                placeName: raw,
                 normalized: norm,
                 availableNames: (allPlacesRef.current || []).map((p) => p.name),
             });
         } else {
-            console.log('[TRANSPORT][resolvePlaceIdByName] Nájdené miesto:', {
-                placeName,
+            console.log('[TRANSPORT][resolvePlaceIdByName] Nájdené miesto podľa názvu:', {
+                placeName: raw,
                 normalized: norm,
                 id: found.id,
                 name: found.name,
                 type: found.type,
             });
         }
-        
+    
         return found ? found.id : null;
     }
 
@@ -4930,12 +4976,29 @@ const TransportApp = ({ userProfileData }) => {
             console.log('[TRANSPORT][getTravelMinutes] Chýba placeFrom alebo placeTo:', { placeFrom, placeTo });
             return null;
         }
-
-        const fromId = resolvePlaceIdByName(placeFrom) || placeFrom;
-        const toId = resolvePlaceIdByName(placeTo) || placeTo;
-
+    
+        // ============================================================
+        // NOVÉ: Ak vstup UŽ JE ID (existuje v allPlacesRef), použi ho priamo.
+        // Inak ho prelož cez resolvePlaceIdByName (očakáva názov).
+        // ============================================================
+        const resolveToId = (val) => {
+            if (!val) return null;
+            const raw = String(val).trim();
+    
+            // 1) Je to ID?
+            if ((allPlacesRef.current || []).some((p) => p.id === raw)) {
+                return raw;
+            }
+            // 2) Je to názov? Prelož.
+            return resolvePlaceIdByName(raw);
+        };
+    
+        const fromId = resolveToId(placeFrom);
+        const toId = resolveToId(placeTo);
+    
         const keyId = `${fromId}|${toId}`;
         const found = travelTimes[keyId];
+    
         console.log('[TRANSPORT][getTravelMinutes]', {
             placeFrom,
             placeTo,
@@ -4944,12 +5007,27 @@ const TransportApp = ({ userProfileData }) => {
             keyId,
             found: found ? found.minutes : null,
             allKeys: Object.keys(travelTimes || {}),
+            fromExistsInStops: (stopsList || []).some((s) => s.id === fromId),
+            toExistsInStops: (stopsList || []).some((s) => s.id === toId),
         });
-
+    
         if (found && found.minutes != null) {
             return Number(found.minutes);
         }
-
+    
+        // ============================================================
+        // NOVÉ: Skús aj opačný smer (ak je nastavené len A→B, ale nie B→A)
+        // ============================================================
+        const reverseKey = `${toId}|${fromId}`;
+        const reverseFound = travelTimes[reverseKey];
+        if (reverseFound && reverseFound.minutes != null) {
+            console.log('[TRANSPORT][getTravelMinutes] Použitý opačný smer:', {
+                reverseKey,
+                minutes: reverseFound.minutes,
+            });
+            return Number(reverseFound.minutes);
+        }
+    
         return null;
     }
 
@@ -5167,6 +5245,9 @@ const TransportApp = ({ userProfileData }) => {
             timeFrom: row.timeFrom,
             timeTo: row.timeTo,
             travelMinutes,
+            stopsListCount: (stopsList || []).length,
+            stopsListNames: (stopsList || []).map((s) => ({ id: s.id, name: s.name })),
+            allPlacesCount: (allPlacesRef.current || []).length,
         });
 
         // ============================================================
