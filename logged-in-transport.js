@@ -4044,49 +4044,35 @@ const TransportApp = ({ userProfileData }) => {
         setTravelTimesDraft(draft);
     }, [travelTimes]);
 
-    // ============================================================
-    // AUTOMATICKÝ PREPOČET timeTo PRE VŠETKY RIADKY AUTOBUSOV
-    // (spustí sa pri zmene busRows alebo travelTimes)
-    // ============================================================
     useEffect(() => {
         if (!window.db) return;
-        // NOVÉ: Kým nie je načítaný travelTimes, neprepočítavaj timeTo
-        // (inak by sa pri prvotnom načítavaní zbytočne zapisovalo do DB
-        // a spôsobilo by to viacnásobný re-render + duplicitné varovanie)
         if (!travelTimesLoaded) return;
         if (!busRows || Object.keys(busRows).length === 0) return;
 
         Object.values(busRows).forEach((rows) => {
             (rows || []).forEach((row) => {
-                // Použiť rovnakú logiku ako v renderBusRow
                 const placeFrom = row.placeFrom;
                 const placeTo = row.placeTo;
                 if (!placeFrom || !placeTo) return;
     
+                // Zisti trvanie jazdy
                 let minutes = null;
-                const keyId = `${placeFrom}|${placeTo}`;
+                const fromId = resolvePlaceIdByName(placeFrom) || placeFrom;
+                const toId = resolvePlaceIdByName(placeTo) || placeTo;
+                const keyId = `${fromId}|${toId}`;
                 if (travelTimes[keyId] && travelTimes[keyId].minutes != null) {
                     minutes = Number(travelTimes[keyId].minutes);
-                } else {
-                    const fromStop = stopsList.find((s) => s.name === placeFrom || s.id === placeFrom);
-                    const toStop = stopsList.find((s) => s.name === placeTo || s.id === placeTo);
-                    if (fromStop && toStop) {
-                        const key = `${fromStop.id}|${toStop.id}`;
-                        if (travelTimes[key] && travelTimes[key].minutes != null) {
-                            minutes = Number(travelTimes[key].minutes);
-                        }
-                    }
                 }
-    
+
                 if (minutes == null) return;
                 if (!row.timeFrom || !/^\d{1,2}:\d{2}$/.test(row.timeFrom)) return;
-    
+
                 const [h, m] = row.timeFrom.split(':').map(Number);
                 const total = h * 60 + m + minutes;
                 const endH = Math.floor(total / 60) % 24;
                 const endM = total % 60;
                 const computed = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-    
+
                 if (computed !== (row.timeTo || '')) {
                     updateBusRowField(row.id, 'timeTo', computed);
                 }
@@ -5026,7 +5012,33 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     const renderBusRow = (row, busId, dayKey) => {
         const travelMinutes = getTravelMinutes(row.placeFrom, row.placeTo);
-        const computedTimeTo = addMinutesToTime(row.timeFrom, travelMinutes);
+
+        // ============================================================
+        // NOVÉ: computedTimeTo sa počíta takto:
+        //  1) Ak row.timeTo (z DB) existuje → použi ho PRIAMO
+        //     (zabezpečí, že "Do" sa zobrazí aj keď travelTimes
+        //      ešte nie je načítaný, alebo keď placeFrom/placeTo
+        //      nie sú ešte vyplnené).
+        //  2) Inak dopočítaj z timeFrom + travelMinutes.
+        //  3) Inak prázdny string.
+        // ============================================================
+        const computedTimeTo = (() => {
+            // 1) Priorita: hodnota z DB
+            if (row.timeTo && /^\d{1,2}:\d{2}$/.test(row.timeTo)) {
+                return row.timeTo;
+            }
+            // 2) Fallback: dopočítaj z timeFrom + travelMinutes
+            if (row.timeFrom && travelMinutes != null) {
+                const [h, m] = row.timeFrom.split(':').map(Number);
+                let total = h * 60 + m + travelMinutes;
+                total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
+                const endH = Math.floor(total / 60);
+                const endM = total % 60;
+                return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+            }
+            // 3) Nič
+            return '';
+        })();
 
         const rowsKey = `${busId}|${dayKey}`;
         const allRows = (busRows[rowsKey] || [])
