@@ -231,7 +231,17 @@ const TransportApp = ({ userProfileData }) => {
 
     function resolvePlaceNameById(placeId) {
         if (!placeId) return '';
-        return placesMapRef.current[placeId] || String(placeId);
+        const name = placesMapRef.current[placeId];
+
+        // NOVÉ: diagnostický výpis
+        if (!name) {
+            console.warn('[TRANSPORT][resolvePlaceNameById] Nenájdený názov pre placeId:', {
+                placeId,
+                availableIds: Object.keys(placesMapRef.current || {}),
+            });
+            return String(placeId);
+        }
+        return name;
     }
 
     function resolvePlaceIdByName(placeName) {
@@ -240,6 +250,23 @@ const TransportApp = ({ userProfileData }) => {
         const found = (allPlacesRef.current || []).find(
             (p) => normalizePlaceName(p.name) === norm
         );
+
+        if (!found) {
+            console.warn('[TRANSPORT][resolvePlaceIdByName] Nenájdené miesto podľa názvu:', {
+                placeName,
+                normalized: norm,
+                availableNames: (allPlacesRef.current || []).map((p) => p.name),
+            });
+        } else {
+            console.log('[TRANSPORT][resolvePlaceIdByName] Nájdené miesto:', {
+                placeName,
+                normalized: norm,
+                id: found.id,
+                name: found.name,
+                type: found.type,
+            });
+        }
+        
         return found ? found.id : null;
     }
 
@@ -3117,6 +3144,12 @@ const TransportApp = ({ userProfileData }) => {
                     map[docSnap.id] = data.name || '(bez názvu)';
                 });
                 placesMapRef.current = map;
+        
+                // NOVÉ: diagnostický výpis
+                console.log('[TRANSPORT][places-map] Načítaná mapa placeId → názov:', {
+                    count: Object.keys(map).length,
+                    map,
+                });
             }, (err) => {
                 console.error('[TRANSPORT] onSnapshot(places) error:', err);
             });
@@ -3151,7 +3184,24 @@ const TransportApp = ({ userProfileData }) => {
                 setAllPlaces(list);
                 allPlacesRef.current = list; // okamžite aktualizuj ref
                 setPlacesLoaded(true);        // ← NOVÉ: označ, že places sú načítané
-
+        
+                // NOVÉ: diagnostický výpis
+                const stopsOnly = list.filter((p) => p.type === 'zastavka');
+                console.log('[TRANSPORT][places-all] Načítané všetky miesta:', {
+                    total: list.length,
+                    stopsCount: stopsOnly.length,
+                    stops: stopsOnly.map((s) => ({
+                        id: s.id,
+                        name: s.name,
+                        isExternalArrivalStop: s.isExternalArrivalStop,
+                        isMeetingPointStop: s.isMeetingPointStop,
+                    })),
+                    types: list.reduce((acc, p) => {
+                        acc[p.type] = (acc[p.type] || 0) + 1;
+                        return acc;
+                    }, {}),
+                });
+        
                 // Prepočítaj timeline, aby sa nové flagy prejavili
                 if (matchesLoadedRef.current && cateringLoadedRef.current && teamsLoadedRef.current) {
                     rebuildAndLogTimeline();
@@ -4105,6 +4155,18 @@ const TransportApp = ({ userProfileData }) => {
             .filter((p) => p.type === 'zastavka')
             .sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
         setStopsList(stops);
+
+        // NOVÉ: diagnostický výpis
+        console.log('[TRANSPORT][stopsList] Aktualizovaný zoznam zastávok:', {
+            allPlacesCount: allPlaces.length,
+            stopsCount: stops.length,
+            stops: stops.map((s) => ({
+                id: s.id,
+                name: s.name,
+                isExternalArrivalStop: s.isExternalArrivalStop,
+                isMeetingPointStop: s.isMeetingPointStop,
+            })),
+        });
     }, [allPlaces]);
 
     useEffect(() => {
