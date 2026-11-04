@@ -7400,7 +7400,7 @@ const TransportApp = ({ userProfileData }) => {
                 // Prázdna skratka → zmaž záznam (ak existuje)
                 if (existingDocId) {
                     await deleteDoc(doc(window.db, 'transport', existingDocId));
-                    window.showGlobalNotification(`Skratka pre tím "${name}" bola odstránená.`, 'info');
+                    window.showGlobalNotification(`Skratka pre tím ${name} bola odstránená.`, 'info');
                 }
             } else {
                 if (existingDocId) {
@@ -7432,7 +7432,7 @@ const TransportApp = ({ userProfileData }) => {
                         createdBy: (userProfileData && userProfileData.email) || null,
                     });
                 }
-                window.showGlobalNotification(`Skratka pre tím "${name}" bola uložená: "${newShortcut}".`, 'success');
+                window.showGlobalNotification(`Skratka pre tím ${name} bola uložená: ${newShortcut}.`, 'success');
             }
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri ukladaní skratky tímu:', err);
@@ -7497,7 +7497,7 @@ const TransportApp = ({ userProfileData }) => {
     
             if (!existingDocId) {
                 window.showGlobalNotification(
-                    `Skratka pre tím "${name}" sa nenašla.`,
+                    `Skratka pre tím ${name} sa nenašla.`,
                     'info'
                 );
                 setDeleteShortcutModal(null);
@@ -7506,7 +7506,7 @@ const TransportApp = ({ userProfileData }) => {
     
             await deleteDoc(doc(window.db, 'transport', existingDocId));
             window.showGlobalNotification(
-                `Skratka pre tím "${name}" bola odstránená.`,
+                `Skratka pre tím ${name} bola odstránená.`,
                 'success'
             );
             setDeleteShortcutModal(null);
