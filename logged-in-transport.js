@@ -229,19 +229,19 @@ const TransportApp = ({ userProfileData }) => {
     // placesMapRef: placeId → placeName (už existuje)
     // allPlacesRef: pole všetkých miest (už existuje)
 
-    const resolvePlaceNameById = (placeId) => {
+    function resolvePlaceNameById(placeId) {
         if (!placeId) return '';
         return placesMapRef.current[placeId] || String(placeId);
-    };
+    }
 
-    const resolvePlaceIdByName = (placeName) => {
+    function resolvePlaceIdByName(placeName) {
         if (!placeName) return null;
         const norm = normalizePlaceName(placeName);
         const found = (allPlacesRef.current || []).find(
             (p) => normalizePlaceName(p.name) === norm
         );
         return found ? found.id : null;
-    };
+    }
 
     // Normalizované porovnanie dvoch miest (ID alebo názov → ID)
     const samePlace = (a, b) => {
@@ -4786,7 +4786,7 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     // POMOCNÁ: nájde trvanie jazdy medzi dvoma zastávkami
     // ============================================================
-    const getTravelMinutes = (placeFrom, placeTo) => {
+    function getTravelMinutes(placeFrom, placeTo) {
         if (!placeFrom || !placeTo) return null;
 
         const fromId = resolvePlaceIdByName(placeFrom) || placeFrom;
@@ -4796,9 +4796,9 @@ const TransportApp = ({ userProfileData }) => {
         if (travelTimes[keyId] && travelTimes[keyId].minutes != null) {
             return Number(travelTimes[keyId].minutes);
         }
-
+    
         return null;
-    };
+    }
 
     // ============================================================
     // RENDER HLAVIČKY RIADKOV (8 stĺpcov)
