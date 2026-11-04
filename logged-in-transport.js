@@ -13630,8 +13630,32 @@ const TransportApp = ({ userProfileData }) => {
                     autoFocus: true,
                     value: shortcutEditModal.shortcut || '',
                     onChange: (e) => {
-                        const v = e.target.value.toLocaleUpperCase('sk-SK');
+                        const input = e.target;
+                        const selectionStart = input.selectionStart;
+                        const rawValue = input.value;
+                        const v = rawValue.toLocaleUpperCase('sk-SK');
                         setShortcutEditModal((prev) => prev ? { ...prev, shortcut: v } : prev);
+        
+                        // ============================================================
+                        // NOVÉ: Po zmene hodnoty (uppercase) obnov kurzor na správnu
+                        // pozíciu – tesne za práve zadaným znakom, NIE na koniec textu.
+                        //
+                        // Dôvod: React pri kontrolovanom inpute po setState nastaví
+                        // kurzor na koniec. Ak používateľ píše do stredu textu, kurzor
+                        // "skočí" na koniec. Preto po renderi explicitne nastavíme
+                        // selectionStart/selectionEnd na pôvodnú pozíciu.
+                        //
+                        // Ak sa dĺžka textu zmenila (napr. kvôli uppercase pre slovenské
+                        // znaky), upravíme pozíciu o rozdiel dĺžok.
+                        // ============================================================
+                        const lengthDelta = v.length - rawValue.length;
+                        const newPos = Math.max(0, selectionStart + lengthDelta);
+                        requestAnimationFrame(() => {
+                            try {
+                                input.setSelectionRange(newPos, newPos);
+                            } catch (err) { /* ignore */ }
+                        });
+        
                         // ============================================================
                         // NOVÉ: Live kontrola konfliktu – hneď po zadaní znaku
                         // over, či skratka neexistuje pre iný tím v tej istej
@@ -13733,11 +13757,11 @@ const TransportApp = ({ userProfileData }) => {
                         //  - cursor: not-allowed (disabled myš)
                         // ============================================================
                         const isBlocked = shortcutSaving || !!shortcutConflict;
-
+        
                         const baseCls = 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2';
                         const enabledCls = 'bg-orange-600 text-white hover:bg-orange-700';
                         const blockedCls = 'bg-white border-2 border-orange-600 text-orange-600 cursor-not-allowed';
-
+        
                         return React.createElement(
                             'button',
                             {
