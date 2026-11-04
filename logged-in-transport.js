@@ -9777,16 +9777,18 @@ const TransportApp = ({ userProfileData }) => {
                             // ============================================================
                             let routeLabel = null;
                             if (transferInfo) {
-                                if (t.intermediateStops && t.intermediateStops.length > 0) {
-                                    routeLabel = [t.fromLocation, ...t.intermediateStops, t.toLocation]
+                                const stopsIds = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
+                                if (stopsIds.length > 0) {
+                                    const routeIds = [t.fromId, ...stopsIds, t.toId].filter(Boolean);
+                                    routeLabel = routeIds
+                                        .map((id) => resolvePlaceNameById(id))
                                         .filter(Boolean)
                                         .join(' → ');
                                 } else {
                                     routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
                                 }
-                            } else if (t.fromLocation && t.toLocation) {
-                                // Fallback – ak sa z textu nedá parsovať, použi priamo from/to
-                                routeLabel = `${t.fromLocation} → ${t.toLocation}`;
+                            } else if (t.fromId && t.toId) {
+                                routeLabel = `${resolvePlaceNameById(t.fromId)} → ${resolvePlaceNameById(t.toId)}`;
                             }
     
                             // NOVÉ: informácia o pôvodnom presune
