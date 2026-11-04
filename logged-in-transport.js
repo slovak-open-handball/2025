@@ -3167,9 +3167,8 @@ const TransportApp = ({ userProfileData }) => {
         let unsubscribeTravelTimes = null;
         try {
             const ttRef = doc(window.db, 'settings', 'transportTravelTimes');
-            unsubscribeTravelTimes = onSnapshot(ttRef, (snap) => {                
+            unsubscribeTravelTimes = onSnapshot(ttRef, (snap) => {
                 const map = {};
-                console.log('[TRANSPORT][travelTimes] Načítané trvania:', Object.keys(map).length, map);
                 const transfers = [];
                 if (snap.exists()) {
                     const data = snap.data() || {};
@@ -3224,6 +3223,8 @@ const TransportApp = ({ userProfileData }) => {
                             })),
                         });
                     });
+
+                    console.log('[TRANSPORT][travelTimes] Načítané trvania:', Object.keys(map).length, map);
                 
                     // Dopočítaj teamName
                     const lookup = teamsLookupRef.current || {};
