@@ -7712,13 +7712,9 @@ const TransportApp = ({ userProfileData }) => {
         // (V `useEffect` pre detekciu sa používajú názvy `placeFrom`/`placeTo`.)
         // ============================================================
         const isMissingTravelTime = (fromStop, toStop) => {
-            const fromName = normalizePlaceName(fromStop?.name || '');
-            const toName = normalizePlaceName(toStop?.name || '');
-            if (!fromName || !toName) return false;
+            if (!fromStop?.id || !toStop?.id) return false;
             return missingTravelTimeWarning.some((m) => {
-                const mFrom = normalizePlaceName(m.from || '');
-                const mTo = normalizePlaceName(m.to || '');
-                return mFrom === fromName && mTo === toName;
+                return m.fromId === fromStop.id && m.toId === toStop.id;
             });
         };
     
