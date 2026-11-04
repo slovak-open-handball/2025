@@ -4220,9 +4220,13 @@ const TransportApp = ({ userProfileData }) => {
             }
     
             // ============================================================
-            // NOVÉ: Namiesto addDoc použijeme setDoc s novým doc() –
-            // aby sme mohli explicitne použiť deleteField() pre placeFrom /
-            // placeTo (názov). Tie sa do DB NESMÚ ukladať.
+            // NOVÉ: Pri vytváraní NOVÉHO dokumentu NEPOUŽÍVAME deleteField()
+            // (setDoc bez merge by vyhodil chybu).
+            //
+            // Namiesto toho polia placeFrom / placeTo (názov) jednoducho
+            // VYNECHÁME – setDoc ich nevytvorí, takže v DB nebudú.
+            //
+            // Ukladáme IBA ID: placeFromId / placeToId.
             // ============================================================
             const newRowRef = doc(collection(window.db, 'transport'));
             await setDoc(newRowRef, {
@@ -4235,11 +4239,9 @@ const TransportApp = ({ userProfileData }) => {
                 timeTo: '',
                 placeFromId: initialPlaceFromId,
                 placeToId: null,
-                // Explicitne vymaž názvy (ak by tam niekedy boli)
-                placeFrom: deleteField(),
-                placeTo: deleteField(),
                 teamsIn: [],
                 teamsOut: [],
+                // placeFrom a placeTo sa ZÁMERNE NEUVÁDZAJÚ
             });
             window.showGlobalNotification('Riadok pridaný.', 'success');
         } catch (err) {
@@ -4248,14 +4250,6 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
-    // ============================================================
-    // VLOŽENIE RIADKU MEDZI DVA EXISTUJÚCE RIADKY (hover "+" v medzere)
-    //
-    // Pravidlá pre zastávky:
-    //  - placeFrom = prevRow.placeTo
-    //  - placeTo   = nextRow.placeFrom
-    //  - ak sú placeFrom a placeTo rovnaké → použijú sa obe (placeFrom = placeTo)
-    // ============================================================
     const insertBusRowBetween = async (bus, dayKey, prevRow, nextRow) => {
         if (!window.db || !bus || !dayKey || !prevRow || !nextRow) return;
     
@@ -4297,9 +4291,9 @@ const TransportApp = ({ userProfileData }) => {
             await Promise.all(shiftPromises);
     
             // ============================================================
-            // NOVÉ: Namiesto addDoc použijeme setDoc s novým doc() –
-            // aby sme mohli explicitne použiť deleteField() pre placeFrom /
-            // placeTo (názov). Tie sa do DB NESMÚ ukladať.
+            // NOVÉ: Pri vytváraní NOVÉHO dokumentu NEPOUŽÍVAME deleteField().
+            // Polia placeFrom / placeTo jednoducho VYNECHÁME.
+            // Ukladáme IBA ID: placeFromId / placeToId.
             // ============================================================
             const newRowRef = doc(collection(window.db, 'transport'));
             await setDoc(newRowRef, {
@@ -4312,11 +4306,9 @@ const TransportApp = ({ userProfileData }) => {
                 timeTo: '',
                 placeFromId,
                 placeToId,
-                // Explicitne vymaž názvy (ak by tam niekedy boli)
-                placeFrom: deleteField(),
-                placeTo: deleteField(),
                 teamsIn: [],
                 teamsOut: [],
+                // placeFrom a placeTo sa ZÁMERNE NEUVÁDZAJÚ
             });
     
             window.showGlobalNotification('Riadok vložený medzi existujúce riadky.', 'success');
