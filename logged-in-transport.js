@@ -4202,39 +4202,25 @@ const TransportApp = ({ userProfileData }) => {
     
         Object.values(busRows).forEach((rows) => {
             (rows || []).forEach((row) => {
-                const placeFrom = row.placeFrom;
-                const placeTo = row.placeTo;
-                if (!placeFrom || !placeTo) return;
-    
-                // Zisti, či existuje trvanie (rovnaká logika ako getTravelMinutes)
-                let minutes = null;
-    
-                // 1) Priamo ID
-                const keyId = `${placeFrom}|${placeTo}`;
-                if (travelTimes[keyId] && travelTimes[keyId].minutes != null) {
-                    minutes = Number(travelTimes[keyId].minutes);
-                } else {
-                    // 2) Cez názvy → ID
-                    const fromStop = stopsList.find((s) => s.name === placeFrom || s.id === placeFrom);
-                    const toStop = stopsList.find((s) => s.name === placeTo || s.id === placeTo);
-                    if (fromStop && toStop) {
-                        const key = `${fromStop.id}|${toStop.id}`;
-                        if (travelTimes[key] && travelTimes[key].minutes != null) {
-                            minutes = Number(travelTimes[key].minutes);
-                        }
-                    }
-                }
-    
-                if (minutes != null) return; // trvanie existuje – OK
-    
-                // Chýba trvanie → pridaj do zoznamu (bez duplicitov)
-                const dedupKey = `${placeFrom}|${placeTo}`;
+                const placeFromId = row.placeFromId;
+                const placeToId = row.placeToId;
+                if (!placeFromId || !placeToId) return;
+        
+                // Presne rovnaká logika ako getTravelMinutes – cez ID
+                const key = `${placeFromId}|${placeToId}`;
+                const exists = travelTimes[key] && travelTimes[key].minutes != null;
+                if (exists) return;
+
+                // Chýba trvanie – pridaj do zoznamu
+                const dedupKey = `${placeFromId}|${placeToId}`;
                 if (seen.has(dedupKey)) return;
                 seen.add(dedupKey);
-    
+        
                 missing.push({
-                    from: placeFrom,
-                    to: placeTo,
+                    from: row.placeFrom || placeFromId,
+                    to: row.placeTo || placeToId,
+                    fromId: placeFromId,
+                    toId: placeToId,
                     rowId: row.id,
                 });
             });
