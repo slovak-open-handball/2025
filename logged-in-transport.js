@@ -4530,20 +4530,20 @@ const TransportApp = ({ userProfileData }) => {
     // ============================================================
     const resyncFollowingRowsAfterPlaceToChange = async (busId, dayKey, currentRowId) => {
         if (!window.db || !busId || !dayKey || !currentRowId) return;
-    
+
         const rowsKey = `${busId}|${dayKey}`;
         const allRows = (busRows[rowsKey] || [])
             .slice()
             .sort((a, b) => (a.order || 0) - (b.order || 0));
-    
+
         const currentIdx = allRows.findIndex((r) => r.id === currentRowId);
         if (currentIdx === -1) return;
-    
+
         const currentRow = allRows[currentIdx];
     
-        // Vypočítaj nový timeTo aktuálneho riadku (rovnaká logika ako v renderBusRow / useEffect)
-        const travelMinutes = getTravelMinutes(currentRow.placeFrom, currentRow.placeTo);
-        if (travelMinutes == null) return; // timeTo sa nedá vypočítať
+        // NOVÉ: Použi ID priamo – nie názvy
+        const travelMinutes = getTravelMinutes(currentRow.placeFromId, currentRow.placeToId);
+        if (travelMinutes == null) return;
         if (!currentRow.timeFrom || !/^\d{1,2}:\d{2}$/.test(currentRow.timeFrom)) return;
     
         const [ch, cm] = currentRow.timeFrom.split(':').map(Number);
@@ -4611,7 +4611,7 @@ const TransportApp = ({ userProfileData }) => {
             const newTimeFromStr = fromMinutes(newTimeFromMin);
     
             // Nový timeTo = nový timeFrom + travelMinutes aktuálneho riadku
-            const currTravelMinutes = getTravelMinutes(curr.placeFrom, curr.placeTo);
+            const currTravelMinutes = getTravelMinutes(curr.placeFromId, curr.placeToId);
             let newTimeToStr = curr.timeTo || '';
             let newEndMin = null;
     
@@ -4708,7 +4708,7 @@ const TransportApp = ({ userProfileData }) => {
             const newTimeFromStr = fromMinutes(newTimeFromMin);
     
             // Nový timeTo = nový timeFrom + travelMinutes
-            const currTravelMinutes = getTravelMinutes(curr.placeFrom, curr.placeTo);
+            const currTravelMinutes = getTravelMinutes(curr.placeFromId, curr.placeToId);
             let newTimeToStr = curr.timeTo || '';
             let newEndMin = null;
     
@@ -5445,7 +5445,7 @@ const TransportApp = ({ userProfileData }) => {
                         await updateBusRowField(row.id, 'timeFrom', newValue);
                     
                         let newTimeTo = null;
-                        const travelMinutes = getTravelMinutes(row.placeFrom, row.placeTo);
+                        const travelMinutes = getTravelMinutes(row.placeFromId, row.placeToId);
                         if (travelMinutes != null && /^\d{1,2}:\d{2}$/.test(newValue)) {
                             const [h, m] = newValue.split(':').map(Number);
                             let total = h * 60 + m + travelMinutes;
