@@ -7294,6 +7294,13 @@ const TransportApp = ({ userProfileData }) => {
     // TRVANIA JÁZDY
     // ============================================================
     const saveTravelTime = async (fromStop, toStop, rawValue) => {
+        console.log('[TRANSPORT][saveTravelTime] Volané:', {
+            fromStop: fromStop?.name,
+            fromId: fromStop?.id,
+            toStop: toStop?.name,
+            toId: toStop?.id,
+            rawValue,
+        });
         if (!window.db || !fromStop || !toStop) return;
     
         const key = `${fromStop.id}|${toStop.id}`;
@@ -7644,6 +7651,15 @@ const TransportApp = ({ userProfileData }) => {
             const raw = travelTimesDraft[key] != null ? travelTimesDraft[key] : '';
             const existing = travelTimes[key];
             const existingMinutes = existing ? String(existing.minutes) : '';
+
+            console.log('[TRANSPORT][handleBlur]', {
+                fromName: fromStop.name,
+                toName: toStop.name,
+                key,
+                raw,
+                existingMinutes,
+                skip: raw === existingMinutes,
+            });
     
             if (raw === existingMinutes) return;
     
