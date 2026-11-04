@@ -4304,25 +4304,18 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
-    // ============================================================
-    // AKTUALIZÁCIA POĽA RIADKU
-    // ============================================================
     const updateBusRowField = async (rowId, field, value) => {
         if (!window.db || !rowId) return;
         try {
             if (field === 'placeFrom' || field === 'placeTo') {
                 const idField = field === 'placeFrom' ? 'placeFromId' : 'placeToId';
                 const placeId = resolvePlaceIdByName(value) || (value ? value : null);
-    
-                // ============================================================
-                // NOVÉ: Po zmene miesta prepočítaj aj timeTo (ak sa dá).
-                // Potrebujeme aktuálny stav riadku – nájdeme ho v busRows.
-                // ============================================================
+
                 const patch = {
                     [idField]: placeId,
                     [field]: deleteField(),
                 };
-    
+
                 // Nájdi aktuálny riadok v busRows
                 let currentRow = null;
                 Object.values(busRows || {}).forEach((rows) => {
@@ -4330,16 +4323,14 @@ const TransportApp = ({ userProfileData }) => {
                     const found = (rows || []).find((r) => r.id === rowId);
                     if (found) currentRow = found;
                 });
-    
+
                 if (currentRow) {
-                    // Nové hodnoty placeFrom / placeTo (podľa toho, ktoré sa mení)
                     const newPlaceFrom = field === 'placeFrom' ? value : (currentRow.placeFrom || '');
                     const newPlaceTo = field === 'placeTo' ? value : (currentRow.placeTo || '');
-    
+
                     const travelMinutes = getTravelMinutes(newPlaceFrom, newPlaceTo);
                     const timeFrom = currentRow.timeFrom || '';
-    
-                    // Ak máme timeFrom aj travelMinutes → dopočítaj timeTo
+
                     if (travelMinutes != null && timeFrom && /^\d{1,2}:\d{2}$/.test(timeFrom)) {
                         const [h, m] = timeFrom.split(':').map(Number);
                         let total = h * 60 + m + travelMinutes;
@@ -4352,7 +4343,7 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     }
                 }
-    
+
                 await updateDoc(doc(window.db, 'transport', rowId), patch);
                 return;
             }
