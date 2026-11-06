@@ -8185,7 +8185,6 @@ const TransportApp = ({ userProfileData }) => {
                 return;
             }
 
-            // KROK 1: Reálne časy z autobusu
             const teamName = String(t.teamName || '').trim();
             const category = cleanCategory(t.category || '');
             const dayKey = t.dayKey || '';
@@ -8225,9 +8224,6 @@ const TransportApp = ({ userProfileData }) => {
                 let alightingTs = null;
 
                 allBusRowsForDay.forEach((row) => {
-                    // ============================================================
-                    // NOVÉ: Pracuj VÝHRADNE s ID.
-                    // ============================================================
                     const rowFromId = row.placeFromId || null;
                     const rowToId = row.placeToId || null;
                     const hasTeamIn = matchesTeam(row.teamsIn);
@@ -8264,12 +8260,8 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
 
-            // ============================================================
-            // KROK 2: Vypočítaj časy
-            // ============================================================
             const finalTimes = new Array(routeIds.length - 1).fill(null);
 
-            // 1) Plne vyriešené segmenty (máme nástup aj výstup)
             for (let i = 0; i < routeIds.length - 1; i++) {
                 const rt = segmentRealTimes[i];
                 if (rt && rt.startTs != null && rt.endTs != null) {
@@ -8278,7 +8270,6 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
 
-            // 2) Čiastočne vyriešené segmenty (máme len nástup alebo len výstup)
             for (let i = 0; i < routeIds.length - 1; i++) {
                 if (finalTimes[i]) continue;
                 const rt = segmentRealTimes[i];
@@ -8289,15 +8280,11 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
 
-            // 3) Plne nevyriešené segmenty → ŽIADNY ČAS (null)
             for (let i = 0; i < routeIds.length - 1; i++) {
                 if (finalTimes[i]) continue;
                 finalTimes[i] = { startTs: null, endTs: null };
             }
 
-            // ============================================================
-            // KROK 3: Vytvor segmenty
-            // ============================================================
             for (let i = 0; i < routeIds.length - 1; i++) {
                 const ft = finalTimes[i];
                 if (!ft) continue;
@@ -8306,10 +8293,6 @@ const TransportApp = ({ userProfileData }) => {
                 const toId = routeIds[i + 1];
                 if (fromId === toId) continue;
 
-                // ============================================================
-                // NOVÉ: Zisti, či je TENTO konkrétny segment označený ako peši
-                // v parent.segments (porovnávame VÝHRADNE cez ID).
-                // ============================================================
                 const parentSegmentForThisIdx = (() => {
                     if (!Array.isArray(t.segments)) return null;
                     return t.segments.find(
@@ -8321,7 +8304,6 @@ const TransportApp = ({ userProfileData }) => {
                     (parentSegmentForThisIdx && parentSegmentForThisIdx.isWalking === true) ||
                     t.isWalking === true;
 
-                // Pešie segmenty patria do boxu "Peši" – NEPRIDÁVAJ ich sem.
                 if (isSegmentWalking) {
                     continue;
                 }
@@ -8361,9 +8343,6 @@ const TransportApp = ({ userProfileData }) => {
                     key,
                     when: whenStr,
                     text,
-                    // ============================================================
-                    // NOVÉ: Ukladaj VÝHRADNE ID (fromId / toId).
-                    // ============================================================
                     fromId: fromId,
                     toId: toId,
                     intermediateStopIds: [],
@@ -8377,12 +8356,6 @@ const TransportApp = ({ userProfileData }) => {
             }
         });
     
-        // ============================================================
-        // NOVÉ: Zisti, ktoré parent bloky sú ÚPLNE priradené
-        // (všetky ich segmenty sú priradené alebo peši).
-        //
-        // Porovnávame VÝHRADNE cez ID (intermediateStopIds).
-        // ============================================================
         const fullyAssignedParentKeys = new Set();
 
         const parentKeysInExpanded = new Set();
@@ -8404,18 +8377,9 @@ const TransportApp = ({ userProfileData }) => {
         });
 
         const baseFiltered = expandedTransfers.filter((t) => {
-            // Pešie segmenty patria do boxu "Peši"
             if (t.isWalking === true) return false;
 
             if (t._parentKey) {
-                // ============================================================
-                // Pre segmenty parenta:
-                //  - Ak je segment označený ako walking → patrí do boxu "Peši".
-                //  - Ak je segment SKUTOČNE priradený k busu → skry ho.
-                //  - Ak je parent úplne priradený → skry ho.
-                //
-                // findSegmentIndex pracuje VÝHRADNE s ID.
-                // ============================================================
                 const parent = savedTransfers.find((s) => s.key === t._parentKey);
                 if (parent && Array.isArray(parent.segments)) {
                     const segIdx = findSegmentIndex(parent.segments, t.fromId, t.toId);
@@ -8432,12 +8396,6 @@ const TransportApp = ({ userProfileData }) => {
                 if (t._parentKey && fullyAssignedParentKeys.has(t._parentKey)) return false;
                 return true;
             }
-
-            // ============================================================
-            // Pre samostatné (non-segment) presuny.
-            //
-            // findSegmentIndex pracuje VÝHRADNE s ID.
-            // ============================================================
             const parentRec = savedTransfers.find((s) => s.key === t.key);
             if (parentRec && Array.isArray(parentRec.segments)) {
                 const segIdx = findSegmentIndex(parentRec.segments, t.fromId, t.toId);
@@ -8448,33 +8406,17 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 }
             }
-
             if (isSegmentAssigned(t)) return false;
-
             if (t._remainingMinutes != null && t._remainingMinutes <= 0) {
                 return false;
             }
             return true;
-        });
-        
-        // ============================================================
-        // Výber prvého segmentu z každého parent bloku
-        //
-        // JEDINÁ priorita: NAJMENŠÍ INDEX segmentu v parent.segments
-        // (t.j. najskorší segment v poradí trasy).
-        //
-        // findSegmentIndex pracuje VÝHRADNE s ID.
-        // ============================================================
+        });        
         const firstSegmentPerParent = new Map();
-
-        // Pomocná: získa index segmentu (fromId → toId) v parent.segments
         const getParentSegmentIndex = (t) => {
             if (!t._parentKey) return Number.POSITIVE_INFINITY;
             const parent = savedTransfers.find((s) => s.key === t._parentKey);
             if (!parent || !Array.isArray(parent.segments)) return Number.POSITIVE_INFINITY;
-            // ============================================================
-            // NOVÉ: Pracuj VÝHRADNE s ID.
-            // ============================================================
             const idx = findSegmentIndex(parent.segments, t.fromId, t.toId);
             return idx === -1 ? Number.POSITIVE_INFINITY : idx;
         };
@@ -8483,16 +8425,12 @@ const TransportApp = ({ userProfileData }) => {
             const blockKey = t._parentKey
                 ? `${t._parentKey}||${cleanCategory(t.category || '')}||${String(t.teamName || '').trim()}`
                 : `solo||${t.key}`;
-
             const segmentIdx = getParentSegmentIndex(t);
-
             const existing = firstSegmentPerParent.get(blockKey);
             if (!existing) {
                 firstSegmentPerParent.set(blockKey, { segment: t, segmentIdx });
                 return;
             }
-
-            // Jediná priorita: najmenší index segmentu v parent.segments
             if (segmentIdx < existing.segmentIdx) {
                 firstSegmentPerParent.set(blockKey, { segment: t, segmentIdx });
             }
@@ -8507,16 +8445,6 @@ const TransportApp = ({ userProfileData }) => {
 
         const baseFilteredFirstOnly = baseFilteredFirstOnlyRaw.map((t) => {
             if (!t._parentKey) return t;
-
-            // ============================================================
-            // NOVÉ: Použi spoločnú pomocnú funkciu na výpočet provizórneho
-            // intervalu. Tá istá funkcia sa používa aj vo findMatchingBusRows,
-            // takže zobrazený čas a čas použitý pri hľadaní autobusov sú
-            // IDENTICKÉ.
-            //
-            // computeProvisionalSegmentRange pracuje VÝHRADNE s ID
-            // (t.fromId / t.toId).
-            // ============================================================
             const provisional = computeProvisionalSegmentRange(t);
             if (!provisional) {
                 return {
@@ -8525,9 +8453,7 @@ const TransportApp = ({ userProfileData }) => {
                     _remainingMinutes: null,
                 };
             }
-
             const provisionalWhenStr = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
-
             return {
                 ...t,
                 when: provisionalWhenStr,
@@ -8540,7 +8466,6 @@ const TransportApp = ({ userProfileData }) => {
             ? baseFilteredFirstOnly.filter((t) => t._parentKey && t._parentRoute)
             : baseFilteredFirstOnly;
         
-        // Zoradenie
         const buildStartSortKey = (t) => {
             const r = parseWhenRangeFull(t.when);
             const dayKey = r ? r.startDayKey : (t.dayKey || '');
@@ -8601,10 +8526,6 @@ const TransportApp = ({ userProfileData }) => {
                     `${filtered.length}`
                 )
             ),
-            // ============================================================
-            // NOVÉ: Checkbox – zobraziť iba presuny s textom "časť presunu"
-            // (umiestnený POD hlavičkou boxu)
-            // ============================================================
             React.createElement(
                 'div',
                 { className: 'px-3 pt-2 pb-1 border-b border-gray-100 flex items-center justify-end' },
@@ -8653,19 +8574,7 @@ const TransportApp = ({ userProfileData }) => {
                                     : `${rangeInfo.startLabel} – ${rangeInfo.endLabel}`;
                             } else if (t.dayKey) {
                                 dateLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
-                            }
-    
-                            // ============================================================
-                            // Zobraz čas vždy, keď ho máme. Fallback:
-                            //  1) ak `rangeInfo` má čas → "HH:MM – HH:MM"
-                            //  2) ak `t.when` je neprázdny string → zobraz ho priamo
-                            //  3) ak `t.segments` majú reálne časy → poskladaj z nich
-                            //  4) NOVÉ: ak je to segment (má `_parentKey`), skús `when` parenta
-                            //     – ale zobraz IBA ČAS (HH:MM – HH:MM), bez dátumu
-                            //  5) ak máme len `dayKey` → "DD. MM. YYYY (čas neurčený)"
-                            // ============================================================
-                            
-                            // Pomocná: z ľubovoľného "when" stringu vytiahne iba časy "HH:MM – HH:MM"
+                            }                            
                             const extractTimesOnly = (whenStr) => {
                                 if (!whenStr) return null;
                                 const s = String(whenStr);
@@ -8680,37 +8589,18 @@ const TransportApp = ({ userProfileData }) => {
                                 if (times.length === 0) return null;
                                 if (times.length === 1) return times[0];
                                 return `${times[0]} – ${times[1]}`;
-                            };
-                            
+                            };                            
                             let timeLabel = null;
-
-                            // ============================================================
-                            // NOVÉ: Pre segmenty (majú `_parentKey`) zobrazuj čas
-                            // PRIORITNE zo segmentu v parent zázname:
-                            //  1) Ak segment má reálne časy (busAssigned + startTs/endTs),
-                            //     zobraz čas nástupu → čas výstupu z busu.
-                            //  2) Inak skús PROVIZÓRNY interval (čas od konca
-                            //     predchádzajúceho priradeného segmentu po začiatok
-                            //     nasledujúceho priradeného segmentu).
-                            //  3) Inak žiadny čas.
-                            //
-                            // Tým sa zabezpečí, že sa v boxe NEZOBRAZUJE celkový čas
-                            // parenta pre nepriradený segment, ale skutočný čas
-                            // segmentu alebo provizórny interval.
-                            // ============================================================
                             if (t._parentKey) {
                                 const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
                                 const segFromId = t.fromId || null;
                                 const segToId = t.toId || null;
-
                                 const parentSeg = (() => {
                                     if (!parentRec || !Array.isArray(parentRec.segments)) return null;
                                     if (!segFromId || !segToId) return null;
                                     const idx = findSegmentIndex(parentRec.segments, segFromId, segToId);
                                     return idx !== -1 ? parentRec.segments[idx] : null;
                                 })();
-
-                                // 1) Reálne časy z busu (segment je priradený)
                                 if (parentSeg && parentSeg.busId && parentSeg.boardingRowId && parentSeg.alightingRowId
                                     && parentSeg.startTs != null && parentSeg.endTs != null && parentSeg.endTs > parentSeg.startTs) {
                                     const startFmt = formatTsLocal(parentSeg.startTs);
@@ -8721,8 +8611,6 @@ const TransportApp = ({ userProfileData }) => {
                                     else if (startTime) timeLabel = startTime;
                                     else if (endTime) timeLabel = endTime;
                                 }
-
-                                // 2) Provizórny interval (segment nie je priradený)
                                 if (!timeLabel) {
                                     const provisional = computeProvisionalSegmentRange(t);
                                     if (provisional) {
@@ -8735,13 +8623,7 @@ const TransportApp = ({ userProfileData }) => {
                                         else if (endTime) timeLabel = endTime;
                                     }
                                 }
-
-                                // 3) Ak stále nemáme čas, žiadny čas (nezobrazuj celkový čas parenta)
                             } else {
-                                // ============================================================
-                                // Pre NESEGMENTOVÉ presuny (bez `_parentKey`) zostáva
-                                // pôvodná logika – zobraz `when` z parenta / segmentov.
-                                // ============================================================
                                 if (rangeInfo && (rangeInfo.startTime || rangeInfo.endTime)) {
                                     const st = rangeInfo.startTime;
                                     const et = rangeInfo.endTime;
@@ -8770,16 +8652,10 @@ const TransportApp = ({ userProfileData }) => {
                                     else if (endTime) timeLabel = endTime;
                                 }
                             }
-
                             if (!timeLabel && t.dayKey) {
                                 const dayLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
                                 timeLabel = `${dayLabel} (čas neurčený)`;
                             }
-
-                            // ============================================================
-                            // NOVÉ: routeLabel – zostav z `transferInfo` alebo z parent route
-                            // (musí byť definované, inak render padá na ReferenceError)
-                            // ============================================================
                             let routeLabel = null;
                             if (transferInfo) {
                                 const stopsIds = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
@@ -8794,14 +8670,10 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                             } else if (t.fromId && t.toId) {
                                 routeLabel = `${resolvePlaceNameById(t.fromId)} → ${resolvePlaceNameById(t.toId)}`;
-                            }
-    
-                            // NOVÉ: informácia o pôvodnom presune
+                            }    
                             const parentInfoLabel = t._parentKey && t._parentRoute
                                 ? `časť presunu ${t._parentRoute}`
-                                : null;
-    
-                            // NOVÉ: zvyšný čas na presun (len pre segmenty s reálnym časom)
+                                : null;    
                             const remainingLabel = (t._remainingMinutes != null && t._remainingMinutes > 0)
                                 ? `zvyšný čas na presun: ${t._remainingMinutes} min`
                                 : null;
@@ -8824,7 +8696,6 @@ const TransportApp = ({ userProfileData }) => {
                                         ...(boxBg ? { backgroundColor: boxBg } : {}),
                                     }
                                 },
-                                // 1. riadok – KATEGÓRIA • TÍM
                                 (() => {
                                     const counts = getTeamCountsForTransfer(t.category, t.teamName);
                                     const totalMembers = counts
@@ -8842,11 +8713,9 @@ const TransportApp = ({ userProfileData }) => {
                                             valueText = `${avg}`;
                                             displayTitle = `Priemer členov tímu v kategórii ${t.category} (zaokrúhlené nahor)`;
                                         }
-                                    }
-    
+                                    }    
                                     const teamLabel = t.teamName || '(neznámy tím)';
-                                    const fullText = valueText ? `${teamLabel} ● ${valueText} členov` : teamLabel;
-    
+                                    const fullText = valueText ? `${teamLabel} ● ${valueText} členov` : teamLabel;    
                                     return React.createElement(
                                         'span',
                                         {
@@ -8857,35 +8726,30 @@ const TransportApp = ({ userProfileData }) => {
                                         fullText
                                     );
                                 })(),
-                                // 2. riadok – dátum
                                 dateLabel &&
                                     React.createElement(
                                         'span',
                                         { className: 'text-sm text-gray-500' },
                                         dateLabel
                                     ),
-                                // 3. riadok – čas
                                 timeLabel &&
                                     React.createElement(
                                         'span',
                                         { className: 'text-sm text-gray-600' },
                                         timeLabel
                                     ),
-                                // 4. riadok – miesta
                                 routeLabel &&
                                     React.createElement(
                                         'span',
                                         { className: 'text-sm text-gray-900 font-medium' },
                                         routeLabel
                                     ),
-                                // 5. riadok – informácia o pôvodnom presune
                                 parentInfoLabel &&
                                     React.createElement(
                                         'span',
                                         { className: 'text-sm text-violet-600 italic mt-0.5 inline-flex items-center gap-1' },
                                         parentInfoLabel
                                     ),
-                                // 6. riadok – NOVÉ: zvyšný čas na presun
                                 remainingLabel &&
                                     React.createElement(
                                         'span',
@@ -8893,7 +8757,6 @@ const TransportApp = ({ userProfileData }) => {
                                         React.createElement('i', { className: 'fa-solid fa-hourglass-half' }),
                                         remainingLabel
                                     ),
-                                // 7. riadok – príznak "peši"
                                 t.isWalking === true &&
                                     React.createElement(
                                         'span',
@@ -8901,8 +8764,6 @@ const TransportApp = ({ userProfileData }) => {
                                         React.createElement('i', { className: 'fa-solid fa-person-walking' }),
                                         'PEŠI'
                                     ),
-                                // NOVÉ: ikona koša vpravo – odstráni len tento konkrétny presun
-                                // (rovnaký štýl ako v hlavičke busu, keď je tlačidlo odblokované)
                                 React.createElement(
                                     'button',
                                     {
@@ -8916,7 +8777,6 @@ const TransportApp = ({ userProfileData }) => {
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-trash' })
                                 ),
-                                // Fallback
                                 (!dateLabel && !timeLabel && !routeLabel) &&
                                     React.createElement(
                                         'span',
@@ -8935,34 +8795,20 @@ const TransportApp = ({ userProfileData }) => {
         );
     };
 
-    // ============================================================
-    // Získa zoznam udalostí pre daný tím + doplní vygenerované presuny
-    // ROZLOŽENÉ NA SEGMENTY (pre modálne okno „Vytvoriť vlastný presun").
-    //
-    // Pracuje VÝHRADNE s ID. Názvy miest sa používajú len pre zobrazenie
-    // v UI (odvodené z resolvePlaceNameById).
-    // ============================================================
     const getTeamEventsForCustomTransfer = (category, teamName) => {
         if (!category || !teamName) return [];
-
         const cat = cleanCategory(category);
         const name = String(teamName || '').trim();
-
-        // Zber udalostí z matchesBufferRef
         const events = [];
-
-        // 1) Zápasy
         (matchesBufferRef.current || []).forEach((m) => {
             if (cleanCategory(m.category) !== cat) return;
             if (m.home !== name && m.away !== name) return;
-
             const startTs = m.scheduledTs ?? null;
             const endTs = m.scheduledEndTs ?? startTs;
             const timeRange = m.scheduledTime
                 ? (m.scheduledEndTime ? `${m.scheduledTime} – ${m.scheduledEndTime}` : m.scheduledTime)
                 : 'nenaplánované';
             const text = `${m.home} vs ${m.away}${m.special}${m.hallName ? ` | ${m.hallName}` : ''}`;
-
             events.push({
                 ts: m.scheduledTs ?? Number.POSITIVE_INFINITY,
                 startTs,
@@ -8974,7 +8820,6 @@ const TransportApp = ({ userProfileData }) => {
             });
         });
 
-        // 2) Stravovania
         (cateringBufferRef.current || []).forEach((c) => {
             if (cleanCategory(c.category) !== cat) return;
             if (c.teamName !== name) return;
@@ -8999,7 +8844,6 @@ const TransportApp = ({ userProfileData }) => {
             });
         });
 
-        // 3) Ubytovanie + príchod (z teamsArrivalBufferRef)
         const teamInfo = (teamsArrivalBufferRef.current || []).find(
             (t) => cleanCategory(t.category) === cat && t.teamName === name
         );
@@ -9017,66 +8861,35 @@ const TransportApp = ({ userProfileData }) => {
                 });
             }
         }
-
-        // ============================================================
-        // NOVÉ: Doplniť vygenerované presuny ROZLOŽENÉ NA SEGMENTY.
-        //
-        // Pre každý parent záznam:
-        //  - pracuj VÝHRADNE s ID (t.fromId, t.toId, t.intermediateStopIds)
-        //  - pre každý segment (fromId → toId):
-        //      * ak je isWalking → "PEŠI"
-        //      * ak je busAssigned (má startTs/endTs a busId) → "Bus X" + čas
-        //      * inak → "nepriradený"
-        //  - názvy sa používajú len pre zobrazenie v UI
-        // ============================================================
         (savedTransfersRef.current || []).forEach((t) => {
             if (cleanCategory(t.category || '') !== cat) return;
             if (String(t.teamName || '').trim() !== name) return;
-            // Len parent záznamy (nie segmenty)
             if (t._parentKey && t._parentKey !== t.key) return;
-
             const stopsIds = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
-
-            // ============================================================
-            // NOVÉ: Pracuj VÝHRADNE s ID.
-            // ============================================================
             const routeIdsRaw = [t.fromId, ...stopsIds, t.toId].filter(Boolean);
             const routeIds = [];
             routeIdsRaw.forEach((id) => {
                 if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
             });
             if (routeIds.length < 2) return;
-
             const parentSegments = Array.isArray(t.segments) ? t.segments : [];
             const parentWhenRange = parseTransferWhenToRange(t.when);
-
-            // Názvy pre zobrazenie v UI (tooltip "všetky miesta trasy")
             const parentRoutePlaces = routeIds.map((id) => resolvePlaceNameById(id));
-
-            // Pre každý segment (fromId → toId)
             for (let i = 0; i < routeIds.length - 1; i++) {
                 const fromId = routeIds[i];
                 const toId = routeIds[i + 1];
                 if (fromId === toId) continue;
-
-                // ============================================================
-                // NOVÉ: findSegmentIndex pracuje VÝHRADNE s ID.
-                // ============================================================
                 const segIdx = findSegmentIndex(parentSegments, fromId, toId);
                 const seg = segIdx !== -1 ? parentSegments[segIdx] : null;
-
                 const isWalking = !!(seg && seg.isWalking === true);
                 const hasRealTimes = !!(seg && seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs);
                 const busId = seg && seg.busId ? String(seg.busId) : null;
                 const busName = busId
                     ? (buses.find((b) => b.id === busId)?.name || `Bus ${busId}`)
                     : null;
-
-                // Zisti čas pre tento segment
                 let startTs = null;
                 let endTs = null;
                 let timeLabel = '';
-
                 if (isWalking) {
                     timeLabel = 'PEŠI';
                 } else if (hasRealTimes) {
@@ -9086,7 +8899,6 @@ const TransportApp = ({ userProfileData }) => {
                     const endTime = /(\d{2}:\d{2})$/.exec(formatTsLocal(endTs) || '')?.[1] || '';
                     timeLabel = `${startTime} – ${endTime}`;
                 } else {
-                    // Nepriradený segment – skús provizórny interval
                     try {
                         const provisional = computeProvisionalSegmentRange({
                             ...t,
@@ -9104,8 +8916,6 @@ const TransportApp = ({ userProfileData }) => {
                     } catch (e) { /* ignore */ }
                     if (!timeLabel) timeLabel = 'nepriradený';
                 }
-
-                // Zisti dayKey pre zoskupenie
                 let dayKey = t.dayKey || null;
                 if (!dayKey) {
                     if (startTs != null) {
@@ -9124,16 +8934,12 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     }
                 }
-
                 const sortTs = startTs != null
                     ? startTs
                     : (parentWhenRange && parentWhenRange.startTs != null ? parentWhenRange.startTs : Number.POSITIVE_INFINITY);
-
-                // Názvy len pre zobrazenie
                 const fromName = resolvePlaceNameById(fromId);
                 const toName = resolvePlaceNameById(toId);
                 const routeLabel = `${fromName} → ${toName}`;
-
                 events.push({
                     ts: sortTs,
                     startTs: startTs,
@@ -9142,16 +8948,12 @@ const TransportApp = ({ userProfileData }) => {
                     type: 'transfer',
                     text: `Presun: ${routeLabel}${busName ? ` (${busName})` : ''}`,
                     location: null,
-                    // ============================================================
-                    // NOVÉ: Pracuj VÝHRADNE s ID.
-                    // ============================================================
                     _isAssigned: hasRealTimes,
                     _isWalking: isWalking,
                     _busName: busName,
                     _routeLabel: routeLabel,
                     _fromId: fromId,
                     _toId: toId,
-                    // Názvy pre zobrazenie
                     _fromLocation: fromName,
                     _toLocation: toName,
                     _dayKey: dayKey,
@@ -9160,8 +8962,6 @@ const TransportApp = ({ userProfileData }) => {
                 });
             }
         });
-
-        // Zoraď podľa ts
         events.sort((a, b) => {
             if (a.ts !== b.ts) return a.ts - b.ts;
             return String(a.text).localeCompare(String(b.text), 'sk');
@@ -9169,32 +8969,13 @@ const TransportApp = ({ userProfileData }) => {
 
         return events;
     };
-
-    // ============================================================
-    // RENDER – box pre pešie presuny (zobrazí sa vedľa autobusov)
-    //
-    // Pracuje VÝHRADNE s ID. Názvy miest sa používajú len pre
-    // zobrazenie (odvodené z resolvePlaceNameById).
-    // ============================================================
     const renderWalkingTransfersBox = () => {
-        // ============================================================
-        // 1) ZBER PEŠÍCH SEGMENTOV Z PARENT ZÁZNAMOV
-        // ============================================================
         const walkingTransfers = [];
-
         savedTransfers.forEach((t) => {
             if (selectedDayKey && t.dayKey !== selectedDayKey) return;
             if (selectedCategoryFilter && cleanCategory(t.category || '') !== cleanCategory(selectedCategoryFilter)) return;
-
-            // ============================================================
-            // NOVÉ: Pracuj VÝHRADNE s ID.
-            // ============================================================
             const stopsIds = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
             const segments = Array.isArray(t.segments) ? t.segments : [];
-
-            // ------------------------------------------------------------
-            // A) Celý parent je walking (bez medzizastávok)
-            // ------------------------------------------------------------
             if (t.isWalking === true && stopsIds.length === 0) {
                 walkingTransfers.push({
                     ...t,
@@ -9206,37 +8987,24 @@ const TransportApp = ({ userProfileData }) => {
                 });
                 return;
             }
-
-            // ------------------------------------------------------------
-            // B) Parent s medzizastávkami – rozlož na walking segmenty
-            // ------------------------------------------------------------
             if (stopsIds.length > 0 && segments.length > 0) {
-                // ============================================================
-                // NOVÉ: Zostav routeIds VÝHRADNE z ID.
-                // ============================================================
                 const routeIdsRaw = [t.fromId, ...stopsIds, t.toId].filter(Boolean);
                 const routeIds = [];
                 routeIdsRaw.forEach((id) => {
                     if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
                 });
-
-                // Prejdi segments a nájdi walking
                 segments.forEach((seg, segIdx) => {
                     if (seg.isWalking !== true) return;
                     if (segIdx < 0 || segIdx >= routeIds.length - 1) return;
-
                     const fromId = routeIds[segIdx];
                     const toId = routeIds[segIdx + 1];
-
                     const fromName = resolvePlaceNameById(fromId);
                     const toName = resolvePlaceNameById(toId);
-
                     walkingTransfers.push({
                         ...t,
                         key: `${t.key}||walking||${segIdx}`,
                         fromId: fromId,
                         toId: toId,
-                        // Názvy len pre zobrazenie
                         fromLocation: fromName,
                         toLocation: toName,
                         text: `Presun z ${fromName} do ${toName}`,
@@ -9253,12 +9021,6 @@ const TransportApp = ({ userProfileData }) => {
                 });
             }
         });
-
-        // ============================================================
-        // 2) POMOCNÉ FUNKCIE
-        // ============================================================
-
-        // Parsovanie textu "Presun z X do Y" (pre zobrazenie)
         const parseTransferText = (text) => {
             if (!text) return null;
             const m = /^Presun z (.+?) do (.+)$/.exec(String(text).trim());
@@ -9273,8 +9035,6 @@ const TransportApp = ({ userProfileData }) => {
                 to: normalizePlace(m[2].trim()),
             };
         };
-
-        // Získa názov dňa z dayKey (napr. "Piatok")
         const getDayNameFromDayKey = (dayKey) => {
             if (!dayKey) return '';
             const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
@@ -9283,11 +9043,7 @@ const TransportApp = ({ userProfileData }) => {
             if (isNaN(d.getTime())) return '';
             return d.toLocaleDateString('sk-SK', { weekday: 'long' });
         };
-
         const enrichedWalking = walkingTransfers.map((t) => {
-            // ------------------------------------------------------------
-            // A) Celý parent walking (bez medzizastávok)
-            // ------------------------------------------------------------
             if (!t._parentKey) {
                 const parentRec = savedTransfers.find((s) => s.key === t.key) || t;
 
@@ -9343,10 +9099,6 @@ const TransportApp = ({ userProfileData }) => {
                     _hasAnyBus: true,
                 };
             }
-
-            // ------------------------------------------------------------
-            // B) Walking segment z parenta s medzizastávkami
-            // ------------------------------------------------------------
             const parentKey = t._parentKey;
             const parent = savedTransfers.find((s) => s.key === parentKey);
 
@@ -9360,16 +9112,9 @@ const TransportApp = ({ userProfileData }) => {
                     _hasAnyBus: false,
                 };
             }
-
             const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
             const segmentIndex = t._segmentIndex;
-
             const parentRange = (() => {
-                // ============================================================
-                // NOVÉ: Primárne použi reálne časy segmentov (startTs/endTs).
-                // Tým sa zabezpečí, že po zmene času busu sa zobrazí nový čas
-                // aj keď parent.when ešte nebol aktualizovaný.
-                // ============================================================
                 let earliestStart = null;
                 let latestEnd = null;
                 parentSegments.forEach((s) => {
@@ -9383,14 +9128,12 @@ const TransportApp = ({ userProfileData }) => {
                 if (earliestStart != null && latestEnd != null) {
                     return { startTs: earliestStart, endTs: latestEnd };
                 }
-                // Fallback na parent.when
                 const parsed = parseWhenRangeToTs(parent.when);
                 if (parsed && parsed.startTs != null && parsed.endTs != null) {
                     return { startTs: parsed.startTs, endTs: parsed.endTs };
                 }
                 return null;
             })();
-
             let prevSegmentEndTs = null;
             for (let i = segmentIndex - 1; i >= 0; i--) {
                 const seg = parentSegments[i];
@@ -9404,7 +9147,6 @@ const TransportApp = ({ userProfileData }) => {
                     break;
                 }
             }
-
             let nextSegmentStartTs = null;
             for (let i = segmentIndex + 1; i < parentSegments.length; i++) {
                 const seg = parentSegments[i];
@@ -9418,16 +9160,12 @@ const TransportApp = ({ userProfileData }) => {
                     break;
                 }
             }
-
             const parentStartTs = parentRange && parentRange.startTs != null ? parentRange.startTs : null;
             const parentEndTs = parentRange && parentRange.endTs != null ? parentRange.endTs : null;
-
             const isFirstWalkingSegment = prevSegmentEndTs == null && parentStartTs != null;
             const isLastWalkingSegment = nextSegmentStartTs == null && parentEndTs != null;
-
             let displayStartTs = null;
             let displayEndTs = null;
-
             if (isFirstWalkingSegment) {
                 displayStartTs = parentStartTs;
             } else if (prevSegmentEndTs != null) {
@@ -9435,7 +9173,6 @@ const TransportApp = ({ userProfileData }) => {
             } else if (parentStartTs != null) {
                 displayStartTs = parentStartTs;
             }
-
             if (isLastWalkingSegment) {
                 displayEndTs = parentEndTs;
             } else if (nextSegmentStartTs != null) {
@@ -9443,7 +9180,6 @@ const TransportApp = ({ userProfileData }) => {
             } else if (parentEndTs != null) {
                 displayEndTs = parentEndTs;
             }
-
             if (
                 parentSegments.length === 1 &&
                 parentStartTs != null &&
@@ -9452,7 +9188,6 @@ const TransportApp = ({ userProfileData }) => {
                 displayStartTs = parentStartTs;
                 displayEndTs = parentEndTs;
             }
-
             let whenStr = null;
             if (displayStartTs != null && displayEndTs != null) {
                 whenStr = `${formatTsLocal(displayStartTs)} – ${formatTsLocal(displayEndTs)}`;
@@ -9461,7 +9196,6 @@ const TransportApp = ({ userProfileData }) => {
             } else if (displayEndTs != null) {
                 whenStr = formatTsLocal(displayEndTs);
             }
-
             let remainingMinutes = null;
             if (
                 displayStartTs != null &&
@@ -9470,7 +9204,6 @@ const TransportApp = ({ userProfileData }) => {
             ) {
                 remainingMinutes = Math.round((displayEndTs - displayStartTs) / 60000);
             }
-
             return {
                 ...t,
                 when: whenStr,
@@ -9480,9 +9213,7 @@ const TransportApp = ({ userProfileData }) => {
                 _hasAnyBus: true,
             };
         });
-
         const filteredWalking = enrichedWalking;
-
         const sorted = [...filteredWalking].sort((a, b) => {
             const aStart = a._displayStartTs != null ? a._displayStartTs : Number.POSITIVE_INFINITY;
             const bStart = b._displayStartTs != null ? b._displayStartTs : Number.POSITIVE_INFINITY;
@@ -9492,10 +9223,6 @@ const TransportApp = ({ userProfileData }) => {
             const bTeam = String(b.teamName || '');
             return aTeam.localeCompare(bTeam, 'sk', { sensitivity: 'base' });
         });
-
-        // ============================================================
-        // 6) RENDER
-        // ============================================================
         return React.createElement(
             'div',
             {
@@ -9625,14 +9352,10 @@ const TransportApp = ({ userProfileData }) => {
                                             const endTimeMatch = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt) : null;
                                             if (endTimeMatch) timeTo = endTimeMatch[1];
                                         }
-
-                                        // Názvy pre zobrazenie (odvodené z ID)
                                         const placeFrom = info?.from || t._displayFromLocation || '';
                                         const placeTo = info?.to || t._displayToLocation || '';
                                         const textColor = getCategoryTextColor(t.category);
-
                                         const remainingMinutes = t._displayRemainingMinutes;
-
                                         elements.push(
                                             React.createElement(
                                                 'tr',
@@ -9702,15 +9425,10 @@ const TransportApp = ({ userProfileData }) => {
                     )
                 )
         );
-    };
-    
-    // ============================================================
-    // HLAVNÝ RENDER
-    // ============================================================
+    };    
     return React.createElement(
         'div',
         { className: 'w-full flex-1 flex flex-col' },
-        // === ČERVENÝ PÁSIK – CHÝBAJÚCE TRVANIE JÁZDY ===
         missingTravelTimeWarning.length > 0 &&
             React.createElement(
                 'div',
@@ -9747,7 +9465,6 @@ const TransportApp = ({ userProfileData }) => {
                     )
                 )
             ),
-        // === PÔVODNÝ OBSAH (bez ďalšieho obalenia) ===
         React.createElement(
             'div',
             {
@@ -9788,12 +9505,9 @@ const TransportApp = ({ userProfileData }) => {
                     'Nastavenia'
                 )
             ),
-            // === SELECTBOXY (AUTOBUS, KATEGÓRIA, DEŇ) – len v režime Plánovanie ===
             activeView === 'planovanie' && React.createElement(
                 'div',
-                { className: 'w-full flex flex-wrap items-center justify-center gap-3 mb-6' },
-            
-                // === 1. SELECTBOX PRE AUTOBUS ===
+                { className: 'w-full flex flex-wrap items-center justify-center gap-3 mb-6' },            
                 React.createElement(
                     'select',
                     {
@@ -9810,9 +9524,7 @@ const TransportApp = ({ userProfileData }) => {
                             bus.name
                         )
                     )
-                ),
-            
-                // === 2. SELECTBOX PRE KATEGÓRIU ===
+                ),            
                 React.createElement(
                     'select',
                     {
@@ -9829,9 +9541,7 @@ const TransportApp = ({ userProfileData }) => {
                             cat
                         )
                     )
-                ),
-            
-                // === 3. SELECTBOX PRE DEŇ ===
+                ),            
                 React.createElement(
                     'select',
                     {
@@ -9857,7 +9567,6 @@ const TransportApp = ({ userProfileData }) => {
                     ? React.createElement(
                         'div',
                         { className: 'w-full' },
-                        // NOVÉ: Prepínač záložiek Nastavení
                         React.createElement(
                             'div',
                             { className: 'flex flex-wrap items-center justify-center gap-3 mb-6' },
@@ -9890,7 +9599,6 @@ const TransportApp = ({ userProfileData }) => {
                                 'Skratky názvov tímov'
                             )
                         ),
-                        // NOVÉ: Obsah podľa zvolenej záložky
                         settingsTab === 'travelTimes'
                             ? React.createElement(
                                 'div',
@@ -9932,7 +9640,6 @@ const TransportApp = ({ userProfileData }) => {
                     height: '64px'
                 }
             },
-            // === ZELENÁ POLOVICA (hore/ľavá) – Vygenerovať presuny ===
             React.createElement(
                 'div',
                 {
@@ -9983,7 +9690,6 @@ const TransportApp = ({ userProfileData }) => {
                     )
                 )
             ),
-            // === ČERVENÁ POLOVICA (dole/pravá) – Zmazať presuny ===
             React.createElement(
                 'div',
                 {
@@ -10089,9 +9795,6 @@ const TransportApp = ({ userProfileData }) => {
                 )
             )
         ),
-        // ============================================================
-        // NOVÉ: MODÁLNE OKNO – Výber typu zastávky (nástupná/výstupná alebo miesto zrazu)
-        // ============================================================
         stopTypeModal && React.createElement(
             'div',
             {
@@ -10124,7 +9827,6 @@ const TransportApp = ({ userProfileData }) => {
                 React.createElement(
                     'div',
                     { className: 'space-y-2 mb-4' },
-                    // 1) Nástupná/výstupná
                     React.createElement(
                         'button',
                         {
@@ -10159,7 +9861,6 @@ const TransportApp = ({ userProfileData }) => {
                             )
                         )
                     ),
-                    // 2) Miesto zrazu
                     React.createElement(
                         'button',
                         {
@@ -10210,9 +9911,6 @@ const TransportApp = ({ userProfileData }) => {
                 )
             )
         ),
-        // ============================================================
-        // MODÁLNE OKNO – Zmazať presuny pre kategóriu
-        // ============================================================
         showDeleteTransfersModal && React.createElement(
             'div',
             {
@@ -10404,10 +10102,6 @@ const TransportApp = ({ userProfileData }) => {
                 )
             )
         ),
-        // ============================================================
-        // NOVÉ: MODÁLNE OKNO – Výber typu presunu
-        // (po kliknutí na zelené "+")
-        // ============================================================
         showTransferTypeModal && React.createElement(
             'div',
             {
@@ -10435,7 +10129,6 @@ const TransportApp = ({ userProfileData }) => {
                 React.createElement(
                     'div',
                     { className: 'space-y-2 mb-4' },
-                    // 1) Generovanie potrebných presunov
                     React.createElement(
                         'button',
                         {
@@ -10460,7 +10153,6 @@ const TransportApp = ({ userProfileData }) => {
                             React.createElement('div', { className: 'text-xs text-gray-500' }, 'Automaticky vygeneruje presuny z časovej osi')
                         )
                     ),
-                    // 2) Vytvoriť vlastný presun
                     React.createElement(
                         'button',
                         {
@@ -10498,14 +10190,7 @@ const TransportApp = ({ userProfileData }) => {
                 )
             )
         ),
-        // ============================================================
-        // NOVÉ: MODÁLNE OKNO – Vytvoriť vlastný presun
-        // ============================================================
-        // ============================================================
-        // NOVÉ: MODÁLNE OKNO – Vytvoriť vlastný presun
-        // ============================================================
         showCustomTransferModal && (() => {
-            // Zoznam tímov v zvolenej kategórii (z users + superstructure)
             const teamsInCategory = (() => {
                 const cat = cleanCategory(customTransferCategory);
                 if (!cat) return [];
@@ -10516,17 +10201,10 @@ const TransportApp = ({ userProfileData }) => {
                     set.add(String(t.teamName).trim());
                 });
                 return [...set].sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
-            })();
-        
-            // Udalosti zvoleného tímu
+            })();        
             const teamEvents = customTransferTeamName
                 ? getTeamEventsForCustomTransfer(customTransferCategory, customTransferTeamName)
-                : [];
-        
-            // ============================================================
-            // NOVÉ: Zisti typ dopravy pre príchod zvoleného tímu
-            // (vlastná doprava / verejná doprava vlak/bus / bez dopravy)
-            // ============================================================
+                : [];        
             const arrivalTextForSelectedTeam = (() => {
                 if (!customTransferCategory || !customTransferTeamName) return null;
                 const cat = cleanCategory(customTransferCategory);
@@ -10538,8 +10216,7 @@ const TransportApp = ({ userProfileData }) => {
                 const display = String(teamInfo.arrivalDisplay || '').trim();
                 if (!display || display === '---') return null;
                 return display;
-            })();
-        
+            })();        
             return React.createElement(
                 'div',
                 {
@@ -10573,7 +10250,6 @@ const TransportApp = ({ userProfileData }) => {
                             )
                         )
                     ),
-                    // Selectbox kategórie
                     React.createElement(
                         'label',
                         { className: 'block text-sm font-medium text-gray-700 mb-1' },
@@ -10598,7 +10274,6 @@ const TransportApp = ({ userProfileData }) => {
                             )
                         )
                     ),
-                    // Selectbox tímu
                     React.createElement(
                         'label',
                         { className: 'block text-sm font-medium text-gray-700 mb-1' },
@@ -10621,7 +10296,6 @@ const TransportApp = ({ userProfileData }) => {
                             )
                         )
                     ),
-                    // Zoznam udalostí tímu – prehľadne zoskupený podľa dní
                     customTransferTeamName && React.createElement(
                         'div',
                         { className: 'mb-4' },
@@ -10643,9 +10317,6 @@ const TransportApp = ({ userProfileData }) => {
                                 'Tím nemá žiadne udalosti.'
                             )
                             : (() => {
-                                // ------------------------------------------------------------
-                                // Pomocná: z "when" vytiahne dayKey (YYYY-MM-DD)
-                                // ------------------------------------------------------------
                                 const extractDayKey = (when) => {
                                     if (!when) return null;
                                     const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(when));
@@ -10654,11 +10325,7 @@ const TransportApp = ({ userProfileData }) => {
                                     const mo = String(m[2]).padStart(2, '0');
                                     const y = m[3];
                                     return `${y}-${mo}-${d}`;
-                                };
-        
-                                // ------------------------------------------------------------
-                                // Pomocná: z "when" vytiahne iba časť s časom (HH:MM – HH:MM)
-                                // ------------------------------------------------------------
+                                };        
                                 const extractTimeLabel = (when) => {
                                     if (!when) return '';
                                     const s = String(when);
@@ -10672,10 +10339,6 @@ const TransportApp = ({ userProfileData }) => {
                                     if (times.length === 1) return times[0];
                                     return `${times[0]} – ${times[1]}`;
                                 };
-        
-                                // ------------------------------------------------------------
-                                // Pomocná: meta informácie podľa typu udalosti
-                                // ------------------------------------------------------------
                                 const getEventMeta = (type, ev) => {
                                     switch (type) {
                                         case 'match':
@@ -10687,12 +10350,6 @@ const TransportApp = ({ userProfileData }) => {
                                         case 'accommodation':
                                             return { icon: 'fa-bed', color: '#7c3aed', label: 'Ubytovanie', bg: '#f5f3ff', border: '#ddd6fe', placeIcon: 'fa-location-dot' };
                                         case 'transfer': {
-                                            // ============================================================
-                                            // NOVÉ: Ikona podľa stavu presunu:
-                                            //  - peši → ikona chôdze
-                                            //  - busom/priradený → ikona busu (rovnaká ako Príchod)
-                                            //  - nepriradený → ikona otáznika
-                                            // ============================================================
                                             if (ev && ev._isWalking) {
                                                 return { icon: 'fa-person-walking', color: '#ea580c', label: 'Presun', bg: '#fff7ed', border: '#fed7aa', placeIcon: 'fa-location-dot' };
                                             }
@@ -10705,90 +10362,53 @@ const TransportApp = ({ userProfileData }) => {
                                             return { icon: 'fa-circle-dot', color: '#6b7280', label: 'Udalosť', bg: '#f9fafb', border: '#e5e7eb', placeIcon: 'fa-location-dot' };
                                     }
                                 };
-        
-                                // ------------------------------------------------------------
-                                // Pomocná: vytiahne z textu udalosti názov miesta (ak existuje)
-                                //   - match:      "Tím A vs Tím B [..] | HALA"  → "HALA"
-                                //   - catering:   "Obed (12:00 – 12:30) → JEDÁLEŇ" → "JEDÁLEŇ"
-                                //   - accommodation: "Ubytovanie: UBytovňa X (typ: ...)" → "UBytovňa X"
-                                //   - arrival:    "Doprava / príchod: ..."  → null (nemá miesto)
-                                //   - transfer:   z parenta zobraz medzizastávky + from + to
-                                // ------------------------------------------------------------
                                 const extractPlaceFromEvent = (ev) => {
                                     if (!ev) return null;
                                     const text = String(ev.text || '').trim();
-                                    if (!text) return null;
-        
+                                    if (!text) return null;        
                                     if (ev.type === 'match') {
-                                        // Za posledným "|" je názov haly
                                         const idx = text.lastIndexOf('|');
                                         if (idx !== -1) {
                                             const hall = text.slice(idx + 1).trim();
                                             if (hall) return hall;
                                         }
                                         return ev.location || null;
-                                    }
-        
+                                    }        
                                     if (ev.type === 'catering') {
-                                        // Za "→" je názov jedálne
                                         const idx = text.lastIndexOf('→');
                                         if (idx !== -1) {
                                             const place = text.slice(idx + 1).trim();
                                             if (place) return place;
                                         }
                                         return ev.location || null;
-                                    }
-        
+                                    }        
                                     if (ev.type === 'accommodation') {
-                                        // "Ubytovanie: NÁZOV (typ: ...)" → "NÁZOV"
                                         const m = /^Ubytovanie:\s*(.+?)(?:\s*\(typ:.*\))?$/i.exec(text);
                                         if (m && m[1]) return m[1].trim();
                                         return ev.location || null;
-                                    }
-        
-                                    // arrival a ostatné – použi location, ak existuje
+                                    }        
                                     return ev.location || null;
-                                };
-        
-                                // ============================================================
-                                // NOVÉ: Pre stravovanie vráti typ stravovania
-                                // (Obed / Večera / Raňajky ...) – pre štítok v riadku
-                                // ============================================================
+                                };        
                                 const extractMealTypeLabel = (ev) => {
                                     if (!ev || ev.type !== 'catering') return null;
                                     const raw = String(ev.text || '').trim();
                                     if (!raw) return null;
-                                    // Text začína typom jedla: "Obed (12:00 – 12:30) → JEDÁLEŇ"
-                                    // Odrežeme čas v zátvorke a všetko za "→"
                                     let s = raw;
                                     const arrowIdx = s.lastIndexOf('→');
                                     if (arrowIdx !== -1) s = s.slice(0, arrowIdx).trim();
                                     s = s.replace(/\s*\(\s*\d{1,2}:\d{2}(?:\s*[–-]\s*\d{1,2}:\d{2})?\s*\)\s*$/, '').trim();
                                     return s || null;
-                                };
-        
-                                // ============================================================
-                                // NOVÉ: Pre presun vráti zoznam miest (from, medzizastávky, to)
-                                // pre zobrazenie v poslednom stĺpci – každé na samostatnom riadku
-                                // ============================================================
+                                };        
                                 const extractPlacesForTransferEvent = (ev) => {
                                     if (!ev || ev.type !== 'transfer') return [];
-                                    const places = [];
-                                
-                                    // ============================================================
-                                    // 1) PEŠÍ segment → iba from + to tohto konkrétneho pešieho segmentu
-                                    // ============================================================
+                                    const places = [];                                
                                     if (ev._isWalking === true) {
                                         const fromLoc = String(ev._fromLocation || '').trim();
                                         const toLoc = String(ev._toLocation || '').trim();
                                         if (fromLoc) places.push(fromLoc);
                                         if (toLoc) places.push(toLoc);
                                         return places;
-                                    }
-                                
-                                    // ============================================================
-                                    // 2) Priradený (busom) segment → iba from + to tohto segmentu
-                                    // ============================================================
+                                    }                                
                                     const isAssignedToBus = ev._isAssigned === true;
                                     if (isAssignedToBus) {
                                         const fromLoc = String(ev._fromLocation || '').trim();
@@ -10797,10 +10417,6 @@ const TransportApp = ({ userProfileData }) => {
                                         if (toLoc) places.push(toLoc);
                                         return places;
                                     }
-                                
-                                    // ============================================================
-                                    // 3) Nepriradený segment → všetky zastávky celej trasy parenta
-                                    // ============================================================
                                     const routePlaces = Array.isArray(ev._routePlaces) ? ev._routePlaces : [];
                                     if (routePlaces.length > 0) {
                                         routePlaces.forEach((p) => {
@@ -10808,47 +10424,33 @@ const TransportApp = ({ userProfileData }) => {
                                             if (v) places.push(v);
                                         });
                                         return places;
-                                    }
-                                
-                                    // Fallback – aspoň from a to
+                                    }                                
                                     const fromLoc = String(ev._fromLocation || '').trim();
                                     const toLoc = String(ev._toLocation || '').trim();
                                     if (fromLoc) places.push(fromLoc);
                                     if (toLoc) places.push(toLoc);
                                     return places;
-                                };
-        
+                                };        
                                 const buildEventDescription = (ev) => {
                                     if (!ev) return '';
-                                    const raw = String(ev.text || '').trim();
-        
+                                    const raw = String(ev.text || '').trim();        
                                     if (ev.type === 'match') {
-                                        // Odrež všetko za posledným "|" (názov haly)
                                         const idx = raw.lastIndexOf('|');
                                         if (idx !== -1) return raw.slice(0, idx).trim();
                                         return raw;
-                                    }
-        
+                                    }        
                                     if (ev.type === 'catering') {
-                                        // 1) Odrež všetko za "→" (názov jedálne)
                                         let s = raw;
                                         const arrowIdx = s.lastIndexOf('→');
-                                        if (arrowIdx !== -1) s = s.slice(0, arrowIdx).trim();
-        
-                                        // 2) Odrež aj čas v zátvorke: "Obed (12:00 – 12:30)" → "Obed"
-                                        //    (čas je už zobrazený v samostatnom stĺpci vľavo)
-                                        s = s.replace(/\s*\(\s*\d{1,2}:\d{2}(?:\s*[–-]\s*\d{1,2}:\d{2})?\s*\)\s*$/, '').trim();
-        
+                                        if (arrowIdx !== -1) s = s.slice(0, arrowIdx).trim();        
+                                        s = s.replace(/\s*\(\s*\d{1,2}:\d{2}(?:\s*[–-]\s*\d{1,2}:\d{2})?\s*\)\s*$/, '').trim();        
                                         return s;
-                                    }
-        
+                                    }        
                                     if (ev.type === 'accommodation') {
-                                        // "Ubytovanie: NÁZOV (typ: TYP)"  →  "Ubytovanie (typ: TYP)"
                                         const m = /^Ubytovanie:\s*(.+?)\s*\(typ:\s*(.+?)\)\s*$/i.exec(raw);
                                         if (m) {
                                             return `Ubytovanie (typ: ${m[2].trim()})`;
                                         }
-                                        // Ak nemá "(typ: ...)", skús aspoň odrezať názov za dvojbodkou
                                         const m2 = /^Ubytovanie:\s*(.+)$/i.exec(raw);
                                         if (m2) {
                                             const typMatch = /\(typ:\s*(.+?)\)/i.exec(m2[1]);
@@ -10858,39 +10460,24 @@ const TransportApp = ({ userProfileData }) => {
                                             return 'Ubytovanie';
                                         }
                                         return raw;
-                                    }
-        
-                                    // arrival a ostatné – ponechaj pôvodný text
+                                    }        
                                     return raw;
-                                };
-        
+                                };        
                                 const parseMatchTeams = (ev) => {
                                     if (!ev || ev.type !== 'match') return null;
                                     const raw = String(ev.text || '').trim();
-                                    // "Tím A vs Tím B [..] | Hala" – najprv odrež haly (za posledným "|")
                                     let s = raw;
                                     const pipeIdx = s.lastIndexOf('|');
-                                    if (pipeIdx !== -1) s = s.slice(0, pipeIdx).trim();
-        
-                                    // Nájdi " vs " (prípadne " VS ", " Vs ")
+                                    if (pipeIdx !== -1) s = s.slice(0, pipeIdx).trim();        
                                     const vsMatch = /\s+vs\.?\s+/i.exec(s);
-                                    if (!vsMatch) return null;
-        
+                                    if (!vsMatch) return null;        
                                     const home = s.slice(0, vsMatch.index).trim();
                                     const away = s.slice(vsMatch.index + vsMatch[0].length).trim();
                                     return { home, away };
-                                };
-        
-                                // ------------------------------------------------------------
-                                // Zoskup udalosti podľa dňa (dayKey), zachovaj poradie
-                                // ------------------------------------------------------------
-                                const groups = new Map(); // dayKey → [event, ...]
-                                const order = [];         // poradie dayKey
+                                };        
+                                const groups = new Map();
+                                const order = [];
                                 teamEvents.forEach((ev) => {
-                                    // ============================================================
-                                    // NOVÉ: Pre presuny použi `_dayKey` (priradený v getTeamEventsForCustomTransfer),
-                                    // pretože `when` pri presune obsahuje iba čas (HH:MM – HH:MM) bez dátumu.
-                                    // ============================================================
                                     const dk = ev._dayKey || extractDayKey(ev.when) || '__none__';
                                     if (!groups.has(dk)) {
                                         groups.set(dk, []);
@@ -10898,10 +10485,6 @@ const TransportApp = ({ userProfileData }) => {
                                     }
                                     groups.get(dk).push(ev);
                                 });
-        
-                                // ------------------------------------------------------------
-                                // Render
-                                // ------------------------------------------------------------
                                 return React.createElement(
                                     'div',
                                     {
@@ -10912,17 +10495,10 @@ const TransportApp = ({ userProfileData }) => {
                                         const dayLabel = dk !== '__none__'
                                             ? (formatDateDDMMYYYY(dk) || dk)
                                             : 'Bez dátumu';
-        
-                                        // ============================================================
-                                        // NOVÉ: Ak je tento deň prvý a máme arrivalText, zobrazíme
-                                        // ho v samostatnom riadku ako colspan 2 (Príchod).
-                                        // ============================================================
-                                        const isFirstDayGroup = dk === order[0];
-        
+                                        const isFirstDayGroup = dk === order[0];        
                                         return React.createElement(
                                             'div',
                                             { key: dk, className: 'mb-2 last:mb-0' },
-                                            // Hlavička dňa – vľavo dátum, vpravo "Miesto"
                                             React.createElement(
                                                 'div',
                                                 {
@@ -10939,7 +10515,6 @@ const TransportApp = ({ userProfileData }) => {
                                                     { className: 'text-[10px] text-gray-500 ml-2' },
                                                     `${items.length} udalostí`
                                                 ),
-                                                // "Miesto" – hlavička pravého stĺpca
                                                 React.createElement(
                                                     'span',
                                                     {
@@ -10949,15 +10524,9 @@ const TransportApp = ({ userProfileData }) => {
                                                     'Miesto'
                                                 )
                                             ),
-                                            // Riadky udalostí
                                             React.createElement(
                                                 'div',
                                                 { className: 'space-y-1' },
-                                                // ============================================================
-                                                // NOVÉ: Prvý riadok pre príchod – text príchodu
-                                                // (vlastná doprava / verejná doprava vlak/bus / bez dopravy)
-                                                // uprostred, colspan 2.
-                                                // ============================================================
                                                 isFirstDayGroup && arrivalTextForSelectedTeam &&
                                                     React.createElement(
                                                         'div',
@@ -10969,7 +10538,6 @@ const TransportApp = ({ userProfileData }) => {
                                                             },
                                                             title: `Príchod: ${arrivalTextForSelectedTeam}`
                                                         },
-                                                        // 1) Ikona + typ (Príchod)
                                                         React.createElement(
                                                             'div',
                                                             {
@@ -10996,7 +10564,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                 'Príchod'
                                                             )
                                                         ),
-                                                        // 2) Text príchodu – colspan 2 (zaberá zvyšok riadku)
                                                         React.createElement(
                                                             'div',
                                                             {
@@ -11021,40 +10588,18 @@ const TransportApp = ({ userProfileData }) => {
                                                 items.map((ev, idx) => {
                                                     const meta = getEventMeta(ev.type, ev);
                                                     const timeLabel = extractTimeLabel(ev.when);
-                                                    const text = buildEventDescription(ev);
-        
-                                                    // ============================================================
-                                                    // NOVÉ: Miesta pre posledný stĺpec
-                                                    //  - presun → zoznam miest (from, medzizastávky, to) – každé na samostatnom riadku
-                                                    //  - ostatné → jedno miesto (placeName)
-                                                    // ============================================================
+                                                    const text = buildEventDescription(ev);        
                                                     const isTransferEvent = ev.type === 'transfer';
                                                     const isCateringEvent = ev.type === 'catering';
                                                     const transferPlaces = isTransferEvent ? extractPlacesForTransferEvent(ev) : [];
                                                     const placeName = !isTransferEvent ? extractPlaceFromEvent(ev) : null;
                                                     const hasAnyPlace = isTransferEvent
                                                         ? transferPlaces.length > 0
-                                                        : !!placeName;
-        
-                                                    // ============================================================
-                                                    // NOVÉ: Typ stravovania (Obed / Večera / Raňajky ...)
-                                                    // pre štítok v riadku stravovania
-                                                    // ============================================================
-                                                    const mealTypeLabel = isCateringEvent ? extractMealTypeLabel(ev) : null;
-        
-                                                    // ============================================================
-                                                    // NOVÉ: Presun má oranžový box a čierny text (rovnako ako Príchod)
-                                                    // ============================================================
+                                                        : !!placeName;        
+                                                    const mealTypeLabel = isCateringEvent ? extractMealTypeLabel(ev) : null;        
                                                     const textColor = isTransferEvent ? '#ea580c' : '#1f2937';
-                                                    const metaTextColor = isTransferEvent ? '#ea580c' : meta.color;
-        
-                                                    // ============================================================
-                                                    // NOVÉ: Rozdelenie popisu na dva stĺpce:
-                                                    //  - "Tím" (domáci/hostia pre zápas, inak prázdne)
-                                                    //  - "Miesto" (hala/jedáleň/ubytovanie/presun)
-                                                    // ============================================================
-                                                    const matchTeamsForRow = ev.type === 'match' ? parseMatchTeams(ev) : null;
-        
+                                                    const metaTextColor = isTransferEvent ? '#ea580c' : meta.color;        
+                                                    const matchTeamsForRow = ev.type === 'match' ? parseMatchTeams(ev) : null;        
                                                     return React.createElement(
                                                         'div',
                                                         {
@@ -11066,7 +10611,6 @@ const TransportApp = ({ userProfileData }) => {
                                                             },
                                                             title: `${meta.label}: ${text}`
                                                         },
-                                                        // 1) Ikona + typ
                                                         React.createElement(
                                                             'div',
                                                             {
@@ -11093,7 +10637,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                 meta.label
                                                             )
                                                         ),
-                                                        // 2) Čas (ak existuje) – pevná šírka + oddelenie
                                                         timeLabel
                                                             ? React.createElement(
                                                                 'div',
@@ -11114,7 +10657,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                     style: { width: '84px', minWidth: '84px' }
                                                                 }
                                                             ),
-                                                        // 3) + 4) TÍM a MIESTO – spoločný flex kontajner
                                                         React.createElement(
                                                             'div',
                                                             {
@@ -11122,18 +10664,12 @@ const TransportApp = ({ userProfileData }) => {
                                                                 style: { minWidth: 0, color: textColor },
                                                             },
                                                             (() => {
-                                                                // ------------------------------------------------------------
-                                                                // ZÁPAS – domáci vľavo, hostia vpravo (dva flex stĺpce)
-                                                                // + názov haly vpravo (bez ikony)
-                                                                // ------------------------------------------------------------
                                                                 if (ev.type === 'match') {
                                                                     const teams = matchTeamsForRow;
                                                                     if (teams) {
                                                                         const selectedTeam = String(customTransferTeamName || '').trim();
                                                                         const isHomeSelected = teams.home === selectedTeam;
-                                                                        const isAwaySelected = teams.away === selectedTeam;
-        
-                                                                        // Názov haly z textu (za posledným "|")
+                                                                        const isAwaySelected = teams.away === selectedTeam;        
                                                                         const hallName = (() => {
                                                                             const raw = String(ev.text || '').trim();
                                                                             const idx = raw.lastIndexOf('|');
@@ -11142,12 +10678,10 @@ const TransportApp = ({ userProfileData }) => {
                                                                                 if (hall) return hall;
                                                                             }
                                                                             return ev.location || null;
-                                                                        })();
-        
+                                                                        })();        
                                                                         return React.createElement(
                                                                             React.Fragment,
                                                                             null,
-                                                                            // Domáci – vpravo
                                                                             React.createElement(
                                                                                 'div',
                                                                                 {
@@ -11160,7 +10694,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                                 },
                                                                                 teams.home
                                                                             ),
-                                                                            // Hostia – vľavo
                                                                             React.createElement(
                                                                                 'div',
                                                                                 {
@@ -11173,7 +10706,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                                 },
                                                                                 teams.away
                                                                             ),
-                                                                            // Názov haly – malý badge vpravo, BEZ ikony
                                                                             hallName &&
                                                                                 React.createElement(
                                                                                     'span',
@@ -11195,19 +10727,13 @@ const TransportApp = ({ userProfileData }) => {
                                                                         );
                                                                     }
                                                                 }
-        
-                                                                // ------------------------------------------------------------
-                                                                // STRAVOVANIE – typ stravovania v štítku (colspan 2)
-                                                                // + miesto (jedáleň) vpravo
-                                                                // ------------------------------------------------------------
                                                                 if (isCateringEvent) {
                                                                     return React.createElement(
                                                                         'div',
                                                                         {
-                                                                            className: 'flex-1 flex items-center justify-center relative',   // ← zmena: jeden kontajner
+                                                                            className: 'flex-1 flex items-center justify-center relative',
                                                                             style: { minWidth: 0 }
                                                                         },
-                                                                        // 1) Typ stravovania – štítok VYSTREDENÝ (v celom priestore tímov)
                                                                         mealTypeLabel &&
                                                                             React.createElement(
                                                                                 'span',
@@ -11226,7 +10752,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     mealTypeLabel
                                                                                 )
                                                                             ),
-                                                                        // 2) Miesto (jedáleň) – vpravo, bez ikony (absolútne, aby neposúvalo badge zo stredu)
                                                                         hasAnyPlace &&
                                                                             React.createElement(
                                                                                 'span',
@@ -11250,27 +10775,20 @@ const TransportApp = ({ userProfileData }) => {
                                                                             )
                                                                     );
                                                                 }
-        
-                                                                // ------------------------------------------------------------
-                                                                // PRESUN – vpravo, každé miesto na samostatnom riadku, BEZ ikony
-                                                                // ------------------------------------------------------------
                                                                 if (ev.type === 'transfer') {
-                                                                    const places = extractPlacesForTransferEvent(ev);
-                                                                
+                                                                    const places = extractPlacesForTransferEvent(ev);                                                                
                                                                     return React.createElement(
                                                                         'div',
                                                                         {
-                                                                            className: 'flex-1 flex items-center justify-center relative',   // ← zmena: jeden kontajner
+                                                                            className: 'flex-1 flex items-center justify-center relative',
                                                                             style: { minWidth: 0 }
                                                                         },
-                                                                        // 1) Badge (bus / PEŠI / nepriradený) – VYSTREDENÝ v celom priestore tímov
                                                                         React.createElement(
                                                                             'div',
                                                                             {
                                                                                 className: 'flex items-center justify-center gap-1',
                                                                                 style: { minWidth: 0 }
                                                                             },
-                                                                            // Názov busu
                                                                             ev._busName &&
                                                                                 React.createElement(
                                                                                     'span',
@@ -11282,7 +10800,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     React.createElement('i', { className: 'fa-solid fa-bus text-[9px]' }),
                                                                                     ev._busName
                                                                                 ),
-                                                                            // PEŠI badge
                                                                             ev._isWalking &&
                                                                                 React.createElement(
                                                                                     'span',
@@ -11294,7 +10811,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     React.createElement('i', { className: 'fa-solid fa-person-walking text-[9px]' }),
                                                                                     'PEŠI'
                                                                                 ),
-                                                                            // Nepriradený badge
                                                                             !ev._isWalking && !ev._isAssigned &&
                                                                                 React.createElement(
                                                                                     'span',
@@ -11305,7 +10821,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     'nepriradený'
                                                                                 )
                                                                         ),
-                                                                        // 2) Miesto – vpravo (absolútne, aby neposúvalo badge zo stredu)
                                                                         places.length > 0 &&
                                                                             React.createElement(
                                                                                 'div',
@@ -11342,10 +10857,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                             )
                                                                     );
                                                                 }
-        
-                                                                // ------------------------------------------------------------
-                                                                // UBYTOVANIE / PRÍCHOD – vpravo, BEZ ikony
-                                                                // ------------------------------------------------------------
                                                                 return React.createElement(
                                                                     'div',
                                                                     {
@@ -11386,7 +10897,6 @@ const TransportApp = ({ userProfileData }) => {
                                 );
                             })()
                     ),
-                    // Tlačidlá
                     React.createElement(
                         'div',
                         { className: 'flex justify-end gap-3' },
@@ -11405,9 +10915,6 @@ const TransportApp = ({ userProfileData }) => {
                 )
             );
         })(),
-        // ============================================================
-        // MODÁLNE OKNO – Úprava vygenerovaného presunu (medzizastávky)
-        // ============================================================
         editingTransfer && React.createElement(
             'div',
             {
@@ -11423,7 +10930,6 @@ const TransportApp = ({ userProfileData }) => {
                     className: 'bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto',
                     onClick: (e) => e.stopPropagation()
                 },
-                // Hlavička – BEZ názvu tímu a kategórie
                 React.createElement(
                     'div',
                     { className: 'flex items-start gap-3 mb-4' },
@@ -11442,35 +10948,21 @@ const TransportApp = ({ userProfileData }) => {
                 ),
                 (() => {
                     const tr = editingTransfer;
-
-                    // ============================================================
-                    // NOVÉ: Pre segment (má `_parentKey`) zobraz čas PRIORITNE
-                    // zo segmentu v parent zázname (rovnaká logika ako v boxe
-                    // "Vygenerované presuny"). Tým sa zabezpečí, že sa v modálnom
-                    // okne nezobrazí pôvodný čas z busu (`tr.when`), ale
-                    // skutočný čas segmentu alebo provizórny interval.
-                    // ============================================================
                     let displayWhen = null;
-
                     if (tr._parentKey) {
                         const parentRec = savedTransfersRef.current.find((s) => s.key === tr._parentKey);
                         const segFromId = tr.fromId || null;
                         const segToId = tr.toId || null;
-
                         const parentSeg = (() => {
                             if (!parentRec || !Array.isArray(parentRec.segments)) return null;
                             if (!segFromId || !segToId) return null;
                             const idx = findSegmentIndex(parentRec.segments, segFromId, segToId);
                             return idx !== -1 ? parentRec.segments[idx] : null;
                         })();
-
-                        // 1) Reálne časy z busu (segment je priradený)
                         if (parentSeg && parentSeg.busId && parentSeg.boardingRowId && parentSeg.alightingRowId
                             && parentSeg.startTs != null && parentSeg.endTs != null && parentSeg.endTs > parentSeg.startTs) {
                             displayWhen = `${formatTsLocal(parentSeg.startTs)} – ${formatTsLocal(parentSeg.endTs)}`;
                         }
-
-                        // 2) Provizórny interval (segment nie je priradený)
                         if (!displayWhen) {
                             const provisional = computeProvisionalSegmentRange(tr);
                             if (provisional) {
@@ -11478,13 +10970,9 @@ const TransportApp = ({ userProfileData }) => {
                             }
                         }
                     } else {
-                        // ============================================================
-                        // Pre NESEGMENTOVÉ presuny zostáva pôvodná logika.
-                        // ============================================================
                         if (tr.when && String(tr.when).trim() !== '') {
                             displayWhen = tr.when;
                         }
-
                         if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
                             let earliestStart = null;
                             let latestEnd = null;
@@ -11504,15 +10992,13 @@ const TransportApp = ({ userProfileData }) => {
                                 displayWhen = formatTsLocal(latestEnd);
                             }
                         }
-
                         if (!displayWhen) {
                             const provisional = computeProvisionalSegmentRange(tr);
                             if (provisional) {
                                 displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
                             }
-                    }
-                
-                    // Počet členov tímu
+                        }
+                    }                
                     const counts = getTeamCountsForTransfer(tr.category, tr.teamName);
                     let membersCount = null;
                     let membersTitle = '';
@@ -11530,11 +11016,9 @@ const TransportApp = ({ userProfileData }) => {
                             membersCount = avg;
                             membersTitle = `Priemer členov tímu v kategórii ${tr.category} (zaokrúhlené nahor)`;
                         }
-                    }
-                
+                    }                
                     const transportColor = getTransportColorForCategory(tr.category);
-                    const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
-                
+                    const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;                
                     return React.createElement(
                         'div',
                         {
@@ -11545,7 +11029,6 @@ const TransportApp = ({ userProfileData }) => {
                                 ...(boxBg ? { backgroundColor: boxBg } : { backgroundColor: '#f5f3ff' }),
                             },
                         },
-                        // 1. riadok – tím • počet
                         React.createElement(
                             'div',
                             { className: 'flex flex-wrap items-center gap-x-2 gap-y-1' },
@@ -11570,13 +11053,11 @@ const TransportApp = ({ userProfileData }) => {
                                     `• ${membersCount} členov`
                                 )
                         ),
-                        // 2. riadok – trasa (celá trasa parenta)
                         React.createElement(
                             'span',
                             { className: 'text-sm text-gray-900 font-medium' },
                             `${tr.fromLocation || '?'} → ${tr.toLocation || '?'}`
                         ),
-                        // 3. riadok – dátum a čas
                         displayWhen &&
                             React.createElement(
                                 'span',
@@ -11585,7 +11066,6 @@ const TransportApp = ({ userProfileData }) => {
                             )
                     );
                 })(),
-                // Info o medzizastávkach (zobrazí sa len ak sú nejaké)
                 editingTransferStops.length > 0 && React.createElement(
                     'div',
                     { className: 'mb-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-sm' },
@@ -11600,7 +11080,6 @@ const TransportApp = ({ userProfileData }) => {
                         editingTransferStops.join(', ')
                     )
                 ),
-                // Medzizastávky
                 React.createElement(
                     'div',
                     { className: 'mb-4' },
@@ -11620,19 +11099,16 @@ const TransportApp = ({ userProfileData }) => {
                             'ul',
                             { className: 'space-y-2' },
                             editingTransferStops.map((stopValue, idx) => {
-                                // Všetky už vybrané zastávky (okrem aktuálneho indexu)
                                 const selectedElsewhere = new Set(
                                     editingTransferStops
                                         .filter((_, i) => i !== idx)
                                         .map((s) => String(s || '').trim())
                                         .filter(Boolean)
                                 );
-                                // Zastávky, ktoré ešte nie sú vybrané (alebo sú aktuálna hodnota)
                                 const availableStops = stopsList.filter((s) => {
-                                    if (s.name === stopValue) return true; // aktuálna hodnota vždy dostupná
+                                    if (s.name === stopValue) return true; 
                                     return !selectedElsewhere.has(s.name);
-                                });
-                
+                                });                
                                 return React.createElement(
                                     'li',
                                     {
@@ -11667,7 +11143,6 @@ const TransportApp = ({ userProfileData }) => {
                                             )
                                         )
                                     ),
-                                    // Tlačidlo "+" – vloží nové prázdne miesto POD aktuálny riadok
                                     React.createElement(
                                         'button',
                                         {
@@ -11684,7 +11159,6 @@ const TransportApp = ({ userProfileData }) => {
                                         },
                                         React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
                                     ),
-                                    // Tlačidlo "X" – odstráni tento riadok
                                     React.createElement(
                                         'button',
                                         {
@@ -11700,8 +11174,6 @@ const TransportApp = ({ userProfileData }) => {
                                 );
                             })
                         ),
-                    // Tlačidlo "+" – POD zoznamom, vycentrované
-                    // ZOBRAZÍ SA LEN AK NEEXISTUJE ŽIADNY SELECTBOX (t.j. zoznam je prázdny)
                     editingTransferStops.length === 0 &&
                         React.createElement(
                             'div',
@@ -11718,7 +11190,6 @@ const TransportApp = ({ userProfileData }) => {
                             )
                         )
                 ),
-                // Náhľad novej trasy
                 React.createElement(
                     'div',
                     { className: 'mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm' },
@@ -11735,7 +11206,6 @@ const TransportApp = ({ userProfileData }) => {
                             .join(' → ')
                     )
                 ),
-                // Tlačidlá
                 React.createElement(
                     'div',
                     { className: 'flex justify-end gap-3' },
@@ -11767,9 +11237,6 @@ const TransportApp = ({ userProfileData }) => {
                 )
             )
         ),
-        // ============================================================
-        // ROZHODOVACIE MODÁLNE OKNO PO KLIKNUTÍ NA PRESUN
-        // ============================================================
         transferActionModal && React.createElement(
             'div',
             {
@@ -11791,19 +11258,9 @@ const TransportApp = ({ userProfileData }) => {
                         'Upraviť presun'
                     )
                 ),
-                // Info o presune – rovnaký box ako v "Priradiť presun k autobusu"
                 (() => {
-                    const tr = transferActionModal.transfer;
-                
+                    const tr = transferActionModal.transfer;                
                     let displayWhen = null;
-
-                    // ============================================================
-                    // NOVÉ: Pre segment (má `_parentKey`) zobraz čas PRIORITNE
-                    // zo segmentu v parent zázname (rovnaká logika ako v boxe
-                    // "Vygenerované presuny"). Tým sa zabezpečí, že sa v modálnom
-                    // okne nezobrazí pôvodný čas z busu (`tr.when`), ale
-                    // skutočný čas segmentu alebo provizórny interval.
-                    // ============================================================
                     if (tr._parentKey) {
                         const parentRec = savedTransfersRef.current.find((s) => s.key === tr._parentKey);
                         const segFromId = tr.fromId || null;
