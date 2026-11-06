@@ -8186,6 +8186,8 @@ const TransportApp = ({ userProfileData }) => {
                         text,
                         fromId: fromId,
                         toId: toId,
+                        fromLocation: resolvePlaceNameById(fromId),
+                        toLocation: resolvePlaceNameById(toId),
                         intermediateStopIds: [],
                         _parentKey: t.key,
                         _parentRoute: `${resolvePlaceNameById(t.fromId)} → ${resolvePlaceNameById(t.toId)}`,
@@ -11070,7 +11072,7 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement(
                             'span',
                             { className: 'text-sm text-gray-900 font-medium' },
-                            `${tr.fromLocation || '?'} → ${tr.toLocation || '?'}`
+                            `${resolvePlaceNameById(tr.fromId) || '?'} → ${resolvePlaceNameById(tr.toId) || '?'}`
                         ),
                         displayWhen &&
                             React.createElement(
@@ -11106,7 +11108,7 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement(
                             'p',
                             { className: 'text-xs text-gray-400 italic mb-2' },
-                            'Žiadne medzizastávky. Presun pôjde priamo z „' + editingTransfer.fromLocation + '" do „' + editingTransfer.toLocation + '".'
+                            'Žiadne medzizastávky. Presun pôjde priamo z „' + (resolvePlaceNameById(editingTransfer.fromId) || '?') + '" do „' + (resolvePlaceNameById(editingTransfer.toId) || '?') + '".'
                         ),
                     editingTransferStops.length > 0 &&
                         React.createElement(
@@ -11215,7 +11217,7 @@ const TransportApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: 'text-blue-800' },
-                        [editingTransfer.fromLocation, ...(editingTransferStops || []).filter(Boolean), editingTransfer.toLocation]
+                        [resolvePlaceNameById(editingTransfer.fromId), ...(editingTransferStops || []).filter(Boolean), resolvePlaceNameById(editingTransfer.toId)]
                             .filter(Boolean)
                             .join(' → ')
                     )
@@ -11383,7 +11385,7 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement(
                             'span',
                             { className: 'text-sm text-gray-900 font-medium' },
-                            `${tr.fromLocation || '?'} → ${tr.toLocation || '?'}`
+                            `${resolvePlaceNameById(tr.fromId) || '?'} → ${resolvePlaceNameById(tr.toId) || '?'}`
                         ),
                         displayWhen &&
                             React.createElement(
@@ -11498,8 +11500,8 @@ const TransportApp = ({ userProfileData }) => {
                 if (assignBusTransfer._parentKey) {
                     const segIdx = findSegmentIndex(
                         currentParent.segments || [],
-                        assignBusTransfer.fromLocation,
-                        assignBusTransfer.toLocation
+                        assignBusTransfer.fromId,
+                        assignBusTransfer.toId
                     );
                     const seg = segIdx !== -1 ? currentParent.segments[segIdx] : null;
                     return {
@@ -11661,8 +11663,8 @@ const TransportApp = ({ userProfileData }) => {
                             React.createElement(
                                 'span',
                                 { className: 'text-sm text-gray-900 font-medium' },
-                                `${tr.fromLocation || '?'} → ${tr.toLocation || '?'}`
-                            ),
+                                `${resolvePlaceNameById(tr.fromId) || '?'} → ${resolvePlaceNameById(tr.toId) || '?'}`
+                            ), 
                             displayWhen &&
                                 React.createElement(
                                     'span',
@@ -11912,7 +11914,7 @@ const TransportApp = ({ userProfileData }) => {
                     'div',
                     { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700' },
                     React.createElement('div', { className: 'font-medium' },
-                        `${removeWalkingModal.transfer.fromLocation} → ${removeWalkingModal.transfer.toLocation}`),
+                        `${resolvePlaceNameById(removeWalkingModal.transfer.fromId) || '?'} → ${resolvePlaceNameById(removeWalkingModal.transfer.toId) || '?'}`),
                     React.createElement('div', { className: 'text-xs text-gray-500 mt-1' },
                         `${removeWalkingModal.transfer.teamName || ''}${removeWalkingModal.transfer.when ? ' • ' + removeWalkingModal.transfer.when : ''}`)
                 ),
@@ -11976,7 +11978,7 @@ const TransportApp = ({ userProfileData }) => {
                     'div',
                     { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700' },
                     React.createElement('div', { className: 'font-medium' },
-                        `${deleteTransferModal.transfer.fromLocation} → ${deleteTransferModal.transfer.toLocation}`),
+                        `${resolvePlaceNameById(deleteTransferModal.transfer.fromId) || '?'} → ${resolvePlaceNameById(deleteTransferModal.transfer.toId) || '?'}`),
                     React.createElement('div', { className: 'text-xs text-gray-500 mt-1' },
                         `${deleteTransferModal.transfer.teamName || ''}${deleteTransferModal.transfer.when ? ' • ' + deleteTransferModal.transfer.when : ''}`)
                 ),
