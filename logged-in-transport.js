@@ -5402,6 +5402,7 @@ const TransportApp = ({ userProfileData }) => {
                             }
                         });
                     });
+                    const filteredTeamsIn = filterTeamsByCategory(teamsBoardingHere);
             
                     if (filteredTeamsIn.length === 0) {
                         return React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—');
@@ -5453,6 +5454,7 @@ const TransportApp = ({ userProfileData }) => {
                             }
                         });
                     });
+                    const filteredTeamsOut = filterTeamsByCategory(teamsAlightingHere);
                     if (filteredTeamsOut.length === 0) {
                         return React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—');
                     }
