@@ -5033,97 +5033,101 @@ const TransportApp = ({ userProfileData }) => {
         const allRows = (busRows[rowsKey] || [])
             .slice()
             .sort((a, b) => (a.order || 0) - (b.order || 0));
-
+    
         const currentRow = allRows.find((r) => r.id === rowId);
         if (!currentRow) return [];
-
+    
         const currentOrder = parseOrderFromRowId(currentRow.rowId);
         if (currentOrder == null) return [];
-
+    
         const inBus = new Set();
-
+    
         (savedTransfersRef.current || []).forEach((parent) => {
             if (parent.dayKey !== dayKey) return;
             if (parent.isWalking === true) return;
-
+    
             const effectiveCategory = cleanCategory(parent.category || '');
-
+    
             let effectiveTeamName = String(parent.teamName || '').trim();
             if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
                 const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
                 const info = (teamsLookupRef.current || {})[lookupKey];
                 if (info && info.teamName) effectiveTeamName = info.teamName;
             }
-
-
-// --------------------------------------------------------
-
-            const segmentsForThisBus = (parent.segments || []).filter(
-                (seg) => seg && seg.busId === busId && seg.isWalking !== true
-            );
-            
-            if (segmentsForThisBus.length > 0) {
-                let effectiveTeamNameForLog = String(parent.teamName || '').trim();
-                if (!effectiveTeamNameForLog && parent.teamUid != null && parent.teamIndex != null) {
-                    const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
-                    const info = (teamsLookupRef.current || {})[lookupKey];
-                    if (info && info.teamName) effectiveTeamNameForLog = info.teamName;
+    
+            if (!effectiveTeamName) {
+                // Skús fallback z parent.key (formát: "kat||tím||čas||text")
+                const parts = String(parent.key || '').split('||');
+                if (parts.length >= 2) {
+                    const keyTeamName = String(parts[1] || '').trim();
+                    if (keyTeamName) effectiveTeamName = keyTeamName;
                 }
-
-                console.log('     [TRANSPORT][getTeamsInBusAfterRow] parent priradený tomuto busu', {
-                    busId,
-                    dayKey,
-                    currentOrder,
+            }
+    
+            if (!effectiveTeamName) {
+                console.warn('[TRANSPORT][getTeamsInBusAfterRow] CHÝBA effectiveTeamName pre parent:', {
                     parentKey: parent.key,
-                    parentTeamName: parent.teamName,
                     teamUid: parent.teamUid,
                     teamIndex: parent.teamIndex,
                     category: effectiveCategory,
-                    effectiveTeamName: effectiveTeamNameForLog,
-                    segmentsForThisBus: segmentsForThisBus.map((seg) => ({
-                        fromId: seg.fromId,
-                        toId: seg.toId,
-                        boardingRowId: seg.boardingRowId,
-                        alightingRowId: seg.alightingRowId,
-                        bOrder: parseOrderFromRowId(seg.boardingRowId),
-                        aOrder: parseOrderFromRowId(seg.alightingRowId),
-                        isWalking: seg.isWalking === true,
-                        busAssigned: seg.busAssigned === true,
-                    })),
+                    dayKey: parent.dayKey,
                 });
+                return;
             }
-
-// --------------------------------------------------------
-            
-            if (!effectiveTeamName) return;
-
+    
             (parent.segments || []).forEach((seg) => {
                 if (seg.busId !== busId) return;
                 if (seg.isWalking === true) return;
-
+    
                 const bOrder = parseOrderFromRowId(seg.boardingRowId);
                 const aOrder = parseOrderFromRowId(seg.alightingRowId);
-                if (bOrder == null || aOrder == null) return;
-
-                if (bOrder <= currentOrder && currentOrder < aOrder) {
+                
+                if (bOrder == null || aOrder == null) {
+                    console.warn('[TRANSPORT][getTeamsInBusAfterRow] CHÝBA bOrder/aOrder:', {
+                        parentKey: parent.key,
+                        teamName: effectiveTeamName,
+                        segFrom: seg.fromId,
+                        segTo: seg.toId,
+                        boardingRowId: seg.boardingRowId,
+                        alightingRowId: seg.alightingRowId,
+                    });
+                    return;
+                }
+    
+                // OPRAVA: Ak tím nastúpi a vystúpi v tom istom riadku, 
+                // považujeme ho za "v autobuse" počas tohto riadku
+                // (napr. prestup na tej istej zastávke)
+                let isInBus = false;
+                if (bOrder === aOrder) {
+                    // Tím nastúpi aj vystúpi v tom istom riadku – je v autobuse počas tohto riadku
+                    isInBus = (currentOrder === bOrder);
+                } else {
+                    isInBus = (bOrder <= currentOrder && currentOrder < aOrder);
+                }
+    
+                if (isInBus) {
                     inBus.add(`${effectiveTeamName}|${effectiveCategory}`);
                 }
             });
         });
-
-        return [...inBus].filter((teamKey) => {
+    
+        const result = [...inBus].filter((teamKey) => {
             if (!selectedCategoryFilter) return true;
             const parts = String(teamKey).split('|');
             const cat = cleanCategory(parts[1] || '');
             return cat === cleanCategory(selectedCategoryFilter);
         });
-
+    
         console.log('[TRANSPORT][getTeamsInBusAfterRow] RESULT', {
             busId,
             dayKey,
             currentOrder,
+            rowId,
             inBusArray: [...inBus],
+            resultArray: result,
         });
+    
+        return result;
     };
 
     const getGapMinutes = (timeTo, timeFrom) => {
@@ -5538,10 +5542,21 @@ const TransportApp = ({ userProfileData }) => {
             },
                 (() => {
                     const teamsInBus = getTeamsInBusAfterRow(busId, dayKey, row.id);
-                    console.log('[TRANSPORT][Počet]', {
+                    console.log('[TRANSPORT][Počet] DETAIL', {
                         rowId: row.id,
+                        rowIdFull: row.rowId,
+                        currentOrder: parseOrderFromRowId(row.rowId),
                         teamsInBus,
                         counts: teamsInBus.map((tk) => ({ tk, count: getTeamMembersCount(tk) })),
+                        savedTransfersCount: (savedTransfersRef.current || []).length,
+                        parentsForDay: (savedTransfersRef.current || []).filter(p => p.dayKey === dayKey).map(p => ({
+                            key: p.key,
+                            teamName: p.teamName,
+                            segmentsWithBus: (p.segments || []).filter(s => s.busId === busId).map(s => ({
+                                bOrder: parseOrderFromRowId(s.boardingRowId),
+                                aOrder: parseOrderFromRowId(s.alightingRowId),
+                            })),
+                        })),
                     });
                     if (teamsInBus.length === 0) {
                         return React.createElement('span', { className: 'text-gray-400' }, '—');
