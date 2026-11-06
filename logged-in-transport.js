@@ -3403,31 +3403,25 @@ const TransportApp = ({ userProfileData }) => {
                         if (!data.busId || !data.dayKey) return;
                         const key = `${data.busId}|${data.dayKey}`;
                         if (!rowsGrouped[key]) rowsGrouped[key] = [];
-        
-                        // ============================================================
-                        // V DB sa NESMIE ukladať názov miesta (placeFrom / placeTo).
-                        // Ukladá sa LEN ID (placeFromId / placeToId).
-                        //
-                        // Pri načítaní preto:
-                        //  - primárne použijeme placeFromId / placeToId
-                        //  - NÁZOV odvodíme VÝHRADNE z ID (cez resolvePlaceNameById)
-                        //  - pole placeFrom / placeTo (názov) z DB IGNORUJEME
-                        // ============================================================
+
                         const placeFromId = data.placeFromId || null;
                         const placeToId = data.placeToId || null;
-        
+
+                        const order = Number(data.order) || 0;
+                        // NOVÉ: rowId – ak chýba v DB, dopočítaj (pre staré záznamy)
+                        const rowId = data.rowId || buildRowId(data.busId, data.dayKey, order);
+
                         rowsGrouped[key].push({
                             id: docSnap.id,
-                            order: Number(data.order) || 0,
+                            order,
+                            rowId,
                             timeFrom: data.timeFrom || '',
                             timeTo: data.timeTo || '',
                             placeFromId,
                             placeToId,
-                            // NÁZOV odvodíme VÝHRADNE z ID – NIE z data.placeFrom
                             placeFrom: placeFromId ? (resolvePlaceNameById(placeFromId) || '') : '',
                             placeTo: placeToId ? (resolvePlaceNameById(placeToId) || '') : '',
-                            teamsIn: Array.isArray(data.teamsIn) ? data.teamsIn : [],
-                            teamsOut: Array.isArray(data.teamsOut) ? data.teamsOut : [],
+                            // teamsIn / teamsOut sa už NEPOUŽÍVAJÚ – ponechané len pre spätnú kompatibilitu čítania
                             count: data.count ?? null,
                         });
                     }
@@ -4363,6 +4357,23 @@ const TransportApp = ({ userProfileData }) => {
     
         setMissingTravelTimeWarning(missing);
     }, [busRows, travelTimes, stopsList, travelTimesLoaded, placesLoaded]);
+    
+    // ============================================================
+    // NOVÉ: ID riadku busu = busId + deň + poradie
+    // ============================================================
+    const buildRowId = (busId, dayKey, order) => {
+        return `${busId}__${dayKey}__${order}`;
+    };
+
+    // Pomocná: z rowId vytiahne poradie (posledný segment za "__")
+    const parseOrderFromRowId = (rowId) => {
+        if (!rowId) return null;
+        const parts = String(rowId).split('__');
+        const last = parts[parts.length - 1];
+        const n = Number(last);
+        return Number.isFinite(n) ? n : null;
+    };
+    
     // ============================================================
     // PRIDANIE RIADKU DO AUTOBUSU PRE DANÝ DEŇ
     // ============================================================
@@ -4406,13 +4417,12 @@ const TransportApp = ({ userProfileData }) => {
                 busName: bus.name,
                 dayKey,
                 order: nextOrder,
+                rowId: buildRowId(bus.id, dayKey, nextOrder),   // NOVÉ
                 timeFrom: initialTimeFrom,
                 timeTo: '',
                 placeFromId: initialPlaceFromId,
                 placeToId: null,
-                teamsIn: [],
-                teamsOut: [],
-                // placeFrom a placeTo sa ZÁMERNE NEUVÁDZAJÚ
+                // teamsIn / teamsOut sa ZÁMERNE NEUKLADAJÚ
             });
             window.showGlobalNotification('Riadok pridaný.', 'success');
         } catch (err) {
@@ -4448,24 +4458,66 @@ const TransportApp = ({ userProfileData }) => {
             }
     
             const newOrder = (prevRow.order || 0) + 1;
-    
+
+            // ============================================================
+            // NOVÉ: Posun order A rowId pre všetky nasledujúce riadky.
+            // ============================================================
+            const rowIdMap = {};   // starý rowId → nový rowId
             const shiftPromises = [];
             for (let i = nextIdx; i < allRows.length; i++) {
                 const r = allRows[i];
                 const newOrderValue = (r.order || 0) + 1;
-                if (newOrderValue !== r.order) {
+                const newRowId = buildRowId(bus.id, dayKey, newOrderValue);
+                if (r.rowId) rowIdMap[r.rowId] = newRowId;
+                if (newOrderValue !== r.order || newRowId !== r.rowId) {
                     shiftPromises.push(
-                        updateDoc(doc(window.db, 'transport', r.id), { order: newOrderValue })
+                        updateDoc(doc(window.db, 'transport', r.id), {
+                            order: newOrderValue,
+                            rowId: newRowId,
+                        })
                     );
                 }
             }
             await Promise.all(shiftPromises);
-    
+            
             // ============================================================
-            // NOVÉ: Pri vytváraní NOVÉHO dokumentu NEPOUŽÍVAME deleteField().
-            // Polia placeFrom / placeTo jednoducho VYNECHÁME.
-            // Ukladáme IBA ID: placeFromId / placeToId.
+            // NOVÉ: Premapovanie rowId v už priradených presunoch
+            // (segmenty, ktoré majú busId === bus.id).
             // ============================================================
+            if (Object.keys(rowIdMap).length > 0) {
+                try {
+                    const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+                    const snap = await getDoc(docRef);
+                    if (snap.exists()) {
+                        const data = snap.data() || {};
+                        const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
+                        const tUpdates = {};
+                        Object.entries(rawTransfers).forEach(([key, v]) => {
+                            if (!v || !Array.isArray(v.segments)) return;
+                            let changed = false;
+                            const newSegments = v.segments.map((s) => {
+                                if (s.busId !== bus.id) return s;
+                                if (s.boardingRowId && rowIdMap[s.boardingRowId]) {
+                                    changed = true;
+                                    s = { ...s, boardingRowId: rowIdMap[s.boardingRowId] };
+                                }
+                                if (s.alightingRowId && rowIdMap[s.alightingRowId]) {
+                                    changed = true;
+                                    s = { ...s, alightingRowId: rowIdMap[s.alightingRowId] };
+                                }
+                                return s;
+                            });
+                            if (changed) tUpdates[key] = { ...v, segments: newSegments };
+                        });
+                        if (Object.keys(tUpdates).length > 0) {
+                            await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
+                        }
+                    }
+                } catch (e) {
+                    console.error('[TRANSPORT] Chyba pri premapovaní rowId v presunoch:', e);
+                }
+            }
+            
             const newRowRef = doc(collection(window.db, 'transport'));
             await setDoc(newRowRef, {
                 type: 'busRow',
@@ -4473,13 +4525,12 @@ const TransportApp = ({ userProfileData }) => {
                 busName: bus.name,
                 dayKey,
                 order: newOrder,
+                rowId: buildRowId(bus.id, dayKey, newOrder),   // NOVÉ
                 timeFrom: initialTimeFrom,
                 timeTo: '',
                 placeFromId,
                 placeToId,
-                teamsIn: [],
-                teamsOut: [],
-                // placeFrom a placeTo sa ZÁMERNE NEUVÁDZAJÚ
+                // teamsIn / teamsOut sa ZÁMERNE NEUKLADAJÚ
             });
     
             window.showGlobalNotification('Riadok vložený medzi existujúce riadky.', 'success');
@@ -4978,7 +5029,77 @@ const TransportApp = ({ userProfileData }) => {
     const removeBusRow = async (rowId) => {
         if (!window.db || !rowId) return;
         try {
+            // 1) Nájdi riadok a jeho busId/dayKey
+            let busId = null;
+            let dayKey = null;
+            Object.entries(busRows || {}).forEach(([k, rows]) => {
+                if (busId) return;
+                const [bId, dK] = k.split('|');
+                const r = (rows || []).find((x) => x.id === rowId);
+                if (r) { busId = bId; dayKey = dK; }
+            });
+    
+            if (!busId || !dayKey) {
+                await deleteDoc(doc(window.db, 'transport', rowId));
+                window.showGlobalNotification('Riadok odstránený.', 'info');
+                return;
+            }
+    
+            // 2) Zmaž dokument
             await deleteDoc(doc(window.db, 'transport', rowId));
+    
+            // 3) Prepočítaj order a rowId pre zostávajúce riadky
+            const rowsKey = `${busId}|${dayKey}`;
+            const remaining = (busRows[rowsKey] || [])
+                .filter((r) => r.id !== rowId)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+            const rowIdMap = {};
+            const updates = [];
+            remaining.forEach((r, i) => {
+                const newOrder = i + 1;
+                const newRowId = buildRowId(busId, dayKey, newOrder);
+                if (r.order !== newOrder || r.rowId !== newRowId) {
+                    updates.push(updateDoc(doc(window.db, 'transport', r.id), {
+                        order: newOrder,
+                        rowId: newRowId,
+                    }));
+                    if (r.rowId) rowIdMap[r.rowId] = newRowId;
+                }
+            });
+            await Promise.all(updates);
+    
+            // 4) Premapuj rowId v presunoch
+            if (Object.keys(rowIdMap).length > 0) {
+                const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+                const snap = await getDoc(docRef);
+                if (snap.exists()) {
+                    const data = snap.data() || {};
+                    const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
+                    const tUpdates = {};
+                    Object.entries(rawTransfers).forEach(([key, v]) => {
+                        if (!v || !Array.isArray(v.segments)) return;
+                        let changed = false;
+                        const newSegments = v.segments.map((s) => {
+                            if (s.busId !== busId) return s;
+                            if (s.boardingRowId && rowIdMap[s.boardingRowId]) {
+                                changed = true;
+                                s = { ...s, boardingRowId: rowIdMap[s.boardingRowId] };
+                            }
+                            if (s.alightingRowId && rowIdMap[s.alightingRowId]) {
+                                changed = true;
+                                s = { ...s, alightingRowId: rowIdMap[s.alightingRowId] };
+                            }
+                            return s;
+                        });
+                        if (changed) tUpdates[key] = { ...v, segments: newSegments };
+                    });
+                    if (Object.keys(tUpdates).length > 0) {
+                        await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
+                    }
+                }
+            }
+    
             window.showGlobalNotification('Riadok odstránený.', 'info');
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri odstraňovaní riadku:', err);
@@ -5143,33 +5264,42 @@ const TransportApp = ({ userProfileData }) => {
         return `${teamName}`;
     };
 
-    // ============================================================
-    // POMOCNÁ: zistí, ktoré tímy sú "v autobuse" po tomto riadku
-    // (nastúpili v tomto alebo skoršom riadku a ešte nevystúpili)
-    // ============================================================
     const getTeamsInBusAfterRow = (busId, dayKey, rowId) => {
+        // NOVÉ: Pracuj VÝHRADNE cez rowId (segmenty presunov) – nie cez row.teamsIn/teamsOut
         const rowsKey = `${busId}|${dayKey}`;
         const allRows = (busRows[rowsKey] || [])
             .slice()
             .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-        const currentIdx = allRows.findIndex((r) => r.id === rowId);
-        if (currentIdx === -1) return [];
-
+    
+        const currentRow = allRows.find((r) => r.id === rowId);
+        if (!currentRow) return [];
+    
+        const currentOrder = parseOrderFromRowId(currentRow.rowId);
+        if (currentOrder == null) return [];
+    
         const inBus = new Set();
-
-        // 1) Predchádzajúce riadky – plná logika (in pridaj, out odober)
-        for (let i = 0; i < currentIdx; i++) {
-            const r = allRows[i];
-            (r.teamsIn || []).forEach((t) => inBus.add(String(t)));
-            (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
-        }
-
-        // 2) Aktuálny riadok – pridaj teamsIn, ale NEODOBERAJ teamsOut
-        //    (tím ešte sedí v buse počas jazdy z placeFrom do placeTo)
-        const currentRow = allRows[currentIdx];
-        (currentRow.teamsIn || []).forEach((t) => inBus.add(String(t)));
-
+    
+        // Prejdi všetky parent presuny pre daný deň a bus
+        (savedTransfersRef.current || []).forEach((parent) => {
+            if (parent.dayKey !== dayKey) return;
+            if (parent.isWalking === true) return;
+    
+            (parent.segments || []).forEach((seg) => {
+                if (seg.busId !== busId) return;
+                if (seg.isWalking === true) return;
+    
+                const bOrder = parseOrderFromRowId(seg.boardingRowId);
+                const aOrder = parseOrderFromRowId(seg.alightingRowId);
+                if (bOrder == null || aOrder == null) return;
+    
+                // Tím je v buse na tomto riadku, ak nastúpil v tomto alebo skoršom
+                // a vystúpi až neskôr (nie na tomto riadku).
+                if (bOrder <= currentOrder && currentOrder < aOrder) {
+                    inBus.add(`${parent.teamName}|${parent.category}`);
+                }
+            });
+        });
+    
         return [...inBus].filter((teamKey) => {
             if (!selectedCategoryFilter) return true;
             const parts = String(teamKey).split('|');
@@ -5198,73 +5328,23 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     const isSegmentCoveredByBusPath = (dayKey, teamName, category, fromId, toId) => {
-        // ============================================================
-        // NOVÉ: Pracuj VÝHRADNE s ID.
-        //  - parametre fromId / toId sú ID
-        //  - row.placeFromId / row.placeToId sú ID
-        //  - ŽIADNE názvy (fromLoc, toLoc, row.placeFrom, row.placeTo)
-        // ============================================================
         if (!fromId || !toId) return false;
         if (fromId === toId) return false;
 
-        let covered = false;
-
-        Object.entries(busRows || {}).forEach(([busKey, rows]) => {
-            if (covered) return;
-            const bDayKey = busKey.split('|')[1];
-            if (bDayKey !== dayKey) return;
-
-            const sorted = (rows || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-            if (sorted.length === 0) return;
-
-            const boardIdxs = [];
-            const alightIdxs = [];
-
-            sorted.forEach((row, idx) => {
-                const hasTeamIn = (row.teamsIn || []).some((tk) => {
-                    const [tn, cat] = String(tk).split('|');
-                    return String(tn).trim() === teamName && cleanCategory(cat) === category;
-                });
-                const hasTeamOut = (row.teamsOut || []).some((tk) => {
-                    const [tn, cat] = String(tk).split('|');
-                    return String(tn).trim() === teamName && cleanCategory(cat) === category;
-                });
-                if (hasTeamIn) boardIdxs.push(idx);
-                if (hasTeamOut) alightIdxs.push(idx);
-            });
-
-            if (boardIdxs.length === 0 || alightIdxs.length === 0) return;
-
-            boardIdxs.forEach((boardIdx) => {
-                if (covered) return;
-                const nextAlight = alightIdxs.find((ai) => ai >= boardIdx);
-                if (nextAlight == null) return;
-
-                let fromIdx = -1;
-                let toIdx = -1;
-
-                for (let i = boardIdx; i <= nextAlight; i++) {
-                    // ============================================================
-                    // NOVÉ: Pracuj VÝHRADNE s ID.
-                    // ============================================================
-                    const rowFromId = sorted[i].placeFromId || null;
-                    const rowToId = sorted[i].placeToId || null;
-
-                    if (fromIdx === -1 && (rowFromId === fromId || rowToId === fromId)) {
-                        fromIdx = i;
-                    }
-                    if (fromIdx !== -1 && (rowFromId === toId || rowToId === toId)) {
-                        if (toIdx === -1) toIdx = i;
-                    }
-                }
-
-                if (fromIdx !== -1 && toIdx !== -1 && toIdx >= fromIdx) {
-                    covered = true;
-                }
-            });
+        // ============================================================
+        // NOVÉ: Nájdi v parent.segments segment pre daný tím/kategóriu,
+        // ktorý má busId a zhodné fromId/toId.
+        // ============================================================
+        const parent = (savedTransfersRef.current || []).find((p) => {
+            if (p.dayKey !== dayKey) return false;
+            if (String(p.teamName || '').trim() !== String(teamName || '').trim()) return false;
+            if (cleanCategory(p.category || '') !== cleanCategory(category || '')) return false;
+            return (p.segments || []).some(
+                (s) => s.fromId === fromId && s.toId === toId && s.busId && s.boardingRowId && s.alightingRowId
+            );
         });
 
-        return covered;
+        return !!parent;
     };
 
     // ============================================================
@@ -5359,214 +5439,70 @@ const TransportApp = ({ userProfileData }) => {
                 React.createElement('option', { key: s.id, value: s.id }, s.name)
             );
         
-        const removeTeamSegment = async (teamKeyToRemove, clickSide) => {
-            if (!window.db || !busId || !dayKey || !row?.id) return;
-
-            const rowsKey = `${busId}|${dayKey}`;
-            const allRows = (busRows[rowsKey] || [])
-                .slice()
-                .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-            const currentIdx = allRows.findIndex((r) => r.id === row.id);
-            if (currentIdx === -1) return;
-
-            // Pomocná: zistí, či daný riadok obsahuje tím v teamsIn/teamsOut
-            const hasTeamIn = (r) =>
-                (r.teamsIn || []).some((t) => String(t) === String(teamKeyToRemove));
-            const hasTeamOut = (r) =>
-                (r.teamsOut || []).some((t) => String(t) === String(teamKeyToRemove));
-
-            // Nájdeme nástupný a výstupný riadok pre SEGMENT, v ktorom
-            // sa nachádza aktuálny riadok.
-            let boardIdx = null;
-            let alightIdx = null;
-
-            // 1) Ak kliknutie prišlo z teamsIn → aktuálny riadok je nástupný
-            if (clickSide === 'in' && hasTeamIn(allRows[currentIdx])) {
-                boardIdx = currentIdx;
-                for (let i = currentIdx; i < allRows.length; i++) {
-                    if (hasTeamOut(allRows[i])) {
-                        alightIdx = i;
-                        break;
-                    }
-                }
-            }
-
-            // 2) Ak kliknutie prišlo z teamsOut → aktuálny riadok je výstupný
-            if (clickSide === 'out' && hasTeamOut(allRows[currentIdx])) {
-                alightIdx = currentIdx;
-                for (let i = currentIdx; i >= 0; i--) {
-                    if (hasTeamIn(allRows[i])) {
-                        boardIdx = i;
-                        break;
-                    }
-                }
-            }
-
-            // 3) Fallback – ak sa nenašla dvojica, odstráň len z aktuálneho riadku
-            if (boardIdx == null && alightIdx == null) {
-                const currentTeams = clickSide === 'in'
-                    ? (row.teamsIn || [])
-                    : (row.teamsOut || []);
-                const newTeams = currentTeams.filter((t) => String(t) !== String(teamKeyToRemove));
-                if (newTeams.length === currentTeams.length) return;
-                try {
-                    await updateDoc(doc(window.db, 'transport', row.id), {
-                        [clickSide === 'in' ? 'teamsIn' : 'teamsOut']: newTeams,
-                    });
-                    window.showGlobalNotification('Tím bol odstránený z riadku.', 'info');
-                } catch (err) {
-                    console.error('[TRANSPORT] Chyba pri odstraňovaní tímu z riadku:', err);
-                    window.showGlobalNotification('Nepodarilo sa odstrániť tím z riadku.', 'error');
-                }
+        const removeTeamSegment = async (teamKeyToRemove, clickSide, rowObj) => {
+            if (!window.db || !busId || !dayKey || !rowObj?.id) return;
+        
+            const [teamName, category] = String(teamKeyToRemove).split('|');
+            const tn = String(teamName).trim();
+            const cat = cleanCategory(category || '');
+        
+            // ============================================================
+            // NOVÉ: Nájdi segment v parentoch, ktorý má busId === busId
+            // a (podľa clickSide) boardingRowId alebo alightingRowId === rowObj.rowId
+            // ============================================================
+            const targetParent = (savedTransfersRef.current || []).find((p) => {
+                if (p.dayKey !== dayKey) return false;
+                if (String(p.teamName || '').trim() !== tn) return false;
+                if (cleanCategory(p.category || '') !== cat) return false;
+                return (p.segments || []).some((s) => {
+                    if (s.busId !== busId) return false;
+                    if (clickSide === 'in') return s.boardingRowId === rowObj.rowId;
+                    return s.alightingRowId === rowObj.rowId;
+                });
+            });
+        
+            if (!targetParent) {
+                window.showGlobalNotification('Segment sa nenašiel.', 'error');
                 return;
             }
-
-            // Zostavíme zoznam zmien (riadok → nové teamsIn/teamsOut)
-            const updates = {};
-
-            if (boardIdx != null) {
-                const r = allRows[boardIdx];
-                const newTeamsIn = (r.teamsIn || []).filter(
-                    (t) => String(t) !== String(teamKeyToRemove)
-                );
-                if (newTeamsIn.length !== (r.teamsIn || []).length) {
-                    updates[r.id] = { ...(updates[r.id] || {}), teamsIn: newTeamsIn };
-                }
-            }
-
-            if (alightIdx != null) {
-                const r = allRows[alightIdx];
-                const newTeamsOut = (r.teamsOut || []).filter(
-                    (t) => String(t) !== String(teamKeyToRemove)
-                );
-                if (newTeamsOut.length !== (r.teamsOut || []).length) {
-                    updates[r.id] = { ...(updates[r.id] || {}), teamsOut: newTeamsOut };
-                }
-            }
-
-            if (Object.keys(updates).length === 0) return;
-
+        
             try {
-                await Promise.all(
-                    Object.entries(updates).map(([rid, data]) =>
-                        updateDoc(doc(window.db, 'transport', rid), data)
-                    )
-                );
-                window.showGlobalNotification(
-                    'Tím bol odstránený z celého segmentu (nástup + výstup).',
-                    'info'
-                );
-
-                // ============================================================
-                // NOVÉ: Po odstránení segmentu z autobusu treba prepočítať
-                // VŠETKY parent záznamy daného tímu v ten istý deň.
-                // ============================================================
-                try {
-                    await new Promise((r) => setTimeout(r, 400)); // počkať na onSnapshot
-
-                    const teamKeyParts = String(teamKeyToRemove).split('|');
-                    const removedTeamName = (teamKeyParts[0] || '').trim();
-                    const removedCategory = cleanCategory(teamKeyParts[1] || '');
-
-                    // 1) Nájdi VŠETKY parent záznamy tohto tímu v tento deň
-                    const parentCandidates = (savedTransfersRef.current || [])
-                        .filter((s) => {
-                            if (String(s.teamName || '').trim() !== removedTeamName) return false;
-                            if (cleanCategory(s.category || '') !== removedCategory) return false;
-                            if ((s.dayKey || '') !== dayKey) return false;
-                            if (s._parentKey && s._parentKey !== s.key) return false;
-                            return true;
-                        });
-
-                    // ============================================================
-                    // Pre každý parent:
-                    //  1) Explicitne vynuluj časy segmentov priradených k tomuto busu
-                    //  2) Prepočítaj parent (dopočíta časy pre ostatné segmenty)
-                    // ============================================================
-                    for (const parent of parentCandidates) {
-                        try {
-                            const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
-                            const draft = {
-                                ...parent,
-                                segments: Array.isArray(parent.segments)
-                                    ? parent.segments.map((s) => ({ ...s }))
-                                    : buildDefaultSegments(parent),
+                await updateParentTransfer(targetParent.key, (draft) => {
+                    draft.segments = draft.segments.map((s) => {
+                        if (s.busId !== busId) return s;
+                        if (clickSide === 'in' && s.boardingRowId === rowObj.rowId) {
+                            // Zruš priradenie celého segmentu
+                            return {
+                                ...s,
+                                busAssigned: false,
+                                busId: null,
+                                boardingRowId: null,
+                                alightingRowId: null,
+                                startTs: null,
+                                endTs: null,
+                                when: null,
                             };
-
-                            let changed = false;
-                            draft.segments = draft.segments.map((seg) => {
-                                if (!seg) return seg;
-                                const wasAssignedToThisBus =
-                                    seg.busId === busId ||
-                                    (seg.busId == null && (seg.startTs != null || seg.endTs != null));
-                                if (!wasAssignedToThisBus) return seg;
-
-                                if (
-                                    seg.startTs != null ||
-                                    seg.endTs != null ||
-                                    seg.when != null ||
-                                    seg.busAssigned === true ||
-                                    seg.busId != null
-                                ) {
-                                    changed = true;
-                                    return {
-                                        ...seg,
-                                        startTs: null,
-                                        endTs: null,
-                                        when: null,
-                                        busAssigned: false,
-                                        busId: null,
-                                    };
-                                }
-                                return seg;
-                            });
-
-                            // Zapíš vynulované segmenty do DB okamžite
-                            if (changed) {
-                                const payload = {
-                                    category: draft.category,
-                                    teamUid: draft.teamUid,
-                                    teamIndex: draft.teamIndex,
-                                    dayKey: draft.dayKey,
-                                    // ============================================================
-                                    // NOVÉ: Ukladaj VÝHRADNE ID (fromId / toId).
-                                    // ============================================================
-                                    fromId: draft.fromId || null,
-                                    toId: draft.toId || null,
-                                    when: draft.when,
-                                    segments: draft.segments,
-                                };
-                                if (Array.isArray(draft.intermediateStopIds) && draft.intermediateStopIds.length > 0) {
-                                    payload.intermediateStopIds = draft.intermediateStopIds;
-                                }
-                                if (draft.isWalking === true) {
-                                    payload.isWalking = true;
-                                    payload.walkingSetAt = draft.walkingSetAt || null;
-                                    payload.walkingSetBy = draft.walkingSetBy || null;
-                                }
-                                await setDoc(
-                                    docRef,
-                                    { [TRANSPORT_TRANSFERS_FIELD]: { [parent.key]: payload } },
-                                    { merge: true }
-                                );
-                            }
-
-                            // 3) Prepočítaj parent
-                            await recomputeParentSegments({
-                                ...parent,
-                                segments: draft.segments,
-                            });
-                        } catch (e) {
-                            console.error('[TRANSPORT] Chyba pri prepočte parent segmentov po odstránení z busu:', e);
                         }
-                    }
-                } catch (postErr) {
-                    console.error('[TRANSPORT] Chyba pri post-spracovaní po odstránení segmentu:', postErr);
-                }
+                        if (clickSide === 'out' && s.alightingRowId === rowObj.rowId) {
+                            return {
+                                ...s,
+                                busAssigned: false,
+                                busId: null,
+                                boardingRowId: null,
+                                alightingRowId: null,
+                                startTs: null,
+                                endTs: null,
+                                when: null,
+                            };
+                        }
+                        return s;
+                    });
+                });
+        
+                window.showGlobalNotification('Tím bol odstránený z autobusu.', 'info');
             } catch (err) {
-                console.error('[TRANSPORT] Chyba pri odstraňovaní segmentu tímu:', err);
-                window.showGlobalNotification('Nepodarilo sa odstrániť segment tímu.', 'error');
+                console.error('[TRANSPORT] Chyba pri odstraňovaní tímu z busu:', err);
+                window.showGlobalNotification('Nepodarilo sa odstrániť tím z busu.', 'error');
             }
         };
     
@@ -5726,10 +5662,27 @@ const TransportApp = ({ userProfileData }) => {
                     stopOptionsTo
                 )
             ),            
-            // 5. tímy nástup (len text vo farbe kategórie, bez pozadia a rámčeka)
+            // 5. tímy nástup
             React.createElement('td', { className: 'border border-gray-300 p-1 align-middle whitespace-nowrap' },
                 (() => {
-                    const filteredTeamsIn = filterTeamsByCategory(row.teamsIn);
+                    // ============================================================
+                    // NOVÉ: Tímy, ktoré nastupujú na TOMTO riadku – hľadaj v parent.segments
+                    // podľa busId + boardingRowId === row.rowId
+                    // ============================================================
+                    const teamsBoardingHere = [];
+                    (savedTransfersRef.current || []).forEach((parent) => {
+                        if (parent.dayKey !== dayKey) return;
+                        if (parent.isWalking === true) return;
+                        (parent.segments || []).forEach((seg) => {
+                            if (seg.busId !== busId) return;
+                            if (seg.isWalking === true) return;
+                            if (seg.boardingRowId === row.rowId) {
+                                teamsBoardingHere.push(`${parent.teamName}|${parent.category}`);
+                            }
+                        });
+                    });
+            
+                    const filteredTeamsIn = filterTeamsByCategory(teamsBoardingHere);
                     if (filteredTeamsIn.length === 0) {
                         return React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—');
                     }
@@ -5747,7 +5700,7 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 {
                                     key: `in-${i}`,
-                                    onClick: () => removeTeamSegment(tn, 'in'),
+                                    onClick: () => removeTeamSegment(tn, 'in', row),
                                     title: getTeamTooltipLabel(tn),
                                     className: 'inline-flex items-center gap-1 text-sm font-semibold cursor-pointer hover:underline whitespace-nowrap',
                                     style: { color: textColor }
@@ -5758,10 +5711,27 @@ const TransportApp = ({ userProfileData }) => {
                     );
                 })()
             ),
-            // 6. tímy výstup (len text vo farbe kategórie, bez pozadia a rámčeka)
+            // 6. tímy výstup
             React.createElement('td', { className: 'border border-gray-300 p-1 align-middle whitespace-nowrap' },
                 (() => {
-                    const filteredTeamsOut = filterTeamsByCategory(row.teamsOut);
+                    // ============================================================
+                    // NOVÉ: Tímy, ktoré vystupujú na TOMTO riadku – hľadaj v parent.segments
+                    // podľa busId + alightingRowId === row.rowId
+                    // ============================================================
+                    const teamsAlightingHere = [];
+                    (savedTransfersRef.current || []).forEach((parent) => {
+                        if (parent.dayKey !== dayKey) return;
+                        if (parent.isWalking === true) return;
+                        (parent.segments || []).forEach((seg) => {
+                            if (seg.busId !== busId) return;
+                            if (seg.isWalking === true) return;
+                            if (seg.alightingRowId === row.rowId) {
+                                teamsAlightingHere.push(`${parent.teamName}|${parent.category}`);
+                            }
+                        });
+                    });
+            
+                    const filteredTeamsOut = filterTeamsByCategory(teamsAlightingHere);
                     if (filteredTeamsOut.length === 0) {
                         return React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—');
                     }
@@ -5779,7 +5749,7 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 {
                                     key: `out-${i}`,
-                                    onClick: () => removeTeamSegment(tn, 'out'),
+                                    onClick: () => removeTeamSegment(tn, 'out', row),
                                     title: getTeamTooltipLabel(tn),
                                     className: 'inline-flex items-center gap-1 text-sm font-semibold cursor-pointer hover:underline whitespace-nowrap',
                                     style: { color: textColor }
@@ -6236,70 +6206,27 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
-    // ============================================================
-    // Pomocná: Zisti, či je konkrétny segment pokrytý autobusom
-    // ============================================================
     const isSegmentCoveredByBus = (segment) => {
         if (!segment) return false;
 
-        const teamName = String(segment.teamName || '').trim();
-        const category = cleanCategory(segment.category || '');
-        const dayKey = segment.dayKey || '';
-
-        // ============================================================
-        // NOVÉ: Pracuj VÝHRADNE s ID.
-        //  - segment.fromId / segment.toId sú ID
-        //  - row.placeFromId / row.placeToId sú ID
-        //  - ŽIADNE názvy (fromLocation, toLocation, placeFrom, placeTo)
-        // ============================================================
         const fromId = segment.fromId || null;
         const toId = segment.toId || null;
         if (!fromId || !toId) return false;
 
-        let found = false;
-        Object.entries(busRows || {}).forEach(([busKey, rows]) => {
-            if (found) return;
-            const bDayKey = busKey.split('|')[1];
-            if (bDayKey !== dayKey) return;
+        // ============================================================
+        // NOVÉ: Priamo v parent.segments nájdi segment s busId
+        // a boardingRowId/alightingRowId.
+        // ============================================================
+        const parentKey = segment._parentKey || segment.key;
+        const parent = (savedTransfersRef.current || []).find((p) => p.key === parentKey);
+        if (!parent || !Array.isArray(parent.segments)) return false;
 
-            const sorted = (rows || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-
-            let boardIdx = -1;
-            let alightIdx = -1;
-
-            for (let i = 0; i < sorted.length; i++) {
-                const row = sorted[i];
-                // ============================================================
-                // NOVÉ: Pracuj VÝHRADNE s ID.
-                // ============================================================
-                const rowFromId = row.placeFromId || null;
-                const rowToId = row.placeToId || null;
-
-                const hasTeamIn = (row.teamsIn || []).some((t) => {
-                    const [tn, cat] = String(t).split('|');
-                    return String(tn).trim() === teamName && cleanCategory(cat) === category;
-                });
-                const hasTeamOut = (row.teamsOut || []).some((t) => {
-                    const [tn, cat] = String(t).split('|');
-                    return String(tn).trim() === teamName && cleanCategory(cat) === category;
-                });
-
-                if (hasTeamIn && rowFromId === fromId && boardIdx === -1) {
-                    boardIdx = i;
-                }
-                if (hasTeamOut && rowToId === toId && boardIdx !== -1) {
-                    alightIdx = i;
-                    break;
-                }
-            }
-
-            if (boardIdx !== -1) {
-                found = true;
-            }
-        });
-
-        return found;
+        const segIdx = findSegmentIndex(parent.segments, fromId, toId);
+        if (segIdx === -1) return false;
+        const seg = parent.segments[segIdx];
+        return !!(seg && seg.busId && seg.boardingRowId && seg.alightingRowId);
     };
+
     
     const arePreviousSegmentsResolved = (transfer) => {
         if (!transfer) return true;
@@ -6696,32 +6623,40 @@ const TransportApp = ({ userProfileData }) => {
             const currentTeamKey = `${transfer.teamName}|${transfer.category || ''}`;
 
             sortedRows.forEach((row) => {
-                // ============================================================
-                // NOVÉ: Pracuj VÝHRADNE s ID.
-                // ============================================================
                 const rowFromId = row.placeFromId || null;
                 const rowToId = row.placeToId || null;
                 const rowTimeFromTs = timeOnDayKeyToTs(dayKey, row.timeFrom);
                 const rowTimeToTs = timeOnDayKeyToTs(dayKey, row.timeTo);
-
+            
                 // Nástupný kandidát
                 if (rowFromId && rowFromId === trFromId && rowTimeFromTs != null &&
                     rowTimeFromTs >= trRange.startTs && rowTimeFromTs <= trRange.endTs) {
                     boardingCandidates.push({ row, timeTs: rowTimeFromTs });
                 }
-
+            
                 // Výstupný kandidát
                 if (rowToId && rowToId === trToId && rowTimeToTs != null &&
                     rowTimeToTs >= trRange.startTs && rowTimeToTs <= trRange.endTs) {
                     alightingCandidates.push({ row, timeTs: rowTimeToTs });
                 }
-
-                // Detekcia už priradeného segmentu
-                const hasTeamIn = (row.teamsIn || []).includes(currentTeamKey);
-                const hasTeamOut = (row.teamsOut || []).includes(currentTeamKey);
-                if (hasTeamIn && rowFromId === trFromId) isCurrentSegmentAlreadyAssignedToThisBus = true;
-                if (hasTeamOut && rowToId === trToId) isCurrentSegmentAlreadyAssignedToThisBus = true;
             });
+            
+            // ============================================================
+            // NOVÉ: Detekcia už priradeného segmentu – cez parent.segments
+            // (busId === bus.id && boardingRowId/alightingRowId sedia na trFromId/trToId)
+            // ============================================================
+            const alreadyAssigned = (savedTransfersRef.current || []).some((p) => {
+                if (p.dayKey !== trDayKey) return false;
+                if (String(p.teamName || '').trim() !== String(transfer.teamName || '').trim()) return false;
+                if (cleanCategory(p.category || '') !== cleanCategory(transfer.category || '')) return false;
+                return (p.segments || []).some((s) => {
+                    if (s.busId !== bus.id) return false;
+                    if (s.isWalking === true) return false;
+                    if (s.fromId !== trFromId || s.toId !== trToId) return false;
+                    return !!(s.boardingRowId && s.alightingRowId);
+                });
+            });
+            if (alreadyAssigned) isCurrentSegmentAlreadyAssignedToThisBus = true;
 
             console.log(`  Bus "${bus.name}": nástupných=${boardingCandidates.length}, výstupných=${alightingCandidates.length}, už priradený=${isCurrentSegmentAlreadyAssignedToThisBus}`);
 
@@ -6966,32 +6901,37 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         const findBusTimesForSegment = (fromIdSeg, toIdSeg) => {
-            let boardingTs = null, alightingTs = null, busId = null;
-            allBusRowsForDay.forEach((row) => {
-                // ============================================================
-                // NOVÉ: Pracuj VÝHRADNE s ID.
-                // ============================================================
-                const rowFromId = row.placeFromId || null;
-                const rowToId = row.placeToId || null;
-                const hasTeamIn = matchesTeam(row.teamsIn);
-                const hasTeamOut = matchesTeam(row.teamsOut);
-                if (hasTeamIn && rowFromId === fromIdSeg && row.timeFrom && boardingTs == null) {
-                    const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
-                    if (dm) {
-                        const [h, mi] = row.timeFrom.split(':').map(Number);
-                        boardingTs = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
-                        busId = row._busKey ? String(row._busKey).split('|')[0] : null;
-                    }
+            // ============================================================
+            // NOVÉ: Hľadaj priamo v parent.segments, či tento segment
+            // už má busId + boardingRowId + alightingRowId a zisti časy
+            // z príslušných busRows podľa rowId.
+            // ============================================================
+            const parentSeg = draft.segments.find(
+                (s) => s.fromId === fromIdSeg && s.toId === toIdSeg
+            );
+            if (!parentSeg || !parentSeg.busId) return { boardingTs: null, alightingTs: null, busId: null };
+        
+            const boardingRow = allBusRowsForDay.find(
+                (r) => r.rowId === parentSeg.boardingRowId && String(r._busKey).split('|')[0] === parentSeg.busId
+            );
+            const alightingRow = allBusRowsForDay.find(
+                (r) => r.rowId === parentSeg.alightingRowId && String(r._busKey).split('|')[0] === parentSeg.busId
+            );
+        
+            let boardingTs = null;
+            let alightingTs = null;
+            const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+            if (dm) {
+                if (boardingRow && boardingRow.timeFrom) {
+                    const [h, mi] = boardingRow.timeFrom.split(':').map(Number);
+                    boardingTs = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
                 }
-                if (hasTeamOut && rowToId === toIdSeg && row.timeTo && alightingTs == null) {
-                    const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
-                    if (dm) {
-                        const [h, mi] = row.timeTo.split(':').map(Number);
-                        alightingTs = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
-                    }
+                if (alightingRow && alightingRow.timeTo) {
+                    const [h, mi] = alightingRow.timeTo.split(':').map(Number);
+                    alightingTs = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
                 }
-            });
-            return { boardingTs, alightingTs, busId };
+            }
+            return { boardingTs, alightingTs, busId: parentSeg.busId };
         };
 
         draft.segments = draft.segments.map((seg) => {
@@ -7220,64 +7160,53 @@ const TransportApp = ({ userProfileData }) => {
                 return;
             }
 
-            // Ak bol segment priradený k busu, odstráň ho z busu.
-            if (transfer._parentKey) {
-                const teamKey = `${transfer.teamName}|${transfer.category || ''}`;
-
-                // ============================================================
-                // NOVÉ: Pracuj VÝHRADNE s ID.
-                // ============================================================
-                const trFromId = transfer.fromId || null;
-                const trToId = transfer.toId || null;
-
-                const rowsUpdates = {};
-
-                const parentRec = savedTransfersRef.current.find((s) => s.key === parentKey);
-                let targetSeg = null;
-                if (parentRec && Array.isArray(parentRec.segments)) {
+            // ============================================================
+            // NOVÉ: Pri označení ako "peši" už netreba odstraňovať z busu
+            // cez teamsIn/teamsOut. Stačí v segmentu vyčistiť busId /
+            // boardingRowId / alightingRowId – to urobí updateParentTransfer nižšie.
+            // ============================================================
+            
+            await updateParentTransfer(parentKey, (draft) => {
+                const segIdx = transfer._parentKey
+                    ? findSegmentIndex(draft.segments, transfer.fromId, transfer.toId)
+                    : -1;
+                if (segIdx !== -1) {
+                    draft.segments[segIdx].isWalking = true;
+                    draft.segments[segIdx].busAssigned = false;
                     // ============================================================
-                    // NOVÉ: findSegmentIndex pracuje VÝHRADNE s ID.
+                    // NOVÉ: Vyčisti aj busId a rowId referencie
                     // ============================================================
-                    const segIdx = findSegmentIndex(parentRec.segments, trFromId, trToId);
-                    if (segIdx !== -1) targetSeg = parentRec.segments[segIdx];
-                }
-
-                Object.entries(busRows || {}).forEach(([busKey, rows]) => {
-                    const [busId, dayKey] = busKey.split('|');
-                    if (dayKey !== (transfer.dayKey || '')) return;
-
-                    if (targetSeg && targetSeg.busId && busId !== targetSeg.busId) return;
-
-                    (rows || []).forEach((row) => {
-                        // ============================================================
-                        // NOVÉ: Pracuj VÝHRADNE s ID.
-                        // ============================================================
-                        const rowFromId = row.placeFromId || null;
-                        const rowToId = row.placeToId || null;
-                        const isBoardingRow = rowFromId === trFromId;
-                        const isAlightingRow = rowToId === trToId;
-
-                        if (!isBoardingRow && !isAlightingRow) return;
-
-                        const hasIn = (row.teamsIn || []).some((t) => String(t) === teamKey);
-                        const hasOut = (row.teamsOut || []).some((t) => String(t) === teamKey);
-                        if (!hasIn && !hasOut) return;
-
-                        rowsUpdates[row.id] = {
-                            teamsIn: (row.teamsIn || []).filter((t) => String(t) !== teamKey),
-                            teamsOut: (row.teamsOut || []).filter((t) => String(t) !== teamKey),
-                        };
+                    draft.segments[segIdx].busId = null;
+                    draft.segments[segIdx].boardingRowId = null;
+                    draft.segments[segIdx].alightingRowId = null;
+                    draft.segments[segIdx].startTs = null;
+                    draft.segments[segIdx].endTs = null;
+                    draft.segments[segIdx].when = null;
+                    draft.segments[segIdx].walkingSetAt = Timestamp.fromDate(new Date());
+                    draft.segments[segIdx].walkingSetBy = (userProfileData && userProfileData.email) || null;
+                } else {
+                    draft.segments.forEach((s) => {
+                        s.isWalking = true;
+                        s.busAssigned = false;
+                        s.busId = null;
+                        s.boardingRowId = null;
+                        s.alightingRowId = null;
+                        s.startTs = null;
+                        s.endTs = null;
+                        s.when = null;
+                        s.walkingSetAt = Timestamp.fromDate(new Date());
+                        s.walkingSetBy = (userProfileData && userProfileData.email) || null;
                     });
-                });
-
-                if (Object.keys(rowsUpdates).length > 0) {
-                    await Promise.all(
-                        Object.entries(rowsUpdates).map(([rid, data]) =>
-                            updateDoc(doc(window.db, 'transport', rid), data)
-                        )
-                    );
+                    if (draft.when && String(draft.when).trim() !== '') {
+                        // ponechaj
+                    } else if (parent.when && String(parent.when).trim() !== '') {
+                        draft.when = parent.when;
+                    }
+                    draft.isWalking = true;
+                    draft.walkingSetAt = Timestamp.fromDate(new Date());
+                    draft.walkingSetBy = (userProfileData && userProfileData.email) || null;
                 }
-            }
+            });
 
             await updateParentTransfer(parentKey, (draft) => {
                 // ============================================================
@@ -7328,9 +7257,6 @@ const TransportApp = ({ userProfileData }) => {
         try {
             const parentKey = transfer._parentKey || transfer.key;
             await updateParentTransfer(parentKey, (draft) => {
-                // ============================================================
-                // NOVÉ: findSegmentIndex pracuje VÝHRADNE s ID.
-                // ============================================================
                 const segIdx = transfer._parentKey
                     ? findSegmentIndex(draft.segments, transfer.fromId, transfer.toId)
                     : -1;
@@ -7338,11 +7264,20 @@ const TransportApp = ({ userProfileData }) => {
                     draft.segments[segIdx].isWalking = false;
                     draft.segments[segIdx].walkingSetAt = null;
                     draft.segments[segIdx].walkingSetBy = null;
+                    // ============================================================
+                    // NOVÉ: Vyčisti aj bus referencie (pre istotu)
+                    // ============================================================
+                    draft.segments[segIdx].busId = null;
+                    draft.segments[segIdx].boardingRowId = null;
+                    draft.segments[segIdx].alightingRowId = null;
                 } else {
                     draft.segments.forEach((s) => {
                         s.isWalking = false;
                         s.walkingSetAt = null;
                         s.walkingSetBy = null;
+                        s.busId = null;
+                        s.boardingRowId = null;
+                        s.alightingRowId = null;
                     });
                     draft.isWalking = false;
                     draft.walkingSetAt = null;
@@ -7436,56 +7371,23 @@ const TransportApp = ({ userProfileData }) => {
 
         setAssignBusSaving(true);
         try {
-            const updates = {};
-
-            if (boardingRow) {
-                const newTeamsIn = Array.from(new Set([...(boardingRow.teamsIn || []), teamKey]));
-                updates[boardingRow.id] = { ...(updates[boardingRow.id] || {}), teamsIn: newTeamsIn };
-            }
-
-            if (alightingRow) {
-                const newTeamsOut = Array.from(new Set([...(alightingRow.teamsOut || []), teamKey]));
-                updates[alightingRow.id] = { ...(updates[alightingRow.id] || {}), teamsOut: newTeamsOut };
-            }
-
-            if (!boardingRow && !alightingRow) {
-                const fallbackRowId = boardingRowId || alightingRowId;
-                let currentRow = rows.find(r => r.id === fallbackRowId);
-                if (currentRow) {
-                    if (side === 'in') {
-                        const newTeamsIn = Array.from(new Set([...(currentRow.teamsIn || []), teamKey]));
-                        updates[currentRow.id] = { teamsIn: newTeamsIn };
-                    } else {
-                        const newTeamsOut = Array.from(new Set([...(currentRow.teamsOut || []), teamKey]));
-                        updates[currentRow.id] = { teamsOut: newTeamsOut };
-                    }
-                }
-            }
-
-            await Promise.all(
-                Object.entries(updates).map(([rid, data]) =>
-                    updateDoc(doc(window.db, 'transport', rid), data)
-                )
-            );
-
-            // Počkaj, aby onSnapshot stihol aktualizovať busRows
-            await new Promise((r) => setTimeout(r, 600));
-
+            // ============================================================
+            // NOVÉ: NEZAPISUJEME teamsIn/teamsOut do busRow.
+            // Namiesto toho zapíšeme busId + boardingRowId + alightingRowId
+            // priamo do segmentu presunu.
+            // ============================================================
             const computeSegmentTimesFromRows = () => {
                 let startTs = null;
                 let endTs = null;
-
+        
                 if (boardingRow && boardingRow.timeFrom) {
                     startTs = timeOnDayKeyToTs(trDayKey, boardingRow.timeFrom);
                 }
                 if (alightingRow && alightingRow.timeTo) {
                     endTs = timeOnDayKeyToTs(trDayKey, alightingRow.timeTo);
                 }
-
+        
                 if (startTs != null && endTs == null) {
-                    // ============================================================
-                    // NOVÉ: Použi ID, nie názvy.
-                    // ============================================================
                     const mins = getTravelMinutes(trFromId, trToId);
                     if (mins != null) endTs = startTs + mins * 60000;
                 }
@@ -7493,23 +7395,25 @@ const TransportApp = ({ userProfileData }) => {
                     const mins = getTravelMinutes(trFromId, trToId);
                     if (mins != null) startTs = endTs - mins * 60000;
                 }
-
+        
                 return { startTs, endTs };
             };
-
+        
             const segTimes = computeSegmentTimesFromRows();
-
+        
             const parentKey = transfer._parentKey || transfer.key;
             await updateParentTransfer(parentKey, (draft) => {
-                // ============================================================
-                // NOVÉ: findSegmentIndex pracuje VÝHRADNE s ID.
-                // ============================================================
                 const segIdx = findSegmentIndex(draft.segments, transfer.fromId, transfer.toId);
                 if (segIdx !== -1) {
                     draft.segments[segIdx].busAssigned = true;
                     draft.segments[segIdx].isWalking = false;
                     draft.segments[segIdx].busId = busId || null;
-
+                    // ============================================================
+                    // NOVÉ: Zapíš rowId nástupu a výstupu do segmentu.
+                    // ============================================================
+                    draft.segments[segIdx].boardingRowId = boardingRow?.rowId || null;
+                    draft.segments[segIdx].alightingRowId = alightingRow?.rowId || null;
+        
                     if (segTimes.startTs != null && segTimes.endTs != null) {
                         draft.segments[segIdx].startTs = segTimes.startTs;
                         draft.segments[segIdx].endTs = segTimes.endTs;
@@ -8978,84 +8882,6 @@ const TransportApp = ({ userProfileData }) => {
                 to: normalizePlace(m[2].trim()),
             };
         };
-    
-                // ============================================================
-        // assignedSegmentKeys – segmenty, ktoré sú už priradené
-        // ============================================================
-        const assignedSegmentsByTeam = new Map();
-
-        // ============================================================
-        // NOVÉ: addAssignedSegment pracuje VÝHRADNE s ID.
-        // ============================================================
-        const addAssignedSegment = (dayKey, teamName, category, fromId, toId) => {
-            const key = `${dayKey}|${teamName}|${category}`;
-            if (!assignedSegmentsByTeam.has(key)) assignedSegmentsByTeam.set(key, []);
-            assignedSegmentsByTeam.get(key).push({
-                fromId: fromId || null,
-                toId: toId || null,
-            });
-        };
-
-        // 1) Autobusy
-        Object.entries(busRows || {}).forEach(([busKey, rows]) => {
-            const dayKey = busKey.split('|')[1];
-            const sorted = (rows || [])
-                .slice()
-                .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-            const teamsInThisBus = new Map();
-
-            sorted.forEach((row, idx) => {
-                (row.teamsIn || []).forEach((teamKey) => {
-                    const key = String(teamKey);
-                    if (!teamsInThisBus.has(key)) {
-                        teamsInThisBus.set(key, { boardIdx: idx, alightIdxs: [] });
-                    }
-                });
-                (row.teamsOut || []).forEach((teamKey) => {
-                    const key = String(teamKey);
-                    const entry = teamsInThisBus.get(key);
-                    if (entry && entry.boardIdx != null) {
-                        entry.alightIdxs.push(idx);
-                    }
-                });
-            });
-
-            teamsInThisBus.forEach(({ boardIdx, alightIdxs }, teamKey) => {
-                if (boardIdx == null || alightIdxs.length === 0) return;
-
-                const [teamName, category] = teamKey.split('|');
-                const tn = String(teamName).trim();
-                const cat = cleanCategory(category || '');
-
-                alightIdxs.forEach((alightIdx) => {
-                    if (alightIdx < boardIdx) return;
-
-                    // ============================================================
-                    // NOVÉ: Pracuj VÝHRADNE s ID.
-                    // ============================================================
-                    const fromId = sorted[boardIdx].placeFromId || null;
-                    const toId = sorted[alightIdx].placeToId || null;
-                    if (!fromId || !toId) return;
-                    addAssignedSegment(dayKey, tn, cat, fromId, toId);
-                });
-            });
-        });
-
-        // 2) Pešie presuny
-        savedTransfers.forEach((t) => {
-            if (t.isWalking !== true) return;
-            const tn = String(t.teamName || '').trim();
-            const cat = cleanCategory(t.category || '');
-            const dayKey = t.dayKey || '';
-            // ============================================================
-            // NOVÉ: Pracuj VÝHRADNE s ID.
-            // ============================================================
-            const fromId = t.fromId || null;
-            const toId = t.toId || null;
-            if (!fromId || !toId) return;
-            addAssignedSegment(dayKey, tn, cat, fromId, toId);
-        });
         
         // ============================================================
         // Pomocná: zistí, či je konkrétny segment už priradený
@@ -9065,33 +8891,26 @@ const TransportApp = ({ userProfileData }) => {
             const cat = cleanCategory(t.category || '');
             const dayKey = t.dayKey || '';
 
-            // ============================================================
-            // NOVÉ: Pracuj VÝHRADNE s ID.
-            // ============================================================
             const fromId = t.fromId || null;
             const toId = t.toId || null;
             if (!fromId || !toId) return false;
 
-            // 1) Presná zhoda (tím nastúpil/vystúpil presne na týchto zastávkach)
-            const key = `${dayKey}|${tn}|${cat}`;
-            const list = assignedSegmentsByTeam.get(key) || [];
-            const exactMatch = list.some((s) => s.fromId === fromId && s.toId === toId);
-            if (exactMatch) return true;
-
             // ============================================================
-            // Fallback cez isSegmentCoveredByBusPath – LEN pre segmenty,
-            // ktoré MAJÚ reálne časy z busu (busAssigned === true).
-            //
-            // isSegmentCoveredByBusPath pracuje VÝHRADNE s ID
-            // (fromId / toId).
+            // NOVÉ: Primárne over priamo v parent.segments,
+            // či segment má busId + boardingRowId + alightingRowId.
             // ============================================================
-            const segmentHasRealBusTimes =
-                t.busAssigned === true ||
-                (t._hasRealTime === true && t._isAssigned === true);
-
-            if (segmentHasRealBusTimes) {
-                if (isSegmentCoveredByBusPath(dayKey, tn, cat, fromId, toId)) {
-                    return true;
+            const parentKey = t._parentKey || t.key;
+            const parent = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
+            if (parent && Array.isArray(parent.segments)) {
+                const segIdx = findSegmentIndex(parent.segments, fromId, toId);
+                if (segIdx !== -1) {
+                    const seg = parent.segments[segIdx];
+                    if (seg && seg.busId && seg.boardingRowId && seg.alightingRowId) {
+                        return true;
+                    }
+                    if (seg && seg.isWalking === true) {
+                        return true;
+                    }
                 }
             }
 
