@@ -2683,8 +2683,7 @@ const TransportApp = ({ userProfileData }) => {
                                 };
 
                                 if (isSuperstructureTeamForDb) transfersPatch[key].teamName = teamName;
-                                if (Array.isArray(draft.intermediateStopIds) && draft.intermediateStopIds.length > 0) {if (draft.segments.length === 0) {
-
+                                if (Array.isArray(draft.intermediateStopIds) && draft.intermediateStopIds.length > 0) {
                                     transfersPatch[key].intermediateStopIds = draft.intermediateStopIds;
                                 }
 
@@ -7250,6 +7249,11 @@ const TransportApp = ({ userProfileData }) => {
         setRemoveWalkingSaving(true);
         try {
             const parentKey = transfer._parentKey || transfer.key;
+            const parentRec = savedTransfersRef.current.find((s) => s.key === parentKey);
+            const originalParentWhen = parentRec && parentRec.when && String(parentRec.when).trim() !== ''
+                ? parentRec.when
+                : null;
+    
             await updateParentTransfer(parentKey, (draft) => {
                 const segIdx = transfer._parentKey
                     ? findSegmentIndex(draft.segments, transfer.fromId, transfer.toId)
@@ -7267,30 +7271,17 @@ const TransportApp = ({ userProfileData }) => {
                         for (let i = segIdx - 1; i >= 0; i--) {
                             const prev = draft.segments[i];
                             if (!prev) continue;
-                            if (prev.endTs != null) {
-                                seg.startTs = prev.endTs;
-                                break;
-                            }
-                            if (prev.startTs != null) {
-                                seg.startTs = prev.startTs;
-                                break;
-                            }
+                            if (prev.endTs != null) { seg.startTs = prev.endTs; break; }
+                            if (prev.startTs != null) { seg.startTs = prev.startTs; break; }
                         }
                     }
-    
                     if (seg.endTs == null) {
                         let nextStart = null;
                         for (let i = segIdx + 1; i < draft.segments.length; i++) {
                             const next = draft.segments[i];
                             if (!next) continue;
-                            if (next.startTs != null) {
-                                nextStart = next.startTs;
-                                break;
-                            }
-                            if (next.endTs != null) {
-                                nextStart = next.endTs;
-                                break;
-                            }
+                            if (next.startTs != null) { nextStart = next.startTs; break; }
+                            if (next.endTs != null) { nextStart = next.endTs; break; }
                         }
                         if (nextStart != null && seg.startTs != null && nextStart > seg.startTs) {
                             seg.endTs = nextStart;
@@ -7303,17 +7294,8 @@ const TransportApp = ({ userProfileData }) => {
                             }
                         }
                     }
-    
                     if (seg.startTs != null && seg.endTs != null) {
                         seg.when = `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`;
-                    }
-    
-                    if (seg.endTs == null) {
-                        const parentRange = parseTransferWhenToRange(draft.when);
-                        if (parentRange && parentRange.endTs != null && seg.startTs != null && parentRange.endTs > seg.startTs) {
-                            seg.endTs = parentRange.endTs;
-                            seg.when = `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`;
-                        }
                     }
                 } else {
                     draft.segments.forEach((s) => {
@@ -7327,6 +7309,11 @@ const TransportApp = ({ userProfileData }) => {
                     draft.isWalking = false;
                     draft.walkingSetAt = null;
                     draft.walkingSetBy = null;
+                }
+    
+                // ZACHOVAŤ pôvodný when parenta
+                if (originalParentWhen) {
+                    draft.when = originalParentWhen;
                 }
             });
             window.showGlobalNotification('Príznak „peši" bol odstránený.', 'success');
@@ -8797,10 +8784,18 @@ const TransportApp = ({ userProfileData }) => {
                         continue;
                     }
                     
-                    let hasRealTime = ft.startTs != null && ft.endTs != null;
-                    let whenStr = hasRealTime
-                        ? `${formatTsLocal(ft.startTs)} – ${formatTsLocal(ft.endTs)}`
-                        : null;
+                    let hasRealTime = false;
+                    let whenStr = null;
+
+                    const parentSegForThisIdx = (() => {
+                        if (!Array.isArray(t.segments)) return null;
+                        return t.segments.find((s) => s.fromId === fromId && s.toId === toId) || null;
+                    })();
+
+                    if (parentSegForThisIdx && parentSegForThisIdx.startTs != null && parentSegForThisIdx.endTs != null && parentSegForThisIdx.endTs > parentSegForThisIdx.startTs) {
+                        hasRealTime = true;
+                        whenStr = `${formatTsLocal(parentSegForThisIdx.startTs)} – ${formatTsLocal(parentSegForThisIdx.endTs)}`;
+                    }
                     
                     if (!whenStr) {
                         const parentRec = savedTransfers.find((s) => s.key === t.key);
@@ -8847,22 +8842,7 @@ const TransportApp = ({ userProfileData }) => {
                     );
                     
                     let remainingMinutes = null;
-                    
-                    if (hasRealTime && !segmentAssigned[i]) {
-                        let endTs = null;
-                        for (let k = i + 1; k < routeIds.length - 1; k++) {
-                            if (segmentAssigned[k] && finalTimes[k] && finalTimes[k].startTs != null) {
-                                endTs = finalTimes[k].startTs;
-                                break;
-                            }
-                        }
-                        if (endTs == null) endTs = timeRange.endTs;
-                    
-                        if (endTs != null && ft.startTs != null && endTs > ft.startTs) {
-                            remainingMinutes = Math.round((endTs - ft.startTs) / 60000);
-                        }
-                    }
-                    
+                                        
                     expandedTransfers.push({
                         ...t,
                         key,
