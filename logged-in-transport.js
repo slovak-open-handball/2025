@@ -5709,23 +5709,47 @@ const TransportApp = ({ userProfileData }) => {
     const saveEditedTransfer = async () => {
         if (!window.db || !editingTransfer) return;
         const original = editingTransfer;
-
+    
         const stopIds = (editingTransferStops || [])
             .map((s) => resolvePlaceIdByName(s))
             .filter(Boolean);
-
+    
         const parentKey = original._parentKey || original.key;
-
+    
+        // Ak používateľ odstránil všetky medzizastávky, zmažeme celý parent transfer
+        if (stopIds.length === 0) {
+            setEditingTransferSaving(true);
+            try {
+                const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+                await setDoc(
+                    docRef,
+                    {
+                        [TRANSPORT_TRANSFERS_FIELD]: { [parentKey]: deleteField() },
+                    },
+                    { merge: true }
+                );
+                window.showGlobalNotification('Presun bol odstránený (nezostali žiadne medzizastávky).', 'success');
+                setEditingTransfer(null);
+                setEditingTransferStops([]);
+            } catch (err) {
+                console.error('[TRANSPORT] Chyba pri mazaní presunu po odstránení medzizastávok:', err);
+                window.showGlobalNotification('Nepodarilo sa odstrániť presun.', 'error');
+            } finally {
+                setEditingTransferSaving(false);
+            }
+            return;
+        }
+    
         const originalWhen = (() => {
             const parentRec = savedTransfersRef.current.find((s) => s.key === parentKey);
             if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
                 return parentRec.when;
             }
-
+    
             if (original.when && String(original.when).trim() !== '') {
                 return original.when;
             }
-
+    
             if (parentRec && Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
                 let earliestStart = null;
                 let latestEnd = null;
@@ -5745,7 +5769,7 @@ const TransportApp = ({ userProfileData }) => {
                     return formatTsLocal(latestEnd);
                 }
             }
-
+    
             if (Array.isArray(original.segments) && original.segments.length > 0) {
                 let earliestStart = null;
                 let latestEnd = null;
@@ -5765,16 +5789,16 @@ const TransportApp = ({ userProfileData }) => {
                     return formatTsLocal(latestEnd);
                 }
             }
-
+    
             return null;
         })();
-
+    
         setEditingTransferSaving(true);
         try {
             await updateParentTransfer(parentKey, (draft) => {
                 draft.intermediateStopIds = stopIds;
                 draft.segments = buildDefaultSegments({ ...draft, intermediateStopIds: stopIds });
-
+    
                 const oldSegments = Array.isArray(original.segments) ? original.segments : [];
                 draft.segments.forEach((s) => {
                     const old = oldSegments.find(
@@ -5786,16 +5810,14 @@ const TransportApp = ({ userProfileData }) => {
                         s.walkingSetBy = old.walkingSetBy || null;
                     }
                 });
-
+    
                 if (originalWhen && originalWhen.trim() !== '') {
                     draft.when = originalWhen;
                 }
             });
-
+    
             window.showGlobalNotification(
-                stopIds.length > 0
-                    ? `Presun bol upravený (${stopIds.length} medzizastávok).`
-                    : 'Medzizastávky boli odstránené.',
+                `Presun bol upravený (${stopIds.length} medzizastávok).`,
                 'success'
             );
             setEditingTransfer(null);
