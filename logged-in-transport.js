@@ -9230,57 +9230,54 @@ const TransportApp = ({ userProfileData }) => {
 
                             if (t._parentKey) {
                                 // Skontroluj, či je segment priradený busu (má reálny čas)
-                                if (t._parentKey) {
-                                    // Skontroluj, či je segment priradený busu (má reálny čas)
-                                    const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
-                                    let parentSeg = null;
-                                    if (parentRec && Array.isArray(parentRec.segments)) {
-                                        const idx = findSegmentIndex(parentRec.segments, t.fromId, t.toId);
-                                        if (idx !== -1) parentSeg = parentRec.segments[idx];
-                                    }
-                                    const hasRealBusTime =
-                                        parentSeg &&
-                                        parentSeg.busId &&
-                                        parentSeg.boardingRowId &&
-                                        parentSeg.alightingRowId &&
-                                        parentSeg.startTs != null &&
-                                        parentSeg.endTs != null &&
-                                        parentSeg.endTs > parentSeg.startTs;
+                                const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
+                                let parentSeg = null;
+                                if (parentRec && Array.isArray(parentRec.segments)) {
+                                    const idx = findSegmentIndex(parentRec.segments, t.fromId, t.toId);
+                                    if (idx !== -1) parentSeg = parentRec.segments[idx];
+                                }
+                                const hasRealBusTime =
+                                    parentSeg &&
+                                    parentSeg.busId &&
+                                    parentSeg.boardingRowId &&
+                                    parentSeg.alightingRowId &&
+                                    parentSeg.startTs != null &&
+                                    parentSeg.endTs != null &&
+                                    parentSeg.endTs > parentSeg.startTs;
                                 
-                                    if (hasRealBusTime) {
-                                        // Priradený segment – použi reálny čas
-                                        const startFmt = formatTsLocal(parentSeg.startTs);
-                                        const endFmt = formatTsLocal(parentSeg.endTs);
+                                if (hasRealBusTime) {
+                                    // Priradený segment – použi reálny čas
+                                    const startFmt = formatTsLocal(parentSeg.startTs);
+                                    const endFmt = formatTsLocal(parentSeg.endTs);
+                                    const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
+                                    const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
+                                    if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
+                                    else if (startTime) timeLabel = startTime;
+                                    else if (endTime) timeLabel = endTime;
+                                } else {
+                                    // Nepriradený segment – VŽDY použi computeProvisionalSegmentRange
+                                    const provisional = computeProvisionalSegmentRange(t);
+                                    if (provisional) {
+                                        const startFmt = formatTsLocal(provisional.startTs);
+                                        const endFmt = formatTsLocal(provisional.endTs);
                                         const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
                                         const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
                                         if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
                                         else if (startTime) timeLabel = startTime;
                                         else if (endTime) timeLabel = endTime;
-                                    } else {
-                                        // Nepriradený segment – VŽDY použi computeProvisionalSegmentRange
-                                        const provisional = computeProvisionalSegmentRange(t);
-                                        if (provisional) {
-                                            const startFmt = formatTsLocal(provisional.startTs);
-                                            const endFmt = formatTsLocal(provisional.endTs);
-                                            const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
-                                            const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
-                                            if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
-                                            else if (startTime) timeLabel = startTime;
-                                            else if (endTime) timeLabel = endTime;
-                                        }
                                     }
-                                } else {
-                                    // Non-segment presun
-                                    if (t.when && String(t.when).trim() !== '') {
-                                        timeLabel = extractTimesOnly(t.when) || String(t.when).trim();
-                                    }
-                                    if (!timeLabel && rangeInfo && (rangeInfo.startTime || rangeInfo.endTime)) {
-                                        const st = rangeInfo.startTime;
-                                        const et = rangeInfo.endTime;
-                                        if (st && et) timeLabel = `${st} – ${et}`;
-                                        else if (st) timeLabel = st;
-                                        else if (et) timeLabel = et;
-                                    }
+                                }
+                            } else {
+                                // Non-segment presun
+                                if (t.when && String(t.when).trim() !== '') {
+                                    timeLabel = extractTimesOnly(t.when) || String(t.when).trim();
+                                }
+                                if (!timeLabel && rangeInfo && (rangeInfo.startTime || rangeInfo.endTime)) {
+                                    const st = rangeInfo.startTime;
+                                    const et = rangeInfo.endTime;
+                                    if (st && et) timeLabel = `${st} – ${et}`;
+                                    else if (st) timeLabel = st;
+                                    else if (et) timeLabel = et;
                                 }
                             }
                             
