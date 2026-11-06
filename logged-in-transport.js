@@ -424,7 +424,6 @@ const TransportApp = ({ userProfileData }) => {
         const PARENT_START = parentRange.startTs;
         const PARENT_END = parentRange.endTs;
     
-        // Zoznam segmentov z parenta s doplnenými informáciami
         const parentSegments = [];
         if (Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
             parentRec.segments.forEach((seg, idx) => {
@@ -451,7 +450,7 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 }
     
-                // DÔLEŽITÉ: "resolved" je len segment priradený busu s reálnym časom
+                // Segment je "resolved" (má reálny čas), ak je priradený busu
                 const isBusAssignedWithTime =
                     !isWalkingSeg &&
                     seg.busAssigned === true &&
@@ -492,7 +491,7 @@ const TransportApp = ({ userProfileData }) => {
         }
         parentSegments.sort((a, b) => (a.idx || 0) - (b.idx || 0));
     
-        // Nájdi predchádzajúci PRIradený (busom) segment
+        // Nájdi predchádzajúci segment, ktorý má aspoň endTs (akýkoľvek, nielen busom priradený)
         let prevResolvedEndTs = null;
         for (const seg of parentSegments) {
             const isCurrent = seg.fromId === currentFromId && seg.toId === currentToId;
@@ -500,7 +499,7 @@ const TransportApp = ({ userProfileData }) => {
     
             if (seg.isWalking === true) continue;
     
-            if (seg.isResolvedWithTime && seg.range && seg.range.endTs != null) {
+            if (seg.range && seg.range.endTs != null) {
                 const e = seg.range.endTs;
                 if (prevResolvedEndTs == null || e > prevResolvedEndTs) {
                     prevResolvedEndTs = e;
@@ -508,7 +507,7 @@ const TransportApp = ({ userProfileData }) => {
             }
         }
     
-        // Nájdi nasledujúci PRIradený (busom) segment
+        // Nájdi nasledujúci segment, ktorý má aspoň startTs (akýkoľvek, nielen busom priradený)
         let nextResolvedStartTs = null;
         let foundCurrent = false;
         for (const seg of parentSegments) {
@@ -518,7 +517,7 @@ const TransportApp = ({ userProfileData }) => {
     
             if (seg.isWalking === true) continue;
     
-            if (seg.isResolvedWithTime && seg.range && seg.range.startTs != null) {
+            if (seg.range && seg.range.startTs != null) {
                 const s = seg.range.startTs;
                 if (nextResolvedStartTs == null || s < nextResolvedStartTs) {
                     nextResolvedStartTs = s;
@@ -526,10 +525,10 @@ const TransportApp = ({ userProfileData }) => {
             }
         }
     
-        // ŠTART: koniec predchádzajúceho priradeného segmentu, inak PARENT_START
+        // ŠTART: koniec predchádzajúceho segmentu (akýkoľvek), inak PARENT_START
         const startTsForDisplay = prevResolvedEndTs != null ? prevResolvedEndTs : PARENT_START;
     
-        // KONIEC: začiatok nasledujúceho priradeného segmentu, inak PARENT_END
+        // KONIEC: začiatok nasledujúceho segmentu (akýkoľvek), inak PARENT_END
         let endTsForDisplay;
         if (nextResolvedStartTs != null && nextResolvedStartTs > startTsForDisplay) {
             endTsForDisplay = nextResolvedStartTs;
