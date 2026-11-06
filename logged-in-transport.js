@@ -3936,8 +3936,10 @@ const TransportApp = ({ userProfileData }) => {
         if (!targetRow) return;
         const targetRowId = targetRow.rowId;
         if (!targetRowId) return;
+    
         const parentsToUpdate = [];
-        const segmentsToRemoveFromBus = [];
+        // Zbierame parentov, z ktorých treba segment odstrániť (identicky ako removeTeamSegment)
+        const parentsToRemoveSegmentFrom = new Map(); // parentKey -> { fromId, toId }
     
         (savedTransfersRef.current || []).forEach((parent) => {
             if (parent.dayKey !== dayKey) return;
@@ -3962,34 +3964,16 @@ const TransportApp = ({ userProfileData }) => {
                     ? timeOnDayKeyToTs(dayKey, alightingRow.timeTo)
                     : null;
     
-                const isSegmentStillInParentRange = (() => {
-                    const parentRange = parseTransferWhenToRange(parent.when);
-                    if (!parentRange) return false;
-                    if (boardingTs == null || alightingTs == null) return false;
-                    if (alightingTs <= boardingTs) return false;
-                    return boardingTs >= parentRange.startTs && alightingTs <= parentRange.endTs;
-                })();
-    
+                // Rovnaká podmienka ako pri odstraňovaní cez klik na skratku:
+                // ak chýba nástup/výstup alebo je výstup <= nástup, segment sa odstráni.
                 if (boardingTs == null || alightingTs == null || alightingTs <= boardingTs) {
-                    if (isSegmentStillInParentRange) {
-                        return seg;
-                    }
-    
                     changed = true;
-                    if (seg.boardingRowId === targetRowId) {
-                        segmentsToRemoveFromBus.push({
+                    const removeKey = `${parent.key}|${seg.fromId}|${seg.toId}`;
+                    if (!parentsToRemoveSegmentFrom.has(removeKey)) {
+                        parentsToRemoveSegmentFrom.set(removeKey, {
                             parentKey: parent.key,
                             fromId: seg.fromId,
                             toId: seg.toId,
-                            clickSide: 'in',
-                        });
-                    }
-                    if (seg.alightingRowId === targetRowId) {
-                        segmentsToRemoveFromBus.push({
-                            parentKey: parent.key,
-                            fromId: seg.fromId,
-                            toId: seg.toId,
-                            clickSide: 'out',
                         });
                     }
                     return {
@@ -4012,25 +3996,13 @@ const TransportApp = ({ userProfileData }) => {
                         alightingTs <= boardingTs;
     
                     if (outsideParent) {
-                        if (isSegmentStillInParentRange) {
-                            return seg;
-                        }
-    
                         changed = true;
-                        if (seg.boardingRowId === targetRowId) {
-                            segmentsToRemoveFromBus.push({
+                        const removeKey = `${parent.key}|${seg.fromId}|${seg.toId}`;
+                        if (!parentsToRemoveSegmentFrom.has(removeKey)) {
+                            parentsToRemoveSegmentFrom.set(removeKey, {
                                 parentKey: parent.key,
                                 fromId: seg.fromId,
                                 toId: seg.toId,
-                                clickSide: 'in',
-                            });
-                        }
-                        if (seg.alightingRowId === targetRowId) {
-                            segmentsToRemoveFromBus.push({
-                                parentKey: parent.key,
-                                fromId: seg.fromId,
-                                toId: seg.toId,
-                                clickSide: 'out',
                             });
                         }
                         return {
@@ -4068,6 +4040,7 @@ const TransportApp = ({ userProfileData }) => {
     
             const parentSegmentsAfterSync = newSegments.map((s) => ({ ...s }));
     
+            // Posun susedných segmentov (rovnaké ako pôvodne) – iba ak sa zmenili časy
             const changedIdxSet = new Set();
             newSegments.forEach((s, idx) => {
                 const orig = parent.segments[idx];
@@ -4117,26 +4090,29 @@ const TransportApp = ({ userProfileData }) => {
                 parentsToUpdate.push({ parentKey: parent.key, newSegments: parentSegmentsAfterSync });
             }
         });
-        
-        if (segmentsToRemoveFromBus.length > 0) {
-            const seen = new Set();
-            const uniqueToRemove = segmentsToRemoveFromBus.filter((item) => {
-                const key = `${item.parentKey}|${item.fromId}|${item.toId}`;
-                if (seen.has(key)) return false;
-                seen.add(key);
-                return true;
+    
+        // 1) Odstránenie segmentov z parentov – IDENTICKY ako removeTeamSegment
+        //    (jedno updateParentTransfer volanie per parent, nulovanie všetkých polí)
+        if (parentsToRemoveSegmentFrom.size > 0) {
+            // Zoskupíme podľa parentKey, aby sme pre každého parenta spravili jedno volanie
+            const byParent = new Map();
+            parentsToRemoveSegmentFrom.forEach((item) => {
+                if (!byParent.has(item.parentKey)) byParent.set(item.parentKey, []);
+                byParent.get(item.parentKey).push(item);
             });
-
-            for (const item of uniqueToRemove) {
-                const parentExists = savedTransfersRef.current.some((s) => s.key === item.parentKey);
+    
+            for (const [parentKey, items] of byParent.entries()) {
+                const parentExists = savedTransfersRef.current.some((s) => s.key === parentKey);
                 if (!parentExists) continue;
-
+    
                 try {
-                    await updateParentTransfer(item.parentKey, (draft) => {
+                    await updateParentTransfer(parentKey, (draft) => {
                         draft.segments = draft.segments.map((s) => {
                             if (s.busId !== busId) return s;
-                            if (s.fromId !== item.fromId || s.toId !== item.toId) return s;
-
+                            const shouldRemove = items.some(
+                                (item) => item.fromId === s.fromId && item.toId === s.toId
+                            );
+                            if (!shouldRemove) return s;
                             return {
                                 ...s,
                                 busAssigned: false,
@@ -4154,11 +4130,12 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
         }
-
+    
+        // 2) Aktualizácia časov zostávajúcich platných segmentov (pôvodná logika)
         const refreshedParentsForDay = (savedTransfersRef.current || []).filter(
             (p) => p.dayKey === dayKey && Array.isArray(p.segments) && p.segments.length > 0
         );
-
+    
         if (parentsToUpdate.length === 0) {
             const docRefNoChange = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
             const tUpdatesNoChange = {};
@@ -4177,7 +4154,7 @@ const TransportApp = ({ userProfileData }) => {
                     tUpdatesNoChange[parent.key] = { when: tempDraft.when };
                 }
             });
-
+    
             if (Object.keys(tUpdatesNoChange).length > 0) {
                 try {
                     await setDoc(docRefNoChange, { [TRANSPORT_TRANSFERS_FIELD]: tUpdatesNoChange }, { merge: true });
@@ -4194,7 +4171,7 @@ const TransportApp = ({ userProfileData }) => {
             }
             return;
         }
-
+    
         const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
         const tUpdates = {};
         parentsToUpdate.forEach(({ parentKey, newSegments }) => {
@@ -4218,20 +4195,20 @@ const TransportApp = ({ userProfileData }) => {
                 tUpdates[parentKey].when = newWhen;
             }
         });
-
+    
         try {
             await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri synchronizácii segmentov s busom:', err);
             return;
         }
-
+    
         await new Promise((r) => setTimeout(r, 100));
-
+    
         const updatedParents = (savedTransfersRef.current || []).map((parent) => {
             const patch = parentsToUpdate.find((p) => p.parentKey === parent.key);
             if (!patch) return parent;
-
+    
             const draft = {
                 ...parent,
                 when: null,
@@ -4245,7 +4222,7 @@ const TransportApp = ({ userProfileData }) => {
             }
             return draft;
         });
-
+    
         savedTransfersRef.current = updatedParents;
         setSavedTransfers(updatedParents);
     };
