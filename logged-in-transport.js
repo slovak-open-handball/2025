@@ -8234,8 +8234,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                 }
                                                             }                                                        
                                                             rowElements.push(renderBusRow(r, bus.id, day.dayKey));
-                                                            });
-                                                            
+                                                            });                                                            
                                                             // 20px medzera pod posledným riadkom trasy (funguje aj s filtrom dňa/busu)
                                                             if (rowElements.length > 0) {
                                                                 rowElements.push(
