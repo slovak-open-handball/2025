@@ -3667,6 +3667,14 @@ const TransportApp = ({ userProfileData }) => {
         const stops = allPlaces
             .filter((p) => normalizeType(p.type) === 'zastavka')
             .sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
+
+        console.log('[TRANSPORT][stopsList] Načítané zastávky:', {
+            allPlacesCount: allPlaces.length,
+            stopsCount: stops.length,
+            stops: stops.map(s => ({ id: s.id, name: s.name, type: s.type })),
+            allTypes: allPlaces.map(p => ({ name: p.name, type: p.type })),
+        });
+        
         setStopsList(stops);
     }, [allPlaces]);
 
