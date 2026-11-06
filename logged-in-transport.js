@@ -6142,6 +6142,18 @@ const TransportApp = ({ userProfileData }) => {
         const trToId = transfer.toId || null;
         const trDayKey = transfer.dayKey || null;
 
+        console.log('[TRANSPORT][findMatchingBusRows] VSTUP:', {
+            transferKey: transfer._parentKey || transfer.key,
+            teamName: transfer.teamName,
+            category: transfer.category,
+            when: transfer.when,
+            effectiveWhen,
+            trRange,
+            trFromId,
+            trToId,
+            trDayKey,
+        });
+
         if (!trRange || !trFromId || !trToId || !trDayKey) {
             console.warn(`❌ Chýba vstup – končím:`, {
                 effectiveWhen, trRange, trFromId, trToId, trDayKey,
@@ -6186,6 +6198,19 @@ const TransportApp = ({ userProfileData }) => {
             sortedRows.forEach((row) => {
                 const rowFromId = row.placeFromId || null;
                 const rowToId = row.placeToId || null;
+
+                console.log('[TRANSPORT][findMatchingBusRows] Porovnávam:', {
+                    busName: bus.name,
+                    rowId: row.id,
+                    rowFromId,
+                    rowToId,
+                    trFromId,
+                    trToId,
+                    fromMatch: rowFromId === trFromId,
+                    toMatch: rowToId === trToId,
+                    timeFrom: row.timeFrom,
+                    timeTo: row.timeTo,
+                });
             
                 const rowTimeFromTs = timeOnDayKeyToTs(dayKey, row.timeFrom);
                 const rowTimeToTs = timeOnDayKeyToTs(dayKey, row.timeTo);
