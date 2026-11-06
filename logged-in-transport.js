@@ -3938,8 +3938,7 @@ const TransportApp = ({ userProfileData }) => {
         if (!targetRowId) return;
     
         const parentsToUpdate = [];
-        // Zbierame parentov, z ktorých treba segment odstrániť (identicky ako removeTeamSegment)
-        const parentsToRemoveSegmentFrom = new Map(); // parentKey -> { fromId, toId }
+        const parentsToRemoveSegmentFrom = new Map(); 
     
         (savedTransfersRef.current || []).forEach((parent) => {
             if (parent.dayKey !== dayKey) return;
@@ -3964,8 +3963,6 @@ const TransportApp = ({ userProfileData }) => {
                     ? timeOnDayKeyToTs(dayKey, alightingRow.timeTo)
                     : null;
     
-                // Rovnaká podmienka ako pri odstraňovaní cez klik na skratku:
-                // ak chýba nástup/výstup alebo je výstup <= nástup, segment sa odstráni.
                 if (boardingTs == null || alightingTs == null || alightingTs <= boardingTs) {
                     changed = true;
                     const removeKey = `${parent.key}|${seg.fromId}|${seg.toId}`;
@@ -4040,7 +4037,6 @@ const TransportApp = ({ userProfileData }) => {
     
             const parentSegmentsAfterSync = newSegments.map((s) => ({ ...s }));
     
-            // Posun susedných segmentov (rovnaké ako pôvodne) – iba ak sa zmenili časy
             const changedIdxSet = new Set();
             newSegments.forEach((s, idx) => {
                 const orig = parent.segments[idx];
@@ -4091,10 +4087,7 @@ const TransportApp = ({ userProfileData }) => {
             }
         });
     
-        // 1) Odstránenie segmentov z parentov – IDENTICKY ako removeTeamSegment
-        //    (jedno updateParentTransfer volanie per parent, nulovanie všetkých polí)
         if (parentsToRemoveSegmentFrom.size > 0) {
-            // Zoskupíme podľa parentKey, aby sme pre každého parenta spravili jedno volanie
             const byParent = new Map();
             parentsToRemoveSegmentFrom.forEach((item) => {
                 if (!byParent.has(item.parentKey)) byParent.set(item.parentKey, []);
@@ -4131,7 +4124,6 @@ const TransportApp = ({ userProfileData }) => {
             }
         }
     
-        // 2) Aktualizácia časov zostávajúcich platných segmentov (pôvodná logika)
         const refreshedParentsForDay = (savedTransfersRef.current || []).filter(
             (p) => p.dayKey === dayKey && Array.isArray(p.segments) && p.segments.length > 0
         );
@@ -5119,6 +5111,10 @@ const TransportApp = ({ userProfileData }) => {
                 return;
             }
         
+            const originalParentWhen = targetParent.when && String(targetParent.when).trim() !== ''
+                ? targetParent.when
+                : null;
+        
             try {
                 await updateParentTransfer(targetParent.key, (draft) => {
                     draft.segments = draft.segments.map((s) => {
@@ -5149,6 +5145,10 @@ const TransportApp = ({ userProfileData }) => {
                         }
                         return s;
                     });
+        
+                    if (originalParentWhen) {
+                        draft.when = originalParentWhen;
+                    }
                 });
         
                 window.showGlobalNotification('Tím bol odstránený z autobusu.', 'info');
@@ -6334,7 +6334,7 @@ const TransportApp = ({ userProfileData }) => {
             if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
         });
         if (routeIds.length < 2) return;
-
+    
         if (!Array.isArray(draft.segments) || draft.segments.length !== routeIds.length - 1) {
             draft.segments = routeIds.slice(0, -1).map((id, i) => ({
                 fromId: id,
@@ -6350,11 +6350,11 @@ const TransportApp = ({ userProfileData }) => {
                 toId: routeIds[i + 1],
             }));
         }
-
+    
         const dayKey = draft.dayKey || '';
         const teamName = String(draft.teamName || '').trim();
         const category = cleanCategory(draft.category || '');
-
+    
         const allBusRowsForDay = [];
         Object.entries(busRows || {}).forEach(([busKey, rows]) => {
             const bDayKey = busKey.split('|')[1];
@@ -6362,7 +6362,7 @@ const TransportApp = ({ userProfileData }) => {
             (rows || []).forEach((row) => allBusRowsForDay.push({ ...row, _busKey: busKey }));
         });
         allBusRowsForDay.sort((a, b) => (a.timeFrom || '').localeCompare(b.timeFrom || ''));
-
+    
         const teamKey = `${teamName}|${category}`;
         const matchesTeam = (rowTeams) => {
             if (!Array.isArray(rowTeams)) return false;
@@ -6373,7 +6373,7 @@ const TransportApp = ({ userProfileData }) => {
                 return String(tn).trim() === teamName && cleanCategory(cat) === category;
             });
         };
-
+    
         const findBusTimesForSegment = (fromIdSeg, toIdSeg) => {
             const parentSeg = draft.segments.find(
                 (s) => s.fromId === fromIdSeg && s.toId === toIdSeg
@@ -6451,14 +6451,14 @@ const TransportApp = ({ userProfileData }) => {
                 busId: null,
             };
         });
-
+    
         const nonWalkingSegments = draft.segments.filter((s) => s.isWalking !== true);
         const busSegments = nonWalkingSegments.filter((s) => s.busAssigned === true);
-
+    
         const parentIsFullyWalking =
             draft.segments.length > 0 &&
             draft.segments.every((s) => s.isWalking === true);
-
+    
         const savedParentWhen = (() => {
             if (!draft.key) return null;
             const savedRec = (savedTransfersRef.current || []).find((s) => s.key === draft.key);
@@ -6467,11 +6467,17 @@ const TransportApp = ({ userProfileData }) => {
             }
             return null;
         })();
-
+    
         const allSegStart = draft.segments.map((s) => s.startTs).filter((ts) => ts != null);
         const allSegEnd = draft.segments.map((s) => s.endTs).filter((ts) => ts != null);
-
-        if (busSegments.length > 0 && busSegments.some((s) => s.startTs != null && s.endTs != null)) {
+    
+        const hasUnassignedSegments = draft.segments.some(
+            (s) => s.isWalking !== true && (
+                s.startTs == null || s.endTs == null
+            )
+        );
+    
+        if (busSegments.length > 0 && busSegments.some((s) => s.startTs != null && s.endTs != null) && !hasUnassignedSegments) {
             const busStart = busSegments.map((s) => s.startTs).filter((ts) => ts != null);
             const busEnd = busSegments.map((s) => s.endTs).filter((ts) => ts != null);
             if (busStart.length > 0 && busEnd.length > 0) {
@@ -6483,14 +6489,14 @@ const TransportApp = ({ userProfileData }) => {
             } else {
                 draft.when = '';
             }
-        } else if (allSegStart.length > 0 && allSegEnd.length > 0) {
+        } else if (allSegStart.length > 0 && allSegEnd.length > 0 && !hasUnassignedSegments) {
             draft.when = `${formatTsLocal(Math.min(...allSegStart))} – ${formatTsLocal(Math.max(...allSegEnd))}`;
-        } else if (parentIsFullyWalking && originalWhenFromDraft && String(originalWhenFromDraft).trim() !== '') {
-            draft.when = originalWhenFromDraft;
         } else if (originalWhenFromDraft && String(originalWhenFromDraft).trim() !== '') {
             draft.when = originalWhenFromDraft;
         } else if (savedParentWhen) {
             draft.when = savedParentWhen;
+        } else if (parentIsFullyWalking) {
+            draft.when = originalWhenFromDraft || '';
         } else {
             draft.when = '';
         }
