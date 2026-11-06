@@ -6407,49 +6407,112 @@ const TransportApp = ({ userProfileData }) => {
         
         if (!transfer) return [];
     
-        let effectiveWhen = transfer.when;
-    
-        if (effectiveWhen && String(effectiveWhen).trim() !== '') {
-        } else {
-            const segs = Array.isArray(transfer.segments) ? transfer.segments : [];
-            let earliestStart = null;
-            let latestEnd = null;
-            segs.forEach((s) => {
-                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                    earliestStart = s.startTs;
-                }
-                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                    latestEnd = s.endTs;
-                }
-            });
-            if (earliestStart != null && latestEnd != null) {
-                effectiveWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-            } else if (earliestStart != null) {
-                effectiveWhen = formatTsLocal(earliestStart);
-            } else if (latestEnd != null) {
-                effectiveWhen = formatTsLocal(latestEnd);
+        if (!transfer) return [];
+
+        // === NOVÉ: Priorita 1 — použi "zvyšný čas na presun" (remainingMinutes / displayStartTs / displayEndTs),
+        // ktorý sa zobrazuje v modálnom okne. To je správny interval pre hľadanie autobusov,
+        // pretože vystihuje medzeru medzi priradenými bus-segmentami.
+        let effectiveWhen = null;
+        let trRange = null;
+
+        const remainingRange = (() => {
+            // a) Ak transfer prišiel z renderSavedTransfers, má _displayStartTs/_displayEndTs
+            const ds = transfer._displayStartTs;
+            const de = transfer._displayEndTs;
+            if (ds != null && de != null && de > ds) {
+                return { startTs: ds, endTs: de, source: 'displayStartTs/displayEndTs' };
             }
-        }
-    
-        if (!effectiveWhen || String(effectiveWhen).trim() === '') {
-            const provisional = computeProvisionalSegmentRange(transfer);
-            if (provisional) {
-                effectiveWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
-                console.log('[TRANSPORT][findMatchingBusRows] Použitý provizórny interval:', effectiveWhen);
-            }
-        }
-    
-        if (!effectiveWhen || String(effectiveWhen).trim() === '') {
-            const parentKey = transfer._parentKey || transfer.key;
-            if (parentKey) {
+
+            // b) Ak má transfer _remainingMinutes, dopočítaj interval z neho
+            //    (zvyšný čas začína od konca predchádzajúceho priradeného segmentu,
+            //    alebo od parent.when.startTs, ak predchádzajúci nie je)
+            if (transfer._remainingMinutes != null && transfer._remainingMinutes > 0) {
+                const parentKey = transfer._parentKey || transfer.key;
                 const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
-                if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
-                    effectiveWhen = parentRec.when;
+
+                let startTs = null;
+                if (parentRec && Array.isArray(parentRec.segments)) {
+                    // Nájdi koniec predchádzajúceho priradeného segmentu (s reálnym časom)
+                    const segIdx = findSegmentIndex(parentRec.segments, transfer.fromId, transfer.toId);
+                    if (segIdx !== -1) {
+                        for (let i = segIdx - 1; i >= 0; i--) {
+                            const prev = parentRec.segments[i];
+                            if (!prev) continue;
+                            if (prev.endTs != null) {
+                                startTs = prev.endTs;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (startTs == null) {
+                    const provisional = computeProvisionalSegmentRange(transfer);
+                    if (provisional) startTs = provisional.startTs;
+                }
+                if (startTs != null) {
+                    const endTs = startTs + transfer._remainingMinutes * 60000;
+                    return { startTs, endTs, source: '_remainingMinutes' };
                 }
             }
+
+            return null;
+        })();
+
+        if (remainingRange) {
+            effectiveWhen = `${formatTsLocal(remainingRange.startTs)} – ${formatTsLocal(remainingRange.endTs)}`;
+            trRange = { startTs: remainingRange.startTs, endTs: remainingRange.endTs };
+            console.log(
+                '%c[TRANSPORT][findMatchingBusRows] Použitý interval "zvyšný čas na presun":',
+                'color:#059669;font-weight:bold;',
+                { effectiveWhen, source: remainingRange.source }
+            );
         }
-    
-        const trRange = parseTransferWhenToRange(effectiveWhen);
+
+        // === Priorita 2 — ak neexistuje remainingRange, použi pôvodnú logiku ===
+        if (!trRange) {
+            effectiveWhen = transfer.when;
+
+            if (!effectiveWhen || String(effectiveWhen).trim() === '') {
+                const segs = Array.isArray(transfer.segments) ? transfer.segments : [];
+                let earliestStart = null;
+                let latestEnd = null;
+                segs.forEach((s) => {
+                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                        earliestStart = s.startTs;
+                    }
+                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                        latestEnd = s.endTs;
+                    }
+                });
+                if (earliestStart != null && latestEnd != null) {
+                    effectiveWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                } else if (earliestStart != null) {
+                    effectiveWhen = formatTsLocal(earliestStart);
+                } else if (latestEnd != null) {
+                    effectiveWhen = formatTsLocal(latestEnd);
+                }
+            }
+
+            if (!effectiveWhen || String(effectiveWhen).trim() === '') {
+                const provisional = computeProvisionalSegmentRange(transfer);
+                if (provisional) {
+                    effectiveWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                    console.log('[TRANSPORT][findMatchingBusRows] Použitý provizórny interval:', effectiveWhen);
+                }
+            }
+
+            if (!effectiveWhen || String(effectiveWhen).trim() === '') {
+                const parentKey = transfer._parentKey || transfer.key;
+                if (parentKey) {
+                    const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
+                    if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
+                        effectiveWhen = parentRec.when;
+                    }
+                }
+            }
+
+            trRange = parseTransferWhenToRange(effectiveWhen);
+        }
     
         const trFromId = transfer.fromId || null;
         const trToId = transfer.toId || null;
