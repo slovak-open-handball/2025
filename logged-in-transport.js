@@ -517,7 +517,7 @@ const TransportApp = ({ userProfileData }) => {
         }
         
         if (endTsForDisplay <= startTsForDisplay) {
-            return { startTs: PARENT_START, endTs: PARENT_END };
+            return null;
         }
     
         return { startTs: startTsForDisplay, endTs: endTsForDisplay };
@@ -6786,9 +6786,6 @@ const TransportApp = ({ userProfileData }) => {
 
         if (!boardingRow || !alightingRow) {
             rows.forEach((row) => {
-                // ============================================================
-                // NOVÉ: Pracuj VÝHRADNE s ID.
-                // ============================================================
                 const rowFromId = row.placeFromId || null;
                 const rowToId = row.placeToId || null;
                 if (!boardingRow && rowFromId && rowFromId === trFromId) boardingRow = row;
@@ -6798,11 +6795,6 @@ const TransportApp = ({ userProfileData }) => {
 
         setAssignBusSaving(true);
         try {
-            // ============================================================
-            // NOVÉ: NEZAPISUJEME teamsIn/teamsOut do busRow.
-            // Namiesto toho zapíšeme busId + boardingRowId + alightingRowId
-            // priamo do segmentu presunu.
-            // ============================================================
             const computeSegmentTimesFromRows = () => {
                 let startTs = null;
                 let endTs = null;
@@ -6835,9 +6827,6 @@ const TransportApp = ({ userProfileData }) => {
                     draft.segments[segIdx].busAssigned = true;
                     draft.segments[segIdx].isWalking = false;
                     draft.segments[segIdx].busId = busId || null;
-                    // ============================================================
-                    // NOVÉ: Zapíš rowId nástupu a výstupu do segmentu.
-                    // ============================================================
                     draft.segments[segIdx].boardingRowId = boardingRow?.rowId || null;
                     draft.segments[segIdx].alightingRowId = alightingRow?.rowId || null;
         
@@ -6885,9 +6874,6 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
-    // ============================================================
-    // TRVANIA JÁZDY
-    // ============================================================
     const saveTravelTime = async (fromStop, toStop, rawValue) => {
         console.log('[TRANSPORT][saveTravelTime] Volané:', {
             fromStop: fromStop?.name,
@@ -6921,7 +6907,6 @@ const TransportApp = ({ userProfileData }) => {
                     'success'
                 );
             } else {
-                // Ukladáme IBA ID zastávok – žiadne fromName/toName
                 await setDoc(docRef, {
                     times: {
                         [key]: {
@@ -6949,12 +6934,7 @@ const TransportApp = ({ userProfileData }) => {
         if (!window.db) return;
         const cat = cleanCategory(category);
         const name = String(teamName || '').trim();
-        if (!cat || !name) return;
-    
-        // ============================================================
-        // NOVÉ: Zisti teamUid + teamIndex pre daný tím z `users`.
-        // Tieto údaje tvoria KĽÚČ záznamu v DB (namiesto teamName).
-        // ============================================================
+        if (!cat || !name) return;    
         const teamIds = findTeamIdentifiersByName(cat, name);
         if (!teamIds || teamIds.teamUid == null || teamIds.teamIndex == null) {
             window.showGlobalNotification(
@@ -6962,54 +6942,35 @@ const TransportApp = ({ userProfileData }) => {
                 'error'
             );
             return;
-        }
-    
-        // ============================================================
-        // NOVÉ: KĽÚČ záznamu = `${category}||${teamUid}||${teamIndex}`.
-        // Názov tímu sa do kľúča NEDÁVA.
-        // ============================================================
-        const docKey = `${cat}||${teamIds.teamUid}||${teamIds.teamIndex}`;
-    
+        }    
+        const docKey = `${cat}||${teamIds.teamUid}||${teamIds.teamIndex}`;    
         const newShortcut = String(newShortcutRaw || '')
             .trim()
-            .toLocaleUpperCase('sk-SK');
-    
+            .toLocaleUpperCase('sk-SK');    
         setShortcutSaving(true);
         try {
             const transportRef = collection(window.db, 'transport');
-            const snap = await getDocs(transportRef);
-    
-            // Nájdi existujúci záznam pre (category, teamUid, teamIndex)
-            // + NOVÉ: zisti, či v tej istej kategórii už neexistuje
-            //   INÝ tím s rovnakou skratkou.
+            const snap = await getDocs(transportRef);    
             let existingDocId = null;
             let conflictingTeamUid = null;
-            let conflictingTeamIndex = null;
-    
+            let conflictingTeamIndex = null;    
             snap.forEach((docSnap) => {
                 const data = docSnap.data() || {};
                 if (data.type !== 'teamShortcut') return;
-                if (cleanCategory(data.category) !== cat) return;
-    
+                if (cleanCategory(data.category) !== cat) return;    
                 const docTeamUid = data.teamUid || null;
                 const docTeamIndex = data.teamIndex ?? null;
-                const docShortcut = String(data.shortcut || '').trim().toLocaleUpperCase('sk-SK');
-    
-                // Záznam pre aktuálny tím (rovnaký teamUid + teamIndex) – zapamätaj si ID
+                const docShortcut = String(data.shortcut || '').trim().toLocaleUpperCase('sk-SK');    
                 if (docTeamUid === teamIds.teamUid && docTeamIndex === teamIds.teamIndex) {
                     existingDocId = docSnap.id;
                     return;
-                }
-    
-                // Iný tím v tej istej kategórii s rovnakou skratkou → konflikt
+                }    
                 if (newShortcut && docShortcut && docShortcut === newShortcut) {
                     conflictingTeamUid = docTeamUid;
                     conflictingTeamIndex = docTeamIndex;
                 }
-            });
-    
+            });    
             if (newShortcut && conflictingTeamUid != null) {
-                // Zisti názov konfliktného tímu pre notifikáciu
                 const conflictInfo = (teamsLookupRef.current || {})[
                     `${conflictingTeamUid}|${cat}|${conflictingTeamIndex}`
                 ];
@@ -7019,10 +6980,8 @@ const TransportApp = ({ userProfileData }) => {
                     'error'
                 );
                 return;
-            }
-    
+            }    
             if (!newShortcut) {
-                // Prázdna skratka → zmaž záznam (ak existuje)
                 if (existingDocId) {
                     await deleteDoc(doc(window.db, 'transport', existingDocId));
                     window.showGlobalNotification(`Skratka pre tím ${name} bola odstránená.`, 'info');
@@ -7031,21 +6990,10 @@ const TransportApp = ({ userProfileData }) => {
                 if (existingDocId) {
                     await updateDoc(doc(window.db, 'transport', existingDocId), {
                         shortcut: newShortcut,
-                        // Uisti sa, že teamName v DB nie je (ak tam náhodou zostal)
                         teamName: deleteField(),
-                        // A že v DB je správny kľúč (hoci document ID sa nemení)
                         docKey: docKey,
                     });
                 } else {
-                    // ============================================================
-                    // NOVÉ: Ukladáme IBA docKey + category + teamUid + teamIndex + shortcut.
-                    // NÁZOV TÍMU (teamName) sa NEUKLADÁ.
-                    //
-                    // `docKey` je aj v dátach (pre prípad, že by si ho chcel použiť
-                    // ako prefix pri vyhľadávaní), ale primárne je to document ID.
-                    //
-                    // Document ID = docKey, aby bol kľúč stabilný a neobsahoval názov tímu.
-                    // ============================================================
                     await setDoc(doc(transportRef, docKey), {
                         type: 'teamShortcut',
                         docKey,
@@ -7071,9 +7019,7 @@ const TransportApp = ({ userProfileData }) => {
         if (!window.db) return;
         const cat = cleanCategory(category);
         const name = String(teamName || '').trim();
-        if (!cat || !name) return;
-    
-        // NOVÉ: Zisti teamUid + teamIndex pre daný tím z `users`
+        if (!cat || !name) return;    
         const teamIds = findTeamIdentifiersByName(cat, name);
         if (!teamIds || teamIds.teamUid == null || teamIds.teamIndex == null) {
             window.showGlobalNotification(
@@ -7082,18 +7028,10 @@ const TransportApp = ({ userProfileData }) => {
             );
             setDeleteShortcutModal(null);
             return;
-        }
-    
-        // NOVÉ: docKey = `${category}||${teamUid}||${teamIndex}`
-        const docKey = `${cat}||${teamIds.teamUid}||${teamIds.teamIndex}`;
-    
+        }    
+        const docKey = `${cat}||${teamIds.teamUid}||${teamIds.teamIndex}`;    
         setDeleteShortcutSaving(true);
         try {
-            // ============================================================
-            // NOVÉ: Primárne skús zmazať dokument podľa docKey (document ID).
-            // Ak neexistuje (napr. staré záznamy), prejdi kolekciu a nájdi
-            // záznam podľa teamUid + teamIndex.
-            // ============================================================
             const directDocRef = doc(window.db, 'transport', docKey);
             const directSnap = await getDoc(directDocRef);
     
@@ -7104,10 +7042,8 @@ const TransportApp = ({ userProfileData }) => {
                 if (data.type === 'teamShortcut') {
                     existingDocId = directSnap.id;
                 }
-            }
-    
+            }    
             if (!existingDocId) {
-                // Fallback – prejdi kolekciu (pre staré záznamy, ktoré ešte nemajú docKey)
                 const transportRef = collection(window.db, 'transport');
                 const snap = await getDocs(transportRef);
                 snap.forEach((docSnap) => {
@@ -7118,8 +7054,7 @@ const TransportApp = ({ userProfileData }) => {
                     if ((data.teamIndex ?? null) !== teamIds.teamIndex) return;
                     existingDocId = docSnap.id;
                 });
-            }
-    
+            }    
             if (!existingDocId) {
                 window.showGlobalNotification(
                     `Skratka pre tím ${name} sa nenašla.`,
@@ -7127,8 +7062,7 @@ const TransportApp = ({ userProfileData }) => {
                 );
                 setDeleteShortcutModal(null);
                 return;
-            }
-    
+            }    
             await deleteDoc(doc(window.db, 'transport', existingDocId));
             window.showGlobalNotification(
                 `Skratka pre tím ${name} bola odstránená.`,
@@ -7142,26 +7076,17 @@ const TransportApp = ({ userProfileData }) => {
             setDeleteShortcutSaving(false);
         }
     };
-
-    // ============================================================
-    // VLASTNÉ MODÁLNE POTVRDENIE (Promise-based)
-    // ============================================================
     const askConfirm = (message) => {
         return new Promise((resolve) => {
             setConfirmModal({ message, resolve });
         });
     };
-
     const closeConfirmModal = (result) => {
         if (confirmModal && typeof confirmModal.resolve === 'function') {
             confirmModal.resolve(result);
         }
         setConfirmModal(null);
     };
-
-    // ============================================================
-    // NASTAVENIE NÁSTUPNEJ/VÝSTUPNEJ ZASTÁVKY
-    // ============================================================
     const setExternalArrivalStop = async (placeId) => {
         if (!window.db) return;
         try {
@@ -7184,10 +7109,6 @@ const TransportApp = ({ userProfileData }) => {
             window.showGlobalNotification('Nepodarilo sa zmeniť nástupnú zastávku.', 'error');
         }
     };
-    
-    // ============================================================
-    // NOVÉ: NASTAVENIE ZASTÁVKY AKO "MIESTO ZRAZU"
-    // ============================================================
     const setMeetingPointStop = async (placeId) => {
         if (!window.db) return;
         try {
@@ -7201,16 +7122,14 @@ const TransportApp = ({ userProfileData }) => {
                         isMeetingPointStop: shouldBe,
                     });
                 }
-            }
-    
+            }    
             await batch.commit();
             window.showGlobalNotification('Miesto zrazu bolo zmenené.', 'success');
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri nastavovaní miesta zrazu:', err);
             window.showGlobalNotification('Nepodarilo sa zmeniť miesto zrazu.', 'error');
         }
-    };
-    
+    };    
     const renderTravelTimes = () => {
         if (stopsList.length === 0) {
             return React.createElement(
@@ -7219,7 +7138,6 @@ const TransportApp = ({ userProfileData }) => {
                 'Žiadne zastávky.'
             );
         }
-
         if (stopsList.length === 1) {
             return React.createElement(
                 'div',
@@ -7227,11 +7145,6 @@ const TransportApp = ({ userProfileData }) => {
                 'Pre výpočet trvania jázd sú potrebné aspoň 2 zastávky.'
             );
         }
-
-        // ============================================================
-        // Pracuje VÝHRADNE s ID (fromStop.id / toStop.id).
-        // Názvy (fromStop.name / toStop.name) sú len pre zobrazenie.
-        // ============================================================
         const getInputValue = (fromId, toId) => {
             const key = `${fromId}|${toId}`;
             return travelTimesDraft[key] != null ? travelTimesDraft[key] : '';
@@ -7247,7 +7160,6 @@ const TransportApp = ({ userProfileData }) => {
             const raw = travelTimesDraft[key] != null ? travelTimesDraft[key] : '';
             const existing = travelTimes[key];
             const existingMinutes = existing ? String(existing.minutes) : '';
-
             console.log('[TRANSPORT][handleBlur]', {
                 fromId: fromStop.id,
                 fromName: fromStop.name,
@@ -7258,20 +7170,15 @@ const TransportApp = ({ userProfileData }) => {
                 existingMinutes,
                 skip: raw === existingMinutes,
             });
-
             if (raw === existingMinutes) return;
-
             saveTravelTime(fromStop, toStop, raw);
         };
-
         const handleStopHeaderClick = (stop) => {
             setStopTypeModal({ stop });
         };
-
         const renderStopLabel = (stop) => {
             const isExternal = stop.isExternalArrivalStop === true;
             const isMeeting = stop.isMeetingPointStop === true;
-
             return React.createElement(
                 'span',
                 { className: 'inline-flex flex-col items-center gap-1' },
@@ -7305,17 +7212,12 @@ const TransportApp = ({ userProfileData }) => {
                     )
             );
         };
-
         const isMissingTravelTime = (fromStop, toStop) => {
             if (!fromStop?.id || !toStop?.id) return false;
-            // ============================================================
-            // Pracuje VÝHRADNE s ID.
-            // ============================================================
             return missingTravelTimeWarning.some((m) => {
                 return m.fromId === fromStop.id && m.toId === toStop.id;
             });
         };
-
         return React.createElement(
             'div',
             { className: 'w-full overflow-x-auto' },
@@ -7481,12 +7383,7 @@ const TransportApp = ({ userProfileData }) => {
             )
         );
     };
-
-    // ============================================================
-    // NOVÉ: RENDER – tabuľka skratiek názvov tímov
-    // ============================================================
     const renderTeamShortcuts = () => {
-        // Zoznam kategórií z tímov (users + matches + catering)
         const categories = (() => {
             const set = new Set();
             (teamsArrivalBufferRef.current || []).forEach((t) => {
@@ -7512,7 +7409,6 @@ const TransportApp = ({ userProfileData }) => {
                 'Pre každý tím môžete nastaviť skratku, ktorá sa zobrazí v stĺpcoch Nástup / Výstup v Plánovaní. Ak skratka nie je nastavená, zobrazí sa plný názov tímu.'
             ),
             categories.map((category) => {
-                // Všetky tímy v danej kategórii z users (registrované)
                 const teams = (teamsArrivalBufferRef.current || [])
                     .filter((t) => cleanCategory(t.category) === category && t.isRegistered === true)
                     .map((t) => String(t.teamName || '').trim())
@@ -7604,7 +7500,6 @@ const TransportApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'div',
                                             { className: 'flex items-center justify-center gap-2' },
-                                            // Ikona ceruzky – otvorí modálne okno na pridanie/úpravu skratky
                                             React.createElement(
                                                 'button',
                                                 {
@@ -7622,8 +7517,6 @@ const TransportApp = ({ userProfileData }) => {
                                                 },
                                                 React.createElement('i', { className: 'fa-solid fa-pen' })
                                             ),
-                                            // Ikona koša – otvorí modálne okno na potvrdenie zmazania skratky
-                                            // Zobrazí sa LEN ak skratka existuje
                                             shortcut &&
                                                 React.createElement(
                                                     'button',
@@ -7650,11 +7543,7 @@ const TransportApp = ({ userProfileData }) => {
                 );
             })
         );
-    };    
-
-    // ============================================================
-    // Zoznam dostupných kategórií (z tímov + zápasov + stravovania)
-    // ============================================================
+    };
     const getAvailableCategories = () => {
         const set = new Set();
 
@@ -7672,11 +7561,6 @@ const TransportApp = ({ userProfileData }) => {
             .filter(Boolean)
             .sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
     };
-
-    // ============================================================
-    // NOVÉ: Pomocná – získa farbu dopravy pre kategóriu
-    // (skúsi presný názov, potom cleanCategory, potom fallback)
-    // ============================================================
     const getTransportColorForCategory = (categoryName) => {
         const map = transportColorsRef.current || {};
         const raw = String(categoryName || '').trim();
@@ -7684,7 +7568,6 @@ const TransportApp = ({ userProfileData }) => {
         if (map[raw]) return map[raw];
         const cleaned = cleanCategory(raw);
         if (map[cleaned]) return map[cleaned];
-        // Skús aj case-insensitive
         const lower = raw.toLowerCase();
         for (const [k, v] of Object.entries(map)) {
             if (k.startsWith('__draw__|')) continue;
@@ -7692,26 +7575,15 @@ const TransportApp = ({ userProfileData }) => {
         }
         return null;
     };
-
-    // ============================================================
-    // Pomocná: získa počty členov pre daný tím z `users`
-    // ============================================================
     const getTeamCountsForTransfer = (category, teamName) => {
         const cat = cleanCategory(category);
         const name = String(teamName || '').trim();
         if (!cat || !name) return null;
         return teamCounts[`${cat}|${name}`] || null;
     };
-
-    // ============================================================
-    // Pomocná: celočíselný priemer členov tímu v kategórii
-    // (rovnaký štýl ako "Spolu", len pre tímy, ktoré nie sú v users)
-    // ============================================================
     const getCategoryAverageForTransfer = (category) => {
         const cat = cleanCategory(category);
         if (!cat) return null;
-
-        // Prejdi všetky tímy v teamCounts pre danú kategóriu
         let total = 0;
         let count = 0;
         Object.entries(teamCounts || {}).forEach(([key, counts]) => {
@@ -7731,10 +7603,6 @@ const TransportApp = ({ userProfileData }) => {
         if (count === 0) return null;
         return Math.ceil(total / count);
     };
-
-    // ============================================================
-    // NOVÉ: Pomocná – získa farbu pre rozlosovanie (drawColor)
-    // ============================================================
     const getDrawColorForCategory = (categoryName) => {
         const map = transportColorsRef.current || {};
         const raw = String(categoryName || '').trim();
@@ -7744,11 +7612,6 @@ const TransportApp = ({ userProfileData }) => {
         if (map[`__draw__|${cleaned}`]) return map[`__draw__|${cleaned}`];
         return null;
     };
-
-    // ============================================================
-    // Pomocná: z hex farby (#rrggbb) vytvorí bledý variant zmiešaný s bielou
-    // (ratio = 0 → biela, ratio = 1 → pôvodná farba)
-    // ============================================================
     const lightenHex = (hex, ratio = 0.15) => {
         if (!hex) return null;
         let h = String(hex).trim().replace(/^#/, '');
@@ -7762,19 +7625,11 @@ const TransportApp = ({ userProfileData }) => {
         const mix = (c) => Math.round(c * ratio + 255 * (1 - ratio));
         const toHex = (c) => c.toString(16).padStart(2, '0');
         return `#${toHex(mix(r))}${toHex(mix(g))}${toHex(mix(b))}`;
-    };
-    
-    // ============================================================
-    // Pomocná: farba textu pre tím podľa kategórie
-    // ============================================================
+    };    
     const getCategoryTextColor = (categoryName) => {
         const hex = getTransportColorForCategory(categoryName);
-        return hex || '#374151'; // fallback tmavosivá
+        return hex || '#374151';
     };
-
-    // ============================================================
-    // NOVÉ: Získa skratku pre tím v kategórii (alebo null)
-    // ============================================================
     const getTeamShortcut = (category, teamName) => {
         const cat = cleanCategory(category);
         const name = String(teamName || '').trim();
@@ -7783,39 +7638,26 @@ const TransportApp = ({ userProfileData }) => {
         if (!raw) return null;
         return String(raw).trim().toLocaleUpperCase('sk-SK');
     };
-
-    // ============================================================
-    // NOVÉ: Vráti text pre tím v autobuse – skratka alebo plný názov
-    // ============================================================
     const getTeamDisplayLabel = (teamKey) => {
         const parts = String(teamKey).split('|');
         const teamName = (parts[0] || '').trim();
         const category = (parts[1] || '').trim();
         const shortcut = getTeamShortcut(category, teamName);
         return shortcut || teamName;
-    };    
-
-    // ============================================================
-    // RENDER – plánovanie
-    // ============================================================
+    };
     const renderPlanning = () => {
-        // Filtrovanie dní podľa vybraného dňa v selectboxe
         const daysToRender = selectedDayKey
             ? tournamentDays.filter((d) => d.dayKey === selectedDayKey)
-            : tournamentDays;
-        
+            : tournamentDays;        
         const filteredBuses = selectedBusId
             ? buses.filter((b) => b.id === selectedBusId)
-            : buses;
-    
+            : buses;    
         const hasAnythingToRender =
             filteredBuses.length > 0 ||
-            savedTransfers.some((t) => t.isWalking === true && (!selectedDayKey || t.dayKey === selectedDayKey));
-    
+            savedTransfers.some((t) => t.isWalking === true && (!selectedDayKey || t.dayKey === selectedDayKey));    
         return React.createElement(
             'div',
-            { className: 'w-full flex flex-col items-start justify-start py-6 relative min-h-[400px]' },
-    
+            { className: 'w-full flex flex-col items-start justify-start py-6 relative min-h-[400px]' },    
             !hasAnythingToRender
                 ? React.createElement(
                     'div',
@@ -7843,12 +7685,8 @@ const TransportApp = ({ userProfileData }) => {
                 )
                 : React.createElement(
                     'div',
-                    { className: 'w-full flex flex-row flex-nowrap gap-6 pb-24 overflow-visible items-start' },
-                
-                    // === ĽAVÝ STĹPEC – uložené vygenerované presuny ===
-                    renderSavedTransfers(),
-    
-                    // === BOXY AUTOBUSOV ===
+                    { className: 'w-full flex flex-row flex-nowrap gap-6 pb-24 overflow-visible items-start' },                
+                    renderSavedTransfers(),    
                     filteredBuses.map((bus) =>
                         React.createElement(
                             'div',
@@ -7857,7 +7695,6 @@ const TransportApp = ({ userProfileData }) => {
                                 className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
                                 style: { minWidth: '1000px', width: 'max-content' }
                             },
-                            // Hlavička autobusu
                             React.createElement(
                                 'div',
                                 {
@@ -7867,7 +7704,6 @@ const TransportApp = ({ userProfileData }) => {
                                 React.createElement('i', { className: 'fa-solid fa-bus mr-2' }),
                                 React.createElement('h3', { className: 'text-lg font-bold text-center' }, bus.name),
                                 (() => {
-                                    // Zisti, či autobus má aspoň jeden riadok s časmi a miestami (v ľubovoľnom dni)
                                     let hasAnyRowWithData = false;
                                     Object.entries(busRows || {}).forEach(([key, rows]) => {
                                         if (hasAnyRowWithData) return;
@@ -7876,10 +7712,8 @@ const TransportApp = ({ userProfileData }) => {
                                         if ((rows || []).length > 0) {
                                             hasAnyRowWithData = true;
                                         }
-                                    });
-                            
-                                    const isDisabled = hasAnyRowWithData;
-                            
+                                    });                            
+                                    const isDisabled = hasAnyRowWithData;                            
                                     return React.createElement(
                                         'button',
                                         {
@@ -7922,7 +7756,6 @@ const TransportApp = ({ userProfileData }) => {
                                                 React.createElement(
                                                     React.Fragment,
                                                     { key: day.dayKey },
-                                                    // 1) Riadok s dátumom
                                                     React.createElement(
                                                         'tr',
                                                         { className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50' },
@@ -7933,40 +7766,26 @@ const TransportApp = ({ userProfileData }) => {
                                                             React.createElement('span', { className: 'text-gray-500 mx-2' }, '–'),
                                                             React.createElement('span', null, day.dateLabel)
                                                         )
-                                                    ),
-                                            
-                                                    // 2) Tabuľka s riadkami (ak existujú)
+                                                    ),                                            
                                                     (() => {
                                                         const key = `${bus.id}|${day.dayKey}`;
                                                         const rows = (busRows[key] || []);
                                                         if (rows.length === 0) return null;
-
-                                                        // Zoraď podľa order
                                                         const sortedRows = [...rows].sort(
                                                             (a, b) => (a.order || 0) - (b.order || 0)
                                                         );
-
-                                                        // Postupne renderuj riadky + prípadné volné riadky
                                                         const rowElements = [];
                                                         sortedRows.forEach((r, idx) => {
-                                                            // Najprv pridaj "voľný riadok", ak je medzera > 2 min
                                                             if (idx > 0) {
                                                                 const prev = sortedRows[idx - 1];
                                                                 const rawGap = getGapMinutes(prev.timeTo, r.timeFrom);
                                                                 if (rawGap != null && rawGap > 2) {
                                                                     const prevRow = prev;
                                                                     const nextRow = r;
-                                                                    const gapRowKey = `gap-${prevRow.id}-${nextRow.id}`;
-                                                                
-                                                                    // ============================================================
-                                                                    // NOVÉ: Zisti, či ide o "obrátený" prípad (čas od > čas do).
-                                                                    // Ak áno, použijeme ABSOLÚTNU HODNOTU rozdielu (bez prechodu
-                                                                    // cez polnoc), aby sme nepočítali nezmyselne veľkú medzeru.
-                                                                    // ============================================================
+                                                                    const gapRowKey = `gap-${prevRow.id}-${nextRow.id}`;                                                                
                                                                     const timeReLocal = /^\d{1,2}:\d{2}$/;
                                                                     let isInverted = false;
-                                                                    let gap = rawGap;
-                                                                
+                                                                    let gap = rawGap;                                                                
                                                                     if (timeReLocal.test(prevRow.timeTo || '') && timeReLocal.test(nextRow.timeFrom || '')) {
                                                                         const [fh, fm] = prevRow.timeTo.split(':').map(Number);
                                                                         const [th, tm] = nextRow.timeFrom.split(':').map(Number);
@@ -7974,21 +7793,13 @@ const TransportApp = ({ userProfileData }) => {
                                                                         const toMin = th * 60 + tm;
                                                                         if (fromMin > toMin) {
                                                                             isInverted = true;
-                                                                            gap = fromMin - toMin; // ABSOLÚTNA HODNOTA (väčší - menší)
+                                                                            gap = fromMin - toMin;
                                                                         }
-                                                                    }
-                                                                                                                        
-                                                                    // ============================================================
-                                                                    // NOVÉ: Detekcia "obráteného" červeného riadku:
-                                                                    //  - miesto od (prevRow.placeTo) == miesto do (nextRow.placeFrom)
-                                                                    //  - čas od (prevRow.timeTo) > čas do (nextRow.timeFrom)
-                                                                    //    (t.j. prevRow.timeTo > nextRow.timeFrom)
-                                                                    // ============================================================
+                                                                    }                                                                                                                        
                                                                     const timeRe = /^\d{1,2}:\d{2}$/;
                                                                     const sameFromTo =
                                                                         normalizePlaceName(prevRow.placeTo) !== '' &&
-                                                                        normalizePlaceName(prevRow.placeTo) === normalizePlaceName(nextRow.placeFrom);
-                                                        
+                                                                        normalizePlaceName(prevRow.placeTo) === normalizePlaceName(nextRow.placeFrom);                                                        
                                                                     let isInvertedGap = false;
                                                                     if (
                                                                         sameFromTo &&
@@ -8000,8 +7811,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                         if (fh * 60 + fm > th * 60 + tm) {
                                                                             isInvertedGap = true;
                                                                         }
-                                                                    }
-                                                        
+                                                                    }                                                        
                                                                     rowElements.push(
                                                                         React.createElement(
                                                                             'tr',
@@ -8010,20 +7820,16 @@ const TransportApp = ({ userProfileData }) => {
                                                                                 className: 'group gap-row',
                                                                                 style: { backgroundColor: '#FC9A9C' }
                                                                             },
-                                                                            // 1. čas od
                                                                             React.createElement(
                                                                                 'td',
                                                                                 { className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold text-gray-800' },
                                                                                 prevRow.timeTo || '—'
                                                                             ),
-                                                                            // 2. čas do
                                                                             React.createElement(
                                                                                 'td',
                                                                                 { className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold text-gray-800' },
                                                                                 nextRow.timeFrom || '—'
                                                                             ),
-                                                                            // 3. + 4. miesto od / miesto do
-                                                                            //    Ak sú miesta rovnaké → zlúčiť do jednej bunky (colspan=2) so stredovým zarovnaním
                                                                             (() => {
                                                                                 const placeFromNorm = normalizePlaceName(prevRow.placeTo || '');
                                                                                 const placeToNorm = normalizePlaceName(nextRow.placeFrom || '');
@@ -8054,13 +7860,9 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     ),
                                                                                 ];
                                                                             })(),
-                                                                            // 5. Nástup – prázdne
                                                                             React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, ''),
-                                                                            // 6. Výstup – prázdne
                                                                             React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, ''),
-                                                                            // 7. Počet – prázdne
                                                                             React.createElement('td', { className: 'border border-gray-300 px-2 py-1' }, ''),
-                                                                            // 8. Min – medzera
                                                                             React.createElement(
                                                                                 'td',
                                                                                 {
@@ -8082,12 +7884,9 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     return gap;
                                                                                 })()
                                                                             ),
-                                                                            // 9. Mazanie / "+" + NOVÉ tlačidlo "Posunúť" pri obrátenom riadku
                                                                             React.createElement(
                                                                                 'td',
                                                                                 { className: 'border border-gray-300 px-2 py-1 text-center relative' },
-                                                                                // NOVÉ: ak ide o obrátený riadok (rovnaké miesto, čas od > čas do),
-                                                                                // zobraz tlačidlo na posun nasledujúcich riadkov.
                                                                                 isInvertedGap &&
                                                                                     React.createElement(
                                                                                         'button',
@@ -8111,7 +7910,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                                         },
                                                                                         React.createElement('i', { className: 'fa-solid fa-arrows-down-to-line text-[10px]' })
                                                                                     ),
-                                                                                // Pôvodné hover "+" tlačidlo
                                                                                 React.createElement(
                                                                                     'button',
                                                                                     {
@@ -8127,12 +7925,9 @@ const TransportApp = ({ userProfileData }) => {
                                                                         )
                                                                     );
                                                                 }
-                                                            }
-                                                        
-                                                            // Pridaj samotný riadok
+                                                            }                                                        
                                                             rowElements.push(renderBusRow(r, bus.id, day.dayKey));
                                                         });
-
                                                         return React.createElement(
                                                             'tr',
                                                             null,
@@ -8148,10 +7943,6 @@ const TransportApp = ({ userProfileData }) => {
                                                             )
                                                         );
                                                     })(),
-                                            
-                                                    // 3) Riadok s tlačidlom "+" – AŽ POD posledným riadkom udalosti
-                                                    //    Zobrazí sa LEN ak pre daný bus + deň neexistuje žiadny riadok.
-                                                    //    Ak už riadky existujú, nové sa pridávajú cez hover "+" na hraniciach riadkov.
                                                     (() => {
                                                         const rowsKey = `${bus.id}|${day.dayKey}`;
                                                         const existingRows = busRows[rowsKey] || [];
@@ -8181,12 +7972,8 @@ const TransportApp = ({ userProfileData }) => {
                                         )
                                     )
                         )
-                    ),
-    
-                    // === NOVÉ: PEŠIE PRESUNY – ZA BOXOM POSLEDNÉHO AUTOBUSU ===
-                    renderWalkingTransfersBox(),
-                
-                    // Zelené tlačidlo "+" napravo od posledného boxu
+                    ),    
+                    renderWalkingTransfersBox(),                
                     React.createElement(
                         'button',
                         {
@@ -8203,15 +7990,7 @@ const TransportApp = ({ userProfileData }) => {
                 )
         );
     };
-
-    // ============================================================
-    // RENDER – ľavý stĺpec s uloženými vygenerovanými presunmi
-    // ============================================================
     const renderSavedTransfers = () => {
-        // ============================================================
-        // NOVÉ: Kým nie je načítaný travelTimes, zobraz "Načítavam..."
-        // (inak by box mohol byť prázdny, kým sa načítajú dáta z DB)
-        // ============================================================
         if (!travelTimesLoaded) {
             return React.createElement(
                 'div',
@@ -8239,15 +8018,11 @@ const TransportApp = ({ userProfileData }) => {
                 )
             );
         }
-
-        // Filtrovanie podľa zvoleného dňa
-        // === NOVÉ: Filter podľa dňa AJ kategórie ===
         const filteredByDay = savedTransfers.filter((t) => {
             if (selectedDayKey && t.dayKey !== selectedDayKey) return false;
             if (selectedCategoryFilter && cleanCategory(t.category || '') !== cleanCategory(selectedCategoryFilter)) return false;
             return true;
         });
-
         const parseWhenRangeFull = (when) => {
             if (!when) return null;
             const s = String(when);
@@ -8285,47 +8060,31 @@ const TransportApp = ({ userProfileData }) => {
                 startTime: found[0].time,
                 endTime: found[1].time,
             };
-        };
-    
-        // ============================================================
-        // Pomocná: z textu "Presun z X do Y" vytiahne { from, to }.
-        // ============================================================
+        };    
         const parseTransferText = (text) => {
             if (!text) return null;
             const s = String(text).trim();
             const m = /^Presun z (.+?) do (.+)$/.exec(s);
-            if (!m) return null;
-    
+            if (!m) return null;    
             const normalizePlace = (str) => String(str)
                 .replace(/\bubytovania\b/gi, 'ubytovňa')
                 .replace(/\bubytovanie\b/gi, 'ubytovňa')
                 .replace(/\bzastávky\b/gi, 'zastávka')
                 .replace(/\bzastávok\b/gi, 'zastávka')
                 .replace(/\bmiesta zrazu\b/gi, 'miesto zrazu')
-                .replace(/\bmiesto zrazu\b/gi, 'miesto zrazu');
-    
+                .replace(/\bmiesto zrazu\b/gi, 'miesto zrazu');    
             return {
                 from: normalizePlace(m[1].trim()),
                 to: normalizePlace(m[2].trim()),
             };
-        };
-        
-        // ============================================================
-        // Pomocná: zistí, či je konkrétny segment už priradený
-        // ============================================================
+        };        
         const isSegmentAssigned = (t) => {
             const tn = String(t.teamName || '').trim();
             const cat = cleanCategory(t.category || '');
             const dayKey = t.dayKey || '';
-
             const fromId = t.fromId || null;
             const toId = t.toId || null;
             if (!fromId || !toId) return false;
-
-            // ============================================================
-            // NOVÉ: Primárne over priamo v parent.segments,
-            // či segment má busId + boardingRowId + alightingRowId.
-            // ============================================================
             const parentKey = t._parentKey || t.key;
             const parent = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
             if (parent && Array.isArray(parent.segments)) {
@@ -8340,32 +8099,13 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 }
             }
-
             return false;
-        };
-    
-        // ============================================================
-        // NOVÉ: Rozlož presuny s intermediateStopIds na segmenty
-        // ============================================================
+        };    
         const expandedTransfers = [];
-
         filteredByDay.forEach((t) => {
             const stopsIds = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
-
-            // ============================================================
-            // Segmenty sa NIKDY neukladajú do DB – parent záznam
-            // s intermediateStopIds zostáva v DB vždy ako jeden celok.
-            // ============================================================
-
             if (stopsIds.length === 0) {
-                // Klasický parent presun bez medzizastávok
                 const isAssigned = isSegmentAssigned(t);
-
-                // ============================================================
-                // Ak `when` je prázdny, skús ho doplniť:
-                //  1) z parent záznamu v savedTransfers (rovnaký key)
-                //  2) z reálnych časov segmentov (startTs/endTs)
-                // ============================================================
                 let displayWhen = t.when;
                 if (!displayWhen || String(displayWhen).trim() === '') {
                     const parentRec = savedTransfers.find((s) => s.key === t.key);
@@ -8391,7 +8131,6 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     }
                 }
-
                 expandedTransfers.push({
                     ...t,
                     when: displayWhen,
@@ -8400,48 +8139,33 @@ const TransportApp = ({ userProfileData }) => {
                 });
                 return;
             }
-
-            // ============================================================
-            // NOVÉ: Pracuj VÝHRADNE s ID.
-            //  - t.fromId, t.toId, t.intermediateStopIds
-            // ============================================================
             const routeIdsRaw = [t.fromId, ...stopsIds, t.toId].filter(Boolean);
             const routeIds = [];
             routeIdsRaw.forEach((id) => {
                 if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
             });
-
             if (routeIds.length < 2) {
                 expandedTransfers.push(t);
                 return;
             }
-
             const timeRange = parseWhenRangeToTs(t.when);
             if (!timeRange || timeRange.startTs == null || timeRange.endTs == null || timeRange.endTs <= timeRange.startTs) {
-                // Fallback – nevieme vypočítať časy parenta.
-                // Vytvor segmenty BEZ časov (zobrazia sa ako "čakajúce na priradenie").
                 for (let i = 0; i < routeIds.length - 1; i++) {
                     const fromId = routeIds[i];
                     const toId = routeIds[i + 1];
                     if (fromId === toId) continue;
-
-                    // Zisti, či je tento segment označený ako peši
                     const parentSegmentForThisIdx = (() => {
                         if (!Array.isArray(t.segments)) return null;
                         return t.segments.find(
                             (s) => s.fromId === fromId && s.toId === toId
                         ) || null;
                     })();
-
                     const isSegmentWalking =
                         (parentSegmentForThisIdx && parentSegmentForThisIdx.isWalking === true) ||
                         t.isWalking === true;
-
                     if (isSegmentWalking) continue;
-
                     const text = `Presun z ${resolvePlaceNameById(fromId)} do ${resolvePlaceNameById(toId)}`;
                     const key = buildTransferKey(t.category, t.teamName, '', text);
-
                     expandedTransfers.push({
                         ...t,
                         key,
@@ -8959,59 +8683,94 @@ const TransportApp = ({ userProfileData }) => {
                             };
                             
                             let timeLabel = null;
-                            if (rangeInfo && (rangeInfo.startTime || rangeInfo.endTime)) {
-                                const st = rangeInfo.startTime;
-                                const et = rangeInfo.endTime;
-                                if (st && et) timeLabel = `${st} – ${et}`;
-                                else if (st) timeLabel = st;
-                                else if (et) timeLabel = et;
-                            } else if (t.when && String(t.when).trim() !== '') {
-                                // z `t.when` zobraz iba časy (bez dátumu)
-                                timeLabel = extractTimesOnly(t.when) || String(t.when).trim();
-                            } else if (Array.isArray(t.segments) && t.segments.length > 0) {
-                                // skús vytiahnuť aspoň HH:MM z reálnych časov segmentov
-                                let earliestStart = null;
-                                let latestEnd = null;
-                                t.segments.forEach((s) => {
-                                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                                        earliestStart = s.startTs;
-                                    }
-                                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                                        latestEnd = s.endTs;
-                                    }
-                                });
-                                const startStr = earliestStart != null ? formatTsLocal(earliestStart) : null;
-                                const endStr = latestEnd != null ? formatTsLocal(latestEnd) : null;
-                                const startTime = startStr ? /(\d{2}:\d{2})$/.exec(startStr)?.[1] : null;
-                                const endTime = endStr ? /(\d{2}:\d{2})$/.exec(endStr)?.[1] : null;
-                                if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
-                                else if (startTime) timeLabel = startTime;
-                                else if (endTime) timeLabel = endTime;
-                            }
 
                             // ============================================================
-                            // NOVÉ: Ak stále nemáme čas, skús PROVIZÓRNY interval
-                            // (rovnaká logika ako v modálnom okne „Priradiť presun
-                            //  k autobusu" a v „Upraviť presun").
+                            // NOVÉ: Pre segmenty (majú `_parentKey`) zobrazuj čas
+                            // PRIORITNE zo segmentu v parent zázname:
+                            //  1) Ak segment má reálne časy (busAssigned + startTs/endTs),
+                            //     zobraz čas nástupu → čas výstupu z busu.
+                            //  2) Inak skús PROVIZÓRNY interval (čas od konca
+                            //     predchádzajúceho priradeného segmentu po začiatok
+                            //     nasledujúceho priradeného segmentu).
+                            //  3) Inak žiadny čas.
                             //
-                            // Tým sa zabezpečí, že v zozname sa zobrazí ROVNAKÝ
-                            // čas, aký sa zobrazí po kliknutí na presun v modálnom
-                            // okne (napr. pri nepriradenom segmente parenta,
-                            // ktorý má provizórny interval z okolitých segmentov).
+                            // Tým sa zabezpečí, že sa v boxe NEZOBRAZUJE celkový čas
+                            // parenta pre nepriradený segment, ale skutočný čas
+                            // segmentu alebo provizórny interval.
                             // ============================================================
-                            if (!timeLabel && t._parentKey) {
-                                const provisional = computeProvisionalSegmentRange(t);
-                                if (provisional) {
-                                    const startFmt = formatTsLocal(provisional.startTs);
-                                    const endFmt = formatTsLocal(provisional.endTs);
+                            if (t._parentKey) {
+                                const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
+                                const segFromId = t.fromId || null;
+                                const segToId = t.toId || null;
+
+                                const parentSeg = (() => {
+                                    if (!parentRec || !Array.isArray(parentRec.segments)) return null;
+                                    if (!segFromId || !segToId) return null;
+                                    const idx = findSegmentIndex(parentRec.segments, segFromId, segToId);
+                                    return idx !== -1 ? parentRec.segments[idx] : null;
+                                })();
+
+                                // 1) Reálne časy z busu (segment je priradený)
+                                if (parentSeg && parentSeg.busId && parentSeg.boardingRowId && parentSeg.alightingRowId
+                                    && parentSeg.startTs != null && parentSeg.endTs != null && parentSeg.endTs > parentSeg.startTs) {
+                                    const startFmt = formatTsLocal(parentSeg.startTs);
+                                    const endFmt = formatTsLocal(parentSeg.endTs);
                                     const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
                                     const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
                                     if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
                                     else if (startTime) timeLabel = startTime;
                                     else if (endTime) timeLabel = endTime;
                                 }
+
+                                // 2) Provizórny interval (segment nie je priradený)
+                                if (!timeLabel) {
+                                    const provisional = computeProvisionalSegmentRange(t);
+                                    if (provisional) {
+                                        const startFmt = formatTsLocal(provisional.startTs);
+                                        const endFmt = formatTsLocal(provisional.endTs);
+                                        const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
+                                        const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
+                                        if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
+                                        else if (startTime) timeLabel = startTime;
+                                        else if (endTime) timeLabel = endTime;
+                                    }
+                                }
+
+                                // 3) Ak stále nemáme čas, žiadny čas (nezobrazuj celkový čas parenta)
+                            } else {
+                                // ============================================================
+                                // Pre NESEGMENTOVÉ presuny (bez `_parentKey`) zostáva
+                                // pôvodná logika – zobraz `when` z parenta / segmentov.
+                                // ============================================================
+                                if (rangeInfo && (rangeInfo.startTime || rangeInfo.endTime)) {
+                                    const st = rangeInfo.startTime;
+                                    const et = rangeInfo.endTime;
+                                    if (st && et) timeLabel = `${st} – ${et}`;
+                                    else if (st) timeLabel = st;
+                                    else if (et) timeLabel = et;
+                                } else if (t.when && String(t.when).trim() !== '') {
+                                    timeLabel = extractTimesOnly(t.when) || String(t.when).trim();
+                                } else if (Array.isArray(t.segments) && t.segments.length > 0) {
+                                    let earliestStart = null;
+                                    let latestEnd = null;
+                                    t.segments.forEach((s) => {
+                                        if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                            earliestStart = s.startTs;
+                                        }
+                                        if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                            latestEnd = s.endTs;
+                                        }
+                                    });
+                                    const startStr = earliestStart != null ? formatTsLocal(earliestStart) : null;
+                                    const endStr = latestEnd != null ? formatTsLocal(latestEnd) : null;
+                                    const startTime = startStr ? /(\d{2}:\d{2})$/.exec(startStr)?.[1] : null;
+                                    const endTime = endStr ? /(\d{2}:\d{2})$/.exec(endStr)?.[1] : null;
+                                    if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
+                                    else if (startTime) timeLabel = startTime;
+                                    else if (endTime) timeLabel = endTime;
+                                }
                             }
-                            
+
                             if (!timeLabel && t.dayKey) {
                                 const dayLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
                                 timeLabel = `${dayLabel} (čas neurčený)`;
@@ -11681,44 +11440,76 @@ const TransportApp = ({ userProfileData }) => {
                         )
                     )
                 ),
-                // ============================================================
-                // NOVÝ BOX – rovnaký vizuál ako v "Priradiť presun k autobusu"
-                // ============================================================
                 (() => {
                     const tr = editingTransfer;
-                
-                    // Vypočítaj zobrazený čas (rovnaká logika ako v "Priradiť presun")
+
+                    // ============================================================
+                    // NOVÉ: Pre segment (má `_parentKey`) zobraz čas PRIORITNE
+                    // zo segmentu v parent zázname (rovnaká logika ako v boxe
+                    // "Vygenerované presuny"). Tým sa zabezpečí, že sa v modálnom
+                    // okne nezobrazí pôvodný čas z busu (`tr.when`), ale
+                    // skutočný čas segmentu alebo provizórny interval.
+                    // ============================================================
                     let displayWhen = null;
-                
-                    if (tr.when && String(tr.when).trim() !== '') {
-                        displayWhen = tr.when;
-                    }
-                
-                    if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
-                        let earliestStart = null;
-                        let latestEnd = null;
-                        tr.segments.forEach((s) => {
-                            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                                earliestStart = s.startTs;
-                            }
-                            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                                latestEnd = s.endTs;
-                            }
-                        });
-                        if (earliestStart != null && latestEnd != null) {
-                            displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-                        } else if (earliestStart != null) {
-                            displayWhen = formatTsLocal(earliestStart);
-                        } else if (latestEnd != null) {
-                            displayWhen = formatTsLocal(latestEnd);
+
+                    if (tr._parentKey) {
+                        const parentRec = savedTransfersRef.current.find((s) => s.key === tr._parentKey);
+                        const segFromId = tr.fromId || null;
+                        const segToId = tr.toId || null;
+
+                        const parentSeg = (() => {
+                            if (!parentRec || !Array.isArray(parentRec.segments)) return null;
+                            if (!segFromId || !segToId) return null;
+                            const idx = findSegmentIndex(parentRec.segments, segFromId, segToId);
+                            return idx !== -1 ? parentRec.segments[idx] : null;
+                        })();
+
+                        // 1) Reálne časy z busu (segment je priradený)
+                        if (parentSeg && parentSeg.busId && parentSeg.boardingRowId && parentSeg.alightingRowId
+                            && parentSeg.startTs != null && parentSeg.endTs != null && parentSeg.endTs > parentSeg.startTs) {
+                            displayWhen = `${formatTsLocal(parentSeg.startTs)} – ${formatTsLocal(parentSeg.endTs)}`;
                         }
-                    }
-                
-                    if (!displayWhen) {
-                        const provisional = computeProvisionalSegmentRange(tr);
-                        if (provisional) {
-                            displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+
+                        // 2) Provizórny interval (segment nie je priradený)
+                        if (!displayWhen) {
+                            const provisional = computeProvisionalSegmentRange(tr);
+                            if (provisional) {
+                                displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                            }
                         }
+                    } else {
+                        // ============================================================
+                        // Pre NESEGMENTOVÉ presuny zostáva pôvodná logika.
+                        // ============================================================
+                        if (tr.when && String(tr.when).trim() !== '') {
+                            displayWhen = tr.when;
+                        }
+
+                        if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
+                            let earliestStart = null;
+                            let latestEnd = null;
+                            tr.segments.forEach((s) => {
+                                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                    earliestStart = s.startTs;
+                                }
+                                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                    latestEnd = s.endTs;
+                                }
+                            });
+                            if (earliestStart != null && latestEnd != null) {
+                                displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                            } else if (earliestStart != null) {
+                                displayWhen = formatTsLocal(earliestStart);
+                            } else if (latestEnd != null) {
+                                displayWhen = formatTsLocal(latestEnd);
+                            }
+                        }
+
+                        if (!displayWhen) {
+                            const provisional = computeProvisionalSegmentRange(tr);
+                            if (provisional) {
+                                displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                            }
                     }
                 
                     // Počet členov tímu
@@ -12005,35 +11796,72 @@ const TransportApp = ({ userProfileData }) => {
                     const tr = transferActionModal.transfer;
                 
                     let displayWhen = null;
-                
-                    if (tr.when && String(tr.when).trim() !== '') {
-                        displayWhen = tr.when;
-                    }
-                
-                    if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
-                        let earliestStart = null;
-                        let latestEnd = null;
-                        tr.segments.forEach((s) => {
-                            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                                earliestStart = s.startTs;
-                            }
-                            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                                latestEnd = s.endTs;
-                            }
-                        });
-                        if (earliestStart != null && latestEnd != null) {
-                            displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-                        } else if (earliestStart != null) {
-                            displayWhen = formatTsLocal(earliestStart);
-                        } else if (latestEnd != null) {
-                            displayWhen = formatTsLocal(latestEnd);
+
+                    // ============================================================
+                    // NOVÉ: Pre segment (má `_parentKey`) zobraz čas PRIORITNE
+                    // zo segmentu v parent zázname (rovnaká logika ako v boxe
+                    // "Vygenerované presuny"). Tým sa zabezpečí, že sa v modálnom
+                    // okne nezobrazí pôvodný čas z busu (`tr.when`), ale
+                    // skutočný čas segmentu alebo provizórny interval.
+                    // ============================================================
+                    if (tr._parentKey) {
+                        const parentRec = savedTransfersRef.current.find((s) => s.key === tr._parentKey);
+                        const segFromId = tr.fromId || null;
+                        const segToId = tr.toId || null;
+
+                        const parentSeg = (() => {
+                            if (!parentRec || !Array.isArray(parentRec.segments)) return null;
+                            if (!segFromId || !segToId) return null;
+                            const idx = findSegmentIndex(parentRec.segments, segFromId, segToId);
+                            return idx !== -1 ? parentRec.segments[idx] : null;
+                        })();
+
+                        // 1) Reálne časy z busu (segment je priradený)
+                        if (parentSeg && parentSeg.busId && parentSeg.boardingRowId && parentSeg.alightingRowId
+                            && parentSeg.startTs != null && parentSeg.endTs != null && parentSeg.endTs > parentSeg.startTs) {
+                            displayWhen = `${formatTsLocal(parentSeg.startTs)} – ${formatTsLocal(parentSeg.endTs)}`;
                         }
-                    }
-                
-                    if (!displayWhen) {
-                        const provisional = computeProvisionalSegmentRange(tr);
-                        if (provisional) {
-                            displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+
+                        // 2) Provizórny interval (segment nie je priradený)
+                        if (!displayWhen) {
+                            const provisional = computeProvisionalSegmentRange(tr);
+                            if (provisional) {
+                                displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                            }
+                        }
+                    } else {
+                        // ============================================================
+                        // Pre NESEGMENTOVÉ presuny zostáva pôvodná logika.
+                        // ============================================================
+                        if (tr.when && String(tr.when).trim() !== '') {
+                            displayWhen = tr.when;
+                        }
+
+                        if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
+                            let earliestStart = null;
+                            let latestEnd = null;
+                            tr.segments.forEach((s) => {
+                                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                    earliestStart = s.startTs;
+                                }
+                                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                    latestEnd = s.endTs;
+                                }
+                            });
+                            if (earliestStart != null && latestEnd != null) {
+                                displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                            } else if (earliestStart != null) {
+                                displayWhen = formatTsLocal(earliestStart);
+                            } else if (latestEnd != null) {
+                                displayWhen = formatTsLocal(latestEnd);
+                            }
+                        }
+
+                        if (!displayWhen) {
+                            const provisional = computeProvisionalSegmentRange(tr);
+                            if (provisional) {
+                                displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                            }
                         }
                     }
                 
@@ -12292,62 +12120,76 @@ const TransportApp = ({ userProfileData }) => {
                             )
                         )
                     ),
-        
-//                    // ============================================================
-//                    // VAROVANIE – použijeme currentTransfer
-//                    // ============================================================
-//                    !arePreviousSegmentsResolved(currentTransfer) &&
-//                    React.createElement(
-//                        'div',
-//                        { className: 'mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm' },
-//                        React.createElement(
-//                            'p',
-//                            { className: 'text-amber-700 flex items-start gap-2' },
-//                            React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
-//                            React.createElement(
-//                                'span',
-//                                null,
-//                                'Najprv musíte priradiť predchádzajúce segmenty tohto presunu (alebo ich označiť ako „peši"). ',
-//                                'Tento presun začína neskôr, takže tím sa musí najprv dostať na miesto odchodu.'
-//                            )
-//                        )
-//                    ),
-                    // ============================================================
-                    // INFO O PRESUNE
-                    // ============================================================
                     (() => {
                         const tr = currentTransfer;
-        
+
+                        // ============================================================
+                        // NOVÉ: Pre segment (má `_parentKey`) zobraz čas PRIORITNE
+                        // zo segmentu v parent zázname (rovnaká logika ako v boxe
+                        // "Vygenerované presuny"). Tým sa zabezpečí, že sa v modálnom
+                        // okne nezobrazí pôvodný čas z busu (`tr.when`), ale
+                        // skutočný čas segmentu alebo provizórny interval.
+                        // ============================================================
                         let displayWhen = null;
-        
-                        if (tr.when && String(tr.when).trim() !== '') {
-                            displayWhen = tr.when;
-                        }
-        
-                        if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
-                            let earliestStart = null;
-                            let latestEnd = null;
-                            tr.segments.forEach((s) => {
-                                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                                    earliestStart = s.startTs;
-                                }
-                                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                                    latestEnd = s.endTs;
-                                }
-                            });
-                            if (earliestStart != null && latestEnd != null) {
-                                displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-                            } else if (earliestStart != null) {
-                                displayWhen = formatTsLocal(earliestStart);
-                            } else if (latestEnd != null) {
-                                displayWhen = formatTsLocal(latestEnd);
+
+                        if (tr._parentKey) {
+                            const parentRec = savedTransfersRef.current.find((s) => s.key === tr._parentKey);
+                            const segFromId = tr.fromId || null;
+                            const segToId = tr.toId || null;
+
+                            const parentSeg = (() => {
+                                if (!parentRec || !Array.isArray(parentRec.segments)) return null;
+                                if (!segFromId || !segToId) return null;
+                                const idx = findSegmentIndex(parentRec.segments, segFromId, segToId);
+                                return idx !== -1 ? parentRec.segments[idx] : null;
+                            })();
+
+                            // 1) Reálne časy z busu (segment je priradený)
+                            if (parentSeg && parentSeg.busId && parentSeg.boardingRowId && parentSeg.alightingRowId
+                                && parentSeg.startTs != null && parentSeg.endTs != null && parentSeg.endTs > parentSeg.startTs) {
+                                displayWhen = `${formatTsLocal(parentSeg.startTs)} – ${formatTsLocal(parentSeg.endTs)}`;
                             }
-                        }
-        
-                        if (!displayWhen) {
-                            const provisional = computeProvisionalSegmentRange(tr);
-                            if (provisional) {
-                                displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+
+                            // 2) Provizórny interval (segment nie je priradený)
+                            if (!displayWhen) {
+                                const provisional = computeProvisionalSegmentRange(tr);
+                                if (provisional) {
+                                    displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                                }
+                            }
+                        } else {
+                            // ============================================================
+                            // Pre NESEGMENTOVÉ presuny zostáva pôvodná logika.
+                            // ============================================================
+                            if (tr.when && String(tr.when).trim() !== '') {
+                                displayWhen = tr.when;
+                            }
+
+                            if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
+                                let earliestStart = null;
+                                let latestEnd = null;
+                                tr.segments.forEach((s) => {
+                                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                        earliestStart = s.startTs;
+                                    }
+                                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                        latestEnd = s.endTs;
+                                    }
+                                });
+                                if (earliestStart != null && latestEnd != null) {
+                                    displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                                } else if (earliestStart != null) {
+                                    displayWhen = formatTsLocal(earliestStart);
+                                } else if (latestEnd != null) {
+                                    displayWhen = formatTsLocal(latestEnd);
+                                }
+                            }
+
+                            if (!displayWhen) {
+                                const provisional = computeProvisionalSegmentRange(tr);
+                                if (provisional) {
+                                    displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                                }
                             }
                         }
         
