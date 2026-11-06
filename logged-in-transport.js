@@ -6575,15 +6575,16 @@ const TransportApp = ({ userProfileData }) => {
                 const rangeStart = trRange.startTs;
                 const rangeEnd = trRange.endTs;
 
-                // OPRAVA: pre boarding stačí, aby rowFromTs bol v intervale alebo pred ním (pre prípad, že trRange je užší)
+                // OPRAVA: nástupný riadok musí začínať v rámci časového okna presunu
+                // (nesmie začínať skôr, ako je plánovaný začiatok presunu)
                 if (fromMatches && rowTimeFromTs != null) {
-                    // Povolíme aj mierny presah pred rangeStart (napr. bus odchádza skôr, než je presun naplánovaný)
-                    if (rowTimeFromTs <= rangeEnd) {
+                    if (rowTimeFromTs >= rangeStart && rowTimeFromTs <= rangeEnd) {
                         boardingCandidates.push({ row, timeTs: rowTimeFromTs });
                     }
                 }
+                // Výstupný riadok musí končiť v rámci časového okna presunu
                 if (toMatches && rowTimeToTs != null) {
-                    if (rowTimeToTs >= rangeStart) {
+                    if (rowTimeToTs >= rangeStart && rowTimeToTs <= rangeEnd) {
                         alightingCandidates.push({ row, timeTs: rowTimeToTs });
                     }
                 }
