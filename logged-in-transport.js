@@ -11220,57 +11220,47 @@ const TransportApp = ({ userProfileData }) => {
                 ),
                 (() => {
                     const tr = editingTransfer;
-                    let displayWhen = null;
-                    if (tr._parentKey) {
-                        const parentRec = savedTransfersRef.current.find((s) => s.key === tr._parentKey);
-                        const segFromId = tr.fromId || null;
-                        const segToId = tr.toId || null;
-                        const parentSeg = (() => {
-                            if (!parentRec || !Array.isArray(parentRec.segments)) return null;
-                            if (!segFromId || !segToId) return null;
-                            const idx = findSegmentIndex(parentRec.segments, segFromId, segToId);
-                            return idx !== -1 ? parentRec.segments[idx] : null;
-                        })();
-                        if (parentSeg && parentSeg.busId && parentSeg.boardingRowId && parentSeg.alightingRowId
-                            && parentSeg.startTs != null && parentSeg.endTs != null && parentSeg.endTs > parentSeg.startTs) {
-                            displayWhen = `${formatTsLocal(parentSeg.startTs)} – ${formatTsLocal(parentSeg.endTs)}`;
-                        }
-                        if (!displayWhen) {
-                            const provisional = computeProvisionalSegmentRange(tr);
-                            if (provisional) {
-                                displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+        
+                    // Vypočítame celkový čas celého (parent) presunu
+                    const parentKeyForTotal = tr._parentKey || tr.key;
+                    const parentRecForTotal = savedTransfersRef.current.find((s) => s.key === parentKeyForTotal);
+        
+                    let totalWhenLabel = null;
+        
+                    if (parentRecForTotal && parentRecForTotal.when && String(parentRecForTotal.when).trim() !== '') {
+                        totalWhenLabel = String(parentRecForTotal.when).trim();
+                    }
+        
+                    if (!totalWhenLabel && parentRecForTotal && Array.isArray(parentRecForTotal.segments) && parentRecForTotal.segments.length > 0) {
+                        let earliestStart = null;
+                        let latestEnd = null;
+                        parentRecForTotal.segments.forEach((s) => {
+                            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                earliestStart = s.startTs;
                             }
-                        }
-                    } else {
-                        if (tr.when && String(tr.when).trim() !== '') {
-                            displayWhen = tr.when;
-                        }
-                        if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
-                            let earliestStart = null;
-                            let latestEnd = null;
-                            tr.segments.forEach((s) => {
-                                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                                    earliestStart = s.startTs;
-                                }
-                                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                                    latestEnd = s.endTs;
-                                }
-                            });
-                            if (earliestStart != null && latestEnd != null) {
-                                displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-                            } else if (earliestStart != null) {
-                                displayWhen = formatTsLocal(earliestStart);
-                            } else if (latestEnd != null) {
-                                displayWhen = formatTsLocal(latestEnd);
+                            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                latestEnd = s.endTs;
                             }
+                        });
+                        if (earliestStart != null && latestEnd != null) {
+                            totalWhenLabel = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                        } else if (earliestStart != null) {
+                            totalWhenLabel = formatTsLocal(earliestStart);
+                        } else if (latestEnd != null) {
+                            totalWhenLabel = formatTsLocal(latestEnd);
                         }
-                        if (!displayWhen) {
-                            const provisional = computeProvisionalSegmentRange(tr);
-                            if (provisional) {
-                                displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
-                            }
+                    }
+        
+                    if (!totalWhenLabel) {
+                        const provisionalForTotal = computeProvisionalSegmentRange({
+                            ...tr,
+                            _parentKey: parentKeyForTotal,
+                        });
+                        if (provisionalForTotal) {
+                            totalWhenLabel = `${formatTsLocal(provisionalForTotal.startTs)} – ${formatTsLocal(provisionalForTotal.endTs)}`;
                         }
-                    }                
+                    }
+        
                     const counts = getTeamCountsForTransfer(tr.category, tr.teamName);
                     let membersCount = null;
                     let membersTitle = '';
@@ -11288,9 +11278,11 @@ const TransportApp = ({ userProfileData }) => {
                             membersCount = avg;
                             membersTitle = `Priemer členov tímu v kategórii ${tr.category} (zaokrúhlené nahor)`;
                         }
-                    }                
+                    }
+        
                     const transportColor = getTransportColorForCategory(tr.category);
-                    const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;                
+                    const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
+        
                     return React.createElement(
                         'div',
                         {
@@ -11301,6 +11293,17 @@ const TransportApp = ({ userProfileData }) => {
                                 ...(boxBg ? { backgroundColor: boxBg } : { backgroundColor: '#f5f3ff' }),
                             },
                         },
+                        // Kategória
+                        tr.category &&
+                            React.createElement(
+                                'span',
+                                {
+                                    className: 'text-xs font-semibold uppercase tracking-wide mb-0.5',
+                                    style: { color: transportColor || '#5b21b6', opacity: 0.8 },
+                                },
+                                tr.category
+                            ),
+                        // Tím + počet členov
                         React.createElement(
                             'div',
                             { className: 'flex flex-wrap items-center gap-x-2 gap-y-1' },
@@ -11325,16 +11328,20 @@ const TransportApp = ({ userProfileData }) => {
                                     `• ${membersCount} členov`
                                 )
                         ),
+                        // Trasa
                         React.createElement(
                             'span',
                             { className: 'text-sm text-gray-900 font-medium' },
                             `${resolvePlaceNameById(tr.fromId) || '?'} → ${resolvePlaceNameById(tr.toId) || '?'}`
                         ),
-                        displayWhen &&
+                        // Celkový čas celého presunu – VŽDY zobrazený
+                        totalWhenLabel &&
                             React.createElement(
                                 'span',
-                                { className: 'text-sm text-gray-600' },
-                                displayWhen
+                                { className: 'text-sm text-gray-600 inline-flex items-center gap-1 mt-0.5' },
+                                React.createElement('i', { className: 'fa-regular fa-clock text-xs' }),
+                                React.createElement('span', { className: 'font-semibold' }, 'Celkový čas:'),
+                                React.createElement('span', null, totalWhenLabel)
                             )
                     );
                 })(),
@@ -11378,9 +11385,9 @@ const TransportApp = ({ userProfileData }) => {
                                         .filter(Boolean)
                                 );
                                 const availableStops = stopsList.filter((s) => {
-                                    if (s.name === stopValue) return true; 
+                                    if (s.name === stopValue) return true;
                                     return !selectedElsewhere.has(s.name);
-                                });                
+                                });
                                 return React.createElement(
                                     'li',
                                     {
