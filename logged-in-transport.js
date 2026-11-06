@@ -9272,22 +9272,6 @@ const TransportApp = ({ userProfileData }) => {
                             };                            
                             let timeLabel = null;
 
-                            const extractTimesOnly = (whenStr) => {
-                                if (!whenStr) return null;
-                                const s = String(whenStr);
-                                const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
-                                const times = [];
-                                let m;
-                                while ((m = regex.exec(s)) !== null) {
-                                    if (m[4] != null && m[5] != null) {
-                                        times.push(`${String(m[4]).padStart(2, '0')}:${String(m[5]).padStart(2, '0')}`);
-                                    }
-                                }
-                                if (times.length === 0) return null;
-                                if (times.length === 1) return times[0];
-                                return `${times[0]} – ${times[1]}`;
-                            };
-
                             if (t.when && String(t.when).trim() !== '') {
                                 timeLabel = extractTimesOnly(t.when) || String(t.when).trim();
                             }
