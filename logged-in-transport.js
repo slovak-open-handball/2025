@@ -3658,8 +3658,14 @@ const TransportApp = ({ userProfileData }) => {
     }, [allPlaces]);
 
     useEffect(() => {
+        const normalizeType = (t) => String(t || '')
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
         const stops = allPlaces
-            .filter((p) => p.type === 'zastavka')
+            .filter((p) => normalizeType(p.type) === 'zastavka')
             .sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
         setStopsList(stops);
     }, [allPlaces]);
