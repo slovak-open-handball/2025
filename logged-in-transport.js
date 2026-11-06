@@ -9282,6 +9282,7 @@ const TransportApp = ({ userProfileData }) => {
                                         else if (et) timeLabel = et;
                                     }
                                 }
+                            }
                             
                             if (!timeLabel && t.dayKey) {
                                 const dayLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
