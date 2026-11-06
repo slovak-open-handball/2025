@@ -5184,12 +5184,6 @@ const TransportApp = ({ userProfileData }) => {
             return cat === cleanCategory(selectedCategoryFilter);
         });
 
-        console.log('[TRANSPORT][getTeamsInBusAfterRow] RESULT', {
-            busId, dayKey, currentOrder, rowId,
-            teamsInBus: teams,
-            resultArray: result,
-        });
-
         return result;
     };
 
@@ -13264,10 +13258,6 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName, vi
         const sorted = [...fallbackAccommodations].sort((a, b) =>
             a.localeCompare(b, 'sk', { sensitivity: 'base' })
         );
-        if (sorted.length === 0) {
-        } else {
-            sorted.forEach((name) => console.log(`   • ${name}`));
-        }
         return sorted;
     } catch (err) {
         return [];
