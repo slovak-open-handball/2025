@@ -11667,10 +11667,19 @@ const TransportApp = ({ userProfileData }) => {
                     
                     let totalWhenLabel = null;
                     
-                    // 1) Priorita: prepočítaj celkový rozsah zo VŠETKÝCH segmentov.
-                    //    Pre segmenty, ktoré nemajú startTs/endTs (nepriradené busu),
-                    //    použi computeProvisionalSegmentRange na dopočítanie ich času.
-                    if (parentRecForTotal && Array.isArray(parentRecForTotal.segments) && parentRecForTotal.segments.length > 0) {
+                    // 1) Priorita: parent.when z DB – to je celkový čas presunu, ktorý sa uložil pri generovaní
+                    if (parentRecForTotal && parentRecForTotal.when && String(parentRecForTotal.when).trim() !== '') {
+                        totalWhenLabel = String(parentRecForTotal.when).trim();
+                    }
+                    
+                    // 2) Fallback: tr.when (ak parent nemá when)
+                    if (!totalWhenLabel && tr.when && String(tr.when).trim() !== '') {
+                        totalWhenLabel = String(tr.when).trim();
+                    }
+                    
+                    // 3) Fallback: spočítaj min/max zo VŠETKÝCH segmentov (aj z tých, ktoré nemajú startTs/endTs,
+                    //    cez computeProvisionalSegmentRange), aby to pokrylo celý presun
+                    if (!totalWhenLabel && parentRecForTotal && Array.isArray(parentRecForTotal.segments) && parentRecForTotal.segments.length > 0) {
                         let earliestStart = null;
                         let latestEnd = null;
                     
@@ -11678,7 +11687,6 @@ const TransportApp = ({ userProfileData }) => {
                             let segStartTs = s.startTs != null ? s.startTs : null;
                             let segEndTs = s.endTs != null ? s.endTs : null;
                     
-                            // Ak segment nemá reálny čas (nepriradený busu), dopočítaj provizórny
                             if (segStartTs == null && segEndTs == null) {
                                 try {
                                     const provisional = computeProvisionalSegmentRange({
@@ -11691,9 +11699,7 @@ const TransportApp = ({ userProfileData }) => {
                                         if (provisional.startTs != null) segStartTs = provisional.startTs;
                                         if (provisional.endTs != null) segEndTs = provisional.endTs;
                                     }
-                                } catch (e) {
-                                    // ignore
-                                }
+                                } catch (e) { /* ignore */ }
                             }
                     
                             if (segStartTs != null && (earliestStart == null || segStartTs < earliestStart)) {
@@ -11711,16 +11717,6 @@ const TransportApp = ({ userProfileData }) => {
                         } else if (latestEnd != null) {
                             totalWhenLabel = formatTsLocal(latestEnd);
                         }
-                    }
-                    
-                    // 2) Fallback: parent.when (môže byť staršia hodnota z DB – len prvý segment)
-                    if (!totalWhenLabel && parentRecForTotal && parentRecForTotal.when && String(parentRecForTotal.when).trim() !== '') {
-                        totalWhenLabel = String(parentRecForTotal.when).trim();
-                    }
-                    
-                    // 3) Fallback: tr.when
-                    if (!totalWhenLabel && tr.when && String(tr.when).trim() !== '') {
-                        totalWhenLabel = String(tr.when).trim();
                     }
                     
                     // 4) Fallback: tr.segments (ak by parent nemal segments)
