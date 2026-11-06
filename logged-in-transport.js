@@ -6165,29 +6165,39 @@ const TransportApp = ({ userProfileData }) => {
             const sortedRows = [...rows].sort((a, b) => (a.order || 0) - (b.order || 0));
 
             console.log(`🚌 Kontrolujem bus "${bus.name}" (${bus.id}), riadkov: ${sortedRows.length}`);
-
+            
             const boardingCandidates = [];
             const alightingCandidates = [];
             let isCurrentSegmentAlreadyAssignedToThisBus = false;
             const currentTeamKey = `${transfer.teamName}|${transfer.category || ''}`;
-
-            sortedRows.forEach((row) => {
-                const rowFromId = row.placeFromId || resolvePlaceIdByName(row.placeFrom);
-                const rowToId   = row.placeToId   || resolvePlaceIdByName(row.placeTo);
-                const rowTimeFromTs = timeOnDayKeyToTs(dayKey, row.timeFrom);
-                const rowTimeToTs   = timeOnDayKeyToTs(dayKey, row.timeTo);
             
-                const fromMatches = trFromId
-                    ? rowFromId === trFromId
-                    : (row.placeFrom && normalizePlaceName(row.placeFrom) === normalizePlaceName(resolvePlaceNameById(transfer.fromId)));
-                const toMatches = trToId
-                    ? rowToId === trToId
-                    : (row.placeTo && normalizePlaceName(row.placeTo) === normalizePlaceName(resolvePlaceNameById(transfer.toId)));
+            // POZOR: pracujeme VÝHRADNE s ID zastávok.
+            // Ak niektorý riadok nemá placeFromId/placeToId, jednoducho sa ignoruje
+            // (žiadny fallback cez názov).
+            if (!trFromId || !trToId) {
+                console.warn('[TRANSPORT][findMatchingBusRows] Chýba fromId/toId na presune – preskakujem bus:', {
+                    busName: bus.name,
+                    trFromId,
+                    trToId,
+                });
+                return;
+            }
+            
+            sortedRows.forEach((row) => {
+                const rowFromId = row.placeFromId || null;
+                const rowToId = row.placeToId || null;
+            
+                const rowTimeFromTs = timeOnDayKeyToTs(dayKey, row.timeFrom);
+                const rowTimeToTs = timeOnDayKeyToTs(dayKey, row.timeTo);
+            
+                // Striktné porovnanie ID – žiadny fallback na názvy.
+                const fromMatches = rowFromId != null && rowFromId === trFromId;
+                const toMatches = rowToId != null && rowToId === trToId;
             
                 const rangeStart = trRange.startTs;
-                const rangeEnd   = trRange.endTs;
+                const rangeEnd = trRange.endTs;
                 const wideStart = Math.min(rangeStart, timeOnDayKeyToTs(dayKey, '00:00'));
-                const wideEnd   = Math.max(rangeEnd,   timeOnDayKeyToTs(dayKey, '23:59'));
+                const wideEnd = Math.max(rangeEnd, timeOnDayKeyToTs(dayKey, '23:59'));
             
                 if (fromMatches && rowTimeFromTs != null &&
                     rowTimeFromTs >= wideStart && rowTimeFromTs <= wideEnd) {
@@ -6197,8 +6207,7 @@ const TransportApp = ({ userProfileData }) => {
                     rowTimeToTs >= wideStart && rowTimeToTs <= wideEnd) {
                     alightingCandidates.push({ row, timeTs: rowTimeToTs });
                 }
-            });
-            
+            });            
             const alreadyAssigned = (savedTransfersRef.current || []).some((p) => {
                 if (p.dayKey !== trDayKey) return false;
                 if (String(p.teamName || '').trim() !== String(transfer.teamName || '').trim()) return false;
