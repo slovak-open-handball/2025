@@ -6355,156 +6355,100 @@ const TransportApp = ({ userProfileData }) => {
         return new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
     };
 
-        const findMatchingBusRows = (transfer) => {
+    const findMatchingBusRows = (transfer) => {
         if (!transfer) return [];
 
         let effectiveWhen = null;
         let trRange = null;
 
-        const remainingRange = (() => {
-            const ds = transfer._displayStartTs;
-            const de = transfer._displayEndTs;
-            if (ds != null && de != null && de > ds) {
-                return { startTs: ds, endTs: de, source: 'displayStartTs/displayEndTs' };
-            }
-            if (transfer._remainingMinutes != null && transfer._remainingMinutes > 0) {
-                const parentKey = transfer._parentKey || transfer.key;
-                const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
-                let startTs = null;
-                if (parentRec && Array.isArray(parentRec.segments)) {
-                    const segIdx = findSegmentIndex(parentRec.segments, transfer.fromId, transfer.toId);
-                    if (segIdx !== -1) {
-                        for (let i = segIdx - 1; i >= 0; i--) {
-                            const prev = parentRec.segments[i];
-                            if (!prev) continue;
-                            if (prev.endTs != null) { startTs = prev.endTs; break; }
-                        }
-                    }
-                }
-                if (startTs == null) {
-                    const provisional = computeProvisionalSegmentRange(transfer);
-                    if (provisional) startTs = provisional.startTs;
-                }
-                if (startTs != null) {
-                    const endTs = startTs + transfer._remainingMinutes * 60000;
-                    return { startTs, endTs, source: '_remainingMinutes' };
-                }
-            }
-            return null;
-        })();
-
-        if (remainingRange) {
-            effectiveWhen = `${formatTsLocal(remainingRange.startTs)} – ${formatTsLocal(remainingRange.endTs)}`;
-            trRange = { startTs: remainingRange.startTs, endTs: remainingRange.endTs };
-        }
-
-        if (!trRange) {
-            effectiveWhen = transfer.when;
-            if (!effectiveWhen || String(effectiveWhen).trim() === '') {
-                const segs = Array.isArray(transfer.segments) ? transfer.segments : [];
-                let earliestStart = null;
-                let latestEnd = null;
-                segs.forEach((s) => {
-                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) earliestStart = s.startTs;
-                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) latestEnd = s.endTs;
-                });
-                if (earliestStart != null && latestEnd != null) {
-                    effectiveWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-                } else if (earliestStart != null) {
-                    effectiveWhen = formatTsLocal(earliestStart);
-                } else if (latestEnd != null) {
-                    effectiveWhen = formatTsLocal(latestEnd);
-                }
-            }
-            if (!effectiveWhen || String(effectiveWhen).trim() === '') {
-                const provisional = computeProvisionalSegmentRange(transfer);
-                if (provisional) {
-                    effectiveWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
-                }
-            }
-            if (!effectiveWhen || String(effectiveWhen).trim() === '') {
-                const parentKey = transfer._parentKey || transfer.key;
-                if (parentKey) {
-                    const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
-                    if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
-                        effectiveWhen = parentRec.when;
-                    }
-                }
-            }
+        // Priorita 1: parent.when (celkový čas presunu)
+        const parentKeyForRange = transfer._parentKey || transfer.key;
+        const parentRecForRange = (savedTransfersRef.current || []).find((s) => s.key === parentKeyForRange);
+        if (parentRecForRange && parentRecForRange.when && String(parentRecForRange.when).trim() !== '') {
+            effectiveWhen = String(parentRecForRange.when).trim();
             trRange = parseTransferWhenToRange(effectiveWhen);
         }
 
-        // NOVÉ: Ak trRange stále chýba, skús odvodiť z parent.when
-        if (!trRange) {
-            const parentKey = transfer._parentKey || transfer.key;
-            if (parentKey) {
-                const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
-                if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
-                    effectiveWhen = parentRec.when;
-                    trRange = parseTransferWhenToRange(effectiveWhen);
-                }
+        // Priorita 2: transfer.when
+        if (!trRange && transfer.when && String(transfer.when).trim() !== '') {
+            effectiveWhen = String(transfer.when).trim();
+            trRange = parseTransferWhenToRange(effectiveWhen);
+        }
+
+        // Priorita 3: z parent.segments (min startTs / max endTs)
+        if (!trRange && parentRecForRange && Array.isArray(parentRecForRange.segments) && parentRecForRange.segments.length > 0) {
+            let earliestStart = null;
+            let latestEnd = null;
+            parentRecForRange.segments.forEach((s) => {
+                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) earliestStart = s.startTs;
+                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) latestEnd = s.endTs;
+            });
+            if (earliestStart != null && latestEnd != null && latestEnd > earliestStart) {
+                trRange = { startTs: earliestStart, endTs: latestEnd };
+                effectiveWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
             }
         }
 
-        // NOVÉ: Ak stále chýba trRange, skús odvodiť z parent.segments (min startTs / max endTs)
+        // Priorita 4: provisional segment range
         if (!trRange) {
-            const parentKey = transfer._parentKey || transfer.key;
-            if (parentKey) {
-                const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
-                if (parentRec && Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
-                    let earliestStart = null;
-                    let latestEnd = null;
-                    parentRec.segments.forEach((s) => {
-                        if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) earliestStart = s.startTs;
-                        if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) latestEnd = s.endTs;
-                    });
-                    if (earliestStart != null && latestEnd != null && latestEnd > earliestStart) {
-                        trRange = { startTs: earliestStart, endTs: latestEnd };
-                        effectiveWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-                    } else if (earliestStart != null) {
-                        trRange = { startTs: earliestStart, endTs: earliestStart + 24 * 60 * 60 * 1000 };
-                        effectiveWhen = formatTsLocal(earliestStart);
-                    }
-                }
+            const provisional = computeProvisionalSegmentRange(transfer);
+            if (provisional) {
+                trRange = { startTs: provisional.startTs, endTs: provisional.endTs };
+                effectiveWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
             }
         }
 
-        // NOVÉ: Ak stále chýba, použi dayKey ako fallback
-        if (!trRange && transfer.dayKey) {
-            const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(transfer.dayKey);
-            if (dm) {
-                const dayStart = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), 0, 0, 0, 0).getTime();
-                trRange = { startTs: dayStart, endTs: dayStart + 24 * 60 * 60 * 1000 - 60000 };
-                effectiveWhen = `${formatTsLocal(trRange.startTs)} – ${formatTsLocal(trRange.endTs)}`;
+        // Priorita 5: dayKey ako fallback
+        if (!trRange) {
+            let effectiveDayKeyForFallback = transfer.dayKey || null;
+            if (!effectiveDayKeyForFallback && parentRecForRange && parentRecForRange.dayKey) {
+                effectiveDayKeyForFallback = parentRecForRange.dayKey;
+            }
+            if (effectiveDayKeyForFallback) {
+                const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(effectiveDayKeyForFallback);
+                if (dm) {
+                    const dayStart = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), 0, 0, 0, 0).getTime();
+                    trRange = { startTs: dayStart, endTs: dayStart + 24 * 60 * 60 * 1000 - 60000 };
+                    effectiveWhen = `${formatTsLocal(trRange.startTs)} – ${formatTsLocal(trRange.endTs)}`;
+                }
             }
         }
 
         const trFromId = transfer.fromId || null;
         const trToId = transfer.toId || null;
-        const trDayKey = transfer.dayKey || null;
+        const trDayKey = transfer.dayKey || (parentRecForRange ? parentRecForRange.dayKey : null);
 
-        // NOVÉ: Ak chýba dayKey, skús odvodiť z parent.dayKey
-        let effectiveDayKey = trDayKey;
-        if (!effectiveDayKey) {
-            const parentKey = transfer._parentKey || transfer.key;
-            if (parentKey) {
-                const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
-                if (parentRec && parentRec.dayKey) {
-                    effectiveDayKey = parentRec.dayKey;
-                }
-            }
-        }
-
-        if (!trRange || !trFromId || !trToId || !effectiveDayKey) {
+        if (!trRange || !trFromId || !trToId || !trDayKey) {
             return [];
         }
+
+        // OPRAVA: výpočet timeTo s fallbackom na travelMinutes z parent segmentu
+        const getEffectiveTravelMinutes = (row) => {
+            if (!row) return null;
+            const direct = getTravelMinutes(row.placeFromId, row.placeToId);
+            if (direct != null) return direct;
+
+            // Fallback: skús nájsť parent segment, ktorý tomuto riadku zodpovedá
+            for (const parent of (savedTransfersRef.current || [])) {
+                if (parent.dayKey !== trDayKey) continue;
+                for (const seg of (parent.segments || [])) {
+                    if (!seg || seg.isWalking === true) continue;
+                    if (seg.busId !== null && seg.busId !== undefined) continue; // iba nepriradené
+                    if (seg.fromId === row.placeFromId && seg.toId === row.placeToId) {
+                        const mins = getTravelMinutes(seg.fromId, seg.toId);
+                        if (mins != null) return mins;
+                    }
+                }
+            }
+            return null;
+        };
 
         const computeRowTimeToStr = (row) => {
             if (!row) return null;
             if (row.timeTo && /^\d{1,2}:\d{2}$/.test(row.timeTo)) return row.timeTo;
             if (!row.timeFrom || !/^\d{1,2}:\d{2}$/.test(row.timeFrom)) return null;
             if (!row.placeFromId || !row.placeToId) return null;
-            const mins = getTravelMinutes(row.placeFromId, row.placeToId);
+            const mins = getEffectiveTravelMinutes(row);
             if (mins == null) return null;
             const [h, m] = row.timeFrom.split(':').map(Number);
             let total = h * 60 + m + Number(mins);
@@ -6518,7 +6462,7 @@ const TransportApp = ({ userProfileData }) => {
 
         Object.entries(busRows || {}).forEach(([key, rows]) => {
             const [busId, dayKey] = key.split('|');
-            if (dayKey !== effectiveDayKey) return;
+            if (dayKey !== trDayKey) return;
 
             const bus = buses.find((b) => b.id === busId);
             if (!bus) return;
@@ -6528,8 +6472,6 @@ const TransportApp = ({ userProfileData }) => {
 
             const boardingCandidates = [];
             const alightingCandidates = [];
-            let isCurrentSegmentAlreadyAssignedToThisBus = false;
-            const currentTeamKey = `${transfer.teamName}|${transfer.category || ''}`;
 
             const normalizeNameForCompare = (name) => {
                 if (!name) return '';
@@ -6633,35 +6575,19 @@ const TransportApp = ({ userProfileData }) => {
                 const rangeStart = trRange.startTs;
                 const rangeEnd = trRange.endTs;
 
-                if (fromMatches && rowTimeFromTs != null &&
-                    rowTimeFromTs >= rangeStart && rowTimeFromTs <= rangeEnd) {
-                    boardingCandidates.push({ row, timeTs: rowTimeFromTs });
+                // OPRAVA: pre boarding stačí, aby rowFromTs bol v intervale alebo pred ním (pre prípad, že trRange je užší)
+                if (fromMatches && rowTimeFromTs != null) {
+                    // Povolíme aj mierny presah pred rangeStart (napr. bus odchádza skôr, než je presun naplánovaný)
+                    if (rowTimeFromTs <= rangeEnd) {
+                        boardingCandidates.push({ row, timeTs: rowTimeFromTs });
+                    }
                 }
-                if (toMatches && rowTimeToTs != null &&
-                    rowTimeToTs >= rangeStart && rowTimeToTs <= rangeEnd) {
-                    alightingCandidates.push({ row, timeTs: rowTimeToTs });
+                if (toMatches && rowTimeToTs != null) {
+                    if (rowTimeToTs >= rangeStart) {
+                        alightingCandidates.push({ row, timeTs: rowTimeToTs });
+                    }
                 }
             });
-
-            const alreadyAssigned = (savedTransfersRef.current || []).some((p) => {
-                if (p.dayKey !== effectiveDayKey) return false;
-                if (String(p.teamName || '').trim() !== String(transfer.teamName || '').trim()) return false;
-                if (cleanCategory(p.category || '') !== cleanCategory(transfer.category || '')) return false;
-                return (p.segments || []).some((s) => {
-                    if (s.busId !== bus.id) return false;
-                    if (s.isWalking === true) return false;
-                    if (s.fromId !== trFromId || s.toId !== trToId) return false;
-                    return !!(s.boardingRowId && s.alightingRowId);
-                });
-            });
-            if (alreadyAssigned) isCurrentSegmentAlreadyAssignedToThisBus = true;
-
-            if (
-                (boardingCandidates.length === 0 || alightingCandidates.length === 0) &&
-                !isCurrentSegmentAlreadyAssignedToThisBus
-            ) {
-                return;
-            }
 
             boardingCandidates.forEach((board) => {
                 alightingCandidates.forEach((alight) => {
@@ -6779,7 +6705,7 @@ const TransportApp = ({ userProfileData }) => {
             if (best) dedupedResults.push(best);
         });
 
-        const MAX_TRIP_DURATION_MINUTES = 60;
+        const MAX_TRIP_DURATION_MINUTES = 120;
         const filteredByDuration = dedupedResults.filter((r) => {
             const duration = computeTripDurationMinutes(r.boardingRow, r.alightingRow);
             if (duration == null) return true;
