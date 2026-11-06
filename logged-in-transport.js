@@ -578,64 +578,37 @@ const TransportApp = ({ userProfileData }) => {
     const [selectedCategoryForDelete, setSelectedCategoryForDelete] = useState('');    
     const [missingTravelTimeWarning, setMissingTravelTimeWarning] = useState([]);
     const [placesLoaded, setPlacesLoaded] = useState(false);
-
-    // ==== NOVÉ: Prepínač záložiek v Nastaveniach ====
-    const [settingsTab, setSettingsTab] = useState('travelTimes'); // 'travelTimes' | 'teamShortcuts'
-
-    // ==== NOVÉ: Skratky názvov tímov (category|teamName → shortcut) ====
+    const [settingsTab, setSettingsTab] = useState('travelTimes');
     const [teamShortcuts, setTeamShortcuts] = useState({});
     const [teamShortcutsLoaded, setTeamShortcutsLoaded] = useState(false);
-
-    // ==== NOVÉ: Modálne okno pre výber typu presunu ====
     const [showTransferTypeModal, setShowTransferTypeModal] = useState(false);
-
-    // ==== NOVÉ: Modálne okno pre vytvorenie vlastného presunu ====
     const [showCustomTransferModal, setShowCustomTransferModal] = useState(false);
     const [customTransferCategory, setCustomTransferCategory] = useState('');
     const [customTransferTeamName, setCustomTransferTeamName] = useState('');
-
-    // ==== NOVÉ: Modálne okno pre úpravu skratky tímu ====
-    const [shortcutEditModal, setShortcutEditModal] = useState(null); // { category, teamName, shortcut }
+    const [shortcutEditModal, setShortcutEditModal] = useState(null);
     const [shortcutSaving, setShortcutSaving] = useState(false);
-    const [shortcutConflict, setShortcutConflict] = useState(null);
-    
-    // ==== NOVÉ: Modálne okno pre potvrdenie zmazania skratky tímu ====
-    const [deleteShortcutModal, setDeleteShortcutModal] = useState(null); // { category, teamName, shortcut }
+    const [shortcutConflict, setShortcutConflict] = useState(null);    
+    const [deleteShortcutModal, setDeleteShortcutModal] = useState(null);
     const [deleteShortcutSaving, setDeleteShortcutSaving] = useState(false);
-
-    // ==== MODÁLNE OKNO PRE ÚPRAVU VYGENEROVANÉHO PRESUNU ====
     const [editingTransfer, setEditingTransfer] = useState(null);
-    const [editingTransferStops, setEditingTransferStops] = useState([]); // medzizastávky medzi from a to
+    const [editingTransferStops, setEditingTransferStops] = useState([]);
     const [editingTransferSaving, setEditingTransferSaving] = useState(false);
-
-    // ==== ROZHODOVACIE MODÁLNE OKNO PO KLIKNUTÍ NA PRESUN ====
-    const [transferActionModal, setTransferActionModal] = useState(null); // { transfer }
+    const [transferActionModal, setTransferActionModal] = useState(null); 
     const [showAssignBusModal, setShowAssignBusModal] = useState(false);
     const [assignBusTransfer, setAssignBusTransfer] = useState(null);
-    const [assignBusMatches, setAssignBusMatches] = useState([]); // pole { bus, row, side } – side = 'in' | 'out'
-    const [assignBusSelectedKey, setAssignBusSelectedKey] = useState(''); // `${busId}|${rowId}|${side}`
+    const [assignBusMatches, setAssignBusMatches] = useState([]);
+    const [assignBusSelectedKey, setAssignBusSelectedKey] = useState('');
     const [assignBusSaving, setAssignBusSaving] = useState(false);
-
-    // ==== MODÁLNE OKNO PRE ODSTRÁNENIE "PEŠI" PRÍZNAKU ====
-    const [removeWalkingModal, setRemoveWalkingModal] = useState(null); // { transfer }
+    const [removeWalkingModal, setRemoveWalkingModal] = useState(null);
     const [removeWalkingSaving, setRemoveWalkingSaving] = useState(false);
-
-    // ==== MODÁLNE OKNO PRE ODSTRÁNENIE KONKRÉTNEHO PRESUNU ====
-    const [deleteTransferModal, setDeleteTransferModal] = useState(null); // { transfer }
+    const [deleteTransferModal, setDeleteTransferModal] = useState(null);
     const [deleteTransferSaving, setDeleteTransferSaving] = useState(false);
-
-    // ==== MODÁLNE OKNO PRE POTVRDENIE REGENERÁCIE PRESUNOV ====
-    const [regenTransfersModal, setRegenTransfersModal] = useState(null); // { category, existingCount }
-
-    // ============================================================
-    // PREDNAČÍTANIE UBYTOVNÍ PRE SUPERSTRUCTURE TÍMY
-    // ============================================================
+    const [regenTransfersModal, setRegenTransfersModal] = useState(null);
     const preloadAccommodationsForSuperstructureTeams = async () => {
         if (!window.__transport_accommodationsByGroup) {
             window.__transport_accommodationsByGroup = {};
         }
 
-        // Zbieraj všetky (category, derivedGroupName) dvojice, ktoré treba prednačítať
         const toLoad = new Set();
     
         (teamsArrivalBufferRef.current || []).forEach((t) => {
@@ -649,7 +622,7 @@ const TransportApp = ({ userProfileData }) => {
         });
 
         for (const key of toLoad) {
-            if (window.__transport_accommodationsByGroup[key]) continue; // už načítané
+            if (window.__transport_accommodationsByGroup[key]) continue;
             const [cat, grp] = key.split('|');
             try {
                 const result = await window.listAccommodationsByCategoryAndGroup(cat, grp);
@@ -658,14 +631,9 @@ const TransportApp = ({ userProfileData }) => {
                 console.error(`[TRANSPORT] Chyba pri prednačítaní ubytovní pre ${key}:`, err);
                 window.__transport_accommodationsByGroup[key] = [];
             }
-        }
-    
-        console.log('[TRANSPORT] Prednačítané ubytovne pre superstructure tímy:', window.__transport_accommodationsByGroup);
+        }    
     };
 
-    // ============================================================
-    // POMOCNÁ FUNKCIA – vykreslí časovú os pre jeden tím
-    // ============================================================
     const renderTeamTimeline = (category, teamName, events, options) => {
         const {
             isSuperstructureTeam,
@@ -679,7 +647,6 @@ const TransportApp = ({ userProfileData }) => {
         const lines = [];
         lines.push(`\n  [TRANSPORT] Tím: ${teamName} (počet udalostí: ${events.length})`);
 
-        // Pomocná: zisti, či je tím pavúkový (WSF/LSF/WQF/W8F/W16F v názve)
         const isPavukTeam = /\b(WSF|LSF|WQF|W8F|W16F)\d*/i.test(String(teamName));
         
         if (isSuperstructureTeam && !isPavukTeam) {
@@ -744,9 +711,6 @@ const TransportApp = ({ userProfileData }) => {
         return lines;
     };
 
-    // ============================================================
-    // GLOBÁLNA FUNKCIA – výpis časovej osi konkrétneho tímu do konzoly
-    // ============================================================
     window.printTeamTimeline = (teamName) => {
         if (!teamName || typeof teamName !== 'string') {
             return;
@@ -754,19 +718,17 @@ const TransportApp = ({ userProfileData }) => {
 
         const targetTeam = teamName.trim();
         const originalLog = console.log;
-        const captured = []; // { text, css } – css môže byť null
+        const captured = [];
         let found = false;
         let captureDone = false;
 
         console.log = (...args) => {
-            // Zisti, či ide o %c formátovaný výpis
             let cleanText;
             let css = null;
 
             const firstArg = args[0];
             if (typeof firstArg === 'string' && firstArg.startsWith('%c')) {
                 cleanText = firstArg.replace(/^%c/, '');
-                // Druhý argument je CSS štýl
                 if (args.length > 1 && typeof args[1] === 'string') {
                     css = args[1];
                 }
@@ -781,7 +743,6 @@ const TransportApp = ({ userProfileData }) => {
             }
 
             if (found && !captureDone) {
-                // Ak narazíme na ďalší tím alebo kategóriu, ukončíme zachytávanie
                 if (
                     cleanText.includes('[TRANSPORT] Tím: ') ||
                     cleanText.includes('[TRANSPORT] ██ Kategória:')
@@ -804,7 +765,6 @@ const TransportApp = ({ userProfileData }) => {
             return;
         }
 
-        // Vypíšeme zachytené riadky s pôvodnými farbami
         captured.forEach(({ text, css }) => {
             if (css) {
                 console.log('%c' + text, css);
@@ -814,15 +774,11 @@ const TransportApp = ({ userProfileData }) => {
         });
     };
 
-    // ============================================================
-    // ZBUILDÍ A VYPÍŠE ČASOVÚ OS PRE KAŽDÝ TÍM V KAŽDEJ KATEGÓRII
-    // ============================================================
     const rebuildAndLogTimeline = (force = false, categoryFilter = null) => {
         if (!force && !timelineGenerationRequestedRef.current) return;
         if (!matchesLoadedRef.current || !cateringLoadedRef.current || !teamsLoadedRef.current) return;
         if (!teamsLookupLoadedRef.current) return;
         if (!travelTimesLoaded) {
-            console.log('[TRANSPORT] rebuildAndLogTimeline: čakám na načítanie travelTimes');
             return;
         }
 
@@ -835,7 +791,6 @@ const TransportApp = ({ userProfileData }) => {
         const superstructureInfoByTeam = {};
         const teamsByGroup = {};
     
-        // Nájdi zastávku označenú ako nástupnú pre externé tímy
         const externalArrivalStop = (() => {
             const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isExternalArrivalStop === true);
             if (fromAllPlaces) return fromAllPlaces;
@@ -863,7 +818,6 @@ const TransportApp = ({ userProfileData }) => {
             return formatDateTime(new Date(ts));
         };
     
-        // 1) TÍMY
         teamsArrivalBufferRef.current.forEach((t) => {
             const arr = ensure(t.category, t.teamName);
     
@@ -956,7 +910,6 @@ const TransportApp = ({ userProfileData }) => {
             }
         });
     
-        // 2) ZÁPASY
         matchesBufferRef.current.forEach((m) => {
             const timeRange = m.scheduledTime
                 ? (m.scheduledEndTime ? `${m.scheduledTime} – ${m.scheduledEndTime}` : m.scheduledTime)
@@ -997,7 +950,6 @@ const TransportApp = ({ userProfileData }) => {
             }
         });
     
-        // 3) STRAVOVANIA
         cateringBufferRef.current.forEach((c) => {
             const flags = [];
             if (c.isPriority) flags.push('PRIORITA');
@@ -1110,40 +1062,23 @@ const TransportApp = ({ userProfileData }) => {
             keys.sort();
             return keys[keys.length - 1];
         })();        
-
-        // ============================================================
-        // Pomocná funkcia – zisti písmeno skupiny (posledné A-Z písmeno)
-        // Príklady:
-        //   "skupina B"  → "B"
-        //   "skupina 1B" → "B"
-        //   "CH B"       → "B"
-        //   "U12 D 5B"   → "B"
-        // ============================================================
+        
         const getGroupLastChar = (groupNameOrTeamName) => {
             if (!groupNameOrTeamName) return null;
             const s = String(groupNameOrTeamName).trim();
             if (!s) return null;
-            // Nájdi posledné veľké písmeno A-Z / Á-Ž
             const m = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(s.toUpperCase());
             if (m) return m[1];
             return null;
         };
 
-        // ============================================================
-        // Pomocná funkcia – zisti, či skupina patrí pod dané písmeno
-        // (napr. skupina "skupina 1B" patrí pod písmeno "B")
-        // ============================================================
         const groupBelongsToChar = (groupName, char) => {
             if (!groupName || !char) return false;
             const gChar = getGroupLastChar(groupName);
             return gChar === char;
         };
     
-        // ============================================================
-        // NOVÉ: Pomocná funkcia – získa skupinu pre superstructure tím
-        // ============================================================
         const getGroupForSuperstructureTeam = (category, teamName) => {
-            // Skús nájsť skupinu z teamsByGroup
             const groups = teamsByGroup[category] || {};
             for (const [gName, teamSet] of Object.entries(groups)) {
                 if (teamSet.has(teamName)) return gName;
@@ -1158,13 +1093,8 @@ const TransportApp = ({ userProfileData }) => {
         if (categories.length === 0) {
             console.log('[TRANSPORT] Žiadne udalosti.');
         } else {
-            // ============================================================
-            // Pre každý superstructure tím zisti zoznam jeho "hráčských"
-            // dátumov (dni, kedy sa hrá akýkoľvek zápas v skupinách s jeho
-            // písmenom). Použije sa neskôr pri generovaní ranných presunov.
-            // ============================================================
-            const ssPlayDatesByTeam = {}; // key: category|teamName → Set(dayKey)
-            const ssGroupCharByTeam = {}; // key: category|teamName → char
+            const ssPlayDatesByTeam = {};
+            const ssGroupCharByTeam = {};
 
             (teamsArrivalBufferRef.current || []).forEach((t) => {
                 if (!t.isSuperstructure) return;
@@ -1179,7 +1109,6 @@ const TransportApp = ({ userProfileData }) => {
                 if (!ssPlayDatesByTeam[key]) ssPlayDatesByTeam[key] = new Set();
             });
 
-            // NOVÉ: množina názvov superstructure tímov (celý názov) → rýchle vyhľadanie
             const superstructureTeamNames = new Set();
             (teamsArrivalBufferRef.current || []).forEach((t) => {
                 if (t.isSuperstructure && t.teamName) {
@@ -1187,7 +1116,6 @@ const TransportApp = ({ userProfileData }) => {
                 }
             });
 
-            // Naplň dátumy
             Object.keys(ssGroupCharByTeam).forEach((key) => {
                 const [cat, teamName] = key.split('|');
                 const char = ssGroupCharByTeam[key];
@@ -1195,21 +1123,8 @@ const TransportApp = ({ userProfileData }) => {
             
                 matchesBufferRef.current.forEach((m) => {
                     if (cleanCategory(m.category) !== cleanCategory(cat)) return;
-            
-                    // ============================================================
-                    // NOVÉ: Zápas patrí do skupiny s daným písmenom LEN ak:
-                    //  1) Má vyplnené `groupName` (t.j. je to skupinový zápas, NIE pavúkový)
-                    //  2) A zároveň to `groupName` patrí pod dané písmeno
-                    //     (napr. "skupina B" → "B", "skupina 1B" → "B")
-                    //
-                    // Tým sa zabezpečí, že pavúkové zápasy (bez groupName) sa
-                    // NEPOČÍTAJÚ do hracích dní skupiny. To je dôležité pre
-                    // generovanie ranných presunov z ubytovní – tie sa majú
-                    // generovať pre dni, kedy tím hrá LEN skupinový zápas,
-                    // nie pavúkový.
-                    // ============================================================
                     const matchGroupName = m.groupName ? String(m.groupName).trim() : null;
-                    if (!matchGroupName) return; // pavúkový zápas – nepočítaj
+                    if (!matchGroupName) return;
                     if (!groupBelongsToChar(matchGroupName, char)) return;
             
                     let dayKey = null;
@@ -1256,28 +1171,20 @@ const TransportApp = ({ userProfileData }) => {
     
                     const ssInfo = superstructureInfoByTeam[category] && superstructureInfoByTeam[category][teamName];
 
-                    // ============================================================
-                    // Zisti skupinu tímu – buď z ssInfo, alebo z názvu tímu (posledné písmeno)
-                    // ============================================================
                     const teamGroupName = (() => {
                         if (ssInfo && ssInfo.groupName) return ssInfo.groupName;
                         const g = getGroupForSuperstructureTeam(category, teamName);
                         if (g) return g;
                         if (ssInfo && ssInfo.lastChar) return `skupina ${ssInfo.lastChar}`;
                         
-                        // NOVÉ: Skús odvodiť skupinu z názvu tímu (napr. "U12 CH 5B" → "skupina B")
-                        // Toto je potrebné pre superstructure tímy, ktoré sú v users (majú ubytovanie),
-                        // ale nemajú groupName v DB.
                         const nameMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
                         if (nameMatch) {
                             const lastChar = nameMatch[1];
-                            // Over, či existuje skupina s týmto posledným písmenom v tejto kategórii
                             const groups = teamsByGroup[category] || {};
                             for (const [gName, teamSet] of Object.entries(groups)) {
                                 const gLastChar = gName.trim().slice(-1).toUpperCase();
                                 if (gLastChar === lastChar) return gName;
                             }
-                            // Ak neexistuje, použi aspoň "skupina X"
                             return `skupina ${lastChar}`;
                         }
                         
@@ -1286,29 +1193,16 @@ const TransportApp = ({ userProfileData }) => {
 
                     const isSuperstructureTeam = (() => {
                         if (ssInfo && ssInfo.isSuperstructure) return true;
-                        // Ak tím nie je v users vôbec, je to superstructure
                         const inUsers = teamsArrivalBufferRef.current.some(
                             (t) => cleanCategory(t.category) === cleanCategory(category)
                                 && t.teamName === teamName
                                 && t.isRegistered === true
                         );
                         if (!inUsers) return true;
-                        // Ak tím je v users, ale má v názve posledné písmeno (napr. "5B"), je to superstructure
-                        // (bol pridaný do users len kvôli ubytovaniu)
                         if (/\d[A-ZÁ-Ž]\s*$/.test(String(teamName).trim())) return true;
                         return false;
                     })();
 
-                    // ============================================================
-                    // NOVÉ: Pre superstructure tím, ktorý NEMÁ udalosť v deň,
-                    // kedy skupina hrá (ale má udalosť v nasledujúci deň), vygeneruj
-                    // ranné presuny z ubytovní tímov zo skupiny na miesto prvej
-                    // udalosti tímu v nasledujúci deň.
-                    //
-                    // Príklad: tím "U12 CH 4D" nemá udalosť 26.12.2026 (skupina D hrá),
-                    // ale má udalosť 27.12.2026 08:38 Javorku. Vygeneruj presuny
-                    // z ubytovní tímov zo skupiny D (1A, 1B, 2A, 3B) na Javorku.
-                    // ============================================================
                     if (isSuperstructureTeam) {
                         const ssTeamKeyPre = `${cleanCategory(category)}|${teamName}`;
                         const groupCharPre = ssGroupCharByTeam[ssTeamKeyPre];
@@ -1317,7 +1211,6 @@ const TransportApp = ({ userProfileData }) => {
                             const groupPlayDays = [...ssPlayDatesByTeam[ssTeamKeyPre]].sort();                            
                     
                             groupPlayDays.forEach((groupPlayDay) => {
-                                // Zisti, či tím má udalosť v daný deň (z events AJ z matches/catering)
                                 const teamHasEventOnDay = (() => {
                                     const fromEvents = events.some((ev) => extractDayKeyFromWhen(ev.when) === groupPlayDay);
                                     if (fromEvents) return true;
@@ -1346,7 +1239,6 @@ const TransportApp = ({ userProfileData }) => {
                                 
                                 if (teamHasEventOnDay) return;
 
-                                // NOVÉ: NEGENERUJ presuny z ubytovní pre dni PRED prvou udalosťou tímu
                                 const firstTeamEventDay = (() => {
                                     let first = null;
                                     events.forEach((ev) => {
@@ -1357,10 +1249,9 @@ const TransportApp = ({ userProfileData }) => {
                                 })();
                                 
                                 if (firstTeamEventDay != null && groupPlayDay < firstTeamEventDay) {
-                                    return; // deň pred prvou udalosťou – neriešime tu
+                                    return;
                                 }
                     
-                                // Nájdi prvú udalosť tímu v nasledujúcom dni (po groupPlayDay)
                                 let destEvent = null;
                                 const sortedTeamEvents = [...events].sort((a, b) => {
                                     if (a.ts !== b.ts) return a.ts - b.ts;
@@ -1377,20 +1268,13 @@ const TransportApp = ({ userProfileData }) => {
                     
                                 const destination = destEvent.location;
                     
-                                // Pomocné funkcie
-                                // ============================================================
-                                // Pomocná: zisti, či tím patrí do skupiny s daným písmenom.
-                                // Kontrola cez groupName, alebo fallback cez názov tímu.
-                                // ============================================================
                                 const teamBelongsToCharPre = (tn) => {
                                     if (!tn) return false;
                                     if (String(tn).startsWith('(row team:')) return false;
-                                    // Fallback: odvoď z názvu tímu (napr. "U12 CH 2B" → "B")
                                     const nameMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(tn).trim());
                                     if (nameMatch && nameMatch[1].toUpperCase() === groupCharPre) {
                                         return true;
                                     }
-                                    // Skús cez groupName v teamsArrivalBufferRef
                                     const teamInfo = (teamsArrivalBufferRef.current || []).find(
                                         (t) => cleanCategory(t.category) === cleanCategory(category) && t.teamName === tn
                                     );
@@ -1400,7 +1284,6 @@ const TransportApp = ({ userProfileData }) => {
                                     return false;
                                 };
                     
-                                // Zisti, či je to prvý hrací deň tímu
                                 const firstPlayDayPre = (() => {
                                     let firstDayKey = null;
                                     events.forEach((ev) => {
@@ -1415,7 +1298,6 @@ const TransportApp = ({ userProfileData }) => {
                     
                                 const isFirstPlayDayPre = firstPlayDayPre != null && groupPlayDay === firstPlayDayPre;
                     
-                                // Zber zdrojov
                                 const uniqueSourceLocationsPre = new Map();
                                 const updateUniqueSourcePre = (loc, endTs) => {
                                     if (!loc) return;
@@ -4436,7 +4318,6 @@ const TransportApp = ({ userProfileData }) => {
     
                 // Skontroluj, či sú časy platné
                 if (boardingTs == null || alightingTs == null || alightingTs <= boardingTs) {
-                    // Časy sú neplatné → odstráň priradenie
                     changed = true;
                     return {
                         ...seg,
@@ -4459,7 +4340,6 @@ const TransportApp = ({ userProfileData }) => {
                         alightingTs <= boardingTs;
     
                     if (outsideParent) {
-                        // Mimo rozsahu parenta → odstráň priradenie
                         changed = true;
                         return {
                             ...seg,
@@ -4474,7 +4354,6 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 }
     
-                // Aktualizuj časy segmentu
                 const newStartTs = boardingTs;
                 const newEndTs = alightingTs;
                 const newWhen = `${formatTsLocal(newStartTs)} – ${formatTsLocal(newEndTs)}`;
@@ -4495,8 +4374,82 @@ const TransportApp = ({ userProfileData }) => {
                 return seg;
             });
     
+            // ============================================================
+            // NOVÉ: Prepočítaj NAVIAZANÉ segmenty (predchádzajúci a nasledujúci),
+            // ktoré nie sú priradené k žiadnemu busu (nemajú busId), ale mali
+            // by nadväzovať na zmenené časy.
+            //
+            // Princíp:
+            //  - Ak sa zmenil startTs segmentu, musí sa zmeniť aj endTs
+            //    predchádzajúceho segmentu (ak nemá vlastné reálne časy).
+            //  - Ak sa zmenil endTs segmentu, musí sa zmeniť aj startTs
+            //    nasledujúceho segmentu (ak nemá vlastné reálne časy).
+            //
+            // Porovnávame cez ID: prevSeg.toId === seg.fromId a nextSeg.fromId === seg.toId.
+            // ============================================================
+            const parentSegmentsAfterSync = newSegments.map((s) => ({ ...s }));
+    
+            // Zisti, ktoré segmenty sa zmenili (majú nové časy)
+            const changedIdxSet = new Set();
+            newSegments.forEach((s, idx) => {
+                const orig = parent.segments[idx];
+                if (!orig) return;
+                if (s.startTs !== orig.startTs || s.endTs !== orig.endTs) {
+                    changedIdxSet.add(idx);
+                }
+            });
+    
+            if (changedIdxSet.size > 0) {
+                // Pre každý zmenený segment uprav naviazané segmenty
+                changedIdxSet.forEach((changedIdx) => {
+                    const changedSeg = parentSegmentsAfterSync[changedIdx];
+                    if (!changedSeg || changedSeg.startTs == null || changedSeg.endTs == null) return;
+                    if (changedSeg.isWalking === true) return;
+    
+                    // 1) PREDCHÁDZAJÚCI segment – ak končí tam, kde zmenený začína
+                    for (let i = changedIdx - 1; i >= 0; i--) {
+                        const prev = parentSegmentsAfterSync[i];
+                        if (!prev) continue;
+                        if (prev.isWalking === true) break;
+                        if (prev.toId !== changedSeg.fromId) break;
+    
+                        // Ak má vlastné reálne časy z busu → neupravuj
+                        if (prev.busId && prev.boardingRowId && prev.alightingRowId) break;
+    
+                        // Ak má len startTs a nemá endTs → doplň endTs z changedSeg.startTs
+                        if (prev.startTs != null && prev.endTs == null) {
+                            prev.endTs = changedSeg.startTs;
+                            prev.when = `${formatTsLocal(prev.startTs)} – ${formatTsLocal(prev.endTs)}`;
+                            changed = true;
+                        }
+                        // Ak nemá ani startTs ani endTs → nič (nedá sa dopočítať)
+                        break;
+                    }
+    
+                    // 2) NASLEDUJÚCI segment – ak začína tam, kde zmenený končí
+                    for (let i = changedIdx + 1; i < parentSegmentsAfterSync.length; i++) {
+                        const next = parentSegmentsAfterSync[i];
+                        if (!next) continue;
+                        if (next.isWalking === true) break;
+                        if (next.fromId !== changedSeg.toId) break;
+    
+                        // Ak má vlastné reálne časy z busu → neupravuj
+                        if (next.busId && next.boardingRowId && next.alightingRowId) break;
+    
+                        // Ak má len endTs a nemá startTs → doplň startTs z changedSeg.endTs
+                        if (next.endTs != null && next.startTs == null) {
+                            next.startTs = changedSeg.endTs;
+                            next.when = `${formatTsLocal(next.startTs)} – ${formatTsLocal(next.endTs)}`;
+                            changed = true;
+                        }
+                        // Ak nemá ani startTs ani endTs → nič (nedá sa dopočítať)
+                        break;
+                    }
+                });
+            }
+    
             if (changed) {
-                parentsToUpdate.push({ parentKey: parent.key, newSegments });
+                parentsToUpdate.push({ parentKey: parent.key, newSegments: parentSegmentsAfterSync });
             }
         });
     
@@ -4506,10 +4459,6 @@ const TransportApp = ({ userProfileData }) => {
         const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
         const tUpdates = {};
         parentsToUpdate.forEach(({ parentKey, newSegments }) => {
-            // ============================================================
-            // NOVÉ: Prepočítaj `when` pre každý parent a zapíš ho spolu
-            // so segmentmi. Inak by v DB zostal starý `when`.
-            // ============================================================
             const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
             let newWhen = null;
             if (parentRec) {
@@ -4540,16 +4489,6 @@ const TransportApp = ({ userProfileData }) => {
     
         await new Promise((r) => setTimeout(r, 100));
     
-        // ============================================================
-        // NOVÉ: Aktualizuj LOKÁLNY STAV `savedTransfersRef.current` a
-        // `setSavedTransfers`, aby UI okamžite zobrazilo nové časy
-        // (nielen po ďalšom Firestore snapshote).
-        //
-        // DÔLEŽITÉ: Pre každý zmenený parent prepočítaj `when` z nových
-        // segmentov a ulož ho do nového objektu. Bez toho by `renderSavedTransfers`
-        // a `computeProvisionalSegmentRange` pracovali so starým `when`
-        // parenta a v boxe "Vygenerované presuny" by ostal starý čas.
-        // ============================================================
         const updatedParents = (savedTransfersRef.current || []).map((parent) => {
             const patch = parentsToUpdate.find((p) => p.parentKey === parent.key);
             if (!patch) return parent;
@@ -4563,7 +4502,6 @@ const TransportApp = ({ userProfileData }) => {
                 recomputeParentSegmentsInPlace(draft);
             } catch (e) {
                 console.error('[TRANSPORT] Chyba pri recomputeParentSegmentsInPlace v sync:', e);
-                // Aj pri chybe zachovaj aspoň nové segmenty
                 draft.when = parent.when;
             }
             return draft;
