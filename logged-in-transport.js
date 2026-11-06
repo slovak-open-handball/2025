@@ -4,9 +4,6 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 
 const { useState, useEffect, useRef } = React;
 
-/**
- * Globálna funkcia pre zobrazenie notifikácií
- */
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
     if (!notificationElement) {
@@ -37,7 +34,6 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-// Pomocná funkcia: Firestore Timestamp / Date / ISO string → "DD. MM. YYYY"
 const formatDateDDMMYYYY = (ts) => {
     if (!ts) return null;
     let date;
@@ -51,7 +47,6 @@ const formatDateDDMMYYYY = (ts) => {
     return `${day}. ${month}. ${year}`;
 };
 
-// Pomocná funkcia: Firestore Timestamp / Date → "DD. MM. YYYY HH:MM"
 const formatDateTime = (ts) => {
     if (!ts) return null;
     let date;
@@ -67,7 +62,6 @@ const formatDateTime = (ts) => {
     return `${day}. ${month}. ${year} ${hours}:${minutes}`;
 };
 
-// Pomocná: timestamp → "DD. MM. YYYY HH:MM"
 const formatTsLocal = (ts) => {
     if (ts == null || !isFinite(ts)) return null;
     const d = new Date(ts);
@@ -85,10 +79,6 @@ const cleanCategory = (cat) => String(cat || '')
     .replace(/\s+/g, ' ')
     .trim();
 
-// ============================================================
-// Normalizuje názov miesta – odstráni predpony ako "zastávka ",
-// "ubytovanie ", "ubytovňa " a odstráni medzery na okrajoch
-// ============================================================
 const normalizePlaceName = (name) => {
     if (!name) return '';
     return String(name)
@@ -103,9 +93,6 @@ const normalizePlaceName = (name) => {
         .trim();
 };
 
-// ============================================================
-// Prevedie identifikátor tímu na zobrazovaný názov
-// ============================================================
 const resolveTeamName = (identifier) => {
     if (!identifier) return '---';
 
@@ -120,9 +107,6 @@ const resolveTeamName = (identifier) => {
     return identifier;
 };
 
-// ============================================================
-// Naformátuje typ dopravy a čas príchodu
-// ============================================================
 const formatArrival = (arrival) => {
     if (!arrival || !arrival.type) return '---';
     const type = String(arrival.type).trim();
@@ -132,9 +116,6 @@ const formatArrival = (arrival) => {
     return type;
 };
 
-// ============================================================
-// Z `dayKey` (YYYY-MM-DD) + `slotFrom` (HH:MM) vytvorí timestamp
-// ============================================================
 const dayKeyAndSlotToTimestamp = (dayKey, slotFrom) => {
     if (!dayKey) return null;
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
@@ -150,9 +131,6 @@ const dayKeyAndSlotToTimestamp = (dayKey, slotFrom) => {
     return new Date(year, month, day, hours, minutes, 0, 0).getTime();
 };
 
-// ============================================================
-// Pomocné mapovanie typu miesta na ikonu + farbu
-// ============================================================
 const placeTypeIcons = {
     sportova_hala: { icon: 'fa-futbol', color: '#dc2626', label: 'Športová hala' },
     stravovanie:   { icon: 'fa-utensils', color: '#16a34a', label: 'Stravovanie' },
@@ -160,15 +138,10 @@ const placeTypeIcons = {
     zastavka:      { icon: 'fa-bus', color: '#2563eb', label: 'Zastávka' },
 };
 
-// ============================================================
-// KOLEKCIA PRE ULOŽENÉ VYGENEROVANÉ PRESUNY
-// (rovnaká kolekcia ako nastavenia časov medzi zastávkami)
-// ============================================================
 const TRANSPORT_SETTINGS_COLLECTION = 'settings';
 const TRANSPORT_SETTINGS_DOC = 'transportTravelTimes';
 const TRANSPORT_TRANSFERS_FIELD = 'transfers';
 
-// Pomocná: stabilný kľúč pre presun (aby sme vedeli identifikovať duplicitný)
 const buildTransferKey = (category, teamName, when, text) => {
     return [
         cleanCategory(category || ''),
@@ -180,13 +153,7 @@ const buildTransferKey = (category, teamName, when, text) => {
 
 const buildDefaultSegments = (parent) => {
     if (!parent) return [];
-
-    // ============================================================
-    // NOVÉ: Pracuj VÝHRADNE s ID.
-    //  - parent.intermediateStopIds → ID (primárne)
-    //  - parent.fromId / parent.toId → ID (primárne)
-    //  - ŽIADNE názvy (intermediateStops, fromLocation, toLocation)
-    // ============================================================
+    
     const stops = Array.isArray(parent.intermediateStopIds)
         ? parent.intermediateStopIds.filter(Boolean)
         : [];
@@ -221,12 +188,6 @@ const findSegmentIndex = (segments, fromId, toId) => {
     if (!Array.isArray(segments)) return -1;
     if (!fromId || !toId) return -1;
 
-    // ============================================================
-    // NOVÉ: Pracuj VÝHRADNE s ID.
-    //  - parametre fromId / toId sú ID
-    //  - s.fromId / s.toId sú ID
-    //  - ŽIADNE názvy (s.from, s.to)
-    // ============================================================
     return segments.findIndex((s) => {
         return s.fromId === fromId && s.toId === toId;
     });
@@ -234,28 +195,18 @@ const findSegmentIndex = (segments, fromId, toId) => {
 
 const TransportApp = ({ userProfileData }) => {
     const timelineGenerationRequestedRef = useRef(false);
-    // Mapa placeId → placeName
     const placesMapRef = useRef({});    
 
-    // Lookup pre názvy tímov (userId|category|teamIndex → teamName)
     const teamsLookupRef = useRef({});
-
-    // placesMapRef: placeId → placeName (už existuje)
-    // allPlacesRef: pole všetkých miest (už existuje)
 
     function resolvePlaceNameById(placeId) {
         if (!placeId) return '';
     
         const id = String(placeId);
     
-        // 1) Primárne z placesMapRef
         const fromMap = placesMapRef.current[id];
         if (fromMap) return fromMap;
     
-        // ============================================================
-        // NOVÉ: Fallback cez allPlacesRef (ak placesMapRef ešte nie je
-        // naplnený pri prvom renderi)
-        // ============================================================
         const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.id === id);
         if (fromAllPlaces) {
             console.log('[TRANSPORT][resolvePlaceNameById] Fallback cez allPlacesRef:', {
@@ -265,9 +216,6 @@ const TransportApp = ({ userProfileData }) => {
             return fromAllPlaces.name;
         }
     
-        // ============================================================
-        // NOVÉ: Fallback cez stopsList (ak allPlacesRef ešte nie je)
-        // ============================================================
         const fromStops = (stopsList || []).find((s) => s.id === id);
         if (fromStops) {
             console.log('[TRANSPORT][resolvePlaceNameById] Fallback cez stopsList:', {
@@ -291,10 +239,6 @@ const TransportApp = ({ userProfileData }) => {
     
         const raw = String(placeName).trim();
     
-        // ============================================================
-        // NOVÉ: Ak vstup UŽ JE ID (existuje v allPlacesRef ako p.id),
-        // vráť ho priamo – žiadny warn, žiadne hľadanie podľa názvu.
-        // ============================================================
         const directById = (allPlacesRef.current || []).find((p) => p.id === raw);
         if (directById) {
             console.log('[TRANSPORT][resolvePlaceIdByName] Vstup je už ID, vraciam priamo:', {
@@ -330,7 +274,6 @@ const TransportApp = ({ userProfileData }) => {
         return found ? found.id : null;
     }
 
-    // Normalizované porovnanie dvoch miest (ID alebo názov → ID)
     const samePlace = (a, b) => {
         if (!a || !b) return false;
         const idA = resolvePlaceIdByName(a) || a;
@@ -360,29 +303,17 @@ const TransportApp = ({ userProfileData }) => {
         return null;
     };
 
-    // ============================================================
-    // NOVÉ: Pomocná funkcia – vypíše do konzoly DB dokument pre presun
-    // ============================================================
     const logTransferDbDocument = async (transfer) => {
         if (!window.db || !transfer) {
             console.warn('[TRANSPORT] logTransferDbDocument: chýba window.db alebo transfer');
             return;
         }
 
-        const collectionPath = TRANSPORT_SETTINGS_COLLECTION; // 'settings'
-        const docPath = TRANSPORT_SETTINGS_DOC;              // 'transportTravelTimes'
-        const fieldPath = TRANSPORT_TRANSFERS_FIELD;         // 'transfers'
+        const collectionPath = TRANSPORT_SETTINGS_COLLECTION;
+        const docPath = TRANSPORT_SETTINGS_DOC;
+        const fieldPath = TRANSPORT_TRANSFERS_FIELD;
 
-        // Kľúč parent záznamu (pre segmenty je to _parentKey)
         const parentKey = transfer._parentKey || transfer.key;
-
-        console.log('%c[TRANSPORT][DB-DOC] ===== DB dokument pre presun =====', 'color:#2563eb;font-weight:bold;');
-        console.log('[TRANSPORT][DB-DOC] Kolekcia:', collectionPath);
-        console.log('[TRANSPORT][DB-DOC] Dokument:', docPath);
-        console.log('[TRANSPORT][DB-DOC] Pole:', fieldPath);
-        console.log('[TRANSPORT][DB-DOC] Kľúč záznamu (parent):', parentKey);
-        console.log('[TRANSPORT][DB-DOC] Celá cesta:', `${collectionPath}/${docPath} → ${fieldPath}.${parentKey}`);
-        console.log('[TRANSPORT][DB-DOC] Transfer objekt (z pamäte):', transfer);
 
         try {
             const docRef = doc(window.db, collectionPath, docPath);
@@ -406,21 +337,10 @@ const TransportApp = ({ userProfileData }) => {
                 );
                 return;
             }
-
-            console.log('%c[TRANSPORT][DB-DOC] Záznam z DB:', 'color:#16a34a;font-weight:bold;', {
-                key: parentKey,
-                path: `${collectionPath}/${docPath} → ${fieldPath}.${parentKey}`,
-                value: dbRecord,
-            });
         } catch (err) {
-            console.error('[TRANSPORT][DB-DOC] Chyba pri načítaní dokumentu z DB:', err);
         }
     };
 
-    // ============================================================
-    // POMOCNÁ: Parsovanie času z "when" pre porovnanie intervalov
-    // Vráti { startTs, endTs } alebo null
-    // ============================================================
     const parseTransferWhenToRange = (when) => {
         if (!when) return null;
         const s = String(when);
@@ -473,7 +393,6 @@ const TransportApp = ({ userProfileData }) => {
         const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
         if (!parentRec) return null;
     
-        // 1) Pevný rozsah parenta
         let parentRange = null;
         if (parentRec.when && String(parentRec.when).trim() !== '') {
             parentRange = parseTransferWhenToRange(parentRec.when);
@@ -494,13 +413,9 @@ const TransportApp = ({ userProfileData }) => {
         const PARENT_START = parentRange.startTs;
         const PARENT_END = parentRange.endTs;
     
-        // 2) Zoznam segmentov parenta
         const parentSegments = [];
         if (Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
             parentRec.segments.forEach((seg, idx) => {
-                // ============================================================
-                // NOVÉ: Pracuj VÝHRADNE s ID (seg.fromId / seg.toId).
-                // ============================================================
                 const segFromId = seg.fromId || null;
                 const segToId = seg.toId || null;
                 if (!segFromId || !segToId) return;
@@ -541,9 +456,6 @@ const TransportApp = ({ userProfileData }) => {
             });
         }
     
-        // ============================================================
-        // NOVÉ: Pracuj VÝHRADNE s ID (transfer.fromId / transfer.toId).
-        // ============================================================
         const currentFromId = transfer.fromId || null;
         const currentToId = transfer.toId || null;
         if (!currentFromId || !currentToId) return null;
@@ -563,7 +475,6 @@ const TransportApp = ({ userProfileData }) => {
         }
         parentSegments.sort((a, b) => (a.idx || 0) - (b.idx || 0));
     
-        // 3) Predchádzajúci resolved segment
         let prevResolvedEndTs = null;
         for (const seg of parentSegments) {
             const isCurrent = seg.fromId === currentFromId && seg.toId === currentToId;
@@ -573,17 +484,12 @@ const TransportApp = ({ userProfileData }) => {
         
             if (seg.isResolvedWithTime && seg.range && seg.range.endTs != null) {
                 const e = seg.range.endTs;
-                // ============================================================
-                // NOVÉ: NEobmedzuj na PARENT_START/PARENT_END – berieme aj nové
-                // časy, ktoré sú mimo starého parent.when.
-                // ============================================================
                 if (prevResolvedEndTs == null || e > prevResolvedEndTs) {
                     prevResolvedEndTs = e;
                 }
             }
         }
         
-        // 4) Nasledujúci resolved segment
         let nextResolvedStartTs = null;
         let foundCurrent = false;
         for (const seg of parentSegments) {
@@ -595,20 +501,13 @@ const TransportApp = ({ userProfileData }) => {
         
             if (seg.isResolvedWithTime && seg.range && seg.range.startTs != null) {
                 const s = seg.range.startTs;
-                // ============================================================
-                // NOVÉ: NEobmedzuj na PARENT_START/PARENT_END.
-                // ============================================================
                 if (nextResolvedStartTs == null || s < nextResolvedStartTs) {
                     nextResolvedStartTs = s;
                 }
             }
         }
         
-        // 5) Výsledok
         let startTsForDisplay = prevResolvedEndTs != null ? prevResolvedEndTs : PARENT_START;
-        // ============================================================
-        // NOVÉ: NEorezávaj na PARENT_START – ak je nový čas skôr, použi ho.
-        // ============================================================
         
         let endTsForDisplay;
         if (nextResolvedStartTs != null && nextResolvedStartTs > startTsForDisplay) {
@@ -616,9 +515,6 @@ const TransportApp = ({ userProfileData }) => {
         } else {
             endTsForDisplay = PARENT_END;
         }
-        // ============================================================
-        // NOVÉ: NEorezávaj na PARENT_END – ak je nový čas neskôr, použi ho.
-        // ============================================================
         
         if (endTsForDisplay <= startTsForDisplay) {
             return { startTs: PARENT_START, endTs: PARENT_END };
@@ -627,13 +523,6 @@ const TransportApp = ({ userProfileData }) => {
         return { startTs: startTsForDisplay, endTs: endTsForDisplay };
     };
 
-    // ============================================================
-    // Pomocná: obohatí transfer o teamUid/teamIndex (ak chýbajú)
-    // a odstráni teamName (neukladá sa do DB).
-    //
-    // teamUid  = ID dokumentu používateľa v kolekcii users
-    // teamIndex = poradie tímu v poli teams[category] v tomto dokumente
-    // ============================================================
     const toDbTransfer = (src, fallbackCategory, fallbackTeamName) => {
         if (!src) return src;
         const category = cleanCategory(src.category || fallbackCategory || '');
@@ -651,50 +540,26 @@ const TransportApp = ({ userProfileData }) => {
         return out;
     };
 
-    // Buffery pre udalosti z jednotlivých kolekcií
     const matchesBufferRef = useRef([]);
     const cateringBufferRef = useRef([]);
     const teamsArrivalBufferRef = useRef([]);
-
-    // Zrkadlo `allPlaces` pre použitie v `rebuildAndLogTimeline`
     const allPlacesRef = useRef([]);
-
-    // Mapa: category|groupName → Set(teamName) – reálne priradenie zo settings/superstructureGroups
     const superstructureGroupsRef = useRef({});
-
-    // Mapa: názov kategórie → hex farba pre dopravu (z settings/categories)
     const transportColorsRef = useRef({});
-
-    // Zabráni opakovanému spracovaniu pred prvým načítaním
     const matchesLoadedRef = useRef(false);
     const cateringLoadedRef = useRef(false);
     const teamsLoadedRef = useRef(false);
-
     const teamsLookupLoadedRef = useRef(false);
-
     const travelTimesLoadedRef = useRef(false);
-
-    // UI prepínač: 'planovanie' | 'nastavenia'
     const [activeView, setActiveView] = useState('planovanie');
-
-    // Zoznam všetkých miest (z kolekcie `places`)
     const [allPlaces, setAllPlaces] = useState([]);
-
-    // Uložené zastávky pre select
     const [stopsList, setStopsList] = useState([]);
-
-    // ==== TRVANIA JÁZDY MEDZI ZASTÁVKAMI ====
     const [travelTimes, setTravelTimes] = useState({});
     const [travelTimesDraft, setTravelTimesDraft] = useState({});
     const [travelTimesSaving, setTravelTimesSaving] = useState(false);
     const [travelTimesLoaded, setTravelTimesLoaded] = useState(false);
-
-    // Mapa: category|teamName → { players, menRT, womenRT, menDrivers, womenDrivers }
     const [teamCounts, setTeamCounts] = useState({});
-
-    // ==== PLÁNOVANIE – AUTOBUSY A DNI TURNAJA ====
     const [buses, setBuses] = useState([]);
-    // Mapa: busId|dayKey → [ { id, order, timeFrom, timeTo, placeFrom, placeTo, teamsIn, teamsOut, count } ]
     const [busRows, setBusRows] = useState({});
     const [tournamentDays, setTournamentDays] = useState([]);
     const [tournamentDaysLoaded, setTournamentDaysLoaded] = useState(false);
@@ -705,23 +570,13 @@ const TransportApp = ({ userProfileData }) => {
     const [selectedBusId, setSelectedBusId] = useState('');
     const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
     const [savedTransfers, setSavedTransfers] = useState([]);
-    // Farba dopravy pre kategórie (na re-render pri zmene)
     const [transportColors, setTransportColors] = useState({});
-    // ==== MODÁLNE OKNO PRE VÝBER KATEGÓRIE (tlačidlo "+") ====
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [selectedCategoryForTimeline, setSelectedCategoryForTimeline] = useState('');
-
-    // ==== NOVÉ: Filter – zobraziť iba presuny s textom "časť presunu" ====
     const [showOnlyPartialTransfers, setShowOnlyPartialTransfers] = useState(false);
-
-    // ==== MODÁLNE OKNO PRE MAZANIE PRESUNOV (červená polovica FAB) ====
     const [showDeleteTransfersModal, setShowDeleteTransfersModal] = useState(false);
-    const [selectedCategoryForDelete, setSelectedCategoryForDelete] = useState('');
-    
-    // ==== VAROVANIE: CHÝBAJÚCE TRVANIE JÁZDY ====
+    const [selectedCategoryForDelete, setSelectedCategoryForDelete] = useState('');    
     const [missingTravelTimeWarning, setMissingTravelTimeWarning] = useState([]);
-
-    // ==== NOVÉ: príznak, že zoznam zastávok (places) už bol načítaný ====
     const [placesLoaded, setPlacesLoaded] = useState(false);
 
     // ==== NOVÉ: Prepínač záložiek v Nastaveniach ====
@@ -4646,7 +4501,7 @@ const TransportApp = ({ userProfileData }) => {
         });
     
         if (parentsToUpdate.length === 0) return;
-
+    
         // Zapíš zmeny do DB
         const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
         const tUpdates = {};
@@ -4675,24 +4530,30 @@ const TransportApp = ({ userProfileData }) => {
                 tUpdates[parentKey].when = newWhen;
             }
         });
-        
+    
         try {
             await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri synchronizácii segmentov s busom:', err);
             return;
         }
-
+    
         await new Promise((r) => setTimeout(r, 100));
     
+        // ============================================================
+        // NOVÉ: Aktualizuj LOKÁLNY STAV `savedTransfersRef.current` a
+        // `setSavedTransfers`, aby UI okamžite zobrazilo nové časy
+        // (nielen po ďalšom Firestore snapshote).
+        //
+        // DÔLEŽITÉ: Pre každý zmenený parent prepočítaj `when` z nových
+        // segmentov a ulož ho do nového objektu. Bez toho by `renderSavedTransfers`
+        // a `computeProvisionalSegmentRange` pracovali so starým `when`
+        // parenta a v boxe "Vygenerované presuny" by ostal starý čas.
+        // ============================================================
         const updatedParents = (savedTransfersRef.current || []).map((parent) => {
             const patch = parentsToUpdate.find((p) => p.parentKey === parent.key);
             if (!patch) return parent;
-
-            // ============================================================
-            // NOVÉ: Vynuluj `when`, aby ho recomputeParentSegmentsInPlace
-            // prepočítal z nových segmentov (inak zostane staré).
-            // ============================================================
+    
             const draft = {
                 ...parent,
                 when: null,
@@ -4702,6 +4563,8 @@ const TransportApp = ({ userProfileData }) => {
                 recomputeParentSegmentsInPlace(draft);
             } catch (e) {
                 console.error('[TRANSPORT] Chyba pri recomputeParentSegmentsInPlace v sync:', e);
+                // Aj pri chybe zachovaj aspoň nové segmenty
+                draft.when = parent.when;
             }
             return draft;
         });
