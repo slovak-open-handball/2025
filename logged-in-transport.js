@@ -8234,21 +8234,44 @@ const TransportApp = ({ userProfileData }) => {
                                                                 }
                                                             }                                                        
                                                             rowElements.push(renderBusRow(r, bus.id, day.dayKey));
-                                                        });
-                                                        return React.createElement(
-                                                            'tr',
-                                                            null,
-                                                            React.createElement(
-                                                                'td',
-                                                                { colSpan: 1, className: 'border border-gray-200 p-0' },
+                                                            });
+                                                            
+                                                            // 20px medzera pod posledným riadkom trasy (funguje aj s filtrom dňa/busu)
+                                                            if (rowElements.length > 0) {
+                                                                rowElements.push(
+                                                                    React.createElement(
+                                                                        'tr',
+                                                                        { key: 'bus-bottom-spacer' },
+                                                                        React.createElement(
+                                                                            'td',
+                                                                            {
+                                                                                colSpan: 9,
+                                                                                style: {
+                                                                                    height: '20px',
+                                                                                    padding: 0,
+                                                                                    border: 'none',
+                                                                                    background: 'transparent',
+                                                                                },
+                                                                            }
+                                                                        )
+                                                                    )
+                                                                );
+                                                            }
+
+                                                            return React.createElement(
+                                                                'tr',
+                                                                null,
                                                                 React.createElement(
-                                                                    'table',
-                                                                    { className: 'w-full border-collapse text-xs', style: { tableLayout: 'auto', minWidth: '100%' } },
-                                                                    renderBusRowsHeader(),
-                                                                    React.createElement('tbody', null, rowElements)
+                                                                    'td',
+                                                                    { colSpan: 1, className: 'border border-gray-200 p-0' },
+                                                                    React.createElement(
+                                                                        'table',
+                                                                        { className: 'w-full border-collapse text-xs', style: { tableLayout: 'auto', minWidth: '100%' } },
+                                                                        renderBusRowsHeader(),
+                                                                        React.createElement('tbody', null, rowElements)
+                                                                    )
                                                                 )
-                                                            )
-                                                        );
+                                                            );
                                                     })(),
                                                     (() => {
                                                         const rowsKey = `${bus.id}|${day.dayKey}`;
