@@ -4639,7 +4639,7 @@ const TransportApp = ({ userProfileData }) => {
         });
     
         if (parentsToUpdate.length === 0) return;
-    
+
         // Zapíš zmeny do DB
         const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
         const tUpdates = {};
@@ -4651,7 +4651,39 @@ const TransportApp = ({ userProfileData }) => {
             await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri synchronizácii segmentov s busom:', err);
+            return;
         }
+    
+        // ============================================================
+        // NOVÉ: Okamžite aktualizuj lokálny ref + state, aby sa
+        // pre-renderovali "Vygenerované presuny" s novými časmi
+        // (bez čakania na onSnapshot).
+        //
+        // DÔVOD: computeProvisionalSegmentRange() číta
+        // savedTransfersRef.current. Ak sa zmení čas príchodu busu na
+        // miesto konca predchádzajúceho segmentu, nasledujúci nepriradený
+        // segment musí dostať nový startTs. Bez okamžitej aktualizácie
+        // ref by sa zobrazoval starý čas až do ďalšieho onSnapshot.
+        // ============================================================
+        const updatedParents = (savedTransfersRef.current || []).map((parent) => {
+            const patch = parentsToUpdate.find((p) => p.parentKey === parent.key);
+            if (!patch) return parent;
+    
+            // Prepočítaj `when` parenta na základe nových segmentov
+            const draft = {
+                ...parent,
+                segments: patch.newSegments.map((s) => ({ ...s })),
+            };
+            try {
+                recomputeParentSegmentsInPlace(draft);
+            } catch (e) {
+                console.error('[TRANSPORT] Chyba pri recomputeParentSegmentsInPlace v sync:', e);
+            }
+            return draft;
+        });
+    
+        savedTransfersRef.current = updatedParents;
+        setSavedTransfers(updatedParents);
     };
 
     const updateBusRowField = async (rowId, field, value) => {
