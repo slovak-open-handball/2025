@@ -5551,22 +5551,6 @@ const TransportApp = ({ userProfileData }) => {
             },
                 (() => {
                     const teamsInBus = getTeamsInBusAfterRow(busId, dayKey, row.id);
-                    console.log('[TRANSPORT][Počet] DETAIL', {
-                        rowId: row.id,
-                        rowIdFull: row.rowId,
-                        currentOrder: parseOrderFromRowId(row.rowId),
-                        teamsInBus,
-                        counts: teamsInBus.map((tk) => ({ tk, count: getTeamMembersCount(tk) })),
-                        savedTransfersCount: (savedTransfersRef.current || []).length,
-                        parentsForDay: (savedTransfersRef.current || []).filter(p => p.dayKey === dayKey).map(p => ({
-                            key: p.key,
-                            teamName: p.teamName,
-                            segmentsWithBus: (p.segments || []).filter(s => s.busId === busId).map(s => ({
-                                bOrder: parseOrderFromRowId(s.boardingRowId),
-                                aOrder: parseOrderFromRowId(s.alightingRowId),
-                            })),
-                        })),
-                    });
                     if (teamsInBus.length === 0) {
                         return React.createElement('span', { className: 'text-gray-400' }, '—');
                     }
