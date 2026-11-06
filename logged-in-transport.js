@@ -4231,35 +4231,27 @@ const TransportApp = ({ userProfileData }) => {
         setTravelTimesDraft(draft);
     }, [travelTimes]);
 
-    // ============================================================
-    // NOVÉ: Automatický prepočet timeTo pre všetky riadky autobusov.
-    // Pracuje VÝHRADNE s ID (placeFromId / placeToId).
-    // ============================================================
     useEffect(() => {
         if (!window.db) return;
         if (!travelTimesLoaded) return;
         if (!busRows || Object.keys(busRows).length === 0) return;
-
+    
         Object.values(busRows).forEach((rows) => {
             (rows || []).forEach((row) => {
-                // ============================================================
-                // NOVÉ: Pracuj VÝHRADNE s ID.
-                // Žiadne resolvePlaceIdByName(row.placeFrom / row.placeTo).
-                // ============================================================
                 const placeFromId = row.placeFromId || null;
                 const placeToId = row.placeToId || null;
                 if (!placeFromId || !placeToId) return;
-
+    
                 const minutes = getTravelMinutes(placeFromId, placeToId);
                 if (minutes == null) return;
                 if (!row.timeFrom || !/^\d{1,2}:\d{2}$/.test(row.timeFrom)) return;
-
+    
                 const [h, m] = row.timeFrom.split(':').map(Number);
                 const total = h * 60 + m + minutes;
                 const endH = Math.floor(total / 60) % 24;
                 const endM = total % 60;
                 const computed = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-
+    
                 if (computed !== (row.timeTo || '')) {
                     updateBusRowField(row.id, 'timeTo', computed);
                 }
@@ -4540,6 +4532,128 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
+    const syncAssignedSegmentsForBusRow = async (busId, dayKey, rowId) => {
+        if (!window.db || !busId || !dayKey || !rowId) return;
+    
+        // Nájdi aktuálny riadok
+        const rowsKey = `${busId}|${dayKey}`;
+        const allRows = (busRows[rowsKey] || [])
+            .slice()
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+        const targetRow = allRows.find((r) => r.id === rowId);
+        if (!targetRow) return;
+        const targetRowId = targetRow.rowId;
+        if (!targetRowId) return;
+    
+        // Prejdi všetky parent záznamy pre daný deň a bus
+        const parentsToUpdate = [];
+    
+        (savedTransfersRef.current || []).forEach((parent) => {
+            if (parent.dayKey !== dayKey) return;
+            if (!Array.isArray(parent.segments)) return;
+    
+            let changed = false;
+            const newSegments = parent.segments.map((seg) => {
+                if (!seg || seg.busId !== busId) return seg;
+                if (seg.isWalking === true) return seg;
+    
+                const isBoarding = seg.boardingRowId === targetRowId;
+                const isAlighting = seg.alightingRowId === targetRowId;
+                if (!isBoarding && !isAlighting) return seg;
+    
+                // Zisti aktuálne časy z riadkov (podľa rowId)
+                const boardingRow = allRows.find((r) => r.rowId === seg.boardingRowId);
+                const alightingRow = allRows.find((r) => r.rowId === seg.alightingRowId);
+    
+                const boardingTs = boardingRow && boardingRow.timeFrom
+                    ? timeOnDayKeyToTs(dayKey, boardingRow.timeFrom)
+                    : null;
+                const alightingTs = alightingRow && alightingRow.timeTo
+                    ? timeOnDayKeyToTs(dayKey, alightingRow.timeTo)
+                    : null;
+    
+                // Skontroluj, či sú časy platné
+                if (boardingTs == null || alightingTs == null || alightingTs <= boardingTs) {
+                    // Časy sú neplatné → odstráň priradenie
+                    changed = true;
+                    return {
+                        ...seg,
+                        busAssigned: false,
+                        busId: null,
+                        boardingRowId: null,
+                        alightingRowId: null,
+                        startTs: null,
+                        endTs: null,
+                        when: null,
+                    };
+                }
+    
+                // Skontroluj, či segment sedí do rozsahu parenta
+                const parentRange = parseTransferWhenToRange(parent.when);
+                if (parentRange) {
+                    const outsideParent =
+                        boardingTs < parentRange.startTs ||
+                        alightingTs > parentRange.endTs ||
+                        alightingTs <= boardingTs;
+    
+                    if (outsideParent) {
+                        // Mimo rozsahu parenta → odstráň priradenie
+                        changed = true;
+                        return {
+                            ...seg,
+                            busAssigned: false,
+                            busId: null,
+                            boardingRowId: null,
+                            alightingRowId: null,
+                            startTs: null,
+                            endTs: null,
+                            when: null,
+                        };
+                    }
+                }
+    
+                // Aktualizuj časy segmentu
+                const newStartTs = boardingTs;
+                const newEndTs = alightingTs;
+                const newWhen = `${formatTsLocal(newStartTs)} – ${formatTsLocal(newEndTs)}`;
+    
+                if (
+                    seg.startTs !== newStartTs ||
+                    seg.endTs !== newEndTs ||
+                    seg.when !== newWhen
+                ) {
+                    changed = true;
+                    return {
+                        ...seg,
+                        startTs: newStartTs,
+                        endTs: newEndTs,
+                        when: newWhen,
+                    };
+                }
+                return seg;
+            });
+    
+            if (changed) {
+                parentsToUpdate.push({ parentKey: parent.key, newSegments });
+            }
+        });
+    
+        if (parentsToUpdate.length === 0) return;
+    
+        // Zapíš zmeny do DB
+        const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+        const tUpdates = {};
+        parentsToUpdate.forEach(({ parentKey, newSegments }) => {
+            tUpdates[parentKey] = { segments: newSegments };
+        });
+    
+        try {
+            await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri synchronizácii segmentov s busom:', err);
+        }
+    };
+
     const updateBusRowField = async (rowId, field, value) => {
         if (!window.db || !rowId) return;
         try {
@@ -4612,9 +4726,56 @@ const TransportApp = ({ userProfileData }) => {
                 }
 
                 await updateDoc(doc(window.db, 'transport', rowId), patch);
+
+                // ============================================================
+                // NOVÉ: Po zmene placeFrom/placeTo (a prepočte timeTo)
+                // zosynchronizuj segmenty priradené k tomuto riadku.
+                // ============================================================
+                try {
+                    let busIdForSync = null;
+                    let dayKeyForSync = null;
+                    Object.entries(busRows || {}).forEach(([busKey, rows]) => {
+                        if (busIdForSync) return;
+                        const [bId, dK] = busKey.split('|');
+                        const found = (rows || []).find((r) => r.id === rowId);
+                        if (found) {
+                            busIdForSync = bId;
+                            dayKeyForSync = dK;
+                        }
+                    });
+                    if (busIdForSync && dayKeyForSync) {
+                        await syncAssignedSegmentsForBusRow(busIdForSync, dayKeyForSync, rowId);
+                    }
+                } catch (e) {
+                    console.error('[TRANSPORT] Chyba pri sync po zmene place:', e);
+                }
+
                 return;
             }
+            
             await updateDoc(doc(window.db, 'transport', rowId), { [field]: value });
+
+            // ============================================================
+            // NOVÉ: Po zmene timeFrom/timeTo zosynchronizuj segmenty.
+            // ============================================================
+            try {
+                let busIdForSync = null;
+                let dayKeyForSync = null;
+                Object.entries(busRows || {}).forEach(([busKey, rows]) => {
+                    if (busIdForSync) return;
+                    const [bId, dK] = busKey.split('|');
+                    const found = (rows || []).find((r) => r.id === rowId);
+                    if (found) {
+                        busIdForSync = bId;
+                        dayKeyForSync = dK;
+                    }
+                });
+                if (busIdForSync && dayKeyForSync) {
+                    await syncAssignedSegmentsForBusRow(busIdForSync, dayKeyForSync, rowId);
+                }
+            } catch (e) {
+                console.error('[TRANSPORT] Chyba pri sync po zmene času:', e);
+            }
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri aktualizácii riadku:', err);
             window.showGlobalNotification('Nepodarilo sa uložiť zmenu.', 'error');
@@ -4685,6 +4846,18 @@ const TransportApp = ({ userProfileData }) => {
                     updateDoc(doc(window.db, 'transport', id), patch)
                 )
             );
+
+            // ============================================================
+            // NOVÉ: Po posune zosynchronizuj segmenty pre každý zmenený riadok
+            // ============================================================
+            try {
+                await Promise.all(
+                    updates.map(({ id }) => syncAssignedSegmentsForBusRow(busId, dayKey, id))
+                );
+            } catch (e) {
+                console.error('[TRANSPORT] Chyba pri sync segmentov po posune:', e);
+            }
+
             window.showGlobalNotification(
                 `Posunutých ${updates.length} nasledujúcich riadkov o ${deltaMinutes} min.`,
                 'info'
@@ -4818,6 +4991,21 @@ const TransportApp = ({ userProfileData }) => {
                     updateDoc(doc(window.db, 'transport', id), patch)
                 )
             );
+
+            // ============================================================
+            // NOVÉ: Po resync zosynchronizuj segmenty pre každý zmenený riadok
+            // + pre aktuálny riadok (jeho timeTo sa mohol zmeniť)
+            // ============================================================
+            try {
+                const syncPromises = [currentRowId];
+                updates.forEach(({ id }) => syncPromises.push(id));
+                await Promise.all(
+                    syncPromises.map((id) => syncAssignedSegmentsForBusRow(busId, dayKey, id))
+                );
+            } catch (e) {
+                console.error('[TRANSPORT] Chyba pri sync segmentov po resync placeTo:', e);
+            }
+
             window.showGlobalNotification(
                 `Zosúladených ${updates.length} nasledujúcich riadkov.`,
                 'info'
@@ -4914,6 +5102,18 @@ const TransportApp = ({ userProfileData }) => {
                     updateDoc(doc(window.db, 'transport', id), patch)
                 )
             );
+
+            // ============================================================
+            // NOVÉ: Po posune zosynchronizuj segmenty pre každý zmenený riadok
+            // ============================================================
+            try {
+                await Promise.all(
+                    updates.map(({ id }) => syncAssignedSegmentsForBusRow(busId, dayKey, id))
+                );
+            } catch (e) {
+                console.error('[TRANSPORT] Chyba pri sync segmentov po cascade:', e);
+            }
+
             window.showGlobalNotification(
                 `Zosúladených ${updates.length} nasledujúcich riadkov.`,
                 'info'
@@ -5013,6 +5213,21 @@ const TransportApp = ({ userProfileData }) => {
                     updateDoc(doc(window.db, 'transport', id), patch)
                 )
             );
+
+            // ============================================================
+            // NOVÉ: Po posune zosynchronizuj segmenty pre každý zmenený riadok
+            // + pre oba riadky tvoriace "obrátený" gap
+            // ============================================================
+            try {
+                const syncPromises = [gapRowPrevId, gapRowNextId];
+                updates.forEach(({ id }) => syncPromises.push(id));
+                await Promise.all(
+                    syncPromises.map((id) => syncAssignedSegmentsForBusRow(busId, dayKey, id))
+                );
+            } catch (e) {
+                console.error('[TRANSPORT] Chyba pri sync segmentov po posune (inverted):', e);
+            }
+
             window.showGlobalNotification(
                 `Posunutých ${updates.length} nasledujúcich riadkov o ${deltaMinutes} min (medzera ${gap} + 2).`,
                 'info'
@@ -5098,6 +5313,54 @@ const TransportApp = ({ userProfileData }) => {
                         await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
                     }
                 }
+            }
+    
+            // ============================================================
+            // NOVÉ: Po odstránení riadku skontroluj, či niektoré segmenty
+            // neodkazujú na už neexistujúci rowId. Ak áno, odstráň priradenie.
+            // ============================================================
+            try {
+                const existingRowIds = new Set(
+                    (busRows[`${busId}|${dayKey}`] || [])
+                        .filter((r) => r.id !== rowId)
+                        .map((r) => r.rowId)
+                );
+                const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+                const snap = await getDoc(docRef);
+                if (snap.exists()) {
+                    const data = snap.data() || {};
+                    const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
+                    const tUpdates = {};
+                    Object.entries(rawTransfers).forEach(([key, v]) => {
+                        if (!v || !Array.isArray(v.segments)) return;
+                        let changed = false;
+                        const newSegments = v.segments.map((s) => {
+                            if (s.busId !== busId) return s;
+                            const bMissing = s.boardingRowId && !existingRowIds.has(s.boardingRowId);
+                            const aMissing = s.alightingRowId && !existingRowIds.has(s.alightingRowId);
+                            if (bMissing || aMissing) {
+                                changed = true;
+                                return {
+                                    ...s,
+                                    busAssigned: false,
+                                    busId: null,
+                                    boardingRowId: null,
+                                    alightingRowId: null,
+                                    startTs: null,
+                                    endTs: null,
+                                    when: null,
+                                };
+                            }
+                            return s;
+                        });
+                        if (changed) tUpdates[key] = { ...v, segments: newSegments };
+                    });
+                    if (Object.keys(tUpdates).length > 0) {
+                        await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
+                    }
+                }
+            } catch (e) {
+                console.error('[TRANSPORT] Chyba pri čistení segmentov po odstránení riadku:', e);
             }
     
             window.showGlobalNotification('Riadok odstránený.', 'info');
