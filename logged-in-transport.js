@@ -7322,8 +7322,8 @@ const TransportApp = ({ userProfileData }) => {
                     seg.busId = null;
                     seg.boardingRowId = null;
                     seg.alightingRowId = null;
-                
-                    // OPRAVA: ak segment nemá startTs, použiť endTs predchádzajúceho segmentu
+    
+                    // Ak segment nemá startTs, použiť endTs predchádzajúceho segmentu
                     if (seg.startTs == null) {
                         for (let i = segIdx - 1; i >= 0; i--) {
                             const prev = draft.segments[i];
@@ -7338,32 +7338,50 @@ const TransportApp = ({ userProfileData }) => {
                             }
                         }
                     }
-                    // OPRAVA: ak segment nemá endTs, použiť parentRange.endTs alebo dopočítať
+    
+                    // Ak segment nemá endTs, použiť startTs nasledujúceho segmentu
                     if (seg.endTs == null) {
-                        let parentEnd = null;
-                        // skús nájsť nasledujúci segment s endTs
+                        let nextStart = null;
                         for (let i = segIdx + 1; i < draft.segments.length; i++) {
                             const next = draft.segments[i];
                             if (!next) continue;
                             if (next.startTs != null) {
-                                parentEnd = next.startTs;
+                                nextStart = next.startTs;
                                 break;
                             }
                             if (next.endTs != null) {
-                                parentEnd = next.endTs;
+                                nextStart = next.endTs;
                                 break;
                             }
                         }
-                        if (parentEnd != null && seg.startTs != null && parentEnd > seg.startTs) {
-                            seg.endTs = parentEnd;
+                        if (nextStart != null && seg.startTs != null && nextStart > seg.startTs) {
+                            seg.endTs = nextStart;
                         } else if (seg.startTs != null) {
-                            seg.endTs = seg.startTs + 60 * 1000;
+                            // Fallback – skús použiť koniec parenta
+                            const parentRange = parseTransferWhenToRange(draft.when);
+                            if (parentRange && parentRange.endTs != null && parentRange.endTs > seg.startTs) {
+                                seg.endTs = parentRange.endTs;
+                            } else {
+                                seg.endTs = seg.startTs + 60 * 1000;
+                            }
                         }
                     }
+    
+                    // Ak máme startTs aj endTs, nastavíme when
                     if (seg.startTs != null && seg.endTs != null) {
                         seg.when = `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`;
                     }
+    
+                    // Ak stále nemáme endTs, skús použiť parent.when
+                    if (seg.endTs == null) {
+                        const parentRange = parseTransferWhenToRange(draft.when);
+                        if (parentRange && parentRange.endTs != null && seg.startTs != null && parentRange.endTs > seg.startTs) {
+                            seg.endTs = parentRange.endTs;
+                            seg.when = `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`;
+                        }
+                    }
                 } else {
+                    // Celý parent bol peší – odstránime príznak zo všetkých segmentov
                     draft.segments.forEach((s) => {
                         s.isWalking = false;
                         s.walkingSetAt = null;
@@ -8837,27 +8855,97 @@ const TransportApp = ({ userProfileData }) => {
                             (s) => s.fromId === fromId && s.toId === toId
                         ) || null;
                     })();
+                    
                     const isSegmentWalking =
                         (parentSegmentForThisIdx && parentSegmentForThisIdx.isWalking === true) ||
                         t.isWalking === true;
-                    if (isSegmentWalking) continue;
+                    
+                    if (isSegmentWalking) {
+                        continue;
+                    }
+                    
+                    let hasRealTime = ft.startTs != null && ft.endTs != null;
+                    let whenStr = hasRealTime
+                        ? `${formatTsLocal(ft.startTs)} – ${formatTsLocal(ft.endTs)}`
+                        : null;
+                    
+                    // NOVÉ: Ak segment nemá reálny čas, skús použiť parent.when alebo provizórny výpočet
+                    if (!whenStr) {
+                        const parentRec = savedTransfers.find((s) => s.key === t.key);
+                        if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
+                            whenStr = parentRec.when;
+                        } else {
+                            // Skús provizórny výpočet pre tento segment
+                            const provisional = computeProvisionalSegmentRange({
+                                ...t,
+                                fromId: fromId,
+                                toId: toId,
+                                _parentKey: t.key,
+                            });
+                            if (provisional) {
+                                whenStr = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                                hasRealTime = false;
+                            } else if (Array.isArray(t.segments) && t.segments.length > 0) {
+                                // Fallback – použiť najskorší startTs a najneskorší endTs z parent segments
+                                let earliestStart = null;
+                                let latestEnd = null;
+                                t.segments.forEach((s) => {
+                                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                        earliestStart = s.startTs;
+                                    }
+                                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                        latestEnd = s.endTs;
+                                    }
+                                });
+                                if (earliestStart != null && latestEnd != null) {
+                                    whenStr = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                                } else if (earliestStart != null) {
+                                    whenStr = formatTsLocal(earliestStart);
+                                } else if (latestEnd != null) {
+                                    whenStr = formatTsLocal(latestEnd);
+                                }
+                            }
+                        }
+                    }
+                    
                     const text = `Presun z ${resolvePlaceNameById(fromId)} do ${resolvePlaceNameById(toId)}`;
-                    const key = buildTransferKey(t.category, t.teamName, '', text);
+                    const key = buildTransferKey(
+                        t.category,
+                        t.teamName,
+                        whenStr || '',
+                        text
+                    );
+                    
+                    let remainingMinutes = null;
+                    
+                    if (hasRealTime && !segmentAssigned[i]) {
+                        let endTs = null;
+                        for (let k = i + 1; k < routeIds.length - 1; k++) {
+                            if (segmentAssigned[k] && finalTimes[k] && finalTimes[k].startTs != null) {
+                                endTs = finalTimes[k].startTs;
+                                break;
+                            }
+                        }
+                        if (endTs == null) endTs = timeRange.endTs;
+                    
+                        if (endTs != null && ft.startTs != null && endTs > ft.startTs) {
+                            remainingMinutes = Math.round((endTs - ft.startTs) / 60000);
+                        }
+                    }
+                    
                     expandedTransfers.push({
                         ...t,
                         key,
-                        when: null,
+                        when: whenStr,
                         text,
                         fromId: fromId,
                         toId: toId,
-                        fromLocation: resolvePlaceNameById(fromId),
-                        toLocation: resolvePlaceNameById(toId),
                         intermediateStopIds: [],
                         _parentKey: t.key,
                         _parentRoute: `${resolvePlaceNameById(t.fromId)} → ${resolvePlaceNameById(t.toId)}`,
-                        _remainingMinutes: null,
-                        _isAssigned: false,
-                        _hasRealTime: false,
+                        _remainingMinutes: remainingMinutes,
+                        _isAssigned: segmentAssigned[i],
+                        _hasRealTime: hasRealTime,
                         isWalking: false,
                     });
                 }
@@ -9849,10 +9937,17 @@ const TransportApp = ({ userProfileData }) => {
             }
             const parentStartTs = parentRange && parentRange.startTs != null ? parentRange.startTs : null;
             const parentEndTs = parentRange && parentRange.endTs != null ? parentRange.endTs : null;
+            
+            // Zistíme, či je tento peší segment prvý / posledný v rámci parenta
             const isFirstWalkingSegment = prevSegmentEndTs == null && parentStartTs != null;
             const isLastWalkingSegment = nextSegmentStartTs == null && parentEndTs != null;
+            
+            // Pre peší segment: 
+            // - startTs = koniec predchádzajúceho segmentu (alebo parentStart)
+            // - endTs = začiatok nasledujúceho segmentu (alebo parentEnd)
             let displayStartTs = null;
             let displayEndTs = null;
+            
             if (isFirstWalkingSegment) {
                 displayStartTs = parentStartTs;
             } else if (prevSegmentEndTs != null) {
@@ -9860,21 +9955,19 @@ const TransportApp = ({ userProfileData }) => {
             } else if (parentStartTs != null) {
                 displayStartTs = parentStartTs;
             }
-            if (isLastWalkingSegment || nextSegmentStartTs == null) {
-                if (parentEndTs != null && displayStartTs != null && parentEndTs > displayStartTs) {
-                    displayEndTs = parentEndTs;
-                } else if (parentEndTs != null) {
-                    displayEndTs = parentEndTs;
-                } else if (displayStartTs != null) {
-                    displayEndTs = displayStartTs + 60 * 1000;
-                } else {
-                    displayEndTs = null;
-                }
-            } else if (nextSegmentStartTs != null) {
+            
+            if (nextSegmentStartTs != null) {
+                // Peší segment je niekde v strede – koniec = začiatok nasledujúceho segmentu
                 displayEndTs = nextSegmentStartTs;
-            } else {
+            } else if (parentEndTs != null) {
+                // Peší segment je posledný – koniec = koniec parenta
                 displayEndTs = parentEndTs;
+            } else if (displayStartTs != null) {
+                // Fallback – aspoň +1 minúta
+                displayEndTs = displayStartTs + 60 * 1000;
             }
+            
+            // Špeciálny prípad: ak je peší segment jediný v parentovi, použiť celý parent rozsah
             if (
                 parentSegments.length === 1 &&
                 parentStartTs != null &&
@@ -9883,6 +9976,25 @@ const TransportApp = ({ userProfileData }) => {
                 displayStartTs = parentStartTs;
                 displayEndTs = parentEndTs;
             }
+            
+            // Ak je vypočítaný endTs menší alebo rovný startTs, skús použiť parentEnd
+            if (
+                displayStartTs != null &&
+                (displayEndTs == null || displayEndTs <= displayStartTs) &&
+                parentEndTs != null &&
+                parentEndTs > displayStartTs
+            ) {
+                displayEndTs = parentEndTs;
+            }
+            
+            // Ak stále nemáme platný endTs, použiť aspoň +1 minúta
+            if (
+                displayStartTs != null &&
+                (displayEndTs == null || displayEndTs <= displayStartTs)
+            ) {
+                displayEndTs = displayStartTs + 60 * 1000;
+            }
+            
             let whenStr = null;
             if (displayStartTs != null && displayEndTs != null) {
                 whenStr = `${formatTsLocal(displayStartTs)} – ${formatTsLocal(displayEndTs)}`;
@@ -9891,6 +10003,7 @@ const TransportApp = ({ userProfileData }) => {
             } else if (displayEndTs != null) {
                 whenStr = formatTsLocal(displayEndTs);
             }
+            
             let remainingMinutes = null;
             if (
                 displayStartTs != null &&
@@ -9899,6 +10012,7 @@ const TransportApp = ({ userProfileData }) => {
             ) {
                 remainingMinutes = Math.round((displayEndTs - displayStartTs) / 60000);
             }
+            
             return {
                 ...t,
                 when: whenStr,
