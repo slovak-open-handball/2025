@@ -6245,16 +6245,93 @@ const TransportApp = ({ userProfileData }) => {
                 return;
             }
             
+            // === POMOCNÉ FUNKCIE pre fallback na názvy (definuj pred cyklom sortedRows) ===
+            const normalizeNameForCompare = (name) => {
+                if (!name) return '';
+                return String(name)
+                    .trim()
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/^zastavka\s+/i, '')
+                    .replace(/^zastavka\s+/i, '')
+                    .replace(/^ubytovanie\s+/i, '')
+                    .replace(/^ubytovna\s+/i, '')
+                    .replace(/^miesto\s+zrazu\s+/i, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            };
+            
+            // Nájde názov miesta podľa ID (z allPlacesRef alebo stopsList)
+            const getPlaceNameById = (id) => {
+                if (!id) return '';
+                const fromMap = (placesMapRef.current || {})[id];
+                if (fromMap) return fromMap;
+                const fromAll = (allPlacesRef.current || []).find((p) => p.id === id);
+                if (fromAll) return fromAll.name;
+                return '';
+            };
+            
+            // Preloží názov z textu transferu na ID (fallback pre prípad, že fromId/toId chýba)
+            const resolveTransferNameToId = (rawName) => {
+                if (!rawName) return null;
+                const raw = String(rawName).trim();
+                // Skús priamo ID
+                const directById = (allPlacesRef.current || []).find((p) => p.id === raw);
+                if (directById) return directById.id;
+                // Skús podľa názvu
+                const norm = normalizeNameForCompare(raw);
+                const found = (allPlacesRef.current || []).find(
+                    (p) => normalizeNameForCompare(p.name) === norm
+                );
+                return found ? found.id : null;
+            };
+            
+            // Získa názov miesta pre daný transfer (z fromId/toId alebo z textu)
+            const getTransferPlaceName = (transfer, which) => {
+                if (!transfer) return '';
+                const id = which === 'from' ? (transfer.fromId || null) : (transfer.toId || null);
+                const fromIdName = getPlaceNameById(id);
+                if (fromIdName) return fromIdName;
+                if (transfer.text) {
+                    const m = /^Presun z (.+?) do (.+)$/.exec(String(transfer.text).trim());
+                    if (m) {
+                        return which === 'from' ? m[1].trim() : m[2].trim();
+                    }
+                }
+                return '';
+            };
+            
+            const transferFromName = getTransferPlaceName(transfer, 'from');
+            const transferToName = getTransferPlaceName(transfer, 'to');
+            const transferFromIdResolved = trFromId || resolveTransferNameToId(transferFromName);
+            const transferToIdResolved = trToId || resolveTransferNameToId(transferToName);
+            
+            // Ak sa nepodarilo získať ID ani z názvu, preskoč bus
+            if (!transferFromIdResolved || !transferToIdResolved) {
+                console.warn('[TRANSPORT][findMatchingBusRows] Nepodarilo sa získať fromId/toId ani z názvu – preskakujem bus:', {
+                    busName: bus.name,
+                    transferFromName,
+                    transferToName,
+                    trFromId,
+                    trToId,
+                });
+                return;
+            }
+            // === KONIEC POMOCNÝCH FUNKCIÍ ===
+            
             sortedRows.forEach((row) => {
                 const rowFromId = row.placeFromId || null;
                 const rowToId = row.placeToId || null;
-    
+                const rowFromName = row.placeFrom || getPlaceNameById(rowFromId) || '';
+                const rowToName = row.placeTo || getPlaceNameById(rowToId) || '';
+            
                 // === FALLBACK pre rowTimeToTs (ak timeTo ešte nie je uložený) ===
                 const rowTimeFromStr = (row.timeFrom && /^\d{1,2}:\d{2}$/.test(row.timeFrom))
                     ? row.timeFrom
                     : null;
                 const rowTimeToStr = computeRowTimeToStr(row);
-    
+            
                 const rowTimeFromTs = rowTimeFromStr
                     ? timeOnDayKeyToTs(dayKey, rowTimeFromStr)
                     : null;
@@ -6262,16 +6339,57 @@ const TransportApp = ({ userProfileData }) => {
                     ? timeOnDayKeyToTs(dayKey, rowTimeToStr)
                     : null;
                 // === KONIEC FALLBACKU ===
-    
+            
+                // === POROVNANIE: primárne ID, fallback na názvy ===
+                let fromMatches = false;
+                let toMatches = false;
+                let fromMatchBy = null;
+                let toMatchBy = null;
+            
+                // 1) Skús ID
+                if (rowFromId != null && transferFromIdResolved != null && rowFromId === transferFromIdResolved) {
+                    fromMatches = true;
+                    fromMatchBy = 'id';
+                }
+                if (rowToId != null && transferToIdResolved != null && rowToId === transferToIdResolved) {
+                    toMatches = true;
+                    toMatchBy = 'id';
+                }
+            
+                // 2) Fallback: názov (len ak ID nezhodilo)
+                if (!fromMatches && rowFromName && transferFromName) {
+                    const a = normalizeNameForCompare(rowFromName);
+                    const b = normalizeNameForCompare(transferFromName);
+                    if (a && b && a === b) {
+                        fromMatches = true;
+                        fromMatchBy = 'name';
+                    }
+                }
+                if (!toMatches && rowToName && transferToName) {
+                    const a = normalizeNameForCompare(rowToName);
+                    const b = normalizeNameForCompare(transferToName);
+                    if (a && b && a === b) {
+                        toMatches = true;
+                        toMatchBy = 'name';
+                    }
+                }
+                // === KONIEC POROVNANIA ===
+            
                 console.log('[TRANSPORT][findMatchingBusRows] Porovnávam:', {
                     busName: bus.name,
                     rowId: row.id,
                     rowFromId,
                     rowToId,
-                    trFromId,
-                    trToId,
-                    fromMatch: rowFromId === trFromId,
-                    toMatch: rowToId === trToId,
+                    rowFromName,
+                    rowToName,
+                    transferFromIdResolved,
+                    transferToIdResolved,
+                    transferFromName,
+                    transferToName,
+                    fromMatch: fromMatches,
+                    toMatch: toMatches,
+                    fromMatchBy,
+                    toMatchBy,
                     timeFrom: row.timeFrom,
                     timeTo: row.timeTo,
                     timeFromUsed: rowTimeFromStr,
@@ -6279,16 +6397,12 @@ const TransportApp = ({ userProfileData }) => {
                     rowTimeFromTs,
                     rowTimeToTs,
                 });
-    
-                // Striktné porovnanie ID – žiadny fallback na názvy.
-                const fromMatches = rowFromId != null && rowFromId === trFromId;
-                const toMatches = rowToId != null && rowToId === trToId;
-    
+            
                 const rangeStart = trRange.startTs;
                 const rangeEnd = trRange.endTs;
                 const wideStart = Math.min(rangeStart, timeOnDayKeyToTs(dayKey, '00:00'));
                 const wideEnd = Math.max(rangeEnd, timeOnDayKeyToTs(dayKey, '23:59'));
-    
+            
                 if (fromMatches && rowTimeFromTs != null &&
                     rowTimeFromTs >= wideStart && rowTimeFromTs <= wideEnd) {
                     boardingCandidates.push({ row, timeTs: rowTimeFromTs });
