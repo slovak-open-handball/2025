@@ -4682,6 +4682,8 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Chyba pri synchronizácii segmentov s busom:', err);
             return;
         }
+
+        await new Promise((r) => setTimeout(r, 100));
     
         const updatedParents = (savedTransfersRef.current || []).map((parent) => {
             const patch = parentsToUpdate.find((p) => p.parentKey === parent.key);
