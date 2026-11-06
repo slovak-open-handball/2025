@@ -2610,9 +2610,17 @@ const MapApp = ({ userProfileData }) => {
                                   ? 'Upraviť názov/kapacitu/cenu/farbu/poznámku'
                                   : 'Upraviť názov/typ/kapacitu/cenu/farbu/poznámku';
                           } else if (selectedPlace?.type === 'stravovanie') {
-                              return 'Upraviť názov/typ/kapacitu/cenu/farbu/poznámku';
+                              return isCateringPlaceAssigned
+                                  ? 'Upraviť názov/kapacitu/cenu/farbu/poznámku'
+                                  : 'Upraviť názov/typ/kapacitu/cenu/farbu/poznámku';
                           } else if (selectedPlace?.type === 'sportova_hala') {
-                              return 'Upraviť názov/typ/cenu/poznámku';
+                              return isSportHallAssigned
+                                  ? 'Upraviť názov, cenu, poznámku'
+                                  : 'Upraviť názov/typ/cenu/poznámku';
+                          } else if (selectedPlace?.type === 'zastavka') {
+                              return isStopAssigned
+                                  ? 'Upraviť poznámku'
+                                  : 'Upraviť názov/typ/poznámku';
                           } else {
                               return 'Upraviť názov/typ/poznámku';
                           }
