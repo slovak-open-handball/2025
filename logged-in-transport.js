@@ -529,23 +529,21 @@ const TransportApp = ({ userProfileData }) => {
             endTsForDisplay = PARENT_END;
         }
     
-        // OPRAVA: ak endTsForDisplay <= startTsForDisplay, skús posunúť startTsForDisplay
-        // na PARENT_START (ak je prevResolvedEndTs príliš blízko/za nextResolvedStartTs)
+        // OPRAVA: ak endTsForDisplay <= startTsForDisplay, vráť aspoň startTs (nie null)
         if (endTsForDisplay <= startTsForDisplay) {
-            // Skús použiť PARENT_START ako začiatok, ak je to pred endTsForDisplay
-            if (PARENT_START < endTsForDisplay) {
-                startTsForDisplay = PARENT_START;
-            } else {
-                // Posledná záchrana: vráť aspoň samotný bod (start=end=PARENT_END)
-                // Radšej vráť null, ale ak máme aspoň jeden z nich, vráť ho
-                if (startTsForDisplay != null && endTsForDisplay == null) {
-                    return { startTs: startTsForDisplay, endTs: startTsForDisplay };
-                }
-                if (endTsForDisplay != null) {
-                    return { startTs: endTsForDisplay, endTs: endTsForDisplay };
-                }
-                return null;
+            // Ak máme prevResolvedEndTs, použi ho ako startTs a PARENT_END ako endTs
+            if (prevResolvedEndTs != null && PARENT_END > prevResolvedEndTs) {
+                return { startTs: prevResolvedEndTs, endTs: PARENT_END };
             }
+            // Ak máme nextResolvedStartTs a je > PARENT_START, použi PARENT_START ako startTs
+            if (nextResolvedStartTs != null && PARENT_START < nextResolvedStartTs) {
+                return { startTs: PARENT_START, endTs: nextResolvedStartTs };
+            }
+            // Inak vráť aspoň nejaký interval
+            if (PARENT_END > PARENT_START) {
+                return { startTs: PARENT_START, endTs: PARENT_END };
+            }
+            return null;
         }
     
         return { startTs: startTsForDisplay, endTs: endTsForDisplay };
@@ -9260,6 +9258,7 @@ const TransportApp = ({ userProfileData }) => {
                                     parentSeg.endTs > parentSeg.startTs;
                             
                                 if (hasRealBusTime) {
+                                    // Priradený segment – použi reálny čas
                                     const startFmt = formatTsLocal(parentSeg.startTs);
                                     const endFmt = formatTsLocal(parentSeg.endTs);
                                     const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
@@ -9268,20 +9267,11 @@ const TransportApp = ({ userProfileData }) => {
                                     else if (startTime) timeLabel = startTime;
                                     else if (endTime) timeLabel = endTime;
                                 } else {
+                                    // Nepriradený segment – VŽDY použi computeProvisionalSegmentRange
                                     const provisional = computeProvisionalSegmentRange(t);
                                     if (provisional) {
                                         const startFmt = formatTsLocal(provisional.startTs);
                                         const endFmt = formatTsLocal(provisional.endTs);
-                                        const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
-                                        const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
-                                        if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
-                                        else if (startTime) timeLabel = startTime;
-                                        else if (endTime) timeLabel = endTime;
-                                    }
-                                    // OPRAVA: fallback – ak provisional zlyhal, skús aspoň startTs/endTs z parentSeg
-                                    if (!timeLabel && parentSeg) {
-                                        const startFmt = parentSeg.startTs != null ? formatTsLocal(parentSeg.startTs) : null;
-                                        const endFmt = parentSeg.endTs != null ? formatTsLocal(parentSeg.endTs) : null;
                                         const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
                                         const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
                                         if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
