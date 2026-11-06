@@ -3133,10 +3133,14 @@ const MapApp = ({ userProfileData }) => {
               React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Názov miesta'),
               React.createElement('input', {
                 type: 'text',
-                value: newPlaceName,
-                onChange: e => setNewPlaceName(e.target.value),
-                placeholder: 'napr. ŠH Rosinská',
-                className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
+                value: editName,
+                onChange: e => setEditName(e.target.value),
+                disabled: selectedPlace?.type === 'zastavka' && isStopAssigned,
+                className: `w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition ${
+                  selectedPlace?.type === 'zastavka' && isStopAssigned
+                    ? 'bg-gray-100 opacity-70 cursor-not-allowed'
+                    : ''
+                }`
               })
             ),
             // Typ
