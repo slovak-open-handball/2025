@@ -2849,9 +2849,18 @@ const MapApp = ({ userProfileData }) => {
               React.createElement('select', {
                 value: editType,
                 onChange: e => setEditType(e.target.value),
-                disabled: isPlaceAssigned, 
+                disabled:
+                  (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) ||
+                  (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ||
+                  (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned) ||
+                  (selectedPlace?.type === 'zastavka' && isStopAssigned),
                 className: `w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition bg-white ${
-                    isPlaceAssigned ? 'cursor-not-allowed bg-gray-100 opacity-70' : ''
+                  ((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) ||
+                   (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ||
+                   (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned) ||
+                   (selectedPlace?.type === 'zastavka' && isStopAssigned))
+                    ? 'cursor-not-allowed bg-gray-100 opacity-70'
+                    : ''
                 }`
               },
                 React.createElement('option', { value: '' }, 'Vyberte typ'),
