@@ -5716,30 +5716,6 @@ const TransportApp = ({ userProfileData }) => {
     
         const parentKey = original._parentKey || original.key;
     
-        // Ak používateľ odstránil všetky medzizastávky, zmažeme celý parent transfer
-        if (stopIds.length === 0) {
-            setEditingTransferSaving(true);
-            try {
-                const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
-                await setDoc(
-                    docRef,
-                    {
-                        [TRANSPORT_TRANSFERS_FIELD]: { [parentKey]: deleteField() },
-                    },
-                    { merge: true }
-                );
-                window.showGlobalNotification('Presun bol odstránený (nezostali žiadne medzizastávky).', 'success');
-                setEditingTransfer(null);
-                setEditingTransferStops([]);
-            } catch (err) {
-                console.error('[TRANSPORT] Chyba pri mazaní presunu po odstránení medzizastávok:', err);
-                window.showGlobalNotification('Nepodarilo sa odstrániť presun.', 'error');
-            } finally {
-                setEditingTransferSaving(false);
-            }
-            return;
-        }
-    
         const originalWhen = (() => {
             const parentRec = savedTransfersRef.current.find((s) => s.key === parentKey);
             if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
@@ -5796,20 +5772,42 @@ const TransportApp = ({ userProfileData }) => {
         setEditingTransferSaving(true);
         try {
             await updateParentTransfer(parentKey, (draft) => {
-                draft.intermediateStopIds = stopIds;
-                draft.segments = buildDefaultSegments({ ...draft, intermediateStopIds: stopIds });
+                if (stopIds.length === 0) {
+                    // Žiadne medzizastávky – vymažeme pole intermediateStopIds a prepočítame segmenty na priamy presun
+                    draft.intermediateStopIds = [];
+                    draft.segments = buildDefaultSegments({
+                        ...draft,
+                        intermediateStopIds: [],
+                    });
     
-                const oldSegments = Array.isArray(original.segments) ? original.segments : [];
-                draft.segments.forEach((s) => {
-                    const old = oldSegments.find(
-                        (o) => o.fromId === s.fromId && o.toId === s.toId
-                    );
-                    if (old) {
-                        s.isWalking = old.isWalking === true;
-                        s.walkingSetAt = old.walkingSetAt || null;
-                        s.walkingSetBy = old.walkingSetBy || null;
-                    }
-                });
+                    // Zachováme prípadné walking príznaky pre zodpovedajúce segmenty
+                    const oldSegments = Array.isArray(original.segments) ? original.segments : [];
+                    draft.segments.forEach((s) => {
+                        const old = oldSegments.find(
+                            (o) => o.fromId === s.fromId && o.toId === s.toId
+                        );
+                        if (old) {
+                            s.isWalking = old.isWalking === true;
+                            s.walkingSetAt = old.walkingSetAt || null;
+                            s.walkingSetBy = old.walkingSetBy || null;
+                        }
+                    });
+                } else {
+                    draft.intermediateStopIds = stopIds;
+                    draft.segments = buildDefaultSegments({ ...draft, intermediateStopIds: stopIds });
+    
+                    const oldSegments = Array.isArray(original.segments) ? original.segments : [];
+                    draft.segments.forEach((s) => {
+                        const old = oldSegments.find(
+                            (o) => o.fromId === s.fromId && o.toId === s.toId
+                        );
+                        if (old) {
+                            s.isWalking = old.isWalking === true;
+                            s.walkingSetAt = old.walkingSetAt || null;
+                            s.walkingSetBy = old.walkingSetBy || null;
+                        }
+                    });
+                }
     
                 if (originalWhen && originalWhen.trim() !== '') {
                     draft.when = originalWhen;
@@ -5817,7 +5815,9 @@ const TransportApp = ({ userProfileData }) => {
             });
     
             window.showGlobalNotification(
-                `Presun bol upravený (${stopIds.length} medzizastávok).`,
+                stopIds.length > 0
+                    ? `Presun bol upravený (${stopIds.length} medzizastávok).`
+                    : 'Medzizastávky boli odstránené.',
                 'success'
             );
             setEditingTransfer(null);
