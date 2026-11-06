@@ -359,6 +359,8 @@ const MapApp = ({ userProfileData }) => {
     }, [selectedPlace, places]);
 
     // NOVÉ: Kontrola, či je zastávka priradená v trase autobusu
+    // Kontrola prebieha VÝHRADNE podľa ID (placeFromId / placeToId),
+    // pretože v DB sa už názvy miest neukladajú.
     useEffect(() => {
         const checkIfStopIsAssigned = async () => {
             if (!selectedPlace || !window.db || selectedPlace.type !== 'zastavka') {
@@ -371,17 +373,17 @@ const MapApp = ({ userProfileData }) => {
                 const transportSnapshot = await getDocs(transportRef);
     
                 let isAssigned = false;
-                const stopName = selectedPlace.name;
+                const stopId = selectedPlace.id;
     
                 transportSnapshot.forEach((docSnap) => {
                     if (isAssigned) return;
                     const data = docSnap.data() || {};
                     if (data.type !== 'busRow') return;
     
-                    const placeFrom = data.placeFrom || '';
-                    const placeTo = data.placeTo || '';
+                    const placeFromId = data.placeFromId || null;
+                    const placeToId = data.placeToId || null;
 
-                    if (placeFrom === stopName || placeTo === stopName) {
+                    if (placeFromId === stopId || placeToId === stopId) {
                         isAssigned = true;
                     }
                 });
@@ -2653,52 +2655,38 @@ const MapApp = ({ userProfileData }) => {
                         },
                         className: 'w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition'
                       }, 'Upraviť polohu'),
-                     React.createElement('button', {
-                         onClick: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
-                                  (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ||
-                                  (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned) ||
-                                  (selectedPlace?.type === 'zastavka' && isStopAssigned) ? 
-                                  null : handleDeletePlace,
-                         disabled: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
-                                   (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ||
-                                   (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned) ||
-                                   (selectedPlace?.type === 'zastavka' && isStopAssigned),
-                         className: `w-full py-3 font-medium rounded-lg transition flex items-center justify-center gap-2
-                             ${((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
-                                (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ||
-                                (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned) ||
-                                (selectedPlace?.type === 'zastavka' && isStopAssigned))
-                                 ? 'bg-white text-red-600 border-2 border-red-600 opacity-100 hover:cursor-not-allowed' 
-                                 : 'bg-red-600 hover:bg-red-700 text-white'
-                             }`,
-                         title: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) 
-                                ? 'Miesto nie je možné odstrániť (priradené tímy)'
-                                : (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned)
-                                  ? 'Halu nie je možné odstrániť (priradené zápasy)'
-                                  : (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned)
-                                    ? 'Miesto nie je možné odstrániť (priradené tímy)'
-                                    : (selectedPlace?.type === 'zastavka' && isStopAssigned)
-                                      ? 'Zastávku nie je možné odstrániť (priradená v trase autobusu)'
-                                      : 'Odstrániť miesto'
-                     }, 
-                     ((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
-                      (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ||
-                      (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned) ||
-                      (selectedPlace?.type === 'zastavka' && isStopAssigned))
-                     ? React.createElement(React.Fragment, null,
-                         React.createElement('i', { 
-                           className: 'fa-solid fa-trash-alt mr-2',
-                           style: { color: 'inherit' }
-                         }),
-                         'Odstrániť miesto'
-                       )
-                     : React.createElement(React.Fragment, null,
-                         React.createElement('i', { 
-                           className: 'fa-solid fa-trash-alt mr-2' 
-                         }),
-                         'Odstrániť miesto'
-                       )
-                     ),
+                      (() => {
+                         const isDeleteBlocked =
+                             (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) ||
+                             (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ||
+                             (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned) ||
+                             (selectedPlace?.type === 'zastavka' && isStopAssigned);
+
+                         let deleteTitle = 'Odstrániť miesto';
+                         if (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) {
+                             deleteTitle = 'Miesto nie je možné odstrániť (priradené tímy)';
+                         } else if (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) {
+                             deleteTitle = 'Halu nie je možné odstrániť (priradené zápasy)';
+                         } else if (selectedPlace?.type === 'stravovanie' && isCateringPlaceAssigned) {
+                             deleteTitle = 'Miesto nie je možné odstrániť (priradené tímy)';
+                         } else if (selectedPlace?.type === 'zastavka' && isStopAssigned) {
+                             deleteTitle = 'Zastávku nie je možné odstrániť (priradená v trase autobusu)';
+                         }
+
+                         return React.createElement('button', {
+                             onClick: isDeleteBlocked ? null : handleDeletePlace,
+                             disabled: isDeleteBlocked,
+                             className: `w-full py-3 font-medium rounded-lg transition flex items-center justify-center gap-2
+                                 ${isDeleteBlocked
+                                     ? 'bg-white text-red-600 border-2 border-red-600 opacity-100 hover:cursor-not-allowed'
+                                     : 'bg-red-600 hover:bg-red-700 text-white'
+                                 }`,
+                             title: deleteTitle
+                         },
+                             React.createElement('i', { className: 'fa-solid fa-trash-alt mr-2' }),
+                             'Odstrániť miesto'
+                         );
+                     })(),
                 )
               ),
             ),
