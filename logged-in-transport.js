@@ -6092,6 +6092,23 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     const findMatchingBusRows = (transfer) => {
+
+        console.log('[TRANSPORT][findMatchingBusRows] TRANSFER DETAIL:', {
+            key: transfer.key,
+            _parentKey: transfer._parentKey,
+            teamName: transfer.teamName,
+            category: transfer.category,
+            when: transfer.when,
+            text: transfer.text,
+            fromId: transfer.fromId,
+            toId: transfer.toId,
+            fromIdResolved: resolvePlaceNameById(transfer.fromId),
+            toIdResolved: resolvePlaceNameById(transfer.toId),
+            fromLocation: transfer.fromLocation,
+            toLocation: transfer.toLocation,
+            dayKey: transfer.dayKey,
+        });
+        
         if (!transfer) return [];
 
         let effectiveWhen = transfer.when;
