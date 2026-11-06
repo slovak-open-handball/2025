@@ -3928,17 +3928,60 @@ const TransportApp = ({ userProfileData }) => {
     const syncAssignedSegmentsForBusRow = async (busId, dayKey, rowId) => {
         if (!window.db || !busId || !dayKey || !rowId) return;
     
+        // Načítaj aktuálne busRow dokumenty z Firestore pre daný bus a deň
         const rowsKey = `${busId}|${dayKey}`;
-        const allRows = (busRows[rowsKey] || [])
-            .slice()
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
+        let allRows = [];
+        try {
+            const transportRef = collection(window.db, 'transport');
+            const rowsSnap = await getDocs(transportRef);
+            rowsSnap.forEach((docSnap) => {
+                const data = docSnap.data() || {};
+                if (data.type !== 'busRow') return;
+                if (data.busId !== busId) return;
+                if (data.dayKey !== dayKey) return;
+                const order = Number(data.order) || 0;
+                const rowId = data.rowId || buildRowId(data.busId, data.dayKey, order);
+                allRows.push({
+                    id: docSnap.id,
+                    order,
+                    rowId,
+                    timeFrom: data.timeFrom || '',
+                    timeTo: data.timeTo || '',
+                    placeFromId: data.placeFromId || null,
+                    placeToId: data.placeToId || null,
+                });
+            });
+            allRows.sort((a, b) => (a.order || 0) - (b.order || 0));
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri načítaní busRows z Firestore v sync:', err);
+            return;
+        }
+    
         const targetRow = allRows.find((r) => r.id === rowId);
         if (!targetRow) return;
         const targetRowId = targetRow.rowId;
         if (!targetRowId) return;
     
+        // Helper: vráti row s aplikovaným override (ak existuje)
+        const findRowWithOverride = (rowIdToFind) => {
+            const base = allRows.find((r) => r.id === rowIdToFind);
+            if (!base) return null;
+            const ov = overrides[rowIdToFind];
+            if (!ov) return base;
+            return { ...base, ...ov };
+        };
+    
+        // Helper: vráti row podľa rowId (rowId je `${busId}__${dayKey}__${order}`)
+        const findRowByRowIdWithOverride = (rowIdToFind) => {
+            const base = allRows.find((r) => r.rowId === rowIdToFind);
+            if (!base) return null;
+            const ov = overrides[base.id];
+            if (!ov) return base;
+            return { ...base, ...ov };
+        };
+    
         const parentsToUpdate = [];
-        const parentsToRemoveSegmentFrom = new Map(); 
+        const parentsToRemoveSegmentFrom = new Map();
     
         (savedTransfersRef.current || []).forEach((parent) => {
             if (parent.dayKey !== dayKey) return;
@@ -3948,14 +3991,11 @@ const TransportApp = ({ userProfileData }) => {
             const newSegments = parent.segments.map((seg) => {
                 if (!seg || seg.busId !== busId) return seg;
                 if (seg.isWalking === true) return seg;
-    
-                const isBoarding = seg.boardingRowId === targetRowId;
-                const isAlighting = seg.alightingRowId === targetRowId;
-                if (!isBoarding && !isAlighting) return seg;
-    
+
+                // Spracuj VŠETKY segmenty priradené k tomuto busu
                 const boardingRow = allRows.find((r) => r.rowId === seg.boardingRowId);
                 const alightingRow = allRows.find((r) => r.rowId === seg.alightingRowId);
-    
+            
                 const boardingTs = boardingRow && boardingRow.timeFrom
                     ? timeOnDayKeyToTs(dayKey, boardingRow.timeFrom)
                     : null;
@@ -4255,6 +4295,7 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 }
                 await updateDoc(doc(window.db, 'transport', rowId), patch);
+
                 try {
                     let busIdForSync = null;
                     let dayKeyForSync = null;
@@ -4268,7 +4309,13 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     });
                     if (busIdForSync && dayKeyForSync) {
-                        await syncAssignedSegmentsForBusRow(busIdForSync, dayKeyForSync, rowId);
+                        // Override pre zmenený row – všetky polia z patch (placeFromId/placeToId/timeTo)
+                        const overrideFields = {};
+                        if (patch.placeFromId !== undefined) overrideFields.placeFromId = patch.placeFromId;
+                        if (patch.placeToId !== undefined) overrideFields.placeToId = patch.placeToId;
+                        if (patch.timeTo !== undefined) overrideFields.timeTo = patch.timeTo;
+                        const overrides = { [rowId]: overrideFields };
+                        await syncAssignedSegmentsForBusRow(busIdForSync, dayKeyForSync, rowId, overrides);
                     }
                 } catch (e) {
                     console.error('[TRANSPORT] Chyba pri sync po zmene place:', e);
@@ -4292,7 +4339,11 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 });
                 if (busIdForSync && dayKeyForSync) {
-                    await syncAssignedSegmentsForBusRow(busIdForSync, dayKeyForSync, rowId);
+                    // Override pre zmenený row – nové časy
+                    const overrides = {
+                        [rowId]: { [field]: value }
+                    };
+                    await syncAssignedSegmentsForBusRow(busIdForSync, dayKeyForSync, rowId, overrides);
                 }
             } catch (e) {
                 console.error('[TRANSPORT] Chyba pri sync po zmene času:', e);
