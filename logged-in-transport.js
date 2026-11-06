@@ -6361,21 +6361,45 @@ const TransportApp = ({ userProfileData }) => {
         let effectiveWhen = null;
         let trRange = null;
 
-        // Priorita 1: parent.when (celkový čas presunu)
+        // Priorita 1: parent segment pre tento konkrétny segment (ak je priradený busu)
         const parentKeyForRange = transfer._parentKey || transfer.key;
         const parentRecForRange = (savedTransfersRef.current || []).find((s) => s.key === parentKeyForRange);
-        if (parentRecForRange && parentRecForRange.when && String(parentRecForRange.when).trim() !== '') {
+        
+        // Priorita 1a: ak je segment už priradený busu, použi jeho reálny čas
+        if (parentRecForRange && Array.isArray(parentRecForRange.segments)) {
+            const segIdx = findSegmentIndex(parentRecForRange.segments, transfer.fromId, transfer.toId);
+            if (segIdx !== -1) {
+                const seg = parentRecForRange.segments[segIdx];
+                if (seg && seg.busId && seg.boardingRowId && seg.alightingRowId
+                    && seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs) {
+                    trRange = { startTs: seg.startTs, endTs: seg.endTs };
+                    effectiveWhen = `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`;
+                }
+            }
+        }
+
+        // Priorita 1b: provizórny výpočet segmentu (TOTO je to, čo sa zobrazuje v modálnom okne)
+        if (!trRange) {
+            const provisional = computeProvisionalSegmentRange(transfer);
+            if (provisional && provisional.startTs != null && provisional.endTs != null && provisional.endTs > provisional.startTs) {
+                trRange = { startTs: provisional.startTs, endTs: provisional.endTs };
+                effectiveWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+            }
+        }
+
+        // Priorita 2: parent.when (širší interval)
+        if (!trRange && parentRecForRange && parentRecForRange.when && String(parentRecForRange.when).trim() !== '') {
             effectiveWhen = String(parentRecForRange.when).trim();
             trRange = parseTransferWhenToRange(effectiveWhen);
         }
 
-        // Priorita 2: transfer.when
+        // Priorita 3: transfer.when
         if (!trRange && transfer.when && String(transfer.when).trim() !== '') {
             effectiveWhen = String(transfer.when).trim();
             trRange = parseTransferWhenToRange(effectiveWhen);
         }
 
-        // Priorita 3: z parent.segments (min startTs / max endTs)
+        // Priorita 4: z parent.segments (min startTs / max endTs)
         if (!trRange && parentRecForRange && Array.isArray(parentRecForRange.segments) && parentRecForRange.segments.length > 0) {
             let earliestStart = null;
             let latestEnd = null;
@@ -6386,15 +6410,6 @@ const TransportApp = ({ userProfileData }) => {
             if (earliestStart != null && latestEnd != null && latestEnd > earliestStart) {
                 trRange = { startTs: earliestStart, endTs: latestEnd };
                 effectiveWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-            }
-        }
-
-        // Priorita 4: provisional segment range
-        if (!trRange) {
-            const provisional = computeProvisionalSegmentRange(transfer);
-            if (provisional) {
-                trRange = { startTs: provisional.startTs, endTs: provisional.endTs };
-                effectiveWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
             }
         }
 
@@ -6428,12 +6443,11 @@ const TransportApp = ({ userProfileData }) => {
             const direct = getTravelMinutes(row.placeFromId, row.placeToId);
             if (direct != null) return direct;
 
-            // Fallback: skús nájsť parent segment, ktorý tomuto riadku zodpovedá
             for (const parent of (savedTransfersRef.current || [])) {
                 if (parent.dayKey !== trDayKey) continue;
                 for (const seg of (parent.segments || [])) {
                     if (!seg || seg.isWalking === true) continue;
-                    if (seg.busId !== null && seg.busId !== undefined) continue; // iba nepriradené
+                    if (seg.busId !== null && seg.busId !== undefined) continue;
                     if (seg.fromId === row.placeFromId && seg.toId === row.placeToId) {
                         const mins = getTravelMinutes(seg.fromId, seg.toId);
                         if (mins != null) return mins;
@@ -6575,14 +6589,15 @@ const TransportApp = ({ userProfileData }) => {
                 const rangeStart = trRange.startTs;
                 const rangeEnd = trRange.endTs;
 
-                // OPRAVA: nástupný riadok musí začínať v rámci časového okna presunu
-                // (nesmie začínať skôr, ako je plánovaný začiatok presunu)
+                // NOVÉ: Nástupný riadok musí začínať PO alebo V ČASE začiatku presunu
+                // a zároveň nesmie začínať po konci presunu
                 if (fromMatches && rowTimeFromTs != null) {
                     if (rowTimeFromTs >= rangeStart && rowTimeFromTs <= rangeEnd) {
                         boardingCandidates.push({ row, timeTs: rowTimeFromTs });
                     }
                 }
-                // Výstupný riadok musí končiť v rámci časového okna presunu
+                // NOVÉ: Výstupný riadok musí končiť PRED alebo V ČASE konca presunu
+                // a zároveň nesmie končiť pred začiatkom presunu
                 if (toMatches && rowTimeToTs != null) {
                     if (rowTimeToTs >= rangeStart && rowTimeToTs <= rangeEnd) {
                         alightingCandidates.push({ row, timeTs: rowTimeToTs });
@@ -6605,6 +6620,14 @@ const TransportApp = ({ userProfileData }) => {
                     const alightTs = alightTimeStr ? timeOnDayKeyToTs(dayKey, alightTimeStr) : null;
 
                     if (boardTs != null && alightTs != null && alightTs < boardTs) {
+                        return;
+                    }
+
+                    // NOVÉ: overenie, že celý bus riadok je v rámci časového okna presunu
+                    if (boardTs != null && boardTs < rangeStart) {
+                        return;
+                    }
+                    if (alightTs != null && alightTs > rangeEnd) {
                         return;
                     }
 
@@ -6639,6 +6662,7 @@ const TransportApp = ({ userProfileData }) => {
             });
         });
 
+        // ... zvyšok funkcie (computeTripDurationMinutes, dedup, sort) zostáva rovnaký
         const computeTripDurationMinutes = (boardingRow, alightingRow) => {
             const timeRe = /^\d{1,2}:\d{2}$/;
             if (!boardingRow || !alightingRow) return null;
@@ -6706,7 +6730,7 @@ const TransportApp = ({ userProfileData }) => {
             if (best) dedupedResults.push(best);
         });
 
-        const MAX_TRIP_DURATION_MINUTES = 60;
+        const MAX_TRIP_DURATION_MINUTES = 120;
         const filteredByDuration = dedupedResults.filter((r) => {
             const duration = computeTripDurationMinutes(r.boardingRow, r.alightingRow);
             if (duration == null) return true;
