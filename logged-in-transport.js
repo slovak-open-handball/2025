@@ -5117,6 +5117,13 @@ const TransportApp = ({ userProfileData }) => {
             const cat = cleanCategory(parts[1] || '');
             return cat === cleanCategory(selectedCategoryFilter);
         });
+
+        console.log('[TRANSPORT][getTeamsInBusAfterRow] RESULT', {
+            busId,
+            dayKey,
+            currentOrder,
+            inBusArray: [...inBus],
+        });
     };
 
     const getGapMinutes = (timeTo, timeFrom) => {
@@ -5531,6 +5538,11 @@ const TransportApp = ({ userProfileData }) => {
             },
                 (() => {
                     const teamsInBus = getTeamsInBusAfterRow(busId, dayKey, row.id);
+                    console.log('[TRANSPORT][Počet]', {
+                        rowId: row.id,
+                        teamsInBus,
+                        counts: teamsInBus.map((tk) => ({ tk, count: getTeamMembersCount(tk) })),
+                    });
                     if (teamsInBus.length === 0) {
                         return React.createElement('span', { className: 'text-gray-400' }, '—');
                     }
