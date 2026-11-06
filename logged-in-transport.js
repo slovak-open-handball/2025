@@ -420,9 +420,17 @@ const TransportApp = ({ userProfileData }) => {
             }
         }
         if (!parentRange || parentRange.startTs == null || parentRange.endTs == null) return null;
-    
-        const PARENT_START = parentRange.startTs;
-        const PARENT_END = parentRange.endTs;
+
+        let PARENT_START = parentRange.startTs;
+        let PARENT_END = parentRange.endTs;
+
+        // Ak parent.when nezahŕňa celý rozsah (napr. po priradení prvého segmentu busu),
+        // rozšír PARENT_END na najneskorší endTs spomedzi všetkých segmentov.
+        (parentRec.segments || []).forEach((seg) => {
+            if (!seg) return;
+            if (seg.startTs != null && seg.startTs < PARENT_START) PARENT_START = seg.startTs;
+            if (seg.endTs != null && seg.endTs > PARENT_END) PARENT_END = seg.endTs;
+        });
     
         const parentSegments = [];
         if (Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
@@ -8817,10 +8825,12 @@ const TransportApp = ({ userProfileData }) => {
                         intermediateStopIds: [],
                         _parentKey: t.key,
                         _parentRoute: `${resolvePlaceNameById(t.fromId)} → ${resolvePlaceNameById(t.toId)}`,
-                        _remainingMinutes: null,
-                        _isAssigned: false,
+                        _remainingMinutes: remainingMinutes,
+                        _isAssigned: segmentAssigned[i],
                         _hasRealTime: hasRealTime,
                         isWalking: false,
+                        _displayStartTs: ft.startTs,
+                        _displayEndTs: ft.endTs,
                     });
                 }
                 return;
@@ -9240,41 +9250,54 @@ const TransportApp = ({ userProfileData }) => {
                             let timeLabel = null;
 
                             if (t._parentKey) {
-                                const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
-                                let parentSeg = null;
-                                if (parentRec && Array.isArray(parentRec.segments)) {
-                                    const idx = findSegmentIndex(parentRec.segments, t.fromId, t.toId);
-                                    if (idx !== -1) parentSeg = parentRec.segments[idx];
-                                }
-                                const hasRealBusTime =
-                                    parentSeg &&
-                                    parentSeg.busId &&
-                                    parentSeg.boardingRowId &&
-                                    parentSeg.alightingRowId &&
-                                    parentSeg.startTs != null &&
-                                    parentSeg.endTs != null &&
-                                    parentSeg.endTs > parentSeg.startTs;
-                            
-                                if (hasRealBusTime) {
-                                    // Priradený segment – použi reálny čas
-                                    const startFmt = formatTsLocal(parentSeg.startTs);
-                                    const endFmt = formatTsLocal(parentSeg.endTs);
+                                // 1) Priorita: dopočítaný čas z finalTimes (pokrýva aj nepriradené segmenty,
+                                //    keď je predchádzajúci segment priradený busu)
+                                if (t._displayStartTs != null || t._displayEndTs != null) {
+                                    const startFmt = t._displayStartTs != null ? formatTsLocal(t._displayStartTs) : null;
+                                    const endFmt = t._displayEndTs != null ? formatTsLocal(t._displayEndTs) : null;
                                     const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
                                     const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
                                     if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
                                     else if (startTime) timeLabel = startTime;
                                     else if (endTime) timeLabel = endTime;
-                                } else {
-                                    // Nepriradený segment – VŽDY použi computeProvisionalSegmentRange
-                                    const provisional = computeProvisionalSegmentRange(t);
-                                    if (provisional) {
-                                        const startFmt = formatTsLocal(provisional.startTs);
-                                        const endFmt = formatTsLocal(provisional.endTs);
+                                }
+                            
+                                // 2) Fallback: reálny čas segmentu z parenta / provizórny výpočet
+                                if (!timeLabel) {
+                                    const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
+                                    let parentSeg = null;
+                                    if (parentRec && Array.isArray(parentRec.segments)) {
+                                        const idx = findSegmentIndex(parentRec.segments, t.fromId, t.toId);
+                                        if (idx !== -1) parentSeg = parentRec.segments[idx];
+                                    }
+                                    const hasRealBusTime =
+                                        parentSeg &&
+                                        parentSeg.busId &&
+                                        parentSeg.boardingRowId &&
+                                        parentSeg.alightingRowId &&
+                                        parentSeg.startTs != null &&
+                                        parentSeg.endTs != null &&
+                                        parentSeg.endTs > parentSeg.startTs;
+                            
+                                    if (hasRealBusTime) {
+                                        const startFmt = formatTsLocal(parentSeg.startTs);
+                                        const endFmt = formatTsLocal(parentSeg.endTs);
                                         const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
                                         const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
                                         if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
                                         else if (startTime) timeLabel = startTime;
                                         else if (endTime) timeLabel = endTime;
+                                    } else {
+                                        const provisional = computeProvisionalSegmentRange(t);
+                                        if (provisional) {
+                                            const startFmt = formatTsLocal(provisional.startTs);
+                                            const endFmt = formatTsLocal(provisional.endTs);
+                                            const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
+                                            const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
+                                            if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
+                                            else if (startTime) timeLabel = startTime;
+                                            else if (endTime) timeLabel = endTime;
+                                        }
                                     }
                                 }
                             } else {
@@ -11647,14 +11670,12 @@ const TransportApp = ({ userProfileData }) => {
                     const tr = editingTransfer;
                     const parentKeyForTotal = tr._parentKey || tr.key;
                     const parentRecForTotal = savedTransfersRef.current.find((s) => s.key === parentKeyForTotal);
-        
+                    
                     let totalWhenLabel = null;
-        
-                    if (parentRecForTotal && parentRecForTotal.when && String(parentRecForTotal.when).trim() !== '') {
-                        totalWhenLabel = String(parentRecForTotal.when).trim();
-                    }
-        
-                    if (!totalWhenLabel && parentRecForTotal && Array.isArray(parentRecForTotal.segments) && parentRecForTotal.segments.length > 0) {
+                    
+                    // 1) Priorita: prepočítaj celkový rozsah z reálnych segmentov (startTs/endTs)
+                    //    – zahŕňa aj priradené bus-segmenty aj nepriradené, ktoré už majú čas
+                    if (parentRecForTotal && Array.isArray(parentRecForTotal.segments) && parentRecForTotal.segments.length > 0) {
                         let earliestStart = null;
                         let latestEnd = null;
                         parentRecForTotal.segments.forEach((s) => {
@@ -11665,7 +11686,9 @@ const TransportApp = ({ userProfileData }) => {
                                 latestEnd = s.endTs;
                             }
                         });
-                        if (earliestStart != null && latestEnd != null) {
+                        if (earliestStart != null && latestEnd != null && latestEnd > earliestStart) {
+                            totalWhenLabel = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                        } else if (earliestStart != null && latestEnd != null) {
                             totalWhenLabel = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
                         } else if (earliestStart != null) {
                             totalWhenLabel = formatTsLocal(earliestStart);
@@ -11673,11 +11696,18 @@ const TransportApp = ({ userProfileData }) => {
                             totalWhenLabel = formatTsLocal(latestEnd);
                         }
                     }
-        
+                    
+                    // 2) Fallback: parent.when (môže byť staršia hodnota z DB – len prvý segment)
+                    if (!totalWhenLabel && parentRecForTotal && parentRecForTotal.when && String(parentRecForTotal.when).trim() !== '') {
+                        totalWhenLabel = String(parentRecForTotal.when).trim();
+                    }
+                    
+                    // 3) Fallback: tr.when
                     if (!totalWhenLabel && tr.when && String(tr.when).trim() !== '') {
                         totalWhenLabel = String(tr.when).trim();
                     }
-        
+                    
+                    // 4) Fallback: tr.segments (ak by parent nemal segments)
                     if (!totalWhenLabel && Array.isArray(tr.segments) && tr.segments.length > 0) {
                         let earliestStart = null;
                         let latestEnd = null;
@@ -11697,7 +11727,8 @@ const TransportApp = ({ userProfileData }) => {
                             totalWhenLabel = formatTsLocal(latestEnd);
                         }
                     }
-        
+                    
+                    // 5) Fallback: provizórny výpočet
                     if (!totalWhenLabel) {
                         const provisionalForTotal = computeProvisionalSegmentRange({
                             ...tr,
@@ -11706,8 +11737,7 @@ const TransportApp = ({ userProfileData }) => {
                         if (provisionalForTotal) {
                             totalWhenLabel = `${formatTsLocal(provisionalForTotal.startTs)} – ${formatTsLocal(provisionalForTotal.endTs)}`;
                         }
-                    }
-        
+                    }        
                     const counts = getTeamCountsForTransfer(tr.category, tr.teamName);
                     let membersCount = null;
                     let membersTitle = '';
