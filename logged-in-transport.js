@@ -6705,7 +6705,7 @@ const TransportApp = ({ userProfileData }) => {
             if (best) dedupedResults.push(best);
         });
 
-        const MAX_TRIP_DURATION_MINUTES = 120;
+        const MAX_TRIP_DURATION_MINUTES = 60;
         const filteredByDuration = dedupedResults.filter((r) => {
             const duration = computeTripDurationMinutes(r.boardingRow, r.alightingRow);
             if (duration == null) return true;
