@@ -102,7 +102,8 @@ const resolveTeamName = (identifier) => {
             if (resolved && typeof resolved === 'string' && resolved.trim() !== '') {
                 return resolved;
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+        }
     }
     return identifier;
 };
@@ -8913,7 +8914,8 @@ const TransportApp = ({ userProfileData }) => {
                                 : '';
                             timeLabel = endTime ? `${startTime} – ${endTime}` : startTime;
                         }
-                    } catch (e) { /* ignore */ }
+                    } catch (e) { 
+                    }
                     if (!timeLabel) timeLabel = 'nepriradený';
                 }
                 let dayKey = t.dayKey || null;
@@ -11272,14 +11274,10 @@ const TransportApp = ({ userProfileData }) => {
                             const idx = findSegmentIndex(parentRec.segments, segFromId, segToId);
                             return idx !== -1 ? parentRec.segments[idx] : null;
                         })();
-
-                        // 1) Reálne časy z busu (segment je priradený)
                         if (parentSeg && parentSeg.busId && parentSeg.boardingRowId && parentSeg.alightingRowId
                             && parentSeg.startTs != null && parentSeg.endTs != null && parentSeg.endTs > parentSeg.startTs) {
                             displayWhen = `${formatTsLocal(parentSeg.startTs)} – ${formatTsLocal(parentSeg.endTs)}`;
                         }
-
-                        // 2) Provizórny interval (segment nie je priradený)
                         if (!displayWhen) {
                             const provisional = computeProvisionalSegmentRange(tr);
                             if (provisional) {
@@ -11287,13 +11285,9 @@ const TransportApp = ({ userProfileData }) => {
                             }
                         }
                     } else {
-                        // ============================================================
-                        // Pre NESEGMENTOVÉ presuny zostáva pôvodná logika.
-                        // ============================================================
                         if (tr.when && String(tr.when).trim() !== '') {
                             displayWhen = tr.when;
                         }
-
                         if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
                             let earliestStart = null;
                             let latestEnd = null;
@@ -11313,15 +11307,13 @@ const TransportApp = ({ userProfileData }) => {
                                 displayWhen = formatTsLocal(latestEnd);
                             }
                         }
-
                         if (!displayWhen) {
                             const provisional = computeProvisionalSegmentRange(tr);
                             if (provisional) {
                                 displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
                             }
                         }
-                    }
-                
+                    }                
                     const counts = getTeamCountsForTransfer(tr.category, tr.teamName);
                     let membersCount = null;
                     let membersTitle = '';
@@ -11339,12 +11331,9 @@ const TransportApp = ({ userProfileData }) => {
                             membersCount = avg;
                             membersTitle = `Priemer členov tímu v kategórii ${tr.category} (zaokrúhlené nahor)`;
                         }
-                    }
-                
+                    }                
                     const transportColor = getTransportColorForCategory(tr.category);
-                    const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
-                
-                    // Rovnaký štýl ako box vo vygenerovaných presunoch / v "Priradiť presun k autobusu"
+                    const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;                
                     return React.createElement(
                         'div',
                         {
@@ -11355,7 +11344,6 @@ const TransportApp = ({ userProfileData }) => {
                                 ...(boxBg ? { backgroundColor: boxBg } : { backgroundColor: '#f5f3ff' }),
                             },
                         },
-                        // 1. riadok – tím • počet
                         React.createElement(
                             'div',
                             { className: 'flex flex-wrap items-center gap-x-2 gap-y-1' },
@@ -11380,13 +11368,11 @@ const TransportApp = ({ userProfileData }) => {
                                     `• ${membersCount} členov`
                                 )
                         ),
-                        // 2. riadok – trasa
                         React.createElement(
                             'span',
                             { className: 'text-sm text-gray-900 font-medium' },
                             `${tr.fromLocation || '?'} → ${tr.toLocation || '?'}`
                         ),
-                        // 3. riadok – dátum a čas
                         displayWhen &&
                             React.createElement(
                                 'span',
@@ -11395,24 +11381,17 @@ const TransportApp = ({ userProfileData }) => {
                             )
                     );
                 })(),
-                // Možnosti
                 React.createElement(
                     'div',
                     { className: 'space-y-2 mb-4' },
-                    // 1) Pridať medzizastávku
                     React.createElement(
                         'button',
                         {
                             type: 'button',
                             onClick: () => {
-                                const t = transferActionModal.transfer;
-                                
-                                // ============================================================
-                                // NOVÉ: Ak je to segment, pracuj s parent záznamom.
-                                // ============================================================
+                                const t = transferActionModal.transfer;                                
                                 let transferToEdit = t;
-                                let existingStops = [];
-    
+                                let existingStops = [];    
                                 if (t._parentKey) {
                                     const parent = savedTransfers.find((s) => s.key === t._parentKey);
                                     if (parent) {
@@ -11426,8 +11405,7 @@ const TransportApp = ({ userProfileData }) => {
                                     }
                                 } else if (Array.isArray(t.intermediateStops)) {
                                     existingStops = [...t.intermediateStops];
-                                }
-    
+                                }    
                                 setEditingTransfer(transferToEdit);
                                 setEditingTransferStops(existingStops);
                                 setTransferActionModal(null);
@@ -11469,7 +11447,6 @@ const TransportApp = ({ userProfileData }) => {
                             React.createElement('div', { className: 'text-xs text-gray-500' }, 'Vytvoriť riadok v plánovaní autobusu')
                         )
                     ),
-                    // 3) Nastaviť presun peši
                     React.createElement(
                         'button',
                         {
@@ -11486,7 +11463,6 @@ const TransportApp = ({ userProfileData }) => {
                         )
                     )
                 ),
-                // Zatvoriť
                 React.createElement(
                     'div',
                     { className: 'flex justify-end' },
@@ -11503,20 +11479,8 @@ const TransportApp = ({ userProfileData }) => {
             )
         ),
         showAssignBusModal && assignBusTransfer && (() => {
-            // ============================================================
-            // NOVÉ: Vždy obnov assignBusTransfer z aktuálneho savedTransfers.
-            //
-            // DÔVOD: assignBusTransfer je snapshot z okamihu otvorenia modálneho
-            // okna. Ak sa medzitým zmenil parent (napr. si označil predchádzajúci
-            // segment ako peši), assignBusTransfer neobsahuje aktuálne
-            // isWalking: true pre peší segment.
-            //
-            // Preto pri každom renderi modálneho okna obnovíme `currentTransfer`
-            // z aktuálneho savedTransfers a použijeme ho všade.
-            // ============================================================
             const parentKey = assignBusTransfer._parentKey || assignBusTransfer.key;
-            const currentParent = savedTransfers.find((s) => s.key === parentKey);
-        
+            const currentParent = savedTransfers.find((s) => s.key === parentKey);        
             const currentTransfer = (() => {
                 if (!currentParent) return assignBusTransfer;
                 if (assignBusTransfer._parentKey) {
@@ -11536,8 +11500,7 @@ const TransportApp = ({ userProfileData }) => {
                     ...assignBusTransfer,
                     segments: currentParent.segments,
                 };
-            })();
-        
+            })();        
             return React.createElement(
                 'div',
                 {
@@ -11553,9 +11516,6 @@ const TransportApp = ({ userProfileData }) => {
                         className: 'bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto',
                         onClick: (e) => e.stopPropagation()
                     },
-                    // ============================================================
-                    // HLAVIČKA
-                    // ============================================================
                     React.createElement(
                         'div',
                         { className: 'flex items-start gap-3 mb-4' },
@@ -11579,16 +11539,7 @@ const TransportApp = ({ userProfileData }) => {
                     ),
                     (() => {
                         const tr = currentTransfer;
-
-                        // ============================================================
-                        // NOVÉ: Pre segment (má `_parentKey`) zobraz čas PRIORITNE
-                        // zo segmentu v parent zázname (rovnaká logika ako v boxe
-                        // "Vygenerované presuny"). Tým sa zabezpečí, že sa v modálnom
-                        // okne nezobrazí pôvodný čas z busu (`tr.when`), ale
-                        // skutočný čas segmentu alebo provizórny interval.
-                        // ============================================================
                         let displayWhen = null;
-
                         if (tr._parentKey) {
                             const parentRec = savedTransfersRef.current.find((s) => s.key === tr._parentKey);
                             const segFromId = tr.fromId || null;
@@ -11600,14 +11551,10 @@ const TransportApp = ({ userProfileData }) => {
                                 const idx = findSegmentIndex(parentRec.segments, segFromId, segToId);
                                 return idx !== -1 ? parentRec.segments[idx] : null;
                             })();
-
-                            // 1) Reálne časy z busu (segment je priradený)
                             if (parentSeg && parentSeg.busId && parentSeg.boardingRowId && parentSeg.alightingRowId
                                 && parentSeg.startTs != null && parentSeg.endTs != null && parentSeg.endTs > parentSeg.startTs) {
                                 displayWhen = `${formatTsLocal(parentSeg.startTs)} – ${formatTsLocal(parentSeg.endTs)}`;
                             }
-
-                            // 2) Provizórny interval (segment nie je priradený)
                             if (!displayWhen) {
                                 const provisional = computeProvisionalSegmentRange(tr);
                                 if (provisional) {
@@ -11615,13 +11562,9 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                             }
                         } else {
-                            // ============================================================
-                            // Pre NESEGMENTOVÉ presuny zostáva pôvodná logika.
-                            // ============================================================
                             if (tr.when && String(tr.when).trim() !== '') {
                                 displayWhen = tr.when;
                             }
-
                             if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
                                 let earliestStart = null;
                                 let latestEnd = null;
@@ -11648,8 +11591,7 @@ const TransportApp = ({ userProfileData }) => {
                                     displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
                                 }
                             }
-                        }
-        
+                        }        
                         const counts = getTeamCountsForTransfer(tr.category, tr.teamName);
                         let membersCount = null;
                         let membersTitle = '';
@@ -11667,11 +11609,9 @@ const TransportApp = ({ userProfileData }) => {
                                 membersCount = avg;
                                 membersTitle = `Priemer členov tímu v kategórii ${tr.category} (zaokrúhlené nahor)`;
                             }
-                        }
-        
+                        }        
                         const transportColor = getTransportColorForCategory(tr.category);
-                        const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
-        
+                        const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;        
                         return React.createElement(
                             'div',
                             {
@@ -11719,12 +11659,8 @@ const TransportApp = ({ userProfileData }) => {
                                 )
                         );
                     })(),
-                    // ============================================================
-                    // DYNAMICKÝ VÝPOČET ZOZNAMU AUTOBUSOV
-                    // ============================================================
                     (() => {
-                        const currentMatches = findMatchingBusRows(currentTransfer);
-        
+                        const currentMatches = findMatchingBusRows(currentTransfer);        
                         if (currentMatches.length === 0) {
                             return React.createElement(
                                 'div',
@@ -11741,8 +11677,7 @@ const TransportApp = ({ userProfileData }) => {
                                     )
                                 )
                             );
-                        }
-        
+                        }        
                         return React.createElement(
                             'div',
                             { className: 'mb-4' },
@@ -11758,16 +11693,12 @@ const TransportApp = ({ userProfileData }) => {
                                     if (!m || !m.bus || !m.trip) {
                                         console.warn('[TRANSPORT] Neplatný výsledok v currentMatches:', m);
                                         return null;
-                                    }
-        
+                                    }        
                                     const key = `${m.bus.id}|${m.boardingRow?.id || ''}|${m.alightingRow?.id || ''}|${m.side}`;
-                                    const isSelected = assignBusSelectedKey === key;
-        
+                                    const isSelected = assignBusSelectedKey === key;        
                                     const hasBoarding = !!m.boardingRow;
-                                    const hasAlighting = !!m.alightingRow;
-        
-                                    const teamKey = `${currentTransfer.teamName}|${currentTransfer.category || ''}`;
-        
+                                    const hasAlighting = !!m.alightingRow;        
+                                    const teamKey = `${currentTransfer.teamName}|${currentTransfer.category || ''}`;        
                                     return React.createElement(
                                         'li',
                                         { key },
@@ -11812,12 +11743,7 @@ const TransportApp = ({ userProfileData }) => {
                                                         const dayKey = m.trip?.dayKey;
                                                         const boardingRow = m.boardingRow;
                                                         const alightingRow = m.alightingRow;
-                                                        if (!busId || !dayKey || !boardingRow || !alightingRow) return null;
-                                                
-                                                        // ============================================================
-                                                        // Dĺžka jazdy – počíta sa VŽDY z boardingRow.timeFrom → alightingRow.timeTo
-                                                        // (nezávisle od počtu členov v autobuse).
-                                                        // ============================================================
+                                                        if (!busId || !dayKey || !boardingRow || !alightingRow) return null;                                                
                                                         const computeTripDuration = () => {
                                                             const timeRe = /^\d{1,2}:\d{2}$/;
                                                             const boardStr = String(m.boardingTime || '').trim();
@@ -11828,18 +11754,12 @@ const TransportApp = ({ userProfileData }) => {
                                                             let diff = (ah * 60 + am) - (bh * 60 + bm);
                                                             if (diff < 0) diff += 24 * 60;
                                                             return diff > 0 ? diff : null;
-                                                        };
-                                                
-                                                        const tripDurationMin = computeTripDuration();
-                                                
-                                                        // ============================================================
-                                                        // Počet členov v autobuse – voliteľný údaj.
-                                                        // ============================================================
+                                                        };                                                
+                                                        const tripDurationMin = computeTripDuration();                                                
                                                         const rowsKey = `${busId}|${dayKey}`;
                                                         const allRows = (busRows[rowsKey] || [])
                                                             .slice()
-                                                            .sort((a, b) => (a.order || 0) - (b.order || 0));
-                                                
+                                                            .sort((a, b) => (a.order || 0) - (b.order || 0));                                                
                                                         const boardIdx = allRows.findIndex((r) => r.id === boardingRow.id);
                                                         const alightIdx = allRows.findIndex((r) => r.id === alightingRow.id);
                                                         let total = 0;
@@ -11857,16 +11777,10 @@ const TransportApp = ({ userProfileData }) => {
                                                                 (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
                                                             }
                                                             total = [...inBus].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
-                                                        }
-                                                
-                                                        // ============================================================
-                                                        // Render: dĺžka jazdy sa zobrazí VŽDY (ak je vypočítateľná),
-                                                        // počet členov len ak je > 0.
-                                                        // ============================================================
+                                                        }                                                
                                                         return React.createElement(
                                                             React.Fragment,
                                                             null,
-                                                            // 1) Počet členov v autobuse (len ak > 0)
                                                             total > 0 &&
                                                                 React.createElement(
                                                                     'span',
@@ -11877,7 +11791,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                     React.createElement('i', { className: 'fa-solid fa-users' }),
                                                                     `${total}`
                                                                 ),
-                                                            // 2) Dĺžka jazdy (trvanie) – vždy, ak je vypočítateľná
                                                             tripDurationMin != null &&
                                                                 React.createElement(
                                                                     'span',
@@ -11913,11 +11826,7 @@ const TransportApp = ({ userProfileData }) => {
                                 }).filter(Boolean)
                             )
                         );
-                    })(),
-        
-                    // ============================================================
-                    // TLAČIDLÁ – used currentTransfer
-                    // ============================================================
+                    })(),        
                     React.createElement(
                         'div',
                         { className: 'flex justify-end gap-3' },
@@ -11935,29 +11844,15 @@ const TransportApp = ({ userProfileData }) => {
                             'Zrušiť'
                         ),
                         (() => {
-                            // ============================================================
-                            // Zisti, či má byť tlačidlo zablokované.
-                            //
-                            // POZOR: Zámerne TU NIE JE kontrola
-                            // `!arePreviousSegmentsResolved(currentTransfer)`.
-                            // Tlačidlo „Priradiť" sa nemá blokovať kvôli
-                            // nevyriešeným predchádzajúcim segmentom – tie
-                            // sa dajú priradiť neskôr.
-                            // ============================================================
                             const isBlocked =
                                 assignBusSaving ||
                                 !assignBusSelectedKey ||
-                                assignBusMatches.length === 0;
-                        
+                                assignBusMatches.length === 0;                        
                             const baseCls =
                                 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2';
-                            // Odblokované: oranžová výplň, biely text
                             const enabledCls = 'bg-amber-600 text-white hover:bg-amber-700';
-                            // Zablokované: biele pozadie, oranžový text, oranžové rámovanie,
-                            // cursor: not-allowed (zakázaná myš)
                             const blockedCls =
-                                'bg-white border-2 border-amber-600 text-amber-600 cursor-not-allowed';
-                        
+                                'bg-white border-2 border-amber-600 text-amber-600 cursor-not-allowed';                        
                             return React.createElement(
                                 'button',
                                 {
@@ -11977,9 +11872,6 @@ const TransportApp = ({ userProfileData }) => {
                 )
             );
         })() || null,
-        // ============================================================
-        // MODÁLNE OKNO – Odstrániť príznak "peši"
-        // ============================================================
         removeWalkingModal && React.createElement(
             'div',
             {
@@ -12044,9 +11936,6 @@ const TransportApp = ({ userProfileData }) => {
                 )
             )
         ),
-        // ============================================================
-        // MODÁLNE OKNO – Potvrdenie odstránenia konkrétneho presunu
-        // ============================================================
         deleteTransferModal && React.createElement(
             'div',
             {
@@ -12111,9 +12000,6 @@ const TransportApp = ({ userProfileData }) => {
                 )
             )
         ),
-        // ============================================================
-        // MODÁLNE OKNO – Potvrdenie regenerácie presunov pre kategóriu
-        // ============================================================
         regenTransfersModal && React.createElement(
             'div',
             {
@@ -12194,9 +12080,6 @@ const TransportApp = ({ userProfileData }) => {
                 )
             )
         ),
-        // ============================================================
-        // NOVÉ: MODÁLNE OKNO – Úprava skratky tímu
-        // ============================================================
         shortcutEditModal && React.createElement(
             'div',
             {
@@ -12245,33 +12128,14 @@ const TransportApp = ({ userProfileData }) => {
                         const rawValue = input.value;
                         const v = rawValue.toLocaleUpperCase('sk-SK');
                         setShortcutEditModal((prev) => prev ? { ...prev, shortcut: v } : prev);
-        
-                        // ============================================================
-                        // NOVÉ: Po zmene hodnoty (uppercase) obnov kurzor na správnu
-                        // pozíciu – tesne za práve zadaným znakom, NIE na koniec textu.
-                        //
-                        // Dôvod: React pri kontrolovanom inpute po setState nastaví
-                        // kurzor na koniec. Ak používateľ píše do stredu textu, kurzor
-                        // "skočí" na koniec. Preto po renderi explicitne nastavíme
-                        // selectionStart/selectionEnd na pôvodnú pozíciu.
-                        //
-                        // Ak sa dĺžka textu zmenila (napr. kvôli uppercase pre slovenské
-                        // znaky), upravíme pozíciu o rozdiel dĺžok.
-                        // ============================================================
                         const lengthDelta = v.length - rawValue.length;
                         const newPos = Math.max(0, selectionStart + lengthDelta);
                         requestAnimationFrame(() => {
                             try {
                                 input.setSelectionRange(newPos, newPos);
-                            } catch (err) { /* ignore */ }
+                            } catch (err) {
+                            }
                         });
-        
-                        // ============================================================
-                        // NOVÉ: Live kontrola konfliktu – hneď po zadaní znaku
-                        // over, či skratka neexistuje pre iný tím v tej istej
-                        // kategórii. Ak áno, nastav `shortcutConflict` a zobraz
-                        // chybovú hlášku pod inputom.
-                        // ============================================================
                         const trimmed = String(v || '').trim();
                         if (!trimmed) {
                             setShortcutConflict(null);
@@ -12283,7 +12147,7 @@ const TransportApp = ({ userProfileData }) => {
                         Object.entries(teamShortcuts || {}).forEach(([key, shortcutVal]) => {
                             const [kCat, kTeam] = String(key).split('|');
                             if (cleanCategory(kCat) !== cat) return;
-                            if (String(kTeam || '').trim() === currentTeam) return; // vlastná skratka
+                            if (String(kTeam || '').trim() === currentTeam) return;
                             const normalized = String(shortcutVal || '').trim().toLocaleUpperCase('sk-SK');
                             if (normalized && normalized === trimmed) {
                                 conflict = {
@@ -12297,9 +12161,6 @@ const TransportApp = ({ userProfileData }) => {
                     onKeyDown: async (e) => {
                         if (e.key === 'Enter') {
                             e.preventDefault();
-                            // ============================================================
-                            // NOVÉ: Ak existuje konflikt, Enter nesmie uložiť.
-                            // ============================================================
                             if (shortcutConflict) return;
                             const m = shortcutEditModal;
                             if (!m) return;
@@ -12310,10 +12171,6 @@ const TransportApp = ({ userProfileData }) => {
                     },
                     className: 'w-full px-3 py-2 text-sm border border-gray-300 rounded text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 mb-4'
                 }),
-                // ============================================================
-                // NOVÉ: Ak existuje konflikt, zobraz červenú chybovú hlášku
-                // pod inputom (nad pomocným textom).
-                // ============================================================
                 shortcutConflict &&
                     React.createElement(
                         'div',
@@ -12355,23 +12212,10 @@ const TransportApp = ({ userProfileData }) => {
                         'Zrušiť'
                     ),
                     (() => {
-                        // ============================================================
-                        // NOVÉ: Tlačidlo „Uložiť" je zablokované, ak:
-                        //  - beží ukladanie (shortcutSaving), alebo
-                        //  - existuje konflikt skratky (shortcutConflict).
-                        //
-                        // Vizuál zablokovaného tlačidla:
-                        //  - biele pozadie
-                        //  - oranžový obrys a oranžový text (rovnaká farba ako
-                        //    výplň odblokovaného tlačidla)
-                        //  - cursor: not-allowed (disabled myš)
-                        // ============================================================
-                        const isBlocked = shortcutSaving || !!shortcutConflict;
-        
+                        const isBlocked = shortcutSaving || !!shortcutConflict;        
                         const baseCls = 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2';
                         const enabledCls = 'bg-orange-600 text-white hover:bg-orange-700';
-                        const blockedCls = 'bg-white border-2 border-orange-600 text-orange-600 cursor-not-allowed';
-        
+                        const blockedCls = 'bg-white border-2 border-orange-600 text-orange-600 cursor-not-allowed';        
                         return React.createElement(
                             'button',
                             {
@@ -12396,9 +12240,6 @@ const TransportApp = ({ userProfileData }) => {
                 )
             )
         ),
-        // ============================================================
-        // NOVÉ: MODÁLNE OKNO – Potvrdenie zmazania skratky tímu
-        // ============================================================
         deleteShortcutModal && React.createElement(
             'div',
             {
@@ -12487,19 +12328,15 @@ const TransportApp = ({ userProfileData }) => {
         )
     );
 };
-
 let isEmailSyncListenerSetup = false;
-
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
-
     if (userProfileData) {
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
                     try {
-                        // E-MAIL SYNCHRONIZUJEME DO usersprivate, NIE DO users
                         const userPrivateRef = doc(window.db, 'usersprivate', user.uid);
                         const privateSnap = await getDoc(userPrivateRef);
                         if (privateSnap.exists()) {
@@ -12515,7 +12352,6 @@ const handleDataUpdateAndRender = (event) => {
                                 window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná v usersprivate.', 'success');
                             }
                         } else {
-                            // Ak usersprivate dokument neexistuje, vytvoríme ho s e-mailom
                             await setDoc(userPrivateRef, { email: user.email }, { merge: true });
                         }
                     } catch (error) {
@@ -12525,7 +12361,6 @@ const handleDataUpdateAndRender = (event) => {
             });
             isEmailSyncListenerSetup = true;
         }
-
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(TransportApp, { userProfileData }));
@@ -12543,65 +12378,48 @@ const handleDataUpdateAndRender = (event) => {
         }
     }
 };
-
 window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName, visitedGroups = new Set()) => {
     if (!window.db) {
-        console.error('[TRANSPORT] Firebase nie je inicializovaný (window.db chýba).');
         return;
     }
     if (!categoryName || !groupName) {
-        console.error('[TRANSPORT] Zadajte dva parametre: názov kategórie a názov skupiny.');
-        console.error('  Príklad: listAccommodationsByCategoryAndGroup("U12 D", "skupina F")');
         return;
     }
-
     const targetCategory = cleanCategory(categoryName);
     const targetGroup = String(groupName).trim();
-
-    // Ak už bola táto skupina navštívená, vráť prázdne (predídeme cyklu)
     const groupKey = `${targetCategory}|${targetGroup}`;
     if (visitedGroups.has(groupKey)) {
-        console.log(`[TRANSPORT] Skupina "${targetGroup}" už bola navštívená – preskakujem.`);
         return [];
     }
     visitedGroups.add(groupKey);
-
     const targetGroupLastChar = targetGroup.replace(/\s+/g, '').slice(-1).toUpperCase();
-
     const nameEndsWithTargetChar = (teamName) => {
         if (!targetGroupLastChar) return false;
         const match = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
         if (!match) return false;
         return match[1].toUpperCase() === targetGroupLastChar;
     };
-
     try {
         const usersRef = collection(window.db, 'users');
         const usersSnap = await getDocs(usersRef);
-
         const teamsByGroupName = {};
         const accommodationByTeamName = {};
-
         usersSnap.forEach((userDoc) => {
             const userData = userDoc.data() || {};
             const teams = userData.teams;
             if (!teams || typeof teams !== 'object') return;
-
             Object.entries(teams).forEach(([category, teamArray]) => {
                 if (!Array.isArray(teamArray)) return;
                 if (cleanCategory(category) !== targetCategory) return;
-
                 teamArray.forEach((team) => {
                     if (!team || !team.teamName) return;
                     const trimmedName = team.teamName.trim();
                     const teamGroup = team.groupName ? String(team.groupName).trim() : null;
                     const accomName = team.accommodation?.name?.trim?.() || '';
-
                     if (teamGroup) {
                         if (!teamsByGroupName[teamGroup]) teamsByGroupName[teamGroup] = new Set();
                         teamsByGroupName[teamGroup].add(trimmedName);
                     }
-
                     if (accomName) {
                         if (!accommodationByTeamName[trimmedName]) {
                             accommodationByTeamName[trimmedName] = new Set();
@@ -12611,37 +12429,23 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName, vi
                 });
             });
         });
-
-        // 1) PRIAMA ZHODA
         if (teamsByGroupName[targetGroup] && teamsByGroupName[targetGroup].size > 0) {
             const directAccommodations = new Set();
             teamsByGroupName[targetGroup].forEach((teamName) => {
                 const accoms = accommodationByTeamName[teamName];
                 if (accoms) accoms.forEach((a) => directAccommodations.add(a));
             });
-
             const sorted = [...directAccommodations].sort((a, b) =>
                 a.localeCompare(b, 'sk', { sensitivity: 'base' })
             );
-
-            console.log(`[TRANSPORT] ===== UBYTOVNE PRE KATEGÓRIU ${targetCategory} A SKUPINU ${targetGroup} =====`);
             if (sorted.length === 0) {
-                console.log('[TRANSPORT] Žiadne priradené ubytovne sa nenašli.');
             } else {
                 sorted.forEach((name) => console.log(`   • ${name}`));
             }
-            console.log(`[TRANSPORT] Spolu: ${sorted.length} jedinečných ubytovní.`);
-            console.log('[TRANSPORT] =========================================================');
-
             return sorted;
         }
-
-        // 2) FALLBACK
-        console.log(`[TRANSPORT] Skupina "${targetGroup}" sa nenašla v users – spúšťam fallback cez matches.`);
-
         const matchesRef = collection(window.db, 'matches');
         const matchesSnap = await getDocs(matchesRef);
-
         const allCategoryMatches = [];
         matchesSnap.forEach((docSnap) => {
             const data = docSnap.data() || {};
@@ -12649,24 +12453,18 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName, vi
             if (matchCategory !== targetCategory) return;
             allCategoryMatches.push(data);
         });
-
         const teamsInTargetGroup = new Set();
-
         allCategoryMatches.forEach((data) => {
             const matchGroupName = data.groupName ? String(data.groupName).trim() : null;
-
             const candidates = [];
             if (data.homeTeamIdentifier) candidates.push(data.homeTeamIdentifier);
             if (data.awayTeamIdentifier) candidates.push(data.awayTeamIdentifier);
-
             candidates.forEach((identifier) => {
                 const teamName = resolveTeamName(identifier);
                 if (!teamName || teamName === '---') return;
                 const trimmed = String(teamName).trim();
                 if (!trimmed) return;
-
                 if (nameEndsWithTargetChar(trimmed)) return;
-
                 const matchesGroupByField =
                     matchGroupName && matchGroupName === targetGroup;
                 if (matchesGroupByField) {
@@ -12674,12 +12472,6 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName, vi
                 }
             });
         });
-
-        console.log(
-            `[TRANSPORT] Fallback – tímy v skupine "${targetGroup}" (z matches, bez tímov končiacich na "${targetGroupLastChar}"):`,
-            [...teamsInTargetGroup]
-        );
-
         const findGroupsInUsersByChar = (char) => {
             const result = new Set();
             Object.keys(teamsByGroupName).forEach((gName) => {
@@ -12688,46 +12480,24 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName, vi
             });
             return result;
         };
-
         const fallbackAccommodations = new Set();
         const visitedChars = new Set();
-
-        // Priame ubytovne pre tímy v cieľovej skupine
         teamsInTargetGroup.forEach((teamName) => {
             const accoms = accommodationByTeamName[teamName];
             if (accoms) accoms.forEach((a) => fallbackAccommodations.add(a));
         });
-
-        console.log(
-            `[TRANSPORT] Fallback – priame ubytovne pre tímy v skupine "${targetGroup}":`,
-            [...fallbackAccommodations]
-        );
-
         const initialChars = new Set();
         teamsInTargetGroup.forEach((teamName) => {
             const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
             if (m) initialChars.add(m[1].toUpperCase());
         });
-
-        console.log(
-            `[TRANSPORT] Fallback – počiatočné písmená z tímov v skupine "${targetGroup}":`,
-            [...initialChars]
-        );
-
         const queue = [...initialChars];
-
         while (queue.length > 0) {
             const char = queue.shift();
             if (visitedChars.has(char)) continue;
             visitedChars.add(char);
-
-            // 1) Skús nájsť existujúce skupiny v users pre toto písmeno
             const groupsInUsers = findGroupsInUsersByChar(char);
             if (groupsInUsers.size > 0) {
-                console.log(
-                    `[TRANSPORT] Fallback – pre písmeno "${char}" existujú skupiny v users:`,
-                    [...groupsInUsers]
-                );
                 groupsInUsers.forEach((gName) => {
                     const teamsInGroup = teamsByGroupName[gName];
                     if (!teamsInGroup) return;
@@ -12738,14 +12508,7 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName, vi
                 });
                 continue;
             }
-
-            // 2) Ak neexistujú skupiny v users, rekurzívne zavolaj tú istú funkciu
-            //    pre skupinu zodpovedajúcu písmenu (napr. "D" → "skupina D")
             const derivedGroupName = `skupina ${char}`;
-            console.log(
-                `[TRANSPORT] Fallback – pre písmeno "${char}" neexistuje skupina v users, rekurzívne volám listAccommodationsByCategoryAndGroup("${targetCategory}", "${derivedGroupName}")`
-            );
-
             try {
                 const recursiveResult = await window.listAccommodationsByCategoryAndGroup(
                     targetCategory,
@@ -12756,35 +12519,21 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName, vi
                     recursiveResult.forEach((a) => fallbackAccommodations.add(a));
                 }
             } catch (recursiveErr) {
-                console.error(
-                    `[TRANSPORT] Fallback – chyba pri rekurzívnom volaní pre "${derivedGroupName}":`,
-                    recursiveErr
-                );
             }
         }
-
         const sorted = [...fallbackAccommodations].sort((a, b) =>
             a.localeCompare(b, 'sk', { sensitivity: 'base' })
         );
-
-        console.log(`[TRANSPORT] ===== UBYTOVNE PRE KATEGÓRIU ${targetCategory} A SKUPINU ${targetGroup} (fallback) =====`);
         if (sorted.length === 0) {
-            console.log('[TRANSPORT] Žiadne priradené ubytovne sa nenašli (ani cez fallback).');
         } else {
             sorted.forEach((name) => console.log(`   • ${name}`));
         }
-        console.log(`[TRANSPORT] Spolu: ${sorted.length} jedinečných ubytovní.`);
-        console.log('[TRANSPORT] =========================================================');
-
         return sorted;
     } catch (err) {
-        console.error('[TRANSPORT] Chyba pri načítaní ubytovní pre kategóriu a skupinu:', err);
         return [];
     }
 };
-
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-
 if (window.globalUserProfileData) {
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
@@ -12800,7 +12549,6 @@ if (window.globalUserProfileData) {
         );
     }
 }
-
 window.listTeamsByCategoryAndGroup = async (categoryName, groupName) => {
     if (!window.db) {
         console.error('[TRANSPORT] Firebase nie je inicializovaný (window.db chýba).');
@@ -12811,89 +12559,62 @@ window.listTeamsByCategoryAndGroup = async (categoryName, groupName) => {
         console.error('  Príklad: listTeamsByCategoryAndGroup("U12 D", "skupina D")');
         return;
     }
-
     const targetCategory = cleanCategory(categoryName);
     const targetGroup = String(groupName).trim();
-
     try {
-        // 1) Registrované tímy z users
         const usersRef = collection(window.db, 'users');
         const usersSnap = await getDocs(usersRef);
-
         const teamsSet = new Set();
-        const registeredTeamNames = new Set(); // pre rozlíšenie superstructure
-
+        const registeredTeamNames = new Set();
         usersSnap.forEach((userDoc) => {
             const userData = userDoc.data() || {};
             const teams = userData.teams;
             if (!teams || typeof teams !== 'object') return;
-
             Object.entries(teams).forEach(([category, teamArray]) => {
                 if (!Array.isArray(teamArray)) return;
                 if (cleanCategory(category) !== targetCategory) return;
-
                 teamArray.forEach((team) => {
                     if (!team || !team.teamName) return;
-
                     const teamGroup = team.groupName ? String(team.groupName).trim() : null;
                     if (!teamGroup || teamGroup !== targetGroup) return;
-
                     const trimmed = team.teamName.trim();
                     teamsSet.add(trimmed);
                     registeredTeamNames.add(trimmed);
                 });
             });
         });
-
-        // 2) Superstructure tímy z matches – IBA ak majú v zápase groupName presne rovný zadanej skupine
         const matchesRef = collection(window.db, 'matches');
         const matchesSnap = await getDocs(matchesRef);
-
         matchesSnap.forEach((docSnap) => {
             const data = docSnap.data() || {};
             const matchCategory = cleanCategory(data.categoryName || data.categoryId || '');
             if (matchCategory !== targetCategory) return;
-
             const matchGroupName = data.groupName ? String(data.groupName).trim() : null;
             if (!matchGroupName || matchGroupName !== targetGroup) return;
-
             const candidates = [];
             if (data.homeTeamIdentifier) candidates.push(data.homeTeamIdentifier);
             if (data.awayTeamIdentifier) candidates.push(data.awayTeamIdentifier);
-
             candidates.forEach((identifier) => {
                 const teamName = resolveTeamName(identifier);
                 if (!teamName || teamName === '---') return;
                 const trimmed = String(teamName).trim();
                 if (!trimmed) return;
-
-                // Ak je to registrovaný tím, už je v sete
                 if (registeredTeamNames.has(trimmed)) return;
-
                 teamsSet.add(trimmed);
             });
         });
-
         const sortedTeams = [...teamsSet].sort((a, b) =>
             a.localeCompare(b, 'sk', { sensitivity: 'base' })
         );
-
-        console.log(`[TRANSPORT] ===== TÍMY PRE KATEGÓRIU ${targetCategory} A SKUPINU ${targetGroup} =====`);
         if (sortedTeams.length === 0) {
-            console.log('[TRANSPORT] Žiadne tímy sa nenašli.');
         } else {
             sortedTeams.forEach((name) => {
                 const isRegistered = registeredTeamNames.has(name);
                 const tag = isRegistered ? '' : ' [superstructure]';
-                console.log(`   • ${name}${tag}`);
             });
         }
-        console.log(`[TRANSPORT] Spolu: ${sortedTeams.length} tímov.`);
-        console.log('[TRANSPORT] =========================================================');
-
         return sortedTeams;
     } catch (err) {
-        console.error('[TRANSPORT] Chyba pri načítaní tímov pre kategóriu a skupinu:', err);
         return [];
     }
 };
