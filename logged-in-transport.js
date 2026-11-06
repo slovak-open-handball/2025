@@ -5028,17 +5028,11 @@ const TransportApp = ({ userProfileData }) => {
         return `${teamName}`;
     };
 
-    const getTeamsInBusAfterRow = (busId, dayKey, rowId) => {
-        const rowsKey = `${busId}|${dayKey}`;
-        const allRows = (busRows[rowsKey] || [])
-            .slice()
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
-    
-        const currentRow = allRows.find((r) => r.id === rowId);
-        if (!currentRow) return [];
-    
-        const currentOrder = parseOrderFromRowId(currentRow.rowId);
-        if (currentOrder == null) return [];
+    const getTeamMembersInBusBetween = (busId, dayKey, boardingOrderInclusive, alightingOrderExclusive) => {
+        if (!busId || !dayKey) return { teams: [], total: 0 };
+        if (boardingOrderInclusive == null || alightingOrderExclusive == null) {
+            return { teams: [], total: 0 };
+        }
     
         const inBus = new Set();
     
@@ -5054,26 +5048,14 @@ const TransportApp = ({ userProfileData }) => {
                 const info = (teamsLookupRef.current || {})[lookupKey];
                 if (info && info.teamName) effectiveTeamName = info.teamName;
             }
-    
             if (!effectiveTeamName) {
-                // Skús fallback z parent.key (formát: "kat||tím||čas||text")
                 const parts = String(parent.key || '').split('||');
                 if (parts.length >= 2) {
                     const keyTeamName = String(parts[1] || '').trim();
                     if (keyTeamName) effectiveTeamName = keyTeamName;
                 }
             }
-    
-            if (!effectiveTeamName) {
-                console.warn('[TRANSPORT][getTeamsInBusAfterRow] CHÝBA effectiveTeamName pre parent:', {
-                    parentKey: parent.key,
-                    teamUid: parent.teamUid,
-                    teamIndex: parent.teamIndex,
-                    category: effectiveCategory,
-                    dayKey: parent.dayKey,
-                });
-                return;
-            }
+            if (!effectiveTeamName) return;
     
             (parent.segments || []).forEach((seg) => {
                 if (seg.busId !== busId) return;
@@ -5081,28 +5063,14 @@ const TransportApp = ({ userProfileData }) => {
     
                 const bOrder = parseOrderFromRowId(seg.boardingRowId);
                 const aOrder = parseOrderFromRowId(seg.alightingRowId);
-                
-                if (bOrder == null || aOrder == null) {
-                    console.warn('[TRANSPORT][getTeamsInBusAfterRow] CHÝBA bOrder/aOrder:', {
-                        parentKey: parent.key,
-                        teamName: effectiveTeamName,
-                        segFrom: seg.fromId,
-                        segTo: seg.toId,
-                        boardingRowId: seg.boardingRowId,
-                        alightingRowId: seg.alightingRowId,
-                    });
-                    return;
-                }
+                if (bOrder == null || aOrder == null) return;
     
-                // OPRAVA: Ak tím nastúpi a vystúpi v tom istom riadku, 
-                // považujeme ho za "v autobuse" počas tohto riadku
-                // (napr. prestup na tej istej zastávke)
+                // Ak nastúpi aj vystúpi v tom istom riadku, počítame ho len pre ten riadok
                 let isInBus = false;
                 if (bOrder === aOrder) {
-                    // Tím nastúpi aj vystúpi v tom istom riadku – je v autobuse počas tohto riadku
-                    isInBus = (currentOrder === bOrder);
+                    isInBus = (boardingOrderInclusive === bOrder && alightingOrderExclusive === aOrder);
                 } else {
-                    isInBus = (bOrder <= currentOrder && currentOrder < aOrder);
+                    isInBus = (bOrder <= boardingOrderInclusive && boardingOrderInclusive < aOrder);
                 }
     
                 if (isInBus) {
@@ -5111,22 +5079,38 @@ const TransportApp = ({ userProfileData }) => {
             });
         });
     
-        const result = [...inBus].filter((teamKey) => {
+        const teams = [...inBus];
+        const total = teams.reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
+        return { teams, total };
+    };
+
+    const getTeamsInBusAfterRow = (busId, dayKey, rowId) => {
+        const rowsKey = `${busId}|${dayKey}`;
+        const allRows = (busRows[rowsKey] || [])
+            .slice()
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+        const currentRow = allRows.find((r) => r.id === rowId);
+        if (!currentRow) return [];
+
+        const currentOrder = parseOrderFromRowId(currentRow.rowId);
+        if (currentOrder == null) return [];
+
+        const { teams } = getTeamMembersInBusBetween(busId, dayKey, currentOrder, currentOrder);
+
+        const result = teams.filter((teamKey) => {
             if (!selectedCategoryFilter) return true;
             const parts = String(teamKey).split('|');
             const cat = cleanCategory(parts[1] || '');
             return cat === cleanCategory(selectedCategoryFilter);
         });
-    
+
         console.log('[TRANSPORT][getTeamsInBusAfterRow] RESULT', {
-            busId,
-            dayKey,
-            currentOrder,
-            rowId,
-            inBusArray: [...inBus],
+            busId, dayKey, currentOrder, rowId,
+            teamsInBus: teams,
             resultArray: result,
         });
-    
+
         return result;
     };
 
@@ -12251,7 +12235,8 @@ const TransportApp = ({ userProfileData }) => {
                                                         const dayKey = m.trip?.dayKey;
                                                         const boardingRow = m.boardingRow;
                                                         const alightingRow = m.alightingRow;
-                                                        if (!busId || !dayKey || !boardingRow || !alightingRow) return null;                                                
+                                                        if (!busId || !dayKey || !boardingRow || !alightingRow) return null;
+                                                
                                                         const computeTripDuration = () => {
                                                             const timeRe = /^\d{1,2}:\d{2}$/;
                                                             const boardStr = String(m.boardingTime || '').trim();
@@ -12262,30 +12247,22 @@ const TransportApp = ({ userProfileData }) => {
                                                             let diff = (ah * 60 + am) - (bh * 60 + bm);
                                                             if (diff < 0) diff += 24 * 60;
                                                             return diff > 0 ? diff : null;
-                                                        };                                                
-                                                        const tripDurationMin = computeTripDuration();                                                
-                                                        const rowsKey = `${busId}|${dayKey}`;
-                                                        const allRows = (busRows[rowsKey] || [])
-                                                            .slice()
-                                                            .sort((a, b) => (a.order || 0) - (b.order || 0));                                                
-                                                        const boardIdx = allRows.findIndex((r) => r.id === boardingRow.id);
-                                                        const alightIdx = allRows.findIndex((r) => r.id === alightingRow.id);
+                                                        };
+                                                
+                                                        const tripDurationMin = computeTripDuration();
+                                                
+                                                        // Počet členov v autobuse medzi nástupom a výstupom
+                                                        // (rovnaká logika ako v stĺpci "Počet" v riadku busu)
                                                         let total = 0;
-                                                        if (boardIdx !== -1 && alightIdx !== -1 && alightIdx >= boardIdx) {
-                                                            const inBus = new Set();
-                                                            for (let i = 0; i <= boardIdx; i++) {
-                                                                const r = allRows[i];
-                                                                (r.teamsIn || []).forEach((t) => inBus.add(String(t)));
-                                                                (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
+                                                        {
+                                                            const bOrder = parseOrderFromRowId(boardingRow.rowId);
+                                                            const aOrder = parseOrderFromRowId(alightingRow.rowId);
+                                                            if (bOrder != null && aOrder != null) {
+                                                                const calc = getTeamMembersInBusBetween(busId, dayKey, bOrder, aOrder);
+                                                                total = calc.total;
                                                             }
-                                                            (boardingRow.teamsIn || []).forEach((t) => inBus.add(String(t)));
-                                                            for (let i = boardIdx + 1; i < alightIdx; i++) {
-                                                                const r = allRows[i];
-                                                                (r.teamsIn || []).forEach((t) => inBus.add(String(t)));
-                                                                (r.teamsOut || []).forEach((t) => inBus.delete(String(t)));
-                                                            }
-                                                            total = [...inBus].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
-                                                        }                                                
+                                                        }
+                                                
                                                         return React.createElement(
                                                             React.Fragment,
                                                             null,
