@@ -6387,61 +6387,29 @@ const TransportApp = ({ userProfileData }) => {
         return new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
     };
 
-    const findMatchingBusRows = (transfer) => {
-
-        console.log('[TRANSPORT][findMatchingBusRows] TRANSFER DETAIL:', {
-            key: transfer.key,
-            _parentKey: transfer._parentKey,
-            teamName: transfer.teamName,
-            category: transfer.category,
-            when: transfer.when,
-            text: transfer.text,
-            fromId: transfer.fromId,
-            toId: transfer.toId,
-            fromIdResolved: resolvePlaceNameById(transfer.fromId),
-            toIdResolved: resolvePlaceNameById(transfer.toId),
-            fromLocation: transfer.fromLocation,
-            toLocation: transfer.toLocation,
-            dayKey: transfer.dayKey,
-        });
-        
-        if (!transfer) return [];
-    
+        const findMatchingBusRows = (transfer) => {
         if (!transfer) return [];
 
-        // === NOVÉ: Priorita 1 — použi "zvyšný čas na presun" (remainingMinutes / displayStartTs / displayEndTs),
-        // ktorý sa zobrazuje v modálnom okne. To je správny interval pre hľadanie autobusov,
-        // pretože vystihuje medzeru medzi priradenými bus-segmentami.
         let effectiveWhen = null;
         let trRange = null;
 
         const remainingRange = (() => {
-            // a) Ak transfer prišiel z renderSavedTransfers, má _displayStartTs/_displayEndTs
             const ds = transfer._displayStartTs;
             const de = transfer._displayEndTs;
             if (ds != null && de != null && de > ds) {
                 return { startTs: ds, endTs: de, source: 'displayStartTs/displayEndTs' };
             }
-
-            // b) Ak má transfer _remainingMinutes, dopočítaj interval z neho
-            //    (zvyšný čas začína od konca predchádzajúceho priradeného segmentu,
-            //    alebo od parent.when.startTs, ak predchádzajúci nie je)
             if (transfer._remainingMinutes != null && transfer._remainingMinutes > 0) {
                 const parentKey = transfer._parentKey || transfer.key;
                 const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
-
                 let startTs = null;
                 if (parentRec && Array.isArray(parentRec.segments)) {
-                    // Nájdi koniec predchádzajúceho priradeného segmentu (s reálnym časom)
                     const segIdx = findSegmentIndex(parentRec.segments, transfer.fromId, transfer.toId);
                     if (segIdx !== -1) {
                         for (let i = segIdx - 1; i >= 0; i--) {
                             const prev = parentRec.segments[i];
                             if (!prev) continue;
-                            if (prev.endTs != null) {
-                                startTs = prev.endTs;
-                                break;
-                            }
+                            if (prev.endTs != null) { startTs = prev.endTs; break; }
                         }
                     }
                 }
@@ -6454,35 +6422,23 @@ const TransportApp = ({ userProfileData }) => {
                     return { startTs, endTs, source: '_remainingMinutes' };
                 }
             }
-
             return null;
         })();
 
         if (remainingRange) {
             effectiveWhen = `${formatTsLocal(remainingRange.startTs)} – ${formatTsLocal(remainingRange.endTs)}`;
             trRange = { startTs: remainingRange.startTs, endTs: remainingRange.endTs };
-            console.log(
-                '%c[TRANSPORT][findMatchingBusRows] Použitý interval "zvyšný čas na presun":',
-                'color:#059669;font-weight:bold;',
-                { effectiveWhen, source: remainingRange.source }
-            );
         }
 
-        // === Priorita 2 — ak neexistuje remainingRange, použi pôvodnú logiku ===
         if (!trRange) {
             effectiveWhen = transfer.when;
-
             if (!effectiveWhen || String(effectiveWhen).trim() === '') {
                 const segs = Array.isArray(transfer.segments) ? transfer.segments : [];
                 let earliestStart = null;
                 let latestEnd = null;
                 segs.forEach((s) => {
-                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                        earliestStart = s.startTs;
-                    }
-                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                        latestEnd = s.endTs;
-                    }
+                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) earliestStart = s.startTs;
+                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) latestEnd = s.endTs;
                 });
                 if (earliestStart != null && latestEnd != null) {
                     effectiveWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
@@ -6492,15 +6448,12 @@ const TransportApp = ({ userProfileData }) => {
                     effectiveWhen = formatTsLocal(latestEnd);
                 }
             }
-
             if (!effectiveWhen || String(effectiveWhen).trim() === '') {
                 const provisional = computeProvisionalSegmentRange(transfer);
                 if (provisional) {
                     effectiveWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
-                    console.log('[TRANSPORT][findMatchingBusRows] Použitý provizórny interval:', effectiveWhen);
                 }
             }
-
             if (!effectiveWhen || String(effectiveWhen).trim() === '') {
                 const parentKey = transfer._parentKey || transfer.key;
                 if (parentKey) {
@@ -6510,38 +6463,77 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 }
             }
-
             trRange = parseTransferWhenToRange(effectiveWhen);
         }
-    
+
+        // NOVÉ: Ak trRange stále chýba, skús odvodiť z parent.when
+        if (!trRange) {
+            const parentKey = transfer._parentKey || transfer.key;
+            if (parentKey) {
+                const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
+                if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
+                    effectiveWhen = parentRec.when;
+                    trRange = parseTransferWhenToRange(effectiveWhen);
+                }
+            }
+        }
+
+        // NOVÉ: Ak stále chýba trRange, skús odvodiť z parent.segments (min startTs / max endTs)
+        if (!trRange) {
+            const parentKey = transfer._parentKey || transfer.key;
+            if (parentKey) {
+                const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
+                if (parentRec && Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
+                    let earliestStart = null;
+                    let latestEnd = null;
+                    parentRec.segments.forEach((s) => {
+                        if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) earliestStart = s.startTs;
+                        if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) latestEnd = s.endTs;
+                    });
+                    if (earliestStart != null && latestEnd != null && latestEnd > earliestStart) {
+                        trRange = { startTs: earliestStart, endTs: latestEnd };
+                        effectiveWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                    } else if (earliestStart != null) {
+                        trRange = { startTs: earliestStart, endTs: earliestStart + 24 * 60 * 60 * 1000 };
+                        effectiveWhen = formatTsLocal(earliestStart);
+                    }
+                }
+            }
+        }
+
+        // NOVÉ: Ak stále chýba, použi dayKey ako fallback
+        if (!trRange && transfer.dayKey) {
+            const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(transfer.dayKey);
+            if (dm) {
+                const dayStart = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), 0, 0, 0, 0).getTime();
+                trRange = { startTs: dayStart, endTs: dayStart + 24 * 60 * 60 * 1000 - 60000 };
+                effectiveWhen = `${formatTsLocal(trRange.startTs)} – ${formatTsLocal(trRange.endTs)}`;
+            }
+        }
+
         const trFromId = transfer.fromId || null;
         const trToId = transfer.toId || null;
         const trDayKey = transfer.dayKey || null;
-    
-        console.log('[TRANSPORT][findMatchingBusRows] VSTUP:', {
-            transferKey: transfer._parentKey || transfer.key,
-            teamName: transfer.teamName,
-            category: transfer.category,
-            when: transfer.when,
-            effectiveWhen,
-            trRange,
-            trFromId,
-            trToId,
-            trDayKey,
-        });
-    
-        if (!trRange || !trFromId || !trToId || !trDayKey) {
-            console.warn(`❌ Chýba vstup – končím:`, {
-                effectiveWhen, trRange, trFromId, trToId, trDayKey,
-            });
+
+        // NOVÉ: Ak chýba dayKey, skús odvodiť z parent.dayKey
+        let effectiveDayKey = trDayKey;
+        if (!effectiveDayKey) {
+            const parentKey = transfer._parentKey || transfer.key;
+            if (parentKey) {
+                const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
+                if (parentRec && parentRec.dayKey) {
+                    effectiveDayKey = parentRec.dayKey;
+                }
+            }
+        }
+
+        if (!trRange || !trFromId || !trToId || !effectiveDayKey) {
             return [];
         }
-    
+
         const computeRowTimeToStr = (row) => {
             if (!row) return null;
-            if (row.timeTo && /^\d{1,2}:\d{2}$/.test(row.timeTo)) {
-                return row.timeTo;
-            }
+            if (row.timeTo && /^\d{1,2}:\d{2}$/.test(row.timeTo)) return row.timeTo;
             if (!row.timeFrom || !/^\d{1,2}:\d{2}$/.test(row.timeFrom)) return null;
             if (!row.placeFromId || !row.placeToId) return null;
             const mins = getTravelMinutes(row.placeFromId, row.placeToId);
@@ -6553,38 +6545,24 @@ const TransportApp = ({ userProfileData }) => {
             const endM = total % 60;
             return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
         };
-    
+
         const results = [];
-    
+
         Object.entries(busRows || {}).forEach(([key, rows]) => {
             const [busId, dayKey] = key.split('|');
-            if (dayKey !== trDayKey) return;
-    
+            if (dayKey !== effectiveDayKey) return;
+
             const bus = buses.find((b) => b.id === busId);
-            if (!bus) {
-                console.warn(`⚠️ Bus ${busId} sa nenašiel v zozname buses`);
-                return;
-            }
+            if (!bus) return;
             if (!rows || rows.length === 0) return;
-    
+
             const sortedRows = [...rows].sort((a, b) => (a.order || 0) - (b.order || 0));
-    
-            console.log(`🚌 Kontrolujem bus "${bus.name}" (${bus.id}), riadkov: ${sortedRows.length}`);
-            
+
             const boardingCandidates = [];
             const alightingCandidates = [];
             let isCurrentSegmentAlreadyAssignedToThisBus = false;
             const currentTeamKey = `${transfer.teamName}|${transfer.category || ''}`;
-            
-            if (!trFromId || !trToId) {
-                console.warn('[TRANSPORT][findMatchingBusRows] Chýba fromId/toId na presune – preskakujem bus:', {
-                    busName: bus.name,
-                    trFromId,
-                    trToId,
-                });
-                return;
-            }
-            
+
             const normalizeNameForCompare = (name) => {
                 if (!name) return '';
                 return String(name)
@@ -6600,7 +6578,7 @@ const TransportApp = ({ userProfileData }) => {
                     .replace(/\s+/g, ' ')
                     .trim();
             };
-            
+
             const getPlaceNameById = (id) => {
                 if (!id) return '';
                 const fromMap = (placesMapRef.current || {})[id];
@@ -6609,7 +6587,7 @@ const TransportApp = ({ userProfileData }) => {
                 if (fromAll) return fromAll.name;
                 return '';
             };
-            
+
             const resolveTransferNameToId = (rawName) => {
                 if (!rawName) return null;
                 const raw = String(rawName).trim();
@@ -6621,7 +6599,7 @@ const TransportApp = ({ userProfileData }) => {
                 );
                 return found ? found.id : null;
             };
-            
+
             const getTransferPlaceName = (transfer, which) => {
                 if (!transfer) return '';
                 const id = which === 'from' ? (transfer.fromId || null) : (transfer.toId || null);
@@ -6635,75 +6613,58 @@ const TransportApp = ({ userProfileData }) => {
                 }
                 return '';
             };
-            
+
             const transferFromName = getTransferPlaceName(transfer, 'from');
             const transferToName = getTransferPlaceName(transfer, 'to');
             const transferFromIdResolved = trFromId || resolveTransferNameToId(transferFromName);
             const transferToIdResolved = trToId || resolveTransferNameToId(transferToName);
-            
+
             if (!transferFromIdResolved || !transferToIdResolved) {
-                console.warn('[TRANSPORT][findMatchingBusRows] Nepodarilo sa získať fromId/toId ani z názvu – preskakujem bus:', {
-                    busName: bus.name,
-                    transferFromName,
-                    transferToName,
-                    trFromId,
-                    trToId,
-                });
                 return;
             }
-            
+
             sortedRows.forEach((row) => {
                 const rowFromId = row.placeFromId || null;
                 const rowToId = row.placeToId || null;
                 const rowFromName = row.placeFrom || getPlaceNameById(rowFromId) || '';
                 const rowToName = row.placeTo || getPlaceNameById(rowToId) || '';
-            
+
                 const rowTimeFromStr = (row.timeFrom && /^\d{1,2}:\d{2}$/.test(row.timeFrom))
                     ? row.timeFrom
                     : null;
                 const rowTimeToStr = computeRowTimeToStr(row);
-            
+
                 const rowTimeFromTs = rowTimeFromStr
                     ? timeOnDayKeyToTs(dayKey, rowTimeFromStr)
                     : null;
                 const rowTimeToTs = rowTimeToStr
                     ? timeOnDayKeyToTs(dayKey, rowTimeToStr)
                     : null;
-            
+
                 let fromMatches = false;
                 let toMatches = false;
-                let fromMatchBy = null;
-                let toMatchBy = null;
-            
+
                 if (rowFromId != null && transferFromIdResolved != null && rowFromId === transferFromIdResolved) {
                     fromMatches = true;
-                    fromMatchBy = 'id';
                 }
                 if (rowToId != null && transferToIdResolved != null && rowToId === transferToIdResolved) {
                     toMatches = true;
-                    toMatchBy = 'id';
                 }
-            
+
                 if (!fromMatches && rowFromName && transferFromName) {
                     const a = normalizeNameForCompare(rowFromName);
                     const b = normalizeNameForCompare(transferFromName);
-                    if (a && b && a === b) {
-                        fromMatches = true;
-                        fromMatchBy = 'name';
-                    }
+                    if (a && b && a === b) fromMatches = true;
                 }
                 if (!toMatches && rowToName && transferToName) {
                     const a = normalizeNameForCompare(rowToName);
                     const b = normalizeNameForCompare(transferToName);
-                    if (a && b && a === b) {
-                        toMatches = true;
-                        toMatchBy = 'name';
-                    }
+                    if (a && b && a === b) toMatches = true;
                 }
-            
+
                 const rangeStart = trRange.startTs;
                 const rangeEnd = trRange.endTs;
-                
+
                 if (fromMatches && rowTimeFromTs != null &&
                     rowTimeFromTs >= rangeStart && rowTimeFromTs <= rangeEnd) {
                     boardingCandidates.push({ row, timeTs: rowTimeFromTs });
@@ -6713,9 +6674,9 @@ const TransportApp = ({ userProfileData }) => {
                     alightingCandidates.push({ row, timeTs: rowTimeToTs });
                 }
             });
-    
+
             const alreadyAssigned = (savedTransfersRef.current || []).some((p) => {
-                if (p.dayKey !== trDayKey) return false;
+                if (p.dayKey !== effectiveDayKey) return false;
                 if (String(p.teamName || '').trim() !== String(transfer.teamName || '').trim()) return false;
                 if (cleanCategory(p.category || '') !== cleanCategory(transfer.category || '')) return false;
                 return (p.segments || []).some((s) => {
@@ -6726,44 +6687,38 @@ const TransportApp = ({ userProfileData }) => {
                 });
             });
             if (alreadyAssigned) isCurrentSegmentAlreadyAssignedToThisBus = true;
-    
-            console.log(`  Bus "${bus.name}": nástupných=${boardingCandidates.length}, výstupných=${alightingCandidates.length}, už priradený=${isCurrentSegmentAlreadyAssignedToThisBus}`);
-    
+
             if (
                 (boardingCandidates.length === 0 || alightingCandidates.length === 0) &&
                 !isCurrentSegmentAlreadyAssignedToThisBus
             ) {
                 return;
             }
-    
+
             boardingCandidates.forEach((board) => {
                 alightingCandidates.forEach((alight) => {
                     if ((alight.row.order || 0) < (board.row.order || 0)) {
                         return;
                     }
-    
+
                     const boardTimeStr = (board.row.timeFrom && /^\d{1,2}:\d{2}$/.test(board.row.timeFrom))
                         ? board.row.timeFrom
                         : null;
                     const alightTimeStr = computeRowTimeToStr(alight.row);
-    
+
                     const boardTs = boardTimeStr ? timeOnDayKeyToTs(dayKey, boardTimeStr) : null;
                     const alightTs = alightTimeStr ? timeOnDayKeyToTs(dayKey, alightTimeStr) : null;
-    
+
                     if (boardTs != null && alightTs != null && alightTs < boardTs) {
                         return;
                     }
-    
-                    const segmentFromId =
-                        board.row.placeFromId ||
-                        trFromId;
-                    const segmentToId =
-                        alight.row.placeToId ||
-                        trToId;
-    
+
+                    const segmentFromId = board.row.placeFromId || trFromId;
+                    const segmentToId = alight.row.placeToId || trToId;
+
                     const segmentFromName = resolvePlaceNameById(segmentFromId);
                     const segmentToName = resolvePlaceNameById(segmentToId);
-    
+
                     results.push({
                         bus,
                         trip: {
@@ -6788,31 +6743,27 @@ const TransportApp = ({ userProfileData }) => {
                 });
             });
         });
-    
+
         const computeTripDurationMinutes = (boardingRow, alightingRow) => {
             const timeRe = /^\d{1,2}:\d{2}$/;
             if (!boardingRow || !alightingRow) return null;
-    
-            const boardStr = (boardingRow.timeFrom && timeRe.test(boardingRow.timeFrom))
-                ? boardingRow.timeFrom
-                : null;
+
+            const boardStr = (boardingRow.timeFrom && timeRe.test(boardingRow.timeFrom)) ? boardingRow.timeFrom : null;
             const alightStr = computeRowTimeToStr(alightingRow);
-    
-            if (!boardStr || !alightStr) {
-                return null;
-            }
+
+            if (!boardStr || !alightStr) return null;
             const [bh, bm] = boardStr.split(':').map(Number);
             const [ah, am] = alightStr.split(':').map(Number);
             let diff = (ah * 60 + am) - (bh * 60 + bm);
             if (diff < 0) diff += 24 * 60;
             return diff;
         };
-    
+
         const getEffectiveDuration = (r) => {
             const d = computeTripDurationMinutes(r.boardingRow, r.alightingRow);
             return d != null ? d : Number.POSITIVE_INFINITY;
         };
-    
+
         const pickShortestDuration = (group) => {
             if (!group || group.length === 0) return null;
             if (group.length === 1) return group[0];
@@ -6821,14 +6772,11 @@ const TransportApp = ({ userProfileData }) => {
             for (let i = 1; i < group.length; i++) {
                 const r = group[i];
                 const d = getEffectiveDuration(r);
-                if (d < bestDuration) {
-                    best = r;
-                    bestDuration = d;
-                }
+                if (d < bestDuration) { best = r; bestDuration = d; }
             }
             return best;
         };
-    
+
         const groupedByBoarding = new Map();
         results.forEach((r) => {
             const busId = r.bus?.id || '';
@@ -6839,13 +6787,13 @@ const TransportApp = ({ userProfileData }) => {
             if (!groupedByBoarding.has(key)) groupedByBoarding.set(key, []);
             groupedByBoarding.get(key).push(r);
         });
-    
+
         const afterBoardingDedup = [];
         groupedByBoarding.forEach((group) => {
             const best = pickShortestDuration(group);
             if (best) afterBoardingDedup.push(best);
         });
-    
+
         const groupedByAlighting = new Map();
         afterBoardingDedup.forEach((r) => {
             const busId = r.bus?.id || '';
@@ -6856,23 +6804,20 @@ const TransportApp = ({ userProfileData }) => {
             if (!groupedByAlighting.has(key)) groupedByAlighting.set(key, []);
             groupedByAlighting.get(key).push(r);
         });
-    
+
         const dedupedResults = [];
         groupedByAlighting.forEach((group) => {
             const best = pickShortestDuration(group);
             if (best) dedupedResults.push(best);
         });
-    
+
         const MAX_TRIP_DURATION_MINUTES = 60;
         const filteredByDuration = dedupedResults.filter((r) => {
             const duration = computeTripDurationMinutes(r.boardingRow, r.alightingRow);
             if (duration == null) return true;
-            if (duration > MAX_TRIP_DURATION_MINUTES) {
-                return false;
-            }
-            return true;
+            return duration <= MAX_TRIP_DURATION_MINUTES;
         });
-    
+
         filteredByDuration.sort((a, b) => {
             const timeA = a.boardingTime || a.alightingTime || '';
             const timeB = b.boardingTime || b.alightingTime || '';
