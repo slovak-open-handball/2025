@@ -11667,22 +11667,44 @@ const TransportApp = ({ userProfileData }) => {
                     
                     let totalWhenLabel = null;
                     
-                    // 1) Priorita: prepočítaj celkový rozsah z reálnych segmentov (startTs/endTs)
-                    //    – zahŕňa aj priradené bus-segmenty aj nepriradené, ktoré už majú čas
+                    // 1) Priorita: prepočítaj celkový rozsah zo VŠETKÝCH segmentov.
+                    //    Pre segmenty, ktoré nemajú startTs/endTs (nepriradené busu),
+                    //    použi computeProvisionalSegmentRange na dopočítanie ich času.
                     if (parentRecForTotal && Array.isArray(parentRecForTotal.segments) && parentRecForTotal.segments.length > 0) {
                         let earliestStart = null;
                         let latestEnd = null;
+                    
                         parentRecForTotal.segments.forEach((s) => {
-                            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                                earliestStart = s.startTs;
+                            let segStartTs = s.startTs != null ? s.startTs : null;
+                            let segEndTs = s.endTs != null ? s.endTs : null;
+                    
+                            // Ak segment nemá reálny čas (nepriradený busu), dopočítaj provizórny
+                            if (segStartTs == null && segEndTs == null) {
+                                try {
+                                    const provisional = computeProvisionalSegmentRange({
+                                        ...parentRecForTotal,
+                                        fromId: s.fromId,
+                                        toId: s.toId,
+                                        _parentKey: parentKeyForTotal,
+                                    });
+                                    if (provisional) {
+                                        if (provisional.startTs != null) segStartTs = provisional.startTs;
+                                        if (provisional.endTs != null) segEndTs = provisional.endTs;
+                                    }
+                                } catch (e) {
+                                    // ignore
+                                }
                             }
-                            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                                latestEnd = s.endTs;
+                    
+                            if (segStartTs != null && (earliestStart == null || segStartTs < earliestStart)) {
+                                earliestStart = segStartTs;
+                            }
+                            if (segEndTs != null && (latestEnd == null || segEndTs > latestEnd)) {
+                                latestEnd = segEndTs;
                             }
                         });
-                        if (earliestStart != null && latestEnd != null && latestEnd > earliestStart) {
-                            totalWhenLabel = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-                        } else if (earliestStart != null && latestEnd != null) {
+                    
+                        if (earliestStart != null && latestEnd != null) {
                             totalWhenLabel = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
                         } else if (earliestStart != null) {
                             totalWhenLabel = formatTsLocal(earliestStart);
@@ -11722,7 +11744,7 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     }
                     
-                    // 5) Fallback: provizórny výpočet
+                    // 5) Fallback: provizórny výpočet pre celý parent
                     if (!totalWhenLabel) {
                         const provisionalForTotal = computeProvisionalSegmentRange({
                             ...tr,
@@ -11731,7 +11753,8 @@ const TransportApp = ({ userProfileData }) => {
                         if (provisionalForTotal) {
                             totalWhenLabel = `${formatTsLocal(provisionalForTotal.startTs)} – ${formatTsLocal(provisionalForTotal.endTs)}`;
                         }
-                    }        
+                    }
+                                        
                     const counts = getTeamCountsForTransfer(tr.category, tr.teamName);
                     let membersCount = null;
                     let membersTitle = '';
