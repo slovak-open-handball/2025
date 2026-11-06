@@ -5042,19 +5042,19 @@ const TransportApp = ({ userProfileData }) => {
     
         const inBus = new Set();
     
+        // 1) Primárny zdroj: segments v savedTransfers (nový spôsob)
         (savedTransfersRef.current || []).forEach((parent) => {
             if (parent.dayKey !== dayKey) return;
             if (parent.isWalking === true) return;
     
-            // NOVÉ: doplnenie teamName pre superstructure / neúplné záznamy
             let effectiveTeamName = String(parent.teamName || '').trim();
-            let effectiveCategory = cleanCategory(parent.category || '');
+            const effectiveCategory = cleanCategory(parent.category || '');
             if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
                 const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
                 const info = (teamsLookupRef.current || {})[lookupKey];
                 if (info && info.teamName) effectiveTeamName = info.teamName;
             }
-            if (!effectiveTeamName) return; // bez mena nevieme nič spočítať
+            if (!effectiveTeamName) return;
     
             (parent.segments || []).forEach((seg) => {
                 if (seg.busId !== busId) return;
@@ -5069,6 +5069,47 @@ const TransportApp = ({ userProfileData }) => {
                 }
             });
         });
+    
+        // 2) Fallback: teamsIn / teamsOut priamo na riadkoch busu
+        //    (pre prípady, keď segmenty ešte nie sú uložené alebo ide o starší zápis)
+        //    Simulujeme "kto je v buse" prechodom cez riadky od začiatku po currentOrder.
+        const fallbackInBus = new Set();
+        let started = false;
+        for (let i = 0; i < allRows.length; i++) {
+            const r = allRows[i];
+            const rOrder = parseOrderFromRowId(r.rowId);
+            if (rOrder == null) continue;
+    
+            // Aplikuj teamsIn
+            (Array.isArray(r.teamsIn) ? r.teamsIn : []).forEach((tk) => {
+                const s = String(tk || '').trim();
+                if (!s) return;
+                const [tn, cat] = s.split('|');
+                const teamName = String(tn || '').trim();
+                const category = cleanCategory(cat || '');
+                if (!teamName) return;
+                fallbackInBus.add(`${teamName}|${category}`);
+            });
+    
+            // Aplikuj teamsOut
+            (Array.isArray(r.teamsOut) ? r.teamsOut : []).forEach((tk) => {
+                const s = String(tk || '').trim();
+                if (!s) return;
+                const [tn, cat] = s.split('|');
+                const teamName = String(tn || '').trim();
+                const category = cleanCategory(cat || '');
+                if (!teamName) return;
+                fallbackInBus.delete(`${teamName}|${category}`);
+            });
+    
+            if (rOrder === currentOrder) {
+                started = true;
+                break;
+            }
+        }
+    
+        // Zlúč výsledky (primárny + fallback), aby sa nič nestratilo
+        fallbackInBus.forEach((tk) => inBus.add(tk));
     
         return [...inBus].filter((teamKey) => {
             if (!selectedCategoryFilter) return true;
