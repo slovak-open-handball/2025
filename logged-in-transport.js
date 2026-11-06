@@ -6907,18 +6907,30 @@ const TransportApp = ({ userProfileData }) => {
             return null;
         })();
     
-        const allSegStart = draft.segments.map((s) => s.startTs).filter((ts) => ts != null);
-        const allSegEnd = draft.segments.map((s) => s.endTs).filter((ts) => ts != null);
-    
+        const segStartList = [];
+        const segEndList = [];
+        draft.segments.forEach((s) => {
+            if (s.startTs != null) segStartList.push(s.startTs);
+            if (s.endTs != null) {
+                segEndList.push(s.endTs);
+            } else if (s.isWalking === true && s.startTs != null) {
+                segEndList.push(s.startTs + 60 * 1000);
+            }
+        });
+        
         const hasUnassignedSegments = draft.segments.some(
             (s) => s.isWalking !== true && (
                 s.startTs == null || s.endTs == null
             )
         );
-    
+        
         if (busSegments.length > 0 && busSegments.some((s) => s.startTs != null && s.endTs != null) && !hasUnassignedSegments) {
             const busStart = busSegments.map((s) => s.startTs).filter((ts) => ts != null);
-            const busEnd = busSegments.map((s) => s.endTs).filter((ts) => ts != null);
+            const busEnd = busSegments.map((s) => {
+                if (s.endTs != null) return s.endTs;
+                if (s.isWalking === true && s.startTs != null) return s.startTs + 60 * 1000;
+                return null;
+            }).filter((ts) => ts != null);
             if (busStart.length > 0 && busEnd.length > 0) {
                 draft.when = `${formatTsLocal(Math.min(...busStart))} – ${formatTsLocal(Math.max(...busEnd))}`;
             } else if (busStart.length > 0) {
@@ -6928,8 +6940,8 @@ const TransportApp = ({ userProfileData }) => {
             } else {
                 draft.when = '';
             }
-        } else if (allSegStart.length > 0 && allSegEnd.length > 0 && !hasUnassignedSegments) {
-            draft.when = `${formatTsLocal(Math.min(...allSegStart))} – ${formatTsLocal(Math.max(...allSegEnd))}`;
+        } else if (segStartList.length > 0 && segEndList.length > 0 && !hasUnassignedSegments) {
+            draft.when = `${formatTsLocal(Math.min(...segStartList))} – ${formatTsLocal(Math.max(...segEndList))}`;
         } else if (originalWhenFromDraft && String(originalWhenFromDraft).trim() !== '') {
             draft.when = originalWhenFromDraft;
         } else if (savedParentWhen) {
@@ -7132,12 +7144,54 @@ const TransportApp = ({ userProfileData }) => {
                     ? findSegmentIndex(draft.segments, transfer.fromId, transfer.toId)
                     : -1;
                 if (segIdx !== -1) {
-                    draft.segments[segIdx].isWalking = false;
-                    draft.segments[segIdx].walkingSetAt = null;
-                    draft.segments[segIdx].walkingSetBy = null;
-                    draft.segments[segIdx].busId = null;
-                    draft.segments[segIdx].boardingRowId = null;
-                    draft.segments[segIdx].alightingRowId = null;
+                    const seg = draft.segments[segIdx];
+                    seg.isWalking = false;
+                    seg.walkingSetAt = null;
+                    seg.walkingSetBy = null;
+                    seg.busId = null;
+                    seg.boardingRowId = null;
+                    seg.alightingRowId = null;
+                
+                    // OPRAVA: ak segment nemá startTs, použiť endTs predchádzajúceho segmentu
+                    if (seg.startTs == null) {
+                        for (let i = segIdx - 1; i >= 0; i--) {
+                            const prev = draft.segments[i];
+                            if (!prev) continue;
+                            if (prev.endTs != null) {
+                                seg.startTs = prev.endTs;
+                                break;
+                            }
+                            if (prev.startTs != null) {
+                                seg.startTs = prev.startTs;
+                                break;
+                            }
+                        }
+                    }
+                    // OPRAVA: ak segment nemá endTs, použiť parentRange.endTs alebo dopočítať
+                    if (seg.endTs == null) {
+                        let parentEnd = null;
+                        // skús nájsť nasledujúci segment s endTs
+                        for (let i = segIdx + 1; i < draft.segments.length; i++) {
+                            const next = draft.segments[i];
+                            if (!next) continue;
+                            if (next.startTs != null) {
+                                parentEnd = next.startTs;
+                                break;
+                            }
+                            if (next.endTs != null) {
+                                parentEnd = next.endTs;
+                                break;
+                            }
+                        }
+                        if (parentEnd != null && seg.startTs != null && parentEnd > seg.startTs) {
+                            seg.endTs = parentEnd;
+                        } else if (seg.startTs != null) {
+                            seg.endTs = seg.startTs + 60 * 1000;
+                        }
+                    }
+                    if (seg.startTs != null && seg.endTs != null) {
+                        seg.when = `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`;
+                    }
                 } else {
                     draft.segments.forEach((s) => {
                         s.isWalking = false;
@@ -9576,8 +9630,15 @@ const TransportApp = ({ userProfileData }) => {
                     if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
                         earliestStart = s.startTs;
                     }
+                    // OPRAVA: aj pešie segmenty prispievajú k endTs
                     if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
                         latestEnd = s.endTs;
+                    } else if (s.isWalking === true && s.startTs != null) {
+                        // Peší segment bez endTs – berieme aspoň startTs + 1 min
+                        const candidateEnd = s.startTs + 60 * 1000;
+                        if (latestEnd == null || candidateEnd > latestEnd) {
+                            latestEnd = candidateEnd;
+                        }
                     }
                 });
                 if (earliestStart != null && latestEnd != null) {
@@ -9628,11 +9689,19 @@ const TransportApp = ({ userProfileData }) => {
             } else if (parentStartTs != null) {
                 displayStartTs = parentStartTs;
             }
-            if (isLastWalkingSegment) {
-                displayEndTs = parentEndTs;
+            if (isLastWalkingSegment || nextSegmentStartTs == null) {
+                if (parentEndTs != null && displayStartTs != null && parentEndTs > displayStartTs) {
+                    displayEndTs = parentEndTs;
+                } else if (parentEndTs != null) {
+                    displayEndTs = parentEndTs;
+                } else if (displayStartTs != null) {
+                    displayEndTs = displayStartTs + 60 * 1000;
+                } else {
+                    displayEndTs = null;
+                }
             } else if (nextSegmentStartTs != null) {
                 displayEndTs = nextSegmentStartTs;
-            } else if (parentEndTs != null) {
+            } else {
                 displayEndTs = parentEndTs;
             }
             if (
