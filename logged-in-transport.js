@@ -8798,19 +8798,23 @@ const TransportApp = ({ userProfileData }) => {
                     }
                     
                     if (!whenStr) {
-                        const parentRec = savedTransfers.find((s) => s.key === t.key);
-                        if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
-                            whenStr = parentRec.when;
-                        } else {
-                            const provisional = computeProvisionalSegmentRange({
-                                ...t,
-                                fromId: fromId,
-                                toId: toId,
-                                _parentKey: t.key,
-                            });
-                            if (provisional) {
-                                whenStr = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
-                                hasRealTime = false;
+                        // PRVÉ: skús computeProvisionalSegmentRange (vracia správny rozsah pre segment)
+                        const provisional = computeProvisionalSegmentRange({
+                            ...t,
+                            fromId: fromId,
+                            toId: toId,
+                            _parentKey: t.key,
+                        });
+                        if (provisional) {
+                            whenStr = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                            hasRealTime = false;
+                        }
+                        
+                        // AŽ POTOM: fallback na parentRec.when
+                        if (!whenStr) {
+                            const parentRec = savedTransfers.find((s) => s.key === t.key);
+                            if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
+                                whenStr = parentRec.when;
                             } else if (Array.isArray(t.segments) && t.segments.length > 0) {
                                 let earliestStart = null;
                                 let latestEnd = null;
