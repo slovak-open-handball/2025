@@ -11825,7 +11825,6 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement(
                             'span',
                             { className: 'text-sm text-gray-600 inline-flex items-center gap-1 mt-0.5' },
-                            React.createElement('i', { className: 'fa-regular fa-clock text-xs' }),
                             React.createElement('span', { className: 'font-semibold' }, 'Celkový čas:'),
                             React.createElement(
                                 'span',
