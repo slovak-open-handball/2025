@@ -4986,7 +4986,6 @@ const TransportApp = ({ userProfileData }) => {
     
     function getTravelMinutes(placeFrom, placeTo) {
         if (!placeFrom || !placeTo) {
-            console.log('[TRANSPORT][getTravelMinutes] Chýba placeFrom alebo placeTo:', { placeFrom, placeTo });
             return null;
         }
     
@@ -5005,18 +5004,6 @@ const TransportApp = ({ userProfileData }) => {
     
         const keyId = `${fromId}|${toId}`;
         const found = travelTimes[keyId];
-    
-        console.log('[TRANSPORT][getTravelMinutes]', {
-            placeFrom,
-            placeTo,
-            fromId,
-            toId,
-            keyId,
-            found: found ? found.minutes : null,
-            allKeys: Object.keys(travelTimes || {}),
-            fromExistsInStops: (stopsList || []).some((s) => s.id === fromId),
-            toExistsInStops: (stopsList || []).some((s) => s.id === toId),
-        });
     
         if (found && found.minutes != null) {
             return Number(found.minutes);
