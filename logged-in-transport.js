@@ -8963,7 +8963,32 @@ const TransportApp = ({ userProfileData }) => {
 
             for (let i = 0; i < routeIds.length - 1; i++) {
                 if (finalTimes[i]) continue;
-                finalTimes[i] = { startTs: null, endTs: null };
+
+                // začiatok = koniec predchádzajúceho vyriešeného segmentu
+                let startTs = null;
+                for (let k = i - 1; k >= 0; k--) {
+                    if (finalTimes[k] && finalTimes[k].endTs != null) {
+                        startTs = finalTimes[k].endTs;
+                        break;
+                    }
+                }
+                if (startTs == null) startTs = timeRange.startTs;
+
+                // koniec = začiatok nasledujúceho vyriešeného segmentu
+                let endTs = null;
+                for (let k = i + 1; k < routeIds.length - 1; k++) {
+                    if (finalTimes[k] && finalTimes[k].startTs != null) {
+                        endTs = finalTimes[k].startTs;
+                        break;
+                    }
+                }
+                if (endTs == null) endTs = timeRange.endTs;
+
+                if (startTs != null && endTs != null && endTs > startTs) {
+                    finalTimes[i] = { startTs, endTs };
+                } else {
+                    finalTimes[i] = { startTs: null, endTs: null };
+                }
             }
 
             for (let i = 0; i < routeIds.length - 1; i++) {
