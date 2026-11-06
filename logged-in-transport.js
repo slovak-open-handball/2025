@@ -473,24 +473,22 @@ const TransportApp = ({ userProfileData }) => {
         const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
         if (!parentRec) return null;
     
+        // 1) Pevný rozsah parenta
         let parentRange = null;
-        let earliestStart = null;
-        let latestEnd = null;
-        (parentRec.segments || []).forEach((s) => {
-            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) earliestStart = s.startTs;
-            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) latestEnd = s.endTs;
-        });
-        if (earliestStart != null && latestEnd != null) {
-            parentRange = { startTs: earliestStart, endTs: latestEnd };
+        if (parentRec.when && String(parentRec.when).trim() !== '') {
+            parentRange = parseTransferWhenToRange(parentRec.when);
         }
-
-        // 2) Fallback na parent.when
         if (!parentRange || parentRange.startTs == null || parentRange.endTs == null) {
-            if (parentRec.when && String(parentRec.when).trim() !== '') {
-                parentRange = parseTransferWhenToRange(parentRec.when);
+            let earliestStart = null;
+            let latestEnd = null;
+            (parentRec.segments || []).forEach((s) => {
+                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) earliestStart = s.startTs;
+                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) latestEnd = s.endTs;
+            });
+            if (earliestStart != null && latestEnd != null) {
+                parentRange = { startTs: earliestStart, endTs: latestEnd };
             }
         }
-
         if (!parentRange || parentRange.startTs == null || parentRange.endTs == null) return null;
     
         const PARENT_START = parentRange.startTs;
@@ -4637,8 +4635,6 @@ const TransportApp = ({ userProfileData }) => {
                         startTs: newStartTs,
                         endTs: newEndTs,
                         when: newWhen,
-                        busAssigned: true,
-                        busId: seg.busId || busId,
                     };
                 }
                 return seg;
@@ -4662,17 +4658,16 @@ const TransportApp = ({ userProfileData }) => {
             const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
             let newWhen = null;
             if (parentRec) {
-                const validSegs = newSegments.filter(
-                    (s) => s && s.isWalking !== true && s.startTs != null && s.endTs != null && s.endTs > s.startTs
-                );
-                if (validSegs.length > 0) {
-                    const starts = validSegs.map((s) => s.startTs);
-                    const ends = validSegs.map((s) => s.endTs);
-                    newWhen = `${formatTsLocal(Math.min(...starts))} – ${formatTsLocal(Math.max(...ends))}`;
-                } else if (parentRec.when && String(parentRec.when).trim() !== '') {
-                    newWhen = parentRec.when;
-                } else {
-                    newWhen = '';
+                const tempDraft = {
+                    ...parentRec,
+                    when: null,
+                    segments: newSegments.map((s) => ({ ...s })),
+                };
+                try {
+                    recomputeParentSegmentsInPlace(tempDraft);
+                    newWhen = tempDraft.when;
+                } catch (e) {
+                    console.error('[TRANSPORT] Chyba pri recomputeParentSegmentsInPlace pre DB:', e);
                 }
             }
             tUpdates[parentKey] = { segments: newSegments };
@@ -4689,35 +4684,28 @@ const TransportApp = ({ userProfileData }) => {
         }
 
         await new Promise((r) => setTimeout(r, 100));
-
+    
         const updatedParents = (savedTransfersRef.current || []).map((parent) => {
             const patch = parentsToUpdate.find((p) => p.parentKey === parent.key);
             if (!patch) return parent;
 
-            const newSegments = patch.newSegments.map((s) => ({ ...s }));
-        
-            // Vypočítaj `when` z validných segmentov
-            const validSegs = newSegments.filter(
-                (s) => s && s.isWalking !== true && s.startTs != null && s.endTs != null && s.endTs > s.startTs
-            );
-            let newWhen;
-            if (validSegs.length > 0) {
-                const starts = validSegs.map((s) => s.startTs);
-                const ends = validSegs.map((s) => s.endTs);
-                newWhen = `${formatTsLocal(Math.min(...starts))} – ${formatTsLocal(Math.max(...ends))}`;
-            } else if (parent.when && String(parent.when).trim() !== '') {
-                newWhen = parent.when;
-            } else {
-                newWhen = '';
-            }
-
-            return {
+            // ============================================================
+            // NOVÉ: Vynuluj `when`, aby ho recomputeParentSegmentsInPlace
+            // prepočítal z nových segmentov (inak zostane staré).
+            // ============================================================
+            const draft = {
                 ...parent,
-                when: newWhen,
-                segments: newSegments,
+                when: null,
+                segments: patch.newSegments.map((s) => ({ ...s })),
             };
+            try {
+                recomputeParentSegmentsInPlace(draft);
+            } catch (e) {
+                console.error('[TRANSPORT] Chyba pri recomputeParentSegmentsInPlace v sync:', e);
+            }
+            return draft;
         });
-        
+    
         savedTransfersRef.current = updatedParents;
         setSavedTransfers(updatedParents);
     };
@@ -7292,22 +7280,16 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         draft.segments = draft.segments.map((seg) => {
-            // ============================================================
-            // NOVÉ: Zachovaj segment, ak má platné časy – NEZÁLEŽÍ, či má
-            // busAssigned alebo nie. Tým sa zabráni tomu, aby sa časy
-            // prepísali cez findBusTimesForSegment (ktorý číta busRows
-            // v čase volania a môže byť ešte starý).
-            // ============================================================
-            const hasValidTimes =
+            if (
+                seg.busAssigned === true &&
+                seg.busId != null &&
                 seg.startTs != null &&
                 seg.endTs != null &&
-                seg.endTs > seg.startTs;
-    
-            if (hasValidTimes && seg.busId != null) {
+                seg.endTs > seg.startTs
+            ) {
                 return {
                     ...seg,
                     isWalking: false,
-                    busAssigned: true,
                     when: `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`,
                 };
             }
