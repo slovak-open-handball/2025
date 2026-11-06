@@ -6498,7 +6498,6 @@ const TransportApp = ({ userProfileData }) => {
                     .normalize('NFD')
                     .replace(/[\u0300-\u036f]/g, '')
                     .replace(/^zastavka\s+/i, '')
-                    .replace(/^zastavka\s+/i, '')
                     .replace(/^ubytovanie\s+/i, '')
                     .replace(/^ubytovna\s+/i, '')
                     .replace(/^miesto\s+zrazu\s+/i, '')
