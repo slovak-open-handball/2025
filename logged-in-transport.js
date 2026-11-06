@@ -6576,15 +6576,13 @@ const TransportApp = ({ userProfileData }) => {
             
                 const rangeStart = trRange.startTs;
                 const rangeEnd = trRange.endTs;
-                const wideStart = Math.min(rangeStart, timeOnDayKeyToTs(dayKey, '00:00'));
-                const wideEnd = Math.max(rangeEnd, timeOnDayKeyToTs(dayKey, '23:59'));
-            
+                
                 if (fromMatches && rowTimeFromTs != null &&
-                    rowTimeFromTs >= wideStart && rowTimeFromTs <= wideEnd) {
+                    rowTimeFromTs >= rangeStart && rowTimeFromTs <= rangeEnd) {
                     boardingCandidates.push({ row, timeTs: rowTimeFromTs });
                 }
                 if (toMatches && rowTimeToTs != null &&
-                    rowTimeToTs >= wideStart && rowTimeToTs <= wideEnd) {
+                    rowTimeToTs >= rangeStart && rowTimeToTs <= rangeEnd) {
                     alightingCandidates.push({ row, timeTs: rowTimeToTs });
                 }
             });
