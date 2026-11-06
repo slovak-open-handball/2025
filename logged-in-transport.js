@@ -3962,24 +3962,6 @@ const TransportApp = ({ userProfileData }) => {
         const targetRowId = targetRow.rowId;
         if (!targetRowId) return;
     
-        // Helper: vráti row s aplikovaným override (ak existuje)
-        const findRowWithOverride = (rowIdToFind) => {
-            const base = allRows.find((r) => r.id === rowIdToFind);
-            if (!base) return null;
-            const ov = overrides[rowIdToFind];
-            if (!ov) return base;
-            return { ...base, ...ov };
-        };
-    
-        // Helper: vráti row podľa rowId (rowId je `${busId}__${dayKey}__${order}`)
-        const findRowByRowIdWithOverride = (rowIdToFind) => {
-            const base = allRows.find((r) => r.rowId === rowIdToFind);
-            if (!base) return null;
-            const ov = overrides[base.id];
-            if (!ov) return base;
-            return { ...base, ...ov };
-        };
-    
         const parentsToUpdate = [];
         const parentsToRemoveSegmentFrom = new Map();
     
@@ -4314,8 +4296,7 @@ const TransportApp = ({ userProfileData }) => {
                         if (patch.placeFromId !== undefined) overrideFields.placeFromId = patch.placeFromId;
                         if (patch.placeToId !== undefined) overrideFields.placeToId = patch.placeToId;
                         if (patch.timeTo !== undefined) overrideFields.timeTo = patch.timeTo;
-                        const overrides = { [rowId]: overrideFields };
-                        await syncAssignedSegmentsForBusRow(busIdForSync, dayKeyForSync, rowId, overrides);
+                        await syncAssignedSegmentsForBusRow(busIdForSync, dayKeyForSync, rowId);
                     }
                 } catch (e) {
                     console.error('[TRANSPORT] Chyba pri sync po zmene place:', e);
@@ -4340,10 +4321,7 @@ const TransportApp = ({ userProfileData }) => {
                 });
                 if (busIdForSync && dayKeyForSync) {
                     // Override pre zmenený row – nové časy
-                    const overrides = {
-                        [rowId]: { [field]: value }
-                    };
-                    await syncAssignedSegmentsForBusRow(busIdForSync, dayKeyForSync, rowId, overrides);
+                    await syncAssignedSegmentsForBusRow(busIdForSync, dayKeyForSync, rowId);
                 }
             } catch (e) {
                 console.error('[TRANSPORT] Chyba pri sync po zmene času:', e);
