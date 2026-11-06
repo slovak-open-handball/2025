@@ -6176,18 +6176,31 @@ const TransportApp = ({ userProfileData }) => {
             const currentTeamKey = `${transfer.teamName}|${transfer.category || ''}`;
 
             sortedRows.forEach((row) => {
-                const rowFromId = row.placeFromId || null;
-                const rowToId = row.placeToId || null;
+                const rowFromId = row.placeFromId || resolvePlaceIdByName(row.placeFrom);
+                const rowToId   = row.placeToId   || resolvePlaceIdByName(row.placeTo);
                 const rowTimeFromTs = timeOnDayKeyToTs(dayKey, row.timeFrom);
-                const rowTimeToTs = timeOnDayKeyToTs(dayKey, row.timeTo);
+                const rowTimeToTs   = timeOnDayKeyToTs(dayKey, row.timeTo);
             
-                if (rowFromId && rowFromId === trFromId && rowTimeFromTs != null &&
-                    rowTimeFromTs >= trRange.startTs && rowTimeFromTs <= trRange.endTs) {
+                // fallback: ak trFromId je null, porovnaj aspoň názov
+                const fromMatches = trFromId
+                    ? rowFromId === trFromId
+                    : (row.placeFrom && normalizePlaceName(row.placeFrom) === normalizePlaceName(resolvePlaceNameById(transfer.fromId)));
+                const toMatches = trToId
+                    ? rowToId === trToId
+                    : (row.placeTo && normalizePlaceName(row.placeTo) === normalizePlaceName(resolvePlaceNameById(transfer.toId)));
+            
+                // rozšírené okno: ak trRange je príliš úzky, použi celý deň
+                const rangeStart = trRange.startTs;
+                const rangeEnd   = trRange.endTs;
+                const wideStart = Math.min(rangeStart, timeOnDayKeyToTs(dayKey, '00:00'));
+                const wideEnd   = Math.max(rangeEnd,   timeOnDayKeyToTs(dayKey, '23:59'));
+            
+                if (fromMatches && rowTimeFromTs != null &&
+                    rowTimeFromTs >= wideStart && rowTimeFromTs <= wideEnd) {
                     boardingCandidates.push({ row, timeTs: rowTimeFromTs });
                 }
-            
-                if (rowToId && rowToId === trToId && rowTimeToTs != null &&
-                    rowTimeToTs >= trRange.startTs && rowTimeToTs <= trRange.endTs) {
+                if (toMatches && rowTimeToTs != null &&
+                    rowTimeToTs >= wideStart && rowTimeToTs <= wideEnd) {
                     alightingCandidates.push({ row, timeTs: rowTimeToTs });
                 }
             });
