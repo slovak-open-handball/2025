@@ -5054,6 +5054,17 @@ const TransportApp = ({ userProfileData }) => {
                 const info = (teamsLookupRef.current || {})[lookupKey];
                 if (info && info.teamName) effectiveTeamName = info.teamName;
             }
+            
+            console.log('          [TRANSPORT][getTeamsInBusAfterRow]', {
+                parentKey: parent.key,
+                parentTeamName: parent.teamName,
+                teamUid: parent.teamUid,
+                teamIndex: parent.teamIndex,
+                category: effectiveCategory,
+                effectiveTeamName,
+                hasSegments: (parent.segments || []).length,
+            });
+            
             if (!effectiveTeamName) return;
 
             (parent.segments || []).forEach((seg) => {
