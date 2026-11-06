@@ -3454,7 +3454,6 @@ const TransportApp = ({ userProfileData }) => {
                 teamsArrivalBufferRef.current = buffer;
                 teamsLoadedRef.current = true;
 
-                // Načítaj cache pre superstructure tímy a potom rebuild
                 preloadAccommodationsForSuperstructureTeams().then(() => {
                     rebuildAndLogTimeline();
                 });
@@ -3464,7 +3463,6 @@ const TransportApp = ({ userProfileData }) => {
             }
         };
 
-        // 3) VŠETKY ZÁPASY PODĽA KATEGÓRIÍ
         const buildMatchesBuffer = (snapshot) => {
             const buffer = [];
 
@@ -3533,8 +3531,6 @@ const TransportApp = ({ userProfileData }) => {
             matchesBufferRef.current = buffer;
             matchesLoadedRef.current = true;
 
-            // DÔLEŽITÉ: Po načítaní matches musia byť znovu načítané aj tímy,
-            // aby sa z matches detegovali superstructure tímy (ktoré nie sú v users).
             if (typeof loadTeamsWithAccommodation === 'function') {
                 loadTeamsWithAccommodation();
             }
@@ -3551,7 +3547,6 @@ const TransportApp = ({ userProfileData }) => {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na matches:', e);
         }
 
-        // 4) VŠETKY NAPLÁNOVANÉ STRAVOVANIA
         const getRowTeamName = (a) => {
             const lookup = teamsLookupRef.current;
 
@@ -3657,29 +3652,15 @@ const TransportApp = ({ userProfileData }) => {
         };
     }, []);
 
-    // Zrkadlenie allPlaces pre rebuildAndLogTimeline
     useEffect(() => {
         allPlacesRef.current = allPlaces;
     }, [allPlaces]);
 
-    // Naplnenie `stopsList` pri zmene `allPlaces`
     useEffect(() => {
         const stops = allPlaces
             .filter((p) => p.type === 'zastavka')
             .sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
         setStopsList(stops);
-
-        // NOVÉ: diagnostický výpis
-        console.log('[TRANSPORT][stopsList] Aktualizovaný zoznam zastávok:', {
-            allPlacesCount: allPlaces.length,
-            stopsCount: stops.length,
-            stops: stops.map((s) => ({
-                id: s.id,
-                name: s.name,
-                isExternalArrivalStop: s.isExternalArrivalStop,
-                isMeetingPointStop: s.isMeetingPointStop,
-            })),
-        });
     }, [allPlaces]);
 
     useEffect(() => {
@@ -3718,16 +3699,8 @@ const TransportApp = ({ userProfileData }) => {
         });
     }, [busRows, travelTimes, stopsList, travelTimesLoaded]);
 
-    // ============================================================
-    // NOVÉ: Automatická synchronizácia "Miesto od" s predchádzajúcim
-    // riadkom. Ak predchádzajúci riadok má placeToId, aktuálny riadok
-    // musí mať placeFromId = prevRow.placeToId.
-    //
-    // Pracuje VÝHRADNE s ID (placeToId / placeFromId).
-    // ============================================================
     useEffect(() => {
         if (!window.db) return;
-        // Kým nie je načítaný travelTimes, nesynchronizuj placeFrom
         if (!travelTimesLoaded) return;
         if (!busRows || Object.keys(busRows).length === 0) return;
 
@@ -3740,9 +3713,6 @@ const TransportApp = ({ userProfileData }) => {
                 const prevRow = sorted[i - 1];
                 const currRow = sorted[i];
 
-                // ============================================================
-                // NOVÉ: Pracuj VÝHRADNE s ID.
-                // ============================================================
                 if (!prevRow.placeToId) continue;
                 if (currRow.placeFromId === prevRow.placeToId) continue;
 
@@ -3750,23 +3720,13 @@ const TransportApp = ({ userProfileData }) => {
             }
         });
     }, [busRows, travelTimesLoaded]);
-    
-    // ============================================================
-    // DETEKCIA CHÝBAJÚCICH TRVANÍ JÁZDY PRE RIADKY AUTOBUSOV
-    // (placeFrom + placeTo vyplnené, ale travelTimes[fromId|toId] chýba)
-    // ============================================================
+
     useEffect(() => {
-        // Kým nie je načítaný prvý snapshot travelTimes, varovanie nerieš
         if (!travelTimesLoaded) {
             setMissingTravelTimeWarning([]);
             return;
         }
 
-        // NOVÉ: Kým nie je načítaný zoznam zastávok (places), varovanie
-        // nerieš. Bez zastávok sa nedá overiť, či trvanie existuje,
-        // pretože getTravelMinutes potrebuje ID zastávok z `stopsList`.
-        // Tým sa zabráni falošnému varovaniu pri prvotnom načítaní,
-        // keď ešte places nedorazili z Firestore.
         if (!placesLoaded || !stopsList || stopsList.length === 0) {
             setMissingTravelTimeWarning([]);
             return;
@@ -3786,12 +3746,10 @@ const TransportApp = ({ userProfileData }) => {
                 const placeToId = row.placeToId;
                 if (!placeFromId || !placeToId) return;
         
-                // Presne rovnaká logika ako getTravelMinutes – cez ID
                 const key = `${placeFromId}|${placeToId}`;
                 const exists = travelTimes[key] && travelTimes[key].minutes != null;
                 if (exists) return;
 
-                // Chýba trvanie – pridaj do zoznamu
                 const dedupKey = `${placeFromId}|${placeToId}`;
                 if (seen.has(dedupKey)) return;
                 seen.add(dedupKey);
@@ -3809,14 +3767,10 @@ const TransportApp = ({ userProfileData }) => {
         setMissingTravelTimeWarning(missing);
     }, [busRows, travelTimes, stopsList, travelTimesLoaded, placesLoaded]);
     
-    // ============================================================
-    // NOVÉ: ID riadku busu = busId + deň + poradie
-    // ============================================================
     const buildRowId = (busId, dayKey, order) => {
         return `${busId}__${dayKey}__${order}`;
     };
 
-    // Pomocná: z rowId vytiahne poradie (posledný segment za "__")
     const parseOrderFromRowId = (rowId) => {
         if (!rowId) return null;
         const parts = String(rowId).split('__');
@@ -3825,9 +3779,6 @@ const TransportApp = ({ userProfileData }) => {
         return Number.isFinite(n) ? n : null;
     };
     
-    // ============================================================
-    // PRIDANIE RIADKU DO AUTOBUSU PRE DANÝ DEŇ
-    // ============================================================
     const addBusRow = async (bus, dayKey) => {
         if (!window.db || !bus || !dayKey) return;
         try {
@@ -3852,15 +3803,6 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
     
-            // ============================================================
-            // NOVÉ: Pri vytváraní NOVÉHO dokumentu NEPOUŽÍVAME deleteField()
-            // (setDoc bez merge by vyhodil chybu).
-            //
-            // Namiesto toho polia placeFrom / placeTo (názov) jednoducho
-            // VYNECHÁME – setDoc ich nevytvorí, takže v DB nebudú.
-            //
-            // Ukladáme IBA ID: placeFromId / placeToId.
-            // ============================================================
             const newRowRef = doc(collection(window.db, 'transport'));
             await setDoc(newRowRef, {
                 type: 'busRow',
@@ -3868,12 +3810,11 @@ const TransportApp = ({ userProfileData }) => {
                 busName: bus.name,
                 dayKey,
                 order: nextOrder,
-                rowId: buildRowId(bus.id, dayKey, nextOrder),   // NOVÉ
+                rowId: buildRowId(bus.id, dayKey, nextOrder),
                 timeFrom: initialTimeFrom,
                 timeTo: '',
                 placeFromId: initialPlaceFromId,
                 placeToId: null,
-                // teamsIn / teamsOut sa ZÁMERNE NEUKLADAJÚ
             });
             window.showGlobalNotification('Riadok pridaný.', 'success');
         } catch (err) {
@@ -3910,10 +3851,7 @@ const TransportApp = ({ userProfileData }) => {
     
             const newOrder = (prevRow.order || 0) + 1;
 
-            // ============================================================
-            // NOVÉ: Posun order A rowId pre všetky nasledujúce riadky.
-            // ============================================================
-            const rowIdMap = {};   // starý rowId → nový rowId
+            const rowIdMap = {};
             const shiftPromises = [];
             for (let i = nextIdx; i < allRows.length; i++) {
                 const r = allRows[i];
@@ -3931,10 +3869,6 @@ const TransportApp = ({ userProfileData }) => {
             }
             await Promise.all(shiftPromises);
             
-            // ============================================================
-            // NOVÉ: Premapovanie rowId v už priradených presunoch
-            // (segmenty, ktoré majú busId === bus.id).
-            // ============================================================
             if (Object.keys(rowIdMap).length > 0) {
                 try {
                     const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
@@ -3976,12 +3910,11 @@ const TransportApp = ({ userProfileData }) => {
                 busName: bus.name,
                 dayKey,
                 order: newOrder,
-                rowId: buildRowId(bus.id, dayKey, newOrder),   // NOVÉ
+                rowId: buildRowId(bus.id, dayKey, newOrder), 
                 timeFrom: initialTimeFrom,
                 timeTo: '',
                 placeFromId,
                 placeToId,
-                // teamsIn / teamsOut sa ZÁMERNE NEUKLADAJÚ
             });
     
             window.showGlobalNotification('Riadok vložený medzi existujúce riadky.', 'success');
@@ -3994,7 +3927,6 @@ const TransportApp = ({ userProfileData }) => {
     const syncAssignedSegmentsForBusRow = async (busId, dayKey, rowId) => {
         if (!window.db || !busId || !dayKey || !rowId) return;
     
-        // Nájdi aktuálny riadok
         const rowsKey = `${busId}|${dayKey}`;
         const allRows = (busRows[rowsKey] || [])
             .slice()
@@ -4004,8 +3936,19 @@ const TransportApp = ({ userProfileData }) => {
         const targetRowId = targetRow.rowId;
         if (!targetRowId) return;
     
-        // Prejdi všetky parent záznamy pre daný deň a bus
+        // ============================================================
+        // NOVÉ: Zber segmentov, ktoré treba odstrániť z busu (rovnaká
+        // logika ako removeTeamSegment – cez updateParentTransfer).
+        //
+        // Kľúčové pravidlo:
+        //  - Ak segment po prepočte časov už nesedí (neplatné časy,
+        //    mimo parent rozsahu), treba ho odstrániť z busu.
+        //  - ALE ak segment stále patrí do celkového času parenta
+        //    (t.j. parent.when stále obsahuje jeho časy), NESMIE sa
+        //    odstrániť – zostane v buse.
+        // ============================================================
         const parentsToUpdate = [];
+        const segmentsToRemoveFromBus = []; // { parentKey, fromId, toId, clickSide }
     
         (savedTransfersRef.current || []).forEach((parent) => {
             if (parent.dayKey !== dayKey) return;
@@ -4020,7 +3963,6 @@ const TransportApp = ({ userProfileData }) => {
                 const isAlighting = seg.alightingRowId === targetRowId;
                 if (!isBoarding && !isAlighting) return seg;
     
-                // Zisti aktuálne časy z riadkov (podľa rowId)
                 const boardingRow = allRows.find((r) => r.rowId === seg.boardingRowId);
                 const alightingRow = allRows.find((r) => r.rowId === seg.alightingRowId);
     
@@ -4031,9 +3973,53 @@ const TransportApp = ({ userProfileData }) => {
                     ? timeOnDayKeyToTs(dayKey, alightingRow.timeTo)
                     : null;
     
+                // ============================================================
+                // NOVÉ: Pomocná – zisti, či segment stále patrí do
+                // celkového času parenta (t.j. parent.when obsahuje jeho časy).
+                //
+                // Ak áno, segment sa NESMIE odstrániť z busu, aj keď má
+                // neplatné časy – zostane priradený (bude sa čakať na
+                // ďalšiu zmenu času busu).
+                // ============================================================
+                const isSegmentStillInParentRange = (() => {
+                    const parentRange = parseTransferWhenToRange(parent.when);
+                    if (!parentRange) return false;
+                    if (boardingTs == null || alightingTs == null) return false;
+                    if (alightingTs <= boardingTs) return false;
+                    return boardingTs >= parentRange.startTs && alightingTs <= parentRange.endTs;
+                })();
+    
                 // Skontroluj, či sú časy platné
                 if (boardingTs == null || alightingTs == null || alightingTs <= boardingTs) {
+                    // ============================================================
+                    // NOVÉ: Ak segment stále patrí do parent rozsahu, NEODSTRAŇUJ
+                    // ho – nechaj pôvodné časy (budú sa aktualizovať pri ďalšej
+                    // zmene času busu).
+                    // ============================================================
+                    if (isSegmentStillInParentRange) {
+                        return seg;
+                    }
+    
+                    // Inak ho treba odstrániť z busu – ale cez rovnakú logiku
+                    // ako removeTeamSegment (updateParentTransfer nižšie).
                     changed = true;
+                    if (seg.boardingRowId === targetRowId) {
+                        segmentsToRemoveFromBus.push({
+                            parentKey: parent.key,
+                            fromId: seg.fromId,
+                            toId: seg.toId,
+                            clickSide: 'in',
+                        });
+                    }
+                    if (seg.alightingRowId === targetRowId) {
+                        segmentsToRemoveFromBus.push({
+                            parentKey: parent.key,
+                            fromId: seg.fromId,
+                            toId: seg.toId,
+                            clickSide: 'out',
+                        });
+                    }
+                    // Vráť segment bez priradenia (bude sa aktualizovať cez updateParentTransfer nižšie)
                     return {
                         ...seg,
                         busAssigned: false,
@@ -4055,7 +4041,31 @@ const TransportApp = ({ userProfileData }) => {
                         alightingTs <= boardingTs;
     
                     if (outsideParent) {
+                        // ============================================================
+                        // NOVÉ: Ak segment stále patrí do parent rozsahu, NEODSTRAŇUJ
+                        // ho – nechaj pôvodné časy.
+                        // ============================================================
+                        if (isSegmentStillInParentRange) {
+                            return seg;
+                        }
+    
                         changed = true;
+                        if (seg.boardingRowId === targetRowId) {
+                            segmentsToRemoveFromBus.push({
+                                parentKey: parent.key,
+                                fromId: seg.fromId,
+                                toId: seg.toId,
+                                clickSide: 'in',
+                            });
+                        }
+                        if (seg.alightingRowId === targetRowId) {
+                            segmentsToRemoveFromBus.push({
+                                parentKey: parent.key,
+                                fromId: seg.fromId,
+                                toId: seg.toId,
+                                clickSide: 'out',
+                            });
+                        }
                         return {
                             ...seg,
                             busAssigned: false,
@@ -4089,22 +4099,8 @@ const TransportApp = ({ userProfileData }) => {
                 return seg;
             });
     
-            // ============================================================
-            // NOVÉ: Prepočítaj NAVIAZANÉ segmenty (predchádzajúci a nasledujúci),
-            // ktoré nie sú priradené k žiadnemu busu (nemajú busId), ale mali
-            // by nadväzovať na zmenené časy.
-            //
-            // Princíp:
-            //  - Ak sa zmenil startTs segmentu, musí sa zmeniť aj endTs
-            //    predchádzajúceho segmentu (ak nemá vlastné reálne časy).
-            //  - Ak sa zmenil endTs segmentu, musí sa zmeniť aj startTs
-            //    nasledujúceho segmentu (ak nemá vlastné reálne časy).
-            //
-            // Porovnávame cez ID: prevSeg.toId === seg.fromId a nextSeg.fromId === seg.toId.
-            // ============================================================
             const parentSegmentsAfterSync = newSegments.map((s) => ({ ...s }));
     
-            // Zisti, ktoré segmenty sa zmenili (majú nové časy)
             const changedIdxSet = new Set();
             newSegments.forEach((s, idx) => {
                 const orig = parent.segments[idx];
@@ -4115,49 +4111,36 @@ const TransportApp = ({ userProfileData }) => {
             });
     
             if (changedIdxSet.size > 0) {
-                // Pre každý zmenený segment uprav naviazané segmenty
                 changedIdxSet.forEach((changedIdx) => {
                     const changedSeg = parentSegmentsAfterSync[changedIdx];
                     if (!changedSeg || changedSeg.startTs == null || changedSeg.endTs == null) return;
                     if (changedSeg.isWalking === true) return;
     
-                    // 1) PREDCHÁDZAJÚCI segment – ak končí tam, kde zmenený začína
                     for (let i = changedIdx - 1; i >= 0; i--) {
                         const prev = parentSegmentsAfterSync[i];
                         if (!prev) continue;
                         if (prev.isWalking === true) break;
                         if (prev.toId !== changedSeg.fromId) break;
-    
-                        // Ak má vlastné reálne časy z busu → neupravuj
                         if (prev.busId && prev.boardingRowId && prev.alightingRowId) break;
-    
-                        // Ak má len startTs a nemá endTs → doplň endTs z changedSeg.startTs
                         if (prev.startTs != null && prev.endTs == null) {
                             prev.endTs = changedSeg.startTs;
                             prev.when = `${formatTsLocal(prev.startTs)} – ${formatTsLocal(prev.endTs)}`;
                             changed = true;
                         }
-                        // Ak nemá ani startTs ani endTs → nič (nedá sa dopočítať)
                         break;
                     }
     
-                    // 2) NASLEDUJÚCI segment – ak začína tam, kde zmenený končí
                     for (let i = changedIdx + 1; i < parentSegmentsAfterSync.length; i++) {
                         const next = parentSegmentsAfterSync[i];
                         if (!next) continue;
                         if (next.isWalking === true) break;
                         if (next.fromId !== changedSeg.toId) break;
-    
-                        // Ak má vlastné reálne časy z busu → neupravuj
                         if (next.busId && next.boardingRowId && next.alightingRowId) break;
-    
-                        // Ak má len endTs a nemá startTs → doplň startTs z changedSeg.endTs
                         if (next.endTs != null && next.startTs == null) {
                             next.startTs = changedSeg.endTs;
                             next.when = `${formatTsLocal(next.startTs)} – ${formatTsLocal(next.endTs)}`;
                             changed = true;
                         }
-                        // Ak nemá ani startTs ani endTs → nič (nedá sa dopočítať)
                         break;
                     }
                 });
@@ -4168,23 +4151,69 @@ const TransportApp = ({ userProfileData }) => {
             }
         });
     
+        // ============================================================
+        // NOVÉ: Pre každý segment, ktorý treba odstrániť z busu, zavolaj
+        // ROVNAKÚ logiku ako removeTeamSegment (cez updateParentTransfer).
+        //
+        // Tým sa zabezpečí konzistencia – či už segment odstrániš kliknutím
+        // na skratku tímu v riadku busu, alebo automaticky pri zmene času,
+        // vždy sa použije tá istá logika (vyčistenie busId/rowId, walking
+        // flagy zostanú nedotknuté, atď.).
+        // ============================================================
+        if (segmentsToRemoveFromBus.length > 0) {
+            // Deduplikácia – jeden parent môže mať viac segmentov na odstránenie
+            const seen = new Set();
+            const uniqueToRemove = segmentsToRemoveFromBus.filter((item) => {
+                const key = `${item.parentKey}|${item.fromId}|${item.toId}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+    
+            for (const item of uniqueToRemove) {
+                const parent = savedTransfersRef.current.find((s) => s.key === item.parentKey);
+                if (!parent) continue;
+    
+                try {
+                    await updateParentTransfer(item.parentKey, (draft) => {
+                        draft.segments = draft.segments.map((s) => {
+                            if (s.busId !== busId) return s;
+                            if (s.fromId !== item.fromId || s.toId !== item.toId) return s;
+    
+                            // Rovnaká logika ako removeTeamSegment – vyčisti bus
+                            // referencie, ale NENASTAVUJ isWalking (walking flagy
+                            // zostanú nedotknuté).
+                            return {
+                                ...s,
+                                busAssigned: false,
+                                busId: null,
+                                boardingRowId: null,
+                                alightingRowId: null,
+                                startTs: null,
+                                endTs: null,
+                                when: null,
+                            };
+                        });
+                    });
+                } catch (err) {
+                    console.error('[TRANSPORT] Chyba pri odstraňovaní segmentu z busu (sync):', err);
+                }
+            }
+        }
+    
         if (parentsToUpdate.length === 0) {
             // ============================================================
             // NOVÉ: Aj keď sa nezmenili žiadne segmenty, mohol sa zmeniť
             // čas busu, ktorý ovplyvňuje `when` parenta. Preto pre všetky
             // parent záznamy pre daný deň prepočítaj `when` z aktuálnych
             // segmentov a ak sa zmenil, zapíš ho do DB.
-            //
-            // Tým sa zabezpečí, že po zmene času busu sa `when` v DB
-            // aktualizuje aj vtedy, keď sa segmenty nezmenili (napr. keď
-            // sa zmenil iba `timeFrom` a segment už mal správny `startTs`).
             // ============================================================
             const docRefNoChange = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
             const tUpdatesNoChange = {};
             (savedTransfersRef.current || []).forEach((parent) => {
                 if (parent.dayKey !== dayKey) return;
                 if (!Array.isArray(parent.segments) || parent.segments.length === 0) return;
-
+    
                 const tempDraft = {
                     ...parent,
                     when: null,
@@ -4199,11 +4228,10 @@ const TransportApp = ({ userProfileData }) => {
                     tUpdatesNoChange[parent.key] = { when: tempDraft.when };
                 }
             });
-
+    
             if (Object.keys(tUpdatesNoChange).length > 0) {
                 try {
                     await setDoc(docRefNoChange, { [TRANSPORT_TRANSFERS_FIELD]: tUpdatesNoChange }, { merge: true });
-                    // Aktualizuj aj lokálny stav
                     const updated = (savedTransfersRef.current || []).map((p) => {
                         const patch = tUpdatesNoChange[p.key];
                         if (!patch) return p;
@@ -4217,8 +4245,7 @@ const TransportApp = ({ userProfileData }) => {
             }
             return;
         }
-
-        // Zapíš zmeny do DB
+    
         const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
         const tUpdates = {};
         parentsToUpdate.forEach(({ parentKey, newSegments }) => {
@@ -4242,20 +4269,20 @@ const TransportApp = ({ userProfileData }) => {
                 tUpdates[parentKey].when = newWhen;
             }
         });
-
+    
         try {
             await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri synchronizácii segmentov s busom:', err);
             return;
         }
-
+    
         await new Promise((r) => setTimeout(r, 100));
-
+    
         const updatedParents = (savedTransfersRef.current || []).map((parent) => {
             const patch = parentsToUpdate.find((p) => p.parentKey === parent.key);
             if (!patch) return parent;
-
+    
             const draft = {
                 ...parent,
                 when: null,
@@ -4269,7 +4296,7 @@ const TransportApp = ({ userProfileData }) => {
             }
             return draft;
         });
-
+    
         savedTransfersRef.current = updatedParents;
         setSavedTransfers(updatedParents);
     };
@@ -4279,31 +4306,11 @@ const TransportApp = ({ userProfileData }) => {
         try {
             if (field === 'placeFrom' || field === 'placeTo') {
                 const idField = field === 'placeFrom' ? 'placeFromId' : 'placeToId';
-
-                // ============================================================
-                // NOVÉ: value je ID (zo selectboxu).
-                // Žiadny resolvePlaceIdByName – pracuj VÝHRADNE s ID.
-                // ============================================================
                 const placeId = value || null;
-
-                console.log('[TRANSPORT][updateBusRowField]', {
-                    rowId,
-                    field,
-                    value,
-                    resolvedPlaceId: placeId,
-                });
-
                 const patch = {
                     [idField]: placeId,
                     [field]: deleteField(),
                 };
-
-                // ============================================================
-                // Nájdi aktuálny riadok v busRows, ale pre výpočet
-                // timeTo použi:
-                //  - pre menené pole: NOVÉ ID (placeId)
-                //  - pre druhé pole: ID z busRows (placeFromId / placeToId)
-                // ============================================================
                 let currentRow = null;
                 Object.values(busRows || {}).forEach((rows) => {
                     if (currentRow) return;
@@ -4314,19 +4321,8 @@ const TransportApp = ({ userProfileData }) => {
                 if (currentRow) {
                     const newPlaceFromId = field === 'placeFrom' ? placeId : (currentRow.placeFromId || null);
                     const newPlaceToId = field === 'placeTo' ? placeId : (currentRow.placeToId || null);
-
-                    console.log('[TRANSPORT][updateBusRowField] Počítam timeTo:', {
-                        rowId,
-                        newPlaceFromId,
-                        newPlaceToId,
-                        timeFrom: currentRow.timeFrom,
-                    });
-
                     const travelMinutes = getTravelMinutes(newPlaceFromId, newPlaceToId);
                     const timeFrom = currentRow.timeFrom || '';
-
-                    console.log('[TRANSPORT][updateBusRowField] travelMinutes =', travelMinutes);
-
                     if (travelMinutes != null && timeFrom && /^\d{1,2}:\d{2}$/.test(timeFrom)) {
                         const [h, m] = timeFrom.split(':').map(Number);
                         let total = h * 60 + m + travelMinutes;
@@ -4338,19 +4334,9 @@ const TransportApp = ({ userProfileData }) => {
                         if (newTimeTo !== (currentRow.timeTo || '')) {
                             patch.timeTo = newTimeTo;
                         }
-                    } else {
-                        console.log('[TRANSPORT][updateBusRowField] timeTo sa nepočíta (chýba travelMinutes alebo timeFrom)');
                     }
-                } else {
-                    console.warn('[TRANSPORT][updateBusRowField] currentRow sa nenašiel pre rowId:', rowId);
                 }
-
                 await updateDoc(doc(window.db, 'transport', rowId), patch);
-
-                // ============================================================
-                // NOVÉ: Po zmene placeFrom/placeTo (a prepočte timeTo)
-                // zosynchronizuj segmenty priradené k tomuto riadku.
-                // ============================================================
                 try {
                     let busIdForSync = null;
                     let dayKeyForSync = null;
@@ -4375,11 +4361,6 @@ const TransportApp = ({ userProfileData }) => {
             
             await updateDoc(doc(window.db, 'transport', rowId), { [field]: value });
 
-            // ============================================================
-            // NOVÉ: Po zmene timeFrom/timeTo zosynchronizuj segmenty
-            // a POČKAJ na dokončenie, aby sa `when` parenta stihol
-            // prepočítať a zapísať do DB skôr, než sa UI prekreslí.
-            // ============================================================
             try {
                 let busIdForSync = null;
                 let dayKeyForSync = null;
@@ -4416,7 +4397,6 @@ const TransportApp = ({ userProfileData }) => {
         const currentIdx = allRows.findIndex((r) => r.id === currentRowId);
         if (currentIdx === -1) return;
     
-        // Pomocná: posun "HH:MM" o daný počet minút
         const shiftTime = (timeStr, delta) => {
             if (!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr)) return timeStr;
             const [h, m] = timeStr.split(':').map(Number);
@@ -4432,15 +4412,6 @@ const TransportApp = ({ userProfileData }) => {
         for (let i = currentIdx + 1; i < allRows.length; i++) {
             const prev = allRows[i - 1];
             const curr = allRows[i];
-    
-            // ============================================================
-            // NOVÉ: Pre PRVÝ nasledujúci riadok NEKONTROLUJ gap.
-            // Dôvod: aktuálny riadok má nový timeFrom, ale jeho timeTo
-            // sa ešte neprepočítal (useEffect ho dopočíta asynchrónne).
-            // Takže prev.timeTo je starý a gap by bol nesprávny.
-            // Pre ďalšie riadky (i > currentIdx + 1) už máme aktuálne
-            // hodnoty, takže gap kontrolovať môžeme.
-            // ============================================================
             if (i > currentIdx + 1) {
                 const gap = getGapMinutes(prev.timeTo, curr.timeFrom);
                 if (gap != null && gap > 2) {
@@ -4469,9 +4440,6 @@ const TransportApp = ({ userProfileData }) => {
                 )
             );
 
-            // ============================================================
-            // NOVÉ: Po posune zosynchronizuj segmenty pre každý zmenený riadok
-            // ============================================================
             try {
                 await Promise.all(
                     updates.map(({ id }) => syncAssignedSegmentsForBusRow(busId, dayKey, id))
@@ -4490,17 +4458,6 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
-    // ============================================================
-    // PO ZMENE placeTo (a prepočte timeTo) ZOSÚLAĎ NASLEDUJÚCE RIADKY
-    //
-    // Princíp:
-    //  - aktuálny riadok má nový časTo (vypočítaný z timeFrom + travelMinutes)
-    //  - nasledujúce riadky (až po prvý "červený" – medzera > 2 min) sa
-    //    posunú tak, aby ich timeFrom nadväzoval na nový časTo
-    //    predchádzajúceho riadku (+ prípadná pôvodná medzera, ak existuje)
-    //  - ak bola medzi riadkami medzera ≤ 2 min, zachová sa rovnaká medzera
-    //  - ak bola medzera > 2 min (červený riadok), zastavíme sa
-    // ============================================================
     const resyncFollowingRowsAfterPlaceToChange = async (busId, dayKey, currentRowId) => {
         if (!window.db || !busId || !dayKey || !currentRowId) return;
 
@@ -4514,7 +4471,6 @@ const TransportApp = ({ userProfileData }) => {
 
         const currentRow = allRows[currentIdx];
     
-        // NOVÉ: Použi ID priamo – nie názvy
         const travelMinutes = getTravelMinutes(currentRow.placeFromId, currentRow.placeToId);
         if (travelMinutes == null) return;
         if (!currentRow.timeFrom || !/^\d{1,2}:\d{2}$/.test(currentRow.timeFrom)) return;
@@ -4524,14 +4480,12 @@ const TransportApp = ({ userProfileData }) => {
         let newCurrentEndMin = currentStartMin + travelMinutes;
         newCurrentEndMin = ((newCurrentEndMin % (24 * 60)) + (24 * 60)) % (24 * 60);
     
-        // Pomocná: "HH:MM" → minúty od 00:00
         const toMinutes = (timeStr) => {
             if (!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr)) return null;
             const [h, m] = timeStr.split(':').map(Number);
             return h * 60 + m;
         };
     
-        // Pomocná: minúty → "HH:MM" (s mod 24h)
         const fromMinutes = (totalMin) => {
             const norm = ((totalMin % (24 * 60)) + (24 * 60)) % (24 * 60);
             const h = Math.floor(norm / 60);
@@ -4539,14 +4493,12 @@ const TransportApp = ({ userProfileData }) => {
             return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         };
     
-        // Pomocná: posun času o delta minút
         const shiftTime = (timeStr, delta) => {
             const min = toMinutes(timeStr);
             if (min == null) return timeStr;
             return fromMinutes(min + delta);
         };
     
-        // Prechádzaj nasledujúce riadky, kým nenarazíš na "červený" (medzera > 2 min)
         const updates = [];
         let prevRow = currentRow;
         let prevEndMin = newCurrentEndMin;
@@ -4554,16 +4506,13 @@ const TransportApp = ({ userProfileData }) => {
         for (let i = currentIdx + 1; i < allRows.length; i++) {
             const curr = allRows[i];
     
-            const prevTimeToMin = prevEndMin; // koniec predchádzajúceho riadku (po prepočte)
+            const prevTimeToMin = prevEndMin;
             const currTimeFromMin = toMinutes(curr.timeFrom);
     
             if (prevTimeToMin == null || currTimeFromMin == null) {
-                // Ak nie sú časy, nedá sa pokračovať – skonči
                 break;
             }
     
-            // Zisti pôvodnú medzeru medzi predchádzajúcim a aktuálnym riadkom
-            // (pred akýmkoľvek posunom). Použijeme pôvodné hodnoty z allRows.
             const originalPrevTimeToMin = toMinutes(allRows[i - 1].timeTo);
             const originalCurrTimeFromMin = currTimeFromMin;
     
@@ -4573,17 +4522,14 @@ const TransportApp = ({ userProfileData }) => {
                 if (originalGap < 0) originalGap += 24 * 60;
             }
     
-            // Ak je medzera > 2 min → červený riadok, zastav
             if (originalGap != null && originalGap > 2) {
                 break;
             }
     
-            // Nový timeFrom = koniec predchádzajúceho + pôvodná medzera (ak existuje)
             const gapToPreserve = originalGap != null && originalGap > 0 ? originalGap : 0;
             const newTimeFromMin = prevEndMin + gapToPreserve;
             const newTimeFromStr = fromMinutes(newTimeFromMin);
     
-            // Nový timeTo = nový timeFrom + travelMinutes aktuálneho riadku
             const currTravelMinutes = getTravelMinutes(curr.placeFromId, curr.placeToId);
             let newTimeToStr = curr.timeTo || '';
             let newEndMin = null;
@@ -4601,7 +4547,6 @@ const TransportApp = ({ userProfileData }) => {
                 updates.push({ id: curr.id, patch });
             }
     
-            // Posuň prev referenciu
             prevEndMin = (newEndMin != null) ? newEndMin : newTimeFromMin;
         }
     
@@ -4614,10 +4559,6 @@ const TransportApp = ({ userProfileData }) => {
                 )
             );
 
-            // ============================================================
-            // NOVÉ: Po resync zosynchronizuj segmenty pre každý zmenený riadok
-            // + pre aktuálny riadok (jeho timeTo sa mohol zmeniť)
-            // ============================================================
             try {
                 const syncPromises = [currentRowId];
                 updates.forEach(({ id }) => syncPromises.push(id));
@@ -4664,10 +4605,6 @@ const TransportApp = ({ userProfileData }) => {
             return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         };
     
-        // ============================================================
-        // KĽÚČOVÉ: Použi PRIAMO newTimeTo (už vypočítaný v onBlur),
-        // nie starý currentRow.timeTo z busRows.
-        // ============================================================
         let prevEndMin = toMinutes(newTimeTo);
         if (prevEndMin == null) return;
     
@@ -4676,7 +4613,6 @@ const TransportApp = ({ userProfileData }) => {
         for (let i = currentIdx + 1; i < allRows.length; i++) {
             const curr = allRows[i];
     
-            // Pôvodná medzera (z pôvodných hodnôt v busRows)
             const originalPrevTimeToMin = toMinutes(allRows[i - 1].timeTo);
             const originalCurrTimeFromMin = toMinutes(curr.timeFrom);
     
@@ -4686,16 +4622,13 @@ const TransportApp = ({ userProfileData }) => {
                 if (originalGap < 0) originalGap += 24 * 60;
             }
     
-            // Ak je medzera > 2 min → červený riadok, zastav
             if (originalGap != null && originalGap > 2) {
                 break;
             }
     
-            // Nový timeFrom = koniec predchádzajúceho + 2 min
             const newTimeFromMin = prevEndMin + 2;
             const newTimeFromStr = fromMinutes(newTimeFromMin);
     
-            // Nový timeTo = nový timeFrom + travelMinutes
             const currTravelMinutes = getTravelMinutes(curr.placeFromId, curr.placeToId);
             let newTimeToStr = curr.timeTo || '';
             let newEndMin = null;
@@ -4725,9 +4658,6 @@ const TransportApp = ({ userProfileData }) => {
                 )
             );
 
-            // ============================================================
-            // NOVÉ: Po posune zosynchronizuj segmenty pre každý zmenený riadok
-            // ============================================================
             try {
                 await Promise.all(
                     updates.map(({ id }) => syncAssignedSegmentsForBusRow(busId, dayKey, id))
@@ -4746,13 +4676,6 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
-    // ============================================================
-    // POSUN RIADKOV PO "OBRÁTENOM" ČERVENOM RIADKU
-    // (miesto od == miesto do, ale čas od > čas do)
-    //
-    // Posunie všetky timeFrom a timeTo v nasledujúcich riadkoch
-    // až po prvý ďalší červený riadok o hodnotu (medzera + 2 min).
-    // ============================================================
     const shiftFollowingRowsAfterInvertedGap = async (busId, dayKey, gapRowPrevId, gapRowNextId) => {
         if (!window.db || !busId || !dayKey || !gapRowPrevId || !gapRowNextId) return;
     
@@ -4768,8 +4691,6 @@ const TransportApp = ({ userProfileData }) => {
         const prevRow = allRows[prevIdx];
         const nextRow = allRows[nextIdx];
     
-        // Medzera (rovnaká logika ako getGapMinutes – s prechodom cez polnoc)
-        // Pomocná: "HH:MM" → minúty od 00:00
         const toMinutes = (timeStr) => {
             if (!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr)) return null;
             const [h, m] = timeStr.split(':').map(Number);
@@ -4780,14 +4701,9 @@ const TransportApp = ({ userProfileData }) => {
         const nextFromMin = toMinutes(nextRow.timeFrom);
         if (prevToMin == null || nextFromMin == null) return;
         
-        // ABSOLÚTNA HODNOTA rozdielu (bez prechodu cez polnoc)
         const gap = Math.abs(nextFromMin - prevToMin);
-        if (gap <= 2) return; // nie je červený riadok
-        
-        // Posun = medzera + 2 minúty
-        const deltaMinutes = gap + 2;
-    
-        // Pomocná: posun "HH:MM" o daný počet minút
+        if (gap <= 2) return;        
+        const deltaMinutes = gap + 2;    
         const shiftTime = (timeStr, delta) => {
             if (!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr)) return timeStr;
             const [h, m] = timeStr.split(':').map(Number);
@@ -4798,19 +4714,14 @@ const TransportApp = ({ userProfileData }) => {
             return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
         };
     
-        // Prejdi nasledujúce riadky od nextIdx ďalej, ale zastav
-        // pred ďalším červeným riadkom (medzera > 2 min).
         const updates = [];
         for (let i = nextIdx; i < allRows.length; i++) {
             const curr = allRows[i];
     
-            // Ak nie sme na prvom riadku za gapom, over medzeru
-            // medzi predchádzajúcim a aktuálnym riadkom.
             if (i > nextIdx) {
                 const prev = allRows[i - 1];
                 const betweenGap = getGapMinutes(prev.timeTo, curr.timeFrom);
                 if (betweenGap != null && betweenGap > 2) {
-                    // Ďalší červený riadok → stop (tento riadok už neposúvame)
                     break;
                 }
             }
@@ -4836,10 +4747,6 @@ const TransportApp = ({ userProfileData }) => {
                 )
             );
 
-            // ============================================================
-            // NOVÉ: Po posune zosynchronizuj segmenty pre každý zmenený riadok
-            // + pre oba riadky tvoriace "obrátený" gap
-            // ============================================================
             try {
                 const syncPromises = [gapRowPrevId, gapRowNextId];
                 updates.forEach(({ id }) => syncPromises.push(id));
@@ -4860,13 +4767,9 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
-    // ============================================================
-    // ODSTRÁNENIE RIADKU
-    // ============================================================
     const removeBusRow = async (rowId) => {
         if (!window.db || !rowId) return;
         try {
-            // 1) Nájdi riadok a jeho busId/dayKey
             let busId = null;
             let dayKey = null;
             Object.entries(busRows || {}).forEach(([k, rows]) => {
@@ -4882,10 +4785,8 @@ const TransportApp = ({ userProfileData }) => {
                 return;
             }
     
-            // 2) Zmaž dokument
             await deleteDoc(doc(window.db, 'transport', rowId));
     
-            // 3) Prepočítaj order a rowId pre zostávajúce riadky
             const rowsKey = `${busId}|${dayKey}`;
             const remaining = (busRows[rowsKey] || [])
                 .filter((r) => r.id !== rowId)
@@ -4906,7 +4807,6 @@ const TransportApp = ({ userProfileData }) => {
             });
             await Promise.all(updates);
     
-            // 4) Premapuj rowId v presunoch
             if (Object.keys(rowIdMap).length > 0) {
                 const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
                 const snap = await getDoc(docRef);
@@ -4943,13 +4843,7 @@ const TransportApp = ({ userProfileData }) => {
             window.showGlobalNotification('Nepodarilo sa odstrániť riadok.', 'error');
         }
     
-        // ============================================================
-        // NOVÉ: Po odstránení riadku skontroluj, či niektoré segmenty
-        // neodkazujú na už neexistujúci rowId. Ak áno, odstráň priradenie.
-        // ============================================================
         try {
-            // Nájdi busId/dayKey pre daný rowId (rovnaká logika ako v try vyššie,
-            // ale teraz už s aktuálnym stavom busRows – bez zmazaného riadku)
             let busIdForCleanup = null;
             let dayKeyForCleanup = null;
             Object.entries(busRows || {}).forEach(([k, rows]) => {
@@ -4959,10 +4853,6 @@ const TransportApp = ({ userProfileData }) => {
                 if (r) { busIdForCleanup = bId; dayKeyForCleanup = dK; }
             });
     
-            // Ak sa rowId už nenájde (bol zmazaný), skús nájsť busId/dayKey
-            // z už zmazaného záznamu – v tomto bode už nemáme priamy prístup,
-            // preto cleanup robíme pre VŠETKY autobusy a dni, kde by mohol byť problém.
-            // Bezpečnejšie: prejdi VŠETKY parent záznamy a over konzistenciu rowId.
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
             const snap = await getDoc(docRef);
             if (!snap.exists()) return;
@@ -4971,12 +4861,11 @@ const TransportApp = ({ userProfileData }) => {
             const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
             const tUpdates = {};
     
-            // Zoznam všetkých existujúcich rowId naprieč VŠETKÝMI autobusmi a dňami
             const existingRowIds = new Set();
             Object.entries(busRows || {}).forEach(([busKey, rows]) => {
                 const [bId] = busKey.split('|');
                 (rows || []).forEach((r) => {
-                    if (r.id === rowId) return; // práve zmazaný riadok ignoruj
+                    if (r.id === rowId) return;
                     if (r.rowId) existingRowIds.add(`${bId}__${r.rowId}`);
                 });
             });
@@ -5018,9 +4907,6 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
-    // ============================================================
-    // POMOCNÁ: pripočíta minúty k "HH:MM" a vráti "HH:MM"
-    // ============================================================
     const addMinutesToTime = (timeStr, minutes) => {
         if (!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr)) return '';
         if (minutes == null || isNaN(minutes)) return '';
@@ -5031,28 +4917,19 @@ const TransportApp = ({ userProfileData }) => {
         return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
     };
     
-    // ============================================================
-    // POMOCNÁ: nájde trvanie jazdy medzi dvoma zastávkami
-    // ============================================================
     function getTravelMinutes(placeFrom, placeTo) {
         if (!placeFrom || !placeTo) {
             console.log('[TRANSPORT][getTravelMinutes] Chýba placeFrom alebo placeTo:', { placeFrom, placeTo });
             return null;
         }
     
-        // ============================================================
-        // NOVÉ: Ak vstup UŽ JE ID (existuje v allPlacesRef), použi ho priamo.
-        // Inak ho prelož cez resolvePlaceIdByName (očakáva názov).
-        // ============================================================
         const resolveToId = (val) => {
             if (!val) return null;
             const raw = String(val).trim();
     
-            // 1) Je to ID?
             if ((allPlacesRef.current || []).some((p) => p.id === raw)) {
                 return raw;
             }
-            // 2) Je to názov? Prelož.
             return resolvePlaceIdByName(raw);
         };
     
@@ -5078,25 +4955,15 @@ const TransportApp = ({ userProfileData }) => {
             return Number(found.minutes);
         }
     
-        // ============================================================
-        // NOVÉ: Skús aj opačný smer (ak je nastavené len A→B, ale nie B→A)
-        // ============================================================
         const reverseKey = `${toId}|${fromId}`;
         const reverseFound = travelTimes[reverseKey];
         if (reverseFound && reverseFound.minutes != null) {
-            console.log('[TRANSPORT][getTravelMinutes] Použitý opačný smer:', {
-                reverseKey,
-                minutes: reverseFound.minutes,
-            });
             return Number(reverseFound.minutes);
         }
     
         return null;
     }
 
-    // ============================================================
-    // RENDER HLAVIČKY RIADKOV (8 stĺpcov)
-    // ============================================================
     const renderBusRowsHeader = () => React.createElement(
         'thead',
         null,
@@ -5115,11 +4982,6 @@ const TransportApp = ({ userProfileData }) => {
         )
     );
 
-    // ============================================================
-    // POMOCNÁ: vypočíta počet členov tímu z teamKey "Názov|Kategória"
-    // Ak tím nie je v users (nemá známe počty), použije sa priemer
-    // kategórie (rovnaká logika ako getCategoryAverageForTransfer).
-    // ============================================================
     const getTeamMembersCount = (teamKey) => {
         const parts = String(teamKey).split('|');
         const teamName = parts[0] || '';
@@ -5134,17 +4996,12 @@ const TransportApp = ({ userProfileData }) => {
                 + (counts.womenDrivers || 0);
         }
 
-        // Fallback: tím nie je v users (napr. superstructure) → priemer kategórie
         const avg = getCategoryAverageForTransfer(category);
         if (avg != null) return avg;
 
         return 0;
     };
 
-    // ============================================================
-    // POMOCNÁ: vytvorí tooltip pre tím v autobuse
-    // ("Tím • 15 členov — kliknutím odstrániť z autobusu")
-    // ============================================================
     const getTeamTooltipLabel = (teamKey) => {
         const parts = String(teamKey).split('|');
         const teamName = (parts[0] || '').trim();
@@ -5176,7 +5033,6 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     const getTeamsInBusAfterRow = (busId, dayKey, rowId) => {
-        // NOVÉ: Pracuj VÝHRADNE cez rowId (segmenty presunov) – nie cez row.teamsIn/teamsOut
         const rowsKey = `${busId}|${dayKey}`;
         const allRows = (busRows[rowsKey] || [])
             .slice()
@@ -5190,7 +5046,6 @@ const TransportApp = ({ userProfileData }) => {
     
         const inBus = new Set();
     
-        // Prejdi všetky parent presuny pre daný deň a bus
         (savedTransfersRef.current || []).forEach((parent) => {
             if (parent.dayKey !== dayKey) return;
             if (parent.isWalking === true) return;
@@ -5203,8 +5058,6 @@ const TransportApp = ({ userProfileData }) => {
                 const aOrder = parseOrderFromRowId(seg.alightingRowId);
                 if (bOrder == null || aOrder == null) return;
     
-                // Tím je v buse na tomto riadku, ak nastúpil v tomto alebo skoršom
-                // a vystúpi až neskôr (nie na tomto riadku).
                 if (bOrder <= currentOrder && currentOrder < aOrder) {
                     inBus.add(`${parent.teamName}|${parent.category}`);
                 }
@@ -5219,11 +5072,6 @@ const TransportApp = ({ userProfileData }) => {
         });
     };
 
-    // ============================================================
-    // POMOCNÁ: výpočet medzery v minútach medzi dvoma "HH:MM"
-    // Vráti počet minút (môže byť aj > 24h, ale ošetríme mod 24h)
-    // alebo null, ak sa nedá vypočítať.
-    // ============================================================
     const getGapMinutes = (timeTo, timeFrom) => {
         if (!timeTo || !timeFrom) return null;
         const re = /^(\d{1,2}):(\d{2})$/;
@@ -5233,7 +5081,6 @@ const TransportApp = ({ userProfileData }) => {
         const toMin = Number(a[1]) * 60 + Number(a[2]);
         const fromMin = Number(b[1]) * 60 + Number(b[2]);
         let diff = fromMin - toMin;
-        // Ak je záporný, berieme to ako prechod cez polnoc
         if (diff < 0) diff += 24 * 60;
         return diff;
     };
@@ -5241,11 +5088,6 @@ const TransportApp = ({ userProfileData }) => {
     const isSegmentCoveredByBusPath = (dayKey, teamName, category, fromId, toId) => {
         if (!fromId || !toId) return false;
         if (fromId === toId) return false;
-
-        // ============================================================
-        // NOVÉ: Nájdi v parent.segments segment pre daný tím/kategóriu,
-        // ktorý má busId a zhodné fromId/toId.
-        // ============================================================
         const parent = (savedTransfersRef.current || []).find((p) => {
             if (p.dayKey !== dayKey) return false;
             if (String(p.teamName || '').trim() !== String(teamName || '').trim()) return false;
@@ -5258,9 +5100,6 @@ const TransportApp = ({ userProfileData }) => {
         return !!parent;
     };
 
-    // ============================================================
-    // RENDER JEDNÉHO RIADKU (upravený – Do read-only, miesta selectboxy)
-    // ============================================================
     const renderBusRow = (row, busId, dayKey) => {
         const travelMinutes = getTravelMinutes(row.placeFromId, row.placeToId);
 
@@ -5279,15 +5118,6 @@ const TransportApp = ({ userProfileData }) => {
             allPlacesCount: (allPlacesRef.current || []).length,
         });
 
-        // ============================================================
-        // NOVÉ: computedTimeTo sa počíta takto:
-        //  1) Ak row.timeTo (z DB) existuje → použi ho PRIAMO
-        //     (zabezpečí, že "Do" sa zobrazí aj keď travelTimes
-        //      ešte nie je načítaný, alebo keď placeFrom/placeTo
-        //      nie sú ešte vyplnené).
-        //  2) Inak dopočítaj z timeFrom + travelMinutes.
-        //  3) Inak prázdny string.
-        // ============================================================
         const computedTimeTo = (() => {
             if (row.timeTo && /^\d{1,2}:\d{2}$/.test(row.timeTo)) {
                 return row.timeTo;
@@ -5300,7 +5130,6 @@ const TransportApp = ({ userProfileData }) => {
                 const endM = total % 60;
                 return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
             }
-            // 3) Nič
             return '';
         })();
 
@@ -5311,11 +5140,6 @@ const TransportApp = ({ userProfileData }) => {
         const currentIdx = allRows.findIndex((r) => r.id === row.id);
         const prevRow = currentIdx > 0 ? allRows[currentIdx - 1] : null;
 
-        // ============================================================
-        // NOVÉ: lockedPlaceFrom pracuje VÝHRADNE s ID.
-        //  - prevRow.placeToId je ID
-        //  - zobrazený názov získaš cez resolvePlaceNameById
-        // ============================================================
         const lockedPlaceFromId =
             prevRow && prevRow.placeToId ? prevRow.placeToId : null;
         const lockedPlaceFrom = lockedPlaceFromId
@@ -5336,14 +5160,10 @@ const TransportApp = ({ userProfileData }) => {
             });
         };
 
-        // ============================================================
-        // NOVÉ: Selectboxy posielajú ID (value: s.id), nie názvy.
-        // ============================================================
         const stopOptionsFrom = stopsList.map((s) =>
             React.createElement('option', { key: s.id, value: s.id }, s.name)
         );
 
-        // Zastávky pre "Miesto do" – bez tej, ktorá je vybraná v "Miesto od"
         const stopOptionsTo = stopsList
             .filter((s) => s.id !== row.placeFromId)
             .map((s) =>
@@ -5357,10 +5177,6 @@ const TransportApp = ({ userProfileData }) => {
             const tn = String(teamName).trim();
             const cat = cleanCategory(category || '');
         
-            // ============================================================
-            // NOVÉ: Nájdi segment v parentoch, ktorý má busId === busId
-            // a (podľa clickSide) boardingRowId alebo alightingRowId === rowObj.rowId
-            // ============================================================
             const targetParent = (savedTransfersRef.current || []).find((p) => {
                 if (p.dayKey !== dayKey) return false;
                 if (String(p.teamName || '').trim() !== tn) return false;
@@ -5382,7 +5198,6 @@ const TransportApp = ({ userProfileData }) => {
                     draft.segments = draft.segments.map((s) => {
                         if (s.busId !== busId) return s;
                         if (clickSide === 'in' && s.boardingRowId === rowObj.rowId) {
-                            // Zruš priradenie celého segmentu
                             return {
                                 ...s,
                                 busAssigned: false,
@@ -5420,11 +5235,10 @@ const TransportApp = ({ userProfileData }) => {
         return React.createElement(
             'tr',
             { key: row.id, className: 'hover:bg-gray-50 group relative' },
-            // 1. čas začiatok
             React.createElement('td', { className: 'border border-gray-300 p-1' },
                 React.createElement('input', {
                     type: 'time',
-                    key: `timeFrom-${row.id}-${row.timeFrom || ''}`,   // ← NOVÉ
+                    key: `timeFrom-${row.id}-${row.timeFrom || ''}`,
                     defaultValue: row.timeFrom || '',
                     onBlur: async (e) => {
                         const newValue = e.target.value;
@@ -5464,7 +5278,6 @@ const TransportApp = ({ userProfileData }) => {
                     className: inputCls,
                 })
             ),
-            // 2. čas koniec (READ-ONLY, vypočítaný)
             React.createElement('td', { className: 'border border-gray-300 p-1' },
                 React.createElement('input', {
                     type: 'time',
@@ -5478,7 +5291,6 @@ const TransportApp = ({ userProfileData }) => {
                     style: { color: computedTimeTo ? '#1d4ed8' : '#9ca3af' },
                 })
             ),
-            // 3. miesto od
             React.createElement('td', { className: 'border border-gray-300 p-1' },
                 lockedPlaceFrom != null
                     ? React.createElement(
@@ -5490,14 +5302,8 @@ const TransportApp = ({ userProfileData }) => {
                         lockedPlaceFrom
                     )
                     : React.createElement('select', {
-                        // ============================================================
-                        // NOVÉ: value je ID (row.placeFromId), nie názov.
-                        // ============================================================
                         value: row.placeFromId || '',
                         onChange: async (e) => {
-                            // ============================================================
-                            // NOVÉ: newPlaceFromId je ID (zo selectboxu).
-                            // ============================================================
                             const newPlaceFromId = e.target.value;
                             const oldPlaceFromId = row.placeFromId || '';
                             if (newPlaceFromId === oldPlaceFromId) return;
@@ -5527,26 +5333,15 @@ const TransportApp = ({ userProfileData }) => {
                         stopOptionsFrom
                     )
             ),
-            // 4. miesto do (SELECT)
             React.createElement('td', { className: 'border border-gray-300 p-1' },
                 React.createElement('select', {
-                    // ============================================================
-                    // NOVÉ: value je ID (row.placeToId), nie názov.
-                    // ============================================================
                     value: row.placeToId || '',
                     onChange: async (e) => {
-                        // ============================================================
-                        // NOVÉ: newPlaceToId je ID (zo selectboxu).
-                        // ============================================================
                         const newPlaceToId = e.target.value;
                         const oldPlaceToId = row.placeToId || '';
                         if (newPlaceToId === oldPlaceToId) return;
-
                         await updateBusRowField(row.id, 'placeTo', newPlaceToId);
-
-                        // Prepočítaj timeTo z nových ID
                         const currentPlaceFromId = row.placeFromId || null;
-
                         if (currentPlaceFromId && newPlaceToId && row.timeFrom && /^\d{1,2}:\d{2}$/.test(row.timeFrom)) {
                             const travelMinutes = getTravelMinutes(currentPlaceFromId, newPlaceToId);
                             if (travelMinutes != null) {
@@ -5561,8 +5356,6 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                             }
                         }
-
-                        // Zosúlaď nasledujúce riadky
                         setTimeout(() => {
                             resyncFollowingRowsAfterPlaceToChange(busId, dayKey, row.id);
                         }, 300);
@@ -5573,13 +5366,8 @@ const TransportApp = ({ userProfileData }) => {
                     stopOptionsTo
                 )
             ),            
-            // 5. tímy nástup
             React.createElement('td', { className: 'border border-gray-300 p-1 align-middle whitespace-nowrap' },
                 (() => {
-                    // ============================================================
-                    // NOVÉ: Tímy, ktoré nastupujú na TOMTO riadku – hľadaj v parent.segments
-                    // podľa busId + boardingRowId === row.rowId
-                    // ============================================================
                     const teamsBoardingHere = [];
                     (savedTransfersRef.current || []).forEach((parent) => {
                         if (parent.dayKey !== dayKey) return;
@@ -5622,13 +5410,8 @@ const TransportApp = ({ userProfileData }) => {
                     );
                 })()
             ),
-            // 6. tímy výstup
             React.createElement('td', { className: 'border border-gray-300 p-1 align-middle whitespace-nowrap' },
                 (() => {
-                    // ============================================================
-                    // NOVÉ: Tímy, ktoré vystupujú na TOMTO riadku – hľadaj v parent.segments
-                    // podľa busId + alightingRowId === row.rowId
-                    // ============================================================
                     const teamsAlightingHere = [];
                     (savedTransfersRef.current || []).forEach((parent) => {
                         if (parent.dayKey !== dayKey) return;
@@ -5671,7 +5454,6 @@ const TransportApp = ({ userProfileData }) => {
                     );
                 })()
             ),
-            // 7. počet (AUTOMATICKY – súčet členov tímov v autobuse, s fallbackom na priemer kategórie)
             React.createElement('td', {
                 className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold',
                 style: { color: '#1d4ed8' },
@@ -5686,17 +5468,10 @@ const TransportApp = ({ userProfileData }) => {
                     return total > 0 ? total : React.createElement('span', { className: 'text-gray-400' }, '—');
                 })()
             ),
-            // 8. trvanie v min (read-only, VYPOČÍTANÉ)
-            //    Priorita:
-            //      1) Ak je nastavené trvanie jazdy medzi zastávkami (travelMinutes) → zobraz ho
-            //      2) Inak vypočítaj zo zobrazených časov Od / Do (timeTo − timeFrom, s prechodom cez polnoc)
-            //    Ak chýba čas Od alebo Do → "—"
-            //    Ak je timeFrom > timeTo a nemáme travelMinutes → "chyba"
             React.createElement('td', {
                 className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold',
                 style: {
                     color: (() => {
-                        // 1) Prioritne travelMinutes
                         if (travelMinutes != null) {
                             return '#b45309';
                         }
@@ -5714,7 +5489,6 @@ const TransportApp = ({ userProfileData }) => {
                     })(),
                 },
                 title: (() => {
-                    // 1) Prioritne travelMinutes
                     if (travelMinutes != null) {
                         return `Trvanie jazdy nastavené v Nastaveniach: ${travelMinutes} min`;
                     }
@@ -5731,11 +5505,9 @@ const TransportApp = ({ userProfileData }) => {
                     return `Trvanie vypočítané zo zobrazených časov: ${row.timeFrom} → ${row.timeTo}`;
                 })(),
             }, (() => {
-                // 1) Prioritne travelMinutes – nastavené trvanie jazdy
                 if (travelMinutes != null) {
                     return travelMinutes;
                 }
-                // 2) Fallback – vypočítaj zo zobrazených časov
                 const timeRe = /^\d{1,2}:\d{2}$/;
                 if (!row.timeFrom || !row.timeTo ||
                     !timeRe.test(row.timeFrom) || !timeRe.test(row.timeTo)) {
@@ -5752,19 +5524,13 @@ const TransportApp = ({ userProfileData }) => {
                 if (diff < 0) diff += 24 * 60;
                 return diff;
             })()),
-            // 9. mazanie riadku
             React.createElement('td', { className: 'border border-gray-300 p-1 text-center' },
                 React.createElement('button', {
                     type: 'button',
                     onClick: () => removeBusRow(row.id),
                     className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 flex items-center justify-center mx-auto',
                     title: 'Odstrániť riadok',
-                }, React.createElement('i', { className: 'fa-solid fa-xmark' })),
-            
-                // 10. HOVER "+" VYCIELENÝ NA STRED BOXU AUTOBUSU
-                //     Overlay je vnútri posledného <td>, ale <td> NEMÁ position: relative,
-                //     takže absolute sa vzťahuje na <tr> (ktoré má "group relative").
-                //     left: 50% + translateX(-50%) = stred celého riadku (celého boxu).
+                }, React.createElement('i', { className: 'fa-solid fa-xmark' })),            
                 React.createElement(
                     'div',
                     {
@@ -5805,14 +5571,10 @@ const TransportApp = ({ userProfileData }) => {
         );
     };
     
-    // ============================================================
-    // PRIDANIE NOVÉHO AUTOBUSU
-    // ============================================================
     const addNewBus = async () => {
         if (!window.db || busSaving) return;
         setBusSaving(true);
         try {
-            // Zoznam existujúcich čísel autobusov (kladné celé čísla)
             const existingNumbers = new Set(
                 buses
                     .map((b) => Number(b.number))
@@ -5820,7 +5582,6 @@ const TransportApp = ({ userProfileData }) => {
                     .map((n) => Math.floor(n))
             );
     
-            // Nájdi najnižšie voľné číslo začínajúc od 1
             let nextNumber = 1;
             while (existingNumbers.has(nextNumber)) {
                 nextNumber += 1;
@@ -5853,9 +5614,6 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
-    // ============================================================
-    // ZMAZANIE VYGENEROVANÝCH PRESUNOV Z DB
-    // ============================================================
     const deleteTransfers = async ({ categoryId, categoryName }) => {
         if (!window.db) {
             window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
@@ -5864,9 +5622,6 @@ const TransportApp = ({ userProfileData }) => {
         try {
             const targetCat = cleanCategory(categoryName);
 
-            // ============================================================
-            // 1) Zmazať presuny z settings/transportTravelTimes.transfers
-            // ============================================================
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
             const snap = await getDoc(docRef);
 
@@ -5896,20 +5651,14 @@ const TransportApp = ({ userProfileData }) => {
                 );
             }
 
-            // ============================================================
-            // 2) Odstrániť tím z danej kategórie z ALL busRows
-            //    (teamsIn / teamsOut) vo všetkých autobusoch a dňoch
-            // ============================================================
-            const rowsUpdates = {}; // rowId → { teamsIn?, teamsOut? }
+            const rowsUpdates = {};
             let rowsTouchedCount = 0;
 
-            // Prejdi všetky busRows v aktuálnom stave (z React state `busRows`)
             Object.entries(busRows || {}).forEach(([busKey, rows]) => {
                 (rows || []).forEach((row) => {
                     const currentTeamsIn = Array.isArray(row.teamsIn) ? row.teamsIn : [];
                     const currentTeamsOut = Array.isArray(row.teamsOut) ? row.teamsOut : [];
 
-                    // Pomocná: zisti, či teamKey patrí do cieľovej kategórie
                     const isFromTargetCategory = (teamKey) => {
                         const [tn, cat] = String(teamKey).split('|');
                         return cleanCategory(cat || '') === targetCat;
@@ -5938,9 +5687,6 @@ const TransportApp = ({ userProfileData }) => {
                 await Promise.all(promises);
             }
 
-            // ============================================================
-            // 3) Notifikácia
-            // ============================================================
             if (keysToDelete.length === 0 && rowsTouchedCount === 0) {
                 window.showGlobalNotification(
                     `Pre kategóriu ${categoryName} neexistujú žiadne presuny ani priradenia na zmazanie.`,
@@ -5980,9 +5726,6 @@ const TransportApp = ({ userProfileData }) => {
                 },
                 { merge: true }
             );
-            // ============================================================
-            // Názvy pre notifikáciu – odvodené z ID (len pre zobrazenie).
-            // ============================================================
             const fromName = resolvePlaceNameById(transfer.fromId) || '';
             const toName = resolvePlaceNameById(transfer.toId) || '';
             window.showGlobalNotification(
@@ -6002,33 +5745,22 @@ const TransportApp = ({ userProfileData }) => {
         if (!window.db || !editingTransfer) return;
         const original = editingTransfer;
 
-        // ============================================================
-        // NOVÉ: editingTransferStops obsahuje NÁZVY zo selectboxu
-        // (selectbox posiela s.name). Prekladáme ich na ID.
-        // Ďalej pracuj VÝHRADNE s ID.
-        // ============================================================
         const stopIds = (editingTransferStops || [])
             .map((s) => resolvePlaceIdByName(s))
             .filter(Boolean);
 
         const parentKey = original._parentKey || original.key;
 
-        // ============================================================
-        // Vždy použi `when` z PARENTA (nie zo segmentu).
-        // ============================================================
         const originalWhen = (() => {
-            // 1) Skús parent záznam
             const parentRec = savedTransfersRef.current.find((s) => s.key === parentKey);
             if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
                 return parentRec.when;
             }
 
-            // 2) Skús `original.when`
             if (original.when && String(original.when).trim() !== '') {
                 return original.when;
             }
 
-            // 3) Poskladaj z reálnych časov segmentov parenta
             if (parentRec && Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
                 let earliestStart = null;
                 let latestEnd = null;
