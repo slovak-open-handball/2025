@@ -13144,10 +13144,6 @@ window.listAccommodationsByCategoryAndGroup = async (categoryName, groupName, vi
             const sorted = [...directAccommodations].sort((a, b) =>
                 a.localeCompare(b, 'sk', { sensitivity: 'base' })
             );
-            if (sorted.length === 0) {
-            } else {
-                sorted.forEach((name) => console.log(`   • ${name}`));
-            }
             return sorted;
         }
         const matchesRef = collection(window.db, 'matches');
