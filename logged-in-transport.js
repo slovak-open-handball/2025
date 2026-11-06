@@ -4941,16 +4941,19 @@ const TransportApp = ({ userProfileData }) => {
 
     const getTeamMembersCount = (teamKey) => {
         const parts = String(teamKey).split('|');
-        const teamName = parts[0] || '';
-        const category = parts[1] || '';
+        const teamName = (parts[0] || '').trim();
+        const category = (parts[1] || '').trim();
+        if (!teamName || !category) return 0;
 
         const counts = getTeamCountsForTransfer(category, teamName);
         if (counts) {
-            return (counts.players || 0)
-                + (counts.menRT || 0)
-                + (counts.womenRT || 0)
-                + (counts.menDrivers || 0)
-                + (counts.womenDrivers || 0);
+            const total =
+                (counts.players || 0) +
+                (counts.menRT || 0) +
+                (counts.womenRT || 0) +
+                (counts.menDrivers || 0) +
+                (counts.womenDrivers || 0);
+            if (total > 0) return total;
         }
 
         const avg = getCategoryAverageForTransfer(category);
@@ -5007,6 +5010,16 @@ const TransportApp = ({ userProfileData }) => {
             if (parent.dayKey !== dayKey) return;
             if (parent.isWalking === true) return;
     
+            // NOVÉ: doplnenie teamName pre superstructure / neúplné záznamy
+            let effectiveTeamName = String(parent.teamName || '').trim();
+            let effectiveCategory = cleanCategory(parent.category || '');
+            if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
+                const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
+                const info = (teamsLookupRef.current || {})[lookupKey];
+                if (info && info.teamName) effectiveTeamName = info.teamName;
+            }
+            if (!effectiveTeamName) return; // bez mena nevieme nič spočítať
+    
             (parent.segments || []).forEach((seg) => {
                 if (seg.busId !== busId) return;
                 if (seg.isWalking === true) return;
@@ -5016,7 +5029,7 @@ const TransportApp = ({ userProfileData }) => {
                 if (bOrder == null || aOrder == null) return;
     
                 if (bOrder <= currentOrder && currentOrder < aOrder) {
-                    inBus.add(`${parent.teamName}|${parent.category}`);
+                    inBus.add(`${effectiveTeamName}|${effectiveCategory}`);
                 }
             });
         });
