@@ -5169,22 +5169,6 @@ const TransportApp = ({ userProfileData }) => {
 
     const renderBusRow = (row, busId, dayKey) => {
         const travelMinutes = getTravelMinutes(row.placeFromId, row.placeToId);
-
-        console.log('[TRANSPORT][renderBusRow]', {
-            rowId: row.id,
-            placeFromId: row.placeFromId,
-            placeToId: row.placeToId,
-            placeFrom: row.placeFrom,
-            placeTo: row.placeTo,
-            travelTimesKeys: Object.keys(travelTimes || {}),
-            timeFrom: row.timeFrom,
-            timeTo: row.timeTo,
-            travelMinutes,
-            stopsListCount: (stopsList || []).length,
-            stopsListNames: (stopsList || []).map((s) => ({ id: s.id, name: s.name })),
-            allPlacesCount: (allPlacesRef.current || []).length,
-        });
-
         const computedTimeTo = (() => {
             if (row.timeTo && /^\d{1,2}:\d{2}$/.test(row.timeTo)) {
                 return row.timeTo;
