@@ -409,6 +409,17 @@ const TransportApp = ({ userProfileData }) => {
                 parentRange = { startTs: earliestStart, endTs: latestEnd };
             }
         }
+        // NOVÉ: Fallback cez dayKey
+        if (!parentRange || parentRange.startTs == null || parentRange.endTs == null) {
+            const dayKey = parentRec.dayKey || transfer.dayKey;
+            if (dayKey) {
+                const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+                if (dm) {
+                    const dayStart = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), 0, 0, 0, 0).getTime();
+                    parentRange = { startTs: dayStart, endTs: dayStart + 24 * 60 * 60 * 1000 - 60000 };
+                }
+            }
+        }
         if (!parentRange || parentRange.startTs == null || parentRange.endTs == null) return null;
     
         const PARENT_START = parentRange.startTs;
@@ -8766,32 +8777,21 @@ const TransportApp = ({ userProfileData }) => {
                     if (fromId === toId) continue;
                     const parentSegmentForThisIdx = (() => {
                         if (!Array.isArray(t.segments)) return null;
-                        return t.segments.find(
-                            (s) => s.fromId === fromId && s.toId === toId
-                        ) || null;
-                    })();
-                    
-                    const isSegmentWalking =
-                        (parentSegmentForThisIdx && parentSegmentForThisIdx.isWalking === true) ||
-                        t.isWalking === true;
-                    
-                    if (isSegmentWalking) {
-                        continue;
-                    }
-                    
-                    let hasRealTime = false;
-                    let whenStr = null;
-
-                    const parentSegForThisIdx = (() => {
-                        if (!Array.isArray(t.segments)) return null;
                         return t.segments.find((s) => s.fromId === fromId && s.toId === toId) || null;
                     })();
-
-                    if (parentSegForThisIdx && parentSegForThisIdx.startTs != null && parentSegForThisIdx.endTs != null && parentSegForThisIdx.endTs > parentSegForThisIdx.startTs) {
+                    const isSegmentWalking = (parentSegmentForThisIdx && parentSegmentForThisIdx.isWalking === true) || t.isWalking === true;
+                    if (isSegmentWalking) continue;
+            
+                    let hasRealTime = false;
+                    let whenStr = null;
+            
+                    // NOVÉ: Pre priradený segment použi reálny čas z parent.segments
+                    if (parentSegmentForThisIdx && parentSegmentForThisIdx.startTs != null && parentSegmentForThisIdx.endTs != null && parentSegmentForThisIdx.endTs > parentSegmentForThisIdx.startTs) {
                         hasRealTime = true;
-                        whenStr = `${formatTsLocal(parentSegForThisIdx.startTs)} – ${formatTsLocal(parentSegForThisIdx.endTs)}`;
+                        whenStr = `${formatTsLocal(parentSegmentForThisIdx.startTs)} – ${formatTsLocal(parentSegmentForThisIdx.endTs)}`;
                     }
-                    
+            
+                    // NOVÉ: Pre nepriradený segment VŽDY použi computeProvisionalSegmentRange
                     if (!whenStr) {
                         const provisional = computeProvisionalSegmentRange({
                             ...t,
@@ -8803,43 +8803,11 @@ const TransportApp = ({ userProfileData }) => {
                             whenStr = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
                             hasRealTime = false;
                         }
-                        
-                        if (!whenStr) {
-                            const parentRec = savedTransfers.find((s) => s.key === t.key);
-                            if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
-                                whenStr = parentRec.when;
-                            } else if (Array.isArray(t.segments) && t.segments.length > 0) {
-                                let earliestStart = null;
-                                let latestEnd = null;
-                                t.segments.forEach((s) => {
-                                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                                        earliestStart = s.startTs;
-                                    }
-                                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                                        latestEnd = s.endTs;
-                                    }
-                                });
-                                if (earliestStart != null && latestEnd != null) {
-                                    whenStr = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-                                } else if (earliestStart != null) {
-                                    whenStr = formatTsLocal(earliestStart);
-                                } else if (latestEnd != null) {
-                                    whenStr = formatTsLocal(latestEnd);
-                                }
-                            }
-                        }
                     }
-                    
+            
                     const text = `Presun z ${resolvePlaceNameById(fromId)} do ${resolvePlaceNameById(toId)}`;
-                    const key = buildTransferKey(
-                        t.category,
-                        t.teamName,
-                        whenStr || '',
-                        text
-                    );
-                    
-                    let remainingMinutes = null;
-                                        
+                    const key = buildTransferKey(t.category, t.teamName, whenStr || '', text);
+            
                     expandedTransfers.push({
                         ...t,
                         key,
@@ -8850,8 +8818,8 @@ const TransportApp = ({ userProfileData }) => {
                         intermediateStopIds: [],
                         _parentKey: t.key,
                         _parentRoute: `${resolvePlaceNameById(t.fromId)} → ${resolvePlaceNameById(t.toId)}`,
-                        _remainingMinutes: remainingMinutes,
-                        _isAssigned: segmentAssigned[i],
+                        _remainingMinutes: null,
+                        _isAssigned: false,
                         _hasRealTime: hasRealTime,
                         isWalking: false,
                     });
