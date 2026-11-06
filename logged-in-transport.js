@@ -3928,7 +3928,6 @@ const TransportApp = ({ userProfileData }) => {
     const syncAssignedSegmentsForBusRow = async (busId, dayKey, rowId) => {
         if (!window.db || !busId || !dayKey || !rowId) return;
     
-        // Načítaj aktuálne busRow dokumenty z Firestore pre daný bus a deň
         const rowsKey = `${busId}|${dayKey}`;
         let allRows = [];
         try {
@@ -3974,7 +3973,6 @@ const TransportApp = ({ userProfileData }) => {
                 if (!seg || seg.busId !== busId) return seg;
                 if (seg.isWalking === true) return seg;
 
-                // Spracuj VŠETKY segmenty priradené k tomuto busu
                 const boardingRow = allRows.find((r) => r.rowId === seg.boardingRowId);
                 const alightingRow = allRows.find((r) => r.rowId === seg.alightingRowId);
             
@@ -4291,7 +4289,6 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     });
                     if (busIdForSync && dayKeyForSync) {
-                        // Override pre zmenený row – všetky polia z patch (placeFromId/placeToId/timeTo)
                         const overrideFields = {};
                         if (patch.placeFromId !== undefined) overrideFields.placeFromId = patch.placeFromId;
                         if (patch.placeToId !== undefined) overrideFields.placeToId = patch.placeToId;
@@ -4320,7 +4317,6 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 });
                 if (busIdForSync && dayKeyForSync) {
-                    // Override pre zmenený row – nové časy
                     await syncAssignedSegmentsForBusRow(busIdForSync, dayKeyForSync, rowId);
                 }
             } catch (e) {
@@ -6181,7 +6177,6 @@ const TransportApp = ({ userProfileData }) => {
                 const rowTimeFromTs = timeOnDayKeyToTs(dayKey, row.timeFrom);
                 const rowTimeToTs   = timeOnDayKeyToTs(dayKey, row.timeTo);
             
-                // fallback: ak trFromId je null, porovnaj aspoň názov
                 const fromMatches = trFromId
                     ? rowFromId === trFromId
                     : (row.placeFrom && normalizePlaceName(row.placeFrom) === normalizePlaceName(resolvePlaceNameById(transfer.fromId)));
@@ -6189,7 +6184,6 @@ const TransportApp = ({ userProfileData }) => {
                     ? rowToId === trToId
                     : (row.placeTo && normalizePlaceName(row.placeTo) === normalizePlaceName(resolvePlaceNameById(transfer.toId)));
             
-                // rozšírené okno: ak trRange je príliš úzky, použi celý deň
                 const rangeStart = trRange.startTs;
                 const rangeEnd   = trRange.endTs;
                 const wideStart = Math.min(rangeStart, timeOnDayKeyToTs(dayKey, '00:00'));
