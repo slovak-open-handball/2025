@@ -5033,84 +5033,43 @@ const TransportApp = ({ userProfileData }) => {
         const allRows = (busRows[rowsKey] || [])
             .slice()
             .sort((a, b) => (a.order || 0) - (b.order || 0));
-    
+
         const currentRow = allRows.find((r) => r.id === rowId);
         if (!currentRow) return [];
-    
+
         const currentOrder = parseOrderFromRowId(currentRow.rowId);
         if (currentOrder == null) return [];
-    
+
         const inBus = new Set();
-    
-        // 1) Primárny zdroj: segments v savedTransfers (nový spôsob)
+
         (savedTransfersRef.current || []).forEach((parent) => {
             if (parent.dayKey !== dayKey) return;
             if (parent.isWalking === true) return;
-    
-            let effectiveTeamName = String(parent.teamName || '').trim();
+
             const effectiveCategory = cleanCategory(parent.category || '');
+
+            let effectiveTeamName = String(parent.teamName || '').trim();
             if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
                 const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
                 const info = (teamsLookupRef.current || {})[lookupKey];
                 if (info && info.teamName) effectiveTeamName = info.teamName;
             }
             if (!effectiveTeamName) return;
-    
+
             (parent.segments || []).forEach((seg) => {
                 if (seg.busId !== busId) return;
                 if (seg.isWalking === true) return;
-    
+
                 const bOrder = parseOrderFromRowId(seg.boardingRowId);
                 const aOrder = parseOrderFromRowId(seg.alightingRowId);
                 if (bOrder == null || aOrder == null) return;
-    
+
                 if (bOrder <= currentOrder && currentOrder < aOrder) {
                     inBus.add(`${effectiveTeamName}|${effectiveCategory}`);
                 }
             });
         });
-    
-        // 2) Fallback: teamsIn / teamsOut priamo na riadkoch busu
-        //    (pre prípady, keď segmenty ešte nie sú uložené alebo ide o starší zápis)
-        //    Simulujeme "kto je v buse" prechodom cez riadky od začiatku po currentOrder.
-        const fallbackInBus = new Set();
-        let started = false;
-        for (let i = 0; i < allRows.length; i++) {
-            const r = allRows[i];
-            const rOrder = parseOrderFromRowId(r.rowId);
-            if (rOrder == null) continue;
-    
-            // Aplikuj teamsIn
-            (Array.isArray(r.teamsIn) ? r.teamsIn : []).forEach((tk) => {
-                const s = String(tk || '').trim();
-                if (!s) return;
-                const [tn, cat] = s.split('|');
-                const teamName = String(tn || '').trim();
-                const category = cleanCategory(cat || '');
-                if (!teamName) return;
-                fallbackInBus.add(`${teamName}|${category}`);
-            });
-    
-            // Aplikuj teamsOut
-            (Array.isArray(r.teamsOut) ? r.teamsOut : []).forEach((tk) => {
-                const s = String(tk || '').trim();
-                if (!s) return;
-                const [tn, cat] = s.split('|');
-                const teamName = String(tn || '').trim();
-                const category = cleanCategory(cat || '');
-                if (!teamName) return;
-                fallbackInBus.delete(`${teamName}|${category}`);
-            });
-    
-            if (rOrder === currentOrder) {
-                started = true;
-                break;
-            }
-        }
-    
-        // Zlúč výsledky (primárny + fallback), aby sa nič nestratilo
-        fallbackInBus.forEach((tk) => inBus.add(tk));
-    
+
         return [...inBus].filter((teamKey) => {
             if (!selectedCategoryFilter) return true;
             const parts = String(teamKey).split('|');
@@ -5427,16 +5386,23 @@ const TransportApp = ({ userProfileData }) => {
                     (savedTransfersRef.current || []).forEach((parent) => {
                         if (parent.dayKey !== dayKey) return;
                         if (parent.isWalking === true) return;
+                        const effectiveCategory = cleanCategory(parent.category || '');
+                        let effectiveTeamName = String(parent.teamName || '').trim();
+                        if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
+                            const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
+                            const info = (teamsLookupRef.current || {})[lookupKey];
+                            if (info && info.teamName) effectiveTeamName = info.teamName;
+                        }
+                        if (!effectiveTeamName) return;
                         (parent.segments || []).forEach((seg) => {
                             if (seg.busId !== busId) return;
                             if (seg.isWalking === true) return;
                             if (seg.boardingRowId === row.rowId) {
-                                teamsBoardingHere.push(`${parent.teamName}|${parent.category}`);
+                                teamsBoardingHere.push(`${effectiveTeamName}|${effectiveCategory}`);
                             }
                         });
                     });
             
-                    const filteredTeamsIn = filterTeamsByCategory(teamsBoardingHere);
                     if (filteredTeamsIn.length === 0) {
                         return React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—');
                     }
@@ -5471,16 +5437,22 @@ const TransportApp = ({ userProfileData }) => {
                     (savedTransfersRef.current || []).forEach((parent) => {
                         if (parent.dayKey !== dayKey) return;
                         if (parent.isWalking === true) return;
+                        const effectiveCategory = cleanCategory(parent.category || '');
+                        let effectiveTeamName = String(parent.teamName || '').trim();
+                        if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
+                            const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
+                            const info = (teamsLookupRef.current || {})[lookupKey];
+                            if (info && info.teamName) effectiveTeamName = info.teamName;
+                        }
+                        if (!effectiveTeamName) return;
                         (parent.segments || []).forEach((seg) => {
                             if (seg.busId !== busId) return;
                             if (seg.isWalking === true) return;
                             if (seg.alightingRowId === row.rowId) {
-                                teamsAlightingHere.push(`${parent.teamName}|${parent.category}`);
+                                teamsAlightingHere.push(`${effectiveTeamName}|${effectiveCategory}`);
                             }
                         });
                     });
-            
-                    const filteredTeamsOut = filterTeamsByCategory(teamsAlightingHere);
                     if (filteredTeamsOut.length === 0) {
                         return React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—');
                     }
@@ -6936,6 +6908,9 @@ const TransportApp = ({ userProfileData }) => {
             when: draft.when,
             segments: draft.segments,
         };
+        if (draft.teamName && String(draft.teamName).trim() !== '') {
+            payload.teamName = String(draft.teamName).trim();
+        }
         if (Array.isArray(draft.intermediateStopIds) && draft.intermediateStopIds.length > 0) {
             payload.intermediateStopIds = draft.intermediateStopIds;
         }
@@ -6977,6 +6952,10 @@ const TransportApp = ({ userProfileData }) => {
             when: draft.when,
             segments: draft.segments,
         };
+
+        if (draft.teamName && String(draft.teamName).trim() !== '') {
+            payload.teamName = String(draft.teamName).trim();
+        }
 
         if (Array.isArray(draft.intermediateStopIds) && draft.intermediateStopIds.length > 0) {
             payload.intermediateStopIds = draft.intermediateStopIds;
