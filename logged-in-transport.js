@@ -11664,6 +11664,45 @@ const TransportApp = ({ userProfileData }) => {
                     const tr = editingTransfer;
                     const parentKeyForTotal = tr._parentKey || tr.key;
                     const parentRecForTotal = savedTransfersRef.current.find((s) => s.key === parentKeyForTotal);
+
+                    try {
+                        console.log('%c[TRANSPORT][MODAL:editingTransfer] Otvorené', 'color:#2563eb;font-weight:bold;', {
+                            transfer: tr,
+                            editingTransferStops: Array.isArray(editingTransferStops) ? [...editingTransferStops] : null,
+                            parentKeyForTotal,
+                            parentRecForTotal: parentRecForTotal || null,
+                            parentWhen: parentRecForTotal ? parentRecForTotal.when : null,
+                            parentFromId: parentRecForTotal ? parentRecForTotal.fromId : null,
+                            parentFromName: parentRecForTotal ? resolvePlaceNameById(parentRecForTotal.fromId) : null,
+                            parentToId: parentRecForTotal ? parentRecForTotal.toId : null,
+                            parentToName: parentRecForTotal ? resolvePlaceNameById(parentRecForTotal.toId) : null,
+                            parentDayKey: parentRecForTotal ? parentRecForTotal.dayKey : null,
+                            parentIntermediateStopIds: parentRecForTotal ? (parentRecForTotal.intermediateStopIds || []) : null,
+                            parentIntermediateStops: parentRecForTotal ? (parentRecForTotal.intermediateStopIds || []).map((id) => resolvePlaceNameById(id)) : null,
+                            parentSegments: parentRecForTotal ? (parentRecForTotal.segments || []).map((s, i) => ({
+                                idx: i,
+                                fromId: s.fromId,
+                                toId: s.toId,
+                                fromName: resolvePlaceNameById(s.fromId),
+                                toName: resolvePlaceNameById(s.toId),
+                                startTs: s.startTs,
+                                endTs: s.endTs,
+                                startTime: s.startTs != null ? formatTsLocal(s.startTs) : null,
+                                endTime: s.endTs != null ? formatTsLocal(s.endTs) : null,
+                                when: s.when,
+                                isWalking: s.isWalking === true,
+                                busAssigned: s.busAssigned === true,
+                                busId: s.busId || null,
+                                busName: s.busId ? (buses.find((b) => b.id === s.busId)?.name || null) : null,
+                                boardingRowId: s.boardingRowId || null,
+                                alightingRowId: s.alightingRowId || null,
+                                walkingSetAt: s.walkingSetAt || null,
+                                walkingSetBy: s.walkingSetBy || null,
+                            })) : null,
+                        });
+                    } catch (e) {
+                        console.warn('[TRANSPORT][MODAL:editingTransfer] log error:', e);
+                    }
                     
                     let totalWhenLabel = null;
                     
@@ -12027,7 +12066,41 @@ const TransportApp = ({ userProfileData }) => {
                     )
                 ),
                 (() => {
-                    const tr = transferActionModal.transfer;                
+                    const tr = transferActionModal.transfer;
+
+                    try {
+                        const dbgParentKey = tr._parentKey || tr.key;
+                        const dbgParent = (savedTransfersRef.current || []).find((s) => s.key === dbgParentKey);
+                        console.log('%c[TRANSPORT][MODAL:transferActionModal] Otvorené', 'color:#7c3aed;font-weight:bold;', {
+                            transfer: tr,
+                            parentKey: dbgParentKey,
+                            parent: dbgParent || null,
+                            parentSegments: dbgParent ? (dbgParent.segments || []).map((s, i) => ({
+                                idx: i,
+                                fromId: s.fromId,
+                                toId: s.toId,
+                                fromName: resolvePlaceNameById(s.fromId),
+                                toName: resolvePlaceNameById(s.toId),
+                                startTs: s.startTs,
+                                endTs: s.endTs,
+                                startTime: s.startTs != null ? formatTsLocal(s.startTs) : null,
+                                endTime: s.endTs != null ? formatTsLocal(s.endTs) : null,
+                                when: s.when,
+                                isWalking: s.isWalking === true,
+                                busAssigned: s.busAssigned === true,
+                                busId: s.busId || null,
+                                busName: s.busId ? (buses.find((b) => b.id === s.busId)?.name || null) : null,
+                                boardingRowId: s.boardingRowId || null,
+                                alightingRowId: s.alightingRowId || null,
+                            })) : null,
+                            parentWhen: dbgParent ? dbgParent.when : null,
+                            parentIntermediateStopIds: dbgParent ? (dbgParent.intermediateStopIds || []) : null,
+                            parentIntermediateStops: dbgParent ? (dbgParent.intermediateStopIds || []).map((id) => resolvePlaceNameById(id)) : null,
+                        });
+                    } catch (e) {
+                        console.warn('[TRANSPORT][MODAL:transferActionModal] log error:', e);
+                    }
+                    
                     let displayWhen = null;
                     if (tr._parentKey) {
                         const parentRec = savedTransfersRef.current.find((s) => s.key === tr._parentKey);
@@ -12246,7 +12319,51 @@ const TransportApp = ({ userProfileData }) => {
         ),
         showAssignBusModal && assignBusTransfer && (() => {
             const parentKey = assignBusTransfer._parentKey || assignBusTransfer.key;
-            const currentParent = savedTransfers.find((s) => s.key === parentKey);        
+            const currentParent = savedTransfers.find((s) => s.key === parentKey);
+
+            try {
+                console.log('%c[TRANSPORT][MODAL:showAssignBusModal] Otvorené', 'color:#ea580c;font-weight:bold;', {
+                    assignBusTransfer,
+                    parentKey,
+                    currentParent: currentParent || null,
+                    currentParentWhen: currentParent ? currentParent.when : null,
+                    currentParentSegments: currentParent ? (currentParent.segments || []).map((s, i) => ({
+                        idx: i,
+                        fromId: s.fromId,
+                        toId: s.toId,
+                        fromName: resolvePlaceNameById(s.fromId),
+                        toName: resolvePlaceNameById(s.toId),
+                        startTs: s.startTs,
+                        endTs: s.endTs,
+                        startTime: s.startTs != null ? formatTsLocal(s.startTs) : null,
+                        endTime: s.endTs != null ? formatTsLocal(s.endTs) : null,
+                        when: s.when,
+                        isWalking: s.isWalking === true,
+                        busAssigned: s.busAssigned === true,
+                        busId: s.busId || null,
+                        busName: s.busId ? (buses.find((b) => b.id === s.busId)?.name || null) : null,
+                        boardingRowId: s.boardingRowId || null,
+                        alightingRowId: s.alightingRowId || null,
+                    })) : null,
+                    assignBusMatches: Array.isArray(assignBusMatches) ? assignBusMatches.map((m) => ({
+                        busId: m?.bus?.id || null,
+                        busName: m?.bus?.name || null,
+                        boardingRowId: m?.boardingRow?.id || null,
+                        boardingRowIdFull: m?.boardingRow?.rowId || null,
+                        boardingTime: m?.boardingTime || null,
+                        alightingRowId: m?.alightingRow?.id || null,
+                        alightingRowIdFull: m?.alightingRow?.rowId || null,
+                        alightingTime: m?.alightingTime || null,
+                        side: m?.side || null,
+                    })) : null,
+                    assignBusSelectedKey: assignBusSelectedKey || null,
+                    busesCount: (buses || []).length,
+                    busRowsKeys: Object.keys(busRows || {}),
+                });
+            } catch (e) {
+                console.warn('[TRANSPORT][MODAL:showAssignBusModal] log error:', e);
+            }
+            
             const currentTransfer = (() => {
                 if (!currentParent) return assignBusTransfer;
                 if (assignBusTransfer._parentKey) {
