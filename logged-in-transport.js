@@ -3982,6 +3982,30 @@ const TransportApp = ({ userProfileData }) => {
             if (parent.dayKey !== dayKey) return;
             if (!Array.isArray(parent.segments)) return;
     
+            // Pred kontrolou outsideParent prepočítame effectiveParentRange z aktuálnych segmentov,
+            // aby sme neblokovali platné priradenia kvôli starému parent.when.
+            let effectiveParentRange = null;
+            {
+                const segs = parent.segments;
+                let earliestStart = null;
+                let latestEnd = null;
+                segs.forEach((s) => {
+                    if (!s) return;
+                    if (s.isWalking === true) return;
+                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                        earliestStart = s.startTs;
+                    }
+                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                        latestEnd = s.endTs;
+                    }
+                });
+                if (earliestStart != null && latestEnd != null && latestEnd > earliestStart) {
+                    effectiveParentRange = { startTs: earliestStart, endTs: latestEnd };
+                } else {
+                    effectiveParentRange = parseTransferWhenToRange(parent.when);
+                }
+            }
+    
             let changed = false;
             const newSegments = parent.segments.map((seg) => {
                 if (!seg || seg.busId !== busId) return seg;
@@ -4019,33 +4043,45 @@ const TransportApp = ({ userProfileData }) => {
                     };
                 }
     
-                const parentRange = parseTransferWhenToRange(parent.when);
-                if (parentRange) {
+                if (effectiveParentRange) {
                     const outsideParent =
-                        boardingTs < parentRange.startTs ||
-                        alightingTs > parentRange.endTs ||
+                        boardingTs < effectiveParentRange.startTs ||
+                        alightingTs > effectiveParentRange.endTs ||
                         alightingTs <= boardingTs;
-    
+
                     if (outsideParent) {
-                        changed = true;
-                        const removeKey = `${parent.key}|${seg.fromId}|${seg.toId}`;
-                        if (!parentsToRemoveSegmentFrom.has(removeKey)) {
-                            parentsToRemoveSegmentFrom.set(removeKey, {
-                                parentKey: parent.key,
-                                fromId: seg.fromId,
-                                toId: seg.toId,
-                            });
+                        // Ak segment už bol priradený tomuto busu a časy sú platné (boarding < alighting),
+                        // neodstraňujeme ho len preto, že je mimo starého parent.when.
+                        // parent.when sa totiž prepočíta z reálnych segmentov nižšie.
+                        const wasAssignedToThisBus =
+                            seg.busId === busId &&
+                            seg.boardingRowId &&
+                            seg.alightingRowId &&
+                            seg.startTs != null &&
+                            seg.endTs != null &&
+                            seg.endTs > seg.startTs;
+
+                        if (!wasAssignedToThisBus) {
+                            changed = true;
+                            const removeKey = `${parent.key}|${seg.fromId}|${seg.toId}`;
+                            if (!parentsToRemoveSegmentFrom.has(removeKey)) {
+                                parentsToRemoveSegmentFrom.set(removeKey, {
+                                    parentKey: parent.key,
+                                    fromId: seg.fromId,
+                                    toId: seg.toId,
+                                });
+                            }
+                            return {
+                                ...seg,
+                                busAssigned: false,
+                                busId: null,
+                                boardingRowId: null,
+                                alightingRowId: null,
+                                startTs: null,
+                                endTs: null,
+                                when: null,
+                            };
                         }
-                        return {
-                            ...seg,
-                            busAssigned: false,
-                            busId: null,
-                            boardingRowId: null,
-                            alightingRowId: null,
-                            startTs: null,
-                            endTs: null,
-                            when: null,
-                        };
                     }
                 }
     
