@@ -6484,6 +6484,9 @@ const TransportApp = ({ userProfileData }) => {
 
             const sortedRows = [...rows].sort((a, b) => (a.order || 0) - (b.order || 0));
 
+            const rangeStart = trRange.startTs;
+            const rangeEnd = trRange.endTs;
+
             const boardingCandidates = [];
             const alightingCandidates = [];
 
