@@ -568,19 +568,21 @@ const TransportApp = ({ userProfileData }) => {
         for (const seg of parentSegments) {
             const isCurrent = seg.fromId === currentFromId && seg.toId === currentToId;
             if (isCurrent) break;
-    
+        
             if (seg.isWalking === true) continue;
-    
+        
             if (seg.isResolvedWithTime && seg.range && seg.range.endTs != null) {
                 const e = seg.range.endTs;
-                if (e >= PARENT_START && e <= PARENT_END) {
-                    if (prevResolvedEndTs == null || e > prevResolvedEndTs) {
-                        prevResolvedEndTs = e;
-                    }
+                // ============================================================
+                // NOVÉ: NEobmedzuj na PARENT_START/PARENT_END – berieme aj nové
+                // časy, ktoré sú mimo starého parent.when.
+                // ============================================================
+                if (prevResolvedEndTs == null || e > prevResolvedEndTs) {
+                    prevResolvedEndTs = e;
                 }
             }
         }
-    
+        
         // 4) Nasledujúci resolved segment
         let nextResolvedStartTs = null;
         let foundCurrent = false;
@@ -588,31 +590,36 @@ const TransportApp = ({ userProfileData }) => {
             const isCurrent = seg.fromId === currentFromId && seg.toId === currentToId;
             if (isCurrent) { foundCurrent = true; continue; }
             if (!foundCurrent) continue;
-    
+        
             if (seg.isWalking === true) continue;
-    
+        
             if (seg.isResolvedWithTime && seg.range && seg.range.startTs != null) {
                 const s = seg.range.startTs;
-                if (s >= PARENT_START && s <= PARENT_END) {
-                    if (nextResolvedStartTs == null || s < nextResolvedStartTs) {
-                        nextResolvedStartTs = s;
-                    }
+                // ============================================================
+                // NOVÉ: NEobmedzuj na PARENT_START/PARENT_END.
+                // ============================================================
+                if (nextResolvedStartTs == null || s < nextResolvedStartTs) {
+                    nextResolvedStartTs = s;
                 }
             }
         }
-    
+        
         // 5) Výsledok
         let startTsForDisplay = prevResolvedEndTs != null ? prevResolvedEndTs : PARENT_START;
-        if (startTsForDisplay < PARENT_START) startTsForDisplay = PARENT_START;
-    
+        // ============================================================
+        // NOVÉ: NEorezávaj na PARENT_START – ak je nový čas skôr, použi ho.
+        // ============================================================
+        
         let endTsForDisplay;
         if (nextResolvedStartTs != null && nextResolvedStartTs > startTsForDisplay) {
             endTsForDisplay = nextResolvedStartTs;
         } else {
             endTsForDisplay = PARENT_END;
         }
-        if (endTsForDisplay > PARENT_END) endTsForDisplay = PARENT_END;
-    
+        // ============================================================
+        // NOVÉ: NEorezávaj na PARENT_END – ak je nový čas neskôr, použi ho.
+        // ============================================================
+        
         if (endTsForDisplay <= startTsForDisplay) {
             return { startTs: PARENT_START, endTs: PARENT_END };
         }
@@ -4644,9 +4651,31 @@ const TransportApp = ({ userProfileData }) => {
         const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
         const tUpdates = {};
         parentsToUpdate.forEach(({ parentKey, newSegments }) => {
+            // ============================================================
+            // NOVÉ: Prepočítaj `when` pre každý parent a zapíš ho spolu
+            // so segmentmi. Inak by v DB zostal starý `when`.
+            // ============================================================
+            const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
+            let newWhen = null;
+            if (parentRec) {
+                const tempDraft = {
+                    ...parentRec,
+                    when: null,
+                    segments: newSegments.map((s) => ({ ...s })),
+                };
+                try {
+                    recomputeParentSegmentsInPlace(tempDraft);
+                    newWhen = tempDraft.when;
+                } catch (e) {
+                    console.error('[TRANSPORT] Chyba pri recomputeParentSegmentsInPlace pre DB:', e);
+                }
+            }
             tUpdates[parentKey] = { segments: newSegments };
+            if (newWhen != null) {
+                tUpdates[parentKey].when = newWhen;
+            }
         });
-    
+        
         try {
             await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
         } catch (err) {
@@ -4654,24 +4683,17 @@ const TransportApp = ({ userProfileData }) => {
             return;
         }
     
-        // ============================================================
-        // NOVÉ: Okamžite aktualizuj lokálny ref + state, aby sa
-        // pre-renderovali "Vygenerované presuny" s novými časmi
-        // (bez čakania na onSnapshot).
-        //
-        // DÔVOD: computeProvisionalSegmentRange() číta
-        // savedTransfersRef.current. Ak sa zmení čas príchodu busu na
-        // miesto konca predchádzajúceho segmentu, nasledujúci nepriradený
-        // segment musí dostať nový startTs. Bez okamžitej aktualizácie
-        // ref by sa zobrazoval starý čas až do ďalšieho onSnapshot.
-        // ============================================================
         const updatedParents = (savedTransfersRef.current || []).map((parent) => {
             const patch = parentsToUpdate.find((p) => p.parentKey === parent.key);
             if (!patch) return parent;
-    
-            // Prepočítaj `when` parenta na základe nových segmentov
+
+            // ============================================================
+            // NOVÉ: Vynuluj `when`, aby ho recomputeParentSegmentsInPlace
+            // prepočítal z nových segmentov (inak zostane staré).
+            // ============================================================
             const draft = {
                 ...parent,
+                when: null,
                 segments: patch.newSegments.map((s) => ({ ...s })),
             };
             try {
@@ -10501,10 +10523,11 @@ const TransportApp = ({ userProfileData }) => {
             const segmentIndex = t._segmentIndex;
 
             const parentRange = (() => {
-                const parsed = parseWhenRangeToTs(parent.when);
-                if (parsed && parsed.startTs != null && parsed.endTs != null) {
-                    return { startTs: parsed.startTs, endTs: parsed.endTs };
-                }
+                // ============================================================
+                // NOVÉ: Primárne použi reálne časy segmentov (startTs/endTs).
+                // Tým sa zabezpečí, že po zmene času busu sa zobrazí nový čas
+                // aj keď parent.when ešte nebol aktualizovaný.
+                // ============================================================
                 let earliestStart = null;
                 let latestEnd = null;
                 parentSegments.forEach((s) => {
@@ -10517,6 +10540,11 @@ const TransportApp = ({ userProfileData }) => {
                 });
                 if (earliestStart != null && latestEnd != null) {
                     return { startTs: earliestStart, endTs: latestEnd };
+                }
+                // Fallback na parent.when
+                const parsed = parseWhenRangeToTs(parent.when);
+                if (parsed && parsed.startTs != null && parsed.endTs != null) {
+                    return { startTs: parsed.startTs, endTs: parsed.endTs };
                 }
                 return null;
             })();
