@@ -6110,9 +6110,9 @@ const TransportApp = ({ userProfileData }) => {
         });
         
         if (!transfer) return [];
-
+    
         let effectiveWhen = transfer.when;
-
+    
         if (effectiveWhen && String(effectiveWhen).trim() !== '') {
         } else {
             const segs = Array.isArray(transfer.segments) ? transfer.segments : [];
@@ -6134,7 +6134,7 @@ const TransportApp = ({ userProfileData }) => {
                 effectiveWhen = formatTsLocal(latestEnd);
             }
         }
-
+    
         if (!effectiveWhen || String(effectiveWhen).trim() === '') {
             const provisional = computeProvisionalSegmentRange(transfer);
             if (provisional) {
@@ -6142,7 +6142,7 @@ const TransportApp = ({ userProfileData }) => {
                 console.log('[TRANSPORT][findMatchingBusRows] Použitý provizórny interval:', effectiveWhen);
             }
         }
-
+    
         if (!effectiveWhen || String(effectiveWhen).trim() === '') {
             const parentKey = transfer._parentKey || transfer.key;
             if (parentKey) {
@@ -6152,13 +6152,13 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
         }
-
+    
         const trRange = parseTransferWhenToRange(effectiveWhen);
-
+    
         const trFromId = transfer.fromId || null;
         const trToId = transfer.toId || null;
         const trDayKey = transfer.dayKey || null;
-
+    
         console.log('[TRANSPORT][findMatchingBusRows] VSTUP:', {
             transferKey: transfer._parentKey || transfer.key,
             teamName: transfer.teamName,
@@ -6170,29 +6170,48 @@ const TransportApp = ({ userProfileData }) => {
             trToId,
             trDayKey,
         });
-
+    
         if (!trRange || !trFromId || !trToId || !trDayKey) {
             console.warn(`❌ Chýba vstup – končím:`, {
                 effectiveWhen, trRange, trFromId, trToId, trDayKey,
             });
             return [];
         }
-
+    
+        // === POMOCNÁ FUNKCIA: vypočíta timeTo z timeFrom + travelMinutes ===
+        const computeRowTimeToStr = (row) => {
+            if (!row) return null;
+            if (row.timeTo && /^\d{1,2}:\d{2}$/.test(row.timeTo)) {
+                return row.timeTo;
+            }
+            if (!row.timeFrom || !/^\d{1,2}:\d{2}$/.test(row.timeFrom)) return null;
+            if (!row.placeFromId || !row.placeToId) return null;
+            const mins = getTravelMinutes(row.placeFromId, row.placeToId);
+            if (mins == null) return null;
+            const [h, m] = row.timeFrom.split(':').map(Number);
+            let total = h * 60 + m + Number(mins);
+            total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
+            const endH = Math.floor(total / 60);
+            const endM = total % 60;
+            return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+        };
+        // === KONIEC POMOCNEJ FUNKCIE ===
+    
         const results = [];
-
+    
         Object.entries(busRows || {}).forEach(([key, rows]) => {
             const [busId, dayKey] = key.split('|');
             if (dayKey !== trDayKey) return;
-
+    
             const bus = buses.find((b) => b.id === busId);
             if (!bus) {
                 console.warn(`⚠️ Bus ${busId} sa nenašiel v zozname buses`);
                 return;
             }
             if (!rows || rows.length === 0) return;
-
+    
             const sortedRows = [...rows].sort((a, b) => (a.order || 0) - (b.order || 0));
-
+    
             console.log(`🚌 Kontrolujem bus "${bus.name}" (${bus.id}), riadkov: ${sortedRows.length}`);
             
             const boardingCandidates = [];
@@ -6215,7 +6234,21 @@ const TransportApp = ({ userProfileData }) => {
             sortedRows.forEach((row) => {
                 const rowFromId = row.placeFromId || null;
                 const rowToId = row.placeToId || null;
-
+    
+                // === FALLBACK pre rowTimeToTs (ak timeTo ešte nie je uložený) ===
+                const rowTimeFromStr = (row.timeFrom && /^\d{1,2}:\d{2}$/.test(row.timeFrom))
+                    ? row.timeFrom
+                    : null;
+                const rowTimeToStr = computeRowTimeToStr(row);
+    
+                const rowTimeFromTs = rowTimeFromStr
+                    ? timeOnDayKeyToTs(dayKey, rowTimeFromStr)
+                    : null;
+                const rowTimeToTs = rowTimeToStr
+                    ? timeOnDayKeyToTs(dayKey, rowTimeToStr)
+                    : null;
+                // === KONIEC FALLBACKU ===
+    
                 console.log('[TRANSPORT][findMatchingBusRows] Porovnávam:', {
                     busName: bus.name,
                     rowId: row.id,
@@ -6227,20 +6260,21 @@ const TransportApp = ({ userProfileData }) => {
                     toMatch: rowToId === trToId,
                     timeFrom: row.timeFrom,
                     timeTo: row.timeTo,
+                    timeFromUsed: rowTimeFromStr,
+                    timeToUsed: rowTimeToStr,
+                    rowTimeFromTs,
+                    rowTimeToTs,
                 });
-            
-                const rowTimeFromTs = timeOnDayKeyToTs(dayKey, row.timeFrom);
-                const rowTimeToTs = timeOnDayKeyToTs(dayKey, row.timeTo);
-            
+    
                 // Striktné porovnanie ID – žiadny fallback na názvy.
                 const fromMatches = rowFromId != null && rowFromId === trFromId;
                 const toMatches = rowToId != null && rowToId === trToId;
-            
+    
                 const rangeStart = trRange.startTs;
                 const rangeEnd = trRange.endTs;
                 const wideStart = Math.min(rangeStart, timeOnDayKeyToTs(dayKey, '00:00'));
                 const wideEnd = Math.max(rangeEnd, timeOnDayKeyToTs(dayKey, '23:59'));
-            
+    
                 if (fromMatches && rowTimeFromTs != null &&
                     rowTimeFromTs >= wideStart && rowTimeFromTs <= wideEnd) {
                     boardingCandidates.push({ row, timeTs: rowTimeFromTs });
@@ -6249,7 +6283,8 @@ const TransportApp = ({ userProfileData }) => {
                     rowTimeToTs >= wideStart && rowTimeToTs <= wideEnd) {
                     alightingCandidates.push({ row, timeTs: rowTimeToTs });
                 }
-            });            
+            });
+    
             const alreadyAssigned = (savedTransfersRef.current || []).some((p) => {
                 if (p.dayKey !== trDayKey) return false;
                 if (String(p.teamName || '').trim() !== String(transfer.teamName || '').trim()) return false;
@@ -6262,9 +6297,9 @@ const TransportApp = ({ userProfileData }) => {
                 });
             });
             if (alreadyAssigned) isCurrentSegmentAlreadyAssignedToThisBus = true;
-
+    
             console.log(`  Bus "${bus.name}": nástupných=${boardingCandidates.length}, výstupných=${alightingCandidates.length}, už priradený=${isCurrentSegmentAlreadyAssignedToThisBus}`);
-
+    
             if (
                 (boardingCandidates.length === 0 || alightingCandidates.length === 0) &&
                 !isCurrentSegmentAlreadyAssignedToThisBus
@@ -6272,31 +6307,38 @@ const TransportApp = ({ userProfileData }) => {
                 console.warn(`  ⏭️ Bus "${bus.name}" VYNECHANÝ (chýba nástup alebo výstup)`);
                 return;
             }
-
+    
             boardingCandidates.forEach((board) => {
                 alightingCandidates.forEach((alight) => {
                     if ((alight.row.order || 0) < (board.row.order || 0)) {
                         console.warn(`  ⏭️ Výstup (order ${alight.row.order}) je pred nástupom (order ${board.row.order})`);
                         return;
                     }
-
-                    const boardTs = timeOnDayKeyToTs(dayKey, board.row.timeFrom);
-                    const alightTs = timeOnDayKeyToTs(dayKey, alight.row.timeTo);
+    
+                    // Pri výpočte boardTs/alightTs použi rovnaký fallback ako vyššie
+                    const boardTimeStr = (board.row.timeFrom && /^\d{1,2}:\d{2}$/.test(board.row.timeFrom))
+                        ? board.row.timeFrom
+                        : null;
+                    const alightTimeStr = computeRowTimeToStr(alight.row);
+    
+                    const boardTs = boardTimeStr ? timeOnDayKeyToTs(dayKey, boardTimeStr) : null;
+                    const alightTs = alightTimeStr ? timeOnDayKeyToTs(dayKey, alightTimeStr) : null;
+    
                     if (boardTs != null && alightTs != null && alightTs < boardTs) {
-                        console.warn(`  ⏭️ Výstup (${alight.row.timeTo}) je časovo pred nástupom (${board.row.timeFrom})`);
+                        console.warn(`  ⏭️ Výstup (${alightTimeStr}) je časovo pred nástupom (${boardTimeStr})`);
                         return;
                     }
-
+    
                     const segmentFromId =
                         board.row.placeFromId ||
                         trFromId;
                     const segmentToId =
                         alight.row.placeToId ||
                         trToId;
-
+    
                     const segmentFromName = resolvePlaceNameById(segmentFromId);
                     const segmentToName = resolvePlaceNameById(segmentToId);
-
+    
                     results.push({
                         bus,
                         trip: {
@@ -6306,8 +6348,8 @@ const TransportApp = ({ userProfileData }) => {
                             toPlace: segmentToName,
                             fromPlaceId: segmentFromId,
                             toPlaceId: segmentToId,
-                            timeFrom: board.row.timeFrom || '',
-                            timeTo: alight.row.timeTo || '',
+                            timeFrom: boardTimeStr || '',
+                            timeTo: alightTimeStr || '',
                             firstRowId: board.row.id,
                             lastRowId: alight.row.id,
                             rows: sortedRows,
@@ -6315,31 +6357,37 @@ const TransportApp = ({ userProfileData }) => {
                         boardingRow: board.row,
                         alightingRow: alight.row,
                         side: 'in',
-                        boardingTime: board.row.timeFrom,
-                        alightingTime: alight.row.timeTo,
+                        boardingTime: boardTimeStr || '',
+                        alightingTime: alightTimeStr || '',
                     });
                 });
             });
         });
-
+    
         const computeTripDurationMinutes = (boardingRow, alightingRow) => {
             const timeRe = /^\d{1,2}:\d{2}$/;
             if (!boardingRow || !alightingRow) return null;
-            if (!timeRe.test(boardingRow.timeFrom || '') || !timeRe.test(alightingRow.timeTo || '')) {
+    
+            const boardStr = (boardingRow.timeFrom && timeRe.test(boardingRow.timeFrom))
+                ? boardingRow.timeFrom
+                : null;
+            const alightStr = computeRowTimeToStr(alightingRow);
+    
+            if (!boardStr || !alightStr) {
                 return null;
             }
-            const [bh, bm] = boardingRow.timeFrom.split(':').map(Number);
-            const [ah, am] = alightingRow.timeTo.split(':').map(Number);
+            const [bh, bm] = boardStr.split(':').map(Number);
+            const [ah, am] = alightStr.split(':').map(Number);
             let diff = (ah * 60 + am) - (bh * 60 + bm);
             if (diff < 0) diff += 24 * 60;
             return diff;
         };
-
+    
         const getEffectiveDuration = (r) => {
             const d = computeTripDurationMinutes(r.boardingRow, r.alightingRow);
             return d != null ? d : Number.POSITIVE_INFINITY;
         };
-
+    
         const pickShortestDuration = (group) => {
             if (!group || group.length === 0) return null;
             if (group.length === 1) return group[0];
@@ -6355,7 +6403,7 @@ const TransportApp = ({ userProfileData }) => {
             }
             return best;
         };
-
+    
         const groupedByBoarding = new Map();
         results.forEach((r) => {
             const busId = r.bus?.id || '';
@@ -6366,13 +6414,13 @@ const TransportApp = ({ userProfileData }) => {
             if (!groupedByBoarding.has(key)) groupedByBoarding.set(key, []);
             groupedByBoarding.get(key).push(r);
         });
-
+    
         const afterBoardingDedup = [];
         groupedByBoarding.forEach((group) => {
             const best = pickShortestDuration(group);
             if (best) afterBoardingDedup.push(best);
         });
-
+    
         const groupedByAlighting = new Map();
         afterBoardingDedup.forEach((r) => {
             const busId = r.bus?.id || '';
@@ -6383,13 +6431,13 @@ const TransportApp = ({ userProfileData }) => {
             if (!groupedByAlighting.has(key)) groupedByAlighting.set(key, []);
             groupedByAlighting.get(key).push(r);
         });
-
+    
         const dedupedResults = [];
         groupedByAlighting.forEach((group) => {
             const best = pickShortestDuration(group);
             if (best) dedupedResults.push(best);
         });
-
+    
         const MAX_TRIP_DURATION_MINUTES = 60;
         const filteredByDuration = dedupedResults.filter((r) => {
             const duration = computeTripDurationMinutes(r.boardingRow, r.alightingRow);
@@ -6399,7 +6447,7 @@ const TransportApp = ({ userProfileData }) => {
             }
             return true;
         });
-
+    
         filteredByDuration.sort((a, b) => {
             const timeA = a.boardingTime || a.alightingTime || '';
             const timeB = b.boardingTime || b.alightingTime || '';
