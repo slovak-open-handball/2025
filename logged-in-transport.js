@@ -10040,7 +10040,6 @@ const TransportApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'span',
                                         { className: 'text-sm text-violet-600 italic mt-0.5 inline-flex items-center gap-1' },
-                                        React.createElement('i', { className: 'fa-solid fa-code-branch' }),
                                         parentInfoLabel
                                     ),
                                 // 6. riadok – NOVÉ: zvyšný čas na presun
