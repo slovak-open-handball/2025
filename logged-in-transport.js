@@ -11220,17 +11220,19 @@ const TransportApp = ({ userProfileData }) => {
                 ),
                 (() => {
                     const tr = editingTransfer;
-        
-                    // Vypočítame celkový čas celého (parent) presunu
+
+                    // Vypočítame celkový čas celého (parent) presunu – skúsime viac zdrojov
                     const parentKeyForTotal = tr._parentKey || tr.key;
                     const parentRecForTotal = savedTransfersRef.current.find((s) => s.key === parentKeyForTotal);
         
                     let totalWhenLabel = null;
         
+                    // 1) parent.when
                     if (parentRecForTotal && parentRecForTotal.when && String(parentRecForTotal.when).trim() !== '') {
                         totalWhenLabel = String(parentRecForTotal.when).trim();
                     }
         
+                    // 2) z parent.segments (najskorší startTs – najneskorší endTs)
                     if (!totalWhenLabel && parentRecForTotal && Array.isArray(parentRecForTotal.segments) && parentRecForTotal.segments.length > 0) {
                         let earliestStart = null;
                         let latestEnd = null;
@@ -11251,6 +11253,33 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     }
         
+                    // 3) z original.when (editingTransfer.when)
+                    if (!totalWhenLabel && tr.when && String(tr.when).trim() !== '') {
+                        totalWhenLabel = String(tr.when).trim();
+                    }
+        
+                    // 4) z original.segments
+                    if (!totalWhenLabel && Array.isArray(tr.segments) && tr.segments.length > 0) {
+                        let earliestStart = null;
+                        let latestEnd = null;
+                        tr.segments.forEach((s) => {
+                            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                earliestStart = s.startTs;
+                            }
+                            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                latestEnd = s.endTs;
+                            }
+                        });
+                        if (earliestStart != null && latestEnd != null) {
+                            totalWhenLabel = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                        } else if (earliestStart != null) {
+                            totalWhenLabel = formatTsLocal(earliestStart);
+                        } else if (latestEnd != null) {
+                            totalWhenLabel = formatTsLocal(latestEnd);
+                        }
+                    }
+        
+                    // 5) provizórny výpočet
                     if (!totalWhenLabel) {
                         const provisionalForTotal = computeProvisionalSegmentRange({
                             ...tr,
@@ -11335,14 +11364,17 @@ const TransportApp = ({ userProfileData }) => {
                             `${resolvePlaceNameById(tr.fromId) || '?'} → ${resolvePlaceNameById(tr.toId) || '?'}`
                         ),
                         // Celkový čas celého presunu – VŽDY zobrazený
-                        totalWhenLabel &&
+                        React.createElement(
+                            'span',
+                            { className: 'text-sm text-gray-600 inline-flex items-center gap-1 mt-0.5' },
+                            React.createElement('i', { className: 'fa-regular fa-clock text-xs' }),
+                            React.createElement('span', { className: 'font-semibold' }, 'Celkový čas:'),
                             React.createElement(
                                 'span',
-                                { className: 'text-sm text-gray-600 inline-flex items-center gap-1 mt-0.5' },
-                                React.createElement('i', { className: 'fa-regular fa-clock text-xs' }),
-                                React.createElement('span', { className: 'font-semibold' }, 'Celkový čas:'),
-                                React.createElement('span', null, totalWhenLabel)
+                                null,
+                                totalWhenLabel || '— (čas neurčený)'
                             )
+                        )
                     );
                 })(),
                 editingTransferStops.length > 0 && React.createElement(
