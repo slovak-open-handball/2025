@@ -5315,58 +5315,84 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
     
-            // ============================================================
-            // NOVÉ: Po odstránení riadku skontroluj, či niektoré segmenty
-            // neodkazujú na už neexistujúci rowId. Ak áno, odstráň priradenie.
-            // ============================================================
-            try {
-                const existingRowIds = new Set(
-                    (busRows[`${busId}|${dayKey}`] || [])
-                        .filter((r) => r.id !== rowId)
-                        .map((r) => r.rowId)
-                );
-                const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
-                const snap = await getDoc(docRef);
-                if (snap.exists()) {
-                    const data = snap.data() || {};
-                    const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
-                    const tUpdates = {};
-                    Object.entries(rawTransfers).forEach(([key, v]) => {
-                        if (!v || !Array.isArray(v.segments)) return;
-                        let changed = false;
-                        const newSegments = v.segments.map((s) => {
-                            if (s.busId !== busId) return s;
-                            const bMissing = s.boardingRowId && !existingRowIds.has(s.boardingRowId);
-                            const aMissing = s.alightingRowId && !existingRowIds.has(s.alightingRowId);
-                            if (bMissing || aMissing) {
-                                changed = true;
-                                return {
-                                    ...s,
-                                    busAssigned: false,
-                                    busId: null,
-                                    boardingRowId: null,
-                                    alightingRowId: null,
-                                    startTs: null,
-                                    endTs: null,
-                                    when: null,
-                                };
-                            }
-                            return s;
-                        });
-                        if (changed) tUpdates[key] = { ...v, segments: newSegments };
-                    });
-                    if (Object.keys(tUpdates).length > 0) {
-                        await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
-                    }
-                }
-            } catch (e) {
-                console.error('[TRANSPORT] Chyba pri čistení segmentov po odstránení riadku:', e);
-            }
-    
             window.showGlobalNotification('Riadok odstránený.', 'info');
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri odstraňovaní riadku:', err);
             window.showGlobalNotification('Nepodarilo sa odstrániť riadok.', 'error');
+        }
+    
+        // ============================================================
+        // NOVÉ: Po odstránení riadku skontroluj, či niektoré segmenty
+        // neodkazujú na už neexistujúci rowId. Ak áno, odstráň priradenie.
+        // ============================================================
+        try {
+            // Nájdi busId/dayKey pre daný rowId (rovnaká logika ako v try vyššie,
+            // ale teraz už s aktuálnym stavom busRows – bez zmazaného riadku)
+            let busIdForCleanup = null;
+            let dayKeyForCleanup = null;
+            Object.entries(busRows || {}).forEach(([k, rows]) => {
+                if (busIdForCleanup) return;
+                const [bId, dK] = k.split('|');
+                const r = (rows || []).find((x) => x.id === rowId);
+                if (r) { busIdForCleanup = bId; dayKeyForCleanup = dK; }
+            });
+    
+            // Ak sa rowId už nenájde (bol zmazaný), skús nájsť busId/dayKey
+            // z už zmazaného záznamu – v tomto bode už nemáme priamy prístup,
+            // preto cleanup robíme pre VŠETKY autobusy a dni, kde by mohol byť problém.
+            // Bezpečnejšie: prejdi VŠETKY parent záznamy a over konzistenciu rowId.
+            const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) return;
+    
+            const data = snap.data() || {};
+            const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
+            const tUpdates = {};
+    
+            // Zoznam všetkých existujúcich rowId naprieč VŠETKÝMI autobusmi a dňami
+            const existingRowIds = new Set();
+            Object.entries(busRows || {}).forEach(([busKey, rows]) => {
+                const [bId] = busKey.split('|');
+                (rows || []).forEach((r) => {
+                    if (r.id === rowId) return; // práve zmazaný riadok ignoruj
+                    if (r.rowId) existingRowIds.add(`${bId}__${r.rowId}`);
+                });
+            });
+    
+            Object.entries(rawTransfers).forEach(([key, v]) => {
+                if (!v || !Array.isArray(v.segments)) return;
+                let changed = false;
+                const newSegments = v.segments.map((s) => {
+                    if (!s.busId) return s;
+                    const bRowKey = s.boardingRowId ? `${s.busId}__${s.boardingRowId}` : null;
+                    const aRowKey = s.alightingRowId ? `${s.busId}__${s.alightingRowId}` : null;
+    
+                    const bMissing = bRowKey && !existingRowIds.has(bRowKey);
+                    const aMissing = aRowKey && !existingRowIds.has(aRowKey);
+    
+                    if (bMissing || aMissing) {
+                        changed = true;
+                        return {
+                            ...s,
+                            busAssigned: false,
+                            busId: null,
+                            boardingRowId: null,
+                            alightingRowId: null,
+                            startTs: null,
+                            endTs: null,
+                            when: null,
+                        };
+                    }
+                    return s;
+                });
+                if (changed) tUpdates[key] = { ...v, segments: newSegments };
+            });
+    
+            if (Object.keys(tUpdates).length > 0) {
+                await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
+            }
+        } catch (e) {
+            console.error('[TRANSPORT] Chyba pri čistení segmentov po odstránení riadku:', e);
         }
     };
 
