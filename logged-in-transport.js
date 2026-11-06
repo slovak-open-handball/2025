@@ -5056,7 +5056,11 @@ const TransportApp = ({ userProfileData }) => {
             }
 
 
-// --------------------------------------------------------            
+// --------------------------------------------------------
+
+            const segmentsForThisBus = (parent.segments || []).filter(
+                (seg) => seg && seg.busId === busId && seg.isWalking !== true
+            );
             
             if (segmentsForThisBus.length > 0) {
                 let effectiveTeamNameForLog = String(parent.teamName || '').trim();
