@@ -9151,6 +9151,33 @@ const TransportApp = ({ userProfileData }) => {
 
         const baseFilteredFirstOnly = baseFilteredFirstOnlyRaw.map((t) => {
             if (!t._parentKey) return t;
+
+            // Ak má segment reálny bus čas (when je už nastavené z finalTimes), zachovaj ho.
+            const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
+            let parentSeg = null;
+            if (parentRec && Array.isArray(parentRec.segments)) {
+                const idx = findSegmentIndex(parentRec.segments, t.fromId, t.toId);
+                if (idx !== -1) parentSeg = parentRec.segments[idx];
+            }
+            const hasRealBusTime =
+                parentSeg &&
+                parentSeg.busId &&
+                parentSeg.boardingRowId &&
+                parentSeg.alightingRowId &&
+                parentSeg.startTs != null &&
+                parentSeg.endTs != null &&
+                parentSeg.endTs > parentSeg.startTs;
+
+            if (hasRealBusTime) {
+                // Reálny čas z busu – zachovaj `when` (už je z finalTimes) a označ ako reálny.
+                return {
+                    ...t,
+                    _remainingMinutes: null,
+                    _hasRealTime: true,
+                };
+            }
+
+            // Nepriradený segment – použi provizórny rozsah (koniec predch. vyriešeného – začiatok nasl. vyriešeného).
             const provisional = computeProvisionalSegmentRange(t);
             if (!provisional) {
                 return {
