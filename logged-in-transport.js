@@ -5771,48 +5771,86 @@ const TransportApp = ({ userProfileData }) => {
     
         setEditingTransferSaving(true);
         try {
-            await updateParentTransfer(parentKey, (draft) => {
-                if (stopIds.length === 0) {
-                    // Žiadne medzizastávky – vymažeme pole intermediateStopIds a prepočítame segmenty na priamy presun
-                    draft.intermediateStopIds = [];
-                    draft.segments = buildDefaultSegments({
-                        ...draft,
-                        intermediateStopIds: [],
-                    });
-    
-                    // Zachováme prípadné walking príznaky pre zodpovedajúce segmenty
-                    const oldSegments = Array.isArray(original.segments) ? original.segments : [];
-                    draft.segments.forEach((s) => {
-                        const old = oldSegments.find(
-                            (o) => o.fromId === s.fromId && o.toId === s.toId
-                        );
-                        if (old) {
-                            s.isWalking = old.isWalking === true;
-                            s.walkingSetAt = old.walkingSetAt || null;
-                            s.walkingSetBy = old.walkingSetBy || null;
-                        }
-                    });
-                } else {
-                    draft.intermediateStopIds = stopIds;
-                    draft.segments = buildDefaultSegments({ ...draft, intermediateStopIds: stopIds });
-    
-                    const oldSegments = Array.isArray(original.segments) ? original.segments : [];
-                    draft.segments.forEach((s) => {
-                        const old = oldSegments.find(
-                            (o) => o.fromId === s.fromId && o.toId === s.toId
-                        );
-                        if (old) {
-                            s.isWalking = old.isWalking === true;
-                            s.walkingSetAt = old.walkingSetAt || null;
-                            s.walkingSetBy = old.walkingSetBy || null;
-                        }
-                    });
-                }
-    
-                if (originalWhen && originalWhen.trim() !== '') {
-                    draft.when = originalWhen;
-                }
+            // Zostavíme nový stav parenta (draft) – rovnaká logika ako v updateParentTransfer,
+            // aby sme ho mohli okamžite premietnuť do lokálneho state.
+            const parentRec = savedTransfersRef.current.find((s) => s.key === parentKey);
+            if (!parentRec) {
+                throw new Error('Parent presun sa nenašiel');
+            }
+
+            const draft = {
+                ...parentRec,
+                segments: Array.isArray(parentRec.segments)
+                    ? parentRec.segments.map((s) => ({ ...s }))
+                    : buildDefaultSegments(parentRec),
+            };
+
+            if (stopIds.length === 0) {
+                // Žiadne medzizastávky – vymažeme pole intermediateStopIds a prepočítame segmenty na priamy presun
+                draft.intermediateStopIds = [];
+                draft.segments = buildDefaultSegments({
+                    ...draft,
+                    intermediateStopIds: [],
+                });
+
+                const oldSegments = Array.isArray(original.segments) ? original.segments : [];
+                draft.segments.forEach((s) => {
+                    const old = oldSegments.find(
+                        (o) => o.fromId === s.fromId && o.toId === s.toId
+                    );
+                    if (old) {
+                        s.isWalking = old.isWalking === true;
+                        s.walkingSetAt = old.walkingSetAt || null;
+                        s.walkingSetBy = old.walkingSetBy || null;
+                    }
+                });
+            } else {
+                draft.intermediateStopIds = stopIds;
+                draft.segments = buildDefaultSegments({ ...draft, intermediateStopIds: stopIds });
+
+                const oldSegments = Array.isArray(original.segments) ? original.segments : [];
+                draft.segments.forEach((s) => {
+                    const old = oldSegments.find(
+                        (o) => o.fromId === s.fromId && o.toId === s.toId
+                    );
+                    if (old) {
+                        s.isWalking = old.isWalking === true;
+                        s.walkingSetAt = old.walkingSetAt || null;
+                        s.walkingSetBy = old.walkingSetBy || null;
+                    }
+                });
+            }
+
+            if (originalWhen && originalWhen.trim() !== '') {
+                draft.when = originalWhen;
+            }
+
+            recomputeParentSegmentsInPlace(draft);
+
+            // 1) Uložíme do DB cez existujúci updateParentTransfer
+            await updateParentTransfer(parentKey, (d) => {
+                d.intermediateStopIds = draft.intermediateStopIds;
+                d.segments = draft.segments.map((s) => ({ ...s }));
+                d.when = draft.when;
             });
+
+            // 2) OKAMŽITÁ optimistická aktualizácia lokálneho state,
+            //    aby UI hneď vedel, že intermediateStopIds je prázdne a parent už nie je "časť presunu".
+            const updatedTransfer = {
+                ...parentRec,
+                intermediateStopIds: Array.isArray(draft.intermediateStopIds) ? [...draft.intermediateStopIds] : [],
+                segments: (draft.segments || []).map((s) => ({ ...s })),
+                when: draft.when,
+                intermediateStops: Array.isArray(draft.intermediateStopIds)
+                    ? draft.intermediateStopIds.map(resolvePlaceNameById)
+                    : [],
+            };
+
+            const updatedTransfers = (savedTransfersRef.current || []).map((t) =>
+                t.key === parentKey ? updatedTransfer : t
+            );
+            savedTransfersRef.current = updatedTransfers;
+            setSavedTransfers(updatedTransfers);
     
             window.showGlobalNotification(
                 stopIds.length > 0
