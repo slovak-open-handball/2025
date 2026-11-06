@@ -4292,63 +4292,15 @@ const TransportApp = ({ userProfileData }) => {
         );
     
         if (parentsToUpdate.length === 0) {
-            const docRefNoChange = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
-            const tUpdatesNoChange = {};
-            refreshedParentsForDay.forEach((parent) => {
-                const tempDraft = {
-                    ...parent,
-                    when: null,
-                    segments: parent.segments.map((s) => ({ ...s })),
-                };
-                try {
-                    recomputeParentSegmentsInPlace(tempDraft);
-                } catch (e) {
-                    return;
-                }
-                if (tempDraft.when && tempDraft.when !== parent.when) {
-                    tUpdatesNoChange[parent.key] = { when: tempDraft.when };
-                }
-            });
-    
-            if (Object.keys(tUpdatesNoChange).length > 0) {
-                try {
-                    await setDoc(docRefNoChange, { [TRANSPORT_TRANSFERS_FIELD]: tUpdatesNoChange }, { merge: true });
-                    const updated = (savedTransfersRef.current || []).map((p) => {
-                        const patch = tUpdatesNoChange[p.key];
-                        if (!patch) return p;
-                        return { ...p, when: patch.when };
-                    });
-                    savedTransfersRef.current = updated;
-                    setSavedTransfers(updated);
-                } catch (err) {
-                    console.error('[TRANSPORT] Chyba pri zápise when (no-change):', err);
-                }
-            }
             return;
         }
     
         const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
         const tUpdates = {};
         parentsToUpdate.forEach(({ parentKey, newSegments }) => {
-            const parentRec = refreshedParentsForDay.find((s) => s.key === parentKey);
-            let newWhen = null;
-            if (parentRec) {
-                const tempDraft = {
-                    ...parentRec,
-                    when: null,
-                    segments: newSegments.map((s) => ({ ...s })),
-                };
-                try {
-                    recomputeParentSegmentsInPlace(tempDraft);
-                    newWhen = tempDraft.when;
-                } catch (e) {
-                    console.error('[TRANSPORT] Chyba pri recomputeParentSegmentsInPlace pre DB:', e);
-                }
-            }
+            // NOVÉ: `when` sa už NEAKTUALIZUJE v rámci sync-u – zostáva z generovania.
+            // Do DB zapisujeme iba `segments` (reálne časy z busu).
             tUpdates[parentKey] = { segments: newSegments };
-            if (newWhen != null) {
-                tUpdates[parentKey].when = newWhen;
-            }
         });
     
         try {
@@ -7012,6 +6964,10 @@ const TransportApp = ({ userProfileData }) => {
             }
             return null;
         })();
+
+        // NOVÉ: Ak má parent už uložený `when` v DB, NIKDY ho neprepisuj.
+        // `when` sa nastavuje iba pri generovaní časovej osi a odvtedy je nemenný.
+        const parentHasSavedWhen = !!(savedParentWhen && String(savedParentWhen).trim() !== '');
     
         const segStartList = [];
         const segEndList = [];
@@ -7066,8 +7022,14 @@ const TransportApp = ({ userProfileData }) => {
             } else {
                 draft.when = savedParentWhenFallback || '';
             }
-        } else {
+         } else {
             draft.when = savedParentWhenFallback || '';
+        }
+
+        // NOVÉ: Ak parent už mal uložený `when`, vráť ho späť – nech sa nemení.
+        // `when` sa nastavuje iba pri generovaní časovej osi (rebuildAndLogTimeline).
+        if (parentHasSavedWhen) {
+            draft.when = savedParentWhen;
         }
     };
     
