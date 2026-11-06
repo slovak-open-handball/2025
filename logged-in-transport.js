@@ -424,6 +424,7 @@ const TransportApp = ({ userProfileData }) => {
         const PARENT_START = parentRange.startTs;
         const PARENT_END = parentRange.endTs;
     
+        // Zoznam segmentov z parenta s doplnenými informáciami
         const parentSegments = [];
         if (Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
             parentRec.segments.forEach((seg, idx) => {
@@ -450,18 +451,23 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 }
     
-                const isResolvedWithTime =
-                    !isWalkingSeg && (
-                        (seg.busAssigned === true && seg.startTs != null && seg.endTs != null) ||
-                        (seg.startTs != null && seg.endTs != null)
-                    );
+                // DÔLEŽITÉ: "resolved" je len segment priradený busu s reálnym časom
+                const isBusAssignedWithTime =
+                    !isWalkingSeg &&
+                    seg.busAssigned === true &&
+                    seg.busId != null &&
+                    seg.boardingRowId != null &&
+                    seg.alightingRowId != null &&
+                    seg.startTs != null &&
+                    seg.endTs != null &&
+                    seg.endTs > seg.startTs;
     
                 parentSegments.push({
                     idx,
                     fromId: segFromId,
                     toId: segToId,
                     isWalking: isWalkingSeg,
-                    isResolvedWithTime,
+                    isResolvedWithTime: isBusAssignedWithTime,
                     range,
                 });
             });
@@ -486,7 +492,7 @@ const TransportApp = ({ userProfileData }) => {
         }
         parentSegments.sort((a, b) => (a.idx || 0) - (b.idx || 0));
     
-        // Nájdi predchádzajúci PRIradený (alebo aspoň s časom) segment
+        // Nájdi predchádzajúci PRIradený (busom) segment
         let prevResolvedEndTs = null;
         for (const seg of parentSegments) {
             const isCurrent = seg.fromId === currentFromId && seg.toId === currentToId;
@@ -502,7 +508,7 @@ const TransportApp = ({ userProfileData }) => {
             }
         }
     
-        // Nájdi nasledujúci PRIradený (alebo aspoň s časom) segment
+        // Nájdi nasledujúci PRIradený (busom) segment
         let nextResolvedStartTs = null;
         let foundCurrent = false;
         for (const seg of parentSegments) {
@@ -520,8 +526,10 @@ const TransportApp = ({ userProfileData }) => {
             }
         }
     
-        let startTsForDisplay = prevResolvedEndTs != null ? prevResolvedEndTs : PARENT_START;
+        // ŠTART: koniec predchádzajúceho priradeného segmentu, inak PARENT_START
+        const startTsForDisplay = prevResolvedEndTs != null ? prevResolvedEndTs : PARENT_START;
     
+        // KONIEC: začiatok nasledujúceho priradeného segmentu, inak PARENT_END
         let endTsForDisplay;
         if (nextResolvedStartTs != null && nextResolvedStartTs > startTsForDisplay) {
             endTsForDisplay = nextResolvedStartTs;
@@ -529,19 +537,10 @@ const TransportApp = ({ userProfileData }) => {
             endTsForDisplay = PARENT_END;
         }
     
-        // OPRAVA: ak endTsForDisplay <= startTsForDisplay, vráť aspoň startTs (nie null)
+        // Ak by náhodou endTs <= startTs, vráť aspoň startTs..PARENT_END
         if (endTsForDisplay <= startTsForDisplay) {
-            // Ak máme prevResolvedEndTs, použi ho ako startTs a PARENT_END ako endTs
-            if (prevResolvedEndTs != null && PARENT_END > prevResolvedEndTs) {
-                return { startTs: prevResolvedEndTs, endTs: PARENT_END };
-            }
-            // Ak máme nextResolvedStartTs a je > PARENT_START, použi PARENT_START ako startTs
-            if (nextResolvedStartTs != null && PARENT_START < nextResolvedStartTs) {
-                return { startTs: PARENT_START, endTs: nextResolvedStartTs };
-            }
-            // Inak vráť aspoň nejaký interval
-            if (PARENT_END > PARENT_START) {
-                return { startTs: PARENT_START, endTs: PARENT_END };
+            if (PARENT_END > startTsForDisplay) {
+                return { startTs: startTsForDisplay, endTs: PARENT_END };
             }
             return null;
         }
