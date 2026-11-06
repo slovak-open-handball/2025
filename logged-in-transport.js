@@ -2564,14 +2564,30 @@ const TransportApp = ({ userProfileData }) => {
                                     if (!Array.isArray(s.intermediateStopIds) || s.intermediateStopIds.length === 0) return false;
                                     return true;
                                 });
-
+                                
+                                // Nové: nájdeme aj parenta bez intermediateStopIds (priamy presun),
+                                // aby sme vedeli dogenerovať chýbajúce segmenty.
+                                const existingDirectParent = (savedTransfersRef.current || []).find((s) => {
+                                    if (cleanCategory(s.category || '') !== cleanCategory(category)) return false;
+                                    if (String(s.teamName || '').trim() !== teamName) return false;
+                                    const sFromId = s.fromId || null;
+                                    const sToId = s.toId || null;
+                                    if (sFromId !== fromId || sToId !== toId) return false;
+                                    if ((s.dayKey || '') !== (evDayKey || '')) return false;
+                                    if (s._parentKey && s._parentKey !== s.key) return false;
+                                    if (Array.isArray(s.intermediateStopIds) && s.intermediateStopIds.length > 0) return false;
+                                    return true;
+                                });
+                                
                                 const key = existingParentWithStops
                                     ? existingParentWithStops.key
-                                    : buildTransferKey(category, teamName, ev.when, ev.text);
+                                    : (existingDirectParent
+                                        ? existingDirectParent.key
+                                        : buildTransferKey(category, teamName, ev.when, ev.text));
                                 newKeys.add(key);
-
-                                const existingSaved = existingParentWithStops || (savedTransfersRef.current || []).find((s) => s.key === key);
-
+                                
+                                const existingSaved = existingParentWithStops || existingDirectParent || (savedTransfersRef.current || []).find((s) => s.key === key);
+                                
                                 const baseRecord = {
                                     category: cleanCategory(category),
                                     teamUid: effectiveTeamIdentifiers.teamUid,
@@ -2581,12 +2597,12 @@ const TransportApp = ({ userProfileData }) => {
                                     toId,
                                     dayKey: extractDayKeyFromWhen(ev.when) || null,
                                 };
-
+                                
                                 if (isSuperstructureTeamForDb) baseRecord.teamName = teamName;
-
+                                
                                 if (existingSaved) {
                                     if (Array.isArray(existingSaved.intermediateStopIds) && existingSaved.intermediateStopIds.length > 0) {
-                                        baseRecord.intermediateStopIds = existingSaved.intermediateStopIds;
+                                        baseRecord.intermediateStopIds = [...existingSaved.intermediateStopIds];
                                     }
                                     if (existingSaved.isWalking === true) {
                                         baseRecord.isWalking = true;
@@ -2594,7 +2610,7 @@ const TransportApp = ({ userProfileData }) => {
                                         baseRecord.walkingSetBy = existingSaved.walkingSetBy || (userProfileData && userProfileData.email) || null;
                                     }
                                 }
-
+                                
                                 const draft = {
                                     ...baseRecord,
                                     key,
@@ -2602,6 +2618,68 @@ const TransportApp = ({ userProfileData }) => {
                                         ? existingSaved.segments.map((s) => ({ ...s }))
                                         : buildDefaultSegments(baseRecord),
                                 };
+                                
+                                // ============================================================
+                                // DOGENEROVANIE CHÝBAJÚCICH SEGMENTOV
+                                // ============================================================
+                                // Ak parent existuje a má intermediateStopIds, zabezpečíme,
+                                // aby segments pokrývali CELÚ trasu (fromId → ...stops... → toId).
+                                // Ak niektorý segment chýba (bol zmazaný), dogenerujeme ho.
+                                if (existingSaved && Array.isArray(existingSaved.intermediateStopIds) && existingSaved.intermediateStopIds.length > 0) {
+                                    const stopsIds = existingSaved.intermediateStopIds.filter(Boolean);
+                                    const routeIdsRaw = [fromId, ...stopsIds, toId].filter(Boolean);
+                                    const routeIds = [];
+                                    routeIdsRaw.forEach((id) => {
+                                        if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
+                                    });
+                                
+                                    // Zistíme, ktoré segmenty chýbajú
+                                    const existingSegs = Array.isArray(draft.segments) ? draft.segments : [];
+                                    const missingSegments = [];
+                                    for (let i = 0; i < routeIds.length - 1; i++) {
+                                        const segFrom = routeIds[i];
+                                        const segTo = routeIds[i + 1];
+                                        if (segFrom === segTo) continue;
+                                        const found = existingSegs.find((s) => s.fromId === segFrom && s.toId === segTo);
+                                        if (!found) {
+                                            missingSegments.push({ fromId: segFrom, toId: segTo });
+                                        }
+                                    }
+                                
+                                    if (missingSegments.length > 0) {
+                                        // Zostavíme nové segments v správnom poradí podľa routeIds
+                                        const newSegments = [];
+                                        for (let i = 0; i < routeIds.length - 1; i++) {
+                                            const segFrom = routeIds[i];
+                                            const segTo = routeIds[i + 1];
+                                            if (segFrom === segTo) continue;
+                                            const existingSeg = existingSegs.find((s) => s.fromId === segFrom && s.toId === segTo);
+                                            if (existingSeg) {
+                                                newSegments.push({ ...existingSeg });
+                                            } else {
+                                                // Dogenerujeme nový prázdny segment
+                                                newSegments.push({
+                                                    fromId: segFrom,
+                                                    toId: segTo,
+                                                    startTs: null,
+                                                    endTs: null,
+                                                    when: null,
+                                                    isWalking: false,
+                                                    busAssigned: false,
+                                                    walkingSetAt: null,
+                                                    walkingSetBy: null,
+                                                });
+                                            }
+                                        }
+                                        draft.segments = newSegments;
+                                        console.log(
+                                            '%c[TRANSPORT][DOGENEROVANIE] Dogenerované chýbajúce segmenty pre parent:',
+                                            'color:#059669;font-weight:bold;',
+                                            { parentKey: key, missingSegments, allSegments: newSegments.map((s) => `${s.fromId}→${s.toId}`) }
+                                        );
+                                    }
+                                }
+                                
                                 recomputeParentSegmentsInPlace(draft);
 
                                 transfersPatch[key] = {
@@ -5798,13 +5876,108 @@ const TransportApp = ({ userProfileData }) => {
         if (!window.db || !transfer) return;
         setDeleteTransferSaving(true);
         try {
-            const parentKey = transfer._parentKey || transfer.key;
+            const isSegment = !!transfer._parentKey;
+    
+            // ============================================================
+            // PRÍPAD A: Ide o ČASŤ presunu (segment) – zmažeme iba segment
+            // ============================================================
+            if (isSegment) {
+                const parentKey = transfer._parentKey;
+                const parent = savedTransfersRef.current.find((s) => s.key === parentKey);
+                if (!parent) {
+                    window.showGlobalNotification('Parent presun sa nenašiel.', 'error');
+                    setDeleteTransferModal(null);
+                    return;
+                }
+    
+                const segFromId = transfer.fromId || null;
+                const segToId = transfer.toId || null;
+    
+                const draft = {
+                    ...parent,
+                    segments: Array.isArray(parent.segments)
+                        ? parent.segments.map((s) => ({ ...s }))
+                        : buildDefaultSegments(parent),
+                    intermediateStopIds: Array.isArray(parent.intermediateStopIds)
+                        ? [...parent.intermediateStopIds]
+                        : [],
+                };
+    
+                const segIdx = findSegmentIndex(draft.segments, segFromId, segToId);
+                if (segIdx === -1) {
+                    window.showGlobalNotification('Segment sa nenašiel v parentovi.', 'error');
+                    setDeleteTransferModal(null);
+                    return;
+                }
+    
+                // Zmažeme segment
+                draft.segments.splice(segIdx, 1);
+    
+                // Prepočítame intermediateStopIds – zvyšné vnútorné body trasy
+                const fromId = draft.fromId || null;
+                const toId = draft.toId || null;
+                const routeIds = [];
+                // Zo zvyšných segmentov rekonštruujeme trasu: fromId, ...vnútorné body..., toId
+                if (draft.segments.length === 0) {
+                    routeIds.push(fromId, toId);
+                } else {
+                    routeIds.push(draft.segments[0].fromId);
+                    draft.segments.forEach((s) => routeIds.push(s.toId));
+                    // Ak sa prvá fromId nezhoduje s parent.fromId, doplníme
+                    if (routeIds[0] !== fromId) routeIds.unshift(fromId);
+                    // Ak sa posledná toId nezhoduje s parent.toId, doplníme
+                    if (routeIds[routeIds.length - 1] !== toId) routeIds.push(toId);
+                }
+    
+                // Vnútorné body = všetko okrem prvého a posledného
+                const newIntermediateStops = routeIds
+                    .slice(1, -1)
+                    .filter((id) => id && id !== fromId && id !== toId);
+    
+                draft.intermediateStopIds = newIntermediateStops;
+    
+                // Ak ostal len 1 segment (priamy presun) alebo 0, odstránime intermediateStopIds
+                if (draft.segments.length <= 1) {
+                    draft.intermediateStopIds = [];
+                }
+    
+                recomputeParentSegmentsInPlace(draft);
+    
+                // Ak po odstránení nezostali žiadne segmenty, zmažeme celý parent
+                if (draft.segments.length === 0) {
+                    const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+                    await setDoc(
+                        docRef,
+                        { [TRANSPORT_TRANSFERS_FIELD]: { [parentKey]: deleteField() } },
+                        { merge: true }
+                    );
+                } else {
+                    // Uložíme upravený parent (bez zmazaného segmentu)
+                    await updateParentTransfer(parentKey, (d) => {
+                        d.segments = draft.segments.map((s) => ({ ...s }));
+                        d.intermediateStopIds = draft.intermediateStopIds;
+                        d.when = draft.when;
+                    });
+                }
+    
+                const fromName = resolvePlaceNameById(segFromId) || '';
+                const toName = resolvePlaceNameById(segToId) || '';
+                window.showGlobalNotification(
+                    `Časť presunu ${fromName} → ${toName} bola odstránená.`,
+                    'success'
+                );
+                setDeleteTransferModal(null);
+                return;
+            }
+    
+            // ============================================================
+            // PRÍPAD B: Ide o CELÝ presun – zmažeme celý parent
+            // ============================================================
+            const parentKey = transfer.key;
             const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
             await setDoc(
                 docRef,
-                {
-                    [TRANSPORT_TRANSFERS_FIELD]: { [parentKey]: deleteField() },
-                },
+                { [TRANSPORT_TRANSFERS_FIELD]: { [parentKey]: deleteField() } },
                 { merge: true }
             );
             const fromName = resolvePlaceNameById(transfer.fromId) || '';
@@ -5815,7 +5988,7 @@ const TransportApp = ({ userProfileData }) => {
             );
             setDeleteTransferModal(null);
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri mazaní konkrétneho presunu:', err);
+            console.error('[TRANSPORT] Chyba pri mazaní presunu:', err);
             window.showGlobalNotification('Nepodarilo sa odstrániť presun.', 'error');
         } finally {
             setDeleteTransferSaving(false);
