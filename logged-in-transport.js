@@ -5054,16 +5054,42 @@ const TransportApp = ({ userProfileData }) => {
                 const info = (teamsLookupRef.current || {})[lookupKey];
                 if (info && info.teamName) effectiveTeamName = info.teamName;
             }
+
+
+// --------------------------------------------------------            
             
-            console.log('          [TRANSPORT][getTeamsInBusAfterRow]', {
-                parentKey: parent.key,
-                parentTeamName: parent.teamName,
-                teamUid: parent.teamUid,
-                teamIndex: parent.teamIndex,
-                category: effectiveCategory,
-                effectiveTeamName,
-                hasSegments: (parent.segments || []).length,
-            });
+            if (segmentsForThisBus.length > 0) {
+                let effectiveTeamNameForLog = String(parent.teamName || '').trim();
+                if (!effectiveTeamNameForLog && parent.teamUid != null && parent.teamIndex != null) {
+                    const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
+                    const info = (teamsLookupRef.current || {})[lookupKey];
+                    if (info && info.teamName) effectiveTeamNameForLog = info.teamName;
+                }
+
+                console.log('     [TRANSPORT][getTeamsInBusAfterRow] parent priradený tomuto busu', {
+                    busId,
+                    dayKey,
+                    currentOrder,
+                    parentKey: parent.key,
+                    parentTeamName: parent.teamName,
+                    teamUid: parent.teamUid,
+                    teamIndex: parent.teamIndex,
+                    category: effectiveCategory,
+                    effectiveTeamName: effectiveTeamNameForLog,
+                    segmentsForThisBus: segmentsForThisBus.map((seg) => ({
+                        fromId: seg.fromId,
+                        toId: seg.toId,
+                        boardingRowId: seg.boardingRowId,
+                        alightingRowId: seg.alightingRowId,
+                        bOrder: parseOrderFromRowId(seg.boardingRowId),
+                        aOrder: parseOrderFromRowId(seg.alightingRowId),
+                        isWalking: seg.isWalking === true,
+                        busAssigned: seg.busAssigned === true,
+                    })),
+                });
+            }
+
+// --------------------------------------------------------
             
             if (!effectiveTeamName) return;
 
