@@ -2683,7 +2683,8 @@ const TransportApp = ({ userProfileData }) => {
                                 };
 
                                 if (isSuperstructureTeamForDb) transfersPatch[key].teamName = teamName;
-                                if (Array.isArray(draft.intermediateStopIds) && draft.intermediateStopIds.length > 0) {
+                                if (Array.isArray(draft.intermediateStopIds) && draft.intermediateStopIds.length > 0) {if (draft.segments.length === 0) {
+
                                     transfersPatch[key].intermediateStopIds = draft.intermediateStopIds;
                                 }
 
@@ -5915,7 +5916,13 @@ const TransportApp = ({ userProfileData }) => {
                 }
     
                 recomputeParentSegmentsInPlace(draft);
-    
+
+                // Zachovať pôvodný when, ak sa nepodarilo vypočítať nový
+                const parentOriginalWhen = parent.when && String(parent.when).trim() !== '' ? parent.when : '';
+                if ((!draft.when || String(draft.when).trim() === '') && parentOriginalWhen) {
+                    draft.when = parentOriginalWhen;
+                }
+
                 if (draft.segments.length === 0) {
                     const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
                     await setDoc(
@@ -5927,7 +5934,10 @@ const TransportApp = ({ userProfileData }) => {
                     await updateParentTransfer(parentKey, (d) => {
                         d.segments = draft.segments.map((s) => ({ ...s }));
                         d.intermediateStopIds = draft.intermediateStopIds;
-                        d.when = draft.when;
+                        // Nezapisovať when, ak je prázdny – nechať updateParentTransfer, aby použil pôvodný
+                        if (draft.when && String(draft.when).trim() !== '') {
+                            d.when = draft.when;
+                        }
                     });
                 }
     
@@ -7011,6 +7021,12 @@ const TransportApp = ({ userProfileData }) => {
             )
         );
         
+        const savedParentWhenFallback = (() => {
+            if (savedParentWhen && String(savedParentWhen).trim() !== '') return savedParentWhen;
+            if (originalWhenFromDraft && String(originalWhenFromDraft).trim() !== '') return String(originalWhenFromDraft).trim();
+            return null;
+        })();
+        
         if (busSegments.length > 0 && busSegments.some((s) => s.startTs != null && s.endTs != null) && !hasUnassignedSegments) {
             const busStart = busSegments.map((s) => s.startTs).filter((ts) => ts != null);
             const busEnd = busSegments.map((s) => {
@@ -7025,18 +7041,26 @@ const TransportApp = ({ userProfileData }) => {
             } else if (busEnd.length > 0) {
                 draft.when = formatTsLocal(Math.max(...busEnd));
             } else {
-                draft.when = '';
+                draft.when = savedParentWhenFallback || '';
             }
         } else if (segStartList.length > 0 && segEndList.length > 0 && !hasUnassignedSegments) {
             draft.when = `${formatTsLocal(Math.min(...segStartList))} – ${formatTsLocal(Math.max(...segEndList))}`;
-        } else if (originalWhenFromDraft && String(originalWhenFromDraft).trim() !== '') {
-            draft.when = originalWhenFromDraft;
-        } else if (savedParentWhen) {
-            draft.when = savedParentWhen;
-        } else if (parentIsFullyWalking) {
-            draft.when = originalWhenFromDraft || '';
+        } else if (segStartList.length > 0 || segEndList.length > 0) {
+            // Máme aspoň jeden segment s časmi – použiť dostupný rozsah
+            const allStarts = segStartList.filter((ts) => ts != null);
+            const allEnds = segEndList.filter((ts) => ts != null);
+            if (allStarts.length > 0 && allEnds.length > 0) {
+                draft.when = `${formatTsLocal(Math.min(...allStarts))} – ${formatTsLocal(Math.max(...allEnds))}`;
+            } else if (allStarts.length > 0) {
+                draft.when = formatTsLocal(Math.min(...allStarts));
+            } else if (allEnds.length > 0) {
+                draft.when = formatTsLocal(Math.max(...allEnds));
+            } else {
+                draft.when = savedParentWhenFallback || '';
+            }
         } else {
-            draft.when = '';
+            // Žiadne časy – ZACHOVAŤ pôvodný when
+            draft.when = savedParentWhenFallback || '';
         }
     };
     
@@ -9327,7 +9351,24 @@ const TransportApp = ({ userProfileData }) => {
                             }
                             if (!timeLabel && t.dayKey) {
                                 const dayLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
-                                timeLabel = `${dayLabel} (čas neurčený)`;
+                                // Skús ešte raz z parent.when
+                                const parentRec = savedTransfersRef.current.find((s) => s.key === (t._parentKey || t.key));
+                                if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
+                                    const parentRange = parseWhenRangeFull(parentRec.when);
+                                    if (parentRange) {
+                                        const st = parentRange.startTime;
+                                        const et = parentRange.endTime;
+                                        if (st && et) timeLabel = `${st} – ${et}`;
+                                        else if (st) timeLabel = st;
+                                        else if (et) timeLabel = et;
+                                        else timeLabel = String(parentRec.when).trim();
+                                    } else {
+                                        timeLabel = String(parentRec.when).trim();
+                                    }
+                                }
+                                if (!timeLabel) {
+                                    timeLabel = `${dayLabel}`;
+                                }
                             }
                             let routeLabel = null;
                             if (transferInfo) {
@@ -9870,10 +9911,16 @@ const TransportApp = ({ userProfileData }) => {
             
             if (nextSegmentStartTs != null) {
                 displayEndTs = nextSegmentStartTs;
-            } else if (parentEndTs != null) {
+            } else if (parentEndTs != null && parentEndTs > (displayStartTs || 0)) {
                 displayEndTs = parentEndTs;
             } else if (displayStartTs != null) {
-                displayEndTs = displayStartTs + 60 * 1000;
+                // Skús použiť parent.when (aj keď je len jeden bod)
+                const parentWhenRange = parseWhenRangeToTs(parent.when);
+                if (parentWhenRange && parentWhenRange.endTs != null && parentWhenRange.endTs > displayStartTs) {
+                    displayEndTs = parentWhenRange.endTs;
+                } else {
+                    displayEndTs = displayStartTs + 60 * 1000;
+                }
             }
             
             if (
