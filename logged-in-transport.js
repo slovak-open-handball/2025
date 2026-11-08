@@ -13484,17 +13484,6 @@ const TransportApp = ({ userProfileData }) => {
                                                             'div',
                                                             { className: 'font-semibold text-gray-800 text-sm flex items-center gap-2 flex-wrap' },
                                                             m.bus.name,
-                                                            isPreferred &&
-                                                                React.createElement(
-                                                                    'span',
-                                                                    {
-                                                                        className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
-                                                                        style: { backgroundColor: '#ede9fe', color: '#6d28d9' },
-                                                                        title: 'V tomto autobuse už sedí superstructure tím z rovnakej skupiny (rovnaké posledné písmeno).'
-                                                                    },
-                                                                    React.createElement('i', { className: 'fa-solid fa-wand-magic-sparkles text-[9px]' }),
-                                                                    'odporúčané'
-                                                                )
                                                         ),
                                                         React.createElement(
                                                             'div',
