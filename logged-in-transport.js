@@ -12152,18 +12152,30 @@ const TransportApp = ({ userProfileData }) => {
                         },
                         'Zrušiť'
                     ),
-                    React.createElement(
-                        'button',
-                        {
-                            type: 'button',
-                            onClick: saveEditedTransfer,
-                            disabled: editingTransferSaving,
-                            className: 'px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-60 flex items-center gap-2'
-                        },
-                        editingTransferSaving &&
-                            React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
-                        'Uložiť'
-                    )
+                    (() => {
+                        const hasEmptyStop = Array.isArray(editingTransferStops) &&
+                            editingTransferStops.some((s) => !String(s || '').trim());
+                        const isBlocked = editingTransferSaving || hasEmptyStop;
+                        const baseCls = 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2';
+                        const enabledCls = 'bg-blue-600 text-white hover:bg-blue-700';
+                        const blockedCls = 'bg-white border-2 border-blue-600 text-blue-600 cursor-not-allowed';
+                        return React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: saveEditedTransfer,
+                                disabled: isBlocked,
+                                title: hasEmptyStop
+                                    ? 'Najprv vyberte medzizastávku vo všetkých selectboxoch.'
+                                    : undefined,
+                                className: `${baseCls} ${isBlocked ? blockedCls : enabledCls}`,
+                                style: isBlocked ? { cursor: 'not-allowed' } : undefined,
+                            },
+                            editingTransferSaving &&
+                                React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                            'Uložiť'
+                        );
+                    })()
                 )
             )
         ),
@@ -12945,7 +12957,7 @@ const TransportApp = ({ userProfileData }) => {
                                     onClick: assignTransferToBus,
                                     disabled: isBlocked,
                                     title: isBlocked
-                                        ? 'Tlačidlo je neaktívne – najprv vyberte autobus.'
+                                        ? 'Najprv vyberte autobus.'
                                         : undefined,
                                     className: `${baseCls} ${isBlocked ? blockedCls : enabledCls}`,
                                 },
