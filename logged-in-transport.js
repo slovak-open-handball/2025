@@ -5437,6 +5437,9 @@ const TransportApp = ({ userProfileData }) => {
             .sort((a, b) => (a.order || 0) - (b.order || 0));
         const currentIdx = allRows.findIndex((r) => r.id === row.id);
         const prevRow = currentIdx > 0 ? allRows[currentIdx - 1] : null;
+        const nextRow = currentIdx !== -1 && currentIdx < allRows.length - 1
+            ? allRows[currentIdx + 1]
+            : null;
     
         const lockedPlaceFromId =
             prevRow && prevRow.placeToId ? prevRow.placeToId : null;
@@ -5468,9 +5471,10 @@ const TransportApp = ({ userProfileData }) => {
                 React.createElement('option', { key: s.id, value: s.id }, s.name)
             );
     
-        // <<< ZMENA: výpočet tímov, ktoré v tomto riadku vystupujú,
-        // presunutý vyššie, aby ho mohla použiť aj bunka "Miesto do".
-        const teamsAlightingHere = (() => {
+        // <<< ZMENA: pomocná funkcia na výpočet tímov, ktoré v danom riadku
+        // nastupujú alebo vystupujú (aby sme nemuseli výpočet duplikovať).
+        const getTeamsForRowSide = (targetRowId, side) => {
+            if (!targetRowId) return [];
             const result = [];
             (savedTransfersRef.current || []).forEach((parent) => {
                 if (parent.dayKey !== dayKey) return;
@@ -5486,17 +5490,43 @@ const TransportApp = ({ userProfileData }) => {
                 (parent.segments || []).forEach((seg) => {
                     if (seg.busId !== busId) return;
                     if (seg.isWalking === true) return;
-                    if (seg.alightingRowId === row.rowId) {
+                    if (side === 'in' && seg.boardingRowId === targetRowId) {
+                        result.push(`${effectiveTeamName}|${effectiveCategory}`);
+                    }
+                    if (side === 'out' && seg.alightingRowId === targetRowId) {
                         result.push(`${effectiveTeamName}|${effectiveCategory}`);
                     }
                 });
             });
             return result;
-        })();
+        };
     
-        // <<< ZMENA: ak v tomto riadku niekto vystupuje, "Miesto do" sa nesmie meniť
+        // Tímy vystupujúce v tomto riadku (stĺpec "Výstup")
+        const teamsAlightingHere = getTeamsForRowSide(row.rowId, 'out');
         const filteredTeamsOut = filterTeamsByCategory(teamsAlightingHere);
-        const isPlaceToLocked = filteredTeamsOut.length > 0;
+    
+        // <<< ZMENA: tímy nastupujúce v nasledujúcom riadku (stĺpec "Nástup")
+        // Ak v ďalšom riadku niekto nastupuje, tento riadok musí mať
+        // "Miesto do" = "Miesto od" nasledujúceho riadku, preto ho zamkneme.
+        const teamsBoardingNextRow = nextRow
+            ? getTeamsForRowSide(nextRow.rowId, 'in')
+            : [];
+        const filteredTeamsBoardingNextRow = filterTeamsByCategory(teamsBoardingNextRow);
+    
+        // <<< ZMENA: výsledná podmienka zámku pre "Miesto do"
+        const isPlaceToLockedByAlightingHere = filteredTeamsOut.length > 0;
+        const isPlaceToLockedByBoardingNext = filteredTeamsBoardingNextRow.length > 0;
+        const isPlaceToLocked = isPlaceToLockedByAlightingHere || isPlaceToLockedByBoardingNext;
+    
+        const placeToLockTitle = (() => {
+            if (isPlaceToLockedByAlightingHere) {
+                return 'Miesto do sa nedá meniť, pretože v tomto riadku vystupuje tím. Najprv odstráňte tímy zo stĺpca Výstup.';
+            }
+            if (isPlaceToLockedByBoardingNext) {
+                return 'Miesto do sa nedá meniť, pretože v nasledujúcom riadku nastupuje tím. Najprv odstráňte tímy zo stĺpca Nástup v ďalšom riadku.';
+            }
+            return undefined;
+        })();
     
         const removeTeamSegment = async (teamKeyToRemove, clickSide, rowObj) => {
             if (!window.db || !busId || !dayKey || !rowObj?.id) return;
@@ -5669,14 +5699,12 @@ const TransportApp = ({ userProfileData }) => {
                         stopOptionsFrom
                     )
             ),
-            // <<< ZMENA: bunka "Miesto do" so zámkom, ak v tomto riadku niekto vystupuje
+            // <<< ZMENA: bunka "Miesto do" – zámok aj pri nastupe v nasledujúcom riadku
             React.createElement('td', { className: 'border border-gray-300 p-1' },
                 React.createElement('select', {
                     value: row.placeToId || '',
                     disabled: isPlaceToLocked,
-                    title: isPlaceToLocked
-                        ? 'Miesto do sa nedá meniť, pretože v tomto riadku vystupuje tím. Najprv odstráňte tímy zo stĺpca Výstup.'
-                        : undefined,
+                    title: placeToLockTitle,
                     onChange: async (e) => {
                         if (isPlaceToLocked) return;
                         const newPlaceToId = e.target.value;
@@ -5713,26 +5741,7 @@ const TransportApp = ({ userProfileData }) => {
             ),
             React.createElement('td', { className: 'border border-gray-300 p-1 align-middle whitespace-nowrap' },
                 (() => {
-                    const teamsBoardingHere = [];
-                    (savedTransfersRef.current || []).forEach((parent) => {
-                        if (parent.dayKey !== dayKey) return;
-                        if (parent.isWalking === true) return;
-                        const effectiveCategory = cleanCategory(parent.category || '');
-                        let effectiveTeamName = String(parent.teamName || '').trim();
-                        if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
-                            const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
-                            const info = (teamsLookupRef.current || {})[lookupKey];
-                            if (info && info.teamName) effectiveTeamName = info.teamName;
-                        }
-                        if (!effectiveTeamName) return;
-                        (parent.segments || []).forEach((seg) => {
-                            if (seg.busId !== busId) return;
-                            if (seg.isWalking === true) return;
-                            if (seg.boardingRowId === row.rowId) {
-                                teamsBoardingHere.push(`${effectiveTeamName}|${effectiveCategory}`);
-                            }
-                        });
-                    });
+                    const teamsBoardingHere = getTeamsForRowSide(row.rowId, 'in');
                     const filteredTeamsIn = filterTeamsByCategory(teamsBoardingHere);
     
                     if (filteredTeamsIn.length === 0) {
@@ -5763,7 +5772,6 @@ const TransportApp = ({ userProfileData }) => {
                     );
                 })()
             ),
-            // <<< ZMENA: bunka Výstup už používa vopred vypočítané teamsAlightingHere
             React.createElement('td', { className: 'border border-gray-300 p-1 align-middle whitespace-nowrap' },
                 (() => {
                     if (filteredTeamsOut.length === 0) {
