@@ -5605,42 +5605,56 @@ const TransportApp = ({ userProfileData }) => {
                     className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 flex items-center justify-center mx-auto',
                     title: 'Odstrániť riadok',
                 }, React.createElement('i', { className: 'fa-solid fa-xmark' })),            
-                React.createElement(
-                    'div',
-                    {
-                        className: 'absolute left-1/2 -translate-x-1/2 pointer-events-none',
-                        style: {
-                            bottom: '-12px',
-                            zIndex: 100,
-                        }
-                    },
-                    React.createElement(
-                        'button',
+                (() => {
+                    // Zelené "plus" zobrazíme len ak sú vyplnené miesta potrebné na vloženie riadku.
+                    // placeFrom môže byť uzamknuté z predchádzajúceho riadku (lockedPlaceFrom),
+                    // takže kontrolujeme efektívne miesto od (uzamknuté alebo vybrané) a miesto do.
+                    const effectivePlaceFromId = lockedPlaceFromId || row.placeFromId || null;
+                    const hasPlaceFrom = !!effectivePlaceFromId;
+                    const hasPlaceTo = !!row.placeToId;
+                    const canInsertRow = hasPlaceFrom && hasPlaceTo;
+
+                    if (!canInsertRow) {
+                        return null;
+                    }
+
+                    return React.createElement(
+                        'div',
                         {
-                            type: 'button',
-                            onClick: async () => {
-                                const rowsKey = `${busId}|${dayKey}`;
-                                const allRows = (busRows[rowsKey] || [])
-                                    .slice()
-                                    .sort((a, b) => (a.order || 0) - (b.order || 0));
-                                const idx = allRows.findIndex((r) => r.id === row.id);
-                                if (idx === -1) return;
-                                const nextRow = allRows[idx + 1];
-                                const realBus = buses.find((b) => b.id === busId) || { id: busId, name: '' };
-                                if (!nextRow) {
-                                    await addBusRow(realBus, dayKey);
-                                    return;
-                                }
-                                await insertBusRowBetween(realBus, dayKey, row, nextRow);
-                            },
-                            className:
-                                'pointer-events-auto w-6 h-6 rounded-full bg-green-600 text-white shadow-md ' +
-                                'hover:bg-green-700 active:scale-95 transition-all duration-150 ' +
-                                'flex items-center justify-center opacity-0 group-hover:opacity-100',
+                            className: 'absolute left-1/2 -translate-x-1/2 pointer-events-none',
+                            style: {
+                                bottom: '-12px',
+                                zIndex: 100,
+                            }
                         },
-                        React.createElement('i', { className: 'fa-solid fa-plus text-[10px]' })
-                    )
-                )
+                        React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: async () => {
+                                    const rowsKey = `${busId}|${dayKey}`;
+                                    const allRows = (busRows[rowsKey] || [])
+                                        .slice()
+                                        .sort((a, b) => (a.order || 0) - (b.order || 0));
+                                    const idx = allRows.findIndex((r) => r.id === row.id);
+                                    if (idx === -1) return;
+                                    const nextRow = allRows[idx + 1];
+                                    const realBus = buses.find((b) => b.id === busId) || { id: busId, name: '' };
+                                    if (!nextRow) {
+                                        await addBusRow(realBus, dayKey);
+                                        return;
+                                    }
+                                    await insertBusRowBetween(realBus, dayKey, row, nextRow);
+                                },
+                                className:
+                                    'pointer-events-auto w-6 h-6 rounded-full bg-green-600 text-white shadow-md ' +
+                                    'hover:bg-green-700 active:scale-95 transition-all duration-150 ' +
+                                    'flex items-center justify-center opacity-0 group-hover:opacity-100',
+                            },
+                            React.createElement('i', { className: 'fa-solid fa-plus text-[10px]' })
+                        )
+                    );
+                })()
             )
         );
     };
