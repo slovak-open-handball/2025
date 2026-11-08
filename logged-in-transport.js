@@ -13107,9 +13107,8 @@ const TransportApp = ({ userProfileData }) => {
                                                         
                                                             let total = Math.max(totalAtBoarding, totalAtAlighting);
                                                             // Pre tooltip použijeme tú množinu tímov, ktorá dala väčší počet
-                                                            let teams = totalAtBoarding >= totalAtAlighting
-                                                                ? [...teamsAtBoarding]
-                                                                : [...teamsAtAlighting];
+                                                            const teamsSet = new Set([...teamsAtBoarding, ...teamsAtAlighting]);
+                                                            let teams = [...teamsSet];
                                                         
                                                             const isThisRowSelected =
                                                                 assignBusSelectedKey &&
