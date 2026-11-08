@@ -11643,7 +11643,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     'span',
                                                                                     {
                                                                                         className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
-                                                                                        style: { backgroundColor: '#bbf7d0', color: '#15803d' },
+                                                                                        style: { backgroundColor: '#fed7aa', color: '#9a3412' },
                                                                                         title: 'Peší presun'
                                                                                     },
                                                                                     React.createElement('i', { className: 'fa-solid fa-person-walking text-[9px]' }),
