@@ -9002,7 +9002,17 @@ const TransportApp = ({ userProfileData }) => {
         const expandedTransfers = [];
         filteredByDay.forEach((t) => {
             const stopsIds = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
-            if (stopsIds.length === 0) {
+
+            // <<< ZMENA: Rozhodnutie, či má zmysel rozdeľovať parent na segmenty.
+            // Pri superstructure tímoch sa často generujú priame presuny BEZ medzizastávok,
+            // ale parent môže mať viac segmentov (napr. po priradení busu alebo po
+            // označení časti ako peši). V takom prípade chceme zobraziť každý
+            // nepriradený segment samostatne – rovnako ako pri tímoch z users s medzizastávkami.
+            const parentSegmentsForSplit = Array.isArray(t.segments) ? t.segments : [];
+            const hasMultipleSegments = parentSegmentsForSplit.length > 1;
+            const shouldSplitIntoSegments = stopsIds.length > 0 || hasMultipleSegments;
+
+            if (!shouldSplitIntoSegments) {
                 const isAssigned = isSegmentAssigned(t);
                 let displayWhen = t.when;
                 if (!displayWhen || String(displayWhen).trim() === '') {
