@@ -7253,6 +7253,27 @@ const TransportApp = ({ userProfileData }) => {
                     when: `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`,
                 };
             }
+
+            // <<< ZMENA: Ak segment má priradený bus (má boardingRowId a alightingRowId),
+            // NIKDY ho neoznačuj ako nepriradený, aj keď startTs/endTs sú null.
+            // Dôvod: recompute môže nastať skôr, ako sa dopočítajú reálne časy,
+            // a vtedy by sme stratili informáciu o priradení k busu.
+            const hasBusAssignmentMarkers =
+                (seg.busId != null && seg.boardingRowId && seg.alightingRowId)
+                || (seg.busAssigned === true && seg.boardingRowId && seg.alightingRowId);
+
+            if (hasBusAssignmentMarkers) {
+                return {
+                    ...seg,
+                    isWalking: false,
+                    busAssigned: true,
+                    busId: seg.busId || null,
+                    when: seg.startTs != null && seg.endTs != null
+                        ? `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`
+                        : (seg.startTs != null ? formatTsLocal(seg.startTs) : (seg.endTs != null ? formatTsLocal(seg.endTs) : null)),
+                };
+            }
+
             return {
                 ...seg,
                 startTs: null,
@@ -8985,20 +9006,54 @@ const TransportApp = ({ userProfileData }) => {
             if (!fromId || !toId) return false;
             const parentKey = t._parentKey || t.key;
             const parent = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
+        
+            // <<< ZMENA: Pre "solo" záznam (celý parent bez medzizastávok) môže nastať,
+            // že parent.fromId/fromId sú rovnaké ako segment.fromId/toId. V takom prípade
+            // skontrolujeme VŠETKY segmenty parenta (nielen ten s rovnakým fromId/toId),
+            // pretože parent môže mať viac segmentov, ale my chceme zistiť, či JE PRIradený
+            // ASPOŇ JEDEN segment, ktorý zodpovedá "solo" záznamu (t.j. celému parentu).
+            //
+            // Pre segment (s `_parentKey`) skontrolujeme konkrétny segment podľa fromId/toId.
             if (parent && Array.isArray(parent.segments)) {
-                const segIdx = findSegmentIndex(parent.segments, fromId, toId);
-                if (segIdx !== -1) {
-                    const seg = parent.segments[segIdx];
-                    if (seg && seg.busId && seg.boardingRowId && seg.alightingRowId) {
-                        return true;
+                // Pre segment: konkrétny segment podľa fromId/toId
+                if (t._parentKey) {
+                    const segIdx = findSegmentIndex(parent.segments, fromId, toId);
+                    if (segIdx !== -1) {
+                        const seg = parent.segments[segIdx];
+                        if (seg && seg.isWalking === true) {
+                            return true;
+                        }
+                        if (seg && seg.busId && seg.boardingRowId && seg.alightingRowId) {
+                            return true;
+                        }
+                        // <<< ZMENA: Ak segment má priradený bus (má boardingRowId a alightingRowId),
+                        // považujeme ho za priradený AJ keď startTs/endTs sú null.
+                        if (seg && seg.busAssigned === true && seg.boardingRowId && seg.alightingRowId) {
+                            return true;
+                        }
                     }
-                    if (seg && seg.isWalking === true) {
-                        return true;
-                    }
+                    return false;
                 }
+        
+                // Pre "solo" záznam (celý parent): skontrolujeme, či parent má ASPOŇ JEDEN
+                // priradený alebo walking segment. Ak áno, "solo" záznam sa odfiltruje.
+                // (Toto je konzervatívne – ak má parent viac segmentov a aspoň jeden je
+                // priradený/walking, "solo" záznam sa už nezobrazí ako celok.)
+                const segments = parent.segments;
+                if (segments.length === 0) return false;
+        
+                const anyAssigned = segments.some((seg) => {
+                    if (!seg) return false;
+                    if (seg.isWalking === true) return true;
+                    if (seg.busId && seg.boardingRowId && seg.alightingRowId) return true;
+                    if (seg.busAssigned === true && seg.boardingRowId && seg.alightingRowId) return true;
+                    return false;
+                });
+        
+                return anyAssigned;
             }
             return false;
-        };    
+        };  
         const expandedTransfers = [];
         filteredByDay.forEach((t) => {
             const stopsIds = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
