@@ -13589,7 +13589,11 @@ const TransportApp = ({ userProfileData }) => {
                                                         
                                                             const currentTransferKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
                                                             const teamsForTooltip = new Set(teamsInBus || []);
-                                                            teamsForTooltip.add(currentTransferKeyStr);
+                                                            
+                                                            // <<< ZMENA: Aktuálny tím pridaj do tooltipu len pre vybraný riadok.
+                                                            if (isSelected) {
+                                                                teamsForTooltip.add(currentTransferKeyStr);
+                                                            }
                                                         
                                                             const teamTooltipItems = [...teamsForTooltip]
                                                                 .map((tk) => {
