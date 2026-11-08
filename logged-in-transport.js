@@ -12401,11 +12401,7 @@ const TransportApp = ({ userProfileData }) => {
                                     // Pri kliknutí znova prepočítame matches, aby sme mali aktuálne dáta
                                     const matches = findMatchingBusRows(transferToAssign);
                                     setAssignBusMatches(matches);
-                                    setAssignBusSelectedKey(
-                                        matches.length > 0
-                                            ? `${matches[0].bus.id}|${matches[0].boardingRow?.id || ''}|${matches[0].alightingRow?.id || ''}|${matches[0].side}`
-                                            : ''
-                                    );
+                                    setAssignBusSelectedKey('');
                                     setAssignBusTransfer(transferToAssign);
                                     setTransferActionModal(null);
                                     setShowAssignBusModal(true);
