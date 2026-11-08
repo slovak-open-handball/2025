@@ -13247,7 +13247,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                     React.createElement('i', { className: 'fa-solid fa-clock' }),
                                                                     `${tripDurationMin} min`
                                                                 )
-                                                        );
+                                                        ),
                                                     React.createElement(
                                                         'div',
                                                         { className: 'flex flex-col items-end gap-1' },
