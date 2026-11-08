@@ -5707,37 +5707,58 @@ const TransportApp = ({ userProfileData }) => {
                         },
                         lockedPlaceFrom
                     )
-                    : React.createElement('select', {
-                        value: row.placeFromId || '',
-                        onChange: async (e) => {
-                            const newPlaceFromId = e.target.value;
-                            const oldPlaceFromId = row.placeFromId || '';
-                            if (newPlaceFromId === oldPlaceFromId) return;
-    
-                            await updateBusRowField(row.id, 'placeFrom', newPlaceFromId);
-    
-                            const currentPlaceToId = row.placeToId || null;
-    
-                            if (newPlaceFromId && currentPlaceToId && row.timeFrom && /^\d{1,2}:\d{2}$/.test(row.timeFrom)) {
-                                const travelMinutes = getTravelMinutes(newPlaceFromId, currentPlaceToId);
-                                if (travelMinutes != null) {
-                                    const [h, m] = row.timeFrom.split(':').map(Number);
-                                    let total = h * 60 + m + travelMinutes;
-                                    total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
-                                    const endH = Math.floor(total / 60);
-                                    const endM = total % 60;
-                                    const newTimeTo = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-                                    if (newTimeTo !== (row.timeTo || '')) {
-                                        await updateBusRowField(row.id, 'timeTo', newTimeTo);
+                    : (() => {
+                        // <<< ZMENA: ak v tomto riadku (prvý riadok busu) niekto nastupuje,
+                        // selectbox "Miesto od" sa zamkne – miesto od musí zostať také,
+                        // aké bolo pri vytvorení riadku (inak by sa rozbila väzba na segment presunu).
+                        const teamsBoardingHereForPlaceFromLock = getTeamsForRowSide(row.rowId, 'in');
+                        const filteredTeamsBoardingHereForPlaceFromLock =
+                            filterTeamsByCategory(teamsBoardingHereForPlaceFromLock);
+                        const isPlaceFromLockedByBoardingHere =
+                            filteredTeamsBoardingHereForPlaceFromLock.length > 0;
+
+                        const placeFromLockTitle = isPlaceFromLockedByBoardingHere
+                            ? 'Miesto od sa nedá meniť, pretože v tomto riadku nastupuje tím. Najprv odstráňte tímy zo stĺpca Nástup.'
+                            : undefined;
+
+                        return React.createElement('select', {
+                            value: row.placeFromId || '',
+                            disabled: isPlaceFromLockedByBoardingHere,
+                            title: placeFromLockTitle,
+                            onChange: async (e) => {
+                                if (isPlaceFromLockedByBoardingHere) return;
+                                const newPlaceFromId = e.target.value;
+                                const oldPlaceFromId = row.placeFromId || '';
+                                if (newPlaceFromId === oldPlaceFromId) return;
+        
+                                await updateBusRowField(row.id, 'placeFrom', newPlaceFromId);
+        
+                                const currentPlaceToId = row.placeToId || null;
+        
+                                if (newPlaceFromId && currentPlaceToId && row.timeFrom && /^\d{1,2}:\d{2}$/.test(row.timeFrom)) {
+                                    const travelMinutes = getTravelMinutes(newPlaceFromId, currentPlaceToId);
+                                    if (travelMinutes != null) {
+                                        const [h, m] = row.timeFrom.split(':').map(Number);
+                                        let total = h * 60 + m + travelMinutes;
+                                        total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
+                                        const endH = Math.floor(total / 60);
+                                        const endM = total % 60;
+                                        const newTimeTo = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+                                        if (newTimeTo !== (row.timeTo || '')) {
+                                            await updateBusRowField(row.id, 'timeTo', newTimeTo);
+                                        }
                                     }
                                 }
-                            }
+                            },
+                            className: isPlaceFromLockedByBoardingHere
+                                ? selectCls + ' bg-gray-100 text-gray-500 cursor-not-allowed opacity-70'
+                                : selectCls,
+                            style: isPlaceFromLockedByBoardingHere ? { cursor: 'not-allowed' } : undefined,
                         },
-                        className: selectCls,
-                    },
-                        React.createElement('option', { value: '' }, '— vyber zastávku —'),
-                        stopOptionsFrom
-                    )
+                            React.createElement('option', { value: '' }, '— vyber zastávku —'),
+                            stopOptionsFrom
+                        );
+                    })()
             ),
             // <<< ZMENA: bunka "Miesto do" – zámok aj pri nastupe v nasledujúcom riadku
             React.createElement('td', { className: 'border border-gray-300 p-1' },
