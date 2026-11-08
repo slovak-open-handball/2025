@@ -9285,7 +9285,7 @@ const TransportApp = ({ userProfileData }) => {
                             const parentInfoLabel = t._parentKey && t._parentRoute
                                 ? `časť presunu ${t._parentRoute}`
                                 : null;    
-                            const remainingLabel = (t._remainingMinutes != null && t._remainingMinutes > 0)
+                            const remainingLabel = (t._remainingMinutes != null)
                                 ? `zvyšný čas na presun: ${t._remainingMinutes} min`
                                 : null;
     
