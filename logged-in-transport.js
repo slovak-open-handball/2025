@@ -13415,15 +13415,16 @@ const TransportApp = ({ userProfileData }) => {
 
                                     if (!assignBusSelectedKey) {
                                         // <<< ZMENA: Predvolený výber sa smie vykonať LEN vtedy, ak sa v niektorom
-                                        // z ponúkaných busov/riadkov nachádza tím, ktorého PLNÝ názov (vrátane
-                                        // názvu kategórie) sa PRESNE rovná názvu tímu v hlavičke modálneho okna
-                                        // (t.j. `currentTransfer.teamName`).
+                                        // z ponúkaných busov/riadkov nachádza tím, ktorý sa v tooltipe zobrazuje
+                                        // rovnakým spôsobom ako názov tímu v hlavičke modálneho okna.
                                         //
-                                        // Tooltip pri počte členov zobrazuje buď skratku, alebo názov po
-                                        // odstránení kategórie. Hlavička modálneho okna zobrazuje plný názov
-                                        // z DB. Preto musíme overiť, či sa v tooltipe (t.j. v množine tímov
-                                        // priradených k danému busu/riadku) nachádza tím, ktorého plný názov
-                                        // z DB sa presne rovná názvu v hlavičke.
+                                        // Tooltip zobrazuje názov tímu BEZ kategórie (alebo skratku) s farbou
+                                        // písma podľa kategórie. Hlavička modálneho okna zobrazuje PLNÝ názov
+                                        // tímu VRÁTANE kategórie (napr. "Tím A U12 D").
+                                        //
+                                        // Preto pri hľadaní riadku, ktorý sa má predvolene podfarbiť, musíme
+                                        // ku každému názvu tímu z tooltipu pripojiť názov kategórie (podľa
+                                        // ktorej má farbu písma) a výsledný reťazec porovnať s názvom v hlavičke.
                                         //
                                         // Ak sa taký tím nenájde, nesmie sa predvolene označiť žiadny riadok –
                                         // používateľ musí vybrať manuálne.
@@ -13431,16 +13432,32 @@ const TransportApp = ({ userProfileData }) => {
                                         const currentHeaderTeamName = String(currentTransfer.teamName || '').trim();
                                         const currentHeaderCategory = cleanCategory(currentTransfer.category || '');
                                     
+                                        // Zostaví "plný názov" tímu tak, ako ho vidíme v hlavičke modálneho okna
+                                        // (t.j. plný názov vrátane kategórie). Pre porovnanie s tooltipom
+                                        // potrebujeme opačný postup – z tooltipu (názov bez kategórie) + kategórie
+                                        // poskladať plný názov.
+                                        const buildFullTeamName = (baseTeamName, category) => {
+                                            const tn = String(baseTeamName || '').trim();
+                                            const cat = cleanCategory(category || '');
+                                            if (!tn) return '';
+                                            if (!cat) return tn;
+                                            // Ak už názov kategóriu obsahuje (napr. "Tím A U12 D"), nevkladaj ju znova.
+                                            if (tn === cat) return tn;
+                                            const normTn = tn.toLowerCase();
+                                            const normCat = cat.toLowerCase();
+                                            if (normTn.endsWith(normCat)) return tn;
+                                            return `${tn} ${cat}`.trim();
+                                        };
+                                    
                                         const isCurrentTeamAlreadyInAnyMatch = (() => {
                                             if (!currentHeaderTeamName || !currentHeaderCategory) return false;
+                                    
                                             return matchesWithPreferredFlag.some(({ match: m }) => {
                                                 if (!m || !m.bus || !m.trip) return false;
                                                 const busId = m.bus.id;
                                                 const dayKey = m.trip.dayKey;
                                                 if (!busId || !dayKey) return false;
                                     
-                                                // Pre tento konkrétny riadok busu zistíme, aké tímy sú v ňom
-                                                // zobrazené v tooltipe (rovnaká logika ako v `computeBusOccupancy`).
                                                 const boardingRow = m.boardingRow;
                                                 const alightingRow = m.alightingRow;
                                                 if (!boardingRow || !alightingRow) return false;
@@ -13496,13 +13513,46 @@ const TransportApp = ({ userProfileData }) => {
                                     
                                                 const teamsInTooltip = new Set([...teamsAtBoarding, ...teamsAtAlighting]);
                                     
-                                                // Hľadáme tím, ktorého PLNÝ názov (teamName) + kategória sa
-                                                // presne rovná názvu v hlavičke modálneho okna.
+                                                // Pre každý tím z tooltipu poskladáme "plný názov" (názov + kategória,
+                                                // tak ako ho vidno v hlavičke modálneho okna) a porovnáme s hlavičkou.
+                                                //
+                                                // Poznámka: ak má tím v tooltipe nastavenú skratku, jeho názov sa
+                                                // v tooltipe zobrazuje ako skratka – nie je preto možné jednoznačne
+                                                // zrekonštruovať plný názov. Takýto tím preto pri predvolenom výbere
+                                                // neberieme do úvahy (nemôžeme overiť, že ide o ten istý tím ako
+                                                // v hlavičke).
                                                 for (const teamKeyStr of teamsInTooltip) {
                                                     const parts = String(teamKeyStr).split('|');
                                                     const tn = (parts[0] || '').trim();
                                                     const cat = cleanCategory(parts[1] || '');
-                                                    if (tn === currentHeaderTeamName && cat === currentHeaderCategory) {
+                                                    if (!tn || !cat) continue;
+                                    
+                                                    // Ak má tím v tooltipe skratku, nevieme ho jednoznačne porovnať
+                                                    // s plným názvom v hlavičke → preskočíme.
+                                                    const shortcut = getTeamShortcut(cat, tn);
+                                                    if (shortcut) continue;
+                                    
+                                                    // Z tooltipu zobrazovaný názov je `stripCategoryFromTeamName(tn, cat)`.
+                                                    // Ku nemu pripojíme kategóriu (podľa ktorej má farbu písma) a
+                                                    // dostaneme plný názov, ktorý porovnáme s hlavičkou.
+                                                    const displayedBase = stripCategoryFromTeamName(tn, cat);
+                                                    const reconstructedFullName = buildFullTeamName(displayedBase, cat);
+                                    
+                                                    if (
+                                                        reconstructedFullName === currentHeaderTeamName &&
+                                                        cat === currentHeaderCategory
+                                                    ) {
+                                                        return true;
+                                                    }
+                                    
+                                                    // Fallback: skús aj surový názov z DB + kategóriu (pre prípad,
+                                                    // že stripCategoryFromTeamName z názvu nič neodstránil a názov
+                                                    // v DB je už bez kategórie, alebo naopak s ňou).
+                                                    const reconstructedFromDb = buildFullTeamName(tn, cat);
+                                                    if (
+                                                        reconstructedFromDb === currentHeaderTeamName &&
+                                                        cat === currentHeaderCategory
+                                                    ) {
                                                         return true;
                                                     }
                                                 }
