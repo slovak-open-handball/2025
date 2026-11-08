@@ -13391,14 +13391,61 @@ const TransportApp = ({ userProfileData }) => {
                                         return { match: m, isPreferred };
                                     });
 
-                                    // Predvolený výber preferovaného riadku – len ak ešte nič nie je vybrané.
+                                    // Predvolený výber preferovaného riadku – len ak ešte nič nie je vybrané
+                                    // a v danom buse ešte NIE JE priraďovaný tím (aby sme nevybrali riadok,
+                                    // kde už tím sedí a nemá zmysel ho tam priraďovať znova).
                                     if (!assignBusSelectedKey) {
-                                        const firstPreferred = matchesWithPreferredFlag.find((x) => x.isPreferred);
-                                        if (firstPreferred && firstPreferred.match) {
-                                            const pm = firstPreferred.match;
-                                            const preferredKey = `${pm.bus.id}|${pm.boardingRow?.id || ''}|${pm.alightingRow?.id || ''}|${pm.side}`;
+                                        const currentTransferTeamNameForDefault = String(currentTransfer.teamName || '').trim();
+                                        const currentTransferCategoryForDefault = cleanCategory(currentTransfer.category || '');
+                                        const currentTransferDayKeyForDefault = currentTransfer.dayKey || null;
+
+                                        const findPreferredWithoutCurrentTeam = () => {
+                                            if (!currentTransferDayKeyForDefault) return null;
+                                            for (const item of matchesWithPreferredFlag) {
+                                                if (!item.isPreferred) continue;
+                                                const mm = item.match;
+                                                if (!mm || !mm.bus || !mm.trip) continue;
+
+                                                const busId = mm.bus.id;
+                                                const dayKey = mm.trip.dayKey;
+
+                                                // Zisti, či aktuálne priraďovaný tím už má priradený segment v tomto buse
+                                                const teamAlreadyInBus = (savedTransfersRef.current || []).some((parent) => {
+                                                    if (parent.dayKey !== dayKey) return false;
+                                                    if (parent.isWalking === true) return false;
+
+                                                    const parentCategory = cleanCategory(parent.category || '');
+                                                    if (parentCategory !== currentTransferCategoryForDefault) return false;
+
+                                                    let parentTeamName = String(parent.teamName || '').trim();
+                                                    if (!parentTeamName && parent.teamUid != null && parent.teamIndex != null) {
+                                                        const lookupKey = `${parent.teamUid}|${parentCategory}|${parent.teamIndex}`;
+                                                        const info = (teamsLookupRef.current || {})[lookupKey];
+                                                        if (info && info.teamName) parentTeamName = info.teamName;
+                                                    }
+                                                    if (!parentTeamName) return false;
+                                                    if (parentTeamName !== currentTransferTeamNameForDefault) return false;
+
+                                                    return (parent.segments || []).some((seg) => {
+                                                        if (!seg) return false;
+                                                        if (seg.isWalking === true) return false;
+                                                        if (seg.busId !== busId) return false;
+                                                        return !!(seg.boardingRowId && seg.alightingRowId);
+                                                    });
+                                                });
+
+                                                if (!teamAlreadyInBus) {
+                                                    return mm;
+                                                }
+                                            }
+                                            return null;
+                                        };
+
+                                        const defaultMatch = findPreferredWithoutCurrentTeam();
+                                        if (defaultMatch) {
+                                            const defaultKey = `${defaultMatch.bus.id}|${defaultMatch.boardingRow?.id || ''}|${defaultMatch.alightingRow?.id || ''}|${defaultMatch.side}`;
                                             queueMicrotask(() => {
-                                                setAssignBusSelectedKey(preferredKey);
+                                                setAssignBusSelectedKey(defaultKey);
                                             });
                                         }
                                     }
