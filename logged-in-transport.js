@@ -4856,7 +4856,6 @@ const TransportApp = ({ userProfileData }) => {
                 return;
             }
 
-            // Zistíme order odstraňovaného riadku ešte pred zmazaním.
             const rowsKey = `${busId}|${dayKey}`;
             const removedRow = (busRows[rowsKey] || []).find((r) => r.id === rowId);
             const removedOrder = removedRow ? Number(removedRow.order) || 0 : null;
@@ -4882,8 +4881,18 @@ const TransportApp = ({ userProfileData }) => {
             });
             await Promise.all(updates);
 
-            // NOVÉ: Pre každý tím priradený v buse znížime indexy boardingRowId/alightingRowId o 1,
-            // ak boli väčšie ako order odstráneného riadku.
+            // Mapa nových riadkov podľa nového rowId (aby sme vedeli overiť časy)
+            const newRowsByRowId = new Map();
+            remaining.forEach((r, i) => {
+                const newOrder = i + 1;
+                const newRowId = buildRowId(busId, dayKey, newOrder);
+                newRowsByRowId.set(newRowId, {
+                    ...r,
+                    order: newOrder,
+                    rowId: newRowId,
+                });
+            });
+
             if (removedOrder != null) {
                 try {
                     const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
@@ -4911,28 +4920,79 @@ const TransportApp = ({ userProfileData }) => {
                             let changed = false;
                             const newSegments = v.segments.map((s) => {
                                 if (s.busId !== busId) return s;
-                                let nextSeg = s;
-                                if (s.boardingRowId && rowIdMap[s.boardingRowId]) {
-                                    changed = true;
-                                    nextSeg = { ...nextSeg, boardingRowId: rowIdMap[s.boardingRowId] };
-                                } else if (s.boardingRowId) {
-                                    const shifted = shiftRowId(s.boardingRowId);
-                                    if (shifted !== s.boardingRowId) {
-                                        changed = true;
-                                        nextSeg = { ...nextSeg, boardingRowId: shifted };
+                                if (s.isWalking === true) return s;
+
+                                const oldBoardingRowId = s.boardingRowId || null;
+                                const oldAlightingRowId = s.alightingRowId || null;
+
+                                let newBoardingRowId = oldBoardingRowId;
+                                let newAlightingRowId = oldAlightingRowId;
+
+                                if (oldBoardingRowId) {
+                                    if (rowIdMap[oldBoardingRowId]) {
+                                        newBoardingRowId = rowIdMap[oldBoardingRowId];
+                                    } else {
+                                        newBoardingRowId = shiftRowId(oldBoardingRowId);
                                     }
                                 }
-                                if (s.alightingRowId && rowIdMap[s.alightingRowId]) {
-                                    changed = true;
-                                    nextSeg = { ...nextSeg, alightingRowId: rowIdMap[s.alightingRowId] };
-                                } else if (s.alightingRowId) {
-                                    const shifted = shiftRowId(s.alightingRowId);
-                                    if (shifted !== s.alightingRowId) {
-                                        changed = true;
-                                        nextSeg = { ...nextSeg, alightingRowId: shifted };
+                                if (oldAlightingRowId) {
+                                    if (rowIdMap[oldAlightingRowId]) {
+                                        newAlightingRowId = rowIdMap[oldAlightingRowId];
+                                    } else {
+                                        newAlightingRowId = shiftRowId(oldAlightingRowId);
                                     }
                                 }
-                                return nextSeg;
+
+                                const boardingRow = newBoardingRowId ? newRowsByRowId.get(newBoardingRowId) : null;
+                                const alightingRow = newAlightingRowId ? newRowsByRowId.get(newAlightingRowId) : null;
+
+                                const boardingTs = boardingRow && boardingRow.timeFrom
+                                    ? timeOnDayKeyToTs(dayKey, boardingRow.timeFrom)
+                                    : null;
+                                const alightingTs = alightingRow && alightingRow.timeTo
+                                    ? timeOnDayKeyToTs(dayKey, alightingRow.timeTo)
+                                    : null;
+
+                                // Ak nové riadky neexistujú alebo časy nesedia → odobrať tím z busu
+                                const timesValid =
+                                    boardingTs != null &&
+                                    alightingTs != null &&
+                                    alightingTs > boardingTs;
+
+                                if (!timesValid) {
+                                    changed = true;
+                                    return {
+                                        ...s,
+                                        busAssigned: false,
+                                        busId: null,
+                                        boardingRowId: null,
+                                        alightingRowId: null,
+                                        startTs: null,
+                                        endTs: null,
+                                        when: null,
+                                    };
+                                }
+
+                                const newWhen = `${formatTsLocal(boardingTs)} – ${formatTsLocal(alightingTs)}`;
+
+                                if (
+                                    newBoardingRowId !== oldBoardingRowId ||
+                                    newAlightingRowId !== oldAlightingRowId ||
+                                    s.startTs !== boardingTs ||
+                                    s.endTs !== alightingTs ||
+                                    s.when !== newWhen
+                                ) {
+                                    changed = true;
+                                    return {
+                                        ...s,
+                                        boardingRowId: newBoardingRowId,
+                                        alightingRowId: newAlightingRowId,
+                                        startTs: boardingTs,
+                                        endTs: alightingTs,
+                                        when: newWhen,
+                                    };
+                                }
+                                return s;
                             });
                             if (changed) tUpdates[key] = { ...v, segments: newSegments };
                         });
@@ -4942,7 +5002,7 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     }
                 } catch (e) {
-                    console.error('[TRANSPORT] Chyba pri znižovaní indexov riadkov v presunoch:', e);
+                    console.error('[TRANSPORT] Chyba pri aktualizácii presunov po odstránení riadku:', e);
                 }
             }
     
