@@ -13150,7 +13150,7 @@ const TransportApp = ({ userProfileData }) => {
                                                         const total = occupancy.total;
                                                         const teamsInBus = occupancy.teams;
                                                         
-                                                        const teamLabelsForTooltip = (teamsInBus || [])
+                                                        const teamTooltipItems = (teamsInBus || [])
                                                             .map((tk) => {
                                                                 const parts = String(tk).split('|');
                                                                 const tn = (parts[0] || '').trim();
@@ -13158,14 +13158,16 @@ const TransportApp = ({ userProfileData }) => {
                                                                 const shortcut = getTeamShortcut(cat, tn);
                                                                 const label = shortcut || tn;
                                                                 const members = getTeamMembersCount(tk);
-                                                                return members > 0 ? `${label} (${members})` : label;
+                                                                const color = getCategoryTextColor(cat);
+                                                                return { label, members, color };
                                                             })
-                                                            .filter(Boolean);
+                                                            .filter((x) => !!x.label);
                                                         
-                                                        const occupancyTooltip =
+                                                        // Textová verzia pre natívny title (bez farieb)
+                                                        const occupancyTooltipText =
                                                             `V autobuse v tomto čase: ${total} členov` +
-                                                            (teamLabelsForTooltip.length > 0
-                                                                ? `\n• ` + teamLabelsForTooltip.join('\n• ')
+                                                            (teamTooltipItems.length > 0
+                                                                ? `\n• ` + teamTooltipItems.map((x) => x.members > 0 ? `${x.label} (${x.members})` : x.label).join('\n• ')
                                                                 : '');
                                                         
                                                         return React.createElement(
@@ -13175,12 +13177,65 @@ const TransportApp = ({ userProfileData }) => {
                                                                 React.createElement(
                                                                     'span',
                                                                     {
-                                                                        className: 'flex items-center gap-1 text-blue-700',
-                                                                        title: occupancyTooltip,
-                                                                        style: { whiteSpace: 'pre-line' },
+                                                                        className: 'relative flex items-center gap-1 text-blue-700 group/occupancy cursor-help',
+                                                                        title: occupancyTooltipText,
                                                                     },
                                                                     React.createElement('i', { className: 'fa-solid fa-users' }),
-                                                                    `${total}`
+                                                                    `${total}`,
+                                                                    // Vlastný vizuálny tooltip s farebnými skratkami
+                                                                    React.createElement(
+                                                                        'div',
+                                                                        {
+                                                                            className:
+                                                                                'absolute z-[9999] left-1/2 -translate-x-1/2 bottom-full mb-2 ' +
+                                                                                'hidden group-hover/occupancy:block ' +
+                                                                                'bg-gray-900 text-white text-[11px] rounded-md shadow-xl px-2.5 py-2 ' +
+                                                                                'whitespace-nowrap pointer-events-none',
+                                                                            style: { minWidth: '140px' },
+                                                                        },
+                                                                        React.createElement(
+                                                                            'div',
+                                                                            { className: 'font-semibold mb-1 text-gray-200' },
+                                                                            `V autobuse: ${total} členov`
+                                                                        ),
+                                                                        React.createElement(
+                                                                            'ul',
+                                                                            { className: 'space-y-0.5' },
+                                                                            teamTooltipItems.map((item, idx) =>
+                                                                                React.createElement(
+                                                                                    'li',
+                                                                                    {
+                                                                                        key: `occ-${idx}`,
+                                                                                        className: 'flex items-center gap-1.5',
+                                                                                    },
+                                                                                    React.createElement('span', {
+                                                                                        className: 'inline-block w-2 h-2 rounded-full flex-shrink-0',
+                                                                                        style: { backgroundColor: item.color },
+                                                                                    }),
+                                                                                    React.createElement(
+                                                                                        'span',
+                                                                                        {
+                                                                                            className: 'font-semibold',
+                                                                                            style: { color: item.color },
+                                                                                        },
+                                                                                        item.label
+                                                                                    ),
+                                                                                    item.members > 0 &&
+                                                                                        React.createElement(
+                                                                                            'span',
+                                                                                            { className: 'text-gray-400' },
+                                                                                            `(${item.members})`
+                                                                                        )
+                                                                                )
+                                                                            )
+                                                                        ),
+                                                                        React.createElement('div', {
+                                                                            className:
+                                                                                'absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 ' +
+                                                                                'border-l-4 border-r-4 border-t-4 ' +
+                                                                                'border-l-transparent border-r-transparent border-t-gray-900',
+                                                                        })
+                                                                    )
                                                                 ),
                                                             tripDurationMin != null &&
                                                                 React.createElement(
@@ -13193,7 +13248,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                     `${tripDurationMin} min`
                                                                 )
                                                         );
-                                                    })(),
                                                     React.createElement(
                                                         'div',
                                                         { className: 'flex flex-col items-end gap-1' },
