@@ -12386,10 +12386,12 @@ const TransportApp = ({ userProfileData }) => {
                     (() => {
                         const matchingBusRows = findMatchingBusRows(transferActionModal.transfer);
 
-                        // Tlačidlo "Priradiť presun autobusu" zobrazíme VŽDY, ak existuje
-                        // aspoň jeden vhodný riadok busu. Ak žiadny neexistuje, tlačidlo
-                        // nezobrazíme (alebo ho zobrazíme ako neaktívne s vysvetlením).
-                        if (!matchingBusRows || matchingBusRows.length === 0) {
+                        // Tlačidlo "Priradiť presun autobusu" zobrazíme VŽDY.
+                        // Ak existuje aspoň jeden vhodný riadok busu, tlačidlo je aktívne.
+                        // Ak žiadny neexistuje, tlačidlo je viditeľné ale neaktívne s vysvetlením.
+                        const hasMatches = Array.isArray(matchingBusRows) && matchingBusRows.length > 0;
+
+                        if (!hasMatches) {
                             return React.createElement(
                                 'button',
                                 {
@@ -12414,7 +12416,8 @@ const TransportApp = ({ userProfileData }) => {
                                 type: 'button',
                                 onClick: () => {
                                     const transferToAssign = transferActionModal.transfer;
-                                    const matches = findMatchingBusRows(transferActionModal.transfer);
+                                    // Pri kliknutí znova prepočítame matches, aby sme mali aktuálne dáta
+                                    const matches = findMatchingBusRows(transferToAssign);
                                     setAssignBusMatches(matches);
                                     setAssignBusSelectedKey(
                                         matches.length > 0
