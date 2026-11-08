@@ -6638,14 +6638,14 @@ const TransportApp = ({ userProfileData }) => {
                 const rangeStart = trRange.startTs;
                 const rangeEnd = trRange.endTs;
 
-                // NOVÉ: Nástupný riadok musí začínať PO alebo V ČASE začiatku presunu
+                // Nástupný riadok musí začínať PO alebo V ČASE začiatku presunu
                 // a zároveň nesmie začínať po konci presunu
                 if (fromMatches && rowTimeFromTs != null) {
                     if (rowTimeFromTs >= rangeStart && rowTimeFromTs <= rangeEnd) {
                         boardingCandidates.push({ row, timeTs: rowTimeFromTs });
                     }
                 }
-                // NOVÉ: Výstupný riadok musí končiť PRED alebo V ČASE konca presunu
+                // Výstupný riadok musí končiť PRED alebo V ČASE konca presunu
                 // a zároveň nesmie končiť pred začiatkom presunu
                 if (toMatches && rowTimeToTs != null) {
                     if (rowTimeToTs >= rangeStart && rowTimeToTs <= rangeEnd) {
@@ -6672,7 +6672,7 @@ const TransportApp = ({ userProfileData }) => {
                         return;
                     }
 
-                    // NOVÉ: overenie, že celý bus riadok je v rámci časového okna presunu
+                    // overenie, že celý bus riadok je v rámci časového okna presunu
                     if (boardTs != null && boardTs < rangeStart) {
                         return;
                     }
@@ -6711,7 +6711,6 @@ const TransportApp = ({ userProfileData }) => {
             });
         });
 
-        // ... zvyšok funkcie (computeTripDurationMinutes, dedup, sort) zostáva rovnaký
         const computeTripDurationMinutes = (boardingRow, alightingRow) => {
             const timeRe = /^\d{1,2}:\d{2}$/;
             if (!boardingRow || !alightingRow) return null;
@@ -12389,7 +12388,7 @@ const TransportApp = ({ userProfileData }) => {
                         // Tlačidlo "Priradiť presun autobusu" zobrazíme VŽDY.
                         // Ak existuje aspoň jeden vhodný riadok busu, tlačidlo je aktívne.
                         // Ak žiadny neexistuje, tlačidlo je viditeľné ale neaktívne s vysvetlením.
-                        const hasMatches = true; // Array.isArray(matchingBusRows) && matchingBusRows.length > 0;
+                        const hasMatches = Array.isArray(matchingBusRows) && matchingBusRows.length > 0;
 
                         if (!hasMatches) {
                             return React.createElement(
