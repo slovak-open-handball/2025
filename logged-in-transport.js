@@ -12776,16 +12776,76 @@ const TransportApp = ({ userProfileData }) => {
                                                         };
                                                 
                                                         const tripDurationMin = computeTripDuration();
-                                                
-                                                        let total = 0;
-                                                        {
+
+                                                        // NOVÉ: počet ľudí v buse = MAX(
+                                                        //   počet ľudí, ktorí nastupujú na začiatku presunu ALEBO už sú v buse (medzi nástupom a výstupom),
+                                                        //   počet ľudí, ktorí vystupujú na konci presunu ALEBO ešte ostávajú v buse
+                                                        // )
+                                                        const computeBusOccupancy = () => {
                                                             const bOrder = parseOrderFromRowId(boardingRow.rowId);
                                                             const aOrder = parseOrderFromRowId(alightingRow.rowId);
-                                                            if (bOrder != null && aOrder != null) {
-                                                                const calc = getTeamMembersInBusBetween(busId, dayKey, bOrder, aOrder);
-                                                                total = calc.total;
-                                                            }
-                                                        }
+                                                            if (bOrder == null || aOrder == null) return 0;
+
+                                                            // Množina tímov, ktoré sú v buse na nástupnej zastávke:
+                                                            // - tí, ktorí tu nastupujú (boardingRowId === boardingRow.rowId)
+                                                            // - tí, ktorí už boli v buse pred touto zastávkou (boarding order < bOrder a alighting order > bOrder)
+                                                            const teamsAtBoarding = new Set();
+                                                            // Množina tímov, ktoré sú v buse na výstupnej zastávke:
+                                                            // - tí, ktorí tu vystupujú (alightingRowId === alightingRow.rowId)
+                                                            // - tí, ktorí ešte ostávajú v buse po tejto zastávke (boarding order < aOrder a alighting order > aOrder)
+                                                            const teamsAtAlighting = new Set();
+
+                                                            (savedTransfersRef.current || []).forEach((parent) => {
+                                                                if (parent.dayKey !== dayKey) return;
+                                                                if (parent.isWalking === true) return;
+
+                                                                const effectiveCategory = cleanCategory(parent.category || '');
+                                                                let effectiveTeamName = String(parent.teamName || '').trim();
+                                                                if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
+                                                                    const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
+                                                                    const info = (teamsLookupRef.current || {})[lookupKey];
+                                                                    if (info && info.teamName) effectiveTeamName = info.teamName;
+                                                                }
+                                                                if (!effectiveTeamName) {
+                                                                    const parts = String(parent.key || '').split('||');
+                                                                    if (parts.length >= 2) {
+                                                                        const keyTeamName = String(parts[1] || '').trim();
+                                                                        if (keyTeamName) effectiveTeamName = keyTeamName;
+                                                                    }
+                                                                }
+                                                                if (!effectiveTeamName) return;
+
+                                                                const teamKeyStr = `${effectiveTeamName}|${effectiveCategory}`;
+
+                                                                (parent.segments || []).forEach((seg) => {
+                                                                    if (seg.busId !== busId) return;
+                                                                    if (seg.isWalking === true) return;
+
+                                                                    const segBOrder = parseOrderFromRowId(seg.boardingRowId);
+                                                                    const segAOrder = parseOrderFromRowId(seg.alightingRowId);
+                                                                    if (segBOrder == null || segAOrder == null) return;
+
+                                                                    // Je tím v buse na nástupnej zastávke?
+                                                                    const isAtBoarding =
+                                                                        (segBOrder === bOrder) || // nastupuje tu
+                                                                        (segBOrder < bOrder && segAOrder > bOrder); // už bol v buse a ešte nevystúpil
+                                                                    if (isAtBoarding) teamsAtBoarding.add(teamKeyStr);
+
+                                                                    // Je tím v buse na výstupnej zastávke?
+                                                                    const isAtAlighting =
+                                                                        (segAOrder === aOrder) || // vystupuje tu
+                                                                        (segBOrder < aOrder && segAOrder > aOrder); // ešte ostáva v buse po tejto zastávke
+                                                                    if (isAtAlighting) teamsAtAlighting.add(teamKeyStr);
+                                                                });
+                                                            });
+
+                                                            const totalAtBoarding = [...teamsAtBoarding].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
+                                                            const totalAtAlighting = [...teamsAtAlighting].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
+
+                                                            return Math.max(totalAtBoarding, totalAtAlighting);
+                                                        };
+
+                                                        const total = computeBusOccupancy();
                                                 
                                                         return React.createElement(
                                                             React.Fragment,
@@ -12795,7 +12855,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                     'span',
                                                                     {
                                                                         className: 'flex items-center gap-1 text-blue-700',
-                                                                        title: `V autobuse v tomto čase: ${total} členov`,
+                                                                        title: `V autobuse v tomto čase (maximum z nástupu a výstupu): ${total} členov`,
                                                                     },
                                                                     React.createElement('i', { className: 'fa-solid fa-users' }),
                                                                     `${total}`
@@ -12835,7 +12895,7 @@ const TransportApp = ({ userProfileData }) => {
                                 }).filter(Boolean)
                             )
                         );
-                    })(),        
+                    })(),
                     React.createElement(
                         'div',
                         { className: 'flex justify-end gap-3' },
