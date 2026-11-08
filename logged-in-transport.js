@@ -13414,159 +13414,155 @@ const TransportApp = ({ userProfileData }) => {
                                     });
 
                                     if (!assignBusSelectedKey) {
-                                        // <<< ZMENA: Predvolený výber sa smie vykonať LEN vtedy, ak sa v niektorom
-                                        // z ponúkaných busov/riadkov nachádza tím, ktorý sa v tooltipe zobrazuje
-                                        // rovnakým spôsobom ako názov tímu v hlavičke modálneho okna.
-                                        //
-                                        // Tooltip zobrazuje názov tímu BEZ kategórie (alebo skratku) s farbou
-                                        // písma podľa kategórie. Hlavička modálneho okna zobrazuje PLNÝ názov
-                                        // tímu VRÁTANE kategórie (napr. "Tím A U12 D").
-                                        //
-                                        // Preto pri hľadaní riadku, ktorý sa má predvolene podfarbiť, musíme
-                                        // ku každému názvu tímu z tooltipu pripojiť názov kategórie (podľa
-                                        // ktorej má farbu písma) a výsledný reťazec porovnať s názvom v hlavičke.
-                                        //
-                                        // Ak sa taký tím nenájde, nesmie sa predvolene označiť žiadny riadok –
-                                        // používateľ musí vybrať manuálne.
+                                        // <<< ZMENA: Predvolený výber = pre každý riadok busu porovnaj
+                                        //   • parent.teamName (z DB – presuny patriace aktuálnemu tímu)
+                                        //   • s každou hodnotou fullTeamName tímu, ktorý je v tooltipe daného riadku
+                                        // Ak sa nájde zhoda (parent.teamName === fullTeamName), riadok sa zvýrazní.
+                                        // Ak sa nezhoduje žiadny riadok, nič sa nezvýrazní.
                                     
+                                        // 1) Zoznam parent.teamName z DB – všetky rôzne názvy tímov,
+                                        //    ktoré patria aktuálne priraďovanému presunu (rovnaký tím).
                                         const currentHeaderTeamName = String(currentTransfer.teamName || '').trim();
                                         const currentHeaderCategory = cleanCategory(currentTransfer.category || '');
                                     
-                                        // Zostaví "plný názov" tímu tak, ako ho vidíme v hlavičke modálneho okna
-                                        // (t.j. plný názov vrátane kategórie). Pre porovnanie s tooltipom
-                                        // potrebujeme opačný postup – z tooltipu (názov bez kategórie) + kategórie
-                                        // poskladať plný názov.
-                                        const buildFullTeamName = (baseTeamName, category) => {
-                                            const tn = String(baseTeamName || '').trim();
-                                            const cat = cleanCategory(category || '');
-                                            if (!tn) return '';
-                                            if (!cat) return tn;
-                                            // Ak už názov kategóriu obsahuje (napr. "Tím A U12 D"), nevkladaj ju znova.
-                                            if (tn === cat) return tn;
-                                            const normTn = tn.toLowerCase();
-                                            const normCat = cat.toLowerCase();
-                                            if (normTn.endsWith(normCat)) return tn;
-                                            return `${tn} ${cat}`.trim();
-                                        };
-                                    
-                                        const isCurrentTeamAlreadyInAnyMatch = (() => {
-                                            if (!currentHeaderTeamName || !currentHeaderCategory) return false;
-                                    
-                                            return matchesWithPreferredFlag.some(({ match: m }) => {
-                                                if (!m || !m.bus || !m.trip) return false;
-                                                const busId = m.bus.id;
-                                                const dayKey = m.trip.dayKey;
-                                                if (!busId || !dayKey) return false;
-                                    
-                                                const boardingRow = m.boardingRow;
-                                                const alightingRow = m.alightingRow;
-                                                if (!boardingRow || !alightingRow) return false;
-                                    
-                                                const bOrder = parseOrderFromRowId(boardingRow.rowId);
-                                                const aOrder = parseOrderFromRowId(alightingRow.rowId);
-                                                if (bOrder == null || aOrder == null) return false;
-                                    
-                                                const teamsAtBoarding = new Set();
-                                                const teamsAtAlighting = new Set();
-                                    
-                                                (savedTransfersRef.current || []).forEach((parent) => {
-                                                    if (parent.dayKey !== dayKey) return;
-                                                    if (parent.isWalking === true) return;
-                                    
-                                                    const effectiveCategory = cleanCategory(parent.category || '');
-                                                    let effectiveTeamName = String(parent.teamName || '').trim();
-                                                    if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
-                                                        const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
-                                                        const info = (teamsLookupRef.current || {})[lookupKey];
-                                                        if (info && info.teamName) effectiveTeamName = info.teamName;
-                                                    }
-                                                    if (!effectiveTeamName) {
-                                                        const parts = String(parent.key || '').split('||');
-                                                        if (parts.length >= 2) {
-                                                            const keyTeamName = String(parts[1] || '').trim();
-                                                            if (keyTeamName) effectiveTeamName = keyTeamName;
-                                                        }
-                                                    }
-                                                    if (!effectiveTeamName) return;
-                                    
-                                                    const teamKeyStr = `${effectiveTeamName}|${effectiveCategory}`;
-                                    
-                                                    (parent.segments || []).forEach((seg) => {
-                                                        if (seg.busId !== busId) return;
-                                                        if (seg.isWalking === true) return;
-                                    
-                                                        const segBOrder = parseOrderFromRowId(seg.boardingRowId);
-                                                        const segAOrder = parseOrderFromRowId(seg.alightingRowId);
-                                                        if (segBOrder == null || segAOrder == null) return;
-                                    
-                                                        const isAtBoarding =
-                                                            (segBOrder === bOrder) ||
-                                                            (segBOrder < bOrder && segAOrder > bOrder);
-                                                        if (isAtBoarding) teamsAtBoarding.add(teamKeyStr);
-                                    
-                                                        const isAtAlighting =
-                                                            (segAOrder === aOrder) ||
-                                                            (segBOrder < aOrder && segAOrder > aOrder);
-                                                        if (isAtAlighting) teamsAtAlighting.add(teamKeyStr);
-                                                    });
-                                                });
-                                    
-                                                const teamsInTooltip = new Set([...teamsAtBoarding, ...teamsAtAlighting]);
-                                    
-                                                // Pre každý tím z tooltipu poskladáme "plný názov" (názov + kategória,
-                                                // tak ako ho vidno v hlavičke modálneho okna) a porovnáme s hlavičkou.
-                                                //
-                                                // Poznámka: ak má tím v tooltipe nastavenú skratku, jeho názov sa
-                                                // v tooltipe zobrazuje ako skratka – nie je preto možné jednoznačne
-                                                // zrekonštruovať plný názov. Takýto tím preto pri predvolenom výbere
-                                                // neberieme do úvahy (nemôžeme overiť, že ide o ten istý tím ako
-                                                // v hlavičke).
-                                                for (const teamKeyStr of teamsInTooltip) {
-                                                    const parts = String(teamKeyStr).split('|');
-                                                    const tn = (parts[0] || '').trim();
-                                                    const cat = cleanCategory(parts[1] || '');
-                                                    if (!tn || !cat) continue;
-                                    
-                                                    // Ak má tím v tooltipe skratku, nevieme ho jednoznačne porovnať
-                                                    // s plným názvom v hlavičke → preskočíme.
-                                                    const shortcut = getTeamShortcut(cat, tn);
-                                                    if (shortcut) continue;
-                                    
-                                                    // Z tooltipu zobrazovaný názov je `stripCategoryFromTeamName(tn, cat)`.
-                                                    // Ku nemu pripojíme kategóriu (podľa ktorej má farbu písma) a
-                                                    // dostaneme plný názov, ktorý porovnáme s hlavičkou.
-                                                    const displayedBase = stripCategoryFromTeamName(tn, cat);
-                                                    const reconstructedFullName = buildFullTeamName(displayedBase, cat);
-                                    
-                                                    if (
-                                                        reconstructedFullName === currentHeaderTeamName &&
-                                                        cat === currentHeaderCategory
-                                                    ) {
-                                                        return true;
-                                                    }
-                                    
-                                                    // Fallback: skús aj surový názov z DB + kategóriu (pre prípad,
-                                                    // že stripCategoryFromTeamName z názvu nič neodstránil a názov
-                                                    // v DB je už bez kategórie, alebo naopak s ňou).
-                                                    const reconstructedFromDb = buildFullTeamName(tn, cat);
-                                                    if (
-                                                        reconstructedFromDb === currentHeaderTeamName &&
-                                                        cat === currentHeaderCategory
-                                                    ) {
-                                                        return true;
-                                                    }
+                                        const parentTeamNamesForCurrentTransfer = (() => {
+                                            if (!currentHeaderTeamName) return new Set();
+                                            const set = new Set();
+                                            // Pre všetky parent záznamy, ktoré patria rovnakému tímu a kategórii,
+                                            // zoberieme ich teamName (alebo resolve z teamUid/teamIndex).
+                                            (savedTransfersRef.current || []).forEach((p) => {
+                                                if (cleanCategory(p.category || '') !== currentHeaderCategory) return;
+                                                let tn = String(p.teamName || '').trim();
+                                                if (!tn && p.teamUid != null && p.teamIndex != null) {
+                                                    const lookupKey = `${p.teamUid}|${currentHeaderCategory}|${p.teamIndex}`;
+                                                    const info = (teamsLookupRef.current || {})[lookupKey];
+                                                    if (info && info.teamName) tn = String(info.teamName).trim();
                                                 }
-                                    
-                                                return false;
+                                                if (!tn) return;
+                                                if (tn !== currentHeaderTeamName) return;
+                                                set.add(tn);
                                             });
+                                            // Fallback: samotný názov z hlavičky (aby porovnanie fungovalo aj keď
+                                            // sa parent ešte nestihol načítať).
+                                            if (set.size === 0) set.add(currentHeaderTeamName);
+                                            return set;
                                         })();
                                     
-                                        if (isCurrentTeamAlreadyInAnyMatch) {
-                                            const defaultMatch = matchesWithPreferredFlag.find((item) => {
-                                                return item.isPreferred && item.match && item.match.bus && item.match.trip;
+                                        // 2) Pre každý ponúkaný match (riadok busu) zistíme, či v jeho tooltipe
+                                        //    existuje tím, ktorého fullTeamName sa presne rovná niektorému
+                                        //    parent.teamName pre aktuálny presun.
+                                        const matchingKeys = [];
+                                    
+                                        const matchesWithRowMatch = matchesWithPreferredFlag.map(({ match: m, isPreferred }) => {
+                                            if (!m || !m.bus || !m.trip) return { match: m, isPreferred, rowMatches: false };
+                                    
+                                            const busId = m.bus.id;
+                                            const dayKey = m.trip.dayKey;
+                                            if (!busId || !dayKey) return { match: m, isPreferred, rowMatches: false };
+                                    
+                                            const boardingRow = m.boardingRow;
+                                            const alightingRow = m.alightingRow;
+                                            if (!boardingRow || !alightingRow) return { match: m, isPreferred, rowMatches: false };
+                                    
+                                            const bOrder = parseOrderFromRowId(boardingRow.rowId);
+                                            const aOrder = parseOrderFromRowId(alightingRow.rowId);
+                                            if (bOrder == null || aOrder == null) return { match: m, isPreferred, rowMatches: false };
+                                    
+                                            // 3) Zoznam tímov, ktoré sú v tooltipe tohto riadku busu
+                                            //    (rovnaká logika ako v `computeBusOccupancy` – bez `isSelected`
+                                            //    pridania aktuálneho tímu, aby sme porovnávali len reálne
+                                            //    tímy sedené v buse).
+                                            const teamsAtBoarding = new Set();
+                                            const teamsAtAlighting = new Set();
+                                    
+                                            (savedTransfersRef.current || []).forEach((parent) => {
+                                                if (parent.dayKey !== dayKey) return;
+                                                if (parent.isWalking === true) return;
+                                    
+                                                const effectiveCategory = cleanCategory(parent.category || '');
+                                                let effectiveTeamName = String(parent.teamName || '').trim();
+                                                if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
+                                                    const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
+                                                    const info = (teamsLookupRef.current || {})[lookupKey];
+                                                    if (info && info.teamName) effectiveTeamName = info.teamName;
+                                                }
+                                                if (!effectiveTeamName) {
+                                                    const parts = String(parent.key || '').split('||');
+                                                    if (parts.length >= 2) {
+                                                        const keyTeamName = String(parts[1] || '').trim();
+                                                        if (keyTeamName) effectiveTeamName = keyTeamName;
+                                                    }
+                                                }
+                                                if (!effectiveTeamName) return;
+                                    
+                                                const teamKeyStr = `${effectiveTeamName}|${effectiveCategory}`;
+                                    
+                                                (parent.segments || []).forEach((seg) => {
+                                                    if (seg.busId !== busId) return;
+                                                    if (seg.isWalking === true) return;
+                                    
+                                                    const segBOrder = parseOrderFromRowId(seg.boardingRowId);
+                                                    const segAOrder = parseOrderFromRowId(seg.alightingRowId);
+                                                    if (segBOrder == null || segAOrder == null) return;
+                                    
+                                                    const isAtBoarding =
+                                                        (segBOrder === bOrder) ||
+                                                        (segBOrder < bOrder && segAOrder > bOrder);
+                                                    if (isAtBoarding) teamsAtBoarding.add(teamKeyStr);
+                                    
+                                                    const isAtAlighting =
+                                                        (segAOrder === aOrder) ||
+                                                        (segBOrder < aOrder && segAOrder > aOrder);
+                                                    if (isAtAlighting) teamsAtAlighting.add(teamKeyStr);
+                                                });
                                             });
-                                            if (defaultMatch && defaultMatch.match) {
-                                                const dm = defaultMatch.match;
+                                    
+                                            const teamsInTooltip = new Set([...teamsAtBoarding, ...teamsAtAlighting]);
+                                    
+                                            // 4) Pre každý tím z tooltipu zistíme jeho fullTeamName (teamName z DB)
+                                            //    a porovnáme s parent.teamName pre aktuálny presun.
+                                            let rowMatches = false;
+                                    
+                                            for (const teamKeyStr of teamsInTooltip) {
+                                                const parts = String(teamKeyStr).split('|');
+                                                const fullTeamName = (parts[0] || '').trim();
+                                                const cat = cleanCategory(parts[1] || '');
+                                                if (!fullTeamName) continue;
+                                                if (cat !== currentHeaderCategory) continue;
+                                    
+                                                for (const parentTeamName of parentTeamNamesForCurrentTransfer) {
+                                                    if (fullTeamName === parentTeamName) {
+                                                        rowMatches = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if (rowMatches) break;
+                                            }
+                                    
+                                            if (rowMatches) {
+                                                matchingKeys.push({
+                                                    busId,
+                                                    boardingRowId: boardingRow?.id || '',
+                                                    alightingRowId: alightingRow?.id || '',
+                                                    side: m.side,
+                                                    key: `${m.bus.id}|${m.boardingRow?.id || ''}|${m.alightingRow?.id || ''}|${m.side}`,
+                                                });
+                                            }
+                                    
+                                            return { match: m, isPreferred, rowMatches };
+                                        });
+                                    
+                                        // 5) Ak sa našiel aspoň jeden riadok, ktorý sa zhoduje, predvyberieme ho.
+                                        //    Ak sa nenašiel žiadny, nič sa nepredvyberie (a teda ani nezvýrazní).
+                                        if (matchingKeys.length > 0) {
+                                            // Preferujeme riadok označený ako `isPreferred`, inak prvý zhodný.
+                                            const preferredMatch = matchesWithRowMatch.find(
+                                                (item) => item.rowMatches && item.isPreferred && item.match
+                                            );
+                                            const chosen = preferredMatch || matchesWithRowMatch.find((item) => item.rowMatches && item.match);
+                                    
+                                            if (chosen && chosen.match) {
+                                                const dm = chosen.match;
                                                 const defaultKey = `${dm.bus.id}|${dm.boardingRow?.id || ''}|${dm.alightingRow?.id || ''}|${dm.side}`;
                                                 queueMicrotask(() => {
                                                     setAssignBusSelectedKey(defaultKey);
