@@ -79,6 +79,46 @@ const cleanCategory = (cat) => String(cat || '')
     .replace(/\s+/g, ' ')
     .trim();
 
+const stripCategoryFromTeamName = (teamName, category) => {
+    const name = String(teamName || '').trim();
+    const cat = String(category || '').trim();
+    if (!name) return name;
+    if (!cat) return name;
+
+    const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Nahradí výskyt kategórie (ako celé slovo/frázu) medzerou a vyčistí nadbytočné medzery.
+    let out = name;
+    try {
+        const re = new RegExp(
+            '(^|[\\s\\-–—|/,(])' + escapeRegex(cat) + '($|[\\s\\-–—|/),.])',
+            'gi'
+        );
+        out = out.replace(re, (match, p1, p2) => {
+            // Zachová oddeľovač na začiatku/konci, ale kategóriu vyhodí.
+            const prefix = p1 || '';
+            const suffix = p2 || '';
+            return prefix + suffix;
+        });
+    } catch (e) {
+        // Ak by regex zlyhal (napr. čudné znaky), skús jednoduché nahradenie.
+        out = out.split(cat).join(' ');
+    }
+
+    // Normalizácia medzier a odstránenie prázdnych zátvoriek/oddeľovačov na okrajoch.
+    out = out
+        .replace(/\s+/g, ' ')
+        .replace(/\s*([\-–—|/,(])\s*/g, '$1 ')
+        .replace(/\s*([)\]])\s*/g, '$1')
+        .replace(/^\s*[\-–—|/,(]+\s*/, '')
+        .replace(/\s*[\-–—|/,(]+\s*$/, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+
+    // Ak by po odstránení nezostalo nič, vráť pôvodný názov.
+    return out || name;
+};
+
 const normalizePlaceName = (name) => {
     if (!name) return '';
     return String(name)
@@ -5755,7 +5795,7 @@ const TransportApp = ({ userProfileData }) => {
                             const teamName = parts[0] || tn;
                             const teamCategory = parts[1] || '';
                             const shortcut = getTeamShortcut(teamCategory, teamName);
-                            const teamLabel = shortcut || teamName;
+                            const teamLabel = shortcut || stripCategoryFromTeamName(teamName, teamCategory);
                             const textColor = getCategoryTextColor(teamCategory);
                             return React.createElement(
                                 'span',
@@ -5785,7 +5825,7 @@ const TransportApp = ({ userProfileData }) => {
                             const teamName = parts[0] || tn;
                             const teamCategory = parts[1] || '';
                             const shortcut = getTeamShortcut(teamCategory, teamName);
-                            const teamLabel = shortcut || teamName;
+                            const teamLabel = shortcut || stripCategoryFromTeamName(teamName, teamCategory);
                             const textColor = getCategoryTextColor(teamCategory);
                             return React.createElement(
                                 'span',
@@ -9737,8 +9777,8 @@ const TransportApp = ({ userProfileData }) => {
                                             displayTitle = `Priemer členov tímu v kategórii ${t.category} (zaokrúhlené nahor)`;
                                         }
                                     }    
-                                    const teamLabel = t.teamName || '(neznámy tím)';
-                                    const fullText = valueText ? `${teamLabel} ● ${valueText} členov` : teamLabel;    
+                                    const teamLabel = stripCategoryFromTeamName(t.teamName, t.category) || '(neznámy tím)';
+                                    const fullText = valueText ? `${teamLabel} ● ${valueText} členov` : teamLabel;
                                     return React.createElement(
                                         'span',
                                         {
@@ -10576,7 +10616,7 @@ const TransportApp = ({ userProfileData }) => {
                                                     },
                                                     (() => {
                                                         const shortcut = getTeamShortcut(t.category, t.teamName);
-                                                        return shortcut || t.teamName || '(neznámy tím)';
+                                                        return shortcut || stripCategoryFromTeamName(t.teamName, t.category) || '(neznámy tím)';
                                                     })()
                                                 ),
                                                 React.createElement(
