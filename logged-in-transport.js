@@ -5779,7 +5779,38 @@ const TransportApp = ({ userProfileData }) => {
             },
                 (() => {
                     const teamsInBus = getTeamsInBusAfterRow(busId, dayKey, row.id);
+
+                    // Zisti, či v tomto riadku niekto vystupuje
+                    const teamsAlightingHereForCount = [];
+                    (savedTransfersRef.current || []).forEach((parent) => {
+                        if (parent.dayKey !== dayKey) return;
+                        if (parent.isWalking === true) return;
+                        const effectiveCategory = cleanCategory(parent.category || '');
+                        let effectiveTeamName = String(parent.teamName || '').trim();
+                        if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
+                            const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
+                            const info = (teamsLookupRef.current || {})[lookupKey];
+                            if (info && info.teamName) effectiveTeamName = info.teamName;
+                        }
+                        if (!effectiveTeamName) return;
+                        (parent.segments || []).forEach((seg) => {
+                            if (seg.busId !== busId) return;
+                            if (seg.isWalking === true) return;
+                            if (seg.alightingRowId === row.rowId) {
+                                teamsAlightingHereForCount.push(`${effectiveTeamName}|${effectiveCategory}`);
+                            }
+                        });
+                    });
+
+                    const isAlightingRow = teamsAlightingHereForCount.length > 0;
+
                     if (teamsInBus.length === 0) {
+                        if (isAlightingRow) {
+                            const totalAlighting = teamsAlightingHereForCount.reduce(
+                                (sum, tk) => sum + getTeamMembersCount(tk), 0
+                            );
+                            return totalAlighting > 0 ? totalAlighting : React.createElement('span', { className: 'text-gray-400' }, '—');
+                        }
                         return React.createElement('span', { className: 'text-gray-400' }, '—');
                     }
                     const total = teamsInBus.reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
