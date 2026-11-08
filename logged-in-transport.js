@@ -5775,16 +5775,23 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement('td', {
                 className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold',
                 style: { color: '#1d4ed8' },
-                title: 'Automaticky vypočítaný počet členov tímov, ktoré sú práve v autobuse (medzi zastávkami). Ak tím nie je v users, použije sa priemer kategórie.',
+                title: 'Počet členov tímov, ktoré sú v autobuse na tejto zastávke (tí, čo tu vystupujú + tí, čo ešte ostávajú v buse).',
             },
                 (() => {
-                    const teamsInBus = getTeamsInBusAfterRow(busId, dayKey, row.id);
+                    const currentOrder = parseOrderFromRowId(row.rowId);
+                    if (currentOrder == null) {
+                        return React.createElement('span', { className: 'text-gray-400' }, '—');
+                    }
 
-                    // Zisti, či v tomto riadku niekto vystupuje
-                    const teamsAlightingHereForCount = [];
+                    // Tímy, ktoré sú v buse na tejto zastávke:
+                    // - tí, ktorí tu vystupujú (alightingRowId === row.rowId)
+                    // - tí, ktorí ešte ostávajú v buse (boarding order < currentOrder a alighting order > currentOrder)
+                    const teamsAtThisStop = new Set();
+
                     (savedTransfersRef.current || []).forEach((parent) => {
                         if (parent.dayKey !== dayKey) return;
                         if (parent.isWalking === true) return;
+
                         const effectiveCategory = cleanCategory(parent.category || '');
                         let effectiveTeamName = String(parent.teamName || '').trim();
                         if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
@@ -5793,27 +5800,33 @@ const TransportApp = ({ userProfileData }) => {
                             if (info && info.teamName) effectiveTeamName = info.teamName;
                         }
                         if (!effectiveTeamName) return;
+
+                        const teamKeyStr = `${effectiveTeamName}|${effectiveCategory}`;
+
                         (parent.segments || []).forEach((seg) => {
                             if (seg.busId !== busId) return;
                             if (seg.isWalking === true) return;
-                            if (seg.alightingRowId === row.rowId) {
-                                teamsAlightingHereForCount.push(`${effectiveTeamName}|${effectiveCategory}`);
+
+                            const bOrder = parseOrderFromRowId(seg.boardingRowId);
+                            const aOrder = parseOrderFromRowId(seg.alightingRowId);
+                            if (bOrder == null || aOrder == null) return;
+
+                            // Vystupuje tu?
+                            const isAlightingHere = (seg.alightingRowId === row.rowId) || (aOrder === currentOrder);
+                            // Ešte ostáva v buse po tejto zastávke?
+                            const isStillInBus = (bOrder < currentOrder && aOrder > currentOrder);
+
+                            if (isAlightingHere || isStillInBus) {
+                                teamsAtThisStop.add(teamKeyStr);
                             }
                         });
                     });
 
-                    const isAlightingRow = teamsAlightingHereForCount.length > 0;
-
-                    if (teamsInBus.length === 0) {
-                        if (isAlightingRow) {
-                            const totalAlighting = teamsAlightingHereForCount.reduce(
-                                (sum, tk) => sum + getTeamMembersCount(tk), 0
-                            );
-                            return totalAlighting > 0 ? totalAlighting : React.createElement('span', { className: 'text-gray-400' }, '—');
-                        }
+                    if (teamsAtThisStop.size === 0) {
                         return React.createElement('span', { className: 'text-gray-400' }, '—');
                     }
-                    const total = teamsInBus.reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
+
+                    const total = [...teamsAtThisStop].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
                     return total > 0 ? total : React.createElement('span', { className: 'text-gray-400' }, '—');
                 })()
             ),
