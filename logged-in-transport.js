@@ -9284,9 +9284,72 @@ const TransportApp = ({ userProfileData }) => {
                             }    
                             const parentInfoLabel = t._parentKey && t._parentRoute
                                 ? `časť presunu ${t._parentRoute}`
-                                : null;    
-                            const remainingLabel = (t._remainingMinutes != null)
-                                ? `zvyšný čas na presun: ${t._remainingMinutes} min`
+                                : null;
+
+                            // Zvyšný čas na presun sa počíta ZO ZOBRAZENÉHO ČASU PRESUNU (timeLabel),
+                            // t.j. z 3. riadku v boxe. Ak čas chýba, dopočíta sa cez _remainingMinutes
+                            // (alebo sa nezobrazí).
+                            const parseTimeLabelRange = (label) => {
+                                if (!label) return null;
+                                const s = String(label);
+                                const timeRe = /(\d{1,2}):(\d{2})/g;
+                                const found = [];
+                                let m;
+                                while ((m = timeRe.exec(s)) !== null) {
+                                    const hh = Number(m[1]);
+                                    const mi = Number(m[2]);
+                                    if (hh >= 0 && hh <= 23 && mi >= 0 && mi <= 59) {
+                                        found.push(hh * 60 + mi);
+                                    }
+                                }
+                                if (found.length === 0) return null;
+                                if (found.length === 1) return { startMin: found[0], endMin: found[0] };
+                                return { startMin: found[0], endMin: found[1] };
+                            };
+
+                            const computeRemainingMinutesFromLabel = () => {
+                                const parsed = parseTimeLabelRange(timeLabel);
+                                if (!parsed) return null;
+
+                                // Pre segmenty: koniec = začiatok nasledujúceho priradeného segmentu
+                                // (alebo koniec parent timeRange). Pre non-segmenty: endMin - startMin.
+                                let endMin = parsed.endMin;
+
+                                if (t._parentKey) {
+                                    const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
+                                    if (parentRec && Array.isArray(parentRec.segments)) {
+                                        const segIdx = findSegmentIndex(parentRec.segments, t.fromId, t.toId);
+                                        // Nájdi najbližší nasledujúci priradený segment
+                                        let nextAssignedStartMin = null;
+                                        for (let i = segIdx + 1; i < parentRec.segments.length; i++) {
+                                            const seg = parentRec.segments[i];
+                                            if (!seg) continue;
+                                            if (seg.isWalking === true) continue;
+                                            if (!(seg.busId && seg.boardingRowId && seg.alightingRowId)) continue;
+                                            if (seg.startTs == null) continue;
+                                            // Prepočítaj na minúty v rámci dňa – potrebujeme len časť HH:MM
+                                            const startFmt = formatTsLocal(seg.startTs);
+                                            const startTime = startFmt ? /(\d{2}):(\d{2})$/.exec(startFmt) : null;
+                                            if (startTime) {
+                                                nextAssignedStartMin = Number(startTime[1]) * 60 + Number(startTime[2]);
+                                                break;
+                                            }
+                                        }
+                                        if (nextAssignedStartMin != null) {
+                                            endMin = nextAssignedStartMin;
+                                        }
+                                    }
+                                }
+
+                                let diff = endMin - parsed.startMin;
+                                if (diff < 0) diff += 24 * 60;
+                                return diff;
+                            };
+
+                            const remainingMinutesFromLabel = computeRemainingMinutesFromLabel();
+
+                            const remainingLabel = (remainingMinutesFromLabel != null)
+                                ? `zvyšný čas na presun: ${remainingMinutesFromLabel} min`
                                 : null;
     
                             return React.createElement(
