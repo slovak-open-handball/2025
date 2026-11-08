@@ -13234,10 +13234,13 @@ const TransportApp = ({ userProfileData }) => {
                                                         const total = occupancy.total;
                                                         const teamsInBus = occupancy.teams;
                                                         
+                                                        // <<< ZMENA: tím, ktorý práve priraďujeme, pridáme do tooltipu LEN ak je tento riadok vybraný.
                                                         const currentTransferKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
                                                         const teamsForTooltip = new Set(teamsInBus || []);
-                                                        teamsForTooltip.add(currentTransferKeyStr);
-
+                                                        if (isSelected) {
+                                                            teamsForTooltip.add(currentTransferKeyStr);
+                                                        }
+                                                        
                                                         // <<< ZMENA: zoradenie podľa skratky (abecedne), pri zhode podľa plného názvu.
                                                         const teamTooltipItems = [...teamsForTooltip]
                                                             .map((tk) => {
@@ -13260,13 +13263,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                 return ta.localeCompare(tb, 'sk', { sensitivity: 'base' });
                                                             });
                                                         
-                                                        // Textová verzia pre natívny title (bez farieb)
-                                                        const occupancyTooltipText =
-                                                            `V autobuse v tomto čase: ${total} členov` +
-                                                            (teamTooltipItems.length > 0
-                                                                ? `\n• ` + teamTooltipItems.map((x) => x.members > 0 ? `${x.label} (${x.members})` : x.label).join('\n• ')
-                                                                : '');
-                                                        
                                                         return React.createElement(
                                                             React.Fragment,
                                                             null,
@@ -13274,11 +13270,11 @@ const TransportApp = ({ userProfileData }) => {
                                                                 React.createElement(
                                                                     'span',
                                                                     {
+                                                                        // <<< ZMENA: hover nad počtom členov vždy zobrazí tooltip
                                                                         className: 'relative flex items-center gap-1 text-blue-700 group/occupancy',
                                                                     },
                                                                     React.createElement('i', { className: 'fa-solid fa-users' }),
                                                                     `${total}`,
-                                                                    // Vlastný vizuálny tooltip s farebnými skratkami
                                                                     React.createElement(
                                                                         'div',
                                                                         {
