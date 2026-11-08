@@ -9375,6 +9375,11 @@ const TransportApp = ({ userProfileData }) => {
             return idx === -1 ? Number.POSITIVE_INFINITY : idx;
         };
 
+        // <<< ZMENA: Zoskupovacie kľúče – pre segmenty podľa parenta, pre "solo"
+        // presuny podľa ich vlastného key.
+        // Poznámka: parent s 1 segmentom (bez medzizastávok) NEMÁ `_parentKey`
+        // (lebo neprešiel vetvou rozdeľovania), takže sa v tejto deduplikácii
+        // nezúčastňuje – a to je správne, lebo taký presun sa má zobraziť ako celok.
         baseFiltered.forEach((t) => {
             const blockKey = t._parentKey
                 ? `${t._parentKey}||${cleanCategory(t.category || '')}||${String(t.teamName || '').trim()}`
@@ -9395,10 +9400,30 @@ const TransportApp = ({ userProfileData }) => {
             allowedKeys.add(segment.key);
         });
 
-        const baseFilteredFirstOnlyRaw = baseFiltered.filter((t) => allowedKeys.has(t.key));
+        // <<< ZMENA: Finálny filter – okrem `allowedKeys` pridáme aj kontrolu,
+        // že segment (s `_parentKey`) sa nezobrazí, ak už existuje "solo" záznam
+        // s rovnakým parentom (t.j. ak parent s 1 segmentom prešiel vetvou
+        // `!shouldSplitIntoSegments` a súčasne sa jeho segment objavil v `baseFiltered`
+        // ako `_parentKey` záznam).
+        //
+        // Pre také prípady platí: ak existuje "solo" záznam pre daný parent (t.j.
+        // bez `_parentKey`), potom segmenty s `_parentKey` pre ten istý parent
+        // zahodíme – zobrazí sa len "solo" celok.
+        const soloParentKeys = new Set();
+        baseFiltered.forEach((t) => {
+            if (t._parentKey) return;
+            const parentRec = savedTransfers.find((s) => s.key === t.key);
+            if (parentRec && Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
+                soloParentKeys.add(t.key);
+            }
+        });
 
-        const baseFilteredFirstOnly = baseFilteredFirstOnlyRaw;
-
+        const baseFilteredFirstOnly = baseFiltered.filter((t) => {
+            if (!allowedKeys.has(t.key)) return false;
+            if (t._parentKey && soloParentKeys.has(t._parentKey)) return false;
+            return true;
+        });
+        
         const hasAnyPartialTransfer = baseFilteredFirstOnly.some(
             (t) => t._parentKey && t._parentRoute
         );
