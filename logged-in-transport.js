@@ -12385,8 +12385,27 @@ const TransportApp = ({ userProfileData }) => {
                     ),
                     (() => {
                         const matchingBusRows = findMatchingBusRows(transferActionModal.transfer);
+
+                        // Tlačidlo "Priradiť presun autobusu" zobrazíme VŽDY, ak existuje
+                        // aspoň jeden vhodný riadok busu. Ak žiadny neexistuje, tlačidlo
+                        // nezobrazíme (alebo ho zobrazíme ako neaktívne s vysvetlením).
                         if (!matchingBusRows || matchingBusRows.length === 0) {
-                            return null;
+                            return React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    disabled: true,
+                                    title: 'Pre tento presun neexistuje žiadny autobus s trasou zodpovedajúcou miestam a času presunu.',
+                                    className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-gray-200 bg-gray-50 transition-colors flex items-center gap-3 cursor-not-allowed opacity-70'
+                                },
+                                React.createElement('i', { className: 'fa-solid fa-bus text-gray-400 text-xl w-6 text-center' }),
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex-1' },
+                                    React.createElement('div', { className: 'font-semibold text-gray-500' }, 'Priradiť presun autobusu'),
+                                    React.createElement('div', { className: 'text-xs text-gray-400' }, 'Žiadny autobus nezodpovedá trase a času presunu')
+                                )
+                            );
                         }
 
                         return React.createElement(
