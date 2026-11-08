@@ -4015,40 +4015,6 @@ const TransportApp = ({ userProfileData }) => {
             }
             await Promise.all(shiftPromises);
             
-            if (Object.keys(rowIdMap).length > 0) {
-                try {
-                    const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
-                    const snap = await getDoc(docRef);
-                    if (snap.exists()) {
-                        const data = snap.data() || {};
-                        const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
-                        const tUpdates = {};
-                        Object.entries(rawTransfers).forEach(([key, v]) => {
-                            if (!v || !Array.isArray(v.segments)) return;
-                            let changed = false;
-                            const newSegments = v.segments.map((s) => {
-                                if (s.busId !== bus.id) return s;
-                                if (s.boardingRowId && rowIdMap[s.boardingRowId]) {
-                                    changed = true;
-                                    s = { ...s, boardingRowId: rowIdMap[s.boardingRowId] };
-                                }
-                                if (s.alightingRowId && rowIdMap[s.alightingRowId]) {
-                                    changed = true;
-                                    s = { ...s, alightingRowId: rowIdMap[s.alightingRowId] };
-                                }
-                                return s;
-                            });
-                            if (changed) tUpdates[key] = { ...v, segments: newSegments };
-                        });
-                        if (Object.keys(tUpdates).length > 0) {
-                            await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
-                        }
-                    }
-                } catch (e) {
-                    console.error('[TRANSPORT] Chyba pri premapovaní rowId v presunoch:', e);
-                }
-            }
-            
             const newRowRef = doc(collection(window.db, 'transport'));
             await setDoc(newRowRef, {
                 type: 'busRow',
@@ -4062,6 +4028,153 @@ const TransportApp = ({ userProfileData }) => {
                 placeFromId,
                 placeToId,
             });
+
+            // Mapa nových riadkov podľa nového rowId (aby sme vedeli overiť časy)
+            const newRowsByRowId = new Map();
+            allRows.forEach((r, i) => {
+                const newOrderValue = (r.order || 0) + 1;
+                const newRowId = buildRowId(bus.id, dayKey, newOrderValue);
+                newRowsByRowId.set(newRowId, {
+                    ...r,
+                    order: newOrderValue,
+                    rowId: newRowId,
+                });
+            });
+            // Novovložený riadok
+            newRowsByRowId.set(buildRowId(bus.id, dayKey, newOrder), {
+                id: newRowRef.id,
+                order: newOrder,
+                rowId: buildRowId(bus.id, dayKey, newOrder),
+                timeFrom: initialTimeFrom,
+                timeTo: '',
+                placeFromId,
+                placeToId,
+            });
+
+            // NOVÉ: Pre každý tím priradený v buse posunieme indexy a overíme časy
+            if (rowIdMap && Object.keys(rowIdMap).length > 0) {
+                try {
+                    const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+                    const snap = await getDoc(docRef);
+                    if (snap.exists()) {
+                        const data = snap.data() || {};
+                        const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
+                        const tUpdates = {};
+
+                        const shiftRowId = (rowIdStr) => {
+                            if (!rowIdStr) return rowIdStr;
+                            const parts = String(rowIdStr).split('__');
+                            if (parts.length < 3) return rowIdStr;
+                            const orderNum = Number(parts[parts.length - 1]);
+                            if (!Number.isFinite(orderNum)) return rowIdStr;
+                            if (orderNum < newOrder) return rowIdStr;
+                            const newOrderNum = orderNum + 1;
+                            parts[parts.length - 1] = String(newOrderNum);
+                            return parts.join('__');
+                        };
+
+                        Object.entries(rawTransfers).forEach(([key, v]) => {
+                            if (!v || !Array.isArray(v.segments)) return;
+                            let changed = false;
+
+                            // Pomocná funkcia na overenie, či segment má platný parent rozsah
+                            const parentRange = parseTransferWhenToRange(v.when);
+                            const parentStartTs = parentRange && parentRange.startTs != null ? parentRange.startTs : null;
+                            const parentEndTs = parentRange && parentRange.endTs != null ? parentRange.endTs : null;
+
+                            const newSegments = v.segments.map((s) => {
+                                if (s.busId !== bus.id) return s;
+                                if (s.isWalking === true) return s;
+
+                                const oldBoardingRowId = s.boardingRowId || null;
+                                const oldAlightingRowId = s.alightingRowId || null;
+
+                                let newBoardingRowId = oldBoardingRowId;
+                                let newAlightingRowId = oldAlightingRowId;
+
+                                if (oldBoardingRowId) {
+                                    if (rowIdMap[oldBoardingRowId]) {
+                                        newBoardingRowId = rowIdMap[oldBoardingRowId];
+                                    } else {
+                                        newBoardingRowId = shiftRowId(oldBoardingRowId);
+                                    }
+                                }
+                                if (oldAlightingRowId) {
+                                    if (rowIdMap[oldAlightingRowId]) {
+                                        newAlightingRowId = rowIdMap[oldAlightingRowId];
+                                    } else {
+                                        newAlightingRowId = shiftRowId(oldAlightingRowId);
+                                    }
+                                }
+
+                                const boardingRow = newBoardingRowId ? newRowsByRowId.get(newBoardingRowId) : null;
+                                const alightingRow = newAlightingRowId ? newRowsByRowId.get(newAlightingRowId) : null;
+
+                                const boardingTs = boardingRow && boardingRow.timeFrom
+                                    ? timeOnDayKeyToTs(dayKey, boardingRow.timeFrom)
+                                    : null;
+                                const alightingTs = alightingRow && alightingRow.timeTo
+                                    ? timeOnDayKeyToTs(dayKey, alightingRow.timeTo)
+                                    : null;
+
+                                const timesValid =
+                                    boardingTs != null &&
+                                    alightingTs != null &&
+                                    alightingTs > boardingTs;
+
+                                // NOVÉ: Overiť, či časy sedia do celkového času parent presunu
+                                const outsideParent =
+                                    timesValid &&
+                                    parentStartTs != null &&
+                                    parentEndTs != null &&
+                                    (boardingTs < parentStartTs || alightingTs > parentEndTs);
+
+                                if (!timesValid || outsideParent) {
+                                    changed = true;
+                                    return {
+                                        ...s,
+                                        busAssigned: false,
+                                        busId: null,
+                                        boardingRowId: null,
+                                        alightingRowId: null,
+                                        startTs: null,
+                                        endTs: null,
+                                        when: null,
+                                    };
+                                }
+
+                                const newWhen = `${formatTsLocal(boardingTs)} – ${formatTsLocal(alightingTs)}`;
+
+                                if (
+                                    newBoardingRowId !== oldBoardingRowId ||
+                                    newAlightingRowId !== oldAlightingRowId ||
+                                    s.startTs !== boardingTs ||
+                                    s.endTs !== alightingTs ||
+                                    s.when !== newWhen
+                                ) {
+                                    changed = true;
+                                    return {
+                                        ...s,
+                                        boardingRowId: newBoardingRowId,
+                                        alightingRowId: newAlightingRowId,
+                                        startTs: boardingTs,
+                                        endTs: alightingTs,
+                                        when: newWhen,
+                                    };
+                                }
+                                return s;
+                            });
+                            if (changed) tUpdates[key] = { ...v, segments: newSegments };
+                        });
+
+                        if (Object.keys(tUpdates).length > 0) {
+                            await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
+                        }
+                    }
+                } catch (e) {
+                    console.error('[TRANSPORT] Chyba pri posune indexov riadkov v presunoch:', e);
+                }
+            }
     
             window.showGlobalNotification('Riadok vložený medzi existujúce riadky.', 'success');
         } catch (err) {
