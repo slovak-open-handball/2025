@@ -12747,7 +12747,7 @@ const TransportApp = ({ userProfileData }) => {
         showAssignBusModal && assignBusTransfer && (() => {
             const parentKey = assignBusTransfer._parentKey || assignBusTransfer.key;
             const currentParent = savedTransfers.find((s) => s.key === parentKey);
-
+        
             try {
                 console.log('%c[TRANSPORT][MODAL:showAssignBusModal] Otvorené', 'color:#ea580c;font-weight:bold;', {
                     assignBusTransfer,
@@ -12854,7 +12854,7 @@ const TransportApp = ({ userProfileData }) => {
                             const parentRec = savedTransfersRef.current.find((s) => s.key === tr._parentKey);
                             const segFromId = tr.fromId || null;
                             const segToId = tr.toId || null;
-
+        
                             const parentSeg = (() => {
                                 if (!parentRec || !Array.isArray(parentRec.segments)) return null;
                                 if (!segFromId || !segToId) return null;
@@ -12894,7 +12894,7 @@ const TransportApp = ({ userProfileData }) => {
                                     displayWhen = formatTsLocal(latestEnd);
                                 }
                             }
-
+        
                             if (!displayWhen) {
                                 const provisional = computeProvisionalSegmentRange(tr);
                                 if (provisional) {
@@ -13068,7 +13068,7 @@ const TransportApp = ({ userProfileData }) => {
                                                         };
                                                 
                                                         const tripDurationMin = computeTripDuration();
-
+        
                                                         const computeBusOccupancy = () => {
                                                             const bOrder = parseOrderFromRowId(boardingRow.rowId);
                                                             const aOrder = parseOrderFromRowId(alightingRow.rowId);
@@ -13125,7 +13125,6 @@ const TransportApp = ({ userProfileData }) => {
                                                             const totalAtAlighting = [...teamsAtAlighting].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
                                                         
                                                             let total = Math.max(totalAtBoarding, totalAtAlighting);
-                                                            // Pre tooltip použijeme tú množinu tímov, ktorá dala väčší počet
                                                             const teamsSet = new Set([...teamsAtBoarding, ...teamsAtAlighting]);
                                                             let teams = [...teamsSet];
                                                         
@@ -13247,7 +13246,8 @@ const TransportApp = ({ userProfileData }) => {
                                                                     React.createElement('i', { className: 'fa-solid fa-clock' }),
                                                                     `${tripDurationMin} min`
                                                                 )
-                                                        ),
+                                                        );
+                                                    })(),
                                                     React.createElement(
                                                         'div',
                                                         { className: 'flex flex-col items-end gap-1' },
