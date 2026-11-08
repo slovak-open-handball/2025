@@ -4075,13 +4075,15 @@ const TransportApp = ({ userProfileData }) => {
 
                         Object.entries(rawTransfers).forEach(([key, v]) => {
                             if (!v || !Array.isArray(v.segments)) return;
+                            // NOVÉ: Presuny v inom dni sa nesmú posúvať
+                            if (v.dayKey !== dayKey) return;
                             let changed = false;
-
+                        
                             // Pomocná funkcia na overenie, či segment má platný parent rozsah
                             const parentRange = parseTransferWhenToRange(v.when);
                             const parentStartTs = parentRange && parentRange.startTs != null ? parentRange.startTs : null;
                             const parentEndTs = parentRange && parentRange.endTs != null ? parentRange.endTs : null;
-
+                        
                             const newSegments = v.segments.map((s) => {
                                 if (s.busId !== bus.id) return s;
                                 if (s.isWalking === true) return s;
@@ -5030,6 +5032,7 @@ const TransportApp = ({ userProfileData }) => {
 
                         Object.entries(rawTransfers).forEach(([key, v]) => {
                             if (!v || !Array.isArray(v.segments)) return;
+                            if (v.dayKey !== dayKey) return;
                             let changed = false;
                             const newSegments = v.segments.map((s) => {
                                 if (s.busId !== busId) return s;
@@ -5143,25 +5146,30 @@ const TransportApp = ({ userProfileData }) => {
             const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
             const tUpdates = {};
     
-            const existingRowIds = new Set();
+            const existingRowIdsForDay = new Set();
             Object.entries(busRows || {}).forEach(([busKey, rows]) => {
-                const [bId] = busKey.split('|');
+                const [bId, dK] = busKey.split('|');
+                if (bId !== busIdForCleanup) return;
+                if (dK !== dayKeyForCleanup) return;
                 (rows || []).forEach((r) => {
                     if (r.id === rowId) return;
-                    if (r.rowId) existingRowIds.add(`${bId}__${r.rowId}`);
+                    if (r.rowId) existingRowIdsForDay.add(r.rowId);
                 });
             });
     
             Object.entries(rawTransfers).forEach(([key, v]) => {
                 if (!v || !Array.isArray(v.segments)) return;
+                if (v.dayKey !== dayKeyForCleanup) return;
                 let changed = false;
                 const newSegments = v.segments.map((s) => {
                     if (!s.busId) return s;
-                    const bRowKey = s.boardingRowId ? `${s.busId}__${s.boardingRowId}` : null;
-                    const aRowKey = s.alightingRowId ? `${s.busId}__${s.alightingRowId}` : null;
+                    if (s.busId !== busIdForCleanup) return s;
+                    
+                    const bRowKey = s.boardingRowId ? s.boardingRowId : null;
+                    const aRowKey = s.alightingRowId ? s.alightingRowId : null;
     
-                    const bMissing = bRowKey && !existingRowIds.has(bRowKey);
-                    const aMissing = aRowKey && !existingRowIds.has(aRowKey);
+                    const bMissing = bRowKey && !existingRowIdsForDay.has(bRowKey);
+                    const aMissing = aRowKey && !existingRowIdsForDay.has(aRowKey);
     
                     if (bMissing || aMissing) {
                         changed = true;
