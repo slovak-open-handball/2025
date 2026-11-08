@@ -13212,7 +13212,6 @@ const TransportApp = ({ userProfileData }) => {
                                     displayWhen = formatTsLocal(latestEnd);
                                 }
                             }
-        
                             if (!displayWhen) {
                                 const provisional = computeProvisionalSegmentRange(tr);
                                 if (provisional) {
@@ -13319,6 +13318,19 @@ const TransportApp = ({ userProfileData }) => {
                                 'ul',
                                 { className: 'space-y-2' },
                                 (() => {
+                                    // <<< ZMENA: normalizácia názvu tímu (trim, case-insensitive)
+                                    // BEZ odstraňovania kategórie. Používa sa pri porovnávaní
+                                    // presne tých istých názvov z DB, ktoré sa zobrazujú aj v tooltipe.
+                                    const normalizeTeamNameForCompare = (name) => {
+                                        if (!name) return '';
+                                        return String(name)
+                                            .trim()
+                                            .toLowerCase()
+                                            .normalize('NFD')
+                                            .replace(/[\u0300-\u036f]/g, '')
+                                            .replace(/\s+/g, ' ');
+                                    };
+
                                     const currentTransferTeamName = String(currentTransfer.teamName || '').trim();
                                     const currentTransferCategory = cleanCategory(currentTransfer.category || '');
                                     const currentTransferDayKey = currentTransfer.dayKey || null;
@@ -13333,15 +13345,17 @@ const TransportApp = ({ userProfileData }) => {
 
                                     const isTeamSuperstructure = (teamName, category) => {
                                         if (!teamName) return false;
-                                        const tn = String(teamName).trim();
+                                        const tnNorm = normalizeTeamNameForCompare(teamName);
+                                        if (!tnNorm) return false;
                                         const cat = cleanCategory(category || '');
                                         const info = (teamsArrivalBufferRef.current || []).find(
-                                            (t) => cleanCategory(t.category) === cat && String(t.teamName || '').trim() === tn
+                                            (t) => cleanCategory(t.category) === cat
+                                                && normalizeTeamNameForCompare(t.teamName) === tnNorm
                                         );
                                         if (info && info.isSuperstructure === true) return true;
                                         if (!info) return true;
                                         if (info.isRegistered !== true) return true;
-                                        if (/\d[A-ZÁ-Ž]\s*$/.test(tn)) return true;
+                                        if (/\d[A-ZÁ-Ž]\s*$/.test(String(teamName).trim())) return true;
                                         return false;
                                     };
 
@@ -13369,7 +13383,14 @@ const TransportApp = ({ userProfileData }) => {
                                                 }
                                                 if (!parentTeamName) return;
 
-                                                // NEODSTRAŇUJEME aktuálny tím – ak tam už sedí, je to zámer.
+                                                // <<< ZMENA: porovnávame PRESNE tie isté názvy z DB
+                                                // (normalizované: trim, case-insensitive).
+                                                // Tým sa zabezpečí, že tím, ktorý vidíš v tooltipe
+                                                // ako "Tím A", je ten istý tím ako "Tím A U12 D"
+                                                // v DB – pretože kategória sa odstraňuje až pri zobrazení.
+                                                // Ak je to ten istý tím ako aktuálne priraďovaný,
+                                                // NEVYLUČUJEME ho – ak tam už sedí, je to zámer.
+
                                                 if (!isTeamSuperstructure(parentTeamName, parentCategory)) return;
 
                                                 const parentLastChar = getTeamLastChar(parentTeamName);
@@ -13400,60 +13421,6 @@ const TransportApp = ({ userProfileData }) => {
                                         if (defaultMatch && defaultMatch.match) {
                                             const dm = defaultMatch.match;
                                             const defaultKey = `${dm.bus.id}|${dm.boardingRow?.id || ''}|${dm.alightingRow?.id || ''}|${dm.side}`;
-                                            queueMicrotask(() => {
-                                                setAssignBusSelectedKey(defaultKey);
-                                            });
-                                        }
-                                    }
-
-                                    // Predvolený výber preferovaného riadku – len ak ešte nič nie je vybrané
-                                    // a v danom buse ešte NIE JE priraďovaný tím (aby sme nevybrali riadok,
-                                    // kde už tím sedí a nemá zmysel ho tam priraďovať znova).
-                                    if (!assignBusSelectedKey) {
-                                        const findPreferredWithoutCurrentTeam = () => {
-                                            if (!currentTransferDayKey) return null;
-                                            for (const item of matchesWithPreferredFlag) {
-                                                if (!item.isPreferred) continue;
-                                                const mm = item.match;
-                                                if (!mm || !mm.bus || !mm.trip) continue;
-
-                                                const busId = mm.bus.id;
-                                                const dayKey = mm.trip.dayKey;
-
-                                                const teamAlreadyInBus = (savedTransfersRef.current || []).some((parent) => {
-                                                    if (parent.dayKey !== dayKey) return false;
-                                                    if (parent.isWalking === true) return false;
-
-                                                    const parentCategory = cleanCategory(parent.category || '');
-                                                    if (parentCategory !== currentTransferCategory) return false;
-
-                                                    let parentTeamName = String(parent.teamName || '').trim();
-                                                    if (!parentTeamName && parent.teamUid != null && parent.teamIndex != null) {
-                                                        const lookupKey = `${parent.teamUid}|${parentCategory}|${parent.teamIndex}`;
-                                                        const info = (teamsLookupRef.current || {})[lookupKey];
-                                                        if (info && info.teamName) parentTeamName = info.teamName;
-                                                    }
-                                                    if (!parentTeamName) return false;
-                                                    if (parentTeamName !== currentTransferTeamName) return false;
-
-                                                    return (parent.segments || []).some((seg) => {
-                                                        if (!seg) return false;
-                                                        if (seg.isWalking === true) return false;
-                                                        if (seg.busId !== busId) return false;
-                                                        return !!(seg.boardingRowId && seg.alightingRowId);
-                                                    });
-                                                });
-
-                                                if (!teamAlreadyInBus) {
-                                                    return mm;
-                                                }
-                                            }
-                                            return null;
-                                        };
-
-                                        const defaultMatch = findPreferredWithoutCurrentTeam();
-                                        if (defaultMatch) {
-                                            const defaultKey = `${defaultMatch.bus.id}|${defaultMatch.boardingRow?.id || ''}|${defaultMatch.alightingRow?.id || ''}|${defaultMatch.side}`;
                                             queueMicrotask(() => {
                                                 setAssignBusSelectedKey(defaultKey);
                                             });
@@ -13492,7 +13459,18 @@ const TransportApp = ({ userProfileData }) => {
                                                         React.createElement(
                                                             'div',
                                                             { className: 'font-semibold text-gray-800 text-sm flex items-center gap-2 flex-wrap' },
-                                                            m.bus.name
+                                                            m.bus.name,
+                                                            isPreferred &&
+                                                                React.createElement(
+                                                                    'span',
+                                                                    {
+                                                                        className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                                                        style: { backgroundColor: '#ede9fe', color: '#6d28d9' },
+                                                                        title: 'V tomto autobuse už sedí iný superstructure tím z rovnakej skupiny (rovnaké posledné písmeno).'
+                                                                    },
+                                                                    React.createElement('i', { className: 'fa-solid fa-wand-magic-sparkles text-[9px]' }),
+                                                                    'odporúčané'
+                                                                )
                                                         ),
                                                         React.createElement(
                                                             'div',
