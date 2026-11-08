@@ -13717,6 +13717,79 @@ const TransportApp = ({ userProfileData }) => {
                                                                     }
                                                                 }
                                                                 
+                                                                // <<< NOVÉ: Pri každom zobrazení tooltipu (t.j. pri každom renderi
+                                                                // riadku busu) vypíšeme do konzoly všetky tímy, ktoré sú v tooltipe,
+                                                                // spolu so všetkými dostupnými informáciami o nich, a celý názov
+                                                                // tímu, ktorý má aktuálne otvorené modálne okno.
+                                                                try {
+                                                                    const teamsAtBoardingArr = [...teamsAtBoarding];
+                                                                    const teamsAtAlightingArr = [...teamsAtAlighting];
+                                                                    const allTooltipTeamKeys = new Set([
+                                                                        ...teamsAtBoardingArr,
+                                                                        ...teamsAtAlightingArr,
+                                                                    ]);
+                                                                
+                                                                    const tooltipTeamsInfo = [...allTooltipTeamKeys].map((tk) => {
+                                                                        const parts = String(tk).split('|');
+                                                                        const tn = (parts[0] || '').trim();
+                                                                        const cat = (parts[1] || '').trim();
+                                                                        const shortcut = getTeamShortcut(cat, tn);
+                                                                        const displayedLabel = stripCategoryFromTeamName(tn, cat);
+                                                                        const color = getCategoryTextColor(cat);
+                                                                        const members = getTeamMembersCount(tk);
+                                                                        const isBoarding = teamsAtBoarding.has(tk);
+                                                                        const isAlighting = teamsAtAlighting.has(tk);
+                                                                        return {
+                                                                            teamKey: tk,
+                                                                            fullTeamName: tn,
+                                                                            category: cat,
+                                                                            shortcut: shortcut || null,
+                                                                            displayedLabel: shortcut || displayedLabel,
+                                                                            displayedLabelWithoutShortcut: displayedLabel,
+                                                                            textColor: color,
+                                                                            membersCount: members,
+                                                                            isAtBoarding: isBoarding,
+                                                                            isAtAlighting: isAlighting,
+                                                                        };
+                                                                    });
+                                                                
+                                                                    console.log(
+                                                                        '%c[TRANSPORT][TOOLTIP] Zobrazený tooltip – všetky tímy v tooltipe:',
+                                                                        'color:#ea580c;font-weight:bold;',
+                                                                        {
+                                                                            busId,
+                                                                            busName: m.bus?.name || null,
+                                                                            dayKey,
+                                                                            boardingRowId: boardingRow?.rowId || null,
+                                                                            boardingRowTimeFrom: boardingRow?.timeFrom || null,
+                                                                            alightingRowId: alightingRow?.rowId || null,
+                                                                            alightingRowTimeTo: alightingRow?.timeTo || null,
+                                                                            tooltipTeamsCount: tooltipTeamsInfo.length,
+                                                                            tooltipTeams: tooltipTeamsInfo,
+                                                                            currentModalTransfer: {
+                                                                                fullTeamName: String(currentTransfer.teamName || '').trim(),
+                                                                                category: cleanCategory(currentTransfer.category || ''),
+                                                                                shortcut: getTeamShortcut(
+                                                                                    cleanCategory(currentTransfer.category || ''),
+                                                                                    String(currentTransfer.teamName || '').trim()
+                                                                                ) || null,
+                                                                                displayedLabel: stripCategoryFromTeamName(
+                                                                                    String(currentTransfer.teamName || '').trim(),
+                                                                                    cleanCategory(currentTransfer.category || '')
+                                                                                ),
+                                                                                fromId: currentTransfer.fromId || null,
+                                                                                fromLocation: resolvePlaceNameById(currentTransfer.fromId) || null,
+                                                                                toId: currentTransfer.toId || null,
+                                                                                toLocation: resolvePlaceNameById(currentTransfer.toId) || null,
+                                                                                when: currentTransfer.when || null,
+                                                                                dayKey: currentTransfer.dayKey || null,
+                                                                            },
+                                                                        }
+                                                                    );
+                                                                } catch (logErr) {
+                                                                    console.warn('[TRANSPORT][TOOLTIP] Chyba pri logovaní tooltipu:', logErr);
+                                                                }
+                                                                
                                                                 return { total, teams };
                                                             };
                                                         
