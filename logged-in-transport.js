@@ -5430,23 +5430,23 @@ const TransportApp = ({ userProfileData }) => {
             }
             return '';
         })();
-
+    
         const rowsKey = `${busId}|${dayKey}`;
         const allRows = (busRows[rowsKey] || [])
             .slice()
             .sort((a, b) => (a.order || 0) - (b.order || 0));
         const currentIdx = allRows.findIndex((r) => r.id === row.id);
         const prevRow = currentIdx > 0 ? allRows[currentIdx - 1] : null;
-
+    
         const lockedPlaceFromId =
             prevRow && prevRow.placeToId ? prevRow.placeToId : null;
         const lockedPlaceFrom = lockedPlaceFromId
             ? (resolvePlaceNameById(lockedPlaceFromId) || '')
             : null;
-
+    
         const inputCls = 'w-full px-1 py-1 text-sm border border-gray-300 rounded text-black focus:outline-none focus:ring-2 focus:ring-green-500';
         const selectCls = 'w-full px-1 py-1 text-sm border border-gray-300 rounded text-black bg-white focus:outline-none focus:ring-2 focus:ring-green-500';
-
+    
         const filterTeamsByCategory = (teams) => {
             if (!Array.isArray(teams)) return [];
             if (!selectedCategoryFilter) return teams;
@@ -5457,24 +5457,54 @@ const TransportApp = ({ userProfileData }) => {
                 return cat === targetCat;
             });
         };
-
+    
         const stopOptionsFrom = stopsList.map((s) =>
             React.createElement('option', { key: s.id, value: s.id }, s.name)
         );
-
+    
         const stopOptionsTo = stopsList
             .filter((s) => s.id !== row.placeFromId)
             .map((s) =>
                 React.createElement('option', { key: s.id, value: s.id }, s.name)
             );
-        
+    
+        // <<< ZMENA: výpočet tímov, ktoré v tomto riadku vystupujú,
+        // presunutý vyššie, aby ho mohla použiť aj bunka "Miesto do".
+        const teamsAlightingHere = (() => {
+            const result = [];
+            (savedTransfersRef.current || []).forEach((parent) => {
+                if (parent.dayKey !== dayKey) return;
+                if (parent.isWalking === true) return;
+                const effectiveCategory = cleanCategory(parent.category || '');
+                let effectiveTeamName = String(parent.teamName || '').trim();
+                if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
+                    const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
+                    const info = (teamsLookupRef.current || {})[lookupKey];
+                    if (info && info.teamName) effectiveTeamName = info.teamName;
+                }
+                if (!effectiveTeamName) return;
+                (parent.segments || []).forEach((seg) => {
+                    if (seg.busId !== busId) return;
+                    if (seg.isWalking === true) return;
+                    if (seg.alightingRowId === row.rowId) {
+                        result.push(`${effectiveTeamName}|${effectiveCategory}`);
+                    }
+                });
+            });
+            return result;
+        })();
+    
+        // <<< ZMENA: ak v tomto riadku niekto vystupuje, "Miesto do" sa nesmie meniť
+        const filteredTeamsOut = filterTeamsByCategory(teamsAlightingHere);
+        const isPlaceToLocked = filteredTeamsOut.length > 0;
+    
         const removeTeamSegment = async (teamKeyToRemove, clickSide, rowObj) => {
             if (!window.db || !busId || !dayKey || !rowObj?.id) return;
-        
+    
             const [teamName, category] = String(teamKeyToRemove).split('|');
             const tn = String(teamName).trim();
             const cat = cleanCategory(category || '');
-        
+    
             const targetParent = (savedTransfersRef.current || []).find((p) => {
                 if (p.dayKey !== dayKey) return false;
                 if (String(p.teamName || '').trim() !== tn) return false;
@@ -5485,16 +5515,16 @@ const TransportApp = ({ userProfileData }) => {
                     return s.alightingRowId === rowObj.rowId;
                 });
             });
-        
+    
             if (!targetParent) {
                 window.showGlobalNotification('Segment sa nenašiel.', 'error');
                 return;
             }
-        
+    
             const originalParentWhen = targetParent.when && String(targetParent.when).trim() !== ''
                 ? targetParent.when
                 : null;
-        
+    
             try {
                 await updateParentTransfer(targetParent.key, (draft) => {
                     draft.segments = draft.segments.map((s) => {
@@ -5525,12 +5555,12 @@ const TransportApp = ({ userProfileData }) => {
                         }
                         return s;
                     });
-        
+    
                     if (originalParentWhen) {
                         draft.when = originalParentWhen;
                     }
                 });
-        
+    
                 window.showGlobalNotification('Tím bol odstránený z autobusu.', 'info');
             } catch (err) {
                 console.error('[TRANSPORT] Chyba pri odstraňovaní tímu z busu:', err);
@@ -5550,14 +5580,14 @@ const TransportApp = ({ userProfileData }) => {
                         const newValue = e.target.value;
                         const oldValue = row.timeFrom || '';
                         if (newValue === oldValue) return;
-                    
+    
                         if (!newValue) {
                             await updateBusRowField(row.id, 'timeFrom', newValue);
                             return;
                         }
-                    
+    
                         await updateBusRowField(row.id, 'timeFrom', newValue);
-                    
+    
                         let newTimeTo = null;
                         const travelMinutes = getTravelMinutes(row.placeFromId, row.placeToId);
                         if (travelMinutes != null && /^\d{1,2}:\d{2}$/.test(newValue)) {
@@ -5571,7 +5601,7 @@ const TransportApp = ({ userProfileData }) => {
                                 await updateBusRowField(row.id, 'timeTo', newTimeTo);
                             }
                         }
-                    
+    
                         if (newTimeTo != null) {
                             cascadeFollowingRowsAfterTimeFromChange(busId, dayKey, row.id, newValue, newTimeTo);
                         }
@@ -5613,11 +5643,11 @@ const TransportApp = ({ userProfileData }) => {
                             const newPlaceFromId = e.target.value;
                             const oldPlaceFromId = row.placeFromId || '';
                             if (newPlaceFromId === oldPlaceFromId) return;
-
+    
                             await updateBusRowField(row.id, 'placeFrom', newPlaceFromId);
-
+    
                             const currentPlaceToId = row.placeToId || null;
-
+    
                             if (newPlaceFromId && currentPlaceToId && row.timeFrom && /^\d{1,2}:\d{2}$/.test(row.timeFrom)) {
                                 const travelMinutes = getTravelMinutes(newPlaceFromId, currentPlaceToId);
                                 if (travelMinutes != null) {
@@ -5639,10 +5669,16 @@ const TransportApp = ({ userProfileData }) => {
                         stopOptionsFrom
                     )
             ),
+            // <<< ZMENA: bunka "Miesto do" so zámkom, ak v tomto riadku niekto vystupuje
             React.createElement('td', { className: 'border border-gray-300 p-1' },
                 React.createElement('select', {
                     value: row.placeToId || '',
+                    disabled: isPlaceToLocked,
+                    title: isPlaceToLocked
+                        ? 'Miesto do sa nedá meniť, pretože v tomto riadku vystupuje tím. Najprv odstráňte tímy zo stĺpca Výstup.'
+                        : undefined,
                     onChange: async (e) => {
+                        if (isPlaceToLocked) return;
                         const newPlaceToId = e.target.value;
                         const oldPlaceToId = row.placeToId || '';
                         if (newPlaceToId === oldPlaceToId) return;
@@ -5666,12 +5702,15 @@ const TransportApp = ({ userProfileData }) => {
                             resyncFollowingRowsAfterPlaceToChange(busId, dayKey, row.id);
                         }, 300);
                     },
-                    className: selectCls,
+                    className: isPlaceToLocked
+                        ? selectCls + ' bg-gray-100 text-gray-500 cursor-not-allowed opacity-70'
+                        : selectCls,
+                    style: isPlaceToLocked ? { cursor: 'not-allowed' } : undefined,
                 },
                     React.createElement('option', { value: '' }, '— vyber zastávku —'),
                     stopOptionsTo
                 )
-            ),            
+            ),
             React.createElement('td', { className: 'border border-gray-300 p-1 align-middle whitespace-nowrap' },
                 (() => {
                     const teamsBoardingHere = [];
@@ -5695,7 +5734,7 @@ const TransportApp = ({ userProfileData }) => {
                         });
                     });
                     const filteredTeamsIn = filterTeamsByCategory(teamsBoardingHere);
-            
+    
                     if (filteredTeamsIn.length === 0) {
                         return React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—');
                     }
@@ -5724,29 +5763,9 @@ const TransportApp = ({ userProfileData }) => {
                     );
                 })()
             ),
+            // <<< ZMENA: bunka Výstup už používa vopred vypočítané teamsAlightingHere
             React.createElement('td', { className: 'border border-gray-300 p-1 align-middle whitespace-nowrap' },
                 (() => {
-                    const teamsAlightingHere = [];
-                    (savedTransfersRef.current || []).forEach((parent) => {
-                        if (parent.dayKey !== dayKey) return;
-                        if (parent.isWalking === true) return;
-                        const effectiveCategory = cleanCategory(parent.category || '');
-                        let effectiveTeamName = String(parent.teamName || '').trim();
-                        if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
-                            const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
-                            const info = (teamsLookupRef.current || {})[lookupKey];
-                            if (info && info.teamName) effectiveTeamName = info.teamName;
-                        }
-                        if (!effectiveTeamName) return;
-                        (parent.segments || []).forEach((seg) => {
-                            if (seg.busId !== busId) return;
-                            if (seg.isWalking === true) return;
-                            if (seg.alightingRowId === row.rowId) {
-                                teamsAlightingHere.push(`${effectiveTeamName}|${effectiveCategory}`);
-                            }
-                        });
-                    });
-                    const filteredTeamsOut = filterTeamsByCategory(teamsAlightingHere);
                     if (filteredTeamsOut.length === 0) {
                         return React.createElement('span', { className: 'text-xs text-gray-400 italic' }, '—');
                     }
@@ -5785,17 +5804,13 @@ const TransportApp = ({ userProfileData }) => {
                     if (currentOrder == null) {
                         return React.createElement('span', { className: 'text-gray-400' }, '—');
                     }
-
-                    // Tímy, ktoré sú v buse na tejto zastávke:
-                    // - tí, ktorí tu nastupujú (boardingRowId === row.rowId)
-                    // - tí, ktorí tu vystupujú (alightingRowId === row.rowId)
-                    // - tí, ktorí ešte ostávajú v buse (boarding order < currentOrder a alighting order > currentOrder)
+    
                     const teamsAtThisStop = new Set();
-
+    
                     (savedTransfersRef.current || []).forEach((parent) => {
                         if (parent.dayKey !== dayKey) return;
                         if (parent.isWalking === true) return;
-
+    
                         const effectiveCategory = cleanCategory(parent.category || '');
                         let effectiveTeamName = String(parent.teamName || '').trim();
                         if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
@@ -5804,34 +5819,31 @@ const TransportApp = ({ userProfileData }) => {
                             if (info && info.teamName) effectiveTeamName = info.teamName;
                         }
                         if (!effectiveTeamName) return;
-
+    
                         const teamKeyStr = `${effectiveTeamName}|${effectiveCategory}`;
-
+    
                         (parent.segments || []).forEach((seg) => {
                             if (seg.busId !== busId) return;
                             if (seg.isWalking === true) return;
-
+    
                             const bOrder = parseOrderFromRowId(seg.boardingRowId);
                             const aOrder = parseOrderFromRowId(seg.alightingRowId);
                             if (bOrder == null || aOrder == null) return;
-
-                            // Nastupuje tu?
+    
                             const isBoardingHere = (seg.boardingRowId === row.rowId) || (bOrder === currentOrder);
-                            // Vystupuje tu?
                             const isAlightingHere = (seg.alightingRowId === row.rowId) || (aOrder === currentOrder);
-                            // Ešte ostáva v buse po tejto zastávke?
                             const isStillInBus = (bOrder < currentOrder && aOrder > currentOrder);
-
+    
                             if (isBoardingHere || isAlightingHere || isStillInBus) {
                                 teamsAtThisStop.add(teamKeyStr);
                             }
                         });
                     });
-
+    
                     if (teamsAtThisStop.size === 0) {
                         return React.createElement('span', { className: 'text-gray-400' }, '—');
                     }
-
+    
                     const total = [...teamsAtThisStop].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
                     return total > 0 ? total : React.createElement('span', { className: 'text-gray-400' }, '—');
                 })()
@@ -5898,20 +5910,17 @@ const TransportApp = ({ userProfileData }) => {
                     onClick: () => removeBusRow(row.id),
                     className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 flex items-center justify-center mx-auto',
                     title: 'Odstrániť riadok',
-                }, React.createElement('i', { className: 'fa-solid fa-xmark' })),            
+                }, React.createElement('i', { className: 'fa-solid fa-xmark' })),
                 (() => {
-                    // Zelené "plus" zobrazíme len ak sú vyplnené miesta potrebné na vloženie riadku.
-                    // placeFrom môže byť uzamknuté z predchádzajúceho riadku (lockedPlaceFrom),
-                    // takže kontrolujeme efektívne miesto od (uzamknuté alebo vybrané) a miesto do.
                     const effectivePlaceFromId = lockedPlaceFromId || row.placeFromId || null;
                     const hasPlaceFrom = !!effectivePlaceFromId;
                     const hasPlaceTo = !!row.placeToId;
                     const canInsertRow = hasPlaceFrom && hasPlaceTo;
-
+    
                     if (!canInsertRow) {
                         return null;
                     }
-
+    
                     return React.createElement(
                         'div',
                         {
