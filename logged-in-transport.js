@@ -9355,6 +9355,10 @@ const TransportApp = ({ userProfileData }) => {
             const tb = String(b.teamName || '');
             return ta.localeCompare(tb, 'sk', { sensitivity: 'base' });
         });
+
+        if (sortedTransfers.length === 0) {
+            return null;
+        }
     
         return React.createElement(
             'div',
