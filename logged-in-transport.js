@@ -5775,7 +5775,7 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement('td', {
                 className: 'border border-gray-300 px-2 py-1 text-center text-sm font-semibold',
                 style: { color: '#1d4ed8' },
-                title: 'Počet členov tímov, ktoré sú v autobuse na tejto zastávke (tí, čo tu vystupujú + tí, čo ešte ostávajú v buse).',
+                title: 'Počet členov tímov, ktoré sú v autobuse na tejto zastávke (tí, čo tu nastupujú, tí, čo tu vystupujú, aj tí, čo ešte ostávajú v buse).',
             },
                 (() => {
                     const currentOrder = parseOrderFromRowId(row.rowId);
@@ -5784,6 +5784,7 @@ const TransportApp = ({ userProfileData }) => {
                     }
 
                     // Tímy, ktoré sú v buse na tejto zastávke:
+                    // - tí, ktorí tu nastupujú (boardingRowId === row.rowId)
                     // - tí, ktorí tu vystupujú (alightingRowId === row.rowId)
                     // - tí, ktorí ešte ostávajú v buse (boarding order < currentOrder a alighting order > currentOrder)
                     const teamsAtThisStop = new Set();
@@ -5811,12 +5812,14 @@ const TransportApp = ({ userProfileData }) => {
                             const aOrder = parseOrderFromRowId(seg.alightingRowId);
                             if (bOrder == null || aOrder == null) return;
 
+                            // Nastupuje tu?
+                            const isBoardingHere = (seg.boardingRowId === row.rowId) || (bOrder === currentOrder);
                             // Vystupuje tu?
                             const isAlightingHere = (seg.alightingRowId === row.rowId) || (aOrder === currentOrder);
                             // Ešte ostáva v buse po tejto zastávke?
                             const isStillInBus = (bOrder < currentOrder && aOrder > currentOrder);
 
-                            if (isAlightingHere || isStillInBus) {
+                            if (isBoardingHere || isAlightingHere || isStillInBus) {
                                 teamsAtThisStop.add(teamKeyStr);
                             }
                         });
