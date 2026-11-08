@@ -12383,33 +12383,40 @@ const TransportApp = ({ userProfileData }) => {
                             React.createElement('div', { className: 'text-xs text-gray-500' }, 'Rozdeliť trasu na viac segmentov')
                         )
                     ),
-                    React.createElement(
-                        'button',
-                        {
-                            type: 'button',
-                            onClick: () => {
-                                const transferToAssign = transferActionModal.transfer;
-                                const matches = findMatchingBusRows(transferActionModal.transfer);
-                                setAssignBusMatches(matches);
-                                setAssignBusSelectedKey(
-                                    matches.length > 0
-                                        ? `${matches[0].bus.id}|${matches[0].boardingRow?.id || ''}|${matches[0].alightingRow?.id || ''}|${matches[0].side}`
-                                        : ''
-                                );
-                                setAssignBusTransfer(transferToAssign);
-                                setTransferActionModal(null);
-                                setShowAssignBusModal(true);
+                    (() => {
+                        const matchingBusRows = findMatchingBusRows(transferActionModal.transfer);
+                        if (!matchingBusRows || matchingBusRows.length === 0) {
+                            return null;
+                        }
+
+                        return React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: () => {
+                                    const transferToAssign = transferActionModal.transfer;
+                                    const matches = findMatchingBusRows(transferActionModal.transfer);
+                                    setAssignBusMatches(matches);
+                                    setAssignBusSelectedKey(
+                                        matches.length > 0
+                                            ? `${matches[0].bus.id}|${matches[0].boardingRow?.id || ''}|${matches[0].alightingRow?.id || ''}|${matches[0].side}`
+                                            : ''
+                                    );
+                                    setAssignBusTransfer(transferToAssign);
+                                    setTransferActionModal(null);
+                                    setShowAssignBusModal(true);
+                                },
+                                className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors flex items-center gap-3'
                             },
-                            className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors flex items-center gap-3'
-                        },
-                        React.createElement('i', { className: 'fa-solid fa-bus text-amber-600 text-xl w-6 text-center' }),
-                        React.createElement(
-                            'div',
-                            { className: 'flex-1' },
-                            React.createElement('div', { className: 'font-semibold text-gray-800' }, 'Priradiť presun autobusu'),
-                            React.createElement('div', { className: 'text-xs text-gray-500' }, 'Vytvoriť riadok v plánovaní autobusu')
-                        )
-                    ),
+                            React.createElement('i', { className: 'fa-solid fa-bus text-amber-600 text-xl w-6 text-center' }),
+                            React.createElement(
+                                'div',
+                                { className: 'flex-1' },
+                                React.createElement('div', { className: 'font-semibold text-gray-800' }, 'Priradiť presun autobusu'),
+                                React.createElement('div', { className: 'text-xs text-gray-500' }, 'Vytvoriť riadok v plánovaní autobusu')
+                            )
+                        );
+                    })(),
                     React.createElement(
                         'button',
                         {
