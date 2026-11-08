@@ -12781,6 +12781,7 @@ const TransportApp = ({ userProfileData }) => {
                                                         //   počet ľudí, ktorí nastupujú na začiatku presunu ALEBO už sú v buse (medzi nástupom a výstupom),
                                                         //   počet ľudí, ktorí vystupujú na konci presunu ALEBO ešte ostávajú v buse
                                                         // )
+                                                        // + ak je tento konkrétny riadok vybratý (assignBusSelectedKey), pripočíta sa počet členov aktuálneho tímu.
                                                         const computeBusOccupancy = () => {
                                                             const bOrder = parseOrderFromRowId(boardingRow.rowId);
                                                             const aOrder = parseOrderFromRowId(alightingRow.rowId);
@@ -12842,7 +12843,26 @@ const TransportApp = ({ userProfileData }) => {
                                                             const totalAtBoarding = [...teamsAtBoarding].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
                                                             const totalAtAlighting = [...teamsAtAlighting].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
 
-                                                            return Math.max(totalAtBoarding, totalAtAlighting);
+                                                            let total = Math.max(totalAtBoarding, totalAtAlighting);
+
+                                                            // NOVÉ: Ak je TENTO konkrétny riadok vybratý, pripočítame počet členov
+                                                            // aktuálneho tímu (ten sa do počtu v buse ešte nezapočítal, lebo ešte nie je
+                                                            // priradený). Pri výbere iného riadku sa tento dodatok automaticky "resetuje",
+                                                            // pretože sa počíta len pre riadok, ktorý je práve vybratý.
+                                                            const isThisRowSelected =
+                                                                assignBusSelectedKey &&
+                                                                assignBusSelectedKey.startsWith(`${busId}|${boardingRow.id}|${alightingRow.id}|`);
+                                                            if (isThisRowSelected) {
+                                                                const currentTeamKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
+                                                                const alreadyCounted =
+                                                                    teamsAtBoarding.has(currentTeamKeyStr) ||
+                                                                    teamsAtAlighting.has(currentTeamKeyStr);
+                                                                if (!alreadyCounted) {
+                                                                    total += getTeamMembersCount(currentTeamKeyStr);
+                                                                }
+                                                            }
+
+                                                            return total;
                                                         };
 
                                                         const total = computeBusOccupancy();
