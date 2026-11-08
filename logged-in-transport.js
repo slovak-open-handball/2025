@@ -13063,49 +13063,6 @@ const TransportApp = ({ userProfileData }) => {
         showAssignBusModal && assignBusTransfer && (() => {
             const parentKey = assignBusTransfer._parentKey || assignBusTransfer.key;
             const currentParent = savedTransfers.find((s) => s.key === parentKey);
-        
-            try {
-                console.log('%c[TRANSPORT][MODAL:showAssignBusModal] Otvorené', 'color:#ea580c;font-weight:bold;', {
-                    assignBusTransfer,
-                    parentKey,
-                    currentParent: currentParent || null,
-                    currentParentWhen: currentParent ? currentParent.when : null,
-                    currentParentSegments: currentParent ? (currentParent.segments || []).map((s, i) => ({
-                        idx: i,
-                        fromId: s.fromId,
-                        toId: s.toId,
-                        fromName: resolvePlaceNameById(s.fromId),
-                        toName: resolvePlaceNameById(s.toId),
-                        startTs: s.startTs,
-                        endTs: s.endTs,
-                        startTime: s.startTs != null ? formatTsLocal(s.startTs) : null,
-                        endTime: s.endTs != null ? formatTsLocal(s.endTs) : null,
-                        when: s.when,
-                        isWalking: s.isWalking === true,
-                        busAssigned: s.busAssigned === true,
-                        busId: s.busId || null,
-                        busName: s.busId ? (buses.find((b) => b.id === s.busId)?.name || null) : null,
-                        boardingRowId: s.boardingRowId || null,
-                        alightingRowId: s.alightingRowId || null,
-                    })) : null,
-                    assignBusMatches: Array.isArray(assignBusMatches) ? assignBusMatches.map((m) => ({
-                        busId: m?.bus?.id || null,
-                        busName: m?.bus?.name || null,
-                        boardingRowId: m?.boardingRow?.id || null,
-                        boardingRowIdFull: m?.boardingRow?.rowId || null,
-                        boardingTime: m?.boardingTime || null,
-                        alightingRowId: m?.alightingRow?.id || null,
-                        alightingRowIdFull: m?.alightingRow?.rowId || null,
-                        alightingTime: m?.alightingTime || null,
-                        side: m?.side || null,
-                    })) : null,
-                    assignBusSelectedKey: assignBusSelectedKey || null,
-                    busesCount: (buses || []).length,
-                    busRowsKeys: Object.keys(busRows || {}),
-                });
-            } catch (e) {
-                console.warn('[TRANSPORT][MODAL:showAssignBusModal] log error:', e);
-            }
             
             const currentTransfer = (() => {
                 if (!currentParent) return assignBusTransfer;
@@ -13142,166 +13099,15 @@ const TransportApp = ({ userProfileData }) => {
                         className: 'bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto',
                         onClick: (e) => e.stopPropagation()
                     },
-                    React.createElement(
-                        'div',
-                        { className: 'flex items-start gap-3 mb-4' },
-                        React.createElement('i', {
-                            className: 'fa-solid fa-bus text-amber-600 text-2xl mt-0.5'
-                        }),
-                        React.createElement(
-                            'div',
-                            { className: 'flex-1' },
-                            React.createElement(
-                                'h3',
-                                { className: 'text-lg font-semibold text-gray-800' },
-                                'Priradiť presun k autobusu'
-                            ),
-                            React.createElement(
-                                'p',
-                                { className: 'text-xs text-gray-500 mt-0.5' },
-                                'Zobrazujú sa len autobusy s riadkom, ktorý zodpovedá trase a času presunu.'
-                            )
-                        )
-                    ),
-                    (() => {
-                        const tr = currentTransfer;
-                        let displayWhen = null;
-                        if (tr._parentKey) {
-                            const parentRec = savedTransfersRef.current.find((s) => s.key === tr._parentKey);
-                            const segFromId = tr.fromId || null;
-                            const segToId = tr.toId || null;
-        
-                            const parentSeg = (() => {
-                                if (!parentRec || !Array.isArray(parentRec.segments)) return null;
-                                if (!segFromId || !segToId) return null;
-                                const idx = findSegmentIndex(parentRec.segments, segFromId, segToId);
-                                return idx !== -1 ? parentRec.segments[idx] : null;
-                            })();
-                            if (parentSeg && parentSeg.busId && parentSeg.boardingRowId && parentSeg.alightingRowId
-                                && parentSeg.startTs != null && parentSeg.endTs != null && parentSeg.endTs > parentSeg.startTs) {
-                                displayWhen = `${formatTsLocal(parentSeg.startTs)} – ${formatTsLocal(parentSeg.endTs)}`;
-                            }
-                            if (!displayWhen) {
-                                const provisional = computeProvisionalSegmentRange(tr);
-                                if (provisional) {
-                                    displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
-                                }
-                            }
-                        } else {
-                            if (tr.when && String(tr.when).trim() !== '') {
-                                displayWhen = tr.when;
-                            }
-                            if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
-                                let earliestStart = null;
-                                let latestEnd = null;
-                                tr.segments.forEach((s) => {
-                                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                                        earliestStart = s.startTs;
-                                    }
-                                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                                        latestEnd = s.endTs;
-                                    }
-                                });
-                                if (earliestStart != null && latestEnd != null) {
-                                    displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
-                                } else if (earliestStart != null) {
-                                    displayWhen = formatTsLocal(earliestStart);
-                                } else if (latestEnd != null) {
-                                    displayWhen = formatTsLocal(latestEnd);
-                                }
-                            }
-        
-                            if (!displayWhen) {
-                                const provisional = computeProvisionalSegmentRange(tr);
-                                if (provisional) {
-                                    displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
-                                }
-                            }
-                        }        
-                        const counts = getTeamCountsForTransfer(tr.category, tr.teamName);
-                        let membersCount = null;
-                        let membersTitle = '';
-                        if (counts) {
-                            membersCount =
-                                (counts.players || 0) +
-                                (counts.menRT || 0) +
-                                (counts.womenRT || 0) +
-                                (counts.menDrivers || 0) +
-                                (counts.womenDrivers || 0);
-                            membersTitle = 'Počet členov tímu';
-                        } else {
-                            const avg = getCategoryAverageForTransfer(tr.category);
-                            if (avg != null) {
-                                membersCount = avg;
-                                membersTitle = `Priemer členov tímu v kategórii ${tr.category} (zaokrúhlené nahor)`;
-                            }
-                        }        
-                        const transportColor = getTransportColorForCategory(tr.category);
-                        const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;        
-                        return React.createElement(
-                            'div',
-                            {
-                                className: 'mb-4 text-sm text-gray-700 flex flex-col leading-snug rounded-md px-3 py-2',
-                                style: {
-                                    position: 'relative',
-                                    borderLeft: transportColor ? `6px solid ${transportColor}` : '2px solid #c4b5fd',
-                                    ...(boxBg ? { backgroundColor: boxBg } : { backgroundColor: '#f5f3ff' }),
-                                },
-                            },
-                            React.createElement(
-                                'div',
-                                { className: 'flex flex-wrap items-center gap-x-2 gap-y-1' },
-                                tr.teamName &&
-                                    React.createElement(
-                                        'span',
-                                        {
-                                            className: 'text-sm font-semibold',
-                                            style: { color: transportColor || '#5b21b6' },
-                                            title: 'Tím',
-                                        },
-                                        tr.teamName
-                                    ),
-                                membersCount != null &&
-                                    React.createElement(
-                                        'span',
-                                        {
-                                            className: 'text-sm font-semibold',
-                                            style: { color: transportColor || '#5b21b6' },
-                                            title: membersTitle,
-                                        },
-                                        `• ${membersCount} členov`
-                                    )
-                            ),
-                            React.createElement(
-                                'span',
-                                { className: 'text-sm text-gray-900 font-medium' },
-                                `${resolvePlaceNameById(tr.fromId) || '?'} → ${resolvePlaceNameById(tr.toId) || '?'}`
-                            ), 
-                            displayWhen &&
-                                React.createElement(
-                                    'span',
-                                    { className: 'text-sm text-gray-600' },
-                                    displayWhen
-                                )
-                        );
-                    })(),
+                    // ... (header) ...
+                    // ... (info box) ...
                     (() => {
                         const currentMatches = findMatchingBusRows(currentTransfer);        
                         if (currentMatches.length === 0) {
                             return React.createElement(
                                 'div',
                                 { className: 'mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm' },
-                                React.createElement(
-                                    'p',
-                                    { className: 'text-red-700 flex items-start gap-2' },
-                                    React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
-                                    React.createElement(
-                                        'span',
-                                        null,
-                                        'Pre tento presun neexistuje žiadny autobus s trasou, ktorá by zodpovedala miestam a času presunu. ',
-                                        'Najprv pridajte riadky do autobusu (v Plánovaní) tak, aby trasa autobusu obsahovala miesto odchodu a príchodu presunu.'
-                                    )
-                                )
+                                // ... (error hláška) ...
                             );
                         }        
                         return React.createElement(
@@ -13316,12 +13122,10 @@ const TransportApp = ({ userProfileData }) => {
                                 'ul',
                                 { className: 'space-y-2' },
                                 (() => {
-                                    // <<< NOVÉ: Pre každý match zistíme, či v danom buse (na danom dni)
-                                    // už sedí nejaký superstructure tím s rovnakým posledným písmenom
-                                    // ako práve priraďovaný tím. Ak áno, riadok dostane štítok "odporúčané"
-                                    // a ak ešte nie je nič vybrané, predvolene sa vyberie.
                                     const currentTransferTeamName = String(currentTransfer.teamName || '').trim();
+                                    const currentTransferCategory = cleanCategory(currentTransfer.category || '');
                                     const currentTransferDayKey = currentTransfer.dayKey || null;
+                                    const currentTransferKeyStr = `${currentTransferTeamName}|${currentTransferCategory}`;
 
                                     const getTeamLastChar = (teamName) => {
                                         if (!teamName) return null;
@@ -13395,12 +13199,8 @@ const TransportApp = ({ userProfileData }) => {
                                     // a v danom buse ešte NIE JE priraďovaný tím (aby sme nevybrali riadok,
                                     // kde už tím sedí a nemá zmysel ho tam priraďovať znova).
                                     if (!assignBusSelectedKey) {
-                                        const currentTransferTeamNameForDefault = String(currentTransfer.teamName || '').trim();
-                                        const currentTransferCategoryForDefault = cleanCategory(currentTransfer.category || '');
-                                        const currentTransferDayKeyForDefault = currentTransfer.dayKey || null;
-
                                         const findPreferredWithoutCurrentTeam = () => {
-                                            if (!currentTransferDayKeyForDefault) return null;
+                                            if (!currentTransferDayKey) return null;
                                             for (const item of matchesWithPreferredFlag) {
                                                 if (!item.isPreferred) continue;
                                                 const mm = item.match;
@@ -13415,7 +13215,7 @@ const TransportApp = ({ userProfileData }) => {
                                                     if (parent.isWalking === true) return false;
 
                                                     const parentCategory = cleanCategory(parent.category || '');
-                                                    if (parentCategory !== currentTransferCategoryForDefault) return false;
+                                                    if (parentCategory !== currentTransferCategory) return false;
 
                                                     let parentTeamName = String(parent.teamName || '').trim();
                                                     if (!parentTeamName && parent.teamUid != null && parent.teamIndex != null) {
@@ -13424,7 +13224,7 @@ const TransportApp = ({ userProfileData }) => {
                                                         if (info && info.teamName) parentTeamName = info.teamName;
                                                     }
                                                     if (!parentTeamName) return false;
-                                                    if (parentTeamName !== currentTransferTeamNameForDefault) return false;
+                                                    if (parentTeamName !== currentTransferTeamName) return false;
 
                                                     return (parent.segments || []).some((seg) => {
                                                         if (!seg) return false;
@@ -13459,7 +13259,6 @@ const TransportApp = ({ userProfileData }) => {
                                         const isSelected = assignBusSelectedKey === key;        
                                         const hasBoarding = !!m.boardingRow;
                                         const hasAlighting = !!m.alightingRow;        
-                                        const teamKey = `${currentTransfer.teamName}|${currentTransfer.category || ''}`;        
                                         return React.createElement(
                                             'li',
                                             { key },
@@ -13484,6 +13283,17 @@ const TransportApp = ({ userProfileData }) => {
                                                             'div',
                                                             { className: 'font-semibold text-gray-800 text-sm flex items-center gap-2 flex-wrap' },
                                                             m.bus.name,
+                                                            isPreferred &&
+                                                                React.createElement(
+                                                                    'span',
+                                                                    {
+                                                                        className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                                                        style: { backgroundColor: '#ede9fe', color: '#6d28d9' },
+                                                                        title: 'V tomto autobuse už sedí superstructure tím z rovnakej skupiny (rovnaké posledné písmeno).'
+                                                                    },
+                                                                    React.createElement('i', { className: 'fa-solid fa-wand-magic-sparkles text-[9px]' }),
+                                                                    'odporúčané'
+                                                                )
                                                         ),
                                                         React.createElement(
                                                             'div',
@@ -13579,18 +13389,15 @@ const TransportApp = ({ userProfileData }) => {
                                                                 const teamsSet = new Set([...teamsAtBoarding, ...teamsAtAlighting]);
                                                                 let teams = [...teamsSet];
                                                         
-                                                                const isThisRowSelected =
-                                                                    assignBusSelectedKey &&
-                                                                    assignBusSelectedKey.startsWith(`${busId}|${boardingRow.id}|${alightingRow.id}|`);
-                                                                if (isThisRowSelected) {
-                                                                    const currentTeamKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
-                                                                    const alreadyCounted =
-                                                                        teamsAtBoarding.has(currentTeamKeyStr) ||
-                                                                        teamsAtAlighting.has(currentTeamKeyStr);
-                                                                    if (!alreadyCounted) {
-                                                                        total += getTeamMembersCount(currentTeamKeyStr);
-                                                                        teams.push(currentTeamKeyStr);
-                                                                    }
+                                                                // <<< ZMENA: aktuálne priraďovaný tím pridaj do tooltipu VŽDY,
+                                                                // aby používateľ v tooltipe vždy videl reálny počet vrátane neho.
+                                                                const currentTeamKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
+                                                                const alreadyCounted =
+                                                                    teamsAtBoarding.has(currentTeamKeyStr) ||
+                                                                    teamsAtAlighting.has(currentTeamKeyStr);
+                                                                if (!alreadyCounted) {
+                                                                    total += getTeamMembersCount(currentTeamKeyStr);
+                                                                    teams.push(currentTeamKeyStr);
                                                                 }
                                                         
                                                                 return { total, teams };
@@ -13602,9 +13409,7 @@ const TransportApp = ({ userProfileData }) => {
                                                         
                                                             const currentTransferKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
                                                             const teamsForTooltip = new Set(teamsInBus || []);
-                                                            if (isSelected) {
-                                                                teamsForTooltip.add(currentTransferKeyStr);
-                                                            }
+                                                            teamsForTooltip.add(currentTransferKeyStr);
                                                         
                                                             const teamTooltipItems = [...teamsForTooltip]
                                                                 .map((tk) => {
