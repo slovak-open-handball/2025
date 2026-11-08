@@ -3882,28 +3882,33 @@ const TransportApp = ({ userProfileData }) => {
 
     useEffect(() => {
         // Ak je zapnutý filter "Iba časti presunov", ale pre aktuálny výber
-        // (deň / kategória) neexistuje žiadna časť presunu (t.j. presun s medzizastávkami),
+        // (deň / kategória) neexistuje žiadna NEPRIradená časť presunu,
         // automaticky filter vypneme, aby sa zobrazili všetky presuny.
         if (!showOnlyPartialTransfers) return;
 
-        const hasAnyPartialTransfer = (savedTransfers || []).some((t) => {
+        const hasAnyVisiblePartialTransfer = (savedTransfers || []).some((t) => {
             if (selectedDayKey && t.dayKey !== selectedDayKey) return false;
             if (selectedCategoryFilter && cleanCategory(t.category || '') !== cleanCategory(selectedCategoryFilter)) return false;
 
-            // "Časť presunu" = parent má medzizastávky (intermediateStopIds)
-            if (Array.isArray(t.intermediateStopIds) && t.intermediateStopIds.length > 0) return true;
+            // Musí ísť o parent s medzizastávkami (inak to nie je "časť presunu")
+            if (!Array.isArray(t.intermediateStopIds) || t.intermediateStopIds.length === 0) return false;
 
-            // alebo ide o segment z parenta (má _parentKey) s medzizastávkami
-            if (t._parentKey && t._parentKey !== t.key) {
-                const parent = (savedTransfers || []).find((p) => p.key === t._parentKey);
-                if (parent && Array.isArray(parent.intermediateStopIds) && parent.intermediateStopIds.length > 0) {
-                    return true;
-                }
-            }
-            return false;
+            // Parent musí mať aspoň jeden segment, ktorý NIE je priradený busu
+            // a NIE je označený ako peši (tie sa v zozname nezobrazujú).
+            const segments = Array.isArray(t.segments) ? t.segments : [];
+            if (segments.length === 0) return false;
+
+            const hasVisibleSegment = segments.some((seg) => {
+                if (!seg) return false;
+                if (seg.isWalking === true) return false;
+                if (seg.busId && seg.boardingRowId && seg.alightingRowId) return false;
+                return true;
+            });
+
+            return hasVisibleSegment;
         });
 
-        if (!hasAnyPartialTransfer) {
+        if (!hasAnyVisiblePartialTransfer) {
             setShowOnlyPartialTransfers(false);
         }
     }, [savedTransfers, selectedDayKey, selectedCategoryFilter, showOnlyPartialTransfers]);
@@ -9046,7 +9051,15 @@ const TransportApp = ({ userProfileData }) => {
 
         const baseFilteredFirstOnly = baseFilteredFirstOnlyRaw;
 
-        const filtered = showOnlyPartialTransfers
+        const hasAnyPartialTransfer = baseFilteredFirstOnly.some(
+            (t) => t._parentKey && t._parentRoute
+        );
+
+        // Ak nie je žiadna časť presunu, filter sa nesmie uplatniť (inak by sme skryli všetko).
+        const effectiveShowOnlyPartialTransfers =
+            showOnlyPartialTransfers && hasAnyPartialTransfer;
+
+        const filtered = effectiveShowOnlyPartialTransfers
             ? baseFilteredFirstOnly.filter((t) => t._parentKey && t._parentRoute)
             : baseFilteredFirstOnly;
         
@@ -9113,10 +9126,6 @@ const TransportApp = ({ userProfileData }) => {
             (() => {
                 // Checkbox "Iba časti presunov" zobrazíme len ak existuje aspoň jeden
                 // presun, ktorý je časťou väčšieho presunu (má _parentKey a _parentRoute).
-                const hasAnyPartialTransfer = filtered.some(
-                    (t) => t._parentKey && t._parentRoute
-                );
-
                 if (!hasAnyPartialTransfer) {
                     return null;
                 }
