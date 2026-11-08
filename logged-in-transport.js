@@ -4855,10 +4855,14 @@ const TransportApp = ({ userProfileData }) => {
                 window.showGlobalNotification('Riadok odstránený.', 'info');
                 return;
             }
-    
+
+            // Zistíme order odstraňovaného riadku ešte pred zmazaním.
+            const rowsKey = `${busId}|${dayKey}`;
+            const removedRow = (busRows[rowsKey] || []).find((r) => r.id === rowId);
+            const removedOrder = removedRow ? Number(removedRow.order) || 0 : null;
+
             await deleteDoc(doc(window.db, 'transport', rowId));
     
-            const rowsKey = `${busId}|${dayKey}`;
             const remaining = (busRows[rowsKey] || [])
                 .filter((r) => r.id !== rowId)
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -4877,34 +4881,68 @@ const TransportApp = ({ userProfileData }) => {
                 }
             });
             await Promise.all(updates);
-    
-            if (Object.keys(rowIdMap).length > 0) {
-                const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
-                const snap = await getDoc(docRef);
-                if (snap.exists()) {
-                    const data = snap.data() || {};
-                    const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
-                    const tUpdates = {};
-                    Object.entries(rawTransfers).forEach(([key, v]) => {
-                        if (!v || !Array.isArray(v.segments)) return;
-                        let changed = false;
-                        const newSegments = v.segments.map((s) => {
-                            if (s.busId !== busId) return s;
-                            if (s.boardingRowId && rowIdMap[s.boardingRowId]) {
-                                changed = true;
-                                s = { ...s, boardingRowId: rowIdMap[s.boardingRowId] };
-                            }
-                            if (s.alightingRowId && rowIdMap[s.alightingRowId]) {
-                                changed = true;
-                                s = { ...s, alightingRowId: rowIdMap[s.alightingRowId] };
-                            }
-                            return s;
+
+            // NOVÉ: Pre každý tím priradený v buse znížime indexy boardingRowId/alightingRowId o 1,
+            // ak boli väčšie ako order odstráneného riadku.
+            if (removedOrder != null) {
+                try {
+                    const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
+                    const snap = await getDoc(docRef);
+                    if (snap.exists()) {
+                        const data = snap.data() || {};
+                        const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
+                        const tUpdates = {};
+
+                        const shiftRowId = (rowIdStr) => {
+                            if (!rowIdStr) return rowIdStr;
+                            const parts = String(rowIdStr).split('__');
+                            if (parts.length < 3) return rowIdStr;
+                            const orderNum = Number(parts[parts.length - 1]);
+                            if (!Number.isFinite(orderNum)) return rowIdStr;
+                            if (orderNum < removedOrder) return rowIdStr;
+                            const newOrderNum = orderNum - 1;
+                            if (newOrderNum < 1) return rowIdStr;
+                            parts[parts.length - 1] = String(newOrderNum);
+                            return parts.join('__');
+                        };
+
+                        Object.entries(rawTransfers).forEach(([key, v]) => {
+                            if (!v || !Array.isArray(v.segments)) return;
+                            let changed = false;
+                            const newSegments = v.segments.map((s) => {
+                                if (s.busId !== busId) return s;
+                                let nextSeg = s;
+                                if (s.boardingRowId && rowIdMap[s.boardingRowId]) {
+                                    changed = true;
+                                    nextSeg = { ...nextSeg, boardingRowId: rowIdMap[s.boardingRowId] };
+                                } else if (s.boardingRowId) {
+                                    const shifted = shiftRowId(s.boardingRowId);
+                                    if (shifted !== s.boardingRowId) {
+                                        changed = true;
+                                        nextSeg = { ...nextSeg, boardingRowId: shifted };
+                                    }
+                                }
+                                if (s.alightingRowId && rowIdMap[s.alightingRowId]) {
+                                    changed = true;
+                                    nextSeg = { ...nextSeg, alightingRowId: rowIdMap[s.alightingRowId] };
+                                } else if (s.alightingRowId) {
+                                    const shifted = shiftRowId(s.alightingRowId);
+                                    if (shifted !== s.alightingRowId) {
+                                        changed = true;
+                                        nextSeg = { ...nextSeg, alightingRowId: shifted };
+                                    }
+                                }
+                                return nextSeg;
+                            });
+                            if (changed) tUpdates[key] = { ...v, segments: newSegments };
                         });
-                        if (changed) tUpdates[key] = { ...v, segments: newSegments };
-                    });
-                    if (Object.keys(tUpdates).length > 0) {
-                        await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
+
+                        if (Object.keys(tUpdates).length > 0) {
+                            await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
+                        }
                     }
+                } catch (e) {
+                    console.error('[TRANSPORT] Chyba pri znižovaní indexov riadkov v presunoch:', e);
                 }
             }
     
