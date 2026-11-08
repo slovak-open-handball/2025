@@ -13281,17 +13281,19 @@ const TransportApp = ({ userProfileData }) => {
                                                             teamsForTooltip.add(currentTransferKeyStr);
                                                         }
                                                         
-                                                        // <<< ZMENA: zoradenie podľa skratky (abecedne), pri zhode podľa plného názvu.
+                                                        // <<< ZMENA: v tooltipe odstránime názov kategórie z názvu tímu, ak je jeho súčasťou.
+                                                        // Skratka (ak existuje) sa používa priamo – tá už kategóriu neobsahuje.
                                                         const teamTooltipItems = [...teamsForTooltip]
                                                             .map((tk) => {
                                                                 const parts = String(tk).split('|');
                                                                 const tn = (parts[0] || '').trim();
                                                                 const cat = (parts[1] || '').trim();
                                                                 const shortcut = getTeamShortcut(cat, tn);
-                                                                const label = shortcut || tn;
+                                                                const cleanTeamName = stripCategoryFromTeamName(tn, cat);
+                                                                const label = shortcut || cleanTeamName;
                                                                 const members = getTeamMembersCount(tk);
                                                                 const color = getCategoryTextColor(cat);
-                                                                return { label, teamName: tn, members, color };
+                                                                return { label, teamName: cleanTeamName, members, color };
                                                             })
                                                             .filter((x) => !!x.label)
                                                             .sort((a, b) => {
