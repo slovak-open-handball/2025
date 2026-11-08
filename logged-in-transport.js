@@ -13063,6 +13063,49 @@ const TransportApp = ({ userProfileData }) => {
         showAssignBusModal && assignBusTransfer && (() => {
             const parentKey = assignBusTransfer._parentKey || assignBusTransfer.key;
             const currentParent = savedTransfers.find((s) => s.key === parentKey);
+        
+            try {
+                console.log('%c[TRANSPORT][MODAL:showAssignBusModal] Otvorené', 'color:#ea580c;font-weight:bold;', {
+                    assignBusTransfer,
+                    parentKey,
+                    currentParent: currentParent || null,
+                    currentParentWhen: currentParent ? currentParent.when : null,
+                    currentParentSegments: currentParent ? (currentParent.segments || []).map((s, i) => ({
+                        idx: i,
+                        fromId: s.fromId,
+                        toId: s.toId,
+                        fromName: resolvePlaceNameById(s.fromId),
+                        toName: resolvePlaceNameById(s.toId),
+                        startTs: s.startTs,
+                        endTs: s.endTs,
+                        startTime: s.startTs != null ? formatTsLocal(s.startTs) : null,
+                        endTime: s.endTs != null ? formatTsLocal(s.endTs) : null,
+                        when: s.when,
+                        isWalking: s.isWalking === true,
+                        busAssigned: s.busAssigned === true,
+                        busId: s.busId || null,
+                        busName: s.busId ? (buses.find((b) => b.id === s.busId)?.name || null) : null,
+                        boardingRowId: s.boardingRowId || null,
+                        alightingRowId: s.alightingRowId || null,
+                    })) : null,
+                    assignBusMatches: Array.isArray(assignBusMatches) ? assignBusMatches.map((m) => ({
+                        busId: m?.bus?.id || null,
+                        busName: m?.bus?.name || null,
+                        boardingRowId: m?.boardingRow?.id || null,
+                        boardingRowIdFull: m?.boardingRow?.rowId || null,
+                        boardingTime: m?.boardingTime || null,
+                        alightingRowId: m?.alightingRow?.id || null,
+                        alightingRowIdFull: m?.alightingRow?.rowId || null,
+                        alightingTime: m?.alightingTime || null,
+                        side: m?.side || null,
+                    })) : null,
+                    assignBusSelectedKey: assignBusSelectedKey || null,
+                    busesCount: (buses || []).length,
+                    busRowsKeys: Object.keys(busRows || {}),
+                });
+            } catch (e) {
+                console.warn('[TRANSPORT][MODAL:showAssignBusModal] log error:', e);
+            }
             
             const currentTransfer = (() => {
                 if (!currentParent) return assignBusTransfer;
@@ -13099,15 +13142,169 @@ const TransportApp = ({ userProfileData }) => {
                         className: 'bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto',
                         onClick: (e) => e.stopPropagation()
                     },
-                    // ... (header) ...
-                    // ... (info box) ...
+                    // ===== HLAVIČKA =====
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-start gap-3 mb-4' },
+                        React.createElement('i', {
+                            className: 'fa-solid fa-bus text-amber-600 text-2xl mt-0.5'
+                        }),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement(
+                                'h3',
+                                { className: 'text-lg font-semibold text-gray-800' },
+                                'Priradiť presun k autobusu'
+                            ),
+                            React.createElement(
+                                'p',
+                                { className: 'text-xs text-gray-500 mt-0.5' },
+                                'Zobrazujú sa len autobusy s riadkom, ktorý zodpovedá trase a času presunu.'
+                            )
+                        )
+                    ),
+                    // ===== INFO BOX S TÍMOM / TRASOU / ČASOM =====
+                    (() => {
+                        const tr = currentTransfer;
+                        let displayWhen = null;
+                        if (tr._parentKey) {
+                            const parentRec = savedTransfersRef.current.find((s) => s.key === tr._parentKey);
+                            const segFromId = tr.fromId || null;
+                            const segToId = tr.toId || null;
+        
+                            const parentSeg = (() => {
+                                if (!parentRec || !Array.isArray(parentRec.segments)) return null;
+                                if (!segFromId || !segToId) return null;
+                                const idx = findSegmentIndex(parentRec.segments, segFromId, segToId);
+                                return idx !== -1 ? parentRec.segments[idx] : null;
+                            })();
+                            if (parentSeg && parentSeg.busId && parentSeg.boardingRowId && parentSeg.alightingRowId
+                                && parentSeg.startTs != null && parentSeg.endTs != null && parentSeg.endTs > parentSeg.startTs) {
+                                displayWhen = `${formatTsLocal(parentSeg.startTs)} – ${formatTsLocal(parentSeg.endTs)}`;
+                            }
+                            if (!displayWhen) {
+                                const provisional = computeProvisionalSegmentRange(tr);
+                                if (provisional) {
+                                    displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                                }
+                            }
+                        } else {
+                            if (tr.when && String(tr.when).trim() !== '') {
+                                displayWhen = tr.when;
+                            }
+                            if (!displayWhen && Array.isArray(tr.segments) && tr.segments.length > 0) {
+                                let earliestStart = null;
+                                let latestEnd = null;
+                                tr.segments.forEach((s) => {
+                                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                        earliestStart = s.startTs;
+                                    }
+                                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                        latestEnd = s.endTs;
+                                    }
+                                });
+                                if (earliestStart != null && latestEnd != null) {
+                                    displayWhen = `${formatTsLocal(earliestStart)} – ${formatTsLocal(latestEnd)}`;
+                                } else if (earliestStart != null) {
+                                    displayWhen = formatTsLocal(earliestStart);
+                                } else if (latestEnd != null) {
+                                    displayWhen = formatTsLocal(latestEnd);
+                                }
+                            }
+        
+                            if (!displayWhen) {
+                                const provisional = computeProvisionalSegmentRange(tr);
+                                if (provisional) {
+                                    displayWhen = `${formatTsLocal(provisional.startTs)} – ${formatTsLocal(provisional.endTs)}`;
+                                }
+                            }
+                        }        
+                        const counts = getTeamCountsForTransfer(tr.category, tr.teamName);
+                        let membersCount = null;
+                        let membersTitle = '';
+                        if (counts) {
+                            membersCount =
+                                (counts.players || 0) +
+                                (counts.menRT || 0) +
+                                (counts.womenRT || 0) +
+                                (counts.menDrivers || 0) +
+                                (counts.womenDrivers || 0);
+                            membersTitle = 'Počet členov tímu';
+                        } else {
+                            const avg = getCategoryAverageForTransfer(tr.category);
+                            if (avg != null) {
+                                membersCount = avg;
+                                membersTitle = `Priemer členov tímu v kategórii ${tr.category} (zaokrúhlené nahor)`;
+                            }
+                        }        
+                        const transportColor = getTransportColorForCategory(tr.category);
+                        const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;        
+                        return React.createElement(
+                            'div',
+                            {
+                                className: 'mb-4 text-sm text-gray-700 flex flex-col leading-snug rounded-md px-3 py-2',
+                                style: {
+                                    position: 'relative',
+                                    borderLeft: transportColor ? `6px solid ${transportColor}` : '2px solid #c4b5fd',
+                                    ...(boxBg ? { backgroundColor: boxBg } : { backgroundColor: '#f5f3ff' }),
+                                },
+                            },
+                            React.createElement(
+                                'div',
+                                { className: 'flex flex-wrap items-center gap-x-2 gap-y-1' },
+                                tr.teamName &&
+                                    React.createElement(
+                                        'span',
+                                        {
+                                            className: 'text-sm font-semibold',
+                                            style: { color: transportColor || '#5b21b6' },
+                                            title: 'Tím',
+                                        },
+                                        tr.teamName
+                                    ),
+                                membersCount != null &&
+                                    React.createElement(
+                                        'span',
+                                        {
+                                            className: 'text-sm font-semibold',
+                                            style: { color: transportColor || '#5b21b6' },
+                                            title: membersTitle,
+                                        },
+                                        `• ${membersCount} členov`
+                                    )
+                            ),
+                            React.createElement(
+                                'span',
+                                { className: 'text-sm text-gray-900 font-medium' },
+                                `${resolvePlaceNameById(tr.fromId) || '?'} → ${resolvePlaceNameById(tr.toId) || '?'}`
+                            ), 
+                            displayWhen &&
+                                React.createElement(
+                                    'span',
+                                    { className: 'text-sm text-gray-600' },
+                                    displayWhen
+                                )
+                        );
+                    })(),
+                    // ===== ZOZNAM BUSOV =====
                     (() => {
                         const currentMatches = findMatchingBusRows(currentTransfer);        
                         if (currentMatches.length === 0) {
                             return React.createElement(
                                 'div',
                                 { className: 'mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm' },
-                                // ... (error hláška) ...
+                                React.createElement(
+                                    'p',
+                                    { className: 'text-red-700 flex items-start gap-2' },
+                                    React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
+                                    React.createElement(
+                                        'span',
+                                        null,
+                                        'Pre tento presun neexistuje žiadny autobus s trasou, ktorá by zodpovedala miestam a času presunu. ',
+                                        'Najprv pridajte riadky do autobusu (v Plánovaní) tak, aby trasa autobusu obsahovala miesto odchodu a príchodu presunu.'
+                                    )
+                                )
                             );
                         }        
                         return React.createElement(
@@ -13125,7 +13322,6 @@ const TransportApp = ({ userProfileData }) => {
                                     const currentTransferTeamName = String(currentTransfer.teamName || '').trim();
                                     const currentTransferCategory = cleanCategory(currentTransfer.category || '');
                                     const currentTransferDayKey = currentTransfer.dayKey || null;
-                                    const currentTransferKeyStr = `${currentTransferTeamName}|${currentTransferCategory}`;
 
                                     const getTeamLastChar = (teamName) => {
                                         if (!teamName) return null;
@@ -13209,7 +13405,6 @@ const TransportApp = ({ userProfileData }) => {
                                                 const busId = mm.bus.id;
                                                 const dayKey = mm.trip.dayKey;
 
-                                                // Zisti, či aktuálne priraďovaný tím už má priradený segment v tomto buse
                                                 const teamAlreadyInBus = (savedTransfersRef.current || []).some((parent) => {
                                                     if (parent.dayKey !== dayKey) return false;
                                                     if (parent.isWalking === true) return false;
@@ -13389,8 +13584,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                 const teamsSet = new Set([...teamsAtBoarding, ...teamsAtAlighting]);
                                                                 let teams = [...teamsSet];
                                                         
-                                                                // <<< ZMENA: aktuálne priraďovaný tím pridaj do tooltipu VŽDY,
-                                                                // aby používateľ v tooltipe vždy videl reálny počet vrátane neho.
+                                                                // <<< aktuálne priraďovaný tím pridaj do tooltipu VŽDY
                                                                 const currentTeamKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
                                                                 const alreadyCounted =
                                                                     teamsAtBoarding.has(currentTeamKeyStr) ||
@@ -13535,6 +13729,7 @@ const TransportApp = ({ userProfileData }) => {
                             )
                         );
                     })(),
+                    // ===== TLAČIDLÁ =====
                     React.createElement(
                         'div',
                         { className: 'flex justify-end gap-3' },
