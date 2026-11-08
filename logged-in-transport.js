@@ -3879,6 +3879,34 @@ const TransportApp = ({ userProfileData }) => {
     
         setMissingTravelTimeWarning(missing);
     }, [busRows, travelTimes, stopsList, travelTimesLoaded, placesLoaded]);
+
+    useEffect(() => {
+        // Ak je zapnutý filter "Iba časti presunov", ale pre aktuálny výber
+        // (deň / kategória) neexistuje žiadna časť presunu (t.j. presun s medzizastávkami),
+        // automaticky filter vypneme, aby sa zobrazili všetky presuny.
+        if (!showOnlyPartialTransfers) return;
+
+        const hasAnyPartialTransfer = (savedTransfers || []).some((t) => {
+            if (selectedDayKey && t.dayKey !== selectedDayKey) return false;
+            if (selectedCategoryFilter && cleanCategory(t.category || '') !== cleanCategory(selectedCategoryFilter)) return false;
+
+            // "Časť presunu" = parent má medzizastávky (intermediateStopIds)
+            if (Array.isArray(t.intermediateStopIds) && t.intermediateStopIds.length > 0) return true;
+
+            // alebo ide o segment z parenta (má _parentKey) s medzizastávkami
+            if (t._parentKey && t._parentKey !== t.key) {
+                const parent = (savedTransfers || []).find((p) => p.key === t._parentKey);
+                if (parent && Array.isArray(parent.intermediateStopIds) && parent.intermediateStopIds.length > 0) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        if (!hasAnyPartialTransfer) {
+            setShowOnlyPartialTransfers(false);
+        }
+    }, [savedTransfers, selectedDayKey, selectedCategoryFilter, showOnlyPartialTransfers]);
     
     const buildRowId = (busId, dayKey, order) => {
         return `${busId}__${dayKey}__${order}`;
