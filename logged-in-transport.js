@@ -12300,8 +12300,27 @@ const TransportApp = ({ userProfileData }) => {
                                         .map((s) => String(s || '').trim())
                                         .filter(Boolean)
                                 );
+                                // Názvy začiatočného a koncového miesta parent presunu (normalizované)
+                                const parentFromNameNorm = normalizePlaceName(
+                                    resolvePlaceNameById(editingTransfer.fromId) || ''
+                                );
+                                const parentToNameNorm = normalizePlaceName(
+                                    resolvePlaceNameById(editingTransfer.toId) || ''
+                                );
+
                                 const availableStops = stopsList.filter((s) => {
+                                    const stopNameNorm = normalizePlaceName(s.name);
+                    
+                                    // Vylúčiť začiatočné miesto parent presunu (podľa názvu)
+                                    if (parentFromNameNorm && stopNameNorm === parentFromNameNorm) return false;
+                    
+                                    // Vylúčiť koncové miesto parent presunu (podľa názvu)
+                                    if (parentToNameNorm && stopNameNorm === parentToNameNorm) return false;
+                    
+                                    // Aktuálne vybraná hodnota v tomto selectboxe musí zostať dostupná
                                     if (s.name === stopValue) return true;
+
+                                    // Vylúčiť miesta už vybrané v iných selectboxoch
                                     return !selectedElsewhere.has(s.name);
                                 });
                                 return React.createElement(
