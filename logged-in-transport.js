@@ -13369,6 +13369,7 @@ const TransportApp = ({ userProfileData }) => {
                                                 }
                                                 if (!parentTeamName) return;
 
+                                                // NEODSTRAŇUJEME aktuálny tím – ak tam už sedí, je to zámer.
                                                 if (!isTeamSuperstructure(parentTeamName, parentCategory)) return;
 
                                                 const parentLastChar = getTeamLastChar(parentTeamName);
@@ -13390,6 +13391,20 @@ const TransportApp = ({ userProfileData }) => {
                                         }
                                         return { match: m, isPreferred };
                                     });
+
+                                    // Predvolený výber preferovaného riadku – len ak ešte nič nie je vybrané.
+                                    if (!assignBusSelectedKey) {
+                                        const defaultMatch = matchesWithPreferredFlag.find((item) => {
+                                            return item.isPreferred && item.match && item.match.bus && item.match.trip;
+                                        });
+                                        if (defaultMatch && defaultMatch.match) {
+                                            const dm = defaultMatch.match;
+                                            const defaultKey = `${dm.bus.id}|${dm.boardingRow?.id || ''}|${dm.alightingRow?.id || ''}|${dm.side}`;
+                                            queueMicrotask(() => {
+                                                setAssignBusSelectedKey(defaultKey);
+                                            });
+                                        }
+                                    }
 
                                     // Predvolený výber preferovaného riadku – len ak ešte nič nie je vybrané
                                     // a v danom buse ešte NIE JE priraďovaný tím (aby sme nevybrali riadok,
