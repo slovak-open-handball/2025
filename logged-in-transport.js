@@ -13177,7 +13177,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                     'span',
                                                                     {
                                                                         className: 'relative flex items-center gap-1 text-blue-700 group/occupancy cursor-help',
-                                                                        title: occupancyTooltipText,
                                                                     },
                                                                     React.createElement('i', { className: 'fa-solid fa-users' }),
                                                                     `${total}`,
