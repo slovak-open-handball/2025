@@ -11924,7 +11924,7 @@ const TransportApp = ({ userProfileData }) => {
                             (counts.womenRT || 0) +
                             (counts.menDrivers || 0) +
                             (counts.womenDrivers || 0);
-                        membersTitle = 'Počet členov tímu z users';
+                        membersTitle = 'Počet členov tímu';
                     } else {
                         const avg = getCategoryAverageForTransfer(tr.category);
                         if (avg != null) {
@@ -12286,7 +12286,7 @@ const TransportApp = ({ userProfileData }) => {
                             (counts.womenRT || 0) +
                             (counts.menDrivers || 0) +
                             (counts.womenDrivers || 0);
-                        membersTitle = 'Počet členov tímu z users';
+                        membersTitle = 'Počet členov tímu';
                     } else {
                         const avg = getCategoryAverageForTransfer(tr.category);
                         if (avg != null) {
@@ -12616,7 +12616,7 @@ const TransportApp = ({ userProfileData }) => {
                                 (counts.womenRT || 0) +
                                 (counts.menDrivers || 0) +
                                 (counts.womenDrivers || 0);
-                            membersTitle = 'Počet členov tímu z users';
+                            membersTitle = 'Počet členov tímu';
                         } else {
                             const avg = getCategoryAverageForTransfer(tr.category);
                             if (avg != null) {
