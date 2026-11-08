@@ -9565,7 +9565,115 @@ const TransportApp = ({ userProfileData }) => {
                 let endTs = null;
                 let timeLabel = '';
                 if (isWalking) {
-                    timeLabel = 'PEŠI';
+                    // Pre walking segmenty použi rovnakú logiku ako v boxe "Peši":
+                    // displayStartTs = koniec predchádzajúceho segmentu (alebo parent start)
+                    // displayEndTs   = začiatok nasledujúceho segmentu (alebo parent end)
+                    const parentRange = (() => {
+                        const parsedFromWhen = parseWhenRangeToTs(t.when);
+                        if (parsedFromWhen && parsedFromWhen.startTs != null && parsedFromWhen.endTs != null) {
+                            if (parsedFromWhen.endTs > parsedFromWhen.startTs) {
+                                return { startTs: parsedFromWhen.startTs, endTs: parsedFromWhen.endTs };
+                            }
+                        }
+                        let earliestStart = null;
+                        let latestEnd = null;
+                        parentSegments.forEach((s) => {
+                            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                earliestStart = s.startTs;
+                            }
+                            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                latestEnd = s.endTs;
+                            } else if (s.isWalking === true && s.startTs != null) {
+                                const candidateEnd = s.startTs + 60 * 1000;
+                                if (latestEnd == null || candidateEnd > latestEnd) {
+                                    latestEnd = candidateEnd;
+                                }
+                            }
+                        });
+                        if (earliestStart != null && latestEnd != null) {
+                            return { startTs: earliestStart, endTs: latestEnd };
+                        }
+                        if (parsedFromWhen && parsedFromWhen.startTs != null) {
+                            return { startTs: parsedFromWhen.startTs, endTs: parsedFromWhen.endTs };
+                        }
+                        return null;
+                    })();
+
+                    let prevSegmentEndTs = null;
+                    for (let k = i - 1; k >= 0; k--) {
+                        const s2 = parentSegments[k];
+                        if (!s2) continue;
+                        if (s2.endTs != null) { prevSegmentEndTs = s2.endTs; break; }
+                        if (s2.startTs != null) { prevSegmentEndTs = s2.startTs; break; }
+                    }
+
+                    let nextSegmentStartTs = null;
+                    for (let k = i + 1; k < parentSegments.length; k++) {
+                        const s2 = parentSegments[k];
+                        if (!s2) continue;
+                        if (s2.startTs != null) { nextSegmentStartTs = s2.startTs; break; }
+                        if (s2.endTs != null) { nextSegmentStartTs = s2.endTs; break; }
+                    }
+
+                    const parentStartTs = parentRange && parentRange.startTs != null ? parentRange.startTs : null;
+                    const parentEndTs = parentRange && parentRange.endTs != null ? parentRange.endTs : null;
+
+                    let displayStartTs = null;
+                    let displayEndTs = null;
+
+                    if (prevSegmentEndTs != null) {
+                        displayStartTs = prevSegmentEndTs;
+                    } else if (parentStartTs != null) {
+                        displayStartTs = parentStartTs;
+                    }
+
+                    if (nextSegmentStartTs != null) {
+                        displayEndTs = nextSegmentStartTs;
+                    } else if (parentEndTs != null && parentEndTs > (displayStartTs || 0)) {
+                        displayEndTs = parentEndTs;
+                    } else if (displayStartTs != null) {
+                        displayEndTs = displayStartTs + 60 * 1000;
+                    }
+
+                    if (
+                        parentSegments.length === 1 &&
+                        parentStartTs != null &&
+                        parentEndTs != null
+                    ) {
+                        displayStartTs = parentStartTs;
+                        displayEndTs = parentEndTs;
+                    }
+
+                    if (
+                        displayStartTs != null &&
+                        (displayEndTs == null || displayEndTs <= displayStartTs) &&
+                        parentEndTs != null &&
+                        parentEndTs > displayStartTs
+                    ) {
+                        displayEndTs = parentEndTs;
+                    }
+
+                    if (
+                        displayStartTs != null &&
+                        (displayEndTs == null || displayEndTs <= displayStartTs)
+                    ) {
+                        displayEndTs = displayStartTs + 60 * 1000;
+                    }
+
+                    startTs = displayStartTs;
+                    endTs = displayEndTs;
+
+                    const fmtTime = (ts) => {
+                        if (ts == null) return null;
+                        const f = formatTsLocal(ts);
+                        return f ? /(\d{2}:\d{2})$/.exec(f)?.[1] || null : null;
+                    };
+                    const startTime = fmtTime(displayStartTs);
+                    const endTime = fmtTime(displayEndTs);
+                    if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
+                    else if (startTime) timeLabel = startTime;
+                    else if (endTime) timeLabel = endTime;
+                    else timeLabel = 'PEŠI';
                 } else if (hasRealTimes) {
                     startTs = seg.startTs;
                     endTs = seg.endTs;
