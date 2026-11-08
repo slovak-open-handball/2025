@@ -13234,7 +13234,12 @@ const TransportApp = ({ userProfileData }) => {
                                                         const total = occupancy.total;
                                                         const teamsInBus = occupancy.teams;
                                                         
-                                                        const teamTooltipItems = (teamsInBus || [])
+                                                        const currentTransferKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
+                                                        const teamsForTooltip = new Set(teamsInBus || []);
+                                                        teamsForTooltip.add(currentTransferKeyStr);
+
+                                                        // <<< ZMENA: zoradenie podľa skratky (abecedne), pri zhode podľa plného názvu.
+                                                        const teamTooltipItems = [...teamsForTooltip]
                                                             .map((tk) => {
                                                                 const parts = String(tk).split('|');
                                                                 const tn = (parts[0] || '').trim();
@@ -13243,9 +13248,17 @@ const TransportApp = ({ userProfileData }) => {
                                                                 const label = shortcut || tn;
                                                                 const members = getTeamMembersCount(tk);
                                                                 const color = getCategoryTextColor(cat);
-                                                                return { label, members, color };
+                                                                return { label, teamName: tn, members, color };
                                                             })
-                                                            .filter((x) => !!x.label);
+                                                            .filter((x) => !!x.label)
+                                                            .sort((a, b) => {
+                                                                const la = String(a.label || '').toLocaleUpperCase('sk-SK');
+                                                                const lb = String(b.label || '').toLocaleUpperCase('sk-SK');
+                                                                if (la !== lb) return la.localeCompare(lb, 'sk', { sensitivity: 'base' });
+                                                                const ta = String(a.teamName || '').toLocaleUpperCase('sk-SK');
+                                                                const tb = String(b.teamName || '').toLocaleUpperCase('sk-SK');
+                                                                return ta.localeCompare(tb, 'sk', { sensitivity: 'base' });
+                                                            });
                                                         
                                                         // Textová verzia pre natívny title (bez farieb)
                                                         const occupancyTooltipText =
