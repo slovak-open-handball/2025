@@ -13565,17 +13565,21 @@ const TransportApp = ({ userProfileData }) => {
                                                                 let total = Math.max(totalAtBoarding, totalAtAlighting);
                                                                 const teamsSet = new Set([...teamsAtBoarding, ...teamsAtAlighting]);
                                                                 let teams = [...teamsSet];
-                                                        
-                                                                // <<< aktuálne priraďovaný tím pridaj do tooltipu VŽDY
-                                                                const currentTeamKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
-                                                                const alreadyCounted =
-                                                                    teamsAtBoarding.has(currentTeamKeyStr) ||
-                                                                    teamsAtAlighting.has(currentTeamKeyStr);
-                                                                if (!alreadyCounted) {
-                                                                    total += getTeamMembersCount(currentTeamKeyStr);
-                                                                    teams.push(currentTeamKeyStr);
+
+                                                                // <<< ZMENA: Aktuálne priraďovaný tím pridaj do tooltipu LEN pre
+                                                                // riadok, ktorý je práve vybraný (podfarbený žltou).
+                                                                // Pre ostatné riadky sa má zobraziť len to, čo reálne sedí v buse.
+                                                                if (isSelected) {
+                                                                    const currentTeamKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
+                                                                    const alreadyCounted =
+                                                                        teamsAtBoarding.has(currentTeamKeyStr) ||
+                                                                        teamsAtAlighting.has(currentTeamKeyStr);
+                                                                    if (!alreadyCounted) {
+                                                                        total += getTeamMembersCount(currentTeamKeyStr);
+                                                                        teams.push(currentTeamKeyStr);
+                                                                    }
                                                                 }
-                                                        
+                                                                
                                                                 return { total, teams };
                                                             };
                                                         
