@@ -9340,37 +9340,105 @@ const TransportApp = ({ userProfileData }) => {
             ? baseFilteredFirstOnly.filter((t) => t._parentKey && t._parentRoute)
             : baseFilteredFirstOnly;
         
-        const buildStartSortKey = (t) => {
-            const r = parseWhenRangeFull(t.when);
-            const dayKey = r ? r.startDayKey : (t.dayKey || '');
-            const time = r && r.startTime ? r.startTime : '00:00';
-            const datePart = String(dayKey || '').replace(/-/g, '');
-            const timePart = String(time || '').replace(':', '');
-            return `${datePart}${timePart}`;
+        // <<< ZMENA: vráti reálny timestamp začiatku presunu (segmentu).
+        // Priorita: _displayStartTs → parentSeg.startTs → provizórny výpočet → t.when → dayKey.
+        const getTransferStartTsForSort = (t) => {
+            if (!t) return Number.POSITIVE_INFINITY;
+
+            if (t._displayStartTs != null && isFinite(t._displayStartTs)) {
+                return t._displayStartTs;
+            }
+
+            if (t._parentKey) {
+                const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
+                if (parentRec && Array.isArray(parentRec.segments)) {
+                    const segIdx = findSegmentIndex(parentRec.segments, t.fromId, t.toId);
+                    if (segIdx !== -1) {
+                        const seg = parentRec.segments[segIdx];
+                        if (seg && seg.startTs != null && isFinite(seg.startTs)) {
+                            return seg.startTs;
+                        }
+                    }
+                }
+                try {
+                    const provisional = computeProvisionalSegmentRange(t);
+                    if (provisional && provisional.startTs != null && isFinite(provisional.startTs)) {
+                        return provisional.startTs;
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            const rangeInfo = parseWhenRangeFull(t.when);
+            if (rangeInfo && rangeInfo.startDayKey) {
+                const dayTs = timeOnDayKeyToTs(rangeInfo.startDayKey, rangeInfo.startTime || '00:00');
+                if (dayTs != null) return dayTs;
+            }
+
+            if (t.dayKey) {
+                const dayTs = timeOnDayKeyToTs(t.dayKey, '00:00');
+                if (dayTs != null) return dayTs;
+            }
+
+            return Number.POSITIVE_INFINITY;
         };
-    
-        const buildEndSortKey = (t) => {
-            const r = parseWhenRangeFull(t.when);
-            const dayKey = r ? r.endDayKey : (t.dayKey || '');
-            const time = r && r.endTime ? r.endTime : '23:59';
-            const datePart = String(dayKey || '').replace(/-/g, '');
-            const timePart = String(time || '').replace(':', '');
-            return `${datePart}${timePart}`;
+
+        // <<< ZMENA: koniec presunu (sekundárne triedenie pri rovnakom začiatku)
+        const getTransferEndTsForSort = (t) => {
+            if (!t) return Number.POSITIVE_INFINITY;
+
+            if (t._displayEndTs != null && isFinite(t._displayEndTs)) {
+                return t._displayEndTs;
+            }
+
+            if (t._parentKey) {
+                const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
+                if (parentRec && Array.isArray(parentRec.segments)) {
+                    const segIdx = findSegmentIndex(parentRec.segments, t.fromId, t.toId);
+                    if (segIdx !== -1) {
+                        const seg = parentRec.segments[segIdx];
+                        if (seg && seg.endTs != null && isFinite(seg.endTs)) {
+                            return seg.endTs;
+                        }
+                    }
+                }
+                try {
+                    const provisional = computeProvisionalSegmentRange(t);
+                    if (provisional && provisional.endTs != null && isFinite(provisional.endTs)) {
+                        return provisional.endTs;
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            const rangeInfo = parseWhenRangeFull(t.when);
+            if (rangeInfo && rangeInfo.endDayKey) {
+                const dayTs = timeOnDayKeyToTs(rangeInfo.endDayKey, rangeInfo.endTime || '23:59');
+                if (dayTs != null) return dayTs;
+            }
+
+            if (t.dayKey) {
+                const dayTs = timeOnDayKeyToTs(t.dayKey, '23:59');
+                if (dayTs != null) return dayTs;
+            }
+
+            return Number.POSITIVE_INFINITY;
         };
-    
+
+        // <<< ZMENA: zoradenie VŽDY podľa dátumu + času začiatku (od najmenšieho po najväčší),
+        // potom podľa konca, kategórie a tímu. Počíta sa pri každom renderi, takže
+        // pri akejkoľvek zmene (savedTransfers, busRows, filter, dayKey…) sa poradie prepočíta.
         const sortedTransfers = [...filtered].sort((a, b) => {
-            const startA = buildStartSortKey(a);
-            const startB = buildStartSortKey(b);
-            if (startA !== startB) return startA.localeCompare(startB);
-    
-            const endA = buildEndSortKey(a);
-            const endB = buildEndSortKey(b);
-            if (endA !== endB) return endA.localeCompare(endB);
-    
+            const startA = getTransferStartTsForSort(a);
+            const startB = getTransferStartTsForSort(b);
+            if (startA !== startB) return startA - startB;
+
+            const endA = getTransferEndTsForSort(a);
+            const endB = getTransferEndTsForSort(b);
+            if (endA !== endB) return endA - endB;
+
             const ca = cleanCategory(a.category) || '';
             const cb = cleanCategory(b.category) || '';
             if (ca !== cb) return ca.localeCompare(cb, 'sk', { sensitivity: 'base' });
-    
+
             const ta = String(a.teamName || '');
             const tb = String(b.teamName || '');
             return ta.localeCompare(tb, 'sk', { sensitivity: 'base' });
