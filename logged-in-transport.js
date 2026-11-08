@@ -12389,7 +12389,7 @@ const TransportApp = ({ userProfileData }) => {
                         // Tlačidlo "Priradiť presun autobusu" zobrazíme VŽDY.
                         // Ak existuje aspoň jeden vhodný riadok busu, tlačidlo je aktívne.
                         // Ak žiadny neexistuje, tlačidlo je viditeľné ale neaktívne s vysvetlením.
-                        const hasMatches = Array.isArray(matchingBusRows) && matchingBusRows.length > 0;
+                        const hasMatches = true; // Array.isArray(matchingBusRows) && matchingBusRows.length > 0;
 
                         if (!hasMatches) {
                             return React.createElement(
