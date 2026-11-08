@@ -12385,28 +12385,11 @@ const TransportApp = ({ userProfileData }) => {
                     (() => {
                         const matchingBusRows = findMatchingBusRows(transferActionModal.transfer);
 
-                        // Tlačidlo "Priradiť presun autobusu" zobrazíme VŽDY.
-                        // Ak existuje aspoň jeden vhodný riadok busu, tlačidlo je aktívne.
-                        // Ak žiadny neexistuje, tlačidlo je viditeľné ale neaktívne s vysvetlením.
+                        // Ak neexistuje žiadny vhodný riadok busu, tlačidlo sa vôbec nezobrazí.
                         const hasMatches = Array.isArray(matchingBusRows) && matchingBusRows.length > 0;
 
                         if (!hasMatches) {
-                            return React.createElement(
-                                'button',
-                                {
-                                    type: 'button',
-                                    disabled: true,
-                                    title: 'Pre tento presun neexistuje žiadny autobus s trasou zodpovedajúcou miestam a času presunu.',
-                                    className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-gray-200 bg-gray-50 transition-colors flex items-center gap-3 cursor-not-allowed opacity-70'
-                                },
-                                React.createElement('i', { className: 'fa-solid fa-bus text-gray-400 text-xl w-6 text-center' }),
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex-1' },
-                                    React.createElement('div', { className: 'font-semibold text-gray-500' }, 'Priradiť presun autobusu'),
-                                    React.createElement('div', { className: 'text-xs text-gray-400' }, 'Žiadny autobus nezodpovedá trase a času presunu')
-                                )
-                            );
+                            return null;
                         }
 
                         return React.createElement(
