@@ -13315,286 +13315,399 @@ const TransportApp = ({ userProfileData }) => {
                             React.createElement(
                                 'ul',
                                 { className: 'space-y-2' },
-                                currentMatches.map((m, idx) => {
-                                    if (!m || !m.bus || !m.trip) {
-                                        console.warn('[TRANSPORT] Neplatný výsledok v currentMatches:', m);
-                                        return null;
-                                    }        
-                                    const key = `${m.bus.id}|${m.boardingRow?.id || ''}|${m.alightingRow?.id || ''}|${m.side}`;
-                                    const isSelected = assignBusSelectedKey === key;        
-                                    const hasBoarding = !!m.boardingRow;
-                                    const hasAlighting = !!m.alightingRow;        
-                                    const teamKey = `${currentTransfer.teamName}|${currentTransfer.category || ''}`;        
-                                    return React.createElement(
-                                        'li',
-                                        { key },
-                                        React.createElement(
-                                            'button',
-                                            {
-                                                type: 'button',
-                                                onClick: () => setAssignBusSelectedKey(key),
-                                                className: `w-full text-left px-3 py-2 rounded-lg border-2 transition-colors ${
-                                                    isSelected
-                                                        ? 'border-amber-500 bg-amber-50'
-                                                        : 'border-gray-200 bg-white hover:bg-gray-50'
-                                                }`
-                                            },
+                                (() => {
+                                    // <<< NOVÉ: Pre každý match zistíme, či v danom buse (na danom dni)
+                                    // už sedí nejaký superstructure tím, ktorý patrí do rovnakej skupiny
+                                    // (rovnaké posledné písmeno názvu tímu) ako práve priraďovaný tím.
+                                    // Ak áno, tento riadok sa predvolene vyberie.
+                                    const currentTransferTeamName = String(currentTransfer.teamName || '').trim();
+                                    const currentTransferCategory = cleanCategory(currentTransfer.category || '');
+                                    const currentTransferDayKey = currentTransfer.dayKey || null;
+
+                                    const getTeamLastChar = (teamName) => {
+                                        if (!teamName) return null;
+                                        const m = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(String(teamName).trim().toUpperCase());
+                                        return m ? m[1] : null;
+                                    };
+
+                                    const currentTeamLastChar = getTeamLastChar(currentTransferTeamName);
+
+                                    // Pomocná funkcia: zistí, či je daný tím superstructure
+                                    const isTeamSuperstructure = (teamName, category) => {
+                                        if (!teamName) return false;
+                                        const tn = String(teamName).trim();
+                                        const cat = cleanCategory(category || '');
+                                        const info = (teamsArrivalBufferRef.current || []).find(
+                                            (t) => cleanCategory(t.category) === cat && String(t.teamName || '').trim() === tn
+                                        );
+                                        if (info && info.isSuperstructure === true) return true;
+                                        // Fallback: ak tím nie je v users (isRegistered !== true), berieme ako superstructure
+                                        if (!info) return true;
+                                        if (info.isRegistered !== true) return true;
+                                        if (/\d[A-ZÁ-Ž]\s*$/.test(tn)) return true;
+                                        return false;
+                                    };
+
+                                    // Pre každý match zistíme, či v jeho buse (na jeho dni) už sedí
+                                    // superstructure tím s rovnakým posledným písmenom.
+                                    const matchesWithPreferredFlag = currentMatches.map((m) => {
+                                        let isPreferred = false;
+                                        try {
+                                            if (!currentTeamLastChar) return { match: m, isPreferred: false };
+                                            if (!currentTransferDayKey) return { match: m, isPreferred: false };
+                                            if (!m || !m.bus || !m.trip) return { match: m, isPreferred: false };
+
+                                            const busId = m.bus.id;
+                                            const dayKey = m.trip.dayKey;
+
+                                            (savedTransfersRef.current || []).forEach((parent) => {
+                                                if (isPreferred) return;
+                                                if (parent.dayKey !== dayKey) return;
+                                                if (parent.isWalking === true) return;
+
+                                                const parentCategory = cleanCategory(parent.category || '');
+                                                let parentTeamName = String(parent.teamName || '').trim();
+                                                if (!parentTeamName && parent.teamUid != null && parent.teamIndex != null) {
+                                                    const lookupKey = `${parent.teamUid}|${parentCategory}|${parent.teamIndex}`;
+                                                    const info = (teamsLookupRef.current || {})[lookupKey];
+                                                    if (info && info.teamName) parentTeamName = info.teamName;
+                                                }
+                                                if (!parentTeamName) return;
+
+                                                // Musí ísť o superstructure tím
+                                                if (!isTeamSuperstructure(parentTeamName, parentCategory)) return;
+
+                                                // Musí mať rovnaké posledné písmeno ako priraďovaný tím
+                                                const parentLastChar = getTeamLastChar(parentTeamName);
+                                                if (!parentLastChar || parentLastChar !== currentTeamLastChar) return;
+
+                                                // Musí mať segment priradený k tomuto busu
+                                                const hasSegmentOnBus = (parent.segments || []).some((seg) => {
+                                                    if (!seg) return false;
+                                                    if (seg.isWalking === true) return false;
+                                                    if (seg.busId !== busId) return false;
+                                                    return !!(seg.boardingRowId && seg.alightingRowId);
+                                                });
+
+                                                if (hasSegmentOnBus) {
+                                                    isPreferred = true;
+                                                }
+                                            });
+                                        } catch (e) {
+                                            // ignore
+                                        }
+                                        return { match: m, isPreferred };
+                                    });
+
+                                    // Ak existuje aspoň jeden preferovaný match, predvolene vyberieme prvý z nich.
+                                    // Inak zostane výber prázdny (používateľ musí vybrať manuálne).
+                                    const firstPreferred = matchesWithPreferredFlag.find((x) => x.isPreferred);
+                                    if (firstPreferred && firstPreferred.match) {
+                                        const pm = firstPreferred.match;
+                                        const preferredKey = `${pm.bus.id}|${pm.boardingRow?.id || ''}|${pm.alightingRow?.id || ''}|${pm.side}`;
+                                        // Poznámka: setAssignBusSelectedKey voláme asynchrónne, aby sme
+                                        // nevolali setState počas renderu. Použijeme queueMicrotask.
+                                        if (assignBusSelectedKey !== preferredKey) {
+                                            queueMicrotask(() => {
+                                                setAssignBusSelectedKey(preferredKey);
+                                            });
+                                        }
+                                    }
+
+                                    return matchesWithPreferredFlag.map(({ match: m, isPreferred }, idx) => {
+                                        if (!m || !m.bus || !m.trip) {
+                                            console.warn('[TRANSPORT] Neplatný výsledok v currentMatches:', m);
+                                            return null;
+                                        }        
+                                        const key = `${m.bus.id}|${m.boardingRow?.id || ''}|${m.alightingRow?.id || ''}|${m.side}`;
+                                        const isSelected = assignBusSelectedKey === key;        
+                                        const hasBoarding = !!m.boardingRow;
+                                        const hasAlighting = !!m.alightingRow;        
+                                        const teamKey = `${currentTransfer.teamName}|${currentTransfer.category || ''}`;        
+                                        return React.createElement(
+                                            'li',
+                                            { key },
                                             React.createElement(
-                                                'div',
-                                                { className: 'flex items-center justify-between gap-2' },
+                                                'button',
+                                                {
+                                                    type: 'button',
+                                                    onClick: () => setAssignBusSelectedKey(key),
+                                                    className: `w-full text-left px-3 py-2 rounded-lg border-2 transition-colors ${
+                                                        isSelected
+                                                            ? 'border-amber-500 bg-amber-50'
+                                                            : isPreferred
+                                                                ? 'border-violet-400 bg-violet-50 hover:bg-violet-100'
+                                                                : 'border-gray-200 bg-white hover:bg-gray-50'
+                                                    }`
+                                                },
                                                 React.createElement(
                                                     'div',
-                                                    { className: 'flex-1' },
+                                                    { className: 'flex items-center justify-between gap-2' },
                                                     React.createElement(
                                                         'div',
-                                                        { className: 'font-semibold text-gray-800 text-sm' },
-                                                        m.bus.name
+                                                        { className: 'flex-1' },
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'font-semibold text-gray-800 text-sm flex items-center gap-2 flex-wrap' },
+                                                            m.bus.name,
+                                                            isPreferred &&
+                                                                React.createElement(
+                                                                    'span',
+                                                                    {
+                                                                        className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                                                        style: { backgroundColor: '#ede9fe', color: '#6d28d9' },
+                                                                        title: 'V tomto autobuse už sedí superstructure tím z rovnakej skupiny (rovnaké posledné písmeno).'
+                                                                    },
+                                                                    React.createElement('i', { className: 'fa-solid fa-wand-magic-sparkles text-[9px]' }),
+                                                                    'odporúčané'
+                                                                )
+                                                        ),
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'text-xs text-gray-600 mt-0.5' },
+                                                            `${m.trip.fromPlace} → ${m.trip.toPlace}`
+                                                        ),
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'text-xs text-gray-500 mt-0.5' },
+                                                            `Odchod: ${m.boardingTime || '—'}${m.alightingTime ? ` · Príchod: ${m.alightingTime}` : ''}`
+                                                        )
                                                     ),
                                                     React.createElement(
                                                         'div',
-                                                        { className: 'text-xs text-gray-600 mt-0.5' },
-                                                        `${m.trip.fromPlace} → ${m.trip.toPlace}`
-                                                    ),
-                                                    React.createElement(
-                                                        'div',
-                                                        { className: 'text-xs text-gray-500 mt-0.5' },
-                                                        `Odchod: ${m.boardingTime || '—'}${m.alightingTime ? ` · Príchod: ${m.alightingTime}` : ''}`
-                                                    )
-                                                ),
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'flex flex-row items-center gap-6 text-xs font-semibold' },
-                                                    (() => {
-                                                        const busId = m.bus.id;
-                                                        const dayKey = m.trip?.dayKey;
-                                                        const boardingRow = m.boardingRow;
-                                                        const alightingRow = m.alightingRow;
-                                                        if (!busId || !dayKey || !boardingRow || !alightingRow) return null;
+                                                        { className: 'flex flex-row items-center gap-6 text-xs font-semibold' },
+                                                        (() => {
+                                                            const busId = m.bus.id;
+                                                            const dayKey = m.trip?.dayKey;
+                                                            const boardingRow = m.boardingRow;
+                                                            const alightingRow = m.alightingRow;
+                                                            if (!busId || !dayKey || !boardingRow || !alightingRow) return null;
                                                 
-                                                        const computeTripDuration = () => {
-                                                            const timeRe = /^\d{1,2}:\d{2}$/;
-                                                            const boardStr = String(m.boardingTime || '').trim();
-                                                            const alightStr = String(m.alightingTime || '').trim();
-                                                            if (!timeRe.test(boardStr) || !timeRe.test(alightStr)) return null;
-                                                            const [bh, bm] = boardStr.split(':').map(Number);
-                                                            const [ah, am] = alightStr.split(':').map(Number);
-                                                            let diff = (ah * 60 + am) - (bh * 60 + bm);
-                                                            if (diff < 0) diff += 24 * 60;
-                                                            return diff > 0 ? diff : null;
-                                                        };
+                                                            const computeTripDuration = () => {
+                                                                const timeRe = /^\d{1,2}:\d{2}$/;
+                                                                const boardStr = String(m.boardingTime || '').trim();
+                                                                const alightStr = String(m.alightingTime || '').trim();
+                                                                if (!timeRe.test(boardStr) || !timeRe.test(alightStr)) return null;
+                                                                const [bh, bm] = boardStr.split(':').map(Number);
+                                                                const [ah, am] = alightStr.split(':').map(Number);
+                                                                let diff = (ah * 60 + am) - (bh * 60 + bm);
+                                                                if (diff < 0) diff += 24 * 60;
+                                                                return diff > 0 ? diff : null;
+                                                            };
                                                 
-                                                        const tripDurationMin = computeTripDuration();
+                                                            const tripDurationMin = computeTripDuration();
         
-                                                        const computeBusOccupancy = () => {
-                                                            const bOrder = parseOrderFromRowId(boardingRow.rowId);
-                                                            const aOrder = parseOrderFromRowId(alightingRow.rowId);
-                                                            if (bOrder == null || aOrder == null) {
-                                                                return { total: 0, teams: [] };
-                                                            }
-                                                        
-                                                            const teamsAtBoarding = new Set();
-                                                            const teamsAtAlighting = new Set();
-                                                        
-                                                            (savedTransfersRef.current || []).forEach((parent) => {
-                                                                if (parent.dayKey !== dayKey) return;
-                                                                if (parent.isWalking === true) return;
-                                                        
-                                                                const effectiveCategory = cleanCategory(parent.category || '');
-                                                                let effectiveTeamName = String(parent.teamName || '').trim();
-                                                                if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
-                                                                    const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
-                                                                    const info = (teamsLookupRef.current || {})[lookupKey];
-                                                                    if (info && info.teamName) effectiveTeamName = info.teamName;
+                                                            const computeBusOccupancy = () => {
+                                                                const bOrder = parseOrderFromRowId(boardingRow.rowId);
+                                                                const aOrder = parseOrderFromRowId(alightingRow.rowId);
+                                                                if (bOrder == null || aOrder == null) {
+                                                                    return { total: 0, teams: [] };
                                                                 }
-                                                                if (!effectiveTeamName) {
-                                                                    const parts = String(parent.key || '').split('||');
-                                                                    if (parts.length >= 2) {
-                                                                        const keyTeamName = String(parts[1] || '').trim();
-                                                                        if (keyTeamName) effectiveTeamName = keyTeamName;
+                                                        
+                                                                const teamsAtBoarding = new Set();
+                                                                const teamsAtAlighting = new Set();
+                                                        
+                                                                (savedTransfersRef.current || []).forEach((parent) => {
+                                                                    if (parent.dayKey !== dayKey) return;
+                                                                    if (parent.isWalking === true) return;
+                                                        
+                                                                    const effectiveCategory = cleanCategory(parent.category || '');
+                                                                    let effectiveTeamName = String(parent.teamName || '').trim();
+                                                                    if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
+                                                                        const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
+                                                                        const info = (teamsLookupRef.current || {})[lookupKey];
+                                                                        if (info && info.teamName) effectiveTeamName = info.teamName;
+                                                                    }
+                                                                    if (!effectiveTeamName) {
+                                                                        const parts = String(parent.key || '').split('||');
+                                                                        if (parts.length >= 2) {
+                                                                            const keyTeamName = String(parts[1] || '').trim();
+                                                                            if (keyTeamName) effectiveTeamName = keyTeamName;
+                                                                        }
+                                                                    }
+                                                                    if (!effectiveTeamName) return;
+                                                        
+                                                                    const teamKeyStr = `${effectiveTeamName}|${effectiveCategory}`;
+                                                        
+                                                                    (parent.segments || []).forEach((seg) => {
+                                                                        if (seg.busId !== busId) return;
+                                                                        if (seg.isWalking === true) return;
+                                                        
+                                                                        const segBOrder = parseOrderFromRowId(seg.boardingRowId);
+                                                                        const segAOrder = parseOrderFromRowId(seg.alightingRowId);
+                                                                        if (segBOrder == null || segAOrder == null) return;
+                                                        
+                                                                        const isAtBoarding =
+                                                                            (segBOrder === bOrder) ||
+                                                                            (segBOrder < bOrder && segAOrder > bOrder);
+                                                                        if (isAtBoarding) teamsAtBoarding.add(teamKeyStr);
+                                                        
+                                                                        const isAtAlighting =
+                                                                            (segAOrder === aOrder) ||
+                                                                            (segBOrder < aOrder && segAOrder > aOrder);
+                                                                        if (isAtAlighting) teamsAtAlighting.add(teamKeyStr);
+                                                                    });
+                                                                });
+                                                        
+                                                                const totalAtBoarding = [...teamsAtBoarding].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
+                                                                const totalAtAlighting = [...teamsAtAlighting].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
+                                                        
+                                                                let total = Math.max(totalAtBoarding, totalAtAlighting);
+                                                                const teamsSet = new Set([...teamsAtBoarding, ...teamsAtAlighting]);
+                                                                let teams = [...teamsSet];
+                                                        
+                                                                const isThisRowSelected =
+                                                                    assignBusSelectedKey &&
+                                                                    assignBusSelectedKey.startsWith(`${busId}|${boardingRow.id}|${alightingRow.id}|`);
+                                                                if (isThisRowSelected) {
+                                                                    const currentTeamKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
+                                                                    const alreadyCounted =
+                                                                        teamsAtBoarding.has(currentTeamKeyStr) ||
+                                                                        teamsAtAlighting.has(currentTeamKeyStr);
+                                                                    if (!alreadyCounted) {
+                                                                        total += getTeamMembersCount(currentTeamKeyStr);
+                                                                        teams.push(currentTeamKeyStr);
                                                                     }
                                                                 }
-                                                                if (!effectiveTeamName) return;
                                                         
-                                                                const teamKeyStr = `${effectiveTeamName}|${effectiveCategory}`;
+                                                                return { total, teams };
+                                                            };
                                                         
-                                                                (parent.segments || []).forEach((seg) => {
-                                                                    if (seg.busId !== busId) return;
-                                                                    if (seg.isWalking === true) return;
+                                                            const occupancy = computeBusOccupancy();
+                                                            const total = occupancy.total;
+                                                            const teamsInBus = occupancy.teams;
                                                         
-                                                                    const segBOrder = parseOrderFromRowId(seg.boardingRowId);
-                                                                    const segAOrder = parseOrderFromRowId(seg.alightingRowId);
-                                                                    if (segBOrder == null || segAOrder == null) return;
-                                                        
-                                                                    const isAtBoarding =
-                                                                        (segBOrder === bOrder) ||
-                                                                        (segBOrder < bOrder && segAOrder > bOrder);
-                                                                    if (isAtBoarding) teamsAtBoarding.add(teamKeyStr);
-                                                        
-                                                                    const isAtAlighting =
-                                                                        (segAOrder === aOrder) ||
-                                                                        (segBOrder < aOrder && segAOrder > aOrder);
-                                                                    if (isAtAlighting) teamsAtAlighting.add(teamKeyStr);
-                                                                });
-                                                            });
-                                                        
-                                                            const totalAtBoarding = [...teamsAtBoarding].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
-                                                            const totalAtAlighting = [...teamsAtAlighting].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
-                                                        
-                                                            let total = Math.max(totalAtBoarding, totalAtAlighting);
-                                                            const teamsSet = new Set([...teamsAtBoarding, ...teamsAtAlighting]);
-                                                            let teams = [...teamsSet];
-                                                        
-                                                            const isThisRowSelected =
-                                                                assignBusSelectedKey &&
-                                                                assignBusSelectedKey.startsWith(`${busId}|${boardingRow.id}|${alightingRow.id}|`);
-                                                            if (isThisRowSelected) {
-                                                                const currentTeamKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
-                                                                const alreadyCounted =
-                                                                    teamsAtBoarding.has(currentTeamKeyStr) ||
-                                                                    teamsAtAlighting.has(currentTeamKeyStr);
-                                                                if (!alreadyCounted) {
-                                                                    total += getTeamMembersCount(currentTeamKeyStr);
-                                                                    teams.push(currentTeamKeyStr);
-                                                                }
+                                                            // <<< ZMENA: tím, ktorý práve priraďujeme, pridáme do tooltipu LEN ak je tento riadok vybraný.
+                                                            const currentTransferKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
+                                                            const teamsForTooltip = new Set(teamsInBus || []);
+                                                            if (isSelected) {
+                                                                teamsForTooltip.add(currentTransferKeyStr);
                                                             }
                                                         
-                                                            return { total, teams };
-                                                        };
+                                                            // <<< ZMENA: v tooltipe odstránime názov kategórie z názvu tímu, ak je jeho súčasťou.
+                                                            // Skratka (ak existuje) sa používa priamo – tá už kategóriu neobsahuje.
+                                                            const teamTooltipItems = [...teamsForTooltip]
+                                                                .map((tk) => {
+                                                                    const parts = String(tk).split('|');
+                                                                    const tn = (parts[0] || '').trim();
+                                                                    const cat = (parts[1] || '').trim();
+                                                                    const shortcut = getTeamShortcut(cat, tn);
+                                                                    const cleanTeamName = stripCategoryFromTeamName(tn, cat);
+                                                                    const label = shortcut || cleanTeamName;
+                                                                    const members = getTeamMembersCount(tk);
+                                                                    const color = getCategoryTextColor(cat);
+                                                                    return { label, teamName: cleanTeamName, members, color };
+                                                                })
+                                                                .filter((x) => !!x.label)
+                                                                .sort((a, b) => {
+                                                                    const la = String(a.label || '').toLocaleUpperCase('sk-SK');
+                                                                    const lb = String(b.label || '').toLocaleUpperCase('sk-SK');
+                                                                    if (la !== lb) return la.localeCompare(lb, 'sk', { sensitivity: 'base' });
+                                                                    const ta = String(a.teamName || '').toLocaleUpperCase('sk-SK');
+                                                                    const tb = String(b.teamName || '').toLocaleUpperCase('sk-SK');
+                                                                    return ta.localeCompare(tb, 'sk', { sensitivity: 'base' });
+                                                                });
                                                         
-                                                        const occupancy = computeBusOccupancy();
-                                                        const total = occupancy.total;
-                                                        const teamsInBus = occupancy.teams;
-                                                        
-                                                        // <<< ZMENA: tím, ktorý práve priraďujeme, pridáme do tooltipu LEN ak je tento riadok vybraný.
-                                                        const currentTransferKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
-                                                        const teamsForTooltip = new Set(teamsInBus || []);
-                                                        if (isSelected) {
-                                                            teamsForTooltip.add(currentTransferKeyStr);
-                                                        }
-                                                        
-                                                        // <<< ZMENA: v tooltipe odstránime názov kategórie z názvu tímu, ak je jeho súčasťou.
-                                                        // Skratka (ak existuje) sa používa priamo – tá už kategóriu neobsahuje.
-                                                        const teamTooltipItems = [...teamsForTooltip]
-                                                            .map((tk) => {
-                                                                const parts = String(tk).split('|');
-                                                                const tn = (parts[0] || '').trim();
-                                                                const cat = (parts[1] || '').trim();
-                                                                const shortcut = getTeamShortcut(cat, tn);
-                                                                const cleanTeamName = stripCategoryFromTeamName(tn, cat);
-                                                                const label = shortcut || cleanTeamName;
-                                                                const members = getTeamMembersCount(tk);
-                                                                const color = getCategoryTextColor(cat);
-                                                                return { label, teamName: cleanTeamName, members, color };
-                                                            })
-                                                            .filter((x) => !!x.label)
-                                                            .sort((a, b) => {
-                                                                const la = String(a.label || '').toLocaleUpperCase('sk-SK');
-                                                                const lb = String(b.label || '').toLocaleUpperCase('sk-SK');
-                                                                if (la !== lb) return la.localeCompare(lb, 'sk', { sensitivity: 'base' });
-                                                                const ta = String(a.teamName || '').toLocaleUpperCase('sk-SK');
-                                                                const tb = String(b.teamName || '').toLocaleUpperCase('sk-SK');
-                                                                return ta.localeCompare(tb, 'sk', { sensitivity: 'base' });
-                                                            });
-                                                        
-                                                        return React.createElement(
-                                                            React.Fragment,
-                                                            null,
-                                                            total > 0 &&
-                                                                React.createElement(
-                                                                    'span',
-                                                                    {
-                                                                        // <<< ZMENA: hover nad počtom členov vždy zobrazí tooltip
-                                                                        className: 'relative flex items-center gap-1 text-blue-700 group/occupancy',
-                                                                    },
-                                                                    React.createElement('i', { className: 'fa-solid fa-users' }),
-                                                                    `${total}`,
+                                                            return React.createElement(
+                                                                React.Fragment,
+                                                                null,
+                                                                total > 0 &&
                                                                     React.createElement(
-                                                                        'div',
+                                                                        'span',
                                                                         {
-                                                                            className:
-                                                                                'absolute z-[9999] left-1/2 -translate-x-1/2 bottom-full mb-2 ' +
-                                                                                'hidden group-hover/occupancy:block ' +
-                                                                                'bg-gray-900 text-white text-[11px] rounded-md shadow-xl px-2.5 py-2 ' +
-                                                                                'whitespace-nowrap pointer-events-none',
-                                                                            style: { minWidth: '140px' },
+                                                                            // <<< ZMENA: hover nad počtom členov vždy zobrazí tooltip
+                                                                            className: 'relative flex items-center gap-1 text-blue-700 group/occupancy',
                                                                         },
+                                                                        React.createElement('i', { className: 'fa-solid fa-users' }),
+                                                                        `${total}`,
                                                                         React.createElement(
                                                                             'div',
-                                                                            { className: 'font-semibold mb-1 text-gray-200' },
-                                                                            `V autobuse: ${total} členov`
-                                                                        ),
-                                                                        React.createElement(
-                                                                            'ul',
-                                                                            { className: 'space-y-0.5' },
-                                                                            teamTooltipItems.map((item, idx) =>
-                                                                                React.createElement(
-                                                                                    'li',
-                                                                                    {
-                                                                                        key: `occ-${idx}`,
-                                                                                        className: 'flex items-center gap-1.5',
-                                                                                    },
-                                                                                    React.createElement('span', {
-                                                                                        className: 'inline-block w-2 h-2 rounded-full flex-shrink-0',
-                                                                                        style: { backgroundColor: item.color },
-                                                                                    }),
+                                                                            {
+                                                                                className:
+                                                                                    'absolute z-[9999] left-1/2 -translate-x-1/2 bottom-full mb-2 ' +
+                                                                                    'hidden group-hover/occupancy:block ' +
+                                                                                    'bg-gray-900 text-white text-[11px] rounded-md shadow-xl px-2.5 py-2 ' +
+                                                                                    'whitespace-nowrap pointer-events-none',
+                                                                                style: { minWidth: '140px' },
+                                                                            },
+                                                                            React.createElement(
+                                                                                'div',
+                                                                                { className: 'font-semibold mb-1 text-gray-200' },
+                                                                                `V autobuse: ${total} členov`
+                                                                            ),
+                                                                            React.createElement(
+                                                                                'ul',
+                                                                                { className: 'space-y-0.5' },
+                                                                                teamTooltipItems.map((item, idx) =>
                                                                                     React.createElement(
-                                                                                        'span',
+                                                                                        'li',
                                                                                         {
-                                                                                            className: 'font-semibold',
-                                                                                            style: { color: item.color },
+                                                                                            key: `occ-${idx}`,
+                                                                                            className: 'flex items-center gap-1.5',
                                                                                         },
-                                                                                        item.label
-                                                                                    ),
-                                                                                    item.members > 0 &&
+                                                                                        React.createElement('span', {
+                                                                                            className: 'inline-block w-2 h-2 rounded-full flex-shrink-0',
+                                                                                            style: { backgroundColor: item.color },
+                                                                                        }),
                                                                                         React.createElement(
                                                                                             'span',
-                                                                                            { className: 'text-gray-400' },
-                                                                                            `(${item.members})`
-                                                                                        )
+                                                                                            {
+                                                                                                className: 'font-semibold',
+                                                                                                style: { color: item.color },
+                                                                                            },
+                                                                                            item.label
+                                                                                        ),
+                                                                                        item.members > 0 &&
+                                                                                            React.createElement(
+                                                                                                'span',
+                                                                                                { className: 'text-gray-400' },
+                                                                                                `(${item.members})`
+                                                                                            )
+                                                                                    )
                                                                                 )
-                                                                            )
-                                                                        ),
-                                                                        React.createElement('div', {
-                                                                            className:
-                                                                                'absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 ' +
-                                                                                'border-l-4 border-r-4 border-t-4 ' +
-                                                                                'border-l-transparent border-r-transparent border-t-gray-900',
-                                                                        })
+                                                                            ),
+                                                                            React.createElement('div', {
+                                                                                className:
+                                                                                    'absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 ' +
+                                                                                    'border-l-4 border-r-4 border-t-4 ' +
+                                                                                    'border-l-transparent border-r-transparent border-t-gray-900',
+                                                                            })
+                                                                        )
+                                                                    ),
+                                                                tripDurationMin != null &&
+                                                                    React.createElement(
+                                                                        'span',
+                                                                        {
+                                                                            className: 'flex items-center gap-1 text-amber-700',
+                                                                            title: `Dĺžka jazdy: ${tripDurationMin} min (${boardingRow.timeFrom} → ${alightingRow.timeTo})`,
+                                                                        },
+                                                                        React.createElement('i', { className: 'fa-solid fa-clock' }),
+                                                                        `${tripDurationMin} min`
                                                                     )
-                                                                ),
-                                                            tripDurationMin != null &&
-                                                                React.createElement(
-                                                                    'span',
-                                                                    {
-                                                                        className: 'flex items-center gap-1 text-amber-700',
-                                                                        title: `Dĺžka jazdy: ${tripDurationMin} min (${boardingRow.timeFrom} → ${alightingRow.timeTo})`,
-                                                                    },
-                                                                    React.createElement('i', { className: 'fa-solid fa-clock' }),
-                                                                    `${tripDurationMin} min`
-                                                                )
-                                                        );
-                                                    })(),
-                                                    React.createElement(
-                                                        'div',
-                                                        { className: 'flex flex-col items-end gap-1' },
-                                                        hasBoarding && React.createElement(
-                                                            'span',
-                                                            { className: 'flex items-center gap-1 text-emerald-600' },
-                                                            React.createElement('i', { className: 'fa-solid fa-right-to-bracket' }),
-                                                            'Nástup'
-                                                        ),
-                                                        hasAlighting && React.createElement(
-                                                            'span',
-                                                            { className: 'flex items-center gap-1 text-red-600' },
-                                                            React.createElement('i', { className: 'fa-solid fa-right-from-bracket' }),
-                                                            'Výstup'
+                                                            );
+                                                        })(),
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'flex flex-col items-end gap-1' },
+                                                            hasBoarding && React.createElement(
+                                                                'span',
+                                                                { className: 'flex items-center gap-1 text-emerald-600' },
+                                                                React.createElement('i', { className: 'fa-solid fa-right-to-bracket' }),
+                                                                'Nástup'
+                                                            ),
+                                                            hasAlighting && React.createElement(
+                                                                'span',
+                                                                { className: 'flex items-center gap-1 text-red-600' },
+                                                                React.createElement('i', { className: 'fa-solid fa-right-from-bracket' }),
+                                                                'Výstup'
+                                                            )
                                                         )
                                                     )
                                                 )
                                             )
-                                        )
-                                    );
-                                }).filter(Boolean)
+                                        );
+                                    }).filter(Boolean);
+                                })()
                             )
                         );
                     })(),
