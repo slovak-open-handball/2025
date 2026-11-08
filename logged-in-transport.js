@@ -4171,6 +4171,37 @@ const TransportApp = ({ userProfileData }) => {
                                     parentEndTs != null &&
                                     (boardingTs < parentStartTs || alightingTs > parentEndTs);
 
+                                // <<< ZMENA: Ak segment už bol priradený a rowId sa NEZMENIL (alebo sa zmenil len v rámci rowIdMap), 
+                                // tak NIKDY nezahadzuj priradenie. Len aktualizuj časy (aj keď sú null).
+                                // Priradenie sa zahodí len ak rowId sa zmenil a nový rowId už neexistuje, 
+                                // alebo ak časy sú neplatné A segment predtým nebol priradený.
+                                const hadValidAssignment =
+                                    oldBoardingRowId != null &&
+                                    oldAlightingRowId != null;
+
+                                if (hadValidAssignment && !timesValid) {
+                                    // Segment mal priradenie, ale nové časy sú neplatné (napr. prvý riadok bez času).
+                                    // ZACHOVAJ priradenie – len aktualizuj rowId (ak sa zmenil) a nechaj časy null.
+                                    if (
+                                        newBoardingRowId !== oldBoardingRowId ||
+                                        newAlightingRowId !== oldAlightingRowId
+                                    ) {
+                                        changed = true;
+                                        return {
+                                            ...s,
+                                            boardingRowId: newBoardingRowId,
+                                            alightingRowId: newAlightingRowId,
+                                            startTs: null,
+                                            endTs: null,
+                                            when: null,
+                                            busAssigned: true,
+                                            busId: s.busId || bus.id,
+                                        };
+                                    }
+                                    // Ak sa rowId nezmenil a časy sú null, nič nemeniť.
+                                    return s;
+                                }
+
                                 if (!timesValid || outsideParent) {
                                     changed = true;
                                     return {
@@ -4305,7 +4336,20 @@ const TransportApp = ({ userProfileData }) => {
                     ? timeOnDayKeyToTs(dayKey, alightingRow.timeTo)
                     : null;
     
-                if (boardingTs == null || alightingTs == null || alightingTs <= boardingTs) {
+                const hasValidAssignmentMarkers =
+                    seg.busId != null &&
+                    seg.boardingRowId != null &&
+                    seg.alightingRowId != null;
+
+                const boardingRowExists = seg.boardingRowId
+                    ? allRows.some((r) => r.rowId === seg.boardingRowId)
+                    : false;
+                const alightingRowExists = seg.alightingRowId
+                    ? allRows.some((r) => r.rowId === seg.alightingRowId)
+                    : false;
+
+                if (hasValidAssignmentMarkers && !boardingRowExists && !alightingRowExists) {
+                    // Oba riadky boli odstránené – až teraz zahodíme priradenie.
                     changed = true;
                     const removeKey = `${parent.key}|${seg.fromId}|${seg.toId}`;
                     if (!parentsToRemoveSegmentFrom.has(removeKey)) {
@@ -4325,6 +4369,11 @@ const TransportApp = ({ userProfileData }) => {
                         endTs: null,
                         when: null,
                     };
+                }
+
+                if (!hasValidAssignmentMarkers && (boardingTs == null || alightingTs == null || alightingTs <= boardingTs)) {
+                    // Segment nemal priradenie a nemá ani platné časy – nič nemeniť.
+                    return seg;
                 }
     
                 if (effectiveParentRange) {
@@ -5122,41 +5171,72 @@ const TransportApp = ({ userProfileData }) => {
                                 boardingTs != null &&
                                 alightingTs != null &&
                                 alightingTs > boardingTs;
-    
-                            if (!timesValid) {
-                                changed = true;
-                                return {
-                                    ...s,
-                                    busAssigned: false,
-                                    busId: null,
-                                    boardingRowId: null,
-                                    alightingRowId: null,
-                                    startTs: null,
-                                    endTs: null,
-                                    when: null,
-                                };
+
+                            // <<< ZMENA: Ak rowId sa NEZMENIL (t.j. zmena order neovplyvnila tento segment),
+                            // tak NIKDY nezahadzuj priradenie. Len aktualizuj časy.
+                            const rowIdsUnchanged =
+                                newBoardingRowId === oldBoardingRowId &&
+                                newAlightingRowId === oldAlightingRowId;
+
+                            if (rowIdsUnchanged) {
+                                // RowId sa nezmenil, ale časy môžu byť null – v tom prípade
+                                // len aktualizuj časy (a nechaj priradenie).
+                                if (!timesValid) {
+                                    if (s.startTs != null || s.endTs != null || s.when != null) {
+                                        changed = true;
+                                        return {
+                                            ...s,
+                                            startTs: null,
+                                            endTs: null,
+                                            when: null,
+                                        };
+                                    }
+                                    return s;
+                                }
+                                const newWhen = `${formatTsLocal(boardingTs)} – ${formatTsLocal(alightingTs)}`;
+                                if (
+                                    s.startTs !== boardingTs ||
+                                    s.endTs !== alightingTs ||
+                                    s.when !== newWhen
+                                ) {
+                                    changed = true;
+                                    return {
+                                        ...s,
+                                        startTs: boardingTs,
+                                        endTs: alightingTs,
+                                        when: newWhen,
+                                    };
+                                }
+                                return s;
                             }
-    
-                            const newWhen = `${formatTsLocal(boardingTs)} – ${formatTsLocal(alightingTs)}`;
-    
-                            if (
-                                newBoardingRowId !== oldBoardingRowId ||
-                                newAlightingRowId !== oldAlightingRowId ||
-                                s.startTs !== boardingTs ||
-                                s.endTs !== alightingTs ||
-                                s.when !== newWhen
-                            ) {
+
+                            // RowId sa zmenil (napr. odstránený riadok bol pred týmto segmentom).
+                            // Ak časy nie sú platné, ZACHOVAJ priradenie s novými rowId a null časmi.
+                            if (!timesValid) {
                                 changed = true;
                                 return {
                                     ...s,
                                     boardingRowId: newBoardingRowId,
                                     alightingRowId: newAlightingRowId,
-                                    startTs: boardingTs,
-                                    endTs: alightingTs,
-                                    when: newWhen,
+                                    startTs: null,
+                                    endTs: null,
+                                    when: null,
+                                    busAssigned: true,
+                                    busId: s.busId || busId,
                                 };
                             }
-                            return s;
+    
+                            const newWhen = `${formatTsLocal(boardingTs)} – ${formatTsLocal(alightingTs)}`;
+    
+                            changed = true;
+                            return {
+                                ...s,
+                                boardingRowId: newBoardingRowId,
+                                alightingRowId: newAlightingRowId,
+                                startTs: boardingTs,
+                                endTs: alightingTs,
+                                when: newWhen,
+                            };
                         });
                         if (changed) tUpdates[key] = { ...v, segments: newSegments };
                     });
