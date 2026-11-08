@@ -5515,7 +5515,7 @@ const TransportApp = ({ userProfileData }) => {
         // nastupujú alebo vystupujú (aby sme nemuseli výpočet duplikovať).
         const getTeamsForRowSide = (targetRowId, side) => {
             if (!targetRowId) return [];
-            const result = [];
+            const resultSet = new Set();
             (savedTransfersRef.current || []).forEach((parent) => {
                 if (parent.dayKey !== dayKey) return;
                 if (parent.isWalking === true) return;
@@ -5531,14 +5531,14 @@ const TransportApp = ({ userProfileData }) => {
                     if (seg.busId !== busId) return;
                     if (seg.isWalking === true) return;
                     if (side === 'in' && seg.boardingRowId === targetRowId) {
-                        result.push(`${effectiveTeamName}|${effectiveCategory}`);
+                        resultSet.add(`${effectiveTeamName}|${effectiveCategory}`);
                     }
                     if (side === 'out' && seg.alightingRowId === targetRowId) {
-                        result.push(`${effectiveTeamName}|${effectiveCategory}`);
+                        resultSet.add(`${effectiveTeamName}|${effectiveCategory}`);
                     }
                 });
             });
-            return result;
+            return [...resultSet];
         };
     
         // Tímy vystupujúce v tomto riadku (stĺpec "Výstup")
