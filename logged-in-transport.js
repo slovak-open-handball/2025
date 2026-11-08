@@ -13413,17 +13413,46 @@ const TransportApp = ({ userProfileData }) => {
                                         return { match: m, isPreferred };
                                     });
 
-                                    // Predvolený výber preferovaného riadku – len ak ešte nič nie je vybrané.
                                     if (!assignBusSelectedKey) {
-                                        const defaultMatch = matchesWithPreferredFlag.find((item) => {
-                                            return item.isPreferred && item.match && item.match.bus && item.match.trip;
-                                        });
-                                        if (defaultMatch && defaultMatch.match) {
-                                            const dm = defaultMatch.match;
-                                            const defaultKey = `${dm.bus.id}|${dm.boardingRow?.id || ''}|${dm.alightingRow?.id || ''}|${dm.side}`;
-                                            queueMicrotask(() => {
-                                                setAssignBusSelectedKey(defaultKey);
+                                        const currentTeamKeyStr = `${currentTransferTeamName}|${currentTransferCategory}`;
+                                        const isCurrentTeamAlreadyInAnyMatch = matchesWithPreferredFlag.some(({ match: m }) => {
+                                            if (!m || !m.bus || !m.trip) return false;
+                                            const busId = m.bus.id;
+                                            const dayKey = m.trip.dayKey;
+                                            if (!busId || !dayKey) return false;
+                                            return (savedTransfersRef.current || []).some((parent) => {
+                                                if (parent.dayKey !== dayKey) return false;
+                                                if (parent.isWalking === true) return false;
+                                                const parentCategory = cleanCategory(parent.category || '');
+                                                let parentTeamName = String(parent.teamName || '').trim();
+                                                if (!parentTeamName && parent.teamUid != null && parent.teamIndex != null) {
+                                                    const lookupKey = `${parent.teamUid}|${parentCategory}|${parent.teamIndex}`;
+                                                    const info = (teamsLookupRef.current || {})[lookupKey];
+                                                    if (info && info.teamName) parentTeamName = info.teamName;
+                                                }
+                                                if (!parentTeamName) return false;
+                                                const parentTeamKeyStr = `${parentTeamName}|${parentCategory}`;
+                                                if (parentTeamKeyStr !== currentTeamKeyStr) return false;
+                                                return (parent.segments || []).some((seg) => {
+                                                    if (!seg) return false;
+                                                    if (seg.isWalking === true) return false;
+                                                    if (seg.busId !== busId) return false;
+                                                    return !!(seg.boardingRowId && seg.alightingRowId);
+                                                });
                                             });
+                                        });
+
+                                        if (isCurrentTeamAlreadyInAnyMatch) {
+                                            const defaultMatch = matchesWithPreferredFlag.find((item) => {
+                                                return item.isPreferred && item.match && item.match.bus && item.match.trip;
+                                            });
+                                            if (defaultMatch && defaultMatch.match) {
+                                                const dm = defaultMatch.match;
+                                                const defaultKey = `${dm.bus.id}|${dm.boardingRow?.id || ''}|${dm.alightingRow?.id || ''}|${dm.side}`;
+                                                queueMicrotask(() => {
+                                                    setAssignBusSelectedKey(defaultKey);
+                                                });
+                                            }
                                         }
                                     }
 
