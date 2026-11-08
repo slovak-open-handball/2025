@@ -13317,11 +13317,10 @@ const TransportApp = ({ userProfileData }) => {
                                 { className: 'space-y-2' },
                                 (() => {
                                     // <<< NOVÉ: Pre každý match zistíme, či v danom buse (na danom dni)
-                                    // už sedí nejaký superstructure tím, ktorý patrí do rovnakej skupiny
-                                    // (rovnaké posledné písmeno názvu tímu) ako práve priraďovaný tím.
-                                    // Ak áno, tento riadok sa predvolene vyberie.
+                                    // už sedí nejaký superstructure tím s rovnakým posledným písmenom
+                                    // ako práve priraďovaný tím. Ak áno, riadok dostane štítok "odporúčané"
+                                    // a ak ešte nie je nič vybrané, predvolene sa vyberie.
                                     const currentTransferTeamName = String(currentTransfer.teamName || '').trim();
-                                    const currentTransferCategory = cleanCategory(currentTransfer.category || '');
                                     const currentTransferDayKey = currentTransfer.dayKey || null;
 
                                     const getTeamLastChar = (teamName) => {
@@ -13332,7 +13331,6 @@ const TransportApp = ({ userProfileData }) => {
 
                                     const currentTeamLastChar = getTeamLastChar(currentTransferTeamName);
 
-                                    // Pomocná funkcia: zistí, či je daný tím superstructure
                                     const isTeamSuperstructure = (teamName, category) => {
                                         if (!teamName) return false;
                                         const tn = String(teamName).trim();
@@ -13341,15 +13339,12 @@ const TransportApp = ({ userProfileData }) => {
                                             (t) => cleanCategory(t.category) === cat && String(t.teamName || '').trim() === tn
                                         );
                                         if (info && info.isSuperstructure === true) return true;
-                                        // Fallback: ak tím nie je v users (isRegistered !== true), berieme ako superstructure
                                         if (!info) return true;
                                         if (info.isRegistered !== true) return true;
                                         if (/\d[A-ZÁ-Ž]\s*$/.test(tn)) return true;
                                         return false;
                                     };
 
-                                    // Pre každý match zistíme, či v jeho buse (na jeho dni) už sedí
-                                    // superstructure tím s rovnakým posledným písmenom.
                                     const matchesWithPreferredFlag = currentMatches.map((m) => {
                                         let isPreferred = false;
                                         try {
@@ -13374,14 +13369,11 @@ const TransportApp = ({ userProfileData }) => {
                                                 }
                                                 if (!parentTeamName) return;
 
-                                                // Musí ísť o superstructure tím
                                                 if (!isTeamSuperstructure(parentTeamName, parentCategory)) return;
 
-                                                // Musí mať rovnaké posledné písmeno ako priraďovaný tím
                                                 const parentLastChar = getTeamLastChar(parentTeamName);
                                                 if (!parentLastChar || parentLastChar !== currentTeamLastChar) return;
 
-                                                // Musí mať segment priradený k tomuto busu
                                                 const hasSegmentOnBus = (parent.segments || []).some((seg) => {
                                                     if (!seg) return false;
                                                     if (seg.isWalking === true) return false;
@@ -13399,22 +13391,19 @@ const TransportApp = ({ userProfileData }) => {
                                         return { match: m, isPreferred };
                                     });
 
-                                    // Ak existuje aspoň jeden preferovaný match, predvolene vyberieme prvý z nich.
-                                    // Inak zostane výber prázdny (používateľ musí vybrať manuálne).
-                                    const firstPreferred = matchesWithPreferredFlag.find((x) => x.isPreferred);
-                                    if (firstPreferred && firstPreferred.match) {
-                                        const pm = firstPreferred.match;
-                                        const preferredKey = `${pm.bus.id}|${pm.boardingRow?.id || ''}|${pm.alightingRow?.id || ''}|${pm.side}`;
-                                        // Poznámka: setAssignBusSelectedKey voláme asynchrónne, aby sme
-                                        // nevolali setState počas renderu. Použijeme queueMicrotask.
-                                        if (assignBusSelectedKey !== preferredKey) {
+                                    // Predvolený výber preferovaného riadku – len ak ešte nič nie je vybrané.
+                                    if (!assignBusSelectedKey) {
+                                        const firstPreferred = matchesWithPreferredFlag.find((x) => x.isPreferred);
+                                        if (firstPreferred && firstPreferred.match) {
+                                            const pm = firstPreferred.match;
+                                            const preferredKey = `${pm.bus.id}|${pm.boardingRow?.id || ''}|${pm.alightingRow?.id || ''}|${pm.side}`;
                                             queueMicrotask(() => {
                                                 setAssignBusSelectedKey(preferredKey);
                                             });
                                         }
                                     }
 
-                                    return matchesWithPreferredFlag.map(({ match: m, isPreferred }, idx) => {
+                                    return matchesWithPreferredFlag.map(({ match: m, isPreferred }) => {
                                         if (!m || !m.bus || !m.trip) {
                                             console.warn('[TRANSPORT] Neplatný výsledok v currentMatches:', m);
                                             return null;
@@ -13435,9 +13424,7 @@ const TransportApp = ({ userProfileData }) => {
                                                     className: `w-full text-left px-3 py-2 rounded-lg border-2 transition-colors ${
                                                         isSelected
                                                             ? 'border-amber-500 bg-amber-50'
-                                                            : isPreferred
-                                                                ? 'border-violet-400 bg-violet-50 hover:bg-violet-100'
-                                                                : 'border-gray-200 bg-white hover:bg-gray-50'
+                                                            : 'border-gray-200 bg-white hover:bg-gray-50'
                                                     }`
                                                 },
                                                 React.createElement(
@@ -13577,15 +13564,12 @@ const TransportApp = ({ userProfileData }) => {
                                                             const total = occupancy.total;
                                                             const teamsInBus = occupancy.teams;
                                                         
-                                                            // <<< ZMENA: tím, ktorý práve priraďujeme, pridáme do tooltipu LEN ak je tento riadok vybraný.
                                                             const currentTransferKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
                                                             const teamsForTooltip = new Set(teamsInBus || []);
                                                             if (isSelected) {
                                                                 teamsForTooltip.add(currentTransferKeyStr);
                                                             }
                                                         
-                                                            // <<< ZMENA: v tooltipe odstránime názov kategórie z názvu tímu, ak je jeho súčasťou.
-                                                            // Skratka (ak existuje) sa používa priamo – tá už kategóriu neobsahuje.
                                                             const teamTooltipItems = [...teamsForTooltip]
                                                                 .map((tk) => {
                                                                     const parts = String(tk).split('|');
@@ -13615,7 +13599,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                     React.createElement(
                                                                         'span',
                                                                         {
-                                                                            // <<< ZMENA: hover nad počtom členov vždy zobrazí tooltip
                                                                             className: 'relative flex items-center gap-1 text-blue-700 group/occupancy',
                                                                         },
                                                                         React.createElement('i', { className: 'fa-solid fa-users' }),
