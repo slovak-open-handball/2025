@@ -4317,35 +4317,72 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
-    const syncAssignedSegmentsForBusRow = async (busId, dayKey, rowId) => {
+    const syncAssignedSegmentsForBusRow = async (busId, dayKey, rowId, overrides = null) => {
         if (!window.db || !busId || !dayKey || !rowId) return;
     
         const rowsKey = `${busId}|${dayKey}`;
         let allRows = [];
-        try {
-            const transportRef = collection(window.db, 'transport');
-            const rowsSnap = await getDocs(transportRef);
-            rowsSnap.forEach((docSnap) => {
-                const data = docSnap.data() || {};
-                if (data.type !== 'busRow') return;
-                if (data.busId !== busId) return;
-                if (data.dayKey !== dayKey) return;
-                const order = Number(data.order) || 0;
-                const rowId = data.rowId || buildRowId(data.busId, data.dayKey, order);
+    
+        // Primárne použi busRows state (aktuálny v Reacte)
+        const stateRows = (busRows && busRows[rowsKey]) ? busRows[rowsKey] : null;
+        if (Array.isArray(stateRows) && stateRows.length > 0) {
+            stateRows.forEach((r) => {
+                if (!r || !r.id) return;
                 allRows.push({
-                    id: docSnap.id,
-                    order,
-                    rowId,
-                    timeFrom: data.timeFrom || '',
-                    timeTo: data.timeTo || '',
-                    placeFromId: data.placeFromId || null,
-                    placeToId: data.placeToId || null,
+                    id: r.id,
+                    order: Number(r.order) || 0,
+                    rowId: r.rowId || buildRowId(busId, dayKey, Number(r.order) || 0),
+                    timeFrom: r.timeFrom || '',
+                    timeTo: r.timeTo || '',
+                    placeFromId: r.placeFromId || null,
+                    placeToId: r.placeToId || null,
                 });
             });
             allRows.sort((a, b) => (a.order || 0) - (b.order || 0));
-        } catch (err) {
-            console.error('[TRANSPORT] Chyba pri načítaní busRows z Firestore v sync:', err);
-            return;
+        }
+    
+        // Fallback: ak busRows state ešte nemá dáta, načítaj z Firestore
+        if (allRows.length === 0) {
+            try {
+                const transportRef = collection(window.db, 'transport');
+                const rowsSnap = await getDocs(transportRef);
+                rowsSnap.forEach((docSnap) => {
+                    const data = docSnap.data() || {};
+                    if (data.type !== 'busRow') return;
+                    if (data.busId !== busId) return;
+                    if (data.dayKey !== dayKey) return;
+                    const order = Number(data.order) || 0;
+                    const rowId = data.rowId || buildRowId(data.busId, data.dayKey, order);
+                    allRows.push({
+                        id: docSnap.id,
+                        order,
+                        rowId,
+                        timeFrom: data.timeFrom || '',
+                        timeTo: data.timeTo || '',
+                        placeFromId: data.placeFromId || null,
+                        placeToId: data.placeToId || null,
+                    });
+                });
+                allRows.sort((a, b) => (a.order || 0) - (b.order || 0));
+            } catch (err) {
+                console.error('[TRANSPORT] Chyba pri načítaní busRows z Firestore v sync:', err);
+                return;
+            }
+        }
+    
+        // Aplikuj overrides (aktuálne zmenené časy) – kľúč = rowId (Firestore doc id)
+        if (overrides && typeof overrides === 'object') {
+            allRows = allRows.map((r) => {
+                const ov = overrides[r.id];
+                if (!ov) return r;
+                return {
+                    ...r,
+                    timeFrom: ov.timeFrom != null ? ov.timeFrom : r.timeFrom,
+                    timeTo: ov.timeTo != null ? ov.timeTo : r.timeTo,
+                    placeFromId: ov.placeFromId !== undefined ? ov.placeFromId : r.placeFromId,
+                    placeToId: ov.placeToId !== undefined ? ov.placeToId : r.placeToId,
+                };
+            });
         }
     
         const targetRow = allRows.find((r) => r.id === rowId);
@@ -4581,7 +4618,7 @@ const TransportApp = ({ userProfileData }) => {
         setSavedTransfers(updatedParents);
     };
 
-    const syncAllAffectedRowsForBus = async (busId, dayKey, changedRowId) => {
+    const syncAllAffectedRowsForBus = async (busId, dayKey, changedRowId, overrides = null) => {
         if (!window.db || !busId || !dayKey) return;
 
         // Zisti, ktoré rowId majú priradené tímy (cez boardingRowId/alightingRowId)
@@ -4619,13 +4656,13 @@ const TransportApp = ({ userProfileData }) => {
 
         if (targetRowIds.size === 0) {
             // Fallback – aspoň zmenený riadok
-            await syncAssignedSegmentsForBusRow(busId, dayKey, changedRowId);
+            await syncAssignedSegmentsForBusRow(busId, dayKey, changedRowId, overrides);
             return;
         }
 
         const syncPromises = [];
         targetRowIds.forEach((rid) => {
-            syncPromises.push(syncAssignedSegmentsForBusRow(busId, dayKey, rid));
+            syncPromises.push(syncAssignedSegmentsForBusRow(busId, dayKey, rid, overrides));
         });
         await Promise.all(syncPromises);
     };
@@ -4680,7 +4717,13 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     });
                     if (busIdForSync && dayKeyForSync) {
-                        await syncAllAffectedRowsForBus(busIdForSync, dayKeyForSync, rowId);
+                        const overrides = {};
+                        overrides[rowId] = {
+                            placeFromId: patch.placeFromId,
+                            placeToId: patch.placeToId,
+                            timeTo: patch.timeTo,
+                        };
+                        await syncAllAffectedRowsForBus(busIdForSync, dayKeyForSync, rowId, overrides);
                     }
                 } catch (e) {
                     console.error('[TRANSPORT] Chyba pri sync po zmene place:', e);
@@ -4704,7 +4747,27 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 });
                 if (busIdForSync && dayKeyForSync) {
-                    await syncAllAffectedRowsForBus(busIdForSync, dayKeyForSync, rowId);
+                    // Overrides – aktuálne zmenené časy (aby sync videl nové hodnoty
+                    // skôr, než sa stihne aktualizovať busRows state z Firestore)
+                    const overrides = {};
+                    overrides[rowId] = { [field]: value };
+                    if (field === 'timeFrom' && value) {
+                        const currentRow = (busRows[`${busIdForSync}|${dayKeyForSync}`] || [])
+                            .find((r) => r.id === rowId);
+                        const travelMinutes = getTravelMinutes(
+                            currentRow?.placeFromId || null,
+                            currentRow?.placeToId || null
+                        );
+                        if (travelMinutes != null && /^\d{1,2}:\d{2}$/.test(value)) {
+                            const [h, m] = value.split(':').map(Number);
+                            let total = h * 60 + m + travelMinutes;
+                            total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
+                            const endH = Math.floor(total / 60);
+                            const endM = total % 60;
+                            overrides[rowId].timeTo = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+                        }
+                    }
+                    await syncAllAffectedRowsForBus(busIdForSync, dayKeyForSync, rowId, overrides);
                 }
             } catch (e) {
                 console.error('[TRANSPORT] Chyba pri sync po zmene času:', e);
@@ -4892,12 +4955,33 @@ const TransportApp = ({ userProfileData }) => {
             );
 
             try {
+                // Zmenený riadok + všetky zmenené riadky → sync pre všetky dotknuté
                 const affectedRowIds = new Set([currentRowId]);
                 updates.forEach(({ id }) => affectedRowIds.add(id));
 
+                // Overrides – nové časy pre všetky zmenené riadky
+                const overrides = {};
+                const allRowsForOverrides = (busRows[`${busId}|${dayKey}`] || [])
+                    .slice()
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+                // Zmenený riadok (currentRowId) – nové časy newTimeFrom/newTimeTo
+                const currentRowForOverride = allRowsForOverrides.find((r) => r.id === currentRowId);
+                if (currentRowForOverride) {
+                    overrides[currentRowId] = {
+                        timeFrom: newTimeFrom,
+                        timeTo: newTimeTo,
+                    };
+                }
+                // Ostatné zmenené riadky – nové časy z updates
+                updates.forEach(({ id, patch }) => {
+                    if (!overrides[id]) overrides[id] = {};
+                    if (patch.timeFrom !== undefined) overrides[id].timeFrom = patch.timeFrom;
+                    if (patch.timeTo !== undefined) overrides[id].timeTo = patch.timeTo;
+                });
+
                 const syncPromises = [];
                 affectedRowIds.forEach((rid) => {
-                    syncPromises.push(syncAllAffectedRowsForBus(busId, dayKey, rid));
+                    syncPromises.push(syncAllAffectedRowsForBus(busId, dayKey, rid, overrides));
                 });
                 await Promise.all(syncPromises);
             } catch (e) {
@@ -4998,9 +5082,29 @@ const TransportApp = ({ userProfileData }) => {
                 const affectedRowIds = new Set([currentRowId]);
                 updates.forEach(({ id }) => affectedRowIds.add(id));
 
+                // Overrides – nové časy pre všetky zmenené riadky
+                const overrides = {};
+                const allRowsForOverrides = (busRows[`${busId}|${dayKey}`] || [])
+                    .slice()
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+                // Zmenený riadok (currentRowId) – nové časy newTimeFrom/newTimeTo
+                const currentRowForOverride = allRowsForOverrides.find((r) => r.id === currentRowId);
+                if (currentRowForOverride) {
+                    overrides[currentRowId] = {
+                        timeFrom: newTimeFrom,
+                        timeTo: newTimeTo,
+                    };
+                }
+                // Ostatné zmenené riadky – nové časy z updates
+                updates.forEach(({ id, patch }) => {
+                    if (!overrides[id]) overrides[id] = {};
+                    if (patch.timeFrom !== undefined) overrides[id].timeFrom = patch.timeFrom;
+                    if (patch.timeTo !== undefined) overrides[id].timeTo = patch.timeTo;
+                });
+
                 const syncPromises = [];
                 affectedRowIds.forEach((rid) => {
-                    syncPromises.push(syncAllAffectedRowsForBus(busId, dayKey, rid));
+                    syncPromises.push(syncAllAffectedRowsForBus(busId, dayKey, rid, overrides));
                 });
                 await Promise.all(syncPromises);
             } catch (e) {
