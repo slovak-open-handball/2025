@@ -3204,8 +3204,6 @@ const TransportApp = ({ userProfileData }) => {
                         toPlaceName: data.toPlaceName,
                         fromPlaceNameNorm: fromNorm,
                         toPlaceNameNorm: toNorm,
-                        createdAt: data.createdAt || null,
-                        createdBy: data.createdBy || null,
                     });
                 });
                 rules.sort((a, b) => {
@@ -8012,8 +8010,6 @@ const TransportApp = ({ userProfileData }) => {
                         teamUid: teamIds.teamUid,
                         teamIndex: teamIds.teamIndex,
                         shortcut: newShortcut,
-                        createdAt: Timestamp.fromDate(new Date()),
-                        createdBy: (userProfileData && userProfileData.email) || null,
                     });
                 }
                 window.showGlobalNotification(`Skratka pre tím ${name} bola uložená: ${newShortcut}.`, 'success');
@@ -11607,6 +11603,7 @@ const TransportApp = ({ userProfileData }) => {
                                             }
                                             setNewWalkingRuleSaving(true);
                                             try {
+                                                // 1) Pôvodné pravidlo (A → B)
                                                 await setDoc(doc(window.db, 'transport', docId), {
                                                     type: 'walkingRule',
                                                     docKey: docId,
@@ -11616,17 +11613,36 @@ const TransportApp = ({ userProfileData }) => {
                                                     toPlaceName: toPlace.name,
                                                     fromPlaceNameNorm: fromNorm,
                                                     toPlaceNameNorm: toNorm,
-                                                    createdAt: Timestamp.fromDate(new Date()),
-                                                    createdBy: (userProfileData && userProfileData.email) || null,
                                                 }, { merge: true });
+                                            
+                                                // 2) Obrátené pravidlo (B → A)
+                                                const reverseDocId = buildWalkingRuleDocId(toNorm, fromNorm);
+                                                if (reverseDocId) {
+                                                    const reverseDuplicate = walkingRules.find(
+                                                        (r) => r.fromPlaceNameNorm === toNorm && r.toPlaceNameNorm === fromNorm
+                                                    );
+                                                    if (!reverseDuplicate) {
+                                                        await setDoc(doc(window.db, 'transport', reverseDocId), {
+                                                            type: 'walkingRule',
+                                                            docKey: reverseDocId,
+                                                            fromPlaceId: toPlace.id || null,
+                                                            toPlaceId: fromPlace.id || null,
+                                                            fromPlaceName: toPlace.name,
+                                                            toPlaceName: fromPlace.name,
+                                                            fromPlaceNameNorm: toNorm,
+                                                            toPlaceNameNorm: fromNorm,
+                                                        }, { merge: true });
+                                                    }
+                                                }
+                                            
                                                 window.showGlobalNotification(
-                                                    `Pravidlo „${fromPlace.name} → ${toPlace.name}" bolo pridané.`,
+                                                    `Pravidlá „${fromPlace.name} → ${toPlace.name}" a „${toPlace.name} → ${fromPlace.name}" boli pridané.`,
                                                     'success'
                                                 );
                                                 setShowAddWalkingRuleModal(false);
                                             } catch (err) {
-                                                console.error('[TRANSPORT] Chyba pri ukladaní pravidla peši:', err);
-                                                window.showGlobalNotification('Nepodarilo sa uložiť pravidlo.', 'error');
+                                                console.error('[TRANSPORT] Chyba pri ukladaní pravidiel peši:', err);
+                                                window.showGlobalNotification('Nepodarilo sa uložiť pravidlá.', 'error');
                                             } finally {
                                                 setNewWalkingRuleSaving(false);
                                             }
