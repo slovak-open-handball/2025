@@ -7806,7 +7806,7 @@ const TransportApp = ({ userProfileData }) => {
             }
     
             window.showGlobalNotification(
-                `Označených ako "peši": ${updatedParentsCount} presunov (vrátane častí rozdelených presunov).`,
+                `Označených ako peši: ${updatedParentsCount} presunov (vrátane častí rozdelených presunov).`,
                 'success'
             );
         } catch (err) {
