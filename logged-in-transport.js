@@ -5691,17 +5691,18 @@ const TransportApp = ({ userProfileData }) => {
         };
     
         const teamsAlightingHere = getTeamsForRowSide(row.rowId, 'out');
+        // filteredTeamsOut sa používa iba na zobrazenie v stĺpci Výstup
         const filteredTeamsOut = filterTeamsByCategory(teamsAlightingHere);
-    
+
         const teamsBoardingNextRow = nextRow
             ? getTeamsForRowSide(nextRow.rowId, 'in')
             : [];
         const filteredTeamsBoardingNextRow = filterTeamsByCategory(teamsBoardingNextRow);
-    
-        const isPlaceToLockedByAlightingHere = filteredTeamsOut.length > 0;
-        const isPlaceToLockedByBoardingNext = filteredTeamsBoardingNextRow.length > 0;
+
+        const isPlaceToLockedByAlightingHere = teamsAlightingHere.length > 0;
+        const isPlaceToLockedByBoardingNext = teamsBoardingNextRow.length > 0;
         const isPlaceToLocked = isPlaceToLockedByAlightingHere || isPlaceToLockedByBoardingNext;
-    
+            
         const placeToLockTitle = (() => {
             if (isPlaceToLockedByAlightingHere) {
                 return 'Miesto do sa nedá meniť, pretože v tomto riadku vystupuje tím. Najprv odstráňte tímy zo stĺpca Výstup.';
@@ -5853,10 +5854,8 @@ const TransportApp = ({ userProfileData }) => {
                     )
                     : (() => {
                         const teamsBoardingHereForPlaceFromLock = getTeamsForRowSide(row.rowId, 'in');
-                        const filteredTeamsBoardingHereForPlaceFromLock =
-                            filterTeamsByCategory(teamsBoardingHereForPlaceFromLock);
                         const isPlaceFromLockedByBoardingHere =
-                            filteredTeamsBoardingHereForPlaceFromLock.length > 0;
+                            teamsBoardingHereForPlaceFromLock.length > 0;
 
                         const placeFromLockTitle = isPlaceFromLockedByBoardingHere
                             ? 'Miesto od sa nedá meniť, pretože v tomto riadku nastupuje tím. Najprv odstráňte tímy zo stĺpca Nástup.'
