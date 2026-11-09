@@ -10169,19 +10169,8 @@ const TransportApp = ({ userProfileData }) => {
                                 routeLabel &&
                                     React.createElement(
                                         'span',
-                                        { className: 'text-sm text-gray-900 font-medium inline-flex items-center flex-wrap gap-x-1' },
-                                        (() => {
-                                            const parts = String(routeLabel).split('→').map((s) => s.trim()).filter(Boolean);
-                                            const nodes = [];
-                                            parts.forEach((part, i) => {
-                                                nodes.push(getPlaceIconForName(part));
-                                                nodes.push(React.createElement('span', { key: `part-${i}` }, part));
-                                                if (i < parts.length - 1) {
-                                                    nodes.push(React.createElement('span', { key: `arr-${i}` }, '→'));
-                                                }
-                                            });
-                                            return nodes;
-                                        })()
+                                        { className: 'text-sm text-gray-900 font-medium' },
+                                        routeLabel
                                     ),
                                 parentInfoLabel &&
                                     React.createElement(
