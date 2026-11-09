@@ -14237,7 +14237,7 @@ const TransportApp = ({ userProfileData }) => {
                             React.createElement(
                                 'div',
                                 { className: 'flex-1' },
-                                React.createElement('div', { className: 'font-semibold text-gray-800' }, 'Priradiť presun autobusu'),
+                                React.createElement('div', { className: 'font-semibold text-gray-800' }, 'Priradiť presun k autobusu'),
                                 React.createElement('div', { className: 'text-xs text-gray-500' }, 'Vytvoriť riadok v plánovaní autobusu')
                             )
                         );
