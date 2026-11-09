@@ -4359,8 +4359,20 @@ const TransportApp = ({ userProfileData }) => {
         (savedTransfersRef.current || []).forEach((parent) => {
             if (parent.dayKey !== dayKey) return;
             if (!Array.isArray(parent.segments)) return;
-    
-            const effectiveParentRange = computeEffectiveParentRange(parent);
+
+            // NOVÉ: prepočítaj parent.when z aktuálnych segmentov (aby sme kontrolovali
+            // voči aktuálnemu rozsahu, nie voči starému when z DB)
+            const parentDraft = {
+                ...parent,
+                segments: parent.segments.map((s) => ({ ...s })),
+            };
+            try {
+                recomputeParentSegmentsInPlace(parentDraft);
+            } catch (e) {
+                console.error('[TRANSPORT] Chyba pri recompute v sync:', e);
+            }
+
+            const effectiveParentRange = computeEffectiveParentRange(parentDraft);
     
             let changed = false;
             const newSegments = parent.segments.map((seg) => {
@@ -4569,6 +4581,55 @@ const TransportApp = ({ userProfileData }) => {
         setSavedTransfers(updatedParents);
     };
 
+    const syncAllAffectedRowsForBus = async (busId, dayKey, changedRowId) => {
+        if (!window.db || !busId || !dayKey) return;
+
+        // Zisti, ktoré rowId majú priradené tímy (cez boardingRowId/alightingRowId)
+        const rowIdsWithTeams = new Set();
+        (savedTransfersRef.current || []).forEach((parent) => {
+            if (parent.dayKey !== dayKey) return;
+            if (parent.isWalking === true) return;
+            (parent.segments || []).forEach((seg) => {
+                if (!seg) return;
+                if (seg.busId !== busId) return;
+                if (seg.isWalking === true) return;
+                if (seg.boardingRowId) rowIdsWithTeams.add(seg.boardingRowId);
+                if (seg.alightingRowId) rowIdsWithTeams.add(seg.alightingRowId);
+            });
+        });
+
+        // Zoznam všetkých busRows pre daný bus a deň
+        const rowsKey = `${busId}|${dayKey}`;
+        const allRows = (busRows[rowsKey] || [])
+            .slice()
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        // Vyber riadky, ktoré majú priradené tímy, plus zmenený riadok
+        const targetRowIds = new Set();
+        allRows.forEach((r) => {
+            if (!r || !r.id) return;
+            if (r.id === changedRowId) {
+                targetRowIds.add(r.id);
+                return;
+            }
+            if (r.rowId && rowIdsWithTeams.has(r.rowId)) {
+                targetRowIds.add(r.id);
+            }
+        });
+
+        if (targetRowIds.size === 0) {
+            // Fallback – aspoň zmenený riadok
+            await syncAssignedSegmentsForBusRow(busId, dayKey, changedRowId);
+            return;
+        }
+
+        const syncPromises = [];
+        targetRowIds.forEach((rid) => {
+            syncPromises.push(syncAssignedSegmentsForBusRow(busId, dayKey, rid));
+        });
+        await Promise.all(syncPromises);
+    };
+
     const updateBusRowField = async (rowId, field, value) => {
         if (!window.db || !rowId) return;
         try {
@@ -4619,11 +4680,7 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     });
                     if (busIdForSync && dayKeyForSync) {
-                        const overrideFields = {};
-                        if (patch.placeFromId !== undefined) overrideFields.placeFromId = patch.placeFromId;
-                        if (patch.placeToId !== undefined) overrideFields.placeToId = patch.placeToId;
-                        if (patch.timeTo !== undefined) overrideFields.timeTo = patch.timeTo;
-                        await syncAssignedSegmentsForBusRow(busIdForSync, dayKeyForSync, rowId);
+                        await syncAllAffectedRowsForBus(busIdForSync, dayKeyForSync, rowId);
                     }
                 } catch (e) {
                     console.error('[TRANSPORT] Chyba pri sync po zmene place:', e);
@@ -4647,7 +4704,7 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 });
                 if (busIdForSync && dayKeyForSync) {
-                    await syncAssignedSegmentsForBusRow(busIdForSync, dayKeyForSync, rowId);
+                    await syncAllAffectedRowsForBus(busIdForSync, dayKeyForSync, rowId);
                 }
             } catch (e) {
                 console.error('[TRANSPORT] Chyba pri sync po zmene času:', e);
@@ -4714,9 +4771,11 @@ const TransportApp = ({ userProfileData }) => {
             );
 
             try {
-                await Promise.all(
-                    updates.map(({ id }) => syncAssignedSegmentsForBusRow(busId, dayKey, id))
-                );
+                const syncPromises = [];
+                updates.forEach(({ id }) => {
+                    syncPromises.push(syncAllAffectedRowsForBus(busId, dayKey, id));
+                });
+                await Promise.all(syncPromises);
             } catch (e) {
                 console.error('[TRANSPORT] Chyba pri sync segmentov po posune:', e);
             }
@@ -4833,11 +4892,14 @@ const TransportApp = ({ userProfileData }) => {
             );
 
             try {
-                const syncPromises = [currentRowId];
-                updates.forEach(({ id }) => syncPromises.push(id));
-                await Promise.all(
-                    syncPromises.map((id) => syncAssignedSegmentsForBusRow(busId, dayKey, id))
-                );
+                const affectedRowIds = new Set([currentRowId]);
+                updates.forEach(({ id }) => affectedRowIds.add(id));
+
+                const syncPromises = [];
+                affectedRowIds.forEach((rid) => {
+                    syncPromises.push(syncAllAffectedRowsForBus(busId, dayKey, rid));
+                });
+                await Promise.all(syncPromises);
             } catch (e) {
                 console.error('[TRANSPORT] Chyba pri sync segmentov po resync placeTo:', e);
             }
@@ -4932,9 +4994,15 @@ const TransportApp = ({ userProfileData }) => {
             );
 
             try {
-                await Promise.all(
-                    updates.map(({ id }) => syncAssignedSegmentsForBusRow(busId, dayKey, id))
-                );
+                // Zmenený riadok + všetky zmenené riadky → sync pre všetky dotknuté
+                const affectedRowIds = new Set([currentRowId]);
+                updates.forEach(({ id }) => affectedRowIds.add(id));
+
+                const syncPromises = [];
+                affectedRowIds.forEach((rid) => {
+                    syncPromises.push(syncAllAffectedRowsForBus(busId, dayKey, rid));
+                });
+                await Promise.all(syncPromises);
             } catch (e) {
                 console.error('[TRANSPORT] Chyba pri sync segmentov po cascade:', e);
             }
@@ -5021,11 +5089,14 @@ const TransportApp = ({ userProfileData }) => {
             );
 
             try {
-                const syncPromises = [gapRowPrevId, gapRowNextId];
-                updates.forEach(({ id }) => syncPromises.push(id));
-                await Promise.all(
-                    syncPromises.map((id) => syncAssignedSegmentsForBusRow(busId, dayKey, id))
-                );
+                const affectedRowIds = new Set([gapRowPrevId, gapRowNextId]);
+                updates.forEach(({ id }) => affectedRowIds.add(id));
+
+                const syncPromises = [];
+                affectedRowIds.forEach((rid) => {
+                    syncPromises.push(syncAllAffectedRowsForBus(busId, dayKey, rid));
+                });
+                await Promise.all(syncPromises);
             } catch (e) {
                 console.error('[TRANSPORT] Chyba pri sync segmentov po posune (inverted):', e);
             }
@@ -7184,7 +7255,7 @@ const TransportApp = ({ userProfileData }) => {
         return filteredByDuration;
     };
 
-    const recomputeParentSegmentsInPlace = (draft) => {
+    function recomputeParentSegmentsInPlace(draft) {
         if (!draft) return;
         const originalWhenFromDraft = draft.when;
         const stops = Array.isArray(draft.intermediateStopIds) ? draft.intermediateStopIds : [];
@@ -7409,7 +7480,7 @@ const TransportApp = ({ userProfileData }) => {
         if (parentHasSavedWhen) {
             draft.when = savedParentWhen;
         }
-    };
+    }
     
     const recomputeParentSegments = async (parent) => {
         if (!window.db || !parent) return;
