@@ -8659,7 +8659,7 @@ const TransportApp = ({ userProfileData }) => {
                 React.createElement(
                     'span',
                     { className: 'ml-auto text-sm text-gray-500' },
-                    `Definovaných pravidiel: ${walkingRules.length}`
+                    `Počet pravidiel: ${walkingRules.length}`
                 )
             ),
             walkingRules.length === 0
@@ -11233,12 +11233,7 @@ const TransportApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'div',
                                     { className: 'flex items-center justify-between mb-4 pb-3 border-b border-gray-200' },
-                                    React.createElement('h3', { className: 'text-xl font-semibold text-gray-700' }, 'Peši – priradenie miest udalostí k zastávkam'),
-                                    React.createElement(
-                                        'span',
-                                        { className: 'text-sm text-gray-500' },
-                                        `Definovaných priradení: ${Object.keys(walkingAssignments).length}`
-                                    )
+                                    React.createElement('h3', { className: 'text-xl font-semibold text-gray-700' }, 'Peši – priradenie miest'),
                                 ),
                                 renderWalkingAssignments()
                             )
