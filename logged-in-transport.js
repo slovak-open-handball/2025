@@ -10424,26 +10424,12 @@ const TransportApp = ({ userProfileData }) => {
             return Number.POSITIVE_INFINITY;
         };
 
-        const getDisplayedEndMinutesForSort = (t) => {
+        const getDisplayedEndTsForSort = (t) => {
             if (!t) return null;
         
-            const parseTimeStr = (str) => {
-                if (!str) return null;
-                const m = /(\d{1,2}):(\d{2})/.exec(String(str));
-                if (!m) return null;
-                const hh = Number(m[1]);
-                const mi = Number(m[2]);
-                if (!Number.isFinite(hh) || !Number.isFinite(mi)) return null;
-                if (hh < 0 || hh > 23 || mi < 0 || mi > 59) return null;
-                return hh * 60 + mi;
-            };
-        
-            // 1) Ak máme priamo _displayEndTs (rovnaké ako zobrazené v boxe)
+            // 1) Ak máme priamo _displayEndTs (presne to, čo je zobrazené v boxe za „–")
             if (t._displayEndTs != null && isFinite(t._displayEndTs)) {
-                const d = new Date(t._displayEndTs);
-                if (!isNaN(d.getTime())) {
-                    return d.getHours() * 60 + d.getMinutes();
-                }
+                return t._displayEndTs;
             }
         
             // 2) Pre segmenty: skús z parentRec.segments nájsť reálny endTs
@@ -10454,52 +10440,76 @@ const TransportApp = ({ userProfileData }) => {
                     if (segIdx !== -1) {
                         const seg = parentRec.segments[segIdx];
                         if (seg && seg.endTs != null && isFinite(seg.endTs)) {
-                            const d = new Date(seg.endTs);
-                            if (!isNaN(d.getTime())) {
-                                return d.getHours() * 60 + d.getMinutes();
-                            }
+                            return seg.endTs;
                         }
                     }
                 }
             }
         
-            // 3) Fallback: parsuj priamo z t.when (druhý čas za „–")
+            // 3) Fallback: parsuj priamo z t.when (druhý čas za „–") a poskladaj timestamp
             if (t.when) {
                 const s = String(t.when);
-                const times = [];
-                const regex = /(\d{1,2}):(\d{2})/g;
-                let m;
-                while ((m = regex.exec(s)) !== null) {
-                    const hh = Number(m[1]);
-                    const mi = Number(m[2]);
-                    if (hh >= 0 && hh <= 23 && mi >= 0 && mi <= 59) {
-                        times.push(hh * 60 + mi);
+                const dm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(s);
+                if (dm) {
+                    const day = Number(dm[1]);
+                    const month = Number(dm[2]) - 1;
+                    const year = Number(dm[3]);
+                    const times = [];
+                    const regex = /(\d{1,2}):(\d{2})/g;
+                    let m;
+                    while ((m = regex.exec(s)) !== null) {
+                        const hh = Number(m[1]);
+                        const mi = Number(m[2]);
+                        if (hh >= 0 && hh <= 23 && mi >= 0 && mi <= 59) {
+                            times.push({ hh, mi });
+                        }
+                    }
+                    if (times.length > 0) {
+                        const last = times[times.length - 1];
+                        const d = new Date(year, month, day, last.hh, last.mi, 0, 0);
+                        if (!isNaN(d.getTime())) return d.getTime();
                     }
                 }
-                if (times.length >= 2) return times[times.length - 1];
-                if (times.length === 1) return times[0];
             }
         
-            // 4) Fallback: z parenta
+            // 4) Fallback: z parenta (tiež poskladaj plný timestamp)
             if (t._parentKey) {
                 const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
-                if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
-                    const parsed = parseTimeStr(parentRec.when);
-                    if (parsed != null) {
-                        // skús vytiahnuť druhý čas
-                        const times = [];
-                        const regex = /(\d{1,2}):(\d{2})/g;
-                        let m;
-                        while ((m = regex.exec(String(parentRec.when))) !== null) {
-                            const hh = Number(m[1]);
-                            const mi = Number(m[2]);
-                            if (hh >= 0 && hh <= 23 && mi >= 0 && mi <= 59) {
-                                times.push(hh * 60 + mi);
+                if (parentRec) {
+                    // najprv skús parentRec.endTs z parentRec.when
+                    if (parentRec.when && String(parentRec.when).trim() !== '') {
+                        const s = String(parentRec.when);
+                        const dm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(s);
+                        if (dm) {
+                            const day = Number(dm[1]);
+                            const month = Number(dm[2]) - 1;
+                            const year = Number(dm[3]);
+                            const times = [];
+                            const regex = /(\d{1,2}):(\d{2})/g;
+                            let m;
+                            while ((m = regex.exec(s)) !== null) {
+                                const hh = Number(m[1]);
+                                const mi = Number(m[2]);
+                                if (hh >= 0 && hh <= 23 && mi >= 0 && mi <= 59) {
+                                    times.push({ hh, mi });
+                                }
+                            }
+                            if (times.length > 0) {
+                                const last = times[times.length - 1];
+                                const d = new Date(year, month, day, last.hh, last.mi, 0, 0);
+                                if (!isNaN(d.getTime())) return d.getTime();
                             }
                         }
-                        if (times.length >= 2) return times[times.length - 1];
-                        if (times.length === 1) return times[0];
                     }
+                }
+            }
+        
+            // 5) Úplný fallback: ak máme aspoň dayKey, použi koniec dňa
+            if (t.dayKey) {
+                const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t.dayKey);
+                if (dm) {
+                    const d = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), 23, 59, 0, 0);
+                    if (!isNaN(d.getTime())) return d.getTime();
                 }
             }
         
@@ -10508,32 +10518,18 @@ const TransportApp = ({ userProfileData }) => {
         
         const sortedTransfers = [...filtered].sort((a, b) => {
             if (sortTransfersBy === 'arrival') {
-                const endMinA = getDisplayedEndMinutesForSort(a);
-                const endMinB = getDisplayedEndMinutesForSort(b);
+                const endTsA = getDisplayedEndTsForSort(a);
+                const endTsB = getDisplayedEndTsForSort(b);
         
-                const safeA = endMinA == null ? Number.POSITIVE_INFINITY : endMinA;
-                const safeB = endMinB == null ? Number.POSITIVE_INFINITY : endMinB;
+                const safeA = endTsA == null ? Number.POSITIVE_INFINITY : endTsA;
+                const safeB = endTsB == null ? Number.POSITIVE_INFINITY : endTsB;
         
                 if (safeA !== safeB) return safeA - safeB;
         
-                // ak sú rovnaké, rozhodne čas odchodu
-                const startMinA = (() => {
-                    if (a._displayStartTs != null && isFinite(a._displayStartTs)) {
-                        const d = new Date(a._displayStartTs);
-                        if (!isNaN(d.getTime())) return d.getHours() * 60 + d.getMinutes();
-                    }
-                    return null;
-                })();
-                const startMinB = (() => {
-                    if (b._displayStartTs != null && isFinite(b._displayStartTs)) {
-                        const d = new Date(b._displayStartTs);
-                        if (!isNaN(d.getTime())) return d.getHours() * 60 + d.getMinutes();
-                    }
-                    return null;
-                })();
-                const sA = startMinA == null ? Number.POSITIVE_INFINITY : startMinA;
-                const sB = startMinB == null ? Number.POSITIVE_INFINITY : startMinB;
-                if (sA !== sB) return sA - sB;
+                // ak sú rovnaké, rozhodne čas odchodu (plný timestamp)
+                const startTsA = getTransferStartTsForSort(a);
+                const startTsB = getTransferStartTsForSort(b);
+                if (startTsA !== startTsB) return startTsA - startTsB;
             } else {
                 // departure – pôvodné správanie
                 const startA = getTransferStartTsForSort(a);
