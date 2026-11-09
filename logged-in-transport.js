@@ -11755,7 +11755,23 @@ const TransportApp = ({ userProfileData }) => {
                                 setDeleteWalkingRuleSaving(true);
                                 try {
                                     await deleteDoc(doc(window.db, 'transport', rule.docId));
-                                    window.showGlobalNotification('Pravidlo bolo odstránené.', 'success');
+
+                                    const reverseRule = (walkingRules || []).find(
+                                        (r) =>
+                                            r.docId !== rule.docId &&
+                                            r.fromPlaceNameNorm === rule.toPlaceNameNorm &&
+                                            r.toPlaceNameNorm === rule.fromPlaceNameNorm
+                                    );
+                                    if (reverseRule && reverseRule.docId) {
+                                        await deleteDoc(doc(window.db, 'transport', reverseRule.docId));
+                                    }
+
+                                    window.showGlobalNotification(
+                                        reverseRule
+                                            ? `Pravidlá „${rule.fromPlaceName} → ${rule.toPlaceName}" a „${rule.toPlaceName} → ${rule.fromPlaceName}" boli odstránené.`
+                                            : 'Pravidlo bolo odstránené.',
+                                        'success'
+                                    );
                                     setDeleteWalkingRuleModal(null);
                                 } catch (err) {
                                     console.error('[TRANSPORT] Chyba pri odstraňovaní pravidla peši:', err);
