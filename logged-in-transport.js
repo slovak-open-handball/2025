@@ -447,23 +447,9 @@ const TransportApp = ({ userProfileData }) => {
 
     const computeEffectiveParentRange = (parent) => {
         if (!parent) return null;
-
         const whenRange = parseTransferWhenToRange(parent.when);
-        let rangeStart = whenRange && whenRange.startTs != null ? whenRange.startTs : null;
-        let rangeEnd = whenRange && whenRange.endTs != null ? whenRange.endTs : null;
-
-        const segs = Array.isArray(parent.segments) ? parent.segments : [];
-        segs.forEach((s) => {
-            if (!s) return;
-            if (s.isWalking === true) return;
-            if (s.startTs != null && (rangeStart == null || s.startTs < rangeStart)) rangeStart = s.startTs;
-            if (s.endTs != null && (rangeEnd == null || s.endTs > rangeEnd)) rangeEnd = s.endTs;
-        });
-
-        if (rangeStart == null && rangeEnd == null) return null;
-        if (rangeStart == null) return { startTs: rangeEnd, endTs: rangeEnd };
-        if (rangeEnd == null) return { startTs: rangeStart, endTs: rangeStart };
-        return { startTs: rangeStart, endTs: rangeEnd };
+        if (!whenRange) return null;
+        return { startTs: whenRange.startTs, endTs: whenRange.endTs };
     };
 
     const parseWhenRangeToTs = (when) => {
@@ -4429,33 +4415,8 @@ const TransportApp = ({ userProfileData }) => {
                     return seg;
                 }
     
-                if (effectiveParentRange) {
-                    const outsideParent =
-                        boardingTs < effectiveParentRange.startTs ||
-                        alightingTs > effectiveParentRange.endTs ||
-                        alightingTs <= boardingTs;
-    
-                    if (outsideParent) {
-                        changed = true;
-                        const removeKey = `${parent.key}|${seg.fromId}|${seg.toId}`;
-                        if (!parentsToRemoveSegmentFrom.has(removeKey)) {
-                            parentsToRemoveSegmentFrom.set(removeKey, {
-                                parentKey: parent.key,
-                                fromId: seg.fromId,
-                                toId: seg.toId,
-                            });
-                        }
-                        return {
-                            ...seg,
-                            busAssigned: false,
-                            busId: null,
-                            boardingRowId: null,
-                            alightingRowId: null,
-                            startTs: null,
-                            endTs: null,
-                            when: null,
-                        };
-                    }
+                if (!hasValidAssignmentMarkers && (boardingTs == null || alightingTs == null || alightingTs <= boardingTs)) {
+                    return seg;
                 }
     
                 const newStartTs = boardingTs;
