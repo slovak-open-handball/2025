@@ -702,6 +702,8 @@ const TransportApp = ({ userProfileData }) => {
     const [newWalkingRuleFromId, setNewWalkingRuleFromId] = useState('');
     const [newWalkingRuleToId, setNewWalkingRuleToId] = useState('');
     const [newWalkingRuleSaving, setNewWalkingRuleSaving] = useState(false);
+    const [newWalkingRuleFromType, setNewWalkingRuleFromType] = useState('');
+    const [newWalkingRuleToType, setNewWalkingRuleToType] = useState('');
     const [deleteWalkingRuleModal, setDeleteWalkingRuleModal] = useState(null);
     const [deleteWalkingRuleSaving, setDeleteWalkingRuleSaving] = useState(false);
     const preloadAccommodationsForSuperstructureTeams = async () => {
@@ -8697,6 +8699,8 @@ const TransportApp = ({ userProfileData }) => {
                             }
                             setNewWalkingRuleFromId('');
                             setNewWalkingRuleToId('');
+                            setNewWalkingRuleFromType('');
+                            setNewWalkingRuleToType('');
                             setShowAddWalkingRuleModal(true);
                         },
                         className: 'px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2',
@@ -11440,14 +11444,76 @@ const TransportApp = ({ userProfileData }) => {
                 ),
                 (() => {
                     const placesOptions = getWalkablePlacesOptions();
+
+                    const typeLabelMap = {
+                        sportova_hala: 'Športová hala',
+                        stravovanie: 'Stravovanie',
+                        ubytovanie: 'Ubytovňa',
+                        zastavka: 'Zastávka',
+                    };
+
+                    const distinctTypes = (() => {
+                        const set = new Set();
+                        placesOptions.forEach((p) => {
+                            const t = String(p.type || '').trim();
+                            if (t) set.add(t);
+                        });
+                        return [...set].sort((a, b) => {
+                            const la = typeLabelMap[a] || a;
+                            const lb = typeLabelMap[b] || b;
+                            return la.localeCompare(lb, 'sk', { sensitivity: 'base' });
+                        });
+                    })();
+
+                    const filterPlacesByType = (type) => {
+                        const t = String(type || '').trim();
+                        if (!t) return placesOptions;
+                        return placesOptions.filter((p) => String(p.type || '').trim() === t);
+                    };
+
                     const fromId = newWalkingRuleFromId;
                     const toId = newWalkingRuleToId;
                     const fromPlace = placesOptions.find((p) => p.id === fromId) || null;
                     const toPlace = placesOptions.find((p) => p.id === toId) || null;
                     const isSame = !!fromPlace && !!toPlace && fromPlace.nameNorm === toPlace.nameNorm;
+
+                    const fromOptionsFiltered = filterPlacesByType(newWalkingRuleFromType);
+                    const toOptionsFiltered = filterPlacesByType(newWalkingRuleToType);
+
                     return React.createElement(
                         React.Fragment,
                         null,
+                        React.createElement(
+                            'label',
+                            { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                            'Typ miesta – odkiaľ'
+                        ),
+                        React.createElement(
+                            'select',
+                            {
+                                value: newWalkingRuleFromType,
+                                onChange: (e) => {
+                                    setNewWalkingRuleFromType(e.target.value);
+                                    // Ak aktuálne vybrané miesto nezodpovedá novému filtru, zrušíme ho
+                                    const newType = e.target.value;
+                                    if (newType && fromPlace) {
+                                        if (String(fromPlace.type || '').trim() !== newType) {
+                                            setNewWalkingRuleFromId('');
+                                        }
+                                    }
+                                },
+                                disabled: newWalkingRuleSaving,
+                                className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-2 disabled:opacity-60'
+                            },
+                            React.createElement('option', { value: '' }, 'Všetky typy'),
+                            distinctTypes.map((t) =>
+                                React.createElement(
+                                    'option',
+                                    { key: t, value: t },
+                                    typeLabelMap[t] || t
+                                )
+                            )
+                        ),
                         React.createElement(
                             'label',
                             { className: 'block text-sm font-medium text-gray-700 mb-1' },
@@ -11462,11 +11528,41 @@ const TransportApp = ({ userProfileData }) => {
                                 className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-4 disabled:opacity-60'
                             },
                             React.createElement('option', { value: '' }, '— vyber miesto —'),
-                            placesOptions.map((p) =>
+                            fromOptionsFiltered.map((p) =>
                                 React.createElement(
                                     'option',
                                     { key: p.id, value: p.id },
                                     p.displayLabel
+                                )
+                            )
+                        ),
+                        React.createElement(
+                            'label',
+                            { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                            'Typ miesta – kam'
+                        ),
+                        React.createElement(
+                            'select',
+                            {
+                                value: newWalkingRuleToType,
+                                onChange: (e) => {
+                                    setNewWalkingRuleToType(e.target.value);
+                                    const newType = e.target.value;
+                                    if (newType && toPlace) {
+                                        if (String(toPlace.type || '').trim() !== newType) {
+                                            setNewWalkingRuleToId('');
+                                        }
+                                    }
+                                },
+                                disabled: newWalkingRuleSaving,
+                                className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-2 disabled:opacity-60'
+                            },
+                            React.createElement('option', { value: '' }, 'Všetky typy'),
+                            distinctTypes.map((t) =>
+                                React.createElement(
+                                    'option',
+                                    { key: t, value: t },
+                                    typeLabelMap[t] || t
                                 )
                             )
                         ),
@@ -11484,7 +11580,7 @@ const TransportApp = ({ userProfileData }) => {
                                 className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-4 disabled:opacity-60'
                             },
                             React.createElement('option', { value: '' }, '— vyber miesto —'),
-                            placesOptions.map((p) =>
+                            toOptionsFiltered.map((p) =>
                                 React.createElement(
                                     'option',
                                     { key: p.id, value: p.id },
