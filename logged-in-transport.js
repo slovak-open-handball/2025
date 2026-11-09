@@ -687,6 +687,7 @@ const TransportApp = ({ userProfileData }) => {
     const [selectedCategoryForTimeline, setSelectedCategoryForTimeline] = useState('');
     const [showOnlyPartialTransfers, setShowOnlyPartialTransfers] = useState(false);
     const [showDeleteTransfersModal, setShowDeleteTransfersModal] = useState(false);
+    const [sortTransfersBy, setSortTransfersBy] = useState('departure');
     const [selectedCategoryForDelete, setSelectedCategoryForDelete] = useState('');    
     const [missingTravelTimeWarning, setMissingTravelTimeWarning] = useState([]);
     const [placesLoaded, setPlacesLoaded] = useState(false);
@@ -10424,18 +10425,28 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         const sortedTransfers = [...filtered].sort((a, b) => {
-            const startA = getTransferStartTsForSort(a);
-            const startB = getTransferStartTsForSort(b);
-            if (startA !== startB) return startA - startB;
+            if (sortTransfersBy === 'arrival') {
+                const endA = getTransferEndTsForSort(a);
+                const endB = getTransferEndTsForSort(b);
+                if (endA !== endB) return endA - endB;
+        
+                const startA = getTransferStartTsForSort(a);
+                const startB = getTransferStartTsForSort(b);
+                if (startA !== startB) return startA - startB;
+            } else {
+                const startA = getTransferStartTsForSort(a);
+                const startB = getTransferStartTsForSort(b);
+                if (startA !== startB) return startA - startB;
 
-            const endA = getTransferEndTsForSort(a);
-            const endB = getTransferEndTsForSort(b);
-            if (endA !== endB) return endA - endB;
+                const endA = getTransferEndTsForSort(a);
+                const endB = getTransferEndTsForSort(b);
+                if (endA !== endB) return endA - endB;
+            }
 
             const ca = cleanCategory(a.category) || '';
             const cb = cleanCategory(b.category) || '';
             if (ca !== cb) return ca.localeCompare(cb, 'sk', { sensitivity: 'base' });
-
+        
             const ta = String(a.teamName || '');
             const tb = String(b.teamName || '');
             return ta.localeCompare(tb, 'sk', { sensitivity: 'base' });
@@ -10467,6 +10478,40 @@ const TransportApp = ({ userProfileData }) => {
                     'span',
                     { className: 'absolute right-3 text-xs bg-white/20 rounded-full px-2 py-0.5' },
                     `${filtered.length}`
+                )
+            ),
+            React.createElement(
+                'div',
+                { className: 'px-3 pt-2 pb-2 border-b border-gray-100 flex items-center justify-center gap-2' },
+                React.createElement(
+                    'button',
+                    {
+                        type: 'button',
+                        onClick: () => setSortTransfersBy('departure'),
+                        className: `px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                            sortTransfersBy === 'departure'
+                                ? 'bg-violet-600 text-white'
+                                : 'bg-white text-violet-600 border border-violet-300 hover:bg-violet-50'
+                        }`,
+                        title: 'Zoradiť presuny podľa času odchodu (od najskoršieho)'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-arrow-up-from-bracket' }),
+                    'Čas odchodu'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        type: 'button',
+                        onClick: () => setSortTransfersBy('arrival'),
+                        className: `px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                            sortTransfersBy === 'arrival'
+                                ? 'bg-violet-600 text-white'
+                                : 'bg-white text-violet-600 border border-violet-300 hover:bg-violet-50'
+                        }`,
+                        title: 'Zoradiť presuny podľa času príchodu (od najskoršieho)'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-arrow-down-to-bracket' }),
+                    'Čas príchodu'
                 )
             ),
             (() => {
