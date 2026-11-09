@@ -663,6 +663,11 @@ const TransportApp = ({ userProfileData }) => {
     const [deleteTransferModal, setDeleteTransferModal] = useState(null);
     const [deleteTransferSaving, setDeleteTransferSaving] = useState(false);
     const [regenTransfersModal, setRegenTransfersModal] = useState(null);
+    const [walkingAssignments, setWalkingAssignments] = useState({});
+    const [walkingSettingsLoaded, setWalkingSettingsLoaded] = useState(false);
+    const [walkingSaving, setWalkingSaving] = useState(false);
+    const [walkingEvents, setWalkingEvents] = useState([]);
+    const [walkingEventsLoading, setWalkingEventsLoading] = useState(false);
     const preloadAccommodationsForSuperstructureTeams = async () => {
         if (!window.__transport_accommodationsByGroup) {
             window.__transport_accommodationsByGroup = {};
@@ -3120,6 +3125,38 @@ const TransportApp = ({ userProfileData }) => {
         } catch (e) {
             console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport (teamShortcuts):', e);
         }
+
+        let unsubscribeWalkingAssignments = null;
+        try {
+            const transportRef = collection(window.db, 'transport');
+            unsubscribeWalkingAssignments = onSnapshot(transportRef, (snapshot) => {
+                const map = {};
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data() || {};
+                    if (data.type !== 'walkingAssignment') return;
+                    if (!data.placeName) return;
+                    const key = normalizePlaceName(data.placeName);
+                    if (!key) return;
+                    map[key] = {
+                        docId: docSnap.id,
+                        placeName: data.placeName,
+                        placeNameNorm: key,
+                        stopId: data.stopId || null,
+                        stopName: data.stopName || null,
+                        updatedAt: data.updatedAt || null,
+                        updatedBy: data.updatedBy || null,
+                    };
+                });
+                setWalkingAssignments(map);
+                setWalkingSettingsLoaded(true);
+            }, (err) => {
+                console.error('[TRANSPORT] onSnapshot(transport – walkingAssignments) error:', err);
+                setWalkingSettingsLoaded(true);
+            });
+        } catch (e) {
+            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport (walkingAssignments):', e);
+            setWalkingSettingsLoaded(true);
+        }
         
         try {
             const cateringSettingsRef = doc(window.db, 'settings', 'catering');
@@ -3775,6 +3812,7 @@ const TransportApp = ({ userProfileData }) => {
             if (unsubscribeBuses) unsubscribeBuses();
             if (unsubscribeTeamCounts) unsubscribeTeamCounts();
             if (unsubscribeTeamShortcuts) unsubscribeTeamShortcuts();
+            if (unsubscribeWalkingAssignments) unsubscribeWalkingAssignments();
         };
     }, []);
 
@@ -8447,6 +8485,309 @@ const TransportApp = ({ userProfileData }) => {
             })
         );
     };
+     const addMinutesToTimeStr = (timeStr, minutes) => {
+        if (!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr)) return '';
+        if (minutes == null || isNaN(minutes)) return '';
+        const [h, m] = timeStr.split(':').map(Number);
+        let total = h * 60 + m + Number(minutes);
+        total = ((total % (24 * 60)) + (24 * 60)) % (24 * 60);
+        const endH = Math.floor(total / 60);
+        const endM = total % 60;
+        return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+    };
+
+    const extractPlaceFromEventForWalking = (ev) => {
+        if (!ev) return null;
+        const text = String(ev.text || '').trim();
+        if (!text) return null;
+        if (ev.type === 'match') {
+            const idx = text.lastIndexOf('|');
+            if (idx !== -1) {
+                const hall = text.slice(idx + 1).trim();
+                if (hall) return hall;
+            }
+            return ev.location || null;
+        }
+        if (ev.type === 'catering') {
+            const idx = text.lastIndexOf('→');
+            if (idx !== -1) {
+                const place = text.slice(idx + 1).trim();
+                if (place) return place;
+            }
+            return ev.location || null;
+        }
+        if (ev.type === 'accommodation') {
+            const m = /^Ubytovanie:\s*(.+?)(?:\s*\(typ:.*\))?$/i.exec(text);
+            if (m && m[1]) return m[1].trim();
+            return ev.location || null;
+        }
+        return ev.location || null;
+    };
+
+    const buildWalkingEventsFromBuffers = () => {
+        const events = [];
+        const seen = new Set();
+        const pushEvent = (placeName, category, teamName, when, startTs, endTs, type, text) => {
+            if (!placeName) return;
+            const placeTrim = String(placeName).trim();
+            if (!placeTrim) return;
+            const norm = normalizePlaceName(placeTrim);
+            if (!norm) return;
+            const key = `${norm}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            events.push({
+                placeName: placeTrim,
+                placeNameNorm: norm,
+                category: cleanCategory(category || ''),
+                teamName: String(teamName || '').trim(),
+                when: when || '',
+                startTs: startTs ?? null,
+                endTs: endTs ?? null,
+                type: type || '',
+                sampleText: text || '',
+            });
+        };
+
+        (matchesBufferRef.current || []).forEach((m) => {
+            const hallName = m.hallName || null;
+            if (!hallName) return;
+            const when = m.scheduledTime
+                ? (m.scheduledEndTime ? `${m.scheduledTime} – ${m.scheduledEndTime}` : m.scheduledTime)
+                : 'nenaplánované';
+            pushEvent(hallName, m.category, m.home, when, m.scheduledTs ?? null, m.scheduledEndTs ?? null, 'match',
+                `${m.home} vs ${m.away}${m.special}${m.hallName ? ` | ${m.hallName}` : ''}`);
+        });
+
+        (cateringBufferRef.current || []).forEach((c) => {
+            if (!c.placeName) return;
+            const formattedDay = c.dayKey ? (formatDateDDMMYYYY(c.dayKey) || c.dayKey) : '?';
+            const timeRange = c.slotFrom
+                ? (c.slotTo ? `${c.slotFrom} – ${c.slotTo}` : c.slotFrom)
+                : '--:--';
+            const mealLabel = c.mealType === 'lunch' ? 'Obed' : c.mealType === 'dinner' ? 'Večera' : c.mealType;
+            pushEvent(c.placeName, c.category, c.teamName, `${formattedDay} ${timeRange}`.trim(), c.ts ?? null, c.slotToTs ?? c.ts ?? null, 'catering',
+                `${mealLabel} (${timeRange}) → ${c.placeName}`);
+        });
+
+        (teamsArrivalBufferRef.current || []).forEach((t) => {
+            if (!t.accommodationName) return;
+            pushEvent(t.accommodationName, t.category, t.teamName, '—', null, null, 'accommodation',
+                `Ubytovanie: ${t.accommodationName} (typ: ${t.accommodationType || 'neurčený'})`);
+        });
+
+        events.sort((a, b) => {
+            if (a.startTs != null && b.startTs != null && a.startTs !== b.startTs) return a.startTs - b.startTs;
+            if (a.startTs == null && b.startTs != null) return 1;
+            if (a.startTs != null && b.startTs == null) return -1;
+            return String(a.placeName).localeCompare(String(b.placeName), 'sk', { sensitivity: 'base' });
+        });
+
+        return events;
+    };
+
+    const renderWalkingAssignments = () => {
+        if (!walkingSettingsLoaded) {
+            return React.createElement(
+                'div',
+                { className: 'text-gray-500 italic text-sm px-1 py-4' },
+                'Načítavam priradenia...'
+            );
+        }
+        if (stopsList.length === 0) {
+            return React.createElement(
+                'div',
+                { className: 'text-gray-400 italic text-sm px-1 py-4' },
+                'Žiadne zastávky. Najprv vytvorte aspoň jednu zastávku v miestach.'
+            );
+        }
+
+        const events = buildWalkingEventsFromBuffers();
+
+        return React.createElement(
+            'div',
+            { className: 'w-full' },
+            React.createElement(
+                'p',
+                { className: 'text-xs text-gray-500 mb-3 italic' },
+                'Pri každom mieste udalosti (hala, stravovanie, ubytovanie) vyberte zastávku, na ktorú sa má tím peši presunúť. Toto nastavenie sa použije pri generovaní presunov – presuny na rovnaké miesto sa nastavia ako „peši".'
+            ),
+            events.length === 0
+                ? React.createElement(
+                    'div',
+                    { className: 'text-gray-400 italic text-sm px-1 py-4' },
+                    'Žiadne miesta udalostí. Načítajú sa po načítaní zápasov, stravovania a tímov.'
+                )
+                : React.createElement(
+                    'div',
+                    { className: 'w-full overflow-x-auto' },
+                    React.createElement(
+                        'table',
+                        { className: 'min-w-max border-collapse text-sm' },
+                        React.createElement(
+                            'thead',
+                            null,
+                            React.createElement(
+                                'tr',
+                                { className: 'bg-gray-100 text-xs font-semibold text-gray-700' },
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { width: '60px' } }, 'Typ'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { minWidth: '240px' } }, 'Miesto udalosti'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { minWidth: '260px' } }, 'Zastávka (peši)'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { width: '200px' } }, 'Info'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-center', style: { width: '80px' } }, '')
+                            )
+                        ),
+                        React.createElement(
+                            'tbody',
+                            null,
+                            events.map((ev) => {
+                                const current = walkingAssignments[ev.placeNameNorm] || null;
+                                const typeMeta = ev.type === 'match'
+                                    ? { icon: 'fa-futbol', color: '#dc2626', label: 'Hala' }
+                                    : ev.type === 'catering'
+                                        ? { icon: 'fa-utensils', color: '#16a34a', label: 'Strav.' }
+                                        : ev.type === 'accommodation'
+                                            ? { icon: 'fa-bed', color: '#6b7280', label: 'Ubyt.' }
+                                            : { icon: 'fa-circle-dot', color: '#6b7280', label: '—' };
+                                const currentValue = current && current.stopId ? current.stopId : '';
+                                return React.createElement(
+                                    'tr',
+                                    { key: ev.placeNameNorm, className: 'hover:bg-gray-50' },
+                                    React.createElement(
+                                        'td',
+                                        { className: 'border border-gray-300 px-3 py-1 text-center' },
+                                        React.createElement(
+                                            'span',
+                                            {
+                                                className: 'inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold',
+                                                style: { backgroundColor: typeMeta.color + '22', color: typeMeta.color }
+                                            },
+                                            React.createElement('i', { className: `fa-solid ${typeMeta.icon} text-[9px]` }),
+                                            typeMeta.label
+                                        )
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'border border-gray-300 px-3 py-1 text-gray-800 font-medium' },
+                                        ev.placeName
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'border border-gray-300 px-1 py-1' },
+                                        React.createElement(
+                                            'select',
+                                            {
+                                                value: currentValue,
+                                                disabled: walkingSaving,
+                                                onChange: async (e) => {
+                                                    const newStopId = e.target.value || null;
+                                                    setWalkingSaving(true);
+                                                    try {
+                                                        if (!window.db) throw new Error('DB nie je inicializovaná');
+                                                        const transportRef = collection(window.db, 'transport');
+                                                        const docId = `walkingAssignment||${ev.placeNameNorm}`;
+                                                        const docRef = doc(window.db, 'transport', docId);
+                                                        if (!newStopId) {
+                                                            await deleteDoc(docRef);
+                                                            window.showGlobalNotification(
+                                                                `Priradenie pre „${ev.placeName}" bolo odstránené.`,
+                                                                'info'
+                                                            );
+                                                        } else {
+                                                            const stop = stopsList.find((s) => s.id === newStopId);
+                                                            await setDoc(docRef, {
+                                                                type: 'walkingAssignment',
+                                                                docKey: docId,
+                                                                placeName: ev.placeName,
+                                                                placeNameNorm: ev.placeNameNorm,
+                                                                stopId: newStopId,
+                                                                stopName: stop ? stop.name : null,
+                                                                updatedAt: Timestamp.fromDate(new Date()),
+                                                                updatedBy: (userProfileData && userProfileData.email) || null,
+                                                            }, { merge: true });
+                                                            window.showGlobalNotification(
+                                                                `„${ev.placeName}" → zastávka „${stop ? stop.name : newStopId}".`,
+                                                                'success'
+                                                            );
+                                                        }
+                                                    } catch (err) {
+                                                        console.error('[TRANSPORT] Chyba pri ukladaní walking assignment:', err);
+                                                        window.showGlobalNotification('Nepodarilo sa uložiť priradenie.', 'error');
+                                                    } finally {
+                                                        setWalkingSaving(false);
+                                                    }
+                                                },
+                                                className: 'w-full px-2 py-1 text-sm border border-gray-300 rounded text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500'
+                                            },
+                                            React.createElement('option', { value: '' }, '— nepriradené —'),
+                                            stopsList.map((s) =>
+                                                React.createElement(
+                                                    'option',
+                                                    { key: s.id, value: s.id },
+                                                    s.name
+                                                )
+                                            )
+                                        )
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'border border-gray-300 px-3 py-1 text-xs text-gray-600' },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex flex-col leading-tight' },
+                                            ev.when &&
+                                                React.createElement('span', { className: 'font-mono text-[11px]' }, ev.when),
+                                            ev.category &&
+                                                React.createElement('span', { className: 'text-[10px] text-gray-500' }, ev.category)
+                                        )
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'border border-gray-300 px-2 py-1 text-center' },
+                                        currentValue
+                                            ? React.createElement(
+                                                'button',
+                                                {
+                                                    type: 'button',
+                                                    disabled: walkingSaving,
+                                                    onClick: async () => {
+                                                        setWalkingSaving(true);
+                                                        try {
+                                                            if (!window.db) throw new Error('DB nie je inicializovaná');
+                                                            const docId = `walkingAssignment||${ev.placeNameNorm}`;
+                                                            await deleteDoc(doc(window.db, 'transport', docId));
+                                                            window.showGlobalNotification(
+                                                                `Priradenie pre „${ev.placeName}" bolo odstránené.`,
+                                                                'info'
+                                                            );
+                                                        } catch (err) {
+                                                            console.error('[TRANSPORT] Chyba pri mazaní walking assignment:', err);
+                                                            window.showGlobalNotification('Nepodarilo sa odstrániť priradenie.', 'error');
+                                                        } finally {
+                                                            setWalkingSaving(false);
+                                                        }
+                                                    },
+                                                    title: 'Odstrániť priradenie',
+                                                    className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 inline-flex items-center justify-center'
+                                                },
+                                                React.createElement('i', { className: 'fa-solid fa-xmark' })
+                                            )
+                                            : null
+                                    )
+                                );
+                            })
+                        )
+                    )
+                ),
+            walkingSaving &&
+                React.createElement(
+                    'div',
+                    { className: 'text-xs text-emerald-600 mt-2 italic' },
+                    'Ukladám...'
+                )
+        );
+    };
+
     const getAvailableCategories = () => {
         const set = new Set();
 
@@ -10883,6 +11224,20 @@ const TransportApp = ({ userProfileData }) => {
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-tag' }),
                                 'Skratky názvov tímov'
+                            ),
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => setSettingsTab('walking'),
+                                    className: `px-4 py-2 rounded-lg font-medium border-2 transition-colors duration-200 flex items-center gap-2 ${
+                                        settingsTab === 'walking'
+                                            ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700'
+                                            : 'bg-white text-emerald-600 border-emerald-600 hover:bg-emerald-50'
+                                    }`
+                                },
+                                React.createElement('i', { className: 'fa-solid fa-person-walking' }),
+                                'Peši'
                             )
                         ),
                         settingsTab === 'travelTimes'
@@ -10897,7 +11252,8 @@ const TransportApp = ({ userProfileData }) => {
                                 ),
                                 renderTravelTimes()
                             )
-                            : React.createElement(
+                            : settingsTab === 'teamShortcuts'
+                            ? React.createElement(
                                 'div',
                                 { className: 'w-full' },
                                 React.createElement(
@@ -10911,6 +11267,21 @@ const TransportApp = ({ userProfileData }) => {
                                     )
                                 ),
                                 renderTeamShortcuts()
+                            )
+                            : React.createElement(
+                                'div',
+                                { className: 'w-full' },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex items-center justify-between mb-4 pb-3 border-b border-gray-200' },
+                                    React.createElement('h3', { className: 'text-xl font-semibold text-gray-700' }, 'Peši – priradenie miest udalostí k zastávkam'),
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-sm text-gray-500' },
+                                        `Definovaných priradení: ${Object.keys(walkingAssignments).length}`
+                                    )
+                                ),
+                                renderWalkingAssignments()
                             )
                     )
                     : renderPlanning()
