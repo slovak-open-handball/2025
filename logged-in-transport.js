@@ -5393,8 +5393,51 @@ const TransportApp = ({ userProfileData }) => {
         try {
             const rowsKey = `${busId}|${dayKey}`;
             const removedRow = (busRows[rowsKey] || []).find((r) => r.id === rowId);
-            const removedOrder = removedRow ? Number(removedRow.order) || 0 : null;
-    
+            const removedRowId = removedRow ? removedRow.rowId : null;
+
+            stage = 'detachTeamsOnRemovedRow';
+            if (removedRowId) {
+                const parentsToDetach = new Set();
+                (savedTransfersRef.current || []).forEach((parent) => {
+                    if (parent.dayKey !== dayKey) return;
+                    if (parent.isWalking === true) return;
+                    const hasSegmentOnRow = (parent.segments || []).some((seg) => {
+                        if (!seg) return false;
+                        if (seg.isWalking === true) return false;
+                        if (seg.busId !== busId) return false;
+                        return seg.boardingRowId === removedRowId || seg.alightingRowId === removedRowId;
+                    });
+                    if (hasSegmentOnRow) parentsToDetach.add(parent.key);
+                });
+
+                for (const parentKey of parentsToDetach) {
+                    try {
+                        await updateParentTransfer(parentKey, (draft) => {
+                            draft.segments = draft.segments.map((s) => {
+                                if (!s || s.isWalking === true) return s;
+                                if (s.busId !== busId) return s;
+                                const touchesRemovedRow =
+                                    (s.boardingRowId && s.boardingRowId === removedRowId) ||
+                                    (s.alightingRowId && s.alightingRowId === removedRowId);
+                                if (!touchesRemovedRow) return s;
+                                return {
+                                    ...s,
+                                    busAssigned: false,
+                                    busId: null,
+                                    boardingRowId: null,
+                                    alightingRowId: null,
+                                    startTs: null,
+                                    endTs: null,
+                                    when: null,
+                                };
+                            });
+                        });
+                    } catch (e) {
+                        console.error('[TRANSPORT] Chyba pri odpájaní tímu z odstraňovaného riadku:', e);
+                    }
+                }
+            }
+
             stage = 'deleteDoc';
             await deleteDoc(doc(window.db, 'transport', rowId));
     
@@ -6453,6 +6496,41 @@ const TransportApp = ({ userProfileData }) => {
     const removeBus = async (bus) => {
         if (!window.db || !bus) return;
         try {
+            const busId = bus.id;
+            const parentsToDetach = new Set();
+            (savedTransfersRef.current || []).forEach((parent) => {
+                if (parent.isWalking === true) return;
+                const hasSegmentOnBus = (parent.segments || []).some((seg) => {
+                    if (!seg) return false;
+                    if (seg.isWalking === true) return false;
+                    return seg.busId === busId;
+                });
+                if (hasSegmentOnBus) parentsToDetach.add(parent.key);
+            });
+
+            for (const parentKey of parentsToDetach) {
+                try {
+                    await updateParentTransfer(parentKey, (draft) => {
+                        draft.segments = draft.segments.map((s) => {
+                            if (!s || s.isWalking === true) return s;
+                            if (s.busId !== busId) return s;
+                            return {
+                                ...s,
+                                busAssigned: false,
+                                busId: null,
+                                boardingRowId: null,
+                                alightingRowId: null,
+                                startTs: null,
+                                endTs: null,
+                                when: null,
+                            };
+                        });
+                    });
+                } catch (e) {
+                    console.error('[TRANSPORT] Chyba pri odpájaní tímu z odstraňovaného busu:', e);
+                }
+            }
+
             await deleteDoc(doc(window.db, 'transport', bus.id));
             window.showGlobalNotification(`${bus.name} bol odstránený.`, 'info');
         } catch (err) {
