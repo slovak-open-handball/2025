@@ -14471,7 +14471,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                     },
                                                                     React.createElement(
                                                                         'span',
-                                                                        { className: 'cursor-help border-b border-dotted border-gray-400' },
+                                                                        { className: 'cursor-default' },
                                                                         `${m.trip.fromPlace} → ${m.trip.toPlace}`
                                                                     ),
                                                                     stopsThrough.length > 1 &&
