@@ -14467,7 +14467,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                     'div',
                                                                     {
                                                                         className: 'text-xs text-gray-600 mt-0.5 relative group/busroute inline-block',
-                                                                        title: tooltipText,
                                                                     },
                                                                     React.createElement(
                                                                         'span',
