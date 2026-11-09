@@ -3896,17 +3896,20 @@ const TransportApp = ({ userProfileData }) => {
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '');
 
-        const stops = allPlaces
-            .filter((p) => normalizeType(p.type) === 'zastavka')
+        const stops = [...allPlaces]
+            .filter((p) => p && p.name && (typeof p.lat === 'number') && (typeof p.lng === 'number'))
             .sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
 
-        console.log('[TRANSPORT][stopsList] Načítané zastávky:', {
+        console.log('[TRANSPORT][stopsList] Načítané miesta (všetky typy):', {
             allPlacesCount: allPlaces.length,
             stopsCount: stops.length,
             stops: stops.map(s => ({ id: s.id, name: s.name, type: s.type })),
-            allTypes: allPlaces.map(p => ({ name: p.name, type: p.type })),
+            types: allPlaces.reduce((acc, p) => {
+                acc[p.type] = (acc[p.type] || 0) + 1;
+                return acc;
+            }, {}),
         });
-        
+
         setStopsList(stops);
     }, [allPlaces]);
 
@@ -11710,9 +11713,8 @@ const TransportApp = ({ userProfileData }) => {
                             {
                                 value: fromId,
                                 onChange: (e) => setNewWalkingRuleFromId(e.target.value),
-                                disabled: newWalkingRuleSaving || !String(newWalkingRuleFromType || '').trim(),
-                                className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-4 disabled:opacity-60 ${(!String(newWalkingRuleFromType || '').trim()) ? 'cursor-not-allowed hover:cursor-not-allowed' : ''}`,
-                                title: (!String(newWalkingRuleFromType || '').trim()) ? 'Najprv vyberte typ miesta – odkiaľ.' : undefined,
+                                disabled: newWalkingRuleSaving,
+                                className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-4 disabled:opacity-60'
                             },
                             React.createElement('option', { value: '' }, '— vyber miesto —'),
                             fromOptionsFiltered.map((p) =>
@@ -11763,9 +11765,8 @@ const TransportApp = ({ userProfileData }) => {
                             {
                                 value: toId,
                                 onChange: (e) => setNewWalkingRuleToId(e.target.value),
-                                disabled: newWalkingRuleSaving || !String(newWalkingRuleToType || '').trim(),
-                                className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-4 disabled:opacity-60 ${(!String(newWalkingRuleToType || '').trim()) ? 'cursor-not-allowed hover:cursor-not-allowed' : ''}`,
-                                title: (!String(newWalkingRuleToType || '').trim()) ? 'Najprv vyberte typ miesta – kam.' : undefined,
+                                disabled: newWalkingRuleSaving,
+                                className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-4 disabled:opacity-60'
                             },
                             React.createElement('option', { value: '' }, '— vyber miesto —'),
                             toOptionsFiltered.map((p) =>
