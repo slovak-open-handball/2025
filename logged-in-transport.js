@@ -4204,11 +4204,11 @@ const TransportApp = ({ userProfileData }) => {
                             if (!v || !Array.isArray(v.segments)) return;
                             if (v.dayKey !== dayKey) return;
                             let changed = false;
-                        
+
                             const parentRange = parseTransferWhenToRange(v.when);
                             const parentStartTs = parentRange && parentRange.startTs != null ? parentRange.startTs : null;
                             const parentEndTs = parentRange && parentRange.endTs != null ? parentRange.endTs : null;
-                        
+
                             const newSegments = v.segments.map((s) => {
                                 if (s.busId !== bus.id) return s;
                                 if (s.isWalking === true) return s;
@@ -4255,30 +4255,7 @@ const TransportApp = ({ userProfileData }) => {
                                     parentEndTs != null &&
                                     (boardingTs < parentStartTs || alightingTs > parentEndTs);
 
-                                const hadValidAssignment =
-                                    oldBoardingRowId != null &&
-                                    oldAlightingRowId != null;
-
-                                if (hadValidAssignment && !timesValid) {
-                                    if (
-                                        newBoardingRowId !== oldBoardingRowId ||
-                                        newAlightingRowId !== oldAlightingRowId
-                                    ) {
-                                        changed = true;
-                                        return {
-                                            ...s,
-                                            boardingRowId: newBoardingRowId,
-                                            alightingRowId: newAlightingRowId,
-                                            startTs: null,
-                                            endTs: null,
-                                            when: null,
-                                            busAssigned: true,
-                                            busId: s.busId || bus.id,
-                                        };
-                                    }
-                                    return s;
-                                }
-
+                                // NEW: ak sú časy neplatné alebo mimo parent range → odpojiť segment
                                 if (!timesValid || outsideParent) {
                                     changed = true;
                                     return {
@@ -4456,37 +4433,27 @@ const TransportApp = ({ userProfileData }) => {
                         boardingTs < effectiveParentRange.startTs ||
                         alightingTs > effectiveParentRange.endTs ||
                         alightingTs <= boardingTs;
-
+    
                     if (outsideParent) {
-                        const wasAssignedToThisBus =
-                            seg.busId === busId &&
-                            seg.boardingRowId &&
-                            seg.alightingRowId &&
-                            seg.startTs != null &&
-                            seg.endTs != null &&
-                            seg.endTs > seg.startTs;
-
-                        if (!wasAssignedToThisBus) {
-                            changed = true;
-                            const removeKey = `${parent.key}|${seg.fromId}|${seg.toId}`;
-                            if (!parentsToRemoveSegmentFrom.has(removeKey)) {
-                                parentsToRemoveSegmentFrom.set(removeKey, {
-                                    parentKey: parent.key,
-                                    fromId: seg.fromId,
-                                    toId: seg.toId,
-                                });
-                            }
-                            return {
-                                ...seg,
-                                busAssigned: false,
-                                busId: null,
-                                boardingRowId: null,
-                                alightingRowId: null,
-                                startTs: null,
-                                endTs: null,
-                                when: null,
-                            };
+                        changed = true;
+                        const removeKey = `${parent.key}|${seg.fromId}|${seg.toId}`;
+                        if (!parentsToRemoveSegmentFrom.has(removeKey)) {
+                            parentsToRemoveSegmentFrom.set(removeKey, {
+                                parentKey: parent.key,
+                                fromId: seg.fromId,
+                                toId: seg.toId,
+                            });
                         }
+                        return {
+                            ...seg,
+                            busAssigned: false,
+                            busId: null,
+                            boardingRowId: null,
+                            alightingRowId: null,
+                            startTs: null,
+                            endTs: null,
+                            when: null,
+                        };
                     }
                 }
     
@@ -5205,16 +5172,26 @@ const TransportApp = ({ userProfileData }) => {
                         if (!v || !Array.isArray(v.segments)) return;
                         if (v.dayKey !== dayKey) return;
                         let changed = false;
+
+                        // NEW: effectiveParentRange pre kontrolu, či segment nie je mimo parenta
+                        let effectiveParentRange = null;
+                        {
+                            const parentRange = parseTransferWhenToRange(v.when);
+                            if (parentRange && parentRange.startTs != null && parentRange.endTs != null) {
+                                effectiveParentRange = { startTs: parentRange.startTs, endTs: parentRange.endTs };
+                            }
+                        }
+
                         const newSegments = v.segments.map((s) => {
                             if (s.busId !== busId) return s;
                             if (s.isWalking === true) return s;
-    
+
                             const oldBoardingRowId = s.boardingRowId || null;
                             const oldAlightingRowId = s.alightingRowId || null;
-    
+
                             let newBoardingRowId = oldBoardingRowId;
                             let newAlightingRowId = oldAlightingRowId;
-    
+
                             if (oldBoardingRowId) {
                                 if (rowIdMap[oldBoardingRowId]) {
                                     newBoardingRowId = rowIdMap[oldBoardingRowId];
@@ -5229,39 +5206,47 @@ const TransportApp = ({ userProfileData }) => {
                                     newAlightingRowId = shiftRowId(oldAlightingRowId);
                                 }
                             }
-    
+
                             const boardingRow = newBoardingRowId ? newRowsByRowId.get(newBoardingRowId) : null;
                             const alightingRow = newAlightingRowId ? newRowsByRowId.get(newAlightingRowId) : null;
-    
+
                             const boardingTs = boardingRow && boardingRow.timeFrom
                                 ? timeOnDayKeyToTs(dayKey, boardingRow.timeFrom)
                                 : null;
                             const alightingTs = alightingRow && alightingRow.timeTo
                                 ? timeOnDayKeyToTs(dayKey, alightingRow.timeTo)
                                 : null;
-    
+
                             const timesValid =
                                 boardingTs != null &&
                                 alightingTs != null &&
                                 alightingTs > boardingTs;
+
+                            // NEW: ak sú časy mimo parent range, segment odpojiť
+                            const outsideParent =
+                                timesValid &&
+                                effectiveParentRange != null &&
+                                (boardingTs < effectiveParentRange.startTs || alightingTs > effectiveParentRange.endTs);
+
+                            if (!timesValid || outsideParent) {
+                                changed = true;
+                                return {
+                                    ...s,
+                                    busAssigned: false,
+                                    busId: null,
+                                    boardingRowId: null,
+                                    alightingRowId: null,
+                                    startTs: null,
+                                    endTs: null,
+                                    when: null,
+                                };
+                            }
 
                             const rowIdsUnchanged =
                                 newBoardingRowId === oldBoardingRowId &&
                                 newAlightingRowId === oldAlightingRowId;
 
                             if (rowIdsUnchanged) {
-                                if (!timesValid) {
-                                    if (s.startTs != null || s.endTs != null || s.when != null) {
-                                        changed = true;
-                                        return {
-                                            ...s,
-                                            startTs: null,
-                                            endTs: null,
-                                            when: null,
-                                        };
-                                    }
-                                    return s;
-                                }
                                 const newWhen = `${formatTsLocal(boardingTs)} – ${formatTsLocal(alightingTs)}`;
                                 if (
                                     s.startTs !== boardingTs ||
@@ -5279,22 +5264,8 @@ const TransportApp = ({ userProfileData }) => {
                                 return s;
                             }
 
-                            if (!timesValid) {
-                                changed = true;
-                                return {
-                                    ...s,
-                                    boardingRowId: newBoardingRowId,
-                                    alightingRowId: newAlightingRowId,
-                                    startTs: null,
-                                    endTs: null,
-                                    when: null,
-                                    busAssigned: true,
-                                    busId: s.busId || busId,
-                                };
-                            }
-    
                             const newWhen = `${formatTsLocal(boardingTs)} – ${formatTsLocal(alightingTs)}`;
-    
+
                             changed = true;
                             return {
                                 ...s,
