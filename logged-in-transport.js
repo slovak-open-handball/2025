@@ -8686,7 +8686,6 @@ const TransportApp = ({ userProfileData }) => {
                                 { className: 'bg-gray-100 text-xs font-semibold text-gray-700' },
                                 React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { width: '60px' } }, '#'),
                                 React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { minWidth: '240px' } }, 'Odkiaľ'),
-                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-center', style: { width: '60px' } }, '→'),
                                 React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { minWidth: '240px' } }, 'Kam'),
                                 React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-center', style: { width: '80px' } }, '')
                             )
@@ -8706,17 +8705,22 @@ const TransportApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'td',
                                         { className: 'border border-gray-300 px-3 py-1 text-gray-800 font-medium' },
-                                        rule.fromPlaceName
-                                    ),
-                                    React.createElement(
-                                        'td',
-                                        { className: 'border border-gray-300 px-3 py-1 text-center text-gray-500 font-bold' },
-                                        '→'
+                                        React.createElement(
+                                            'span',
+                                            { className: 'inline-flex items-center' },
+                                            getPlaceIconForName(rule.fromPlaceName),
+                                            rule.fromPlaceName
+                                        )
                                     ),
                                     React.createElement(
                                         'td',
                                         { className: 'border border-gray-300 px-3 py-1 text-gray-800 font-medium' },
-                                        rule.toPlaceName
+                                        React.createElement(
+                                            'span',
+                                            { className: 'inline-flex items-center' },
+                                            getPlaceIconForName(rule.toPlaceName),
+                                            rule.toPlaceName
+                                        )
                                     ),
                                     React.createElement(
                                         'td',
@@ -11684,8 +11688,20 @@ const TransportApp = ({ userProfileData }) => {
                     { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700' },
                     React.createElement(
                         'div',
-                        { className: 'font-medium' },
-                        `${deleteWalkingRuleModal.rule.fromPlaceName} → ${deleteWalkingRuleModal.rule.toPlaceName}`
+                        { className: 'font-medium inline-flex items-center flex-wrap gap-x-1' },
+                        React.createElement(
+                            'span',
+                            { className: 'inline-flex items-center' },
+                            getPlaceIconForName(deleteWalkingRuleModal.rule.fromPlaceName),
+                            deleteWalkingRuleModal.rule.fromPlaceName
+                        ),
+                        React.createElement('span', { className: 'mx-1' }, '→'),
+                        React.createElement(
+                            'span',
+                            { className: 'inline-flex items-center' },
+                            getPlaceIconForName(deleteWalkingRuleModal.rule.toPlaceName),
+                            deleteWalkingRuleModal.rule.toPlaceName
+                        )
                     )
                 ),
                 React.createElement(
