@@ -128,6 +128,20 @@ const normalizePlaceName = (name) => {
         .trim();
 };
 
+const buildWalkingAssignmentDocId = (placeNameNorm) => {
+    const raw = String(placeNameNorm || '').trim();
+    if (!raw) return null;
+    // Firestore doc ID nesmie obsahovať "/" a nemal by obsahovať rezervované znaky.
+    // Nahradíme "/" za "∕" (division slash U+2215) a prípadné ďalšie problematické znaky za "_".
+    const safe = raw
+        .replace(/\//g, '∕')
+        .replace(/\\/g, '_')
+        .replace(/\.\./g, '_')
+        .replace(/^\.+/, '_')
+        .replace(/[\[\]\*\?\x00-\x1F]/g, '_');
+    return `walkingAssignment||${safe}`;
+};
+
 const resolveTeamName = (identifier) => {
     if (!identifier) return '---';
 
@@ -8524,66 +8538,63 @@ const TransportApp = ({ userProfileData }) => {
         return ev.location || null;
     };
 
-    const buildWalkingEventsFromBuffers = () => {
-        const events = [];
-        const seen = new Set();
-        const pushEvent = (placeName, category, teamName, when, startTs, endTs, type, text) => {
-            if (!placeName) return;
-            const placeTrim = String(placeName).trim();
-            if (!placeTrim) return;
-            const norm = normalizePlaceName(placeTrim);
-            if (!norm) return;
-            const key = `${norm}`;
-            if (seen.has(key)) return;
-            seen.add(key);
-            events.push({
-                placeName: placeTrim,
-                placeNameNorm: norm,
-                category: cleanCategory(category || ''),
-                teamName: String(teamName || '').trim(),
-                when: when || '',
-                startTs: startTs ?? null,
-                endTs: endTs ?? null,
-                type: type || '',
-                sampleText: text || '',
-            });
+    const buildWalkingPlacesFromAllPlaces = () => {
+        const places = Array.isArray(allPlacesRef.current) ? allPlacesRef.current : [];
+        const stops = Array.isArray(stopsList) ? stopsList : [];
+
+        // Normalizované názvy zastávok, s ktorými sa majú miesta porovnávať.
+        const stopNorms = new Set();
+        stops.forEach((s) => {
+            const n = normalizePlaceName(s && s.name ? s.name : '');
+            if (n) stopNorms.add(n);
+        });
+
+        const typeMeta = {
+            sportova_hala: { icon: 'fa-futbol', color: '#dc2626', label: 'Hala' },
+            stravovanie:   { icon: 'fa-utensils', color: '#16a34a', label: 'Strav.' },
+            ubytovanie:    { icon: 'fa-bed', color: '#6b7280', label: 'Ubyt.' },
         };
 
-        (matchesBufferRef.current || []).forEach((m) => {
-            const hallName = m.hallName || null;
-            if (!hallName) return;
-            const when = m.scheduledTime
-                ? (m.scheduledEndTime ? `${m.scheduledTime} – ${m.scheduledEndTime}` : m.scheduledTime)
-                : 'nenaplánované';
-            pushEvent(hallName, m.category, m.home, when, m.scheduledTs ?? null, m.scheduledEndTs ?? null, 'match',
-                `${m.home} vs ${m.away}${m.special}${m.hallName ? ` | ${m.hallName}` : ''}`);
+        const seen = new Set();
+        const out = [];
+
+        places.forEach((p) => {
+            if (!p || !p.name) return;
+            const type = String(p.type || '').trim();
+            if (!type) return;
+            // Zastávky samotné netreba priraďovať (sú cieľovým bodom).
+            if (type === 'zastavka') return;
+
+            const placeTrim = String(p.name).trim();
+            const norm = normalizePlaceName(placeTrim);
+            if (!norm) return;
+
+            // Ak sa názov miesta zhoduje s názvom niektorej zastávky → skryť.
+            if (stopNorms.has(norm)) return;
+
+            const key = norm;
+            if (seen.has(key)) return;
+            seen.add(key);
+
+            const meta = typeMeta[type] || { icon: 'fa-circle-dot', color: '#6b7280', label: type };
+
+            out.push({
+                placeId: p.id || null,
+                placeName: placeTrim,
+                placeNameNorm: norm,
+                placeType: type,
+                typeIcon: meta.icon,
+                typeColor: meta.color,
+                typeLabel: meta.label,
+                note: p.note || '',
+            });
         });
 
-        (cateringBufferRef.current || []).forEach((c) => {
-            if (!c.placeName) return;
-            const formattedDay = c.dayKey ? (formatDateDDMMYYYY(c.dayKey) || c.dayKey) : '?';
-            const timeRange = c.slotFrom
-                ? (c.slotTo ? `${c.slotFrom} – ${c.slotTo}` : c.slotFrom)
-                : '--:--';
-            const mealLabel = c.mealType === 'lunch' ? 'Obed' : c.mealType === 'dinner' ? 'Večera' : c.mealType;
-            pushEvent(c.placeName, c.category, c.teamName, `${formattedDay} ${timeRange}`.trim(), c.ts ?? null, c.slotToTs ?? c.ts ?? null, 'catering',
-                `${mealLabel} (${timeRange}) → ${c.placeName}`);
-        });
+        out.sort((a, b) =>
+            String(a.placeName).localeCompare(String(b.placeName), 'sk', { sensitivity: 'base' })
+        );
 
-        (teamsArrivalBufferRef.current || []).forEach((t) => {
-            if (!t.accommodationName) return;
-            pushEvent(t.accommodationName, t.category, t.teamName, '—', null, null, 'accommodation',
-                `Ubytovanie: ${t.accommodationName} (typ: ${t.accommodationType || 'neurčený'})`);
-        });
-
-        events.sort((a, b) => {
-            if (a.startTs != null && b.startTs != null && a.startTs !== b.startTs) return a.startTs - b.startTs;
-            if (a.startTs == null && b.startTs != null) return 1;
-            if (a.startTs != null && b.startTs == null) return -1;
-            return String(a.placeName).localeCompare(String(b.placeName), 'sk', { sensitivity: 'base' });
-        });
-
-        return events;
+        return out;
     };
 
     const renderWalkingAssignments = () => {
@@ -8602,7 +8613,7 @@ const TransportApp = ({ userProfileData }) => {
             );
         }
 
-        const events = buildWalkingEventsFromBuffers();
+        const events = buildWalkingPlacesFromAllPlaces();
 
         return React.createElement(
             'div',
@@ -8610,13 +8621,13 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement(
                 'p',
                 { className: 'text-xs text-gray-500 mb-3 italic' },
-                'Pri každom mieste udalosti (hala, stravovanie, ubytovanie) vyberte zastávku, na ktorú sa má tím peši presunúť. Toto nastavenie sa použije pri generovaní presunov – presuny na rovnaké miesto sa nastavia ako „peši".'
+                 'Zobrazujú sa len miesta (hala, stravovanie, ubytovanie), ktoré NEMAJÚ rovnaký názov ako niektorá zastávka. Pri každom takomto mieste vyberte zastávku, na ktorú sa má tím peši presunúť. Ak sa názov miesta zhoduje s názvom zastávky, riadok sa nezobrazí – považuje sa to za ten istý cieľ.'
             ),
             events.length === 0
                 ? React.createElement(
                     'div',
                     { className: 'text-gray-400 italic text-sm px-1 py-4' },
-                    'Žiadne miesta udalostí. Načítajú sa po načítaní zápasov, stravovania a tímov.'
+                    'Žiadne miesta na priradenie. Buď neexistujú iné miesta ako zastávky, alebo všetky miesta majú rovnaký názov ako niektorá zastávka.'
                 )
                 : React.createElement(
                     'div',
@@ -8642,13 +8653,11 @@ const TransportApp = ({ userProfileData }) => {
                             null,
                             events.map((ev) => {
                                 const current = walkingAssignments[ev.placeNameNorm] || null;
-                                const typeMeta = ev.type === 'match'
-                                    ? { icon: 'fa-futbol', color: '#dc2626', label: 'Hala' }
-                                    : ev.type === 'catering'
-                                        ? { icon: 'fa-utensils', color: '#16a34a', label: 'Strav.' }
-                                        : ev.type === 'accommodation'
-                                            ? { icon: 'fa-bed', color: '#6b7280', label: 'Ubyt.' }
-                                            : { icon: 'fa-circle-dot', color: '#6b7280', label: '—' };
+                                const typeMeta = {
+                                    icon: ev.typeIcon || 'fa-circle-dot',
+                                    color: ev.typeColor || '#6b7280',
+                                    label: ev.typeLabel || '—',
+                                };
                                 const currentValue = current && current.stopId ? current.stopId : '';
                                 return React.createElement(
                                     'tr',
@@ -8685,7 +8694,8 @@ const TransportApp = ({ userProfileData }) => {
                                                     try {
                                                         if (!window.db) throw new Error('DB nie je inicializovaná');
                                                         const transportRef = collection(window.db, 'transport');
-                                                        const docId = `walkingAssignment||${ev.placeNameNorm}`;
+                                                        const docId = buildWalkingAssignmentDocId(ev.placeNameNorm);
+                                                        if (!docId) throw new Error('Neplatný názov miesta pre docId');
                                                         const docRef = doc(window.db, 'transport', docId);
                                                         if (!newStopId) {
                                                             await deleteDoc(docRef);
@@ -8735,10 +8745,12 @@ const TransportApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'div',
                                             { className: 'flex flex-col leading-tight' },
-                                            ev.when &&
-                                                React.createElement('span', { className: 'font-mono text-[11px]' }, ev.when),
-                                            ev.category &&
-                                                React.createElement('span', { className: 'text-[10px] text-gray-500' }, ev.category)
+                                            ev.note &&
+                                                React.createElement(
+                                                    'span',
+                                                    { className: 'text-[11px] text-gray-700' },
+                                                    ev.note
+                                                )
                                         )
                                     ),
                                     React.createElement(
@@ -8754,7 +8766,8 @@ const TransportApp = ({ userProfileData }) => {
                                                         setWalkingSaving(true);
                                                         try {
                                                             if (!window.db) throw new Error('DB nie je inicializovaná');
-                                                            const docId = `walkingAssignment||${ev.placeNameNorm}`;
+                                                            const docId = buildWalkingAssignmentDocId(ev.placeNameNorm);
+                                                            if (!docId) throw new Error('Neplatný názov miesta pre docId');
                                                             await deleteDoc(doc(window.db, 'transport', docId));
                                                             window.showGlobalNotification(
                                                                 `Priradenie pre „${ev.placeName}" bolo odstránené.`,
