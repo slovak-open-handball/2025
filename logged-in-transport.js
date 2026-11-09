@@ -202,6 +202,24 @@ const placeTypeIcons = {
     zastavka:      { icon: 'fa-bus', color: '#2563eb', label: 'Zastávka' },
 };
 
+const getPlaceIconForName = (placeName) => {
+    if (!placeName) return null;
+    const raw = String(placeName).trim();
+    const norm = normalizePlaceName(raw);
+    const all = Array.isArray(allPlacesRef.current) ? allPlacesRef.current : [];
+    let found = all.find((p) => p && normalizePlaceName(p.name) === norm);
+    if (!found) {
+        found = (stopsList || []).find((s) => s && normalizePlaceName(s.name) === norm);
+    }
+    if (!found) return null;
+    const meta = placeTypeIcons[found.type] || { icon: 'fa-circle-dot', color: '#6b7280' };
+    return React.createElement('i', {
+        className: `fa-solid ${meta.icon}`,
+        style: { color: meta.color, marginRight: '4px' },
+        title: meta.label || found.type || '',
+    });
+};
+
 const TRANSPORT_SETTINGS_COLLECTION = 'settings';
 const TRANSPORT_SETTINGS_DOC = 'transportTravelTimes';
 const TRANSPORT_TRANSFERS_FIELD = 'transfers';
@@ -8637,12 +8655,6 @@ const TransportApp = ({ userProfileData }) => {
 
     const getWalkablePlacesOptions = () => {
         const places = Array.isArray(allPlacesRef.current) ? allPlacesRef.current : [];
-        const typeLabel = {
-            sportova_hala: 'Športová hala',
-            stravovanie: 'Stravovanie',
-            ubytovanie: 'Ubytovňa',
-            zastavka: 'Zastávka',
-        };
         const out = [];
         const seen = new Set();
         places.forEach((p) => {
@@ -8653,13 +8665,12 @@ const TransportApp = ({ userProfileData }) => {
             if (!seen.has(norm)) seen.add(norm);
             else return;
             const type = String(p.type || '').trim();
-            const prefix = typeLabel[type] || type || '';
             out.push({
                 id: p.id || null,
                 name,
                 nameNorm: norm,
                 type,
-                displayLabel: prefix ? `${prefix}: ${name}` : name,
+                displayLabel: name,
             });
         });
         out.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
@@ -10213,8 +10224,19 @@ const TransportApp = ({ userProfileData }) => {
                                 routeLabel &&
                                     React.createElement(
                                         'span',
-                                        { className: 'text-sm text-gray-900 font-medium' },
-                                        routeLabel
+                                        { className: 'text-sm text-gray-900 font-medium inline-flex items-center flex-wrap gap-x-1' },
+                                        (() => {
+                                            const parts = String(routeLabel).split('→').map((s) => s.trim()).filter(Boolean);
+                                            const nodes = [];
+                                            parts.forEach((part, i) => {
+                                                nodes.push(getPlaceIconForName(part));
+                                                nodes.push(React.createElement('span', { key: `part-${i}` }, part));
+                                                if (i < parts.length - 1) {
+                                                    nodes.push(React.createElement('span', { key: `arr-${i}` }, '→'));
+                                                }
+                                            });
+                                            return nodes;
+                                        })()
                                     ),
                                 parentInfoLabel &&
                                     React.createElement(
@@ -11007,12 +11029,16 @@ const TransportApp = ({ userProfileData }) => {
                                                 React.createElement(
                                                     'td',
                                                     { className: 'border border-gray-300 p-1 text-sm text-gray-800' },
-                                                    placeFrom || '—'
+                                                    placeFrom
+                                                        ? React.createElement('span', { className: 'inline-flex items-center' }, getPlaceIconForName(placeFrom), placeFrom)
+                                                        : '—'
                                                 ),
                                                 React.createElement(
                                                     'td',
                                                     { className: 'border border-gray-300 p-1 text-sm text-gray-800' },
-                                                    placeTo || '—'
+                                                    placeTo
+                                                        ? React.createElement('span', { className: 'inline-flex items-center' }, getPlaceIconForName(placeTo), placeTo)
+                                                        : '—'
                                                 ),
                                                 React.createElement(
                                                     'td',
