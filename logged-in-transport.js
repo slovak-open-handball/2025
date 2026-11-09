@@ -7667,14 +7667,14 @@ const TransportApp = ({ userProfileData }) => {
             window.showGlobalNotification('Nie sú definované žiadne pravidlá "peši". Najprv ich pridajte v Nastavenia → Peši.', 'info');
             return;
         }
-
+    
         const dayKeyFilter = selectedDayKey || null;
         const categoryFilter = selectedCategoryFilter ? cleanCategory(selectedCategoryFilter) : null;
-
+    
         const rulePairs = new Set(
             walkingRules.map((r) => `${r.fromPlaceNameNorm}||${r.toPlaceNameNorm}`)
         );
-
+    
         const isPairWalking = (fromId, toId) => {
             if (!fromId || !toId) return false;
             const fromNameNorm = normalizePlaceName(resolvePlaceNameById(fromId) || '');
@@ -7682,54 +7682,77 @@ const TransportApp = ({ userProfileData }) => {
             if (!fromNameNorm || !toNameNorm) return false;
             return rulePairs.has(`${fromNameNorm}||${toNameNorm}`);
         };
-
-        const parentsToUpdate = [];
-
+    
+        // Zoznam parentov, ktoré treba upraviť (prejde sa updateParentTransfer)
+        const parentsToUpdate = new Set();
+        // Pre parenty bez medzizastávok: či ich označiť celé ako peši (parent.isWalking = true)
+        const directParentsToMarkWalking = new Set();
+    
         (savedTransfersRef.current || []).forEach((parent) => {
             if (!Array.isArray(parent.segments)) return;
-            if (parent.isWalking === true) return;
-
-            const fromId = parent.fromId || null;
-            const toId = parent.toId || null;
-            if (!isPairWalking(fromId, toId)) return;
-
+    
             if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return;
             if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return;
-
-            const segIdx = findSegmentIndex(parent.segments, fromId, toId);
-            if (segIdx === -1) return;
-            const seg = parent.segments[segIdx];
-            if (!seg) return;
-            if (seg.isWalking === true) return;
-
-            parentsToUpdate.push(parent.key);
+    
+            const stopsIds = Array.isArray(parent.intermediateStopIds) ? parent.intermediateStopIds : [];
+            const isDirectTransfer = stopsIds.length === 0;
+    
+            if (isDirectTransfer) {
+                // Priamy presun – rozhoduje parent.fromId → parent.toId
+                if (parent.isWalking === true) return;
+                const fromId = parent.fromId || null;
+                const toId = parent.toId || null;
+                if (!isPairWalking(fromId, toId)) return;
+    
+                const segIdx = findSegmentIndex(parent.segments, fromId, toId);
+                if (segIdx === -1) return;
+                const seg = parent.segments[segIdx];
+                if (!seg) return;
+                if (seg.isWalking === true) return;
+    
+                parentsToUpdate.add(parent.key);
+                directParentsToMarkWalking.add(parent.key);
+                return;
+            }
+    
+            // Rozdelený presun – prejsť segmenty a označiť tie, ktoré zodpovedajú pravidlám
+            const segments = parent.segments;
+            let hasAnyMatchingNonWalkingSegment = false;
+    
+            segments.forEach((seg) => {
+                if (!seg) return;
+                if (seg.isWalking === true) return;
+                const segFromId = seg.fromId || null;
+                const segToId = seg.toId || null;
+                if (!isPairWalking(segFromId, segToId)) return;
+                hasAnyMatchingNonWalkingSegment = true;
+            });
+    
+            if (hasAnyMatchingNonWalkingSegment) {
+                parentsToUpdate.add(parent.key);
+            }
         });
-
-        if (parentsToUpdate.length === 0) {
+    
+        if (parentsToUpdate.size === 0) {
             window.showGlobalNotification('Nenašli sa žiadne presuny, ktoré by zodpovedali pravidlám "peši".', 'info');
             return;
         }
-
+    
         setWalkingBatchSaving(true);
         try {
+            let updatedParentsCount = 0;
+    
             for (const parentKey of parentsToUpdate) {
+                const parent = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
+                if (!parent) continue;
+    
+                const stopsIds = Array.isArray(parent.intermediateStopIds) ? parent.intermediateStopIds : [];
+                const isDirectTransfer = stopsIds.length === 0;
+                const shouldMarkParentWalking = directParentsToMarkWalking.has(parentKey);
+    
                 await updateParentTransfer(parentKey, (draft) => {
-                    const stopsIds = Array.isArray(draft.intermediateStopIds) ? draft.intermediateStopIds : [];
-                    const isDirectTransfer = stopsIds.length === 0;
-                    const segIdx = findSegmentIndex(draft.segments, draft.fromId, draft.toId);
-        
-                    if (!isDirectTransfer && segIdx !== -1) {
-                        draft.segments[segIdx].isWalking = true;
-                        draft.segments[segIdx].busAssigned = false;
-                        draft.segments[segIdx].busId = null;
-                        draft.segments[segIdx].boardingRowId = null;
-                        draft.segments[segIdx].alightingRowId = null;
-                        draft.segments[segIdx].startTs = null;
-                        draft.segments[segIdx].endTs = null;
-                        draft.segments[segIdx].when = null;
-                        draft.segments[segIdx].walkingSetAt = Timestamp.fromDate(new Date());
-                        draft.segments[segIdx].walkingSetBy = (userProfileData && userProfileData.email) || null;
-                    } else {
+                    if (shouldMarkParentWalking || (!isDirectTransfer && draft.segments.length === 0)) {
+                        // Priamy presun – označiť celý parent ako peši
                         draft.segments.forEach((s) => {
                             s.isWalking = true;
                             s.busAssigned = false;
@@ -7745,12 +7768,45 @@ const TransportApp = ({ userProfileData }) => {
                         draft.isWalking = true;
                         draft.walkingSetAt = Timestamp.fromDate(new Date());
                         draft.walkingSetBy = (userProfileData && userProfileData.email) || null;
+    
+                        // Zachovať pôvodný when (časový rozsah) pre zobrazenie v boxe Peši
+                        if (!draft.when || String(draft.when).trim() === '') {
+                            if (parent.when && String(parent.when).trim() !== '') {
+                                draft.when = parent.when;
+                            }
+                        }
+                        return;
                     }
+    
+                    // Rozdelený presun – označiť len tie segmenty, ktoré zodpovedajú pravidlám
+                    draft.segments = draft.segments.map((seg) => {
+                        if (!seg) return seg;
+                        const segFromId = seg.fromId || null;
+                        const segToId = seg.toId || null;
+                        if (!isPairWalking(segFromId, segToId)) return seg;
+                        if (seg.isWalking === true) return seg;
+    
+                        return {
+                            ...seg,
+                            isWalking: true,
+                            busAssigned: false,
+                            busId: null,
+                            boardingRowId: null,
+                            alightingRowId: null,
+                            startTs: null,
+                            endTs: null,
+                            when: null,
+                            walkingSetAt: Timestamp.fromDate(new Date()),
+                            walkingSetBy: (userProfileData && userProfileData.email) || null,
+                        };
+                    });
                 });
+    
+                updatedParentsCount += 1;
             }
-
+    
             window.showGlobalNotification(
-                `Označených ako "peši": ${parentsToUpdate.length} presunov.`,
+                `Označených ako "peši": ${updatedParentsCount} presunov (vrátane častí rozdelených presunov).`,
                 'success'
             );
         } catch (err) {
