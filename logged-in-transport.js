@@ -10515,32 +10515,181 @@ const TransportApp = ({ userProfileData }) => {
         
             return null;
         };
+
+        const computeTransferDisplayLabels = (t) => {
+            if (!t) return { dateLabel: null, timeLabel: null, startMinutes: null, endMinutes: null };
         
-        const sortedTransfers = [...filtered].sort((a, b) => {
-            if (sortTransfersBy === 'arrival') {
-                const endTsA = getDisplayedEndTsForSort(a);
-                const endTsB = getDisplayedEndTsForSort(b);
+            const rangeInfo = parseWhenRangeFull(t.when);
+            const transferInfo = parseTransferText(t.text);
         
-                const safeA = endTsA == null ? Number.POSITIVE_INFINITY : endTsA;
-                const safeB = endTsB == null ? Number.POSITIVE_INFINITY : endTsB;
-        
-                if (safeA !== safeB) return safeA - safeB;
-        
-                // ak sú rovnaké, rozhodne čas odchodu (plný timestamp)
-                const startTsA = getTransferStartTsForSort(a);
-                const startTsB = getTransferStartTsForSort(b);
-                if (startTsA !== startTsB) return startTsA - startTsB;
-            } else {
-                // departure – pôvodné správanie
-                const startA = getTransferStartTsForSort(a);
-                const startB = getTransferStartTsForSort(b);
-                if (startA !== startB) return startA - startB;
-        
-                const endA = getTransferEndTsForSort(a);
-                const endB = getTransferEndTsForSort(b);
-                if (endA !== endB) return endA - endB;
+            // ===== DATE LABEL (2. riadok) =====
+            let dateLabel = null;
+            if (rangeInfo) {
+                dateLabel = (rangeInfo.startDayKey === rangeInfo.endDayKey)
+                    ? rangeInfo.startLabel
+                    : `${rangeInfo.startLabel} – ${rangeInfo.endLabel}`;
+            } else if (t.dayKey) {
+                dateLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
             }
         
+            // ===== TIME LABEL (3. riadok) =====
+            const extractTimesOnly = (whenStr) => {
+                if (!whenStr) return null;
+                const s = String(whenStr);
+                const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
+                const times = [];
+                let m;
+                while ((m = regex.exec(s)) !== null) {
+                    if (m[4] != null && m[5] != null) {
+                        times.push(`${String(m[4]).padStart(2, '0')}:${String(m[5]).padStart(2, '0')}`);
+                    }
+                }
+                if (times.length === 0) return null;
+                if (times.length === 1) return times[0];
+                return `${times[0]} – ${times[1]}`;
+            };
+        
+            let timeLabel = null;
+        
+            if (t._parentKey) {
+                if (t._displayStartTs != null || t._displayEndTs != null) {
+                    const startFmt = t._displayStartTs != null ? formatTsLocal(t._displayStartTs) : null;
+                    const endFmt = t._displayEndTs != null ? formatTsLocal(t._displayEndTs) : null;
+                    const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
+                    const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
+                    if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
+                    else if (startTime) timeLabel = startTime;
+                    else if (endTime) timeLabel = endTime;
+                }
+        
+                if (!timeLabel) {
+                    const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
+                    let parentSeg = null;
+                    if (parentRec && Array.isArray(parentRec.segments)) {
+                        const idx = findSegmentIndex(parentRec.segments, t.fromId, t.toId);
+                        if (idx !== -1) parentSeg = parentRec.segments[idx];
+                    }
+                    const hasRealBusTime =
+                        parentSeg &&
+                        parentSeg.busId &&
+                        parentSeg.boardingRowId &&
+                        parentSeg.alightingRowId &&
+                        parentSeg.startTs != null &&
+                        parentSeg.endTs != null &&
+                        parentSeg.endTs > parentSeg.startTs;
+        
+                    if (hasRealBusTime) {
+                        const startFmt = formatTsLocal(parentSeg.startTs);
+                        const endFmt = formatTsLocal(parentSeg.endTs);
+                        const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
+                        const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
+                        if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
+                        else if (startTime) timeLabel = startTime;
+                        else if (endTime) timeLabel = endTime;
+                    } else {
+                        const provisional = computeProvisionalSegmentRange(t);
+                        if (provisional) {
+                            const startFmt = formatTsLocal(provisional.startTs);
+                            const endFmt = formatTsLocal(provisional.endTs);
+                            const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
+                            const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
+                            if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
+                            else if (startTime) timeLabel = startTime;
+                            else if (endTime) timeLabel = endTime;
+                        }
+                    }
+                }
+            } else {
+                if (t.when && String(t.when).trim() !== '') {
+                    timeLabel = extractTimesOnly(t.when) || String(t.when).trim();
+                }
+                if (!timeLabel && rangeInfo && (rangeInfo.startTime || rangeInfo.endTime)) {
+                    const st = rangeInfo.startTime;
+                    const et = rangeInfo.endTime;
+                    if (st && et) timeLabel = `${st} – ${et}`;
+                    else if (st) timeLabel = st;
+                    else if (et) timeLabel = et;
+                }
+            }
+        
+            if (!timeLabel && t.dayKey) {
+                const dayLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
+                timeLabel = `${dayLabel} (čas neurčený)`;
+            }
+        
+            // ===== Parsovanie timeLabel na minúty =====
+            const parseTimeLabelRange = (label) => {
+                if (!label) return null;
+                const s = String(label);
+                const timeRe = /(\d{1,2}):(\d{2})/g;
+                const found = [];
+                let m;
+                while ((m = timeRe.exec(s)) !== null) {
+                    const hh = Number(m[1]);
+                    const mi = Number(m[2]);
+                    if (hh >= 0 && hh <= 23 && mi >= 0 && mi <= 59) {
+                        found.push(hh * 60 + mi);
+                    }
+                }
+                if (found.length === 0) return null;
+                if (found.length === 1) return { startMin: found[0], endMin: found[0] };
+                return { startMin: found[0], endMin: found[1] };
+            };
+        
+            const timeRange = parseTimeLabelRange(timeLabel);
+            const startMinutes = timeRange ? timeRange.startMin : null;
+            const endMinutes = timeRange ? timeRange.endMin : null;
+        
+            return { dateLabel, timeLabel, startMinutes, endMinutes };
+        };
+        
+        const precomputedLabels = new Map();
+        filtered.forEach((t) => {
+            precomputedLabels.set(t.key, computeTransferDisplayLabels(t));
+        });
+        
+        const getSortDateKey = (t) => {
+            // Pre sekundárne triedenie pri rovnakom čase: dátum z 2. riadku (dayKey)
+            const labels = precomputedLabels.get(t.key);
+            const rangeInfo = parseWhenRangeFull(t.when);
+            if (rangeInfo && rangeInfo.startDayKey) return rangeInfo.startDayKey;
+            if (t.dayKey) return t.dayKey;
+            return '9999-99-99';
+        };
+        
+        const sortedTransfers = [...filtered].sort((a, b) => {
+            const la = precomputedLabels.get(a.key) || {};
+            const lb = precomputedLabels.get(b.key) || {};
+        
+            // Primárne triedenie podľa zvoleného režimu (Čas odchodu / Čas príchodu)
+            let primaryA, primaryB;
+            if (sortTransfersBy === 'arrival') {
+                primaryA = la.endMinutes != null ? la.endMinutes : Number.POSITIVE_INFINITY;
+                primaryB = lb.endMinutes != null ? lb.endMinutes : Number.POSITIVE_INFINITY;
+            } else {
+                primaryA = la.startMinutes != null ? la.startMinutes : Number.POSITIVE_INFINITY;
+                primaryB = lb.startMinutes != null ? lb.startMinutes : Number.POSITIVE_INFINITY;
+            }
+        
+            if (primaryA !== primaryB) return primaryA - primaryB;
+        
+            // Sekundárne: druhý čas (ak je arrival, tak start; ak departure, tak end)
+            let secondaryA, secondaryB;
+            if (sortTransfersBy === 'arrival') {
+                secondaryA = la.startMinutes != null ? la.startMinutes : Number.POSITIVE_INFINITY;
+                secondaryB = lb.startMinutes != null ? lb.startMinutes : Number.POSITIVE_INFINITY;
+            } else {
+                secondaryA = la.endMinutes != null ? la.endMinutes : Number.POSITIVE_INFINITY;
+                secondaryB = lb.endMinutes != null ? lb.endMinutes : Number.POSITIVE_INFINITY;
+            }
+            if (secondaryA !== secondaryB) return secondaryA - secondaryB;
+        
+            // Terciárne: dátum (2. riadok)
+            const dateA = getSortDateKey(a);
+            const dateB = getSortDateKey(b);
+            if (dateA !== dateB) return dateA.localeCompare(dateB);
+        
+            // Kvartérne: kategória a tím
             const ca = cleanCategory(a.category) || '';
             const cb = cleanCategory(b.category) || '';
             if (ca !== cb) return ca.localeCompare(cb, 'sk', { sensitivity: 'base' });
@@ -10734,104 +10883,9 @@ const TransportApp = ({ userProfileData }) => {
                         'ul',
                         { className: 'space-y-2' },
                         sortedTransfers.map((t) => {
-                            const rangeInfo = parseWhenRangeFull(t.when);
-                            const transferInfo = parseTransferText(t.text);
-    
-                            const transportColor = getTransportColorForCategory(t.category);
-                            const boxBg = transportColor
-                                ? lightenHex(transportColor, 0.15)
-                                : null;
-    
-                            let dateLabel = null;
-                            if (rangeInfo) {
-                                dateLabel = (rangeInfo.startDayKey === rangeInfo.endDayKey)
-                                    ? rangeInfo.startLabel
-                                    : `${rangeInfo.startLabel} – ${rangeInfo.endLabel}`;
-                            } else if (t.dayKey) {
-                                dateLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
-                            }                            
-                            const extractTimesOnly = (whenStr) => {
-                                if (!whenStr) return null;
-                                const s = String(whenStr);
-                                const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
-                                const times = [];
-                                let m;
-                                while ((m = regex.exec(s)) !== null) {
-                                    if (m[4] != null && m[5] != null) {
-                                        times.push(`${String(m[4]).padStart(2, '0')}:${String(m[5]).padStart(2, '0')}`);
-                                    }
-                                }
-                                if (times.length === 0) return null;
-                                if (times.length === 1) return times[0];
-                                return `${times[0]} – ${times[1]}`;
-                            };                            
-                            let timeLabel = null;
-
-                            if (t._parentKey) {
-                                if (t._displayStartTs != null || t._displayEndTs != null) {
-                                    const startFmt = t._displayStartTs != null ? formatTsLocal(t._displayStartTs) : null;
-                                    const endFmt = t._displayEndTs != null ? formatTsLocal(t._displayEndTs) : null;
-                                    const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
-                                    const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
-                                    if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
-                                    else if (startTime) timeLabel = startTime;
-                                    else if (endTime) timeLabel = endTime;
-                                }
-                            
-                                if (!timeLabel) {
-                                    const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
-                                    let parentSeg = null;
-                                    if (parentRec && Array.isArray(parentRec.segments)) {
-                                        const idx = findSegmentIndex(parentRec.segments, t.fromId, t.toId);
-                                        if (idx !== -1) parentSeg = parentRec.segments[idx];
-                                    }
-                                    const hasRealBusTime =
-                                        parentSeg &&
-                                        parentSeg.busId &&
-                                        parentSeg.boardingRowId &&
-                                        parentSeg.alightingRowId &&
-                                        parentSeg.startTs != null &&
-                                        parentSeg.endTs != null &&
-                                        parentSeg.endTs > parentSeg.startTs;
-                            
-                                    if (hasRealBusTime) {
-                                        const startFmt = formatTsLocal(parentSeg.startTs);
-                                        const endFmt = formatTsLocal(parentSeg.endTs);
-                                        const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
-                                        const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
-                                        if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
-                                        else if (startTime) timeLabel = startTime;
-                                        else if (endTime) timeLabel = endTime;
-                                    } else {
-                                        const provisional = computeProvisionalSegmentRange(t);
-                                        if (provisional) {
-                                            const startFmt = formatTsLocal(provisional.startTs);
-                                            const endFmt = formatTsLocal(provisional.endTs);
-                                            const startTime = startFmt ? /(\d{2}:\d{2})$/.exec(startFmt)?.[1] : null;
-                                            const endTime = endFmt ? /(\d{2}:\d{2})$/.exec(endFmt)?.[1] : null;
-                                            if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
-                                            else if (startTime) timeLabel = startTime;
-                                            else if (endTime) timeLabel = endTime;
-                                        }
-                                    }
-                                }
-                            } else {
-                                if (t.when && String(t.when).trim() !== '') {
-                                    timeLabel = extractTimesOnly(t.when) || String(t.when).trim();
-                                }
-                                if (!timeLabel && rangeInfo && (rangeInfo.startTime || rangeInfo.endTime)) {
-                                    const st = rangeInfo.startTime;
-                                    const et = rangeInfo.endTime;
-                                    if (st && et) timeLabel = `${st} – ${et}`;
-                                    else if (st) timeLabel = st;
-                                    else if (et) timeLabel = et;
-                                }
-                            }
-                            
-                            if (!timeLabel && t.dayKey) {
-                                const dayLabel = formatDateDDMMYYYY(t.dayKey) || t.dayKey;
-                                timeLabel = `${dayLabel} (čas neurčený)`;
-                            }
+                            const precomputed = precomputedLabels.get(t.key) || {};
+                            const dateLabel = precomputed.dateLabel;
+                            const timeLabel = precomputed.timeLabel;
                             
                             let routeLabel = null;
                             if (transferInfo) {
