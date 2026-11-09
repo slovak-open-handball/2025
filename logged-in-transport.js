@@ -10887,8 +10887,9 @@ const TransportApp = ({ userProfileData }) => {
                             const dateLabel = precomputed.dateLabel;
                             const timeLabel = precomputed.timeLabel;
 
-                            // `transferInfo` sa používa na zostavenie `routeLabel` – definujeme ho tu,
-                            // keďže predtým bol definovaný na začiatku `map` callbacku.
+                            const transportColor = getTransportColorForCategory(t.category);
+                            const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
+
                             const transferInfo = parseTransferText(t.text);
                             
                             let routeLabel = null;
