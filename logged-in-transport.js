@@ -10963,16 +10963,12 @@ const TransportApp = ({ userProfileData }) => {
                                                 React.createElement(
                                                     'td',
                                                     { className: 'border border-gray-300 p-1 text-sm text-gray-800' },
-                                                    placeFrom
-                                                        ? React.createElement('span', { className: 'inline-flex items-center' }, getPlaceIconForName(placeFrom), placeFrom)
-                                                        : '—'
+                                                    placeFrom || '—'
                                                 ),
                                                 React.createElement(
                                                     'td',
                                                     { className: 'border border-gray-300 p-1 text-sm text-gray-800' },
-                                                    placeTo
-                                                        ? React.createElement('span', { className: 'inline-flex items-center' }, getPlaceIconForName(placeTo), placeTo)
-                                                        : '—'
+                                                    placeTo || '—'
                                                 ),
                                                 React.createElement(
                                                     'td',
