@@ -8594,65 +8594,6 @@ const TransportApp = ({ userProfileData }) => {
         return ev.location || null;
     };
 
-    const buildWalkingPlacesFromAllPlaces = () => {
-        const places = Array.isArray(allPlacesRef.current) ? allPlacesRef.current : [];
-        const stops = Array.isArray(stopsList) ? stopsList : [];
-
-        // Normalizované názvy zastávok, s ktorými sa majú miesta porovnávať.
-        const stopNorms = new Set();
-        stops.forEach((s) => {
-            const n = normalizePlaceName(s && s.name ? s.name : '');
-            if (n) stopNorms.add(n);
-        });
-
-        const typeMeta = {
-            sportova_hala: { icon: 'fa-futbol', color: '#dc2626', label: 'Hala' },
-            stravovanie:   { icon: 'fa-utensils', color: '#16a34a', label: 'Strav.' },
-            ubytovanie:    { icon: 'fa-bed', color: '#6b7280', label: 'Ubyt.' },
-        };
-
-        const seen = new Set();
-        const out = [];
-
-        places.forEach((p) => {
-            if (!p || !p.name) return;
-            const type = String(p.type || '').trim();
-            if (!type) return;
-            // Zastávky samotné netreba priraďovať (sú cieľovým bodom).
-            if (type === 'zastavka') return;
-
-            const placeTrim = String(p.name).trim();
-            const norm = normalizePlaceName(placeTrim);
-            if (!norm) return;
-
-            // Ak sa názov miesta zhoduje s názvom niektorej zastávky → skryť.
-            if (stopNorms.has(norm)) return;
-
-            const key = norm;
-            if (seen.has(key)) return;
-            seen.add(key);
-
-            const meta = typeMeta[type] || { icon: 'fa-circle-dot', color: '#6b7280', label: type };
-
-            out.push({
-                placeId: p.id || null,
-                placeName: placeTrim,
-                placeNameNorm: norm,
-                placeType: type,
-                typeIcon: meta.icon,
-                typeColor: meta.color,
-                typeLabel: meta.label,
-                note: p.note || '',
-            });
-        });
-
-        out.sort((a, b) =>
-            String(a.placeName).localeCompare(String(b.placeName), 'sk', { sensitivity: 'base' })
-        );
-
-        return out;
-    };
-
     const getWalkablePlacesOptions = () => {
         const places = Array.isArray(allPlacesRef.current) ? allPlacesRef.current : [];
         const out = [];
