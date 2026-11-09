@@ -10424,25 +10424,127 @@ const TransportApp = ({ userProfileData }) => {
             return Number.POSITIVE_INFINITY;
         };
 
+        const getDisplayedEndMinutesForSort = (t) => {
+            if (!t) return null;
+        
+            const parseTimeStr = (str) => {
+                if (!str) return null;
+                const m = /(\d{1,2}):(\d{2})/.exec(String(str));
+                if (!m) return null;
+                const hh = Number(m[1]);
+                const mi = Number(m[2]);
+                if (!Number.isFinite(hh) || !Number.isFinite(mi)) return null;
+                if (hh < 0 || hh > 23 || mi < 0 || mi > 59) return null;
+                return hh * 60 + mi;
+            };
+        
+            // 1) Ak máme priamo _displayEndTs (rovnaké ako zobrazené v boxe)
+            if (t._displayEndTs != null && isFinite(t._displayEndTs)) {
+                const d = new Date(t._displayEndTs);
+                if (!isNaN(d.getTime())) {
+                    return d.getHours() * 60 + d.getMinutes();
+                }
+            }
+        
+            // 2) Pre segmenty: skús z parentRec.segments nájsť reálny endTs
+            if (t._parentKey) {
+                const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
+                if (parentRec && Array.isArray(parentRec.segments)) {
+                    const segIdx = findSegmentIndex(parentRec.segments, t.fromId, t.toId);
+                    if (segIdx !== -1) {
+                        const seg = parentRec.segments[segIdx];
+                        if (seg && seg.endTs != null && isFinite(seg.endTs)) {
+                            const d = new Date(seg.endTs);
+                            if (!isNaN(d.getTime())) {
+                                return d.getHours() * 60 + d.getMinutes();
+                            }
+                        }
+                    }
+                }
+            }
+        
+            // 3) Fallback: parsuj priamo z t.when (druhý čas za „–")
+            if (t.when) {
+                const s = String(t.when);
+                const times = [];
+                const regex = /(\d{1,2}):(\d{2})/g;
+                let m;
+                while ((m = regex.exec(s)) !== null) {
+                    const hh = Number(m[1]);
+                    const mi = Number(m[2]);
+                    if (hh >= 0 && hh <= 23 && mi >= 0 && mi <= 59) {
+                        times.push(hh * 60 + mi);
+                    }
+                }
+                if (times.length >= 2) return times[times.length - 1];
+                if (times.length === 1) return times[0];
+            }
+        
+            // 4) Fallback: z parenta
+            if (t._parentKey) {
+                const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
+                if (parentRec && parentRec.when && String(parentRec.when).trim() !== '') {
+                    const parsed = parseTimeStr(parentRec.when);
+                    if (parsed != null) {
+                        // skús vytiahnuť druhý čas
+                        const times = [];
+                        const regex = /(\d{1,2}):(\d{2})/g;
+                        let m;
+                        while ((m = regex.exec(String(parentRec.when))) !== null) {
+                            const hh = Number(m[1]);
+                            const mi = Number(m[2]);
+                            if (hh >= 0 && hh <= 23 && mi >= 0 && mi <= 59) {
+                                times.push(hh * 60 + mi);
+                            }
+                        }
+                        if (times.length >= 2) return times[times.length - 1];
+                        if (times.length === 1) return times[0];
+                    }
+                }
+            }
+        
+            return null;
+        };
+        
         const sortedTransfers = [...filtered].sort((a, b) => {
             if (sortTransfersBy === 'arrival') {
-                const endA = getTransferEndTsForSort(a);
-                const endB = getTransferEndTsForSort(b);
-                if (endA !== endB) return endA - endB;
+                const endMinA = getDisplayedEndMinutesForSort(a);
+                const endMinB = getDisplayedEndMinutesForSort(b);
         
-                const startA = getTransferStartTsForSort(a);
-                const startB = getTransferStartTsForSort(b);
-                if (startA !== startB) return startA - startB;
+                const safeA = endMinA == null ? Number.POSITIVE_INFINITY : endMinA;
+                const safeB = endMinB == null ? Number.POSITIVE_INFINITY : endMinB;
+        
+                if (safeA !== safeB) return safeA - safeB;
+        
+                // ak sú rovnaké, rozhodne čas odchodu
+                const startMinA = (() => {
+                    if (a._displayStartTs != null && isFinite(a._displayStartTs)) {
+                        const d = new Date(a._displayStartTs);
+                        if (!isNaN(d.getTime())) return d.getHours() * 60 + d.getMinutes();
+                    }
+                    return null;
+                })();
+                const startMinB = (() => {
+                    if (b._displayStartTs != null && isFinite(b._displayStartTs)) {
+                        const d = new Date(b._displayStartTs);
+                        if (!isNaN(d.getTime())) return d.getHours() * 60 + d.getMinutes();
+                    }
+                    return null;
+                })();
+                const sA = startMinA == null ? Number.POSITIVE_INFINITY : startMinA;
+                const sB = startMinB == null ? Number.POSITIVE_INFINITY : startMinB;
+                if (sA !== sB) return sA - sB;
             } else {
+                // departure – pôvodné správanie
                 const startA = getTransferStartTsForSort(a);
                 const startB = getTransferStartTsForSort(b);
                 if (startA !== startB) return startA - startB;
-
+        
                 const endA = getTransferEndTsForSort(a);
                 const endB = getTransferEndTsForSort(b);
                 if (endA !== endB) return endA - endB;
             }
-
+        
             const ca = cleanCategory(a.category) || '';
             const cb = cleanCategory(b.category) || '';
             if (ca !== cb) return ca.localeCompare(cb, 'sk', { sensitivity: 'base' });
