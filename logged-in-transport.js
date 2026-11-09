@@ -5394,6 +5394,9 @@ const TransportApp = ({ userProfileData }) => {
             const rowsKey = `${busId}|${dayKey}`;
             const removedRow = (busRows[rowsKey] || []).find((r) => r.id === rowId);
             const removedRowId = removedRow ? removedRow.rowId : null;
+            const removedOrder = removedRow
+                ? (parseOrderFromRowId(removedRow.rowId) ?? (Number(removedRow.order) || null))
+                : null;
 
             stage = 'detachTeamsOnRemovedRow';
             if (removedRowId) {
