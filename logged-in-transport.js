@@ -4667,6 +4667,171 @@ const TransportApp = ({ userProfileData }) => {
             .slice()
             .sort((a, b) => (a.order || 0) - (b.order || 0));
 
+        // ===== NOVÉ LOGOVANIE: vypíš presuny v riadkoch pod zmeneným riadkom =====
+        try {
+            const changedRow = allRows.find((r) => r.id === changedRowId) || null;
+            const changedOrder = changedRow ? parseOrderFromRowId(changedRow.rowId) : null;
+            const bus = (buses || []).find((b) => b.id === busId) || null;
+
+            console.log(
+                '%c[TRANSPORT][SYNC-ROWS] === Zmena riadku v buse ===',
+                'color:#0ea5e9;font-weight:bold;',
+                {
+                    busId,
+                    busName: bus ? bus.name : null,
+                    dayKey,
+                    changedRowId,
+                    changedRowOrder: changedOrder,
+                    changedRowTimeFrom: changedRow ? changedRow.timeFrom : null,
+                    changedRowTimeTo: changedRow ? changedRow.timeTo : null,
+                    changedRowPlaceFromId: changedRow ? changedRow.placeFromId : null,
+                    changedRowPlaceToId: changedRow ? changedRow.placeToId : null,
+                    overrides: overrides || null,
+                }
+            );
+
+            if (changedOrder == null) {
+                console.warn(
+                    '[TRANSPORT][SYNC-ROWS] Nepodarilo sa zistiť order zmeneného riadku (rowId):',
+                    changedRow ? changedRow.rowId : null
+                );
+            } else {
+                const rowsBelow = allRows.filter((r) => {
+                    const o = parseOrderFromRowId(r.rowId);
+                    return o != null && o > changedOrder;
+                });
+
+                console.log(
+                    '%c[TRANSPORT][SYNC-ROWS] Riadky POD zmeneným riadkom:',
+                    'color:#0ea5e9;font-weight:bold;',
+                    {
+                        count: rowsBelow.length,
+                        rows: rowsBelow.map((r) => ({
+                            id: r.id,
+                            rowId: r.rowId,
+                            order: parseOrderFromRowId(r.rowId),
+                            timeFrom: r.timeFrom || null,
+                            timeTo: r.timeTo || null,
+                            placeFromId: r.placeFromId || null,
+                            placeFrom: r.placeFrom || null,
+                            placeToId: r.placeToId || null,
+                            placeTo: r.placeTo || null,
+                        })),
+                    }
+                );
+
+                // Pre každý riadok pod zmeneným riadkom zisti, ktoré tímy/presuny sú v ňom viazané
+                // (boardingRowId alebo alightingRowId smeruje na daný rowId).
+                const transfersInRowsBelow = [];
+
+                (savedTransfersRef.current || []).forEach((parent) => {
+                    if (parent.dayKey !== dayKey) return;
+                    if (parent.isWalking === true) return;
+
+                    const effectiveCategory = cleanCategory(parent.category || '');
+                    let effectiveTeamName = String(parent.teamName || '').trim();
+                    if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
+                        const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
+                        const info = (teamsLookupRef.current || {})[lookupKey];
+                        if (info && info.teamName) effectiveTeamName = info.teamName;
+                    }
+                    if (!effectiveTeamName) {
+                        const parts = String(parent.key || '').split('||');
+                        if (parts.length >= 2) {
+                            const keyTeamName = String(parts[1] || '').trim();
+                            if (keyTeamName) effectiveTeamName = keyTeamName;
+                        }
+                    }
+                    if (!effectiveTeamName) return;
+
+                    (parent.segments || []).forEach((seg) => {
+                        if (!seg) return;
+                        if (seg.busId !== busId) return;
+                        if (seg.isWalking === true) return;
+
+                        const bRow = seg.boardingRowId || null;
+                        const aRow = seg.alightingRowId || null;
+
+                        const bRowObj = bRow ? allRows.find((r) => r.rowId === bRow) : null;
+                        const aRowObj = aRow ? allRows.find((r) => r.rowId === aRow) : null;
+
+                        const bOrder = bRowObj ? parseOrderFromRowId(bRowObj.rowId) : null;
+                        const aOrder = aRowObj ? parseOrderFromRowId(aRowObj.rowId) : null;
+
+                        const boardsBelow = bOrder != null && bOrder > changedOrder;
+                        const alightsBelow = aOrder != null && aOrder > changedOrder;
+
+                        if (!boardsBelow && !alightsBelow) return;
+
+                        transfersInRowsBelow.push({
+                            parentKey: parent.key,
+                            category: effectiveCategory,
+                            teamName: effectiveTeamName,
+                            segmentFromId: seg.fromId || null,
+                            segmentFromName: resolvePlaceNameById(seg.fromId) || null,
+                            segmentToId: seg.toId || null,
+                            segmentToName: resolvePlaceNameById(seg.toId) || null,
+                            boardingRowId: bRow,
+                            boardingOrder: bOrder,
+                            boardingTimeFrom: bRowObj ? bRowObj.timeFrom : null,
+                            alightingRowId: aRow,
+                            alightingOrder: aOrder,
+                            alightingTimeTo: aRowObj ? aRowObj.timeTo : null,
+                            startTs: seg.startTs != null ? seg.startTs : null,
+                            endTs: seg.endTs != null ? seg.endTs : null,
+                            when: seg.when || null,
+                            boardsBelow,
+                            alightsBelow,
+                        });
+                    });
+                });
+
+                console.log(
+                    '%c[TRANSPORT][SYNC-ROWS] Presuny nachádzajúce sa v riadkoch POD zmeneným riadkom:',
+                    'color:#f59e0b;font-weight:bold;',
+                    {
+                        busId,
+                        busName: bus ? bus.name : null,
+                        dayKey,
+                        changedRowOrder: changedOrder,
+                        count: transfersInRowsBelow.length,
+                        transfers: transfersInRowsBelow.map((t, idx) => ({
+                            idx,
+                            parentKey: t.parentKey,
+                            category: t.category,
+                            teamName: t.teamName,
+                            segment: `${t.segmentFromName || '?'} → ${t.segmentToName || '?'}`,
+                            boarding: {
+                                rowId: t.boardingRowId,
+                                order: t.boardingOrder,
+                                timeFrom: t.boardingTimeFrom,
+                                isBelowChangedRow: t.boardsBelow,
+                            },
+                            alighting: {
+                                rowId: t.alightingRowId,
+                                order: t.alightingOrder,
+                                timeTo: t.alightingTimeTo,
+                                isBelowChangedRow: t.alightsBelow,
+                            },
+                            startTs: t.startTs,
+                            endTs: t.endTs,
+                            when: t.when,
+                        })),
+                    }
+                );
+
+                if (transfersInRowsBelow.length === 0) {
+                    console.log(
+                        '%c[TRANSPORT][SYNC-ROWS] V riadkoch pod zmeneným riadkom nie sú žiadne priradené presuny.',
+                        'color:#6b7280;font-style:italic;'
+                    );
+                }
+            }
+        } catch (logErr) {
+            console.warn('[TRANSPORT][SYNC-ROWS] Chyba pri logovaní presunov pod zmeneným riadkom:', logErr);
+        }
+        // ===== KONIEC NOVÉHO LOGOVANIA =====
+
         // Vyber riadky, ktoré majú priradené tímy, plus zmenený riadok
         const targetRowIds = new Set();
         allRows.forEach((r) => {
@@ -4793,6 +4958,20 @@ const TransportApp = ({ userProfileData }) => {
                             overrides[rowId].timeTo = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
                         }
                     }
+
+                    console.log(
+                        '%c[TRANSPORT][UPDATE-ROW] Spúšťam sync po zmene času riadku:',
+                        'color:#10b981;font-weight:bold;',
+                        {
+                            busId: busIdForSync,
+                            dayKey: dayKeyForSync,
+                            rowId,
+                            field,
+                            newValue: value,
+                            overrides,
+                        }
+                    );
+
                     await syncAllAffectedRowsForBus(busIdForSync, dayKeyForSync, rowId, overrides);
                 }
             } catch (e) {
