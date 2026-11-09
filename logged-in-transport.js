@@ -706,6 +706,7 @@ const TransportApp = ({ userProfileData }) => {
     const [assignBusSaving, setAssignBusSaving] = useState(false);
     const [removeWalkingModal, setRemoveWalkingModal] = useState(null);
     const [removeWalkingSaving, setRemoveWalkingSaving] = useState(false);
+    const [walkingBatchSaving, setWalkingBatchSaving] = useState(false);
     const [deleteTransferModal, setDeleteTransferModal] = useState(null);
     const [deleteTransferSaving, setDeleteTransferSaving] = useState(false);
     const [regenTransfersModal, setRegenTransfersModal] = useState(null);
@@ -7659,6 +7660,104 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
+    const setAllWalkingTransfersAsWalking = async () => {
+        if (!window.db) return;
+        if (walkingBatchSaving) return;
+        if (!Array.isArray(walkingRules) || walkingRules.length === 0) {
+            window.showGlobalNotification('Nie sú definované žiadne pravidlá "peši". Najprv ich pridajte v Nastavenia → Peši.', 'info');
+            return;
+        }
+
+        const dayKeyFilter = selectedDayKey || null;
+        const categoryFilter = selectedCategoryFilter ? cleanCategory(selectedCategoryFilter) : null;
+
+        const rulePairs = new Set(
+            walkingRules.map((r) => `${r.fromPlaceNameNorm}||${r.toPlaceNameNorm}`)
+        );
+
+        const isPairWalking = (fromId, toId) => {
+            if (!fromId || !toId) return false;
+            const fromNameNorm = normalizePlaceName(resolvePlaceNameById(fromId) || '');
+            const toNameNorm = normalizePlaceName(resolvePlaceNameById(toId) || '');
+            if (!fromNameNorm || !toNameNorm) return false;
+            return rulePairs.has(`${fromNameNorm}||${toNameNorm}`);
+        };
+
+        const parentsToUpdate = [];
+
+        (savedTransfersRef.current || []).forEach((parent) => {
+            if (!Array.isArray(parent.segments)) return;
+            if (parent.isWalking === true) return;
+
+            const fromId = parent.fromId || null;
+            const toId = parent.toId || null;
+            if (!isPairWalking(fromId, toId)) return;
+
+            if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return;
+            if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return;
+
+            const segIdx = findSegmentIndex(parent.segments, fromId, toId);
+            if (segIdx === -1) return;
+            const seg = parent.segments[segIdx];
+            if (!seg) return;
+            if (seg.isWalking === true) return;
+
+            parentsToUpdate.push(parent.key);
+        });
+
+        if (parentsToUpdate.length === 0) {
+            window.showGlobalNotification('Nenašli sa žiadne presuny, ktoré by zodpovedali pravidlám "peši".', 'info');
+            return;
+        }
+
+        setWalkingBatchSaving(true);
+        try {
+            for (const parentKey of parentsToUpdate) {
+                await updateParentTransfer(parentKey, (draft) => {
+                    const segIdx = findSegmentIndex(draft.segments, draft.fromId, draft.toId);
+                    if (segIdx !== -1) {
+                        draft.segments[segIdx].isWalking = true;
+                        draft.segments[segIdx].busAssigned = false;
+                        draft.segments[segIdx].busId = null;
+                        draft.segments[segIdx].boardingRowId = null;
+                        draft.segments[segIdx].alightingRowId = null;
+                        draft.segments[segIdx].startTs = null;
+                        draft.segments[segIdx].endTs = null;
+                        draft.segments[segIdx].when = null;
+                        draft.segments[segIdx].walkingSetAt = Timestamp.fromDate(new Date());
+                        draft.segments[segIdx].walkingSetBy = (userProfileData && userProfileData.email) || null;
+                    } else {
+                        draft.segments.forEach((s) => {
+                            s.isWalking = true;
+                            s.busAssigned = false;
+                            s.busId = null;
+                            s.boardingRowId = null;
+                            s.alightingRowId = null;
+                            s.startTs = null;
+                            s.endTs = null;
+                            s.when = null;
+                            s.walkingSetAt = Timestamp.fromDate(new Date());
+                            s.walkingSetBy = (userProfileData && userProfileData.email) || null;
+                        });
+                        draft.isWalking = true;
+                        draft.walkingSetAt = Timestamp.fromDate(new Date());
+                        draft.walkingSetBy = (userProfileData && userProfileData.email) || null;
+                    }
+                });
+            }
+
+            window.showGlobalNotification(
+                `Označených ako "peši": ${parentsToUpdate.length} presunov.`,
+                'success'
+            );
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri hromadnom označení presunov ako peši:', err);
+            window.showGlobalNotification('Nepodarilo sa označiť presuny ako peši.', 'error');
+        } finally {
+            setWalkingBatchSaving(false);
+        }
+    };
+
     const removeWalkingFlag = async () => {
         if (!window.db || !removeWalkingModal?.transfer) return;
         const transfer = removeWalkingModal.transfer;
@@ -9877,27 +9976,48 @@ const TransportApp = ({ userProfileData }) => {
                 )
             ),
             (() => {
-                if (!hasAnyPartialTransfer) {
+                const showPartialCheckbox = hasAnyPartialTransfer;
+                const showWalkingButton = (walkingRules || []).length > 0;
+
+                if (!showPartialCheckbox && !showWalkingButton) {
                     return null;
                 }
 
                 return React.createElement(
                     'div',
-                    { className: 'px-3 pt-2 pb-1 border-b border-gray-100 flex items-center justify-end' },
-                    React.createElement(
-                        'label',
-                        {
-                            className: 'flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer select-none',
-                            title: 'Zobraziť iba tie presuny, ktoré sú časťou väčšieho presunu (majú medzizastávky)',
-                        },
-                        React.createElement('input', {
-                            type: 'checkbox',
-                            checked: showOnlyPartialTransfers,
-                            onChange: (e) => setShowOnlyPartialTransfers(e.target.checked),
-                            className: 'w-4 h-4 rounded accent-violet-600 cursor-pointer',
-                        }),
-                        React.createElement('span', { className: 'whitespace-nowrap' }, 'Iba časti presunov')
-                    )
+                    { className: 'px-3 pt-2 pb-1 border-b border-gray-100 flex items-center justify-between gap-2 flex-wrap' },
+                    showWalkingButton
+                        ? React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: setAllWalkingTransfersAsWalking,
+                                disabled: walkingBatchSaving,
+                                title: 'Označí ako "peši" všetky presuny medzi miestami, ktoré sú definované v pravidlách „peši" (Nastavenia → Peši).',
+                                className: `inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md transition-colors ${walkingBatchSaving ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`
+                            },
+                            walkingBatchSaving
+                                ? React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' })
+                                : React.createElement('i', { className: 'fa-solid fa-person-walking' }),
+                            React.createElement('span', { className: 'whitespace-nowrap' }, 'Nastaviť presun peši medzi blízkymi miestami / na najbližšiu zastávku')
+                        )
+                        : React.createElement('span', null),
+                    showPartialCheckbox
+                        ? React.createElement(
+                            'label',
+                            {
+                                className: 'flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer select-none',
+                                title: 'Zobraziť iba tie presuny, ktoré sú súčasťou väčšieho presunu (majú medzizastávky)',
+                            },
+                            React.createElement('input', {
+                                type: 'checkbox',
+                                checked: showOnlyPartialTransfers,
+                                onChange: (e) => setShowOnlyPartialTransfers(e.target.checked),
+                                className: 'w-4 h-4 rounded accent-violet-600 cursor-pointer',
+                            }),
+                            React.createElement('span', { className: 'whitespace-nowrap' }, 'Iba časti presunov')
+                        )
+                        : React.createElement('span', null)
                 );
             })(),
             filtered.length === 0
