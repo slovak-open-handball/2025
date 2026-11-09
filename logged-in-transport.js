@@ -11717,8 +11717,9 @@ const TransportApp = ({ userProfileData }) => {
                             {
                                 value: fromId,
                                 onChange: (e) => setNewWalkingRuleFromId(e.target.value),
-                                disabled: newWalkingRuleSaving,
-                                className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-4 disabled:opacity-60'
+                                disabled: newWalkingRuleSaving || !String(newWalkingRuleFromType || '').trim(),
+                                title: (!String(newWalkingRuleFromType || '').trim()) ? 'Najprv vyberte typ miesta – odkiaľ.' : undefined,
+                                className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-4 disabled:opacity-60 ${(!String(newWalkingRuleFromType || '').trim()) ? 'cursor-not-allowed' : ''}`
                             },
                             React.createElement('option', { value: '' }, '— vyber miesto —'),
                             fromOptionsFiltered.map((p) =>
@@ -11737,25 +11738,18 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement(
                             'select',
                             {
-                                value: newWalkingRuleToType,
-                                onChange: (e) => {
-                                    setNewWalkingRuleToType(e.target.value);
-                                    const newType = e.target.value;
-                                    if (newType && toPlace) {
-                                        if (String(toPlace.type || '').trim() !== newType) {
-                                            setNewWalkingRuleToId('');
-                                        }
-                                    }
-                                },
-                                disabled: newWalkingRuleSaving,
-                                className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-2 disabled:opacity-60'
+                                value: toId,
+                                onChange: (e) => setNewWalkingRuleToId(e.target.value),
+                                disabled: newWalkingRuleSaving || !String(newWalkingRuleToType || '').trim(),
+                                title: (!String(newWalkingRuleToType || '').trim()) ? 'Najprv vyberte typ miesta – kam.' : undefined,
+                                className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-4 disabled:opacity-60 ${(!String(newWalkingRuleToType || '').trim()) ? 'cursor-not-allowed' : ''}`
                             },
-                            React.createElement('option', { value: '' }, 'Všetky typy'),
-                            distinctTypes.map((t) =>
+                            React.createElement('option', { value: '' }, '— vyber miesto —'),
+                            toOptionsFiltered.map((p) =>
                                 React.createElement(
                                     'option',
-                                    { key: t, value: t },
-                                    typeLabelMap[t] || t
+                                    { key: p.id, value: p.id },
+                                    p.displayLabel
                                 )
                             )
                         ),
