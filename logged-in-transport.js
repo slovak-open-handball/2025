@@ -8644,7 +8644,6 @@ const TransportApp = ({ userProfileData }) => {
                                 React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { width: '60px' } }, 'Typ'),
                                 React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { minWidth: '240px' } }, 'Miesto udalosti'),
                                 React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { minWidth: '260px' } }, 'Zastávka (peši)'),
-                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { width: '200px' } }, 'Info'),
                                 React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-center', style: { width: '80px' } }, '')
                             )
                         ),
@@ -8737,20 +8736,6 @@ const TransportApp = ({ userProfileData }) => {
                                                     s.name
                                                 )
                                             )
-                                        )
-                                    ),
-                                    React.createElement(
-                                        'td',
-                                        { className: 'border border-gray-300 px-3 py-1 text-xs text-gray-600' },
-                                        React.createElement(
-                                            'div',
-                                            { className: 'flex flex-col leading-tight' },
-                                            ev.note &&
-                                                React.createElement(
-                                                    'span',
-                                                    { className: 'text-[11px] text-gray-700' },
-                                                    ev.note
-                                                )
                                         )
                                     ),
                                     React.createElement(
