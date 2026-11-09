@@ -14470,7 +14470,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                     },
                                                                     React.createElement(
                                                                         'span',
-                                                                        { className: 'cursor-default' },
+                                                                        { className: 'cursor-pointer' },
                                                                         `${m.trip.fromPlace} → ${m.trip.toPlace}`
                                                                     ),
                                                                     stopsThrough.length > 1 &&
