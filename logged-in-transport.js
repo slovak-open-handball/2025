@@ -5795,7 +5795,8 @@ const TransportApp = ({ userProfileData }) => {
             return { teams: [], total: 0 };
         }
     
-        const inBus = new Set();
+        // normalizedKey -> { teamName, category }
+        const inBus = new Map();
     
         (savedTransfersRef.current || []).forEach((parent) => {
             if (parent.dayKey !== dayKey) return;
@@ -5818,6 +5819,9 @@ const TransportApp = ({ userProfileData }) => {
             }
             if (!effectiveTeamName) return;
     
+            // KĽÚČOVÁ ZMENA: normalizovaný kľúč pre deduplikáciu superstructure tímov
+            const normalizedKey = normalizeTeamKeyForCount(effectiveTeamName, effectiveCategory);
+    
             (parent.segments || []).forEach((seg) => {
                 if (seg.busId !== busId) return;
                 if (seg.isWalking === true) return;
@@ -5834,13 +5838,34 @@ const TransportApp = ({ userProfileData }) => {
                 }
     
                 if (isInBus) {
-                    inBus.add(`${effectiveTeamName}|${effectiveCategory}`);
+                    if (!inBus.has(normalizedKey)) {
+                        inBus.set(normalizedKey, {
+                            teamName: effectiveTeamName,
+                            category: effectiveCategory,
+                        });
+                    }
                 }
             });
         });
     
-        const teams = [...inBus];
-        const total = teams.reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
+        const teams = [...inBus.values()].map(
+            ({ teamName, category }) => `${teamName}|${category}`
+        );
+    
+        const total = [...inBus.values()].reduce((sum, { teamName, category }) => {
+            const counts = getTeamCountsForTransfer(category, teamName);
+            if (counts) {
+                return sum +
+                    (counts.players || 0) +
+                    (counts.menRT || 0) +
+                    (counts.womenRT || 0) +
+                    (counts.menDrivers || 0) +
+                    (counts.womenDrivers || 0);
+            }
+            const avg = getCategoryAverageForTransfer(category);
+            return sum + (avg != null ? avg : 0);
+        }, 0);
+    
         return { teams, total };
     };
 
@@ -6308,7 +6333,8 @@ const TransportApp = ({ userProfileData }) => {
                         return React.createElement('span', { className: 'text-gray-400' }, '—');
                     }
     
-                    const teamsAtThisStop = new Set();
+                    // normalizedKey -> { teamName, category }
+                    const teamsAtThisStop = new Map();
     
                     (savedTransfersRef.current || []).forEach((parent) => {
                         if (parent.dayKey !== dayKey) return;
@@ -6323,7 +6349,8 @@ const TransportApp = ({ userProfileData }) => {
                         }
                         if (!effectiveTeamName) return;
     
-                        const teamKeyStr = `${effectiveTeamName}|${effectiveCategory}`;
+                        // KĽÚČOVÁ ZMENA: normalizovaný kľúč pre deduplikáciu superstructure tímov
+                        const normalizedKey = normalizeTeamKeyForCount(effectiveTeamName, effectiveCategory);
     
                         (parent.segments || []).forEach((seg) => {
                             if (seg.busId !== busId) return;
@@ -6338,7 +6365,12 @@ const TransportApp = ({ userProfileData }) => {
                             const isStillInBus = (bOrder < currentOrder && aOrder > currentOrder);
     
                             if (isBoardingHere || isAlightingHere || isStillInBus) {
-                                teamsAtThisStop.add(teamKeyStr);
+                                if (!teamsAtThisStop.has(normalizedKey)) {
+                                    teamsAtThisStop.set(normalizedKey, {
+                                        teamName: effectiveTeamName,
+                                        category: effectiveCategory,
+                                    });
+                                }
                             }
                         });
                     });
@@ -6347,7 +6379,19 @@ const TransportApp = ({ userProfileData }) => {
                         return React.createElement('span', { className: 'text-gray-400' }, '—');
                     }
     
-                    const total = [...teamsAtThisStop].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
+                    const total = [...teamsAtThisStop.values()].reduce((sum, { teamName, category }) => {
+                        const counts = getTeamCountsForTransfer(category, teamName);
+                        if (counts) {
+                            return sum +
+                                (counts.players || 0) +
+                                (counts.menRT || 0) +
+                                (counts.womenRT || 0) +
+                                (counts.menDrivers || 0) +
+                                (counts.womenDrivers || 0);
+                        }
+                        const avg = getCategoryAverageForTransfer(category);
+                        return sum + (avg != null ? avg : 0);
+                    }, 0);
                     return total > 0 ? total : React.createElement('span', { className: 'text-gray-400' }, '—');
                 })()
             ),
@@ -9367,6 +9411,14 @@ const TransportApp = ({ userProfileData }) => {
         const name = String(teamName || '').trim();
         if (!cat || !name) return null;
         return teamCounts[`${cat}|${name}`] || null;
+    };
+    const normalizeTeamKeyForCount = (teamName, category) => {
+        const name = String(teamName || '')
+            .trim()
+            .replace(/\s+/g, ' ')
+            .toLocaleUpperCase('sk-SK');
+        const cat = cleanCategory(category || '');
+        return `${name}|${cat}`;
     };
     const getCategoryAverageForTransfer = (category) => {
         const cat = cleanCategory(category);
@@ -15134,8 +15186,9 @@ const TransportApp = ({ userProfileData }) => {
                                                                     return { total: 0, teams: [] };
                                                                 }
                                                         
-                                                                const teamsAtBoarding = new Set();
-                                                                const teamsAtAlighting = new Set();
+                                                                // normalizedKey -> { teamName, category }
+                                                                const teamsAtBoarding = new Map();
+                                                                const teamsAtAlighting = new Map();
                                                         
                                                                 (savedTransfersRef.current || []).forEach((parent) => {
                                                                     if (parent.dayKey !== dayKey) return;
@@ -15157,7 +15210,9 @@ const TransportApp = ({ userProfileData }) => {
                                                                     }
                                                                     if (!effectiveTeamName) return;
                                                         
-                                                                    const teamKeyStr = `${effectiveTeamName}|${effectiveCategory}`;
+                                                                    // KĽÚČOVÁ ZMENA: normalizovaný kľúč pre deduplikáciu superstructure tímov
+                                                                    const normalizedKey = normalizeTeamKeyForCount(effectiveTeamName, effectiveCategory);
+                                                                    const teamData = { teamName: effectiveTeamName, category: effectiveCategory };
                                                         
                                                                     (parent.segments || []).forEach((seg) => {
                                                                         if (seg.busId !== busId) return;
@@ -15170,67 +15225,67 @@ const TransportApp = ({ userProfileData }) => {
                                                                         const isAtBoarding =
                                                                             (segBOrder === bOrder) ||
                                                                             (segBOrder < bOrder && segAOrder > bOrder);
-                                                                        if (isAtBoarding) teamsAtBoarding.add(teamKeyStr);
+                                                                        if (isAtBoarding && !teamsAtBoarding.has(normalizedKey)) {
+                                                                            teamsAtBoarding.set(normalizedKey, teamData);
+                                                                        }
                                                         
                                                                         const isAtAlighting =
                                                                             (segAOrder === aOrder) ||
                                                                             (segBOrder < aOrder && segAOrder > aOrder);
-                                                                        if (isAtAlighting) teamsAtAlighting.add(teamKeyStr);
+                                                                        if (isAtAlighting && !teamsAtAlighting.has(normalizedKey)) {
+                                                                            teamsAtAlighting.set(normalizedKey, teamData);
+                                                                        }
                                                                     });
                                                                 });
                                                         
-                                                                const totalAtBoarding = [...teamsAtBoarding].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
-                                                                const totalAtAlighting = [...teamsAtAlighting].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
+                                                                const computeMembers = ({ teamName, category }) => {
+                                                                    const counts = getTeamCountsForTransfer(category, teamName);
+                                                                    if (counts) {
+                                                                        return (counts.players || 0) +
+                                                                            (counts.menRT || 0) +
+                                                                            (counts.womenRT || 0) +
+                                                                            (counts.menDrivers || 0) +
+                                                                            (counts.womenDrivers || 0);
+                                                                    }
+                                                                    const avg = getCategoryAverageForTransfer(category);
+                                                                    return avg != null ? avg : 0;
+                                                                };
+                                                        
+                                                                const totalAtBoarding = [...teamsAtBoarding.values()].reduce((sum, t) => sum + computeMembers(t), 0);
+                                                                const totalAtAlighting = [...teamsAtAlighting.values()].reduce((sum, t) => sum + computeMembers(t), 0);
                                                         
                                                                 let total = Math.max(totalAtBoarding, totalAtAlighting);
-                                                                const teamsSet = new Set([...teamsAtBoarding, ...teamsAtAlighting]);
-                                                                let teams = [...teamsSet];
+
+                                                                // Zlúč tímy (union) – opäť cez normalizovaný kľúč
+                                                                const teamsMap = new Map();
+                                                                teamsAtBoarding.forEach((v, k) => teamsMap.set(k, v));
+                                                                teamsAtAlighting.forEach((v, k) => teamsMap.set(k, v));
 
                                                                 if (isSelected) {
-                                                                    const currentTeamKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
+                                                                    const currentNormKey = normalizeTeamKeyForCount(
+                                                                        String(currentTransfer.teamName || '').trim(),
+                                                                        cleanCategory(currentTransfer.category || '')
+                                                                    );
                                                                     const alreadyCounted =
-                                                                        teamsAtBoarding.has(currentTeamKeyStr) ||
-                                                                        teamsAtAlighting.has(currentTeamKeyStr);
+                                                                        teamsAtBoarding.has(currentNormKey) ||
+                                                                        teamsAtAlighting.has(currentNormKey);
                                                                     if (!alreadyCounted) {
-                                                                        total += getTeamMembersCount(currentTeamKeyStr);
-                                                                        teams.push(currentTeamKeyStr);
+                                                                        total += computeMembers({
+                                                                            teamName: String(currentTransfer.teamName || '').trim(),
+                                                                            category: cleanCategory(currentTransfer.category || ''),
+                                                                        });
+                                                                    }
+                                                                    if (!teamsMap.has(currentNormKey)) {
+                                                                        teamsMap.set(currentNormKey, {
+                                                                            teamName: String(currentTransfer.teamName || '').trim(),
+                                                                            category: cleanCategory(currentTransfer.category || ''),
+                                                                        });
                                                                     }
                                                                 }
-                                                                
-                                                                try {
-                                                                    const teamsAtBoardingArr = [...teamsAtBoarding];
-                                                                    const teamsAtAlightingArr = [...teamsAtAlighting];
-                                                                    const allTooltipTeamKeys = new Set([
-                                                                        ...teamsAtBoardingArr,
-                                                                        ...teamsAtAlightingArr,
-                                                                    ]);
-                                                                
-                                                                    const tooltipTeamsInfo = [...allTooltipTeamKeys].map((tk) => {
-                                                                        const parts = String(tk).split('|');
-                                                                        const tn = (parts[0] || '').trim();
-                                                                        const cat = (parts[1] || '').trim();
-                                                                        const shortcut = getTeamShortcut(cat, tn);
-                                                                        const displayedLabel = stripCategoryFromTeamName(tn, cat);
-                                                                        const color = getCategoryTextColor(cat);
-                                                                        const members = getTeamMembersCount(tk);
-                                                                        const isBoarding = teamsAtBoarding.has(tk);
-                                                                        const isAlighting = teamsAtAlighting.has(tk);
-                                                                        return {
-                                                                            teamKey: tk,
-                                                                            fullTeamName: tn,
-                                                                            category: cat,
-                                                                            shortcut: shortcut || null,
-                                                                            displayedLabel: shortcut || displayedLabel,
-                                                                            displayedLabelWithoutShortcut: displayedLabel,
-                                                                            textColor: color,
-                                                                            membersCount: members,
-                                                                            isAtBoarding: isBoarding,
-                                                                            isAtAlighting: isAlighting,
-                                                                        };
-                                                                    });
-                                                                } catch (logErr) {
-                                                                    console.warn('[TRANSPORT][TOOLTIP] Chyba pri logovaní tooltipu:', logErr);
-                                                                }
+
+                                                                const teams = [...teamsMap.values()].map(
+                                                                    ({ teamName, category }) => `${teamName}|${category}`
+                                                                );
                                                                 
                                                                 return { total, teams };
                                                             };
@@ -15239,22 +15294,34 @@ const TransportApp = ({ userProfileData }) => {
                                                             const total = occupancy.total;
                                                             const teamsInBus = occupancy.teams;
                                                         
-                                                            const currentTransferKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
-                                                            const teamsForTooltip = new Set(teamsInBus || []);
-                                                            
+                                                            const currentTransferNormKey = normalizeTeamKeyForCount(
+                                                                String(currentTransfer.teamName || '').trim(),
+                                                                cleanCategory(currentTransfer.category || '')
+                                                            );
+
+                                                            // teamsInBus už obsahuje len unikátne tímy (z teamsMap vyššie),
+                                                            // ale pre istotu ich ešte raz deduplikujeme cez normalizovaný kľúč.
+                                                            const tooltipMap = new Map();
+                                                            (teamsInBus || []).forEach((tk) => {
+                                                                const [tn, cat] = String(tk).split('|');
+                                                                tooltipMap.set(normalizeTeamKeyForCount(tn, cat), {
+                                                                    tn: String(tn || '').trim(),
+                                                                    cat: cleanCategory(cat || ''),
+                                                                });
+                                                            });
                                                             if (isSelected) {
-                                                                teamsForTooltip.add(currentTransferKeyStr);
+                                                                tooltipMap.set(currentTransferNormKey, {
+                                                                    tn: String(currentTransfer.teamName || '').trim(),
+                                                                    cat: cleanCategory(currentTransfer.category || ''),
+                                                                });
                                                             }
-                                                        
-                                                            const teamTooltipItems = [...teamsForTooltip]
-                                                                .map((tk) => {
-                                                                    const parts = String(tk).split('|');
-                                                                    const tn = (parts[0] || '').trim();
-                                                                    const cat = (parts[1] || '').trim();
+
+                                                            const teamTooltipItems = [...tooltipMap.values()]
+                                                                .map(({ tn, cat }) => {
                                                                     const shortcut = getTeamShortcut(cat, tn);
                                                                     const cleanTeamName = stripCategoryFromTeamName(tn, cat);
                                                                     const label = shortcut || cleanTeamName;
-                                                                    const members = getTeamMembersCount(tk);
+                                                                    const members = getTeamMembersCount(`${tn}|${cat}`);
                                                                     const color = getCategoryTextColor(cat);
                                                                     return { label, teamName: cleanTeamName, members, color };
                                                                 })
