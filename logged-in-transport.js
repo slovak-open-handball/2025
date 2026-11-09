@@ -13484,17 +13484,16 @@ const TransportApp = ({ userProfileData }) => {
                                     resolvePlaceNameById(editingTransfer.toId) || ''
                                 );
 
-                                const availableStops = stopsList.filter((s) => {
-                                    const stopNameNorm = normalizePlaceName(s.name);
-                    
-                                    if (parentFromNameNorm && stopNameNorm === parentFromNameNorm) return false;
-                    
-                                    if (parentToNameNorm && stopNameNorm === parentToNameNorm) return false;
-                    
-                                    if (s.name === stopValue) return true;
-
-                                    return !selectedElsewhere.has(s.name);
-                                });
+                                const availableStops = stopsList
+                                    .filter((s) => String(s.type || '').trim().toLowerCase() === 'zastavka')
+                                    .filter((s) => {
+                                        const stopNameNorm = normalizePlaceName(s.name);                                
+                                        if (parentFromNameNorm && stopNameNorm === parentFromNameNorm) return false;                                
+                                        if (parentToNameNorm && stopNameNorm === parentToNameNorm) return false;                                
+                                        if (s.name === stopValue) return true;                                
+                                        return !selectedElsewhere.has(s.name);
+                                    });
+                                
                                 return React.createElement(
                                     'li',
                                     {
