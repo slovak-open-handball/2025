@@ -6566,6 +6566,8 @@ const TransportApp = ({ userProfileData }) => {
             );
             savedTransfersRef.current = updatedTransfers;
             setSavedTransfers(updatedTransfers);
+
+            await applyWalkingRulesToParent(parentKey);
     
             window.showGlobalNotification(
                 stopIds.length > 0
@@ -7820,6 +7822,110 @@ const TransportApp = ({ userProfileData }) => {
             window.showGlobalNotification('Nepodarilo sa označiť presuny ako peši.', 'error');
         } finally {
             setWalkingBatchSaving(false);
+        }
+    };
+
+    const applyWalkingRulesToParent = async (parentKey) => {
+        if (!window.db || !parentKey) return;
+        if (!Array.isArray(walkingRules) || walkingRules.length === 0) return;
+    
+        const parent = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
+        if (!parent) return;
+    
+        const rulePairs = new Set(
+            walkingRules.map((r) => `${r.fromPlaceNameNorm}||${r.toPlaceNameNorm}`)
+        );
+    
+        const isPairWalking = (fromId, toId) => {
+            if (!fromId || !toId) return false;
+            const fromNameNorm = normalizePlaceName(resolvePlaceNameById(fromId) || '');
+            const toNameNorm = normalizePlaceName(resolvePlaceNameById(toId) || '');
+            if (!fromNameNorm || !toNameNorm) return false;
+            return rulePairs.has(`${fromNameNorm}||${toNameNorm}`);
+        };
+    
+        const stopsIds = Array.isArray(parent.intermediateStopIds) ? parent.intermediateStopIds : [];
+        const isDirectTransfer = stopsIds.length === 0;
+    
+        let hasAnyMatchingNonWalkingSegment = false;
+        let shouldMarkParentWalking = false;
+    
+        if (isDirectTransfer) {
+            if (parent.isWalking === true) return;
+            const fromId = parent.fromId || null;
+            const toId = parent.toId || null;
+            if (!isPairWalking(fromId, toId)) return;
+    
+            const segIdx = findSegmentIndex(parent.segments || [], fromId, toId);
+            if (segIdx === -1) return;
+            const seg = parent.segments[segIdx];
+            if (!seg) return;
+            if (seg.isWalking === true) return;
+    
+            shouldMarkParentWalking = true;
+            hasAnyMatchingNonWalkingSegment = true;
+        } else {
+            (parent.segments || []).forEach((seg) => {
+                if (!seg) return;
+                if (seg.isWalking === true) return;
+                if (!isPairWalking(seg.fromId, seg.toId)) return;
+                hasAnyMatchingNonWalkingSegment = true;
+            });
+        }
+    
+        if (!hasAnyMatchingNonWalkingSegment) return;
+    
+        try {
+            await updateParentTransfer(parentKey, (draft) => {
+                if (shouldMarkParentWalking) {
+                    // Priamy presun – označiť celý parent ako peši
+                    draft.segments.forEach((s) => {
+                        s.isWalking = true;
+                        s.busAssigned = false;
+                        s.busId = null;
+                        s.boardingRowId = null;
+                        s.alightingRowId = null;
+                        s.startTs = null;
+                        s.endTs = null;
+                        s.when = null;
+                        s.walkingSetAt = Timestamp.fromDate(new Date());
+                        s.walkingSetBy = (userProfileData && userProfileData.email) || null;
+                    });
+                    draft.isWalking = true;
+                    draft.walkingSetAt = Timestamp.fromDate(new Date());
+                    draft.walkingSetBy = (userProfileData && userProfileData.email) || null;
+    
+                    if (!draft.when || String(draft.when).trim() === '') {
+                        if (parent.when && String(parent.when).trim() !== '') {
+                            draft.when = parent.when;
+                        }
+                    }
+                    return;
+                }
+    
+                // Rozdelený presun – označiť len tie segmenty, ktoré zodpovedajú pravidlám
+                draft.segments = draft.segments.map((seg) => {
+                    if (!seg) return seg;
+                    if (seg.isWalking === true) return seg;
+                    if (!isPairWalking(seg.fromId, seg.toId)) return seg;
+    
+                    return {
+                        ...seg,
+                        isWalking: true,
+                        busAssigned: false,
+                        busId: null,
+                        boardingRowId: null,
+                        alightingRowId: null,
+                        startTs: null,
+                        endTs: null,
+                        when: null,
+                        walkingSetAt: Timestamp.fromDate(new Date()),
+                        walkingSetBy: (userProfileData && userProfileData.email) || null,
+                    };
+                });
+            });
+        } catch (err) {
+            console.error('[TRANSPORT] Chyba pri aplikovaní pravidiel peši na parent:', err);
         }
     };
 
