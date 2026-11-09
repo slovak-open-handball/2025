@@ -10002,7 +10002,7 @@ const TransportApp = ({ userProfileData }) => {
                             walkingBatchSaving
                                 ? React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' })
                                 : React.createElement('i', { className: 'fa-solid fa-person-walking' }),
-                            React.createElement('span', { className: 'whitespace-nowrap' }, 'Nastaviť presun peši medzi blízkymi miestami / na najbližšiu zastávku')
+                            React.createElement('span', { className: 'whitespace-nowrap' }, 'Nastaviť presun peši medzi blízkymi miestami')
                         )
                         : React.createElement('span', null),
                     showPartialCheckbox
