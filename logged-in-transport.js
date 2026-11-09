@@ -11477,8 +11477,9 @@ const TransportApp = ({ userProfileData }) => {
                             {
                                 value: fromId,
                                 onChange: (e) => setNewWalkingRuleFromId(e.target.value),
-                                disabled: newWalkingRuleSaving,
-                                className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-4 disabled:opacity-60'
+                                disabled: newWalkingRuleSaving || !String(newWalkingRuleFromType || '').trim(),
+                                className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-4 disabled:opacity-60 ${(!String(newWalkingRuleFromType || '').trim()) ? 'cursor-not-allowed hover:cursor-not-allowed' : ''}`,
+                                title: (!String(newWalkingRuleFromType || '').trim()) ? 'Najprv vyberte typ miesta – odkiaľ.' : undefined,
                             },
                             React.createElement('option', { value: '' }, '— vyber miesto —'),
                             fromOptionsFiltered.map((p) =>
@@ -11529,8 +11530,9 @@ const TransportApp = ({ userProfileData }) => {
                             {
                                 value: toId,
                                 onChange: (e) => setNewWalkingRuleToId(e.target.value),
-                                disabled: newWalkingRuleSaving,
-                                className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-4 disabled:opacity-60'
+                                disabled: newWalkingRuleSaving || !String(newWalkingRuleToType || '').trim(),
+                                className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-4 disabled:opacity-60 ${(!String(newWalkingRuleToType || '').trim()) ? 'cursor-not-allowed hover:cursor-not-allowed' : ''}`,
+                                title: (!String(newWalkingRuleToType || '').trim()) ? 'Najprv vyberte typ miesta – kam.' : undefined,
                             },
                             React.createElement('option', { value: '' }, '— vyber miesto —'),
                             toOptionsFiltered.map((p) =>
