@@ -14522,7 +14522,8 @@ const TransportApp = ({ userProfileData }) => {
                                                                 { className: 'text-xs text-gray-500 mt-0.5' },
                                                                 `Odchod: ${m.boardingTime || '—'}${m.alightingTime ? ` · Príchod: ${m.alightingTime}` : ''}`
                                                             )
-                                                        ),
+                                                        )
+                                                    ),
                                                     React.createElement(
                                                         'div',
                                                         { className: 'flex flex-row items-center gap-6 text-xs font-semibold' },
