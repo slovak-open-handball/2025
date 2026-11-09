@@ -8701,22 +8701,12 @@ const TransportApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'td',
                                         { className: 'border border-gray-300 px-3 py-1 text-gray-800 font-medium' },
-                                        React.createElement(
-                                            'span',
-                                            { className: 'inline-flex items-center' },
-                                            getPlaceIconForName(rule.fromPlaceName),
-                                            rule.fromPlaceName
-                                        )
+                                        rule.fromPlaceName
                                     ),
                                     React.createElement(
                                         'td',
                                         { className: 'border border-gray-300 px-3 py-1 text-gray-800 font-medium' },
-                                        React.createElement(
-                                            'span',
-                                            { className: 'inline-flex items-center' },
-                                            getPlaceIconForName(rule.toPlaceName),
-                                            rule.toPlaceName
-                                        )
+                                        rule.toPlaceName
                                     ),
                                     React.createElement(
                                         'td',
