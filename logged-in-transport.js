@@ -4709,23 +4709,6 @@ const TransportApp = ({ userProfileData }) => {
             const changedOrder = changedRow ? parseOrderFromRowId(changedRow.rowId) : null;
             const bus = (buses || []).find((b) => b.id === busId) || null;
 
-            console.log(
-                '%c[TRANSPORT][SYNC-ROWS] === Zmena riadku v buse ===',
-                'color:#0ea5e9;font-weight:bold;',
-                {
-                    busId,
-                    busName: bus ? bus.name : null,
-                    dayKey,
-                    changedRowId,
-                    changedRowOrder: changedOrder,
-                    changedRowTimeFrom: changedRow ? changedRow.timeFrom : null,
-                    changedRowTimeTo: changedRow ? changedRow.timeTo : null,
-                    changedRowPlaceFromId: changedRow ? changedRow.placeFromId : null,
-                    changedRowPlaceToId: changedRow ? changedRow.placeToId : null,
-                    overrides: overrides || null,
-                }
-            );
-
             if (changedOrder == null) {
                 console.warn(
                     '[TRANSPORT][SYNC-ROWS] Nepodarilo sa zistiť order zmeneného riadku (rowId):',
@@ -4736,25 +4719,6 @@ const TransportApp = ({ userProfileData }) => {
                     const o = parseOrderFromRowId(r.rowId);
                     return o != null && o > changedOrder;
                 });
-
-                console.log(
-                    '%c[TRANSPORT][SYNC-ROWS] Riadky POD zmeneným riadkom:',
-                    'color:#0ea5e9;font-weight:bold;',
-                    {
-                        count: rowsBelow.length,
-                        rows: rowsBelow.map((r) => ({
-                            id: r.id,
-                            rowId: r.rowId,
-                            order: parseOrderFromRowId(r.rowId),
-                            timeFrom: r.timeFrom || null,
-                            timeTo: r.timeTo || null,
-                            placeFromId: r.placeFromId || null,
-                            placeFrom: r.placeFrom || null,
-                            placeToId: r.placeToId || null,
-                            placeTo: r.placeTo || null,
-                        })),
-                    }
-                );
 
                 // Pre každý riadok pod zmeneným riadkom zisti, ktoré tímy/presuny sú v ňom viazané
                 // (boardingRowId alebo alightingRowId smeruje na daný rowId).
@@ -4821,47 +4785,6 @@ const TransportApp = ({ userProfileData }) => {
                         });
                     });
                 });
-
-                console.log(
-                    '%c[TRANSPORT][SYNC-ROWS] Presuny nachádzajúce sa v riadkoch POD zmeneným riadkom:',
-                    'color:#f59e0b;font-weight:bold;',
-                    {
-                        busId,
-                        busName: bus ? bus.name : null,
-                        dayKey,
-                        changedRowOrder: changedOrder,
-                        count: transfersInRowsBelow.length,
-                        transfers: transfersInRowsBelow.map((t, idx) => ({
-                            idx,
-                            parentKey: t.parentKey,
-                            category: t.category,
-                            teamName: t.teamName,
-                            segment: `${t.segmentFromName || '?'} → ${t.segmentToName || '?'}`,
-                            boarding: {
-                                rowId: t.boardingRowId,
-                                order: t.boardingOrder,
-                                timeFrom: t.boardingTimeFrom,
-                                isBelowChangedRow: t.boardsBelow,
-                            },
-                            alighting: {
-                                rowId: t.alightingRowId,
-                                order: t.alightingOrder,
-                                timeTo: t.alightingTimeTo,
-                                isBelowChangedRow: t.alightsBelow,
-                            },
-                            startTs: t.startTs,
-                            endTs: t.endTs,
-                            when: t.when,
-                        })),
-                    }
-                );
-
-                if (transfersInRowsBelow.length === 0) {
-                    console.log(
-                        '%c[TRANSPORT][SYNC-ROWS] V riadkoch pod zmeneným riadkom nie sú žiadne priradené presuny.',
-                        'color:#6b7280;font-style:italic;'
-                    );
-                }
             }
         } catch (logErr) {
             console.warn('[TRANSPORT][SYNC-ROWS] Chyba pri logovaní presunov pod zmeneným riadkom:', logErr);
