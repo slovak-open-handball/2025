@@ -8299,14 +8299,18 @@ const TransportApp = ({ userProfileData }) => {
         }
     };    
     const renderTravelTimes = () => {
-        if (stopsList.length === 0) {
+        const travelTableStops = (stopsList || []).filter(
+            (p) => String(p.type || '').trim().toLowerCase() === 'zastavka'
+        );
+
+        if (travelTableStops.length === 0) {
             return React.createElement(
                 'div',
                 { className: 'text-gray-400 italic text-sm px-1' },
                 'Žiadne zastávky.'
             );
         }
-        if (stopsList.length === 1) {
+        if (travelTableStops.length === 1) {
             return React.createElement(
                 'div',
                 { className: 'text-gray-500 italic text-sm px-1' },
@@ -8449,7 +8453,7 @@ const TransportApp = ({ userProfileData }) => {
                                 )
                             )
                         ),
-                        stopsList.map((toStop) =>
+                        travelTableStops.map((toStop) =>
                             React.createElement(
                                 'th',
                                 {
@@ -8472,7 +8476,7 @@ const TransportApp = ({ userProfileData }) => {
                 React.createElement(
                     'tbody',
                     null,
-                    stopsList.map((fromStop, rowIdx) =>
+                    travelTableStops.map((fromStop, rowIdx) =>
                         React.createElement(
                             'tr',
                             {
@@ -8494,7 +8498,7 @@ const TransportApp = ({ userProfileData }) => {
                                 },
                                 renderStopLabel(fromStop)
                             ),
-                            stopsList.map((toStop) => {
+                            travelTableStops.map((toStop) => {
                                 const isDiagonal = fromStop.id === toStop.id;
                                 if (isDiagonal) {
                                     return React.createElement(
