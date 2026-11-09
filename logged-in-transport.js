@@ -14406,20 +14406,123 @@ const TransportApp = ({ userProfileData }) => {
                                                         { className: 'flex-1' },
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'font-semibold text-gray-800 text-sm flex items-center gap-2 flex-wrap' },
-                                                            m.bus.name,
+                                                            { className: 'flex-1' },
+                                                            React.createElement(
+                                                                'div',
+                                                                { className: 'font-semibold text-gray-800 text-sm flex items-center gap-2 flex-wrap' },
+                                                                m.bus.name,
+                                                            ),
+                                                            (() => {
+                                                                // Zostav zoznam všetkých zastávok, cez ktoré bus prechádza
+                                                                // (od boardingRow až po alightingRow vrátane oboch).
+                                                                const stopsThrough = (() => {
+                                                                    const rowsInTrip = Array.isArray(m.trip?.rows) ? m.trip.rows : [];
+                                                                    const boardingRow = m.boardingRow;
+                                                                    const alightingRow = m.alightingRow;
+                                                                    if (!boardingRow || !alightingRow || rowsInTrip.length === 0) {
+                                                                        return [];
+                                                                    }
+                                                        
+                                                                    const bOrder = parseOrderFromRowId(boardingRow.rowId);
+                                                                    const aOrder = parseOrderFromRowId(alightingRow.rowId);
+                                                                    if (bOrder == null || aOrder == null) return [];
+                                                        
+                                                                    const sortedRows = [...rowsInTrip]
+                                                                        .slice()
+                                                                        .sort((x, y) => (x.order || 0) - (y.order || 0));
+                                                        
+                                                                    const out = [];
+                                                                    sortedRows.forEach((row) => {
+                                                                        const order = parseOrderFromRowId(row.rowId);
+                                                                        if (order == null) return;
+                                                                        if (order < bOrder || order > aOrder) return;
+                                                        
+                                                                        const fromName = row.placeFrom
+                                                                            || (placesMapRef.current[row.placeFromId] || '')
+                                                                            || resolvePlaceNameById(row.placeFromId) || '';
+                                                                        const toName = row.placeTo
+                                                                            || (placesMapRef.current[row.placeToId] || '')
+                                                                            || resolvePlaceNameById(row.placeToId) || '';
+                                                        
+                                                                        if (fromName) out.push(fromName);
+                                                                        if (toName) out.push(toName);
+                                                                    });
+                                                        
+                                                                    // Deduplikácia po sebe idúcich rovnakých názvov
+                                                                    const dedup = [];
+                                                                    out.forEach((name) => {
+                                                                        if (!name) return;
+                                                                        if (dedup.length > 0 && dedup[dedup.length - 1] === name) return;
+                                                                        dedup.push(name);
+                                                                    });
+                                                        
+                                                                    return dedup;
+                                                                })();
+                                                        
+                                                                const tooltipText = stopsThrough.length > 0
+                                                                    ? stopsThrough.join(' → ')
+                                                                    : `${m.trip.fromPlace} → ${m.trip.toPlace}`;
+                                                        
+                                                                return React.createElement(
+                                                                    'div',
+                                                                    {
+                                                                        className: 'text-xs text-gray-600 mt-0.5 relative group/busroute inline-block',
+                                                                        title: tooltipText,
+                                                                    },
+                                                                    React.createElement(
+                                                                        'span',
+                                                                        { className: 'cursor-help border-b border-dotted border-gray-400' },
+                                                                        `${m.trip.fromPlace} → ${m.trip.toPlace}`
+                                                                    ),
+                                                                    stopsThrough.length > 1 &&
+                                                                        React.createElement(
+                                                                            'div',
+                                                                            {
+                                                                                className:
+                                                                                    'absolute z-[9999] left-0 top-full mt-1 ' +
+                                                                                    'hidden group-hover/busroute:block ' +
+                                                                                    'bg-gray-900 text-white text-[11px] rounded-md shadow-xl px-2.5 py-2 ' +
+                                                                                    'whitespace-normal pointer-events-none',
+                                                                                style: { minWidth: '180px', maxWidth: '360px' },
+                                                                            },
+                                                                            React.createElement(
+                                                                                'div',
+                                                                                { className: 'font-semibold mb-1 text-gray-200' },
+                                                                                `Zastávky (${stopsThrough.length}):`
+                                                                            ),
+                                                                            React.createElement(
+                                                                                'ul',
+                                                                                { className: 'space-y-0.5' },
+                                                                                stopsThrough.map((name, idx) =>
+                                                                                    React.createElement(
+                                                                                        'li',
+                                                                                        {
+                                                                                            key: `stop-${idx}`,
+                                                                                            className: 'flex items-start gap-1.5',
+                                                                                        },
+                                                                                        React.createElement('span', {
+                                                                                            className: 'inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0 mt-1',
+                                                                                        }),
+                                                                                        React.createElement('span', null, name)
+                                                                                    )
+                                                                                )
+                                                                            ),
+                                                                            React.createElement('div', {
+                                                                                className:
+                                                                                    'absolute left-4 top-0 -translate-y-full w-0 h-0 ' +
+                                                                                    'border-l-4 border-r-4 border-b-4 ' +
+                                                                                    'border-l-transparent border-r-transparent border-b-gray-900',
+                                                                                style: { marginTop: '-1px' },
+                                                                            })
+                                                                        )
+                                                                );
+                                                            })(),
+                                                            React.createElement(
+                                                                'div',
+                                                                { className: 'text-xs text-gray-500 mt-0.5' },
+                                                                `Odchod: ${m.boardingTime || '—'}${m.alightingTime ? ` · Príchod: ${m.alightingTime}` : ''}`
+                                                            )
                                                         ),
-                                                        React.createElement(
-                                                            'div',
-                                                            { className: 'text-xs text-gray-600 mt-0.5' },
-                                                            `${m.trip.fromPlace} → ${m.trip.toPlace}`
-                                                        ),
-                                                        React.createElement(
-                                                            'div',
-                                                            { className: 'text-xs text-gray-500 mt-0.5' },
-                                                            `Odchod: ${m.boardingTime || '—'}${m.alightingTime ? ` · Príchod: ${m.alightingTime}` : ''}`
-                                                        )
-                                                    ),
                                                     React.createElement(
                                                         'div',
                                                         { className: 'flex flex-row items-center gap-6 text-xs font-semibold' },
