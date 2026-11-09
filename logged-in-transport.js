@@ -4397,12 +4397,38 @@ const TransportApp = ({ userProfileData }) => {
             if (parent.dayKey !== dayKey) return;
             if (!Array.isArray(parent.segments)) return;
 
-            // NOVÉ: prepočítaj parent.when z aktuálnych segmentov (aby sme kontrolovali
-            // voči aktuálnemu rozsahu, nie voči starému when z DB)
             const parentDraft = {
                 ...parent,
                 segments: parent.segments.map((s) => ({ ...s })),
             };
+
+            // NOVÉ: aplikuj overrides na parentDraft.segments (aby recompute videl nové časy)
+            parentDraft.segments = parentDraft.segments.map((seg) => {
+                if (!seg || seg.busId !== busId) return seg;
+                if (seg.isWalking === true) return seg;
+
+                const boardingRow = allRows.find((r) => r.rowId === seg.boardingRowId);
+                const alightingRow = allRows.find((r) => r.rowId === seg.alightingRowId);
+
+                const boardingTs = boardingRow && boardingRow.timeFrom
+                    ? timeOnDayKeyToTs(dayKey, boardingRow.timeFrom)
+                    : null;
+                const alightingTs = alightingRow && alightingRow.timeTo
+                    ? timeOnDayKeyToTs(dayKey, alightingRow.timeTo)
+                    : null;
+
+                if (boardingTs != null && alightingTs != null && alightingTs > boardingTs) {
+                    return {
+                        ...seg,
+                        startTs: boardingTs,
+                        endTs: alightingTs,
+                        when: `${formatTsLocal(boardingTs)} – ${formatTsLocal(alightingTs)}`,
+                        busAssigned: true,
+                    };
+                }
+                return seg;
+            });
+
             try {
                 recomputeParentSegmentsInPlace(parentDraft);
             } catch (e) {
