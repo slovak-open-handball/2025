@@ -10597,7 +10597,6 @@ const TransportApp = ({ userProfileData }) => {
                         }`,
                         title: 'Zoradiť presuny podľa času odchodu (od najskoršieho)'
                     },
-                    React.createElement('i', { className: 'fa-solid fa-arrow-up-from-bracket' }),
                     'Čas odchodu'
                 ),
                 React.createElement(
@@ -10612,7 +10611,6 @@ const TransportApp = ({ userProfileData }) => {
                         }`,
                         title: 'Zoradiť presuny podľa času príchodu (od najskoršieho)'
                     },
-                    React.createElement('i', { className: 'fa-solid fa-arrow-down-to-bracket' }),
                     'Čas príchodu'
                 )
             ),
