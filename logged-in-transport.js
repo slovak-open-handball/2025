@@ -7714,8 +7714,11 @@ const TransportApp = ({ userProfileData }) => {
         try {
             for (const parentKey of parentsToUpdate) {
                 await updateParentTransfer(parentKey, (draft) => {
+                    const stopsIds = Array.isArray(draft.intermediateStopIds) ? draft.intermediateStopIds : [];
+                    const isDirectTransfer = stopsIds.length === 0;
                     const segIdx = findSegmentIndex(draft.segments, draft.fromId, draft.toId);
-                    if (segIdx !== -1) {
+        
+                    if (!isDirectTransfer && segIdx !== -1) {
                         draft.segments[segIdx].isWalking = true;
                         draft.segments[segIdx].busAssigned = false;
                         draft.segments[segIdx].busId = null;
