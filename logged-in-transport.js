@@ -142,6 +142,20 @@ const buildWalkingAssignmentDocId = (placeNameNorm) => {
     return `walkingAssignment||${safe}`;
 };
 
+const buildWalkingRuleDocId = (fromNorm, toNorm) => {
+    const safe = (v) => String(v || '')
+        .trim()
+        .replace(/\//g, '∕')
+        .replace(/\\/g, '_')
+        .replace(/\.\./g, '_')
+        .replace(/^\.+/, '_')
+        .replace(/[\[\]\*\?\x00-\x1F]/g, '_');
+    const a = safe(fromNorm);
+    const b = safe(toNorm);
+    if (!a || !b) return null;
+    return `walkingRule||${a}||${b}`;
+};
+
 const resolveTeamName = (identifier) => {
     if (!identifier) return '---';
 
@@ -682,6 +696,14 @@ const TransportApp = ({ userProfileData }) => {
     const [walkingSaving, setWalkingSaving] = useState(false);
     const [walkingEvents, setWalkingEvents] = useState([]);
     const [walkingEventsLoading, setWalkingEventsLoading] = useState(false);
+    const [walkingRules, setWalkingRules] = useState([]);
+    const [walkingRulesLoaded, setWalkingRulesLoaded] = useState(false);
+    const [showAddWalkingRuleModal, setShowAddWalkingRuleModal] = useState(false);
+    const [newWalkingRuleFromId, setNewWalkingRuleFromId] = useState('');
+    const [newWalkingRuleToId, setNewWalkingRuleToId] = useState('');
+    const [newWalkingRuleSaving, setNewWalkingRuleSaving] = useState(false);
+    const [deleteWalkingRuleModal, setDeleteWalkingRuleModal] = useState(null);
+    const [deleteWalkingRuleSaving, setDeleteWalkingRuleSaving] = useState(false);
     const preloadAccommodationsForSuperstructureTeams = async () => {
         if (!window.__transport_accommodationsByGroup) {
             window.__transport_accommodationsByGroup = {};
@@ -3141,34 +3163,47 @@ const TransportApp = ({ userProfileData }) => {
         }
 
         let unsubscribeWalkingAssignments = null;
+        let unsubscribeWalkingRules = null;
         try {
             const transportRef = collection(window.db, 'transport');
-            unsubscribeWalkingAssignments = onSnapshot(transportRef, (snapshot) => {
-                const map = {};
+            unsubscribeWalkingRules = onSnapshot(transportRef, (snapshot) => {
+                const rules = [];
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data() || {};
-                    if (data.type !== 'walkingAssignment') return;
-                    if (!data.placeName) return;
-                    const key = normalizePlaceName(data.placeName);
-                    if (!key) return;
-                    map[key] = {
+                    if (data.type !== 'walkingRule') return;
+                    if (!data.fromPlaceName || !data.toPlaceName) return;
+                    const fromNorm = normalizePlaceName(data.fromPlaceName);
+                    const toNorm = normalizePlaceName(data.toPlaceName);
+                    if (!fromNorm || !toNorm) return;
+                    if (fromNorm === toNorm) return;
+                    rules.push({
                         docId: docSnap.id,
-                        placeName: data.placeName,
-                        placeNameNorm: key,
-                        stopId: data.stopId || null,
-                        stopName: data.stopName || null,
-                        updatedAt: data.updatedAt || null,
-                        updatedBy: data.updatedBy || null,
-                    };
+                        fromPlaceId: data.fromPlaceId || null,
+                        toPlaceId: data.toPlaceId || null,
+                        fromPlaceName: data.fromPlaceName,
+                        toPlaceName: data.toPlaceName,
+                        fromPlaceNameNorm: fromNorm,
+                        toPlaceNameNorm: toNorm,
+                        createdAt: data.createdAt || null,
+                        createdBy: data.createdBy || null,
+                    });
                 });
-                setWalkingAssignments(map);
+                rules.sort((a, b) => {
+                    const c = String(a.fromPlaceName).localeCompare(String(b.fromPlaceName), 'sk', { sensitivity: 'base' });
+                    if (c !== 0) return c;
+                    return String(a.toPlaceName).localeCompare(String(b.toPlaceName), 'sk', { sensitivity: 'base' });
+                });
+                setWalkingRules(rules);
+                setWalkingRulesLoaded(true);
                 setWalkingSettingsLoaded(true);
             }, (err) => {
-                console.error('[TRANSPORT] onSnapshot(transport – walkingAssignments) error:', err);
+                console.error('[TRANSPORT] onSnapshot(transport – walkingRules) error:', err);
+                setWalkingRulesLoaded(true);
                 setWalkingSettingsLoaded(true);
             });
         } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport (walkingAssignments):', e);
+            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport (walkingRules):', e);
+            setWalkingRulesLoaded(true);
             setWalkingSettingsLoaded(true);
         }
         
@@ -3827,6 +3862,7 @@ const TransportApp = ({ userProfileData }) => {
             if (unsubscribeTeamCounts) unsubscribeTeamCounts();
             if (unsubscribeTeamShortcuts) unsubscribeTeamShortcuts();
             if (unsubscribeWalkingAssignments) unsubscribeWalkingAssignments();
+            if (unsubscribeWalkingRules) unsubscribeWalkingRules();
         };
     }, []);
 
@@ -8597,23 +8633,47 @@ const TransportApp = ({ userProfileData }) => {
         return out;
     };
 
+    const getWalkablePlacesOptions = () => {
+        const places = Array.isArray(allPlacesRef.current) ? allPlacesRef.current : [];
+        const typeLabel = {
+            sportova_hala: 'Športová hala',
+            stravovanie: 'Stravovanie',
+            ubytovanie: 'Ubytovňa',
+            zastavka: 'Zastávka',
+        };
+        const out = [];
+        const seen = new Set();
+        places.forEach((p) => {
+            if (!p || !p.name) return;
+            const name = String(p.name).trim();
+            if (!name) return;
+            const norm = normalizePlaceName(name);
+            if (!seen.has(norm)) seen.add(norm);
+            else return;
+            const type = String(p.type || '').trim();
+            const prefix = typeLabel[type] || type || '';
+            out.push({
+                id: p.id || null,
+                name,
+                nameNorm: norm,
+                type,
+                displayLabel: prefix ? `${prefix}: ${name}` : name,
+            });
+        });
+        out.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
+        return out;
+    };
+
     const renderWalkingAssignments = () => {
-        if (!walkingSettingsLoaded) {
+        if (!walkingSettingsLoaded || !walkingRulesLoaded) {
             return React.createElement(
                 'div',
                 { className: 'text-gray-500 italic text-sm px-1 py-4' },
-                'Načítavam priradenia...'
-            );
-        }
-        if (stopsList.length === 0) {
-            return React.createElement(
-                'div',
-                { className: 'text-gray-400 italic text-sm px-1 py-4' },
-                'Žiadne zastávky. Najprv vytvorte aspoň jednu zastávku v miestach.'
+                'Načítavam pravidlá...'
             );
         }
 
-        const events = buildWalkingPlacesFromAllPlaces();
+        const placesOptions = getWalkablePlacesOptions();
 
         return React.createElement(
             'div',
@@ -8621,13 +8681,40 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement(
                 'p',
                 { className: 'text-xs text-gray-500 mb-3 italic' },
-                 'Zobrazujú sa len miesta (hala, stravovanie, ubytovanie), ktoré NEMAJÚ rovnaký názov ako niektorá zastávka. Pri každom takomto mieste vyberte zastávku, na ktorú sa má tím peši presunúť. Ak sa názov miesta zhoduje s názvom zastávky, riadok sa nezobrazí – považuje sa to za ten istý cieľ.'
+                'Definujte pravidlá, kedy tím pôjde peši z jedného miesta do druhého (napr. Hala A → Hala B, Ubytovanie → Hala, Hala → Zastávka). Pri generovaní presunov sa tieto pravidlá automaticky použijú – každý presun, ktorý zodpovedá niektorému pravidlu (rovnaké miesto odkiaľ aj kam), bude označený ako „peši".'
             ),
-            events.length === 0
+            React.createElement(
+                'div',
+                { className: 'mb-4 flex items-center gap-2' },
+                React.createElement(
+                    'button',
+                    {
+                        type: 'button',
+                        onClick: () => {
+                            if (placesOptions.length < 2) {
+                                window.showGlobalNotification('Na vytvorenie pravidla sú potrebné aspoň 2 rôzne miesta.', 'error');
+                                return;
+                            }
+                            setNewWalkingRuleFromId('');
+                            setNewWalkingRuleToId('');
+                            setShowAddWalkingRuleModal(true);
+                        },
+                        className: 'px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2',
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-plus' }),
+                    'Pridať pravidlo „peši"'
+                ),
+                React.createElement(
+                    'span',
+                    { className: 'ml-auto text-sm text-gray-500' },
+                    `Definovaných pravidiel: ${walkingRules.length}`
+                )
+            ),
+            walkingRules.length === 0
                 ? React.createElement(
                     'div',
                     { className: 'text-gray-400 italic text-sm px-1 py-4' },
-                    'Žiadne miesta na priradenie. Buď neexistujú iné miesta ako zastávky, alebo všetky miesta majú rovnaký názov ako niektorá zastávka.'
+                    'Žiadne pravidlá. Kliknite na „Pridať pravidlo „peši"" a vyberte dvojicu miest.'
                 )
                 : React.createElement(
                     'div',
@@ -8641,139 +8728,57 @@ const TransportApp = ({ userProfileData }) => {
                             React.createElement(
                                 'tr',
                                 { className: 'bg-gray-100 text-xs font-semibold text-gray-700' },
-                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { width: '60px' } }, 'Typ'),
-                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { minWidth: '240px' } }, 'Miesto udalosti'),
-                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { minWidth: '260px' } }, 'Zastávka (peši)'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { width: '60px' } }, '#'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { minWidth: '240px' } }, 'Odkiaľ'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-center', style: { width: '60px' } }, '→'),
+                                React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-left', style: { minWidth: '240px' } }, 'Kam'),
                                 React.createElement('th', { className: 'border border-gray-300 px-3 py-2 text-center', style: { width: '80px' } }, '')
                             )
                         ),
                         React.createElement(
                             'tbody',
                             null,
-                            events.map((ev) => {
-                                const current = walkingAssignments[ev.placeNameNorm] || null;
-                                const typeMeta = {
-                                    icon: ev.typeIcon || 'fa-circle-dot',
-                                    color: ev.typeColor || '#6b7280',
-                                    label: ev.typeLabel || '—',
-                                };
-                                const currentValue = current && current.stopId ? current.stopId : '';
-                                return React.createElement(
+                            walkingRules.map((rule, idx) =>
+                                React.createElement(
                                     'tr',
-                                    { key: ev.placeNameNorm, className: 'hover:bg-gray-50' },
+                                    { key: rule.docId, className: 'hover:bg-gray-50' },
                                     React.createElement(
                                         'td',
-                                        { className: 'border border-gray-300 px-3 py-1 text-center' },
-                                        React.createElement(
-                                            'span',
-                                            {
-                                                className: 'inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold',
-                                                style: { backgroundColor: typeMeta.color + '22', color: typeMeta.color }
-                                            },
-                                            React.createElement('i', { className: `fa-solid ${typeMeta.icon} text-[9px]` }),
-                                            typeMeta.label
-                                        )
+                                        { className: 'border border-gray-300 px-3 py-1 text-center text-xs text-gray-500' },
+                                        `${idx + 1}.`
                                     ),
                                     React.createElement(
                                         'td',
                                         { className: 'border border-gray-300 px-3 py-1 text-gray-800 font-medium' },
-                                        ev.placeName
+                                        rule.fromPlaceName
                                     ),
                                     React.createElement(
                                         'td',
-                                        { className: 'border border-gray-300 px-1 py-1' },
-                                        React.createElement(
-                                            'select',
-                                            {
-                                                value: currentValue,
-                                                disabled: walkingSaving,
-                                                onChange: async (e) => {
-                                                    const newStopId = e.target.value || null;
-                                                    setWalkingSaving(true);
-                                                    try {
-                                                        if (!window.db) throw new Error('DB nie je inicializovaná');
-                                                        const transportRef = collection(window.db, 'transport');
-                                                        const docId = buildWalkingAssignmentDocId(ev.placeNameNorm);
-                                                        if (!docId) throw new Error('Neplatný názov miesta pre docId');
-                                                        const docRef = doc(window.db, 'transport', docId);
-                                                        if (!newStopId) {
-                                                            await deleteDoc(docRef);
-                                                            window.showGlobalNotification(
-                                                                `Priradenie pre „${ev.placeName}" bolo odstránené.`,
-                                                                'info'
-                                                            );
-                                                        } else {
-                                                            const stop = stopsList.find((s) => s.id === newStopId);
-                                                            await setDoc(docRef, {
-                                                                type: 'walkingAssignment',
-                                                                docKey: docId,
-                                                                placeName: ev.placeName,
-                                                                placeNameNorm: ev.placeNameNorm,
-                                                                stopId: newStopId,
-                                                                stopName: stop ? stop.name : null,
-                                                                updatedAt: Timestamp.fromDate(new Date()),
-                                                                updatedBy: (userProfileData && userProfileData.email) || null,
-                                                            }, { merge: true });
-                                                            window.showGlobalNotification(
-                                                                `„${ev.placeName}" → zastávka „${stop ? stop.name : newStopId}".`,
-                                                                'success'
-                                                            );
-                                                        }
-                                                    } catch (err) {
-                                                        console.error('[TRANSPORT] Chyba pri ukladaní walking assignment:', err);
-                                                        window.showGlobalNotification('Nepodarilo sa uložiť priradenie.', 'error');
-                                                    } finally {
-                                                        setWalkingSaving(false);
-                                                    }
-                                                },
-                                                className: 'w-full px-2 py-1 text-sm border border-gray-300 rounded text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500'
-                                            },
-                                            React.createElement('option', { value: '' }, '— nepriradené —'),
-                                            stopsList.map((s) =>
-                                                React.createElement(
-                                                    'option',
-                                                    { key: s.id, value: s.id },
-                                                    s.name
-                                                )
-                                            )
-                                        )
+                                        { className: 'border border-gray-300 px-3 py-1 text-center text-gray-500 font-bold' },
+                                        '→'
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'border border-gray-300 px-3 py-1 text-gray-800 font-medium' },
+                                        rule.toPlaceName
                                     ),
                                     React.createElement(
                                         'td',
                                         { className: 'border border-gray-300 px-2 py-1 text-center' },
-                                        currentValue
-                                            ? React.createElement(
-                                                'button',
-                                                {
-                                                    type: 'button',
-                                                    disabled: walkingSaving,
-                                                    onClick: async () => {
-                                                        setWalkingSaving(true);
-                                                        try {
-                                                            if (!window.db) throw new Error('DB nie je inicializovaná');
-                                                            const docId = buildWalkingAssignmentDocId(ev.placeNameNorm);
-                                                            if (!docId) throw new Error('Neplatný názov miesta pre docId');
-                                                            await deleteDoc(doc(window.db, 'transport', docId));
-                                                            window.showGlobalNotification(
-                                                                `Priradenie pre „${ev.placeName}" bolo odstránené.`,
-                                                                'info'
-                                                            );
-                                                        } catch (err) {
-                                                            console.error('[TRANSPORT] Chyba pri mazaní walking assignment:', err);
-                                                            window.showGlobalNotification('Nepodarilo sa odstrániť priradenie.', 'error');
-                                                        } finally {
-                                                            setWalkingSaving(false);
-                                                        }
-                                                    },
-                                                    title: 'Odstrániť priradenie',
-                                                    className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 inline-flex items-center justify-center'
-                                                },
-                                                React.createElement('i', { className: 'fa-solid fa-xmark' })
-                                            )
-                                            : null
+                                        React.createElement(
+                                            'button',
+                                            {
+                                                type: 'button',
+                                                disabled: walkingSaving,
+                                                onClick: () => setDeleteWalkingRuleModal({ rule }),
+                                                title: 'Odstrániť pravidlo',
+                                                className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 inline-flex items-center justify-center'
+                                            },
+                                            React.createElement('i', { className: 'fa-solid fa-xmark' })
+                                        )
                                     )
-                                );
-                            })
+                                )
+                            )
                         )
                     )
                 ),
@@ -11393,6 +11398,279 @@ const TransportApp = ({ userProfileData }) => {
                                 transform: 'translate(50%, 50%)'
                             }
                         })
+                    )
+                )
+            )
+        ),
+        showAddWalkingRuleModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100002] p-4',
+                onClick: () => {
+                    if (newWalkingRuleSaving) return;
+                    setShowAddWalkingRuleModal(false);
+                }
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-person-walking text-emerald-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'div',
+                        { className: 'flex-1' },
+                        React.createElement(
+                            'h3',
+                            { className: 'text-lg font-semibold text-gray-800' },
+                            'Pridať pravidlo „peši"'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-xs text-gray-500 mt-0.5' },
+                            'Presuny z miesta A do miesta B budú automaticky označené ako peši.'
+                        )
+                    )
+                ),
+                (() => {
+                    const placesOptions = getWalkablePlacesOptions();
+                    const fromId = newWalkingRuleFromId;
+                    const toId = newWalkingRuleToId;
+                    const fromPlace = placesOptions.find((p) => p.id === fromId) || null;
+                    const toPlace = placesOptions.find((p) => p.id === toId) || null;
+                    const isSame = !!fromPlace && !!toPlace && fromPlace.nameNorm === toPlace.nameNorm;
+                    return React.createElement(
+                        React.Fragment,
+                        null,
+                        React.createElement(
+                            'label',
+                            { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                            'Odkiaľ'
+                        ),
+                        React.createElement(
+                            'select',
+                            {
+                                value: fromId,
+                                onChange: (e) => setNewWalkingRuleFromId(e.target.value),
+                                disabled: newWalkingRuleSaving,
+                                className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-4 disabled:opacity-60'
+                            },
+                            React.createElement('option', { value: '' }, '— vyber miesto —'),
+                            placesOptions.map((p) =>
+                                React.createElement(
+                                    'option',
+                                    { key: p.id, value: p.id },
+                                    p.displayLabel
+                                )
+                            )
+                        ),
+                        React.createElement(
+                            'label',
+                            { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                            'Kam'
+                        ),
+                        React.createElement(
+                            'select',
+                            {
+                                value: toId,
+                                onChange: (e) => setNewWalkingRuleToId(e.target.value),
+                                disabled: newWalkingRuleSaving,
+                                className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors mb-4 disabled:opacity-60'
+                            },
+                            React.createElement('option', { value: '' }, '— vyber miesto —'),
+                            placesOptions.map((p) =>
+                                React.createElement(
+                                    'option',
+                                    { key: p.id, value: p.id },
+                                    p.displayLabel
+                                )
+                            )
+                        ),
+                        isSame && React.createElement(
+                            'div',
+                            {
+                                className: 'mb-3 p-2 rounded-md bg-amber-50 border border-amber-300 text-sm text-amber-800 flex items-start gap-2'
+                            },
+                            React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
+                            React.createElement(
+                                'span',
+                                null,
+                                'Miesto „odkiaľ" a „kam" nesmú byť rovnaké.'
+                            )
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'flex justify-end gap-3 mt-2' },
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => {
+                                        if (newWalkingRuleSaving) return;
+                                        setShowAddWalkingRuleModal(false);
+                                    },
+                                    disabled: newWalkingRuleSaving,
+                                    className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
+                                },
+                                'Zrušiť'
+                            ),
+                            (() => {
+                                const isBlocked =
+                                    newWalkingRuleSaving ||
+                                    !fromPlace ||
+                                    !toPlace ||
+                                    isSame;
+                                const baseCls = 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2';
+                                const enabledCls = 'bg-emerald-600 text-white hover:bg-emerald-700';
+                                const blockedCls = 'bg-white border-2 border-emerald-600 text-emerald-600 cursor-not-allowed';
+                                return React.createElement(
+                                    'button',
+                                    {
+                                        type: 'button',
+                                        disabled: isBlocked,
+                                        className: `${baseCls} ${isBlocked ? blockedCls : enabledCls}`,
+                                        onClick: async () => {
+                                            if (isBlocked) return;
+                                            if (!window.db) return;
+                                            const fromNorm = fromPlace.nameNorm;
+                                            const toNorm = toPlace.nameNorm;
+                                            const docId = buildWalkingRuleDocId(fromNorm, toNorm);
+                                            if (!docId) {
+                                                window.showGlobalNotification('Neplatné miesta pre pravidlo.', 'error');
+                                                return;
+                                            }
+                                            // Skontrolujeme duplicity v už načítaných pravidlách
+                                            const duplicate = walkingRules.find(
+                                                (r) => r.fromPlaceNameNorm === fromNorm && r.toPlaceNameNorm === toNorm
+                                            );
+                                            if (duplicate) {
+                                                window.showGlobalNotification('Toto pravidlo už existuje.', 'info');
+                                                return;
+                                            }
+                                            setNewWalkingRuleSaving(true);
+                                            try {
+                                                await setDoc(doc(window.db, 'transport', docId), {
+                                                    type: 'walkingRule',
+                                                    docKey: docId,
+                                                    fromPlaceId: fromPlace.id || null,
+                                                    toPlaceId: toPlace.id || null,
+                                                    fromPlaceName: fromPlace.name,
+                                                    toPlaceName: toPlace.name,
+                                                    fromPlaceNameNorm: fromNorm,
+                                                    toPlaceNameNorm: toNorm,
+                                                    createdAt: Timestamp.fromDate(new Date()),
+                                                    createdBy: (userProfileData && userProfileData.email) || null,
+                                                }, { merge: true });
+                                                window.showGlobalNotification(
+                                                    `Pravidlo „${fromPlace.name} → ${toPlace.name}" bolo pridané.`,
+                                                    'success'
+                                                );
+                                                setShowAddWalkingRuleModal(false);
+                                            } catch (err) {
+                                                console.error('[TRANSPORT] Chyba pri ukladaní pravidla peši:', err);
+                                                window.showGlobalNotification('Nepodarilo sa uložiť pravidlo.', 'error');
+                                            } finally {
+                                                setNewWalkingRuleSaving(false);
+                                            }
+                                        }
+                                    },
+                                    newWalkingRuleSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                                    'Pridať'
+                                );
+                            })()
+                        )
+                    );
+                })()
+            )
+        ),
+        deleteWalkingRuleModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100002] p-4',
+                onClick: () => {
+                    if (deleteWalkingRuleSaving) return;
+                    setDeleteWalkingRuleModal(null);
+                }
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-trash text-red-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-800' },
+                        'Odstrániť pravidlo „peši"'
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700' },
+                    React.createElement(
+                        'div',
+                        { className: 'font-medium' },
+                        `${deleteWalkingRuleModal.rule.fromPlaceName} → ${deleteWalkingRuleModal.rule.toPlaceName}`
+                    )
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-gray-600 mb-4' },
+                    'Naozaj chcete odstrániť toto pravidlo? Táto akcia je nenávratná.'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setDeleteWalkingRuleModal(null),
+                            disabled: deleteWalkingRuleSaving,
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: async () => {
+                                if (deleteWalkingRuleSaving) return;
+                                const rule = deleteWalkingRuleModal.rule;
+                                if (!rule || !rule.docId) {
+                                    setDeleteWalkingRuleModal(null);
+                                    return;
+                                }
+                                setDeleteWalkingRuleSaving(true);
+                                try {
+                                    await deleteDoc(doc(window.db, 'transport', rule.docId));
+                                    window.showGlobalNotification('Pravidlo bolo odstránené.', 'success');
+                                    setDeleteWalkingRuleModal(null);
+                                } catch (err) {
+                                    console.error('[TRANSPORT] Chyba pri odstraňovaní pravidla peši:', err);
+                                    window.showGlobalNotification('Nepodarilo sa odstrániť pravidlo.', 'error');
+                                } finally {
+                                    setDeleteWalkingRuleSaving(false);
+                                }
+                            },
+                            disabled: deleteWalkingRuleSaving,
+                            className: 'px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-60 flex items-center gap-2'
+                        },
+                        deleteWalkingRuleSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                        'Odstrániť'
                     )
                 )
             )
