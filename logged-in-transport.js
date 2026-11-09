@@ -10036,8 +10036,72 @@ const TransportApp = ({ userProfileData }) => {
             ),
             (() => {
                 const showPartialCheckbox = hasAnyPartialTransfer;
-                const showWalkingButton = (walkingRules || []).length > 0;
-
+            
+                // Zisti, či existuje aspoň jeden presun/segment, ktorý by po kliknutí na tlačidlo
+                // mohol byť reálne označený ako peši (rovnaká logika ako v setAllWalkingTransfersAsWalking,
+                // ale len na detekciu – nič nemeniť).
+                const hasAnyMatchingWalkingCandidate = (() => {
+                    if (!Array.isArray(walkingRules) || walkingRules.length === 0) return false;
+            
+                    const dayKeyFilter = selectedDayKey || null;
+                    const categoryFilter = selectedCategoryFilter
+                        ? cleanCategory(selectedCategoryFilter)
+                        : null;
+            
+                    const rulePairs = new Set(
+                        walkingRules.map((r) => `${r.fromPlaceNameNorm}||${r.toPlaceNameNorm}`)
+                    );
+            
+                    const isPairWalking = (fromId, toId) => {
+                        if (!fromId || !toId) return false;
+                        const fromNameNorm = normalizePlaceName(resolvePlaceNameById(fromId) || '');
+                        const toNameNorm = normalizePlaceName(resolvePlaceNameById(toId) || '');
+                        if (!fromNameNorm || !toNameNorm) return false;
+                        return rulePairs.has(`${fromNameNorm}||${toNameNorm}`);
+                    };
+            
+                    for (const parent of savedTransfersRef.current || []) {
+                        if (!Array.isArray(parent.segments)) continue;
+            
+                        if (dayKeyFilter && parent.dayKey !== dayKeyFilter) continue;
+                        if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) continue;
+            
+                        const stopsIds = Array.isArray(parent.intermediateStopIds)
+                            ? parent.intermediateStopIds
+                            : [];
+                        const isDirectTransfer = stopsIds.length === 0;
+            
+                        if (isDirectTransfer) {
+                            if (parent.isWalking === true) continue;
+                            const fromId = parent.fromId || null;
+                            const toId = parent.toId || null;
+                            if (!isPairWalking(fromId, toId)) continue;
+            
+                            const segIdx = findSegmentIndex(parent.segments, fromId, toId);
+                            if (segIdx === -1) continue;
+                            const seg = parent.segments[segIdx];
+                            if (!seg) continue;
+                            if (seg.isWalking === true) continue;
+            
+                            return true;
+                        }
+            
+                        // Rozdelený presun – stačí, ak aspoň jeden segment zodpovedá pravidlám a nie je peši
+                        for (const seg of parent.segments) {
+                            if (!seg) continue;
+                            if (seg.isWalking === true) continue;
+                            const segFromId = seg.fromId || null;
+                            const segToId = seg.toId || null;
+                            if (!isPairWalking(segFromId, segToId)) continue;
+                            return true;
+                        }
+                    }
+            
+                    return false;
+                })();
+            
+                const showWalkingButton = hasAnyMatchingWalkingCandidate;
+            
                 if (!showPartialCheckbox && !showWalkingButton) {
                     return null;
                 }
