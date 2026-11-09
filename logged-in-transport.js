@@ -10129,7 +10129,7 @@ const TransportApp = ({ userProfileData }) => {
                         ? React.createElement(
                             'label',
                             {
-                                className: 'flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer select-none',
+                                className: 'ml-auto flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer select-none',
                                 title: 'Zobraziť iba tie presuny, ktoré sú súčasťou väčšieho presunu (majú medzizastávky)',
                             },
                             React.createElement('input', {
