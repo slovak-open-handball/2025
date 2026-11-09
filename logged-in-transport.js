@@ -10885,7 +10885,10 @@ const TransportApp = ({ userProfileData }) => {
                     { className: 'p-3' },
                     React.createElement(
                         'ul',
-                        { className: 'space-y-2' },
+                        {
+                            className: 'space-y-2',
+                            key: `transfers-list-${sortTransfersBy}`,
+                        },
                         sortedTransfers.map((t) => {
                             const precomputed = getLabelsForSort(t);
                             const dateLabel = precomputed.dateLabel;
@@ -10974,10 +10977,14 @@ const TransportApp = ({ userProfileData }) => {
                                 ? `zvyšný čas na presun: ${remainingMinutesFromLabel} min`
                                 : null;
     
+                            const stableKey = t._parentKey
+                                ? `${t._parentKey}||${t.fromId || ''}||${t.toId || ''}`
+                                : `solo||${t.key}`;
+                            
                             return React.createElement(
                                 'li',
                                 {
-                                    key: t.key,
+                                    key: stableKey,
                                     onClick: () => {
                                         logTransferDbDocument(t);
                                         setTransferActionModal({ transfer: t });
