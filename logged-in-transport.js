@@ -1,6 +1,6 @@
 // logged-in-transport.js
-import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, Timestamp, setDoc, deleteDoc, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, Timestamp, setDoc, deleteDoc, writeBatch, deleteField } from https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js;
+import { onAuthStateChanged } from https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js;
 
 const { useState, useEffect, useRef } = React;
 
@@ -131,8 +131,8 @@ const normalizePlaceName = (name) => {
 const buildWalkingAssignmentDocId = (placeNameNorm) => {
     const raw = String(placeNameNorm || '').trim();
     if (!raw) return null;
-    // Firestore doc ID nesmie obsahovať "/" a nemal by obsahovať rezervované znaky.
-    // Nahradíme "/" za "∕" (division slash U+2215) a prípadné ďalšie problematické znaky za "_".
+    // Firestore doc ID nesmie obsahovať / a nemal by obsahovať rezervované znaky.
+    // Nahradíme / za ∕ (division slash U+2215) a prípadné ďalšie problematické znaky za _.
     const safe = raw
         .replace(/\//g, '∕')
         .replace(/\\/g, '_')
@@ -800,7 +800,7 @@ const TransportApp = ({ userProfileData }) => {
                 });
 
                 const formattedDates = [...datesSet].sort().map((dk) => formatDateDDMMYYYY(dk) || dk);
-                lines.push(`     [superstructure] Písmeno skupiny: "${groupChar}" – jedinečné dátumy zápasov v skupinách s týmto písmenom:`);
+                lines.push(`     [superstructure] Písmeno skupiny: ${groupChar} – jedinečné dátumy zápasov v skupinách s týmto písmenom:`);
                 if (formattedDates.length === 0) lines.push('       (žiadne dátumy)');
                 else formattedDates.forEach((d) => lines.push(`       • ${d}`));
             }
@@ -881,7 +881,7 @@ const TransportApp = ({ userProfileData }) => {
         }
 
         if (!found) {
-            console.warn(`[TRANSPORT] Tím "${targetTeam}" sa nenašiel v časovej osi.`);
+            console.warn(`[TRANSPORT] Tím ${targetTeam} sa nenašiel v časovej osi.`);
             return;
         }
 
@@ -2643,7 +2643,7 @@ const TransportApp = ({ userProfileData }) => {
                                     '%c[TRANSPORT][SUPERSTRUCTURE] Ukladám presuny pre superstructure tím:',
                                     'color:#7c3aed;font-weight:bold;',
                                     teamName, 'v kategórii', category,
-                                    '(teamUid=null, teamIndex=null, teamName="' + teamName + '")'
+                                    '(teamUid=null, teamIndex=null, teamName=' + teamName + ')'
                                 );
                             } else {
                                 if (effectiveTeamIdentifiers.teamUid == null || effectiveTeamIdentifiers.teamIndex == null) {
@@ -7651,7 +7651,7 @@ const TransportApp = ({ userProfileData }) => {
                 }
             });
 
-            window.showGlobalNotification('Presun bol označený ako „peši".', 'success');
+            window.showGlobalNotification('Presun bol označený ako peši.', 'success');
             setTransferActionModal(null);
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri označení presunu ako peši:', err);
@@ -7731,7 +7731,7 @@ const TransportApp = ({ userProfileData }) => {
                     draft.when = originalParentWhen;
                 }
             });
-            window.showGlobalNotification('Príznak „peši" bol odstránený.', 'success');
+            window.showGlobalNotification('Príznak peši bol odstránený.', 'success');
             setRemoveWalkingModal(null);
         } catch (err) {
             console.error('[TRANSPORT] Chyba pri odstraňovaní príznaku peši:', err);
@@ -7866,7 +7866,7 @@ const TransportApp = ({ userProfileData }) => {
             if (parts.length === 0) parts.push(side === 'in' ? 'nástup' : 'výstup');
 
             window.showGlobalNotification(
-                `Tím "${transfer.teamName}" bol priradený (${parts.join(' + ')}).`,
+                `Tím ${transfer.teamName} bol priradený (${parts.join(' + ')}).`,
                 'success'
             );
 
@@ -7947,7 +7947,7 @@ const TransportApp = ({ userProfileData }) => {
         const teamIds = findTeamIdentifiersByName(cat, name);
         if (!teamIds || teamIds.teamUid == null || teamIds.teamIndex == null) {
             window.showGlobalNotification(
-                `Tím "${name}" sa nenašiel v kolekcii users – skratku nie je možné uložiť.`,
+                `Tím ${name} sa nenašiel v kolekcii users – skratku nie je možné uložiť.`,
                 'error'
             );
             return;
@@ -7985,7 +7985,7 @@ const TransportApp = ({ userProfileData }) => {
                 ];
                 const conflictName = conflictInfo?.teamName || '(neznámy tím)';
                 window.showGlobalNotification(
-                    `Skratka "${newShortcut}" je už použitá pre tím "${conflictName}" v kategórii "${cat}". Zvoľte inú skratku.`,
+                    `Skratka ${newShortcut} je už použitá pre tím ${conflictName} v kategórii ${cat}. Zvoľte inú skratku.`,
                     'error'
                 );
                 return;
@@ -8030,7 +8030,7 @@ const TransportApp = ({ userProfileData }) => {
         const teamIds = findTeamIdentifiersByName(cat, name);
         if (!teamIds || teamIds.teamUid == null || teamIds.teamIndex == null) {
             window.showGlobalNotification(
-                `Tím "${name}" sa nenašiel v kolekcii users.`,
+                `Tím ${name} sa nenašiel v kolekcii users.`,
                 'info'
             );
             setDeleteShortcutModal(null);
@@ -8631,7 +8631,7 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement(
                 'p',
                 { className: 'text-xs text-gray-500 mb-3 italic' },
-                'Definujte pravidlá, kedy tím pôjde peši z jedného miesta do druhého (napr. Hala A → Hala B, Ubytovanie → Hala, Hala → Zastávka). Pri generovaní presunov sa tieto pravidlá automaticky použijú – každý presun, ktorý zodpovedá niektorému pravidlu (rovnaké miesto odkiaľ aj kam), bude označený ako „peši".'
+                'Definujte pravidlá, kedy tím pôjde peši z jedného miesta do druhého (napr. Hala A → Hala B, Ubytovanie → Hala, Hala → Zastávka). Pri generovaní presunov sa tieto pravidlá automaticky použijú – každý presun, ktorý zodpovedá niektorému pravidlu (rovnaké miesto odkiaľ aj kam), bude označený ako peši.'
             ),
             React.createElement(
                 'div',
@@ -8654,7 +8654,7 @@ const TransportApp = ({ userProfileData }) => {
                         className: 'px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2',
                     },
                     React.createElement('i', { className: 'fa-solid fa-plus' }),
-                    'Pridať pravidlo „peši"'
+                    'Pridať pravidlo peši'
                 ),
                 React.createElement(
                     'span',
@@ -8666,7 +8666,7 @@ const TransportApp = ({ userProfileData }) => {
                 ? React.createElement(
                     'div',
                     { className: 'text-gray-400 italic text-sm px-1 py-4' },
-                    'Žiadne pravidlá. Kliknite na „Pridať pravidlo „peši"" a vyberte dvojicu miest.'
+                    'Žiadne pravidlá. Kliknite na Pridať pravidlo peši a vyberte dvojicu miest.'
                 )
                 : React.createElement(
                     'div',
@@ -8870,7 +8870,7 @@ const TransportApp = ({ userProfileData }) => {
                     React.createElement(
                         'p',
                         { className: 'text-sm mt-1' },
-                        'Kliknutím na tlačidlo "+" pridáte prvý autobus.'
+                        'Kliknutím na tlačidlo + pridáte prvý autobus.'
                     ),
                     React.createElement(
                         'button',
@@ -9916,7 +9916,7 @@ const TransportApp = ({ userProfileData }) => {
                     { className: 'text-center text-gray-500 py-6 text-sm italic px-3' },
                     showOnlyPartialTransfers
                         ? 'Žiadne presuny, ktoré by boli časťou väčšieho presunu (s medzizastávkami).'
-                        : 'Zatiaľ žiadne vygenerované presuny. Kliknite na "+" vpravo dole a vygenerujte časovú os.'
+                        : 'Zatiaľ žiadne vygenerované presuny. Kliknite na + vpravo dole a vygenerujte časovú os.'
                 )
                 : React.createElement(
                     'div',
@@ -10994,7 +10994,7 @@ const TransportApp = ({ userProfileData }) => {
                                                         {
                                                             type: 'button',
                                                             onClick: () => setRemoveWalkingModal({ transfer: t }),
-                                                            title: 'Odstrániť príznak „peši" (presun sa vráti medzi vygenerované)',
+                                                            title: 'Odstrániť príznak peši (presun sa vráti medzi vygenerované)',
                                                             className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 inline-flex items-center justify-center'
                                                         },
                                                         React.createElement('i', { className: 'fa-solid fa-xmark' })
@@ -11040,14 +11040,14 @@ const TransportApp = ({ userProfileData }) => {
                             React.createElement(
                                 'li',
                                 { key: `${m.from}|${m.to}|${idx}` },
-                                `Medzi zastávkami „${m.from}" a „${m.to}" nie je nastavené trvanie jazdy autobusu.`
+                                `Medzi zastávkami ${m.from} a ${m.to} nie je nastavené trvanie jazdy autobusu.`
                             )
                         )
                     ),
                     React.createElement(
                         'div',
                         { className: 'mt-1 text-xs opacity-90 italic' },
-                        'Nastavte trvanie v záložke „Nastavenia" → „Trvania jazdy medzi zastávkami".'
+                        'Nastavte trvanie v záložke Nastavenia → Trvania jazdy medzi zastávkami.'
                     )
                 )
             ),
@@ -11385,7 +11385,7 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement(
                             'h3',
                             { className: 'text-lg font-semibold text-gray-800' },
-                            'Pridať pravidlo „peši"'
+                            'Pridať pravidlo peši'
                         ),
                         React.createElement(
                             'p',
@@ -11555,7 +11555,7 @@ const TransportApp = ({ userProfileData }) => {
                             React.createElement(
                                 'span',
                                 null,
-                                'Miesto „odkiaľ" a „kam" nesmú byť rovnaké.'
+                                'Miesto odkiaľ a kam nesmú byť rovnaké.'
                             )
                         ),
                         duplicate && !isSame && React.createElement(
@@ -11567,11 +11567,11 @@ const TransportApp = ({ userProfileData }) => {
                             React.createElement(
                                 'span',
                                 null,
-                                'Toto pravidlo „',
+                                'Toto pravidlo ',
                                 fromPlace.name,
                                 ' → ',
                                 toPlace.name,
-                                '" už existuje. Zvoľte inú dvojicu miest.'
+                                ' už existuje. Zvoľte inú dvojicu miest.'
                             )
                         ),
                         React.createElement(
@@ -11606,7 +11606,7 @@ const TransportApp = ({ userProfileData }) => {
                                         type: 'button',
                                         disabled: isBlocked,
                                         title: duplicate
-                                            ? `Pravidlo „${fromPlace.name} → ${toPlace.name}" už existuje.`
+                                            ? `Pravidlo ${fromPlace.name} → ${toPlace.name} už existuje.`
                                             : undefined,
                                         className: `${baseCls} ${isBlocked ? blockedCls : enabledCls}`,
                                         onClick: async () => {
@@ -11654,7 +11654,7 @@ const TransportApp = ({ userProfileData }) => {
                                                 }
                                             
                                                 window.showGlobalNotification(
-                                                    `Pravidlá „${fromPlace.name} → ${toPlace.name}" a „${toPlace.name} → ${fromPlace.name}" boli pridané.`,
+                                                    `Pravidlá ${fromPlace.name} → ${toPlace.name} a ${toPlace.name} → ${fromPlace.name} boli pridané.`,
                                                     'success'
                                                 );
                                                 setShowAddWalkingRuleModal(false);
@@ -11699,7 +11699,7 @@ const TransportApp = ({ userProfileData }) => {
                     React.createElement(
                         'h3',
                         { className: 'text-lg font-semibold text-gray-800' },
-                        'Odstrániť pravidlo „peši"'
+                        'Odstrániť pravidlo peši'
                     )
                 ),
                 React.createElement(
@@ -11768,7 +11768,7 @@ const TransportApp = ({ userProfileData }) => {
 
                                     window.showGlobalNotification(
                                         reverseRule
-                                            ? `Pravidlá „${rule.fromPlaceName} → ${rule.toPlaceName}" a „${rule.toPlaceName} → ${rule.fromPlaceName}" boli odstránené.`
+                                            ? `Pravidlá ${rule.fromPlaceName} → ${rule.toPlaceName} a ${rule.toPlaceName} → ${rule.fromPlaceName} boli odstránené.`
                                             : 'Pravidlo bolo odstránené.',
                                         'success'
                                     );
@@ -11869,7 +11869,7 @@ const TransportApp = ({ userProfileData }) => {
                 React.createElement(
                     'p',
                     { className: 'text-gray-700 mb-4 text-sm' },
-                    `Zastávka: „${stopTypeModal.stop.name}"`
+                    `Zastávka: ${stopTypeModal.stop.name}`
                 ),
                 React.createElement(
                     'div',
@@ -11883,7 +11883,7 @@ const TransportApp = ({ userProfileData }) => {
                                 const stop = stopTypeModal.stop;
                                 setStopTypeModal(null);
                                 const ok = await askConfirm(
-                                    `Nastaviť zastávku „${stop.name}" ako nástupnú/výstupnú pre externé tímy?`
+                                    `Nastaviť zastávku ${stop.name} ako nástupnú/výstupnú pre externé tímy?`
                                 );
                                 if (!ok) return;
                                 setExternalArrivalStop(stop.id);
@@ -11917,7 +11917,7 @@ const TransportApp = ({ userProfileData }) => {
                                 const stop = stopTypeModal.stop;
                                 setStopTypeModal(null);
                                 const ok = await askConfirm(
-                                    `Nastaviť zastávku „${stop.name}" ako miesto zrazu?`
+                                    `Nastaviť zastávku ${stop.name} ako miesto zrazu?`
                                 );
                                 if (!ok) return;
                                 setMeetingPointStop(stop.id);
@@ -13225,7 +13225,7 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement(
                             'p',
                             { className: 'text-xs text-gray-400 italic mb-2' },
-                            'Žiadne medzizastávky. Presun pôjde priamo z „' + (resolvePlaceNameById(editingTransfer.fromId) || '?') + '" do „' + (resolvePlaceNameById(editingTransfer.toId) || '?') + '".'
+                            'Žiadne medzizastávky. Presun pôjde priamo z ' + (resolvePlaceNameById(editingTransfer.fromId) || '?') + ' do ' + (resolvePlaceNameById(editingTransfer.toId) || '?') + '.'
                         ),
                     editingTransferStops.length > 0 &&
                         React.createElement(
@@ -14557,7 +14557,7 @@ const TransportApp = ({ userProfileData }) => {
                     React.createElement(
                         'h3',
                         { className: 'text-lg font-semibold text-gray-800' },
-                        'Odstrániť príznak „peši"'
+                        'Odstrániť príznak peši'
                     )
                 ),
                 React.createElement(
@@ -14691,7 +14691,7 @@ const TransportApp = ({ userProfileData }) => {
                 React.createElement(
                     'p',
                     { className: 'text-sm text-gray-700 mb-4' },
-                    `Pre kategóriu „${regenTransfersModal.category}" už existuje ${regenTransfersModal.existingCount} presunov.`,
+                    `Pre kategóriu ${regenTransfersModal.category} už existuje ${regenTransfersModal.existingCount} presunov.`,
                     ' ',
                     'Chcete časovú os vygenerovať znova?',
                     ' ',
@@ -14707,7 +14707,7 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement(
                             'span',
                             null,
-                            'Presuny, ktoré ste už manuálne upravili (označili ako „peši", pridali medzizastávky alebo ich priradili autobusu), zostanú nedotknuté.'
+                            'Presuny, ktoré ste už manuálne upravili (označili ako peši, pridali medzizastávky alebo ich priradili autobusu), zostanú nedotknuté.'
                         )
                     )
                 ),
@@ -14845,13 +14845,13 @@ const TransportApp = ({ userProfileData }) => {
                         React.createElement(
                             'span',
                             null,
-                            'Táto skratka „',
+                            'Táto skratka ',
                             String(shortcutEditModal.shortcut || '').trim(),
-                            '" už existuje pre tím „',
+                            ' už existuje pre tím ',
                             shortcutConflict.conflictingTeamName,
-                            '" v kategórii „',
+                            ' v kategórii ',
                             shortcutConflict.conflictingCategory,
-                            '". Zvoľte inú skratku.'
+                            '. Zvoľte inú skratku.'
                         )
                     ),
                 React.createElement(
@@ -15212,7 +15212,7 @@ window.listTeamsByCategoryAndGroup = async (categoryName, groupName) => {
     }
     if (!categoryName || !groupName) {
         console.error('[TRANSPORT] Zadajte dva parametre: názov kategórie a názov skupiny.');
-        console.error('  Príklad: listTeamsByCategoryAndGroup("U12 D", "skupina D")');
+        console.error('  Príklad: listTeamsByCategoryAndGroup(U12 D, skupina D)');
         return;
     }
     const targetCategory = cleanCategory(categoryName);
