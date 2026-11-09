@@ -11429,6 +11429,12 @@ const TransportApp = ({ userProfileData }) => {
                     const toPlace = placesOptions.find((p) => p.id === toId) || null;
                     const isSame = !!fromPlace && !!toPlace && fromPlace.nameNorm === toPlace.nameNorm;
 
+                    const duplicate = (fromPlace && toPlace)
+                        ? walkingRules.find(
+                            (r) => r.fromPlaceNameNorm === fromPlace.nameNorm && r.toPlaceNameNorm === toPlace.nameNorm
+                        )
+                        : null;
+                    
                     const fromOptionsFiltered = filterPlacesByType(newWalkingRuleFromType);
                     const toOptionsFiltered = filterPlacesByType(newWalkingRuleToType);
 
@@ -11552,6 +11558,22 @@ const TransportApp = ({ userProfileData }) => {
                                 'Miesto „odkiaľ" a „kam" nesmú byť rovnaké.'
                             )
                         ),
+                        duplicate && !isSame && React.createElement(
+                            'div',
+                            {
+                                className: 'mb-3 p-2 rounded-md bg-red-50 border border-red-300 text-sm text-red-700 flex items-start gap-2'
+                            },
+                            React.createElement('i', { className: 'fa-solid fa-triangle-exclamation mt-0.5' }),
+                            React.createElement(
+                                'span',
+                                null,
+                                'Toto pravidlo „',
+                                fromPlace.name,
+                                ' → ',
+                                toPlace.name,
+                                '" už existuje. Zvoľte inú dvojicu miest.'
+                            )
+                        ),
                         React.createElement(
                             'div',
                             { className: 'flex justify-end gap-3 mt-2' },
@@ -11573,15 +11595,19 @@ const TransportApp = ({ userProfileData }) => {
                                     newWalkingRuleSaving ||
                                     !fromPlace ||
                                     !toPlace ||
-                                    isSame;
+                                    isSame ||
+                                    !!duplicate;
                                 const baseCls = 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2';
                                 const enabledCls = 'bg-emerald-600 text-white hover:bg-emerald-700';
-                                const blockedCls = 'bg-white border-2 border-emerald-600 text-emerald-600 cursor-not-allowed';
+                                const blockedCls = 'bg-white border-2 border-emerald-600 text-emerald-600 cursor-not-allowed hover:cursor-not-allowed';
                                 return React.createElement(
                                     'button',
                                     {
                                         type: 'button',
                                         disabled: isBlocked,
+                                        title: duplicate
+                                            ? `Pravidlo „${fromPlace.name} → ${toPlace.name}" už existuje.`
+                                            : undefined,
                                         className: `${baseCls} ${isBlocked ? blockedCls : enabledCls}`,
                                         onClick: async () => {
                                             if (isBlocked) return;
@@ -11591,14 +11617,6 @@ const TransportApp = ({ userProfileData }) => {
                                             const docId = buildWalkingRuleDocId(fromNorm, toNorm);
                                             if (!docId) {
                                                 window.showGlobalNotification('Neplatné miesta pre pravidlo.', 'error');
-                                                return;
-                                            }
-                                            // Skontrolujeme duplicity v už načítaných pravidlách
-                                            const duplicate = walkingRules.find(
-                                                (r) => r.fromPlaceNameNorm === fromNorm && r.toPlaceNameNorm === toNorm
-                                            );
-                                            if (duplicate) {
-                                                window.showGlobalNotification('Toto pravidlo už existuje.', 'info');
                                                 return;
                                             }
                                             setNewWalkingRuleSaving(true);
