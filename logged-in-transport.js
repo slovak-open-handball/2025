@@ -4917,20 +4917,6 @@ const TransportApp = ({ userProfileData }) => {
                             overrides[rowId].timeTo = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
                         }
                     }
-
-                    console.log(
-                        '%c[TRANSPORT][UPDATE-ROW] Spúšťam sync po zmene času riadku:',
-                        'color:#10b981;font-weight:bold;',
-                        {
-                            busId: busIdForSync,
-                            dayKey: dayKeyForSync,
-                            rowId,
-                            field,
-                            newValue: value,
-                            overrides,
-                        }
-                    );
-
                     await syncAllAffectedRowsForBus(busIdForSync, dayKeyForSync, rowId, overrides);
                 }
             } catch (e) {
@@ -8703,16 +8689,6 @@ const TransportApp = ({ userProfileData }) => {
             const raw = travelTimesDraft[key] != null ? travelTimesDraft[key] : '';
             const existing = travelTimes[key];
             const existingMinutes = existing ? String(existing.minutes) : '';
-            console.log('[TRANSPORT][handleBlur]', {
-                fromId: fromStop.id,
-                fromName: fromStop.name,
-                toId: toStop.id,
-                toName: toStop.name,
-                key,
-                raw,
-                existingMinutes,
-                skip: raw === existingMinutes,
-            });
             if (raw === existingMinutes) return;
             saveTravelTime(fromStop, toStop, raw);
         };
@@ -13607,45 +13583,6 @@ const TransportApp = ({ userProfileData }) => {
                     const tr = editingTransfer;
                     const parentKeyForTotal = tr._parentKey || tr.key;
                     const parentRecForTotal = savedTransfersRef.current.find((s) => s.key === parentKeyForTotal);
-
-                    try {
-                        console.log('%c[TRANSPORT][MODAL:editingTransfer] Otvorené', 'color:#2563eb;font-weight:bold;', {
-                            transfer: tr,
-                            editingTransferStops: Array.isArray(editingTransferStops) ? [...editingTransferStops] : null,
-                            parentKeyForTotal,
-                            parentRecForTotal: parentRecForTotal || null,
-                            parentWhen: parentRecForTotal ? parentRecForTotal.when : null,
-                            parentFromId: parentRecForTotal ? parentRecForTotal.fromId : null,
-                            parentFromName: parentRecForTotal ? resolvePlaceNameById(parentRecForTotal.fromId) : null,
-                            parentToId: parentRecForTotal ? parentRecForTotal.toId : null,
-                            parentToName: parentRecForTotal ? resolvePlaceNameById(parentRecForTotal.toId) : null,
-                            parentDayKey: parentRecForTotal ? parentRecForTotal.dayKey : null,
-                            parentIntermediateStopIds: parentRecForTotal ? (parentRecForTotal.intermediateStopIds || []) : null,
-                            parentIntermediateStops: parentRecForTotal ? (parentRecForTotal.intermediateStopIds || []).map((id) => resolvePlaceNameById(id)) : null,
-                            parentSegments: parentRecForTotal ? (parentRecForTotal.segments || []).map((s, i) => ({
-                                idx: i,
-                                fromId: s.fromId,
-                                toId: s.toId,
-                                fromName: resolvePlaceNameById(s.fromId),
-                                toName: resolvePlaceNameById(s.toId),
-                                startTs: s.startTs,
-                                endTs: s.endTs,
-                                startTime: s.startTs != null ? formatTsLocal(s.startTs) : null,
-                                endTime: s.endTs != null ? formatTsLocal(s.endTs) : null,
-                                when: s.when,
-                                isWalking: s.isWalking === true,
-                                busAssigned: s.busAssigned === true,
-                                busId: s.busId || null,
-                                busName: s.busId ? (buses.find((b) => b.id === s.busId)?.name || null) : null,
-                                boardingRowId: s.boardingRowId || null,
-                                alightingRowId: s.alightingRowId || null,
-                                walkingSetAt: s.walkingSetAt || null,
-                                walkingSetBy: s.walkingSetBy || null,
-                            })) : null,
-                        });
-                    } catch (e) {
-                        console.warn('[TRANSPORT][MODAL:editingTransfer] log error:', e);
-                    }
                     
                     let totalWhenLabel = null;
                     
@@ -14032,32 +13969,6 @@ const TransportApp = ({ userProfileData }) => {
                     try {
                         const dbgParentKey = tr._parentKey || tr.key;
                         const dbgParent = (savedTransfersRef.current || []).find((s) => s.key === dbgParentKey);
-                        console.log('%c[TRANSPORT][MODAL:transferActionModal] Otvorené', 'color:#7c3aed;font-weight:bold;', {
-                            transfer: tr,
-                            parentKey: dbgParentKey,
-                            parent: dbgParent || null,
-                            parentSegments: dbgParent ? (dbgParent.segments || []).map((s, i) => ({
-                                idx: i,
-                                fromId: s.fromId,
-                                toId: s.toId,
-                                fromName: resolvePlaceNameById(s.fromId),
-                                toName: resolvePlaceNameById(s.toId),
-                                startTs: s.startTs,
-                                endTs: s.endTs,
-                                startTime: s.startTs != null ? formatTsLocal(s.startTs) : null,
-                                endTime: s.endTs != null ? formatTsLocal(s.endTs) : null,
-                                when: s.when,
-                                isWalking: s.isWalking === true,
-                                busAssigned: s.busAssigned === true,
-                                busId: s.busId || null,
-                                busName: s.busId ? (buses.find((b) => b.id === s.busId)?.name || null) : null,
-                                boardingRowId: s.boardingRowId || null,
-                                alightingRowId: s.alightingRowId || null,
-                            })) : null,
-                            parentWhen: dbgParent ? dbgParent.when : null,
-                            parentIntermediateStopIds: dbgParent ? (dbgParent.intermediateStopIds || []) : null,
-                            parentIntermediateStops: dbgParent ? (dbgParent.intermediateStopIds || []).map((id) => resolvePlaceNameById(id)) : null,
-                        });
                     } catch (e) {
                         console.warn('[TRANSPORT][MODAL:transferActionModal] log error:', e);
                     }
@@ -14287,49 +14198,6 @@ const TransportApp = ({ userProfileData }) => {
         showAssignBusModal && assignBusTransfer && (() => {
             const parentKey = assignBusTransfer._parentKey || assignBusTransfer.key;
             const currentParent = savedTransfers.find((s) => s.key === parentKey);
-        
-            try {
-                console.log('%c[TRANSPORT][MODAL:showAssignBusModal] Otvorené', 'color:#ea580c;font-weight:bold;', {
-                    assignBusTransfer,
-                    parentKey,
-                    currentParent: currentParent || null,
-                    currentParentWhen: currentParent ? currentParent.when : null,
-                    currentParentSegments: currentParent ? (currentParent.segments || []).map((s, i) => ({
-                        idx: i,
-                        fromId: s.fromId,
-                        toId: s.toId,
-                        fromName: resolvePlaceNameById(s.fromId),
-                        toName: resolvePlaceNameById(s.toId),
-                        startTs: s.startTs,
-                        endTs: s.endTs,
-                        startTime: s.startTs != null ? formatTsLocal(s.startTs) : null,
-                        endTime: s.endTs != null ? formatTsLocal(s.endTs) : null,
-                        when: s.when,
-                        isWalking: s.isWalking === true,
-                        busAssigned: s.busAssigned === true,
-                        busId: s.busId || null,
-                        busName: s.busId ? (buses.find((b) => b.id === s.busId)?.name || null) : null,
-                        boardingRowId: s.boardingRowId || null,
-                        alightingRowId: s.alightingRowId || null,
-                    })) : null,
-                    assignBusMatches: Array.isArray(assignBusMatches) ? assignBusMatches.map((m) => ({
-                        busId: m?.bus?.id || null,
-                        busName: m?.bus?.name || null,
-                        boardingRowId: m?.boardingRow?.id || null,
-                        boardingRowIdFull: m?.boardingRow?.rowId || null,
-                        boardingTime: m?.boardingTime || null,
-                        alightingRowId: m?.alightingRow?.id || null,
-                        alightingRowIdFull: m?.alightingRow?.rowId || null,
-                        alightingTime: m?.alightingTime || null,
-                        side: m?.side || null,
-                    })) : null,
-                    assignBusSelectedKey: assignBusSelectedKey || null,
-                    busesCount: (buses || []).length,
-                    busRowsKeys: Object.keys(busRows || {}),
-                });
-            } catch (e) {
-                console.warn('[TRANSPORT][MODAL:showAssignBusModal] log error:', e);
-            }
             
             const currentTransfer = (() => {
                 if (!currentParent) return assignBusTransfer;
@@ -15027,40 +14895,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                             isAtAlighting: isAlighting,
                                                                         };
                                                                     });
-                                                                
-                                                                    console.log(
-                                                                        '%c[TRANSPORT][TOOLTIP] Zobrazený tooltip – všetky tímy v tooltipe:',
-                                                                        'color:#ea580c;font-weight:bold;',
-                                                                        {
-                                                                            busId,
-                                                                            busName: m.bus?.name || null,
-                                                                            dayKey,
-                                                                            boardingRowId: boardingRow?.rowId || null,
-                                                                            boardingRowTimeFrom: boardingRow?.timeFrom || null,
-                                                                            alightingRowId: alightingRow?.rowId || null,
-                                                                            alightingRowTimeTo: alightingRow?.timeTo || null,
-                                                                            tooltipTeamsCount: tooltipTeamsInfo.length,
-                                                                            tooltipTeams: tooltipTeamsInfo,
-                                                                            currentModalTransfer: {
-                                                                                fullTeamName: String(currentTransfer.teamName || '').trim(),
-                                                                                category: cleanCategory(currentTransfer.category || ''),
-                                                                                shortcut: getTeamShortcut(
-                                                                                    cleanCategory(currentTransfer.category || ''),
-                                                                                    String(currentTransfer.teamName || '').trim()
-                                                                                ) || null,
-                                                                                displayedLabel: stripCategoryFromTeamName(
-                                                                                    String(currentTransfer.teamName || '').trim(),
-                                                                                    cleanCategory(currentTransfer.category || '')
-                                                                                ),
-                                                                                fromId: currentTransfer.fromId || null,
-                                                                                fromLocation: resolvePlaceNameById(currentTransfer.fromId) || null,
-                                                                                toId: currentTransfer.toId || null,
-                                                                                toLocation: resolvePlaceNameById(currentTransfer.toId) || null,
-                                                                                when: currentTransfer.when || null,
-                                                                                dayKey: currentTransfer.dayKey || null,
-                                                                            },
-                                                                        }
-                                                                    );
                                                                 } catch (logErr) {
                                                                     console.warn('[TRANSPORT][TOOLTIP] Chyba pri logovaní tooltipu:', logErr);
                                                                 }
