@@ -5648,11 +5648,15 @@ const TransportApp = ({ userProfileData }) => {
             });
         };
     
-        const stopOptionsFrom = stopsList.map((s) =>
+        const stopsOnlyForSelects = stopsList.filter(
+            (s) => String(s.type || '').trim().toLowerCase() === 'zastavka'
+        );
+
+        const stopOptionsFrom = stopsOnlyForSelects.map((s) =>
             React.createElement('option', { key: s.id, value: s.id }, s.name)
         );
-    
-        const stopOptionsTo = stopsList
+
+        const stopOptionsTo = stopsOnlyForSelects
             .filter((s) => s.id !== row.placeFromId)
             .map((s) =>
                 React.createElement('option', { key: s.id, value: s.id }, s.name)
