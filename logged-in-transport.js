@@ -10643,14 +10643,22 @@ const TransportApp = ({ userProfileData }) => {
             return { dateLabel, timeLabel, startMinutes, endMinutes };
         };
         
-        const precomputedLabels = new Map();
+        const precomputedLabels = new WeakMap();
         filtered.forEach((t) => {
-            precomputedLabels.set(t.key, computeTransferDisplayLabels(t));
+            precomputedLabels.set(t, computeTransferDisplayLabels(t));
         });
         
+        const getLabelsForSort = (t) => {
+            let labels = precomputedLabels.get(t);
+            if (!labels) {
+                labels = computeTransferDisplayLabels(t);
+                precomputedLabels.set(t, labels);
+            }
+            return labels;
+        };
+        
         const getSortDateKey = (t) => {
-            // Pre sekundárne triedenie pri rovnakom čase: dátum z 2. riadku (dayKey)
-            const labels = precomputedLabels.get(t.key);
+            const labels = getLabelsForSort(t);
             const rangeInfo = parseWhenRangeFull(t.when);
             if (rangeInfo && rangeInfo.startDayKey) return rangeInfo.startDayKey;
             if (t.dayKey) return t.dayKey;
@@ -10658,10 +10666,9 @@ const TransportApp = ({ userProfileData }) => {
         };
         
         const sortedTransfers = [...filtered].sort((a, b) => {
-            const la = precomputedLabels.get(a.key) || {};
-            const lb = precomputedLabels.get(b.key) || {};
+            const la = getLabelsForSort(a);
+            const lb = getLabelsForSort(b);
         
-            // Primárne triedenie podľa zvoleného režimu (Čas odchodu / Čas príchodu)
             let primaryA, primaryB;
             if (sortTransfersBy === 'arrival') {
                 primaryA = la.endMinutes != null ? la.endMinutes : Number.POSITIVE_INFINITY;
@@ -10673,7 +10680,6 @@ const TransportApp = ({ userProfileData }) => {
         
             if (primaryA !== primaryB) return primaryA - primaryB;
         
-            // Sekundárne: druhý čas (ak je arrival, tak start; ak departure, tak end)
             let secondaryA, secondaryB;
             if (sortTransfersBy === 'arrival') {
                 secondaryA = la.startMinutes != null ? la.startMinutes : Number.POSITIVE_INFINITY;
@@ -10684,12 +10690,10 @@ const TransportApp = ({ userProfileData }) => {
             }
             if (secondaryA !== secondaryB) return secondaryA - secondaryB;
         
-            // Terciárne: dátum (2. riadok)
             const dateA = getSortDateKey(a);
             const dateB = getSortDateKey(b);
             if (dateA !== dateB) return dateA.localeCompare(dateB);
         
-            // Kvartérne: kategória a tím
             const ca = cleanCategory(a.category) || '';
             const cb = cleanCategory(b.category) || '';
             if (ca !== cb) return ca.localeCompare(cb, 'sk', { sensitivity: 'base' });
@@ -10883,7 +10887,7 @@ const TransportApp = ({ userProfileData }) => {
                         'ul',
                         { className: 'space-y-2' },
                         sortedTransfers.map((t) => {
-                            const precomputed = precomputedLabels.get(t.key) || {};
+                            const precomputed = getLabelsForSort(t);
                             const dateLabel = precomputed.dateLabel;
                             const timeLabel = precomputed.timeLabel;
 
