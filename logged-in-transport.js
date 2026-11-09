@@ -4464,6 +4464,7 @@ const TransportApp = ({ userProfileData }) => {
                     ? allRows.some((r) => r.rowId === seg.alightingRowId)
                     : false;
 
+                // Ak riadky už neexistujú (napr. po vymazaní) → odpojiť segment
                 if (hasValidAssignmentMarkers && !boardingRowExists && !alightingRowExists) {
                     changed = true;
                     const removeKey = `${parent.key}|${seg.fromId}|${seg.toId}`;
@@ -4486,8 +4487,43 @@ const TransportApp = ({ userProfileData }) => {
                     };
                 }
 
+                // Ak nemá platné markery a ani časy → nič nemeniť
                 if (!hasValidAssignmentMarkers && (boardingTs == null || alightingTs == null || alightingTs <= boardingTs)) {
                     return seg;
+                }
+
+                // NOVÉ: ak sú časy neplatné (výstup <= nástup) alebo mimo parent range
+                // → segment treba odpojiť z busu, rovnako ako pri manuálnom odstránení tímu.
+                const timesValid =
+                    boardingTs != null &&
+                    alightingTs != null &&
+                    alightingTs > boardingTs;
+
+                const outsideParent =
+                    timesValid &&
+                    effectiveParentRange != null &&
+                    (boardingTs < effectiveParentRange.startTs || alightingTs > effectiveParentRange.endTs);
+
+                if (hasValidAssignmentMarkers && (!timesValid || outsideParent)) {
+                    changed = true;
+                    const removeKey = `${parent.key}|${seg.fromId}|${seg.toId}`;
+                    if (!parentsToRemoveSegmentFrom.has(removeKey)) {
+                        parentsToRemoveSegmentFrom.set(removeKey, {
+                            parentKey: parent.key,
+                            fromId: seg.fromId,
+                            toId: seg.toId,
+                        });
+                    }
+                    return {
+                        ...seg,
+                        busAssigned: false,
+                        busId: null,
+                        boardingRowId: null,
+                        alightingRowId: null,
+                        startTs: null,
+                        endTs: null,
+                        when: null,
+                    };
                 }
     
                 const newStartTs = boardingTs;
@@ -4509,7 +4545,7 @@ const TransportApp = ({ userProfileData }) => {
                 }
                 return seg;
             });
-    
+            
             const parentSegmentsAfterSync = newSegments.map((s) => ({ ...s }));
     
             const changedIdxSet = new Set();
