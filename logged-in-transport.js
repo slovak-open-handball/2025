@@ -445,6 +445,27 @@ const TransportApp = ({ userProfileData }) => {
         };
     };
 
+    const computeEffectiveParentRange = (parent) => {
+        if (!parent) return null;
+
+        const whenRange = parseTransferWhenToRange(parent.when);
+        let rangeStart = whenRange && whenRange.startTs != null ? whenRange.startTs : null;
+        let rangeEnd = whenRange && whenRange.endTs != null ? whenRange.endTs : null;
+
+        const segs = Array.isArray(parent.segments) ? parent.segments : [];
+        segs.forEach((s) => {
+            if (!s) return;
+            if (s.isWalking === true) return;
+            if (s.startTs != null && (rangeStart == null || s.startTs < rangeStart)) rangeStart = s.startTs;
+            if (s.endTs != null && (rangeEnd == null || s.endTs > rangeEnd)) rangeEnd = s.endTs;
+        });
+
+        if (rangeStart == null && rangeEnd == null) return null;
+        if (rangeStart == null) return { startTs: rangeEnd, endTs: rangeEnd };
+        if (rangeEnd == null) return { startTs: rangeStart, endTs: rangeStart };
+        return { startTs: rangeStart, endTs: rangeEnd };
+    };
+
     const parseWhenRangeToTs = (when) => {
         if (!when) return null;
         const s = String(when);
@@ -4205,9 +4226,9 @@ const TransportApp = ({ userProfileData }) => {
                             if (v.dayKey !== dayKey) return;
                             let changed = false;
 
-                            const parentRange = parseTransferWhenToRange(v.when);
-                            const parentStartTs = parentRange && parentRange.startTs != null ? parentRange.startTs : null;
-                            const parentEndTs = parentRange && parentRange.endTs != null ? parentRange.endTs : null;
+                            const effRange = computeEffectiveParentRange(v);
+                            const parentStartTs = effRange && effRange.startTs != null ? effRange.startTs : null;
+                            const parentEndTs = effRange && effRange.endTs != null ? effRange.endTs : null;
 
                             const newSegments = v.segments.map((s) => {
                                 if (s.busId !== bus.id) return s;
@@ -4353,27 +4374,7 @@ const TransportApp = ({ userProfileData }) => {
             if (parent.dayKey !== dayKey) return;
             if (!Array.isArray(parent.segments)) return;
     
-            let effectiveParentRange = null;
-            {
-                const segs = parent.segments;
-                let earliestStart = null;
-                let latestEnd = null;
-                segs.forEach((s) => {
-                    if (!s) return;
-                    if (s.isWalking === true) return;
-                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                        earliestStart = s.startTs;
-                    }
-                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                        latestEnd = s.endTs;
-                    }
-                });
-                if (earliestStart != null && latestEnd != null && latestEnd > earliestStart) {
-                    effectiveParentRange = { startTs: earliestStart, endTs: latestEnd };
-                } else {
-                    effectiveParentRange = parseTransferWhenToRange(parent.when);
-                }
-            }
+            const effectiveParentRange = computeEffectiveParentRange(parent);
     
             let changed = false;
             const newSegments = parent.segments.map((seg) => {
@@ -5174,13 +5175,7 @@ const TransportApp = ({ userProfileData }) => {
                         let changed = false;
 
                         // NEW: effectiveParentRange pre kontrolu, či segment nie je mimo parenta
-                        let effectiveParentRange = null;
-                        {
-                            const parentRange = parseTransferWhenToRange(v.when);
-                            if (parentRange && parentRange.startTs != null && parentRange.endTs != null) {
-                                effectiveParentRange = { startTs: parentRange.startTs, endTs: parentRange.endTs };
-                            }
-                        }
+                        const effectiveParentRange = computeEffectiveParentRange(v);
 
                         const newSegments = v.segments.map((s) => {
                             if (s.busId !== busId) return s;
