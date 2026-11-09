@@ -202,24 +202,6 @@ const placeTypeIcons = {
     zastavka:      { icon: 'fa-bus', color: '#2563eb', label: 'Zastávka' },
 };
 
-const getPlaceIconForName = (placeName) => {
-    if (!placeName) return null;
-    const raw = String(placeName).trim();
-    const norm = normalizePlaceName(raw);
-    const all = Array.isArray(allPlacesRef.current) ? allPlacesRef.current : [];
-    let found = all.find((p) => p && normalizePlaceName(p.name) === norm);
-    if (!found) {
-        found = (stopsList || []).find((s) => s && normalizePlaceName(s.name) === norm);
-    }
-    if (!found) return null;
-    const meta = placeTypeIcons[found.type] || { icon: 'fa-circle-dot', color: '#6b7280' };
-    return React.createElement('i', {
-        className: `fa-solid ${meta.icon}`,
-        style: { color: meta.color, marginRight: '4px' },
-        title: meta.label || found.type || '',
-    });
-};
-
 const TRANSPORT_SETTINGS_COLLECTION = 'settings';
 const TRANSPORT_SETTINGS_DOC = 'transportTravelTimes';
 const TRANSPORT_TRANSFERS_FIELD = 'transfers';
@@ -361,6 +343,24 @@ const TransportApp = ({ userProfileData }) => {
         const idA = resolvePlaceIdByName(a) || a;
         const idB = resolvePlaceIdByName(b) || b;
         return idA === idB;
+    };
+
+    const getPlaceIconForName = (placeName) => {
+        if (!placeName) return null;
+        const raw = String(placeName).trim();
+        const norm = normalizePlaceName(raw);
+        const all = Array.isArray(allPlacesRef.current) ? allPlacesRef.current : [];
+        let found = all.find((p) => p && normalizePlaceName(p.name) === norm);
+        if (!found) {
+            found = (stopsList || []).find((s) => s && normalizePlaceName(s.name) === norm);
+        }
+        if (!found) return null;
+        const meta = placeTypeIcons[found.type] || { icon: 'fa-circle-dot', color: '#6b7280' };
+        return React.createElement('i', {
+            className: `fa-solid ${meta.icon}`,
+            style: { color: meta.color, marginRight: '4px' },
+            title: meta.label || found.type || '',
+        });
     };
 
     const savedTransfersRef = useRef([]);
