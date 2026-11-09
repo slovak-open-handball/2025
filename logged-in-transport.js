@@ -10658,17 +10658,61 @@ const TransportApp = ({ userProfileData }) => {
         };
         
         const getSortDateKey = (t) => {
-            const labels = getLabelsForSort(t);
+            if (!t) return '9999-99-99';
+        
+            // 1) Priamo z t.when (najspoľahlivejšie)
             const rangeInfo = parseWhenRangeFull(t.when);
             if (rangeInfo && rangeInfo.startDayKey) return rangeInfo.startDayKey;
+        
+            // 2) t.dayKey
             if (t.dayKey) return t.dayKey;
+        
+            // 3) Pre segmenty: skús z parentRec.when / parentRec.segments
+            if (t._parentKey) {
+                const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
+                if (parentRec) {
+                    const parentRange = parseWhenRangeFull(parentRec.when);
+                    if (parentRange && parentRange.startDayKey) return parentRange.startDayKey;
+                    if (parentRec.dayKey) return parentRec.dayKey;
+                    if (Array.isArray(parentRec.segments)) {
+                        const segIdx = findSegmentIndex(parentRec.segments, t.fromId, t.toId);
+                        if (segIdx !== -1) {
+                            const seg = parentRec.segments[segIdx];
+                            if (seg && seg.startTs != null) {
+                                const d = new Date(seg.startTs);
+                                if (!isNaN(d.getTime())) {
+                                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        
+            // 4) Z _displayStartTs (pre segmenty z computeTransferDisplayLabels)
+            if (t._displayStartTs != null && isFinite(t._displayStartTs)) {
+                const d = new Date(t._displayStartTs);
+                if (!isNaN(d.getTime())) {
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                }
+            }
+        
             return '9999-99-99';
         };
         
+        // ⬇️ OPRAVA: porovnávame najprv DÁTUM (dayKey), potom čas v rámci dňa.
+        // Dôvod: boxy zobrazujú dátum v 2. riadku a čas v 3. riadku — používateľ
+        // očakáva zoradenie ako "kalendár": najprv dni, v rámci dňa časy.
         const sortedTransfers = [...filtered].sort((a, b) => {
             const la = getLabelsForSort(a);
             const lb = getLabelsForSort(b);
         
+            // === 1. Primárne: DÁTUM ===
+            const dateA = getSortDateKey(a);
+            const dateB = getSortDateKey(b);
+            if (dateA !== dateB) return dateA.localeCompare(dateB);
+        
+            // === 2. Sekundárne: ČAS (podľa zvoleného režimu) ===
             let primaryA, primaryB;
             if (sortTransfersBy === 'arrival') {
                 primaryA = la.endMinutes != null ? la.endMinutes : Number.POSITIVE_INFINITY;
@@ -10677,9 +10721,9 @@ const TransportApp = ({ userProfileData }) => {
                 primaryA = la.startMinutes != null ? la.startMinutes : Number.POSITIVE_INFINITY;
                 primaryB = lb.startMinutes != null ? lb.startMinutes : Number.POSITIVE_INFINITY;
             }
-        
             if (primaryA !== primaryB) return primaryA - primaryB;
         
+            // === 3. Terciárne: druhý čas (ak je arrival, tak start; ak departure, tak end) ===
             let secondaryA, secondaryB;
             if (sortTransfersBy === 'arrival') {
                 secondaryA = la.startMinutes != null ? la.startMinutes : Number.POSITIVE_INFINITY;
@@ -10690,10 +10734,7 @@ const TransportApp = ({ userProfileData }) => {
             }
             if (secondaryA !== secondaryB) return secondaryA - secondaryB;
         
-            const dateA = getSortDateKey(a);
-            const dateB = getSortDateKey(b);
-            if (dateA !== dateB) return dateA.localeCompare(dateB);
-        
+            // === 4. Kvartérne: kategória, tím ===
             const ca = cleanCategory(a.category) || '';
             const cb = cleanCategory(b.category) || '';
             if (ca !== cb) return ca.localeCompare(cb, 'sk', { sensitivity: 'base' });
