@@ -4415,10 +4415,6 @@ const TransportApp = ({ userProfileData }) => {
                     return seg;
                 }
     
-                if (!hasValidAssignmentMarkers && (boardingTs == null || alightingTs == null || alightingTs <= boardingTs)) {
-                    return seg;
-                }
-    
                 const newStartTs = boardingTs;
                 const newEndTs = alightingTs;
                 const newWhen = `${formatTsLocal(newStartTs)} – ${formatTsLocal(newEndTs)}`;
