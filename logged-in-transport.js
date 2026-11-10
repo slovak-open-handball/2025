@@ -15302,6 +15302,15 @@ const TransportApp = ({ userProfileData }) => {
                                                                                     'whitespace-normal pointer-events-none',
                                                                                 style: { minWidth: '180px', maxWidth: '360px' },
                                                                             },
+                                                                            // NOVÉ: Prvý riadok tooltipu – názov autobusu
+                                                                            React.createElement(
+                                                                                'div',
+                                                                                {
+                                                                                    className: 'font-bold mb-1 text-white flex items-center gap-1.5 border-b border-gray-700 pb-1',
+                                                                                },
+                                                                                m.bus.name
+                                                                            ),
+                                                                            // Hlavička zoznamu zastávok
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { className: 'font-semibold mb-1 text-gray-200' },
