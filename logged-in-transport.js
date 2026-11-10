@@ -10944,12 +10944,9 @@ const TransportApp = ({ userProfileData }) => {
         });
 
         if (sortedTransfers.length === 0) {
-            // Zisti, či sú selectboxy ešte aktívne, ale filter už nemá žiadne dáta
-            // (napr. po priradení posledného presunu, ktorý filtru vyhovoval).
             const hasActivePlaceFilter =
                 !!selectedFromPlaceFilter || !!selectedToPlaceFilter;
         
-            // Over, či filter ešte vôbec zodpovedá niečomu v aktuálnych dátach.
             const placeFilterStillHasData = (() => {
                 if (!hasActivePlaceFilter) return false;
                 return baseFilteredAfterPartial.some((t) => {
@@ -10967,7 +10964,6 @@ const TransportApp = ({ userProfileData }) => {
                 });
             })();
         
-            // Ak filter už nemá dáta (bol resetovaný alebo sa minul), zobraz plný box bez hlášky.
             if (hasActivePlaceFilter && placeFilterStillHasData) {
                 return React.createElement(
                     'div',
@@ -11007,372 +11003,371 @@ const TransportApp = ({ userProfileData }) => {
                 );
             }
         
-            return null;
-        }
-    
-        return React.createElement(
-            'div',
-            {
-                className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
-                style: { width: '420px', maxWidth: '100%' }
-            },
-            React.createElement(
+            // Ak filter už nemá dáta, ale existujú nejaké presuny v baseFilteredAfterPartial,
+            // zobraz plný box presunov so všetkými položkami (filter sa medzitým resetuje).
+            if (!hasActivePlaceFilter && baseFilteredAfterPartial.length === 0) {
+                return null;
+            }
+        
+            // Ak máme nejaké presuny bez filtra, zobrazíme ich (nie prázdny box).
+            const fallbackFiltered = baseFilteredAfterPartial;
+        
+            if (fallbackFiltered.length === 0) {
+                return null;
+            }
+        
+            return React.createElement(
                 'div',
                 {
-                    className: 'relative px-5 py-3 flex items-center justify-center text-white',
-                    style: { backgroundColor: '#7c3aed' }
+                    className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
+                    style: { width: '420px', maxWidth: '100%' }
                 },
-                React.createElement('i', { className: 'fa-solid fa-bus mr-2' }),
                 React.createElement(
-                    'h3',
-                    { className: 'text-lg font-bold text-center' },
-                    'Vygenerované presuny'
+                    'div',
+                    {
+                        className: 'relative px-5 py-3 flex items-center justify-center text-white',
+                        style: { backgroundColor: '#7c3aed' }
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-bus mr-2' }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-bold text-center' },
+                        'Vygenerované presuny'
+                    ),
+                    React.createElement(
+                        'span',
+                        { className: 'absolute right-3 text-xs bg-white/20 rounded-full px-2 py-0.5' },
+                        `${fallbackFiltered.length}`
+                    )
                 ),
                 React.createElement(
-                    'span',
-                    { className: 'absolute right-3 text-xs bg-white/20 rounded-full px-2 py-0.5' },
-                    `${filtered.length}`
-                )
-            ),
-            React.createElement(
-                'div',
-                { className: 'px-3 pt-2 pb-2 border-b border-gray-100 flex flex-col gap-2' },
-                renderPlaceFilters(baseFilteredAfterPartial),
-                renderSortButtons()
-            ),
-            (() => {
-                const showPartialCheckbox = hasAnyPartialTransfer;
-            
-                // Zisti, či existuje aspoň jeden presun/segment, ktorý by po kliknutí na tlačidlo
-                // mohol byť reálne označený ako peši (rovnaká logika ako v setAllWalkingTransfersAsWalking,
-                // ale len na detekciu – nič nemeniť).
-                const hasAnyMatchingWalkingCandidate = (() => {
-                    if (!Array.isArray(walkingRules) || walkingRules.length === 0) return false;
-            
-                    const dayKeyFilter = selectedDayKey || null;
-                    const categoryFilter = selectedCategoryFilter
-                        ? cleanCategory(selectedCategoryFilter)
-                        : null;
-            
-                    const rulePairs = new Set(
-                        walkingRules.map((r) => `${r.fromPlaceNameNorm}||${r.toPlaceNameNorm}`)
-                    );
-            
-                    const isPairWalking = (fromId, toId) => {
-                        if (!fromId || !toId) return false;
-                        const fromNameNorm = normalizePlaceName(resolvePlaceNameById(fromId) || '');
-                        const toNameNorm = normalizePlaceName(resolvePlaceNameById(toId) || '');
-                        if (!fromNameNorm || !toNameNorm) return false;
-                        return rulePairs.has(`${fromNameNorm}||${toNameNorm}`);
-                    };
-            
-                    for (const parent of savedTransfersRef.current || []) {
-                        if (!Array.isArray(parent.segments)) continue;
-            
-                        if (dayKeyFilter && parent.dayKey !== dayKeyFilter) continue;
-                        if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) continue;
-            
-                        const stopsIds = Array.isArray(parent.intermediateStopIds)
-                            ? parent.intermediateStopIds
-                            : [];
-                        const isDirectTransfer = stopsIds.length === 0;
-            
-                        if (isDirectTransfer) {
-                            if (parent.isWalking === true) continue;
-                            const fromId = parent.fromId || null;
-                            const toId = parent.toId || null;
-                            if (!isPairWalking(fromId, toId)) continue;
-            
-                            const segIdx = findSegmentIndex(parent.segments, fromId, toId);
-                            if (segIdx === -1) continue;
-                            const seg = parent.segments[segIdx];
-                            if (!seg) continue;
-                            if (seg.isWalking === true) continue;
-            
-                            return true;
+                    'div',
+                    { className: 'px-3 pt-2 pb-2 border-b border-gray-100 flex flex-col gap-2' },
+                    renderPlaceFilters(fallbackFiltered),
+                    renderSortButtons()
+                ),
+                (() => {
+                    const showPartialCheckbox = hasAnyPartialTransfer;
+                    const hasAnyMatchingWalkingCandidate = (() => {
+                        if (!Array.isArray(walkingRules) || walkingRules.length === 0) return false;
+                        const dayKeyFilter = selectedDayKey || null;
+                        const categoryFilter = selectedCategoryFilter
+                            ? cleanCategory(selectedCategoryFilter)
+                            : null;
+                        const rulePairs = new Set(
+                            walkingRules.map((r) => `${r.fromPlaceNameNorm}||${r.toPlaceNameNorm}`)
+                        );
+                        const isPairWalking = (fromId, toId) => {
+                            if (!fromId || !toId) return false;
+                            const fromNameNorm = normalizePlaceName(resolvePlaceNameById(fromId) || '');
+                            const toNameNorm = normalizePlaceName(resolvePlaceNameById(toId) || '');
+                            if (!fromNameNorm || !toNameNorm) return false;
+                            return rulePairs.has(`${fromNameNorm}||${toNameNorm}`);
+                        };
+                        for (const parent of savedTransfersRef.current || []) {
+                            if (!Array.isArray(parent.segments)) continue;
+                            if (dayKeyFilter && parent.dayKey !== dayKeyFilter) continue;
+                            if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) continue;
+                            const stopsIds = Array.isArray(parent.intermediateStopIds)
+                                ? parent.intermediateStopIds
+                                : [];
+                            const isDirectTransfer = stopsIds.length === 0;
+                            if (isDirectTransfer) {
+                                if (parent.isWalking === true) continue;
+                                const fromId = parent.fromId || null;
+                                const toId = parent.toId || null;
+                                if (!isPairWalking(fromId, toId)) continue;
+                                const segIdx = findSegmentIndex(parent.segments, fromId, toId);
+                                if (segIdx === -1) continue;
+                                const seg = parent.segments[segIdx];
+                                if (!seg) continue;
+                                if (seg.isWalking === true) continue;
+                                return true;
+                            }
+                            for (const seg of parent.segments) {
+                                if (!seg) continue;
+                                if (seg.isWalking === true) continue;
+                                const segFromId = seg.fromId || null;
+                                const segToId = seg.toId || null;
+                                if (!isPairWalking(segFromId, segToId)) continue;
+                                return true;
+                            }
                         }
-            
-                        // Rozdelený presun – stačí, ak aspoň jeden segment zodpovedá pravidlám a nie je peši
-                        for (const seg of parent.segments) {
-                            if (!seg) continue;
-                            if (seg.isWalking === true) continue;
-                            const segFromId = seg.fromId || null;
-                            const segToId = seg.toId || null;
-                            if (!isPairWalking(segFromId, segToId)) continue;
-                            return true;
-                        }
+                        return false;
+                    })();
+                    const showWalkingButton = hasAnyMatchingWalkingCandidate;
+                    if (!showPartialCheckbox && !showWalkingButton) {
+                        return null;
                     }
-            
-                    return false;
-                })();
-            
-                const showWalkingButton = hasAnyMatchingWalkingCandidate;
-            
-                if (!showPartialCheckbox && !showWalkingButton) {
-                    return null;
-                }
-
-                return React.createElement(
-                    'div',
-                    { className: 'px-3 pt-2 pb-1 border-b border-gray-100 flex items-center justify-between gap-2 flex-wrap' },
-                    showWalkingButton
-                        ? React.createElement(
-                            'button',
+                    return React.createElement(
+                        'div',
+                        { className: 'px-3 pt-2 pb-1 border-b border-gray-100 flex items-center justify-between gap-2 flex-wrap' },
+                        showWalkingButton
+                            ? React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: setAllWalkingTransfersAsWalking,
+                                    disabled: walkingBatchSaving,
+                                    title: 'Označí ako "peši" všetky presuny medzi miestami, ktoré sú definované v pravidlách „peši" (Nastavenia → Peši).',
+                                    className: `inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md transition-colors ${walkingBatchSaving ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`
+                                },
+                                walkingBatchSaving
+                                    ? React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' })
+                                    : React.createElement('i', { className: 'fa-solid fa-person-walking' }),
+                                React.createElement('span', { className: 'whitespace-nowrap' }, 'Nastaviť presun peši medzi blízkymi miestami')
+                            )
+                            : React.createElement('span', null),
+                        showPartialCheckbox
+                            ? React.createElement(
+                                'label',
+                                {
+                                    className: 'ml-auto flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer select-none',
+                                    title: 'Zobraziť iba tie presuny, ktoré sú súčasťou väčšieho presunu (majú medzizastávky)',
+                                },
+                                React.createElement('input', {
+                                    type: 'checkbox',
+                                    checked: showOnlyPartialTransfers,
+                                    onChange: (e) => setShowOnlyPartialTransfers(e.target.checked),
+                                    className: 'w-4 h-4 rounded accent-violet-600 cursor-pointer',
+                                }),
+                                React.createElement('span', { className: 'whitespace-nowrap' }, 'Iba časti presunov')
+                            )
+                            : React.createElement('span', null)
+                    );
+                })(),
+                fallbackFiltered.length === 0
+                    ? React.createElement(
+                        'p',
+                        { className: 'text-center text-gray-500 py-6 text-sm italic px-3' },
+                        showOnlyPartialTransfers
+                            ? 'Žiadne presuny, ktoré by boli časťou väčšieho presunu (s medzizastávkami).'
+                            : 'Zatiaľ žiadne vygenerované presuny. Kliknite na + vpravo dole a vygenerujte časovú os.'
+                    )
+                    : React.createElement(
+                        'div',
+                        { className: 'p-3' },
+                        React.createElement(
+                            'ul',
                             {
-                                type: 'button',
-                                onClick: setAllWalkingTransfersAsWalking,
-                                disabled: walkingBatchSaving,
-                                title: 'Označí ako "peši" všetky presuny medzi miestami, ktoré sú definované v pravidlách „peši" (Nastavenia → Peši).',
-                                className: `inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md transition-colors ${walkingBatchSaving ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`
+                                className: 'space-y-2',
+                                key: `transfers-list-${sortTransfersBy}`,
                             },
-                            walkingBatchSaving
-                                ? React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' })
-                                : React.createElement('i', { className: 'fa-solid fa-person-walking' }),
-                            React.createElement('span', { className: 'whitespace-nowrap' }, 'Nastaviť presun peši medzi blízkymi miestami')
-                        )
-                        : React.createElement('span', null),
-                    showPartialCheckbox
-                        ? React.createElement(
-                            'label',
-                            {
-                                className: 'ml-auto flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer select-none',
-                                title: 'Zobraziť iba tie presuny, ktoré sú súčasťou väčšieho presunu (majú medzizastávky)',
-                            },
-                            React.createElement('input', {
-                                type: 'checkbox',
-                                checked: showOnlyPartialTransfers,
-                                onChange: (e) => setShowOnlyPartialTransfers(e.target.checked),
-                                className: 'w-4 h-4 rounded accent-violet-600 cursor-pointer',
-                            }),
-                            React.createElement('span', { className: 'whitespace-nowrap' }, 'Iba časti presunov')
-                        )
-                        : React.createElement('span', null)
-                );
-            })(),
-            filtered.length === 0
-                ? React.createElement(
-                    'p',
-                    { className: 'text-center text-gray-500 py-6 text-sm italic px-3' },
-                    showOnlyPartialTransfers
-                        ? 'Žiadne presuny, ktoré by boli časťou väčšieho presunu (s medzizastávkami).'
-                        : 'Zatiaľ žiadne vygenerované presuny. Kliknite na + vpravo dole a vygenerujte časovú os.'
-                )
-                : React.createElement(
-                    'div',
-                    { className: 'p-3' },
-                    React.createElement(
-                        'ul',
-                        {
-                            className: 'space-y-2',
-                            key: `transfers-list-${sortTransfersBy}`,
-                        },
-                        sortedTransfers.map((t) => {
-                            const precomputed = getLabelsForSort(t);
-                            const dateLabel = precomputed.dateLabel;
-                            const timeLabel = precomputed.timeLabel;
-
-                            const transportColor = getTransportColorForCategory(t.category);
-                            const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
-
-                            const transferInfo = parseTransferText(t.text);
-                            
-                            let routeLabel = null;
-                            if (transferInfo) {
-                                const stopsIds = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
-                                if (stopsIds.length > 0) {
-                                    const routeIds = [t.fromId, ...stopsIds, t.toId].filter(Boolean);
-                                    routeLabel = routeIds
-                                        .map((id) => resolvePlaceNameById(id))
-                                        .filter(Boolean)
-                                        .join(' → ');
-                                } else {
-                                    routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
-                                }
-                            } else if (t.fromId && t.toId) {
-                                routeLabel = `${resolvePlaceNameById(t.fromId)} → ${resolvePlaceNameById(t.toId)}`;
-                            }    
-                            const parentInfoLabel = t._parentKey && t._parentRoute
-                                ? `časť presunu ${t._parentRoute}`
-                                : null;
-
-                            const parseTimeLabelRange = (label) => {
-                                if (!label) return null;
-                                const s = String(label);
-                                const timeRe = /(\d{1,2}):(\d{2})/g;
-                                const found = [];
-                                let m;
-                                while ((m = timeRe.exec(s)) !== null) {
-                                    const hh = Number(m[1]);
-                                    const mi = Number(m[2]);
-                                    if (hh >= 0 && hh <= 23 && mi >= 0 && mi <= 59) {
-                                        found.push(hh * 60 + mi);
+                            [...fallbackFiltered]
+                                .sort((a, b) => {
+                                    const la = getLabelsForSort(a);
+                                    const lb = getLabelsForSort(b);
+                                    const dateA = getSortDateKey(a);
+                                    const dateB = getSortDateKey(b);
+                                    if (dateA !== dateB) return dateA.localeCompare(dateB);
+                                    let primaryA, primaryB;
+                                    if (sortTransfersBy === 'arrival') {
+                                        primaryA = la.endMinutes != null ? la.endMinutes : Number.POSITIVE_INFINITY;
+                                        primaryB = lb.endMinutes != null ? lb.endMinutes : Number.POSITIVE_INFINITY;
+                                    } else {
+                                        primaryA = la.startMinutes != null ? la.startMinutes : Number.POSITIVE_INFINITY;
+                                        primaryB = lb.startMinutes != null ? lb.startMinutes : Number.POSITIVE_INFINITY;
                                     }
-                                }
-                                if (found.length === 0) return null;
-                                if (found.length === 1) return { startMin: found[0], endMin: found[0] };
-                                return { startMin: found[0], endMin: found[1] };
-                            };
-
-                            const computeRemainingMinutesFromLabel = () => {
-                                const parsed = parseTimeLabelRange(timeLabel);
-                                if (!parsed) return null;
-
-                                let endMin = parsed.endMin;
-
-                                if (t._parentKey) {
-                                    const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
-                                    if (parentRec && Array.isArray(parentRec.segments)) {
-                                        const segIdx = findSegmentIndex(parentRec.segments, t.fromId, t.toId);
-                                        let nextAssignedStartMin = null;
-                                        for (let i = segIdx + 1; i < parentRec.segments.length; i++) {
-                                            const seg = parentRec.segments[i];
-                                            if (!seg) continue;
-                                            if (seg.isWalking === true) continue;
-                                            if (!(seg.busId && seg.boardingRowId && seg.alightingRowId)) continue;
-                                            if (seg.startTs == null) continue;
-                                            const startFmt = formatTsLocal(seg.startTs);
-                                            const startTime = startFmt ? /(\d{2}):(\d{2})$/.exec(startFmt) : null;
-                                            if (startTime) {
-                                                nextAssignedStartMin = Number(startTime[1]) * 60 + Number(startTime[2]);
-                                                break;
+                                    if (primaryA !== primaryB) return primaryA - primaryB;
+                                    const ca = cleanCategory(a.category) || '';
+                                    const cb = cleanCategory(b.category) || '';
+                                    if (ca !== cb) return ca.localeCompare(cb, 'sk', { sensitivity: 'base' });
+                                    return String(a.teamName || '').localeCompare(String(b.teamName || ''), 'sk', { sensitivity: 'base' });
+                                })
+                                .map((t) => {
+                                    const precomputed = getLabelsForSort(t);
+                                    const dateLabel = precomputed.dateLabel;
+                                    const timeLabel = precomputed.timeLabel;
+                                    const transportColor = getTransportColorForCategory(t.category);
+                                    const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
+                                    const transferInfo = parseTransferText(t.text);
+                                    let routeLabel = null;
+                                    if (transferInfo) {
+                                        const stopsIds = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
+                                        if (stopsIds.length > 0) {
+                                            const routeIds = [t.fromId, ...stopsIds, t.toId].filter(Boolean);
+                                            routeLabel = routeIds
+                                                .map((id) => resolvePlaceNameById(id))
+                                                .filter(Boolean)
+                                                .join(' → ');
+                                        } else {
+                                            routeLabel = `${transferInfo.from} → ${transferInfo.to}`;
+                                        }
+                                    } else if (t.fromId && t.toId) {
+                                        routeLabel = `${resolvePlaceNameById(t.fromId)} → ${resolvePlaceNameById(t.toId)}`;
+                                    }
+                                    const parentInfoLabel = t._parentKey && t._parentRoute
+                                        ? `časť presunu ${t._parentRoute}`
+                                        : null;
+                                    const parseTimeLabelRange = (label) => {
+                                        if (!label) return null;
+                                        const s = String(label);
+                                        const timeRe = /(\d{1,2}):(\d{2})/g;
+                                        const found = [];
+                                        let m;
+                                        while ((m = timeRe.exec(s)) !== null) {
+                                            const hh = Number(m[1]);
+                                            const mi = Number(m[2]);
+                                            if (hh >= 0 && hh <= 23 && mi >= 0 && mi <= 59) {
+                                                found.push(hh * 60 + mi);
                                             }
                                         }
-                                        if (nextAssignedStartMin != null) {
-                                            endMin = nextAssignedStartMin;
+                                        if (found.length === 0) return null;
+                                        if (found.length === 1) return { startMin: found[0], endMin: found[0] };
+                                        return { startMin: found[0], endMin: found[1] };
+                                    };
+                                    const computeRemainingMinutesFromLabel = () => {
+                                        const parsed = parseTimeLabelRange(timeLabel);
+                                        if (!parsed) return null;
+                                        let endMin = parsed.endMin;
+                                        if (t._parentKey) {
+                                            const parentRec = savedTransfersRef.current.find((s) => s.key === t._parentKey);
+                                            if (parentRec && Array.isArray(parentRec.segments)) {
+                                                const segIdx = findSegmentIndex(parentRec.segments, t.fromId, t.toId);
+                                                let nextAssignedStartMin = null;
+                                                for (let i = segIdx + 1; i < parentRec.segments.length; i++) {
+                                                    const seg = parentRec.segments[i];
+                                                    if (!seg) continue;
+                                                    if (seg.isWalking === true) continue;
+                                                    if (!(seg.busId && seg.boardingRowId && seg.alightingRowId)) continue;
+                                                    if (seg.startTs == null) continue;
+                                                    const startFmt = formatTsLocal(seg.startTs);
+                                                    const startTime = startFmt ? /(\d{2}):(\d{2})$/.exec(startFmt) : null;
+                                                    if (startTime) {
+                                                        nextAssignedStartMin = Number(startTime[1]) * 60 + Number(startTime[2]);
+                                                        break;
+                                                    }
+                                                }
+                                                if (nextAssignedStartMin != null) {
+                                                    endMin = nextAssignedStartMin;
+                                                }
+                                            }
                                         }
-                                    }
-                                }
-
-                                let diff = endMin - parsed.startMin;
-                                if (diff < 0) diff += 24 * 60;
-                                return diff;
-                            };
-
-                            const remainingMinutesFromLabel = computeRemainingMinutesFromLabel();
-
-                            const remainingLabel = (remainingMinutesFromLabel != null)
-                                ? `zvyšný čas na presun: ${remainingMinutesFromLabel} min`
-                                : null;
-    
-                            const stableKey = t._parentKey
-                                ? `${t._parentKey}||${t.fromId || ''}||${t.toId || ''}`
-                                : `solo||${t.key}`;
-                            
-                            return React.createElement(
-                                'li',
-                                {
-                                    key: stableKey,
-                                    onClick: () => {
-                                        logTransferDbDocument(t);
-                                        setTransferActionModal({ transfer: t });
-                                    },
-                                    className: 'relative text-sm text-gray-700 flex flex-col leading-snug rounded-md px-2 py-1.5 cursor-pointer hover:shadow-md transition-shadow' +
-                                        (boxBg ? '' : ' bg-violet-50/40'),
-                                    style: {
-                                        position: 'relative',
-                                        borderLeft: transportColor
-                                            ? `6px solid ${transportColor}`
-                                            : '2px solid #c4b5fd',
-                                        ...(boxBg ? { backgroundColor: boxBg } : {}),
-                                    }
-                                },
-                                (() => {
-                                    const counts = getTeamCountsForTransfer(t.category, t.teamName);
-                                    const totalMembers = counts
-                                        ? counts.players + counts.menRT + counts.womenRT + counts.menDrivers + counts.womenDrivers
+                                        let diff = endMin - parsed.startMin;
+                                        if (diff < 0) diff += 24 * 60;
+                                        return diff;
+                                    };
+                                    const remainingMinutesFromLabel = computeRemainingMinutesFromLabel();
+                                    const remainingLabel = (remainingMinutesFromLabel != null)
+                                        ? `zvyšný čas na presun: ${remainingMinutesFromLabel} min`
                                         : null;
-    
-                                    let valueText = null;
-                                    let displayTitle = null;
-    
-                                    if (totalMembers != null) {
-                                        valueText = `${totalMembers}`;
-                                    } else {
-                                        const avg = getCategoryAverageForTransfer(t.category);
-                                        if (avg != null) {
-                                            valueText = `${avg}`;
-                                            displayTitle = `Priemer členov tímu v kategórii ${t.category} (zaokrúhlené nahor)`;
-                                        }
-                                    }    
-                                    const teamLabel = stripCategoryFromTeamName(t.teamName, t.category) || '(neznámy tím)';
-                                    const fullText = valueText ? `${teamLabel} ● ${valueText} členov` : teamLabel;
+                                    const stableKey = t._parentKey
+                                        ? `${t._parentKey}||${t.fromId || ''}||${t.toId || ''}`
+                                        : `solo||${t.key}`;
                                     return React.createElement(
-                                        'span',
+                                        'li',
                                         {
-                                            className: 'font-semibold',
-                                            style: { color: transportColor || '#5b21b6' },
-                                            title: displayTitle || ''
+                                            key: stableKey,
+                                            onClick: () => {
+                                                logTransferDbDocument(t);
+                                                setTransferActionModal({ transfer: t });
+                                            },
+                                            className: 'relative text-sm text-gray-700 flex flex-col leading-snug rounded-md px-2 py-1.5 cursor-pointer hover:shadow-md transition-shadow' +
+                                                (boxBg ? '' : ' bg-violet-50/40'),
+                                            style: {
+                                                position: 'relative',
+                                                borderLeft: transportColor
+                                                    ? `6px solid ${transportColor}`
+                                                    : '2px solid #c4b5fd',
+                                                ...(boxBg ? { backgroundColor: boxBg } : {}),
+                                            }
                                         },
-                                        fullText
+                                        (() => {
+                                            const counts = getTeamCountsForTransfer(t.category, t.teamName);
+                                            const totalMembers = counts
+                                                ? counts.players + counts.menRT + counts.womenRT + counts.menDrivers + counts.womenDrivers
+                                                : null;
+                                            let valueText = null;
+                                            let displayTitle = null;
+                                            if (totalMembers != null) {
+                                                valueText = `${totalMembers}`;
+                                            } else {
+                                                const avg = getCategoryAverageForTransfer(t.category);
+                                                if (avg != null) {
+                                                    valueText = `${avg}`;
+                                                    displayTitle = `Priemer členov tímu v kategórii ${t.category} (zaokrúhlené nahor)`;
+                                                }
+                                            }
+                                            const teamLabel = stripCategoryFromTeamName(t.teamName, t.category) || '(neznámy tím)';
+                                            const fullText = valueText ? `${teamLabel} ● ${valueText} členov` : teamLabel;
+                                            return React.createElement(
+                                                'span',
+                                                {
+                                                    className: 'font-semibold',
+                                                    style: { color: transportColor || '#5b21b6' },
+                                                    title: displayTitle || ''
+                                                },
+                                                fullText
+                                            );
+                                        })(),
+                                        dateLabel &&
+                                            React.createElement(
+                                                'span',
+                                                { className: 'text-sm text-gray-500' },
+                                                dateLabel
+                                            ),
+                                        timeLabel &&
+                                            React.createElement(
+                                                'span',
+                                                { className: 'text-sm text-gray-600' },
+                                                timeLabel
+                                            ),
+                                        routeLabel &&
+                                            React.createElement(
+                                                'span',
+                                                { className: 'text-sm text-gray-900 font-medium' },
+                                                routeLabel
+                                            ),
+                                        parentInfoLabel &&
+                                            React.createElement(
+                                                'span',
+                                                { className: 'text-sm text-violet-600 italic mt-0.5 inline-flex items-center gap-1' },
+                                                parentInfoLabel
+                                            ),
+                                        remainingLabel &&
+                                            React.createElement(
+                                                'span',
+                                                { className: 'text-xs text-amber-700 font-semibold mt-0.5 inline-flex items-center gap-1' },
+                                                React.createElement('i', { className: 'fa-solid fa-hourglass-half' }),
+                                                remainingLabel
+                                            ),
+                                        t.isWalking === true &&
+                                            React.createElement(
+                                                'span',
+                                                { className: 'text-xs font-semibold text-emerald-700 mt-0.5 inline-flex items-center gap-1' },
+                                                React.createElement('i', { className: 'fa-solid fa-person-walking' }),
+                                                'PEŠI'
+                                            ),
+                                        React.createElement(
+                                            'button',
+                                            {
+                                                type: 'button',
+                                                onClick: (e) => {
+                                                    e.stopPropagation();
+                                                    setDeleteTransferModal({ transfer: t });
+                                                },
+                                                title: 'Odstrániť tento presun',
+                                                className: 'absolute top-1.5 right-1.5 rounded-full w-8 h-8 flex items-center justify-center transition-colors bg-red-600 text-white hover:bg-red-700',
+                                            },
+                                            React.createElement('i', { className: 'fa-solid fa-trash' })
+                                        ),
+                                        (!dateLabel && !timeLabel && !routeLabel) &&
+                                            React.createElement(
+                                                'span',
+                                                { className: 'text-sm text-gray-800' },
+                                                String(t.text || '')
+                                                    .replace(/^Presun z /, '')
+                                                    .replace(/\bubytovania\b/gi, 'ubytovňa')
+                                                    .replace(/\bubytovanie\b/gi, 'ubytovňa')
+                                                    .replace(/\bzastávky\b/gi, 'zastávka')
+                                                    .replace(/\bzastávok\b/gi, 'zastávka')
+                                            )
                                     );
-                                })(),
-                                dateLabel &&
-                                    React.createElement(
-                                        'span',
-                                        { className: 'text-sm text-gray-500' },
-                                        dateLabel
-                                    ),
-                                timeLabel &&
-                                    React.createElement(
-                                        'span',
-                                        { className: 'text-sm text-gray-600' },
-                                        timeLabel
-                                    ),
-                                routeLabel &&
-                                    React.createElement(
-                                        'span',
-                                        { className: 'text-sm text-gray-900 font-medium' },
-                                        routeLabel
-                                    ),
-                                parentInfoLabel &&
-                                    React.createElement(
-                                        'span',
-                                        { className: 'text-sm text-violet-600 italic mt-0.5 inline-flex items-center gap-1' },
-                                        parentInfoLabel
-                                    ),
-                                remainingLabel &&
-                                    React.createElement(
-                                        'span',
-                                        { className: 'text-xs text-amber-700 font-semibold mt-0.5 inline-flex items-center gap-1' },
-                                        React.createElement('i', { className: 'fa-solid fa-hourglass-half' }),
-                                        remainingLabel
-                                    ),
-                                t.isWalking === true &&
-                                    React.createElement(
-                                        'span',
-                                        { className: 'text-xs font-semibold text-emerald-700 mt-0.5 inline-flex items-center gap-1' },
-                                        React.createElement('i', { className: 'fa-solid fa-person-walking' }),
-                                        'PEŠI'
-                                    ),
-                                React.createElement(
-                                    'button',
-                                    {
-                                        type: 'button',
-                                        onClick: (e) => {
-                                            e.stopPropagation();
-                                            setDeleteTransferModal({ transfer: t });
-                                        },
-                                        title: 'Odstrániť tento presun',
-                                        className: 'absolute top-1.5 right-1.5 rounded-full w-8 h-8 flex items-center justify-center transition-colors bg-red-600 text-white hover:bg-red-700',
-                                    },
-                                    React.createElement('i', { className: 'fa-solid fa-trash' })
-                                ),
-                                (!dateLabel && !timeLabel && !routeLabel) &&
-                                    React.createElement(
-                                        'span',
-                                        { className: 'text-sm text-gray-800' },
-                                        String(t.text || '')
-                                            .replace(/^Presun z /, '')
-                                            .replace(/\bubytovania\b/gi, 'ubytovňa')
-                                            .replace(/\bubytovanie\b/gi, 'ubytovňa')
-                                            .replace(/\bzastávky\b/gi, 'zastávka')
-                                            .replace(/\bzastávok\b/gi, 'zastávka')
-                                    ),
-                            );
-                        })
+                                })
+                        )
                     )
-                )
-        );
+            );
+        };
     };
 
     const getTeamEventsForCustomTransfer = (category, teamName) => {
