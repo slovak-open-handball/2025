@@ -15302,6 +15302,17 @@ const TransportApp = ({ userProfileData }) => {
                                                                     return { total: 0, teams: [] };
                                                                 }
                                                             
+                                                                // NOVÉ: Zisti, či je tento riadok práve vybraný v modálnom okne.
+                                                                // Ak áno, priraďovaný tím sa ešte nenachádza v savedTransfers,
+                                                                // preto ho musíme do výpočtu pridať manuálne.
+                                                                const selectedKeyForThisMatch = `${m.bus.id}|${m.boardingRow?.id || ''}|${m.alightingRow?.id || ''}|${m.side}`;
+                                                                const isThisMatchSelected = assignBusSelectedKey === selectedKeyForThisMatch;
+                                                            
+                                                                const currentTransferCategory = cleanCategory(currentTransfer.category || '');
+                                                                const currentTransferTeamName = String(currentTransfer.teamName || '').trim();
+                                                                const currentTransferKeyStr = `${currentTransferTeamName}|${currentTransferCategory}`;
+                                                                const currentTransferMembers = getTeamMembersCount(currentTransferKeyStr);
+                                                            
                                                                 // Zoznam všetkých busRows pre daný bus a deň, zoradený podľa order
                                                                 const rowsKey = `${busId}|${dayKey}`;
                                                                 const rowsForBus = (busRows[rowsKey] || [])
@@ -15362,6 +15373,12 @@ const TransportApp = ({ userProfileData }) => {
                                                                             }
                                                                         });
                                                                     });
+                                                            
+                                                                    // NOVÉ: Ak je tento match práve vybraný, pridaj do výpočtu aj priraďovaný tím.
+                                                                    // Tím sa totiž ešte nenachádza v savedTransfers (priradí sa až po kliknutí na "Priradiť").
+                                                                    if (isThisMatchSelected && currentTransferTeamName) {
+                                                                        teamsAtThisStop.add(currentTransferKeyStr);
+                                                                    }
                                                             
                                                                     const totalAtThisStop = [...teamsAtThisStop].reduce(
                                                                         (sum, tk) => sum + getTeamMembersCount(tk),
