@@ -1790,7 +1790,89 @@ const TransportApp = ({ userProfileData }) => {
                                     current.type === 'match' &&
                                     /\b(WSF|LSF|WQF|W8F|W16F)\d*/i.test(String(teamName));
 
-                                if (isPavukMatchEvent) {
+                                // NOVÉ: Zisti, či je tento pavúkový zápas "nadväzujúci" – t.j.
+                                // tím už odohral v ten istý deň skôr iný pavúkový zápas, alebo
+                                // je miesto poslednej udalosti skupiny (kde tím hral) rovnaké
+                                // ako miesto aktuálneho zápasu.
+                                //
+                                // V takom prípade sa NESMIE generovať ani ranný presun
+                                // z miesta zrazu (tím už je na mieste).
+                                const isPavukFollowUpMatchSamePlace = (() => {
+                                    if (!isPavukMatchEvent) return false;
+                                    if (!currentDay) return false;
+                                    if (!current.location) return false;
+
+                                    const currentStartTs =
+                                        current.startTs ?? current.ts ?? Number.POSITIVE_INFINITY;
+
+                                    // (a) Existuje skôr iný pavúkový zápas tímu v ten istý deň?
+                                    const hasEarlierPavukMatchSameDay = events.some((ev) => {
+                                        if (ev === current) return false;
+                                        if (ev.type !== 'match') return false;
+                                        const evDay = extractDayKeyFromWhen(ev.when);
+                                        if (evDay !== currentDay) return false;
+                                        const evTs =
+                                            ev.startTs ?? ev.ts ?? Number.POSITIVE_INFINITY;
+                                        return evTs < currentStartTs;
+                                    });
+                                    if (hasEarlierPavukMatchSameDay) return true;
+
+                                    // (b) Je miesto poslednej udalosti v ten istý deň (match alebo
+                                    // catering kohokoľvek v kategórii) rovnaké ako current.location?
+                                    let lastPlaceForCategoryOnDay = null;
+                                    let lastPlaceEndTs = -Infinity;
+
+                                    matchesBufferRef.current.forEach((m) => {
+                                        if (cleanCategory(m.category) !== cleanCategory(category)) return;
+                                        let dk = null;
+                                        if (m.scheduledTime) {
+                                            const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                            if (mm) {
+                                                dk = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
+                                            }
+                                        }
+                                        if (!dk && m.scheduledTs != null) {
+                                            const dt = new Date(m.scheduledTs);
+                                            dk = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                        }
+                                        if (dk !== currentDay) return;
+                                        if (!m.hallName) return;
+                                        const endTs = m.scheduledEndTs != null
+                                            ? m.scheduledEndTs
+                                            : (m.scheduledTs != null ? m.scheduledTs : null);
+                                        if (endTs == null) return;
+                                        if (endTs > lastPlaceEndTs) {
+                                            lastPlaceEndTs = endTs;
+                                            lastPlaceForCategoryOnDay = m.hallName;
+                                        }
+                                    });
+
+                                    cateringBufferRef.current.forEach((c) => {
+                                        if (cleanCategory(c.category) !== cleanCategory(category)) return;
+                                        if (c.dayKey !== currentDay) return;
+                                        if (!c.placeName) return;
+                                        const endTs = c.slotToTs != null ? c.slotToTs : c.ts;
+                                        if (endTs == null) return;
+                                        if (endTs > lastPlaceEndTs) {
+                                            lastPlaceEndTs = endTs;
+                                            lastPlaceForCategoryOnDay = c.placeName;
+                                        }
+                                    });
+
+                                    if (
+                                        lastPlaceForCategoryOnDay &&
+                                        isSamePlaceForTransfer(lastPlaceForCategoryOnDay, current.location)
+                                    ) {
+                                        return true;
+                                    }
+
+                                    return false;
+                                })();
+
+                                if (isPavukMatchEvent && isPavukFollowUpMatchSamePlace) {
+                                    // skip – nadväzujúci pavúkový zápas na tom istom mieste
+                                    // nemá ranný presun z miesta zrazu
+                                } else if (isPavukMatchEvent) {
                                     // skip – pavúkový zápas nemá ranný presun z miesta zrazu
                                 } else if (anySuperstructureTeamHasEventToday) {
                                     // Ak v tento deň hrá superstructure tím:
@@ -1926,10 +2008,112 @@ const TransportApp = ({ userProfileData }) => {
                                     }
                                 }
                             } else {
+                                } else {
                                 // ============ VETVA PRE SUPERSTRUCTURE TÍM ============
                                 // NOVÉ: Ak v tento deň má udalosť aspoň jeden users tím, negeneruj ranné presuny pre SS tím
                                 if (anyUsersTeamHasEventToday) {
                                     // skip – pravidlo: ak hrá users tím, SS tím nemá ranné presuny
+                                } else if (!isFirstPavukMatchOfDay) {
+                                    // NOVÉ: Ak ide o pavúkový tím a má v ten deň skôr iný pavúkový zápas,
+                                    // negeneruj ranné presuny (ani z miesta zrazu).
+                                    // Tím už je na mieste z predchádzajúceho zápasu.
+                                } else if (isGlobalFirstDay) {
+*/
+
+// NOVÝ KÓD (nahradiť vyššie uvedené):
+
+                            } else {
+                                // ============ VETVA PRE SUPERSTRUCTURE TÍM ============
+                                // NOVÉ: Zisti, či je aktuálna udalosť pavúkový zápas
+                                const isPavukMatchEventForSS =
+                                    current.type === 'match' &&
+                                    /\b(WSF|LSF|WQF|W8F|W16F)\d*/i.test(String(teamName));
+
+                                // NOVÉ: Zisti, či je tento pavúkový zápas "nadväzujúci" – t.j.
+                                // tím už odohral v ten istý deň skôr iný pavúkový zápas, alebo
+                                // je miesto poslednej udalosti v kategórii v ten istý deň rovnaké
+                                // ako miesto aktuálneho zápasu.
+                                //
+                                // V takom prípade sa NESMIE generovať ani ranný presun
+                                // z miesta zrazu (tím už je na mieste).
+                                const isPavukFollowUpMatchSamePlaceForSS = (() => {
+                                    if (!isPavukMatchEventForSS) return false;
+                                    if (!currentDay) return false;
+                                    if (!current.location) return false;
+
+                                    const currentStartTs =
+                                        current.startTs ?? current.ts ?? Number.POSITIVE_INFINITY;
+
+                                    // (a) Existuje skôr iný pavúkový zápas tímu v ten istý deň?
+                                    const hasEarlierPavukMatchSameDay = events.some((ev) => {
+                                        if (ev === current) return false;
+                                        if (ev.type !== 'match') return false;
+                                        const evDay = extractDayKeyFromWhen(ev.when);
+                                        if (evDay !== currentDay) return false;
+                                        const evTs =
+                                            ev.startTs ?? ev.ts ?? Number.POSITIVE_INFINITY;
+                                        return evTs < currentStartTs;
+                                    });
+                                    if (hasEarlierPavukMatchSameDay) return true;
+
+                                    // (b) Je miesto poslednej udalosti v ten istý deň (match alebo
+                                    // catering kohokoľvek v kategórii) rovnaké ako current.location?
+                                    let lastPlaceForCategoryOnDay = null;
+                                    let lastPlaceEndTs = -Infinity;
+
+                                    matchesBufferRef.current.forEach((m) => {
+                                        if (cleanCategory(m.category) !== cleanCategory(category)) return;
+                                        let dk = null;
+                                        if (m.scheduledTime) {
+                                            const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                            if (mm) {
+                                                dk = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
+                                            }
+                                        }
+                                        if (!dk && m.scheduledTs != null) {
+                                            const dt = new Date(m.scheduledTs);
+                                            dk = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                        }
+                                        if (dk !== currentDay) return;
+                                        if (!m.hallName) return;
+                                        const endTs = m.scheduledEndTs != null
+                                            ? m.scheduledEndTs
+                                            : (m.scheduledTs != null ? m.scheduledTs : null);
+                                        if (endTs == null) return;
+                                        if (endTs > lastPlaceEndTs) {
+                                            lastPlaceEndTs = endTs;
+                                            lastPlaceForCategoryOnDay = m.hallName;
+                                        }
+                                    });
+
+                                    cateringBufferRef.current.forEach((c) => {
+                                        if (cleanCategory(c.category) !== cleanCategory(category)) return;
+                                        if (c.dayKey !== currentDay) return;
+                                        if (!c.placeName) return;
+                                        const endTs = c.slotToTs != null ? c.slotToTs : c.ts;
+                                        if (endTs == null) return;
+                                        if (endTs > lastPlaceEndTs) {
+                                            lastPlaceEndTs = endTs;
+                                            lastPlaceForCategoryOnDay = c.placeName;
+                                        }
+                                    });
+
+                                    if (
+                                        lastPlaceForCategoryOnDay &&
+                                        isSamePlaceForTransfer(lastPlaceForCategoryOnDay, current.location)
+                                    ) {
+                                        return true;
+                                    }
+
+                                    return false;
+                                })();
+
+                                // NOVÉ: Ak v tento deň má udalosť aspoň jeden users tím, negeneruj ranné presuny pre SS tím
+                                if (anyUsersTeamHasEventToday) {
+                                    // skip – pravidlo: ak hrá users tím, SS tím nemá ranné presuny
+                                } else if (isPavukMatchEventForSS && isPavukFollowUpMatchSamePlaceForSS) {
+                                    // skip – nadväzujúci pavúkový zápas na tom istom mieste
+                                    // nemá ranný presun z miesta zrazu
                                 } else if (!isFirstPavukMatchOfDay) {
                                     // NOVÉ: Ak ide o pavúkový tím a má v ten deň skôr iný pavúkový zápas,
                                     // negeneruj ranné presuny (ani z miesta zrazu).
