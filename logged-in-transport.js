@@ -273,28 +273,13 @@ const TransportApp = ({ userProfileData }) => {
     
         const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.id === id);
         if (fromAllPlaces) {
-            console.log('[TRANSPORT][resolvePlaceNameById] Fallback cez allPlacesRef:', {
-                placeId: id,
-                name: fromAllPlaces.name,
-            });
             return fromAllPlaces.name;
         }
     
         const fromStops = (stopsList || []).find((s) => s.id === id);
         if (fromStops) {
-            console.log('[TRANSPORT][resolvePlaceNameById] Fallback cez stopsList:', {
-                placeId: id,
-                name: fromStops.name,
-            });
             return fromStops.name;
         }
-    
-        console.warn('[TRANSPORT][resolvePlaceNameById] Nenájdený názov pre placeId:', {
-            placeId: id,
-            availableIds: Object.keys(placesMapRef.current || {}),
-            allPlacesCount: (allPlacesRef.current || []).length,
-            stopsListCount: (stopsList || []).length,
-        });
         return id;
     }
 
@@ -305,12 +290,6 @@ const TransportApp = ({ userProfileData }) => {
     
         const directById = (allPlacesRef.current || []).find((p) => p.id === raw);
         if (directById) {
-            console.log('[TRANSPORT][resolvePlaceIdByName] Vstup je už ID, vraciam priamo:', {
-                input: raw,
-                id: directById.id,
-                name: directById.name,
-                type: directById.type,
-            });
             return directById.id;
         }
     
@@ -370,7 +349,6 @@ const TransportApp = ({ userProfileData }) => {
 
     const logTransferDbDocument = async (transfer) => {
         if (!window.db || !transfer) {
-            console.warn('[TRANSPORT] logTransferDbDocument: chýba window.db alebo transfer');
             return;
         }
 
@@ -385,7 +363,6 @@ const TransportApp = ({ userProfileData }) => {
             const snap = await getDoc(docRef);
 
             if (!snap.exists()) {
-                console.warn('[TRANSPORT][DB-DOC] Dokument v DB neexistuje:', `${collectionPath}/${docPath}`);
                 return;
             }
 
@@ -394,12 +371,6 @@ const TransportApp = ({ userProfileData }) => {
             const dbRecord = rawTransfers[parentKey] || null;
 
             if (!dbRecord) {
-                console.warn(
-                    '[TRANSPORT][DB-DOC] Záznam pre kľúč neexistuje v DB:',
-                    parentKey,
-                    '\nDostupné kľúče:',
-                    Object.keys(rawTransfers)
-                );
                 return;
             }
         } catch (err) {
@@ -742,7 +713,6 @@ const TransportApp = ({ userProfileData }) => {
                 const result = await window.listAccommodationsByCategoryAndGroup(cat, grp);
                 window.__transport_accommodationsByGroup[key] = Array.isArray(result) ? result : [];
             } catch (err) {
-                console.error(`[TRANSPORT] Chyba pri prednačítaní ubytovní pre ${key}:`, err);
                 window.__transport_accommodationsByGroup[key] = [];
             }
         }    
@@ -875,7 +845,6 @@ const TransportApp = ({ userProfileData }) => {
         }
 
         if (!found) {
-            console.warn(`[TRANSPORT] Tím ${targetTeam} sa nenašiel v časovej osi.`);
             return;
         }
 
@@ -1207,7 +1176,6 @@ const TransportApp = ({ userProfileData }) => {
         );
     
         if (categories.length === 0) {
-            console.log('[TRANSPORT] Žiadne udalosti.');
         } else {
             const ssPlayDatesByTeam = {};
             const ssGroupCharByTeam = {};
@@ -1974,10 +1942,6 @@ const TransportApp = ({ userProfileData }) => {
                                             });
                                     }
                                 } else {
-                                    console.log(
-                                        '%c[TRANSPORT][FALLBACK-ACCOM] ' + teamName + ' @ ' + currentDay + ' → groupHasAnyEventOnCurrentDay=false, generujem ranné presuny z ubytovní',
-                                        'color:#dc2626;font-weight:bold;'
-                                    );
                                     if (!destinationEvent || !destinationEvent.location) {
                                     } else {
                                         const destination = destinationEvent.location;
@@ -2788,18 +2752,8 @@ const TransportApp = ({ userProfileData }) => {
                                 : foundTeamIdentifiers;
 
                             if (isSuperstructureTeamForDb) {
-                                console.log(
-                                    '%c[TRANSPORT][SUPERSTRUCTURE] Ukladám presuny pre superstructure tím:',
-                                    'color:#7c3aed;font-weight:bold;',
-                                    teamName, 'v kategórii', category,
-                                    '(teamUid=null, teamIndex=null, teamName=' + teamName + ')'
-                                );
                             } else {
                                 if (effectiveTeamIdentifiers.teamUid == null || effectiveTeamIdentifiers.teamIndex == null) {
-                                    console.warn(
-                                        '[TRANSPORT] Tím z users nemá platný teamUid/teamIndex – presuny sa neukladajú:',
-                                        { category, teamName }
-                                    );
                                     return;
                                 }
                             }
@@ -2929,11 +2883,6 @@ const TransportApp = ({ userProfileData }) => {
                                             }
                                         }
                                         draft.segments = newSegments;
-                                        console.log(
-                                            '%c[TRANSPORT][DOGENEROVANIE] Dogenerované chýbajúce segmenty pre parent:',
-                                            'color:#059669;font-weight:bold;',
-                                            { parentKey: key, missingSegments, allSegments: newSegments.map((s) => `${s.fromId}→${s.toId}`) }
-                                        );
                                     }
                                 }
                                 
@@ -3008,12 +2957,10 @@ const TransportApp = ({ userProfileData }) => {
                                     { [TRANSPORT_TRANSFERS_FIELD]: transfersPatch },
                                     { merge: true }
                                 ).catch((err) => {
-                                    console.error('[TRANSPORT] Chyba pri ukladaní presunov do DB:', err);
                                 });
                             }
                         }
                     } catch (e) {
-                        console.error('[TRANSPORT] Chyba pri príprave presunov na uloženie:', e);
                     }
     
                     const timelineLines = renderTeamTimeline(category, teamName, enriched, {
@@ -3063,16 +3010,9 @@ const TransportApp = ({ userProfileData }) => {
                     map[docSnap.id] = data.name || '(bez názvu)';
                 });
                 placesMapRef.current = map;
-        
-                console.log('[TRANSPORT][places-map] Načítaná mapa placeId → názov:', {
-                    count: Object.keys(map).length,
-                    map,
-                });
             }, (err) => {
-                console.error('[TRANSPORT] onSnapshot(places) error:', err);
             });
         } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na places:', e);
         }
 
         try {
@@ -3100,34 +3040,15 @@ const TransportApp = ({ userProfileData }) => {
                 list.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
                 setAllPlaces(list);
                 allPlacesRef.current = list;
-                setPlacesLoaded(true);
-        
-                const stopsOnly = list.filter((p) => p.type === 'zastavka');
-                console.log('[TRANSPORT][places-all] Načítané všetky miesta:', {
-                    total: list.length,
-                    stopsCount: stopsOnly.length,
-                    stops: stopsOnly.map((s) => ({
-                        id: s.id,
-                        name: s.name,
-                        isExternalArrivalStop: s.isExternalArrivalStop,
-                        isMeetingPointStop: s.isMeetingPointStop,
-                    })),
-                    types: list.reduce((acc, p) => {
-                        acc[p.type] = (acc[p.type] || 0) + 1;
-                        return acc;
-                    }, {}),
-                });
-        
+                setPlacesLoaded(true);        
+                const stopsOnly = list.filter((p) => p.type === 'zastavka');        
                 if (matchesLoadedRef.current && cateringLoadedRef.current && teamsLoadedRef.current) {
                     rebuildAndLogTimeline();
                 }
             }, (err) => {
-                console.error('[TRANSPORT] onSnapshot(places) pre záložku Nastavenia error:', err);
             });
         } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na places (Nastavenia):', e);
         }
-
         let unsubscribeTravelTimes = null;
         try {
             const ttRef = doc(window.db, 'settings', 'transportTravelTimes');
@@ -3220,10 +3141,8 @@ const TransportApp = ({ userProfileData }) => {
                 setTravelTimesLoaded(true);
                 travelTimesLoadedRef.current = true;
             }, (err) => {
-                console.error('[TRANSPORT] onSnapshot(settings/transportTravelTimes) error:', err);
             });
         } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transportTravelTimes:', e);
         }
 
         let unsubscribeBuses = null;
@@ -3278,10 +3197,8 @@ const TransportApp = ({ userProfileData }) => {
                 setBuses(busesList);
                 setBusRows(rowsGrouped);
             }, (err) => {
-                console.error('[TRANSPORT] onSnapshot(transport) error:', err);
             });
         } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport:', e);
         }
 
         let unsubscribeTeamShortcuts = null;
@@ -3323,10 +3240,8 @@ const TransportApp = ({ userProfileData }) => {
                 setTeamShortcuts(map);
                 setTeamShortcutsLoaded(true);
             }, (err) => {
-                console.error('[TRANSPORT] onSnapshot(transport – teamShortcuts) error:', err);
             });
         } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport (teamShortcuts):', e);
         }
 
         let unsubscribeWalkingAssignments = null;
@@ -3362,12 +3277,10 @@ const TransportApp = ({ userProfileData }) => {
                 setWalkingRulesLoaded(true);
                 setWalkingSettingsLoaded(true);
             }, (err) => {
-                console.error('[TRANSPORT] onSnapshot(transport – walkingRules) error:', err);
                 setWalkingRulesLoaded(true);
                 setWalkingSettingsLoaded(true);
             });
         } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na transport (walkingRules):', e);
             setWalkingRulesLoaded(true);
             setWalkingSettingsLoaded(true);
         }
@@ -3386,10 +3299,8 @@ const TransportApp = ({ userProfileData }) => {
                 window.__transport_unitMinutes = (!isNaN(parsed) && parsed > 0) ? parsed : null;
                 if (cateringLoadedRef.current) rebuildAndLogTimeline();
             }, (err) => {
-                console.error('[TRANSPORT] onSnapshot(settings/catering) error:', err);
             });
         } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na settings/catering:', e);
         }
 
         let unsubscribeSuperstructureGroups = null;
@@ -3399,7 +3310,6 @@ const TransportApp = ({ userProfileData }) => {
                 const map = {};
                 if (snap.exists()) {
                     const data = snap.data() || {};
-                    console.log('[TRANSPORT][SSG-RAW] Raw data zo settings/superstructureGroups:', data);
                     Object.entries(data).forEach(([categoryName, teamArray]) => {
                         if (!Array.isArray(teamArray)) return;
                         teamArray.forEach((team) => {
@@ -3413,20 +3323,16 @@ const TransportApp = ({ userProfileData }) => {
                         });
                     });
                 } else {
-                    console.warn('[TRANSPORT][SSG-RAW] Dokument settings/superstructureGroups NEEXISTUJE!');
                 }
                 superstructureGroupsRef.current = map;
-                console.log('[TRANSPORT][SSG-MAP] Vytvorená mapa:', 
                     Object.fromEntries(Object.entries(map).map(([k, v]) => [k, [...v]]))
                 );
                 if (matchesLoadedRef.current && cateringLoadedRef.current && teamsLoadedRef.current) {
                     rebuildAndLogTimeline();
                 }
             }, (err) => {
-                console.error('[TRANSPORT] onSnapshot(settings/superstructureGroups) error:', err);
             });
         } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na superstructureGroups:', e);
         }
 
         try {
@@ -3464,10 +3370,8 @@ const TransportApp = ({ userProfileData }) => {
                 setTransportColors(colorMap);
                 if (matchesLoadedRef.current) rebuildAndLogTimeline();
             }, (err) => {
-                console.error('[TRANSPORT] onSnapshot(settings/categories) error:', err);
             });
         } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na settings/categories:', e);
         }
 
         const loadTeamsLookup = async () => {
@@ -3530,7 +3434,6 @@ const TransportApp = ({ userProfileData }) => {
                     setTeamShortcuts(map);
                     setTeamShortcutsLoaded(true);
                 } catch (err) {
-                    console.error('[TRANSPORT] Chyba pri načítaní skratiek tímov po lookupe:', err);
                 }
         
                 setSavedTransfers((prev) => {
@@ -3550,7 +3453,6 @@ const TransportApp = ({ userProfileData }) => {
                     rebuildAndLogTimeline();
                 }
             } catch (err) {
-                console.error('[TRANSPORT] Chyba pri načítaní lookup tímov:', err);
             }
         };
         
@@ -3585,10 +3487,8 @@ const TransportApp = ({ userProfileData }) => {
                 });
                 setTeamCounts(map);
             }, (err) => {
-                console.error('[TRANSPORT] onSnapshot(users – team counts) error:', err);
             });
         } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na users (team counts):', e);
         }
 
         try {
@@ -3647,10 +3547,8 @@ const TransportApp = ({ userProfileData }) => {
                 setTournamentDays(days);
                 setTournamentDaysLoaded(true);
             }, (err) => {
-                console.error('[TRANSPORT] onSnapshot(settings/registration) error:', err);
             });
         } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na settings/registration:', e);
         }
 
         const loadTeamsWithAccommodation = async () => {
@@ -3836,7 +3734,6 @@ const TransportApp = ({ userProfileData }) => {
                 });
 
             } catch (err) {
-                console.error('[TRANSPORT] Chyba pri načítaní tímov s ubytovaním:', err);
             }
         };
 
@@ -3918,10 +3815,8 @@ const TransportApp = ({ userProfileData }) => {
             unsubscribeMatches = onSnapshot(matchesRef, (snapshot) => {
                 buildMatchesBuffer(snapshot);
             }, (err) => {
-                console.error('[TRANSPORT] onSnapshot(matches) error:', err);
             });
         } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na matches:', e);
         }
 
         const getRowTeamName = (a) => {
@@ -4007,10 +3902,8 @@ const TransportApp = ({ userProfileData }) => {
             unsubscribeCatering = onSnapshot(cateringRef, (snapshot) => {
                 buildCateringBuffer(snapshot);
             }, (err) => {
-                console.error('[TRANSPORT] onSnapshot(catering) error:', err);
             });
         } catch (e) {
-            console.error('[TRANSPORT] Nepodarilo sa nastaviť listener na catering:', e);
         }
 
         return () => {
@@ -4049,16 +3942,6 @@ const TransportApp = ({ userProfileData }) => {
         const stops = [...allPlaces]
             .filter((p) => p && p.name && (typeof p.lat === 'number') && (typeof p.lng === 'number'))
             .sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
-
-        console.log('[TRANSPORT][stopsList] Načítané miesta (všetky typy):', {
-            allPlacesCount: allPlaces.length,
-            stopsCount: stops.length,
-            stops: stops.map(s => ({ id: s.id, name: s.name, type: s.type })),
-            types: allPlaces.reduce((acc, p) => {
-                acc[p.type] = (acc[p.type] || 0) + 1;
-                return acc;
-            }, {}),
-        });
 
         setStopsList(stops);
     }, [allPlaces]);
@@ -4245,7 +4128,6 @@ const TransportApp = ({ userProfileData }) => {
             });
             window.showGlobalNotification('Riadok pridaný.', 'success');
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri pridávaní riadku:', err);
             window.showGlobalNotification('Nepodarilo sa pridať riadok.', 'error');
         }
     };
@@ -4449,13 +4331,11 @@ const TransportApp = ({ userProfileData }) => {
                         }
                     }
                 } catch (e) {
-                    console.error('[TRANSPORT] Chyba pri posune indexov riadkov v presunoch:', e);
                 }
             }
     
             window.showGlobalNotification('Riadok vložený medzi existujúce riadky.', 'success');
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri vkladaní riadku medzi riadky:', err);
             window.showGlobalNotification('Nepodarilo sa vložiť riadok.', 'error');
         }
     };
@@ -4508,7 +4388,6 @@ const TransportApp = ({ userProfileData }) => {
                 });
                 allRows.sort((a, b) => (a.order || 0) - (b.order || 0));
             } catch (err) {
-                console.error('[TRANSPORT] Chyba pri načítaní busRows z Firestore v sync:', err);
                 return;
             }
         }
@@ -4575,7 +4454,6 @@ const TransportApp = ({ userProfileData }) => {
             try {
                 recomputeParentSegmentsInPlace(parentDraft);
             } catch (e) {
-                console.error('[TRANSPORT] Chyba pri recompute v sync:', e);
             }
 
             const effectiveParentRange = computeEffectiveParentRange(parentDraft);
@@ -4773,7 +4651,6 @@ const TransportApp = ({ userProfileData }) => {
                         });
                     });
                 } catch (err) {
-                    console.error('[TRANSPORT] Chyba pri odstraňovaní segmentu z busu (sync):', err);
                 }
             }
         }
@@ -4795,7 +4672,6 @@ const TransportApp = ({ userProfileData }) => {
         try {
             await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri synchronizácii segmentov s busom:', err);
             return;
         }
     
@@ -4813,7 +4689,6 @@ const TransportApp = ({ userProfileData }) => {
             try {
                 recomputeParentSegmentsInPlace(draft);
             } catch (e) {
-                console.error('[TRANSPORT] Chyba pri recomputeParentSegmentsInPlace v sync:', e);
                 draft.when = parent.when;
             }
             return draft;
@@ -4846,17 +4721,12 @@ const TransportApp = ({ userProfileData }) => {
             .slice()
             .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-        // ===== NOVÉ LOGOVANIE: vypíš presuny v riadkoch pod zmeneným riadkom =====
         try {
             const changedRow = allRows.find((r) => r.id === changedRowId) || null;
             const changedOrder = changedRow ? parseOrderFromRowId(changedRow.rowId) : null;
             const bus = (buses || []).find((b) => b.id === busId) || null;
 
             if (changedOrder == null) {
-                console.warn(
-                    '[TRANSPORT][SYNC-ROWS] Nepodarilo sa zistiť order zmeneného riadku (rowId):',
-                    changedRow ? changedRow.rowId : null
-                );
             } else {
                 const rowsBelow = allRows.filter((r) => {
                     const o = parseOrderFromRowId(r.rowId);
@@ -4930,11 +4800,8 @@ const TransportApp = ({ userProfileData }) => {
                 });
             }
         } catch (logErr) {
-            console.warn('[TRANSPORT][SYNC-ROWS] Chyba pri logovaní presunov pod zmeneným riadkom:', logErr);
         }
-        // ===== KONIEC NOVÉHO LOGOVANIA =====
 
-        // Vyber riadky, ktoré majú priradené tímy, plus zmenený riadok
         const targetRowIds = new Set();
         allRows.forEach((r) => {
             if (!r || !r.id) return;
@@ -4989,7 +4856,6 @@ const TransportApp = ({ userProfileData }) => {
                         const endH = Math.floor(total / 60);
                         const endM = total % 60;
                         const newTimeTo = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-                        console.log('[TRANSPORT][updateBusRowField] Nový timeTo =', newTimeTo);
                         if (newTimeTo !== (currentRow.timeTo || '')) {
                             patch.timeTo = newTimeTo;
                         }
@@ -5019,7 +4885,6 @@ const TransportApp = ({ userProfileData }) => {
                         await syncAllAffectedRowsForBus(busIdForSync, dayKeyForSync, rowId, overrides);
                     }
                 } catch (e) {
-                    console.error('[TRANSPORT] Chyba pri sync po zmene place:', e);
                 }
 
                 return;
@@ -5063,10 +4928,8 @@ const TransportApp = ({ userProfileData }) => {
                     await syncAllAffectedRowsForBus(busIdForSync, dayKeyForSync, rowId, overrides);
                 }
             } catch (e) {
-                console.error('[TRANSPORT] Chyba pri sync po zmene času:', e);
             }
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri aktualizácii riadku:', err);
             window.showGlobalNotification('Nepodarilo sa uložiť zmenu.', 'error');
         }
     };
@@ -5133,7 +4996,6 @@ const TransportApp = ({ userProfileData }) => {
                 });
                 await Promise.all(syncPromises);
             } catch (e) {
-                console.error('[TRANSPORT] Chyba pri sync segmentov po posune:', e);
             }
 
             window.showGlobalNotification(
@@ -5141,7 +5003,6 @@ const TransportApp = ({ userProfileData }) => {
                 'info'
             );
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri posune nasledujúcich riadkov:', err);
             window.showGlobalNotification('Nepodarilo sa posunúť nasledujúce riadky.', 'error');
         }
     };
@@ -5278,7 +5139,6 @@ const TransportApp = ({ userProfileData }) => {
                 });
                 await Promise.all(syncPromises);
             } catch (e) {
-                console.error('[TRANSPORT] Chyba pri sync segmentov po resync placeTo:', e);
             }
 
             window.showGlobalNotification(
@@ -5286,7 +5146,6 @@ const TransportApp = ({ userProfileData }) => {
                 'info'
             );
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri zosúlaďovaní nasledujúcich riadkov:', err);
             window.showGlobalNotification('Nepodarilo sa zosúladiť nasledujúce riadky.', 'error');
         }
     };
@@ -5401,7 +5260,6 @@ const TransportApp = ({ userProfileData }) => {
                 });
                 await Promise.all(syncPromises);
             } catch (e) {
-                console.error('[TRANSPORT] Chyba pri sync segmentov po cascade:', e);
             }
 
             window.showGlobalNotification(
@@ -5409,7 +5267,6 @@ const TransportApp = ({ userProfileData }) => {
                 'info'
             );
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri zosúlaďovaní nasledujúcich riadkov:', err);
             window.showGlobalNotification('Nepodarilo sa zosúladiť nasledujúce riadky.', 'error');
         }
     };
@@ -5495,7 +5352,6 @@ const TransportApp = ({ userProfileData }) => {
                 });
                 await Promise.all(syncPromises);
             } catch (e) {
-                console.error('[TRANSPORT] Chyba pri sync segmentov po posune (inverted):', e);
             }
 
             window.showGlobalNotification(
@@ -5503,7 +5359,6 @@ const TransportApp = ({ userProfileData }) => {
                 'info'
             );
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri posune riadkov po obrátenom červenom riadku:', err);
             window.showGlobalNotification('Nepodarilo sa posunúť nasledujúce riadky.', 'error');
         }
     };
@@ -5525,7 +5380,6 @@ const TransportApp = ({ userProfileData }) => {
                 await deleteDoc(doc(window.db, 'transport', rowId));
                 window.showGlobalNotification('Riadok odstránený.', 'info');
             } catch (err) {
-                console.error('[TRANSPORT] Chyba pri odstraňovaní riadku (bez busId/dayKey):', err, err?.stack);
                 window.showGlobalNotification('Nepodarilo sa odstrániť riadok: ' + (err?.message || err), 'error');
             }
             return;
@@ -5579,7 +5433,6 @@ const TransportApp = ({ userProfileData }) => {
                             });
                         });
                     } catch (e) {
-                        console.error('[TRANSPORT] Chyba pri odpájaní tímu z odstraňovaného riadku:', e);
                     }
                 }
             }
@@ -5811,7 +5664,6 @@ const TransportApp = ({ userProfileData }) => {
     
             window.showGlobalNotification('Riadok odstránený.', 'info');
         } catch (err) {
-            console.error(`[TRANSPORT] Chyba pri odstraňovaní riadku (fáza: ${stage}):`, err, err?.stack);
             window.showGlobalNotification(`Nepodarilo sa odstrániť riadok (${stage}): ` + (err?.message || err), 'error');
         }
     };
@@ -6215,7 +6067,6 @@ const TransportApp = ({ userProfileData }) => {
     
                 window.showGlobalNotification('Tím bol odstránený z autobusu.', 'info');
             } catch (err) {
-                console.error('[TRANSPORT] Chyba pri odstraňovaní tímu z busu:', err);
                 window.showGlobalNotification('Nepodarilo sa odstrániť tím z busu.', 'error');
             }
         };
@@ -6632,7 +6483,6 @@ const TransportApp = ({ userProfileData }) => {
     
             window.showGlobalNotification(`Pridaný Bus ${nextNumber}.`, 'success');
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri pridávaní autobusu:', err);
             window.showGlobalNotification('Nepodarilo sa pridať autobus.', 'error');
         } finally {
             setBusSaving(false);
@@ -6673,14 +6523,12 @@ const TransportApp = ({ userProfileData }) => {
                         });
                     });
                 } catch (e) {
-                    console.error('[TRANSPORT] Chyba pri odpájaní tímu z odstraňovaného busu:', e);
                 }
             }
 
             await deleteDoc(doc(window.db, 'transport', bus.id));
             window.showGlobalNotification(`${bus.name} bol odstránený.`, 'info');
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri odstraňovaní autobusu:', err);
             window.showGlobalNotification('Nepodarilo sa odstrániť autobus.', 'error');
         }
     };
@@ -6779,7 +6627,6 @@ const TransportApp = ({ userProfileData }) => {
                 'success'
             );
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri mazaní presunov:', err);
             window.showGlobalNotification('Nepodarilo sa zmazať presuny.', 'error');
         }
     };
@@ -6892,7 +6739,6 @@ const TransportApp = ({ userProfileData }) => {
             );
             setDeleteTransferModal(null);
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri mazaní presunu:', err);
             window.showGlobalNotification('Nepodarilo sa odstrániť presun.', 'error');
         } finally {
             setDeleteTransferSaving(false);
@@ -7050,7 +6896,6 @@ const TransportApp = ({ userProfileData }) => {
             setEditingTransfer(null);
             setEditingTransferStops([]);
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri ukladaní upraveného presunu:', err);
             window.showGlobalNotification('Nepodarilo sa uložiť úpravu presunu.', 'error');
         } finally {
             setEditingTransferSaving(false);
@@ -7149,7 +6994,6 @@ const TransportApp = ({ userProfileData }) => {
 
         const trRange = parseTransferWhenToRange(effectiveWhen);
         if (!trRange) {
-            console.warn('[TRANSPORT][arePreviousSegmentsResolved] Žiadny trRange pre:', { transfer: effectiveTransfer, effectiveWhen });
             return true;
         }
 
@@ -7320,25 +7164,6 @@ const TransportApp = ({ userProfileData }) => {
             if (seg._isAssigned === true) continue;
 
             if (!isSegmentCoveredByBus(seg)) {
-                console.warn('[TRANSPORT][arePreviousSegmentsResolved] BLOKUJÚCI segment:', {
-                    seg,
-                    trRange,
-                    effectiveTransfer: {
-                        key: effectiveTransfer.key,
-                        _parentKey: effectiveTransfer._parentKey,
-                        fromId: effectiveTransfer.fromId,
-                        toId: effectiveTransfer.toId,
-                        when: effectiveTransfer.when,
-                    },
-                    allSegments: allSegments.map((s) => ({
-                        fromId: s.fromId,
-                        toId: s.toId,
-                        isWalking: s.isWalking,
-                        _isAssigned: s._isAssigned,
-                        _parentKey: s._parentKey,
-                        range: s.range,
-                    })),
-                });
                 return false;
             }
         }
@@ -8000,7 +7825,6 @@ const TransportApp = ({ userProfileData }) => {
         if (!window.db || !parentKey) return;
         const parent = savedTransfersRef.current.find((s) => s.key === parentKey);
         if (!parent) {
-            console.warn('[TRANSPORT] updateParentTransfer: parent sa nenašiel', parentKey);
             return;
         }
 
@@ -8135,7 +7959,6 @@ const TransportApp = ({ userProfileData }) => {
             window.showGlobalNotification('Presun bol označený ako peši.', 'success');
             setTransferActionModal(null);
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri označení presunu ako peši:', err);
             window.showGlobalNotification('Nepodarilo sa označiť presun ako peši.', 'error');
         }
     };
@@ -8290,7 +8113,6 @@ const TransportApp = ({ userProfileData }) => {
                 'success'
             );
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri hromadnom označení presunov ako peši:', err);
             window.showGlobalNotification('Nepodarilo sa označiť presuny ako peši.', 'error');
         } finally {
             setWalkingBatchSaving(false);
@@ -8397,7 +8219,6 @@ const TransportApp = ({ userProfileData }) => {
                 });
             });
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri aplikovaní pravidiel peši na parent:', err);
         }
     };
 
@@ -8476,7 +8297,6 @@ const TransportApp = ({ userProfileData }) => {
             window.showGlobalNotification('Príznak peši bol odstránený.', 'success');
             setRemoveWalkingModal(null);
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri odstraňovaní príznaku peši:', err);
             window.showGlobalNotification('Nepodarilo sa odstrániť príznak peši.', 'error');
         } finally {
             setRemoveWalkingSaving(false);
@@ -8618,7 +8438,6 @@ const TransportApp = ({ userProfileData }) => {
             setAssignBusMatches([]);
             setAssignBusSelectedKey('');
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri priraďovaní presunu k autobusu:', err);
             window.showGlobalNotification('Nepodarilo sa priradiť presun k autobusu.', 'error');
         } finally {
             setAssignBusSaving(false);
@@ -8626,13 +8445,6 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     const saveTravelTime = async (fromStop, toStop, rawValue) => {
-        console.log('[TRANSPORT][saveTravelTime] Volané:', {
-            fromStop: fromStop?.name,
-            fromId: fromStop?.id,
-            toStop: toStop?.name,
-            toId: toStop?.id,
-            rawValue,
-        });
         if (!window.db || !fromStop || !toStop) return;
     
         const key = `${fromStop.id}|${toStop.id}`;
@@ -8674,7 +8486,6 @@ const TransportApp = ({ userProfileData }) => {
                 );
             }
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri ukladaní trvania jazdy:', err);
             window.showGlobalNotification('Nepodarilo sa uložiť trvanie.', 'error');
         } finally {
             setTravelTimesSaving(false);
@@ -8757,7 +8568,6 @@ const TransportApp = ({ userProfileData }) => {
                 window.showGlobalNotification(`Skratka pre tím ${name} bola uložená: ${newShortcut}.`, 'success');
             }
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri ukladaní skratky tímu:', err);
             window.showGlobalNotification('Nepodarilo sa uložiť skratku tímu.', 'error');
         } finally {
             setShortcutSaving(false);
@@ -8819,7 +8629,6 @@ const TransportApp = ({ userProfileData }) => {
             );
             setDeleteShortcutModal(null);
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri mazaní skratky tímu:', err);
             window.showGlobalNotification('Nepodarilo sa odstrániť skratku tímu.', 'error');
         } finally {
             setDeleteShortcutSaving(false);
@@ -8854,7 +8663,6 @@ const TransportApp = ({ userProfileData }) => {
             await batch.commit();
             window.showGlobalNotification('Nástupná/výstupná zastávka bola zmenená.', 'success');
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri nastavovaní nástupnej zastávky:', err);
             window.showGlobalNotification('Nepodarilo sa zmeniť nástupnú zastávku.', 'error');
         }
     };
@@ -8875,7 +8683,6 @@ const TransportApp = ({ userProfileData }) => {
             await batch.commit();
             window.showGlobalNotification('Miesto zrazu bolo zmenené.', 'success');
         } catch (err) {
-            console.error('[TRANSPORT] Chyba pri nastavovaní miesta zrazu:', err);
             window.showGlobalNotification('Nepodarilo sa zmeniť miesto zrazu.', 'error');
         }
     };    
@@ -12720,7 +12527,6 @@ const TransportApp = ({ userProfileData }) => {
                                                 );
                                                 setShowAddWalkingRuleModal(false);
                                             } catch (err) {
-                                                console.error('[TRANSPORT] Chyba pri ukladaní pravidiel peši:', err);
                                                 window.showGlobalNotification('Nepodarilo sa uložiť pravidlá.', 'error');
                                             } finally {
                                                 setNewWalkingRuleSaving(false);
@@ -12835,7 +12641,6 @@ const TransportApp = ({ userProfileData }) => {
                                     );
                                     setDeleteWalkingRuleModal(null);
                                 } catch (err) {
-                                    console.error('[TRANSPORT] Chyba pri odstraňovaní pravidla peši:', err);
                                     window.showGlobalNotification('Nepodarilo sa odstrániť pravidlo.', 'error');
                                 } finally {
                                     setDeleteWalkingRuleSaving(false);
@@ -14484,7 +14289,6 @@ const TransportApp = ({ userProfileData }) => {
                         const dbgParentKey = tr._parentKey || tr.key;
                         const dbgParent = (savedTransfersRef.current || []).find((s) => s.key === dbgParentKey);
                     } catch (e) {
-                        console.warn('[TRANSPORT][MODAL:transferActionModal] log error:', e);
                     }
                     
                     let displayWhen = null;
@@ -15138,7 +14942,6 @@ const TransportApp = ({ userProfileData }) => {
 
                                     return matchesWithPreferredFlag.map(({ match: m, isPreferred }) => {
                                         if (!m || !m.bus || !m.trip) {
-                                            console.warn('[TRANSPORT] Neplatný výsledok v currentMatches:', m);
                                             return null;
                                         }        
                                         const key = `${m.bus.id}|${m.boardingRow?.id || ''}|${m.alightingRow?.id || ''}|${m.side}`;
@@ -15410,7 +15213,6 @@ const TransportApp = ({ userProfileData }) => {
                                                                         };
                                                                     });
                                                                 } catch (logErr) {
-                                                                    console.warn('[TRANSPORT][TOOLTIP] Chyba pri logovaní tooltipu:', logErr);
                                                                 }
                                                                 
                                                                 return { total, teams };
@@ -16267,12 +16069,9 @@ if (window.globalUserProfileData) {
 }
 window.listTeamsByCategoryAndGroup = async (categoryName, groupName) => {
     if (!window.db) {
-        console.error('[TRANSPORT] Firebase nie je inicializovaný (window.db chýba).');
         return;
     }
     if (!categoryName || !groupName) {
-        console.error('[TRANSPORT] Zadajte dva parametre: názov kategórie a názov skupiny.');
-        console.error('  Príklad: listTeamsByCategoryAndGroup(U12 D, skupina D)');
         return;
     }
     const targetCategory = cleanCategory(categoryName);
