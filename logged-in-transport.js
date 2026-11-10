@@ -15301,14 +15301,19 @@ const TransportApp = ({ userProfileData }) => {
                                                                 if (bOrder == null || aOrder == null) {
                                                                     return { total: 0, teams: [] };
                                                                 }
-                                                        
-                                                                const teamsAtBoarding = new Set();
-                                                                const teamsAtAlighting = new Set();
-                                                        
+
+                                                                // Zbierame tímy v troch skupinách:
+                                                                //  - inBus: tímy, ktoré sú v buse medzi nástupom a výstupom (bOrder < order < aOrder),
+                                                                //  - boardingHere: tímy, ktoré nastupujú na nástupnej zastávke (boardingRow),
+                                                                //  - alightingHere: tímy, ktoré vystupujú na výstupnej zastávke (alightingRow).
+                                                                const inBus = new Set();
+                                                                const boardingHere = new Set();
+                                                                const alightingHere = new Set();
+
                                                                 (savedTransfersRef.current || []).forEach((parent) => {
                                                                     if (parent.dayKey !== dayKey) return;
                                                                     if (parent.isWalking === true) return;
-                                                        
+
                                                                     const effectiveCategory = cleanCategory(parent.category || '');
                                                                     let effectiveTeamName = String(parent.teamName || '').trim();
                                                                     if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
@@ -15324,81 +15329,41 @@ const TransportApp = ({ userProfileData }) => {
                                                                         }
                                                                     }
                                                                     if (!effectiveTeamName) return;
-                                                        
+
                                                                     const teamKeyStr = `${effectiveTeamName}|${effectiveCategory}`;
-                                                        
+
                                                                     (parent.segments || []).forEach((seg) => {
                                                                         if (seg.busId !== busId) return;
                                                                         if (seg.isWalking === true) return;
-                                                        
+
                                                                         const segBOrder = parseOrderFromRowId(seg.boardingRowId);
                                                                         const segAOrder = parseOrderFromRowId(seg.alightingRowId);
                                                                         if (segBOrder == null || segAOrder == null) return;
-                                                        
-                                                                        const isAtBoarding =
-                                                                            (segBOrder === bOrder) ||
-                                                                            (segBOrder < bOrder && segAOrder > bOrder);
-                                                                        if (isAtBoarding) teamsAtBoarding.add(teamKeyStr);
-                                                        
-                                                                        const isAtAlighting =
-                                                                            (segAOrder === aOrder) ||
-                                                                            (segBOrder < aOrder && segAOrder > aOrder);
-                                                                        if (isAtAlighting) teamsAtAlighting.add(teamKeyStr);
+
+                                                                        // Tím nastupuje na tejto zastávke (nástupná zastávka ponúkanej trasy)
+                                                                        if (segBOrder === bOrder) {
+                                                                            boardingHere.add(teamKeyStr);
+                                                                        }
+                                                                        // Tím vystupuje na tejto zastávke (výstupná zastávka ponúkanej trasy)
+                                                                        if (segAOrder === aOrder) {
+                                                                            alightingHere.add(teamKeyStr);
+                                                                        }
+                                                                        // Tím je v buse medzi nástupom a výstupom (už je v buse a ostáva v ňom)
+                                                                        if (segBOrder < bOrder && segAOrder > bOrder) {
+                                                                            inBus.add(teamKeyStr);
+                                                                        }
                                                                     });
                                                                 });
-                                                        
-                                                                const totalAtBoarding = [...teamsAtBoarding].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
-                                                                const totalAtAlighting = [...teamsAtAlighting].reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
-                                                        
-                                                                let total = Math.max(totalAtBoarding, totalAtAlighting);
-                                                                const teamsSet = new Set([...teamsAtBoarding, ...teamsAtAlighting]);
-                                                                let teams = [...teamsSet];
 
-                                                                if (isSelected) {
-                                                                    const currentTeamKeyStr = `${String(currentTransfer.teamName || '').trim()}|${cleanCategory(currentTransfer.category || '')}`;
-                                                                    const alreadyCounted =
-                                                                        teamsAtBoarding.has(currentTeamKeyStr) ||
-                                                                        teamsAtAlighting.has(currentTeamKeyStr);
-                                                                    if (!alreadyCounted) {
-                                                                        total += getTeamMembersCount(currentTeamKeyStr);
-                                                                        teams.push(currentTeamKeyStr);
-                                                                    }
-                                                                }
-                                                                
-                                                                try {
-                                                                    const teamsAtBoardingArr = [...teamsAtBoarding];
-                                                                    const teamsAtAlightingArr = [...teamsAtAlighting];
-                                                                    const allTooltipTeamKeys = new Set([
-                                                                        ...teamsAtBoardingArr,
-                                                                        ...teamsAtAlightingArr,
-                                                                    ]);
-                                                                
-                                                                    const tooltipTeamsInfo = [...allTooltipTeamKeys].map((tk) => {
-                                                                        const parts = String(tk).split('|');
-                                                                        const tn = (parts[0] || '').trim();
-                                                                        const cat = (parts[1] || '').trim();
-                                                                        const shortcut = getTeamShortcut(cat, tn);
-                                                                        const displayedLabel = stripCategoryFromTeamName(tn, cat);
-                                                                        const color = getCategoryTextColor(cat);
-                                                                        const members = getTeamMembersCount(tk);
-                                                                        const isBoarding = teamsAtBoarding.has(tk);
-                                                                        const isAlighting = teamsAtAlighting.has(tk);
-                                                                        return {
-                                                                            teamKey: tk,
-                                                                            fullTeamName: tn,
-                                                                            category: cat,
-                                                                            shortcut: shortcut || null,
-                                                                            displayedLabel: shortcut || displayedLabel,
-                                                                            displayedLabelWithoutShortcut: displayedLabel,
-                                                                            textColor: color,
-                                                                            membersCount: members,
-                                                                            isAtBoarding: isBoarding,
-                                                                            isAtAlighting: isAlighting,
-                                                                        };
-                                                                    });
-                                                                } catch (logErr) {
-                                                                }
-                                                                
+                                                                // Zjednotenie tímov – každý tím sa počíta len raz.
+                                                                const teamsSet = new Set([
+                                                                    ...inBus,
+                                                                    ...boardingHere,
+                                                                    ...alightingHere,
+                                                                ]);
+                                                                const teams = [...teamsSet];
+                                                                const total = teams.reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
+
                                                                 return { total, teams };
                                                             };
                                                         
