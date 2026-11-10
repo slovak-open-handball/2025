@@ -1782,6 +1782,7 @@ const TransportApp = ({ userProfileData }) => {
                                     }
                                 }
                             }
+                        }
 
                         enriched.push(current);
 
