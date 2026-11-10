@@ -10934,6 +10934,10 @@ const TransportApp = ({ userProfileData }) => {
             );
         }
 
+        if (sortedTransfers.length === 0) {
+            return null;
+        }
+
         // Inak zobraz plný box (so `sortedTransfers`, ktoré môžu byť aj prázdne,
         // ak `baseFilteredAfterPartial` je prázdne — vtedy box zobrazí hlášku
         // "Zatiaľ žiadne vygenerované presuny").
