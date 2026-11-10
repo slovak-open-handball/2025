@@ -307,6 +307,19 @@ const TransportApp = ({ userProfileData }) => {
         return idA === idB;
     };
 
+    const isSamePlaceForTransfer = (a, b) => {
+        if (!a || !b) return false;
+        const na = normalizePlaceName(a);
+        const nb = normalizePlaceName(b);
+        if (!na || !nb) return false;
+        if (na === nb) return true;
+        // fallback aj cez resolvePlaceIdByName (ak by názvy mali rôzny zápis)
+        const idA = resolvePlaceIdByName(a) || null;
+        const idB = resolvePlaceIdByName(b) || null;
+        if (idA && idB && idA === idB) return true;
+        return false;
+    };
+
     const getPlaceIconForName = (placeName) => {
         if (!placeName) return null;
         const raw = String(placeName).trim();
@@ -1387,7 +1400,7 @@ const TransportApp = ({ userProfileData }) => {
                                 const uniqueSourceLocationsPre = new Map();
                                 const updateUniqueSourcePre = (loc, endTs) => {
                                     if (!loc) return;
-                                    if (loc === destination) return;
+                                    if (isSamePlaceForTransfer(loc, destination)) return;
                                     const existing = uniqueSourceLocationsPre.get(loc);
                                     if (!existing || (endTs != null && endTs > (existing.endTs ?? -Infinity))) {
                                         uniqueSourceLocationsPre.set(loc, { location: loc, endTs });
@@ -1463,6 +1476,9 @@ const TransportApp = ({ userProfileData }) => {
                                         return String(a.location).localeCompare(String(b.location), 'sk');
                                     })
                                     .forEach((info) => {
+                                        // NOVÉ: defensívna kontrola – nevygeneruj ak sa miesto rovná cieľu
+                                        if (isSamePlaceForTransfer(info.location, destination)) return;
+
                                         let whenStr;
                                         if (departureStr && destinationArrivalStr) {
                                             whenStr = `${departureStr} – ${destinationArrivalStr}`;
@@ -1609,10 +1625,10 @@ const TransportApp = ({ userProfileData }) => {
                                         .trim();
                                     const hasPublicTransport = arrivalTypeNorm.includes('verejn') || arrivalTypeNorm.includes('autobus') || arrivalTypeNorm.includes('vlak');
                                     const hasOwnOrNoTransport = arrivalTypeNorm.includes('vlastn') || arrivalTypeNorm.includes('bez dopravy') || arrivalTypeNorm.includes('ziadna') || arrivalTypeNorm.includes('žiadna');
-                        
+                            
                                     let fromLocationName = null;
                                     let fromLabel = null;
-                        
+                            
                                     if (hasPublicTransport && externalArrivalStop) {
                                         fromLocationName = externalArrivalStop.name;
                                         fromLabel = `zastávka ${externalArrivalStop.name}`;
@@ -1620,8 +1636,8 @@ const TransportApp = ({ userProfileData }) => {
                                         fromLocationName = meetingPointStop.name;
                                         fromLabel = `miesto zrazu ${meetingPointStop.name}`;
                                     }
-                        
-                                    if (fromLocationName && fromLocationName !== current.location) {
+                            
+                                    if (fromLocationName && !isSamePlaceForTransfer(fromLocationName, current.location)) {
                                         const arrivalTs = current.startTs;
                                         const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
                                         let departureTs;
@@ -1673,7 +1689,7 @@ const TransportApp = ({ userProfileData }) => {
                                         fromLocationName = meetingPointStop.name;
                                         fromLabel = `miesto zrazu ${meetingPointStop.name}`;
                                     }
-                                    if (fromLocationName && fromLocationName !== current.location) {
+                                    if (fromLocationName && !isSamePlaceForTransfer(fromLocationName, current.location)) {
                                         const arrivalTs = current.startTs;
                                         const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
                                         const departureTs = timestampOnDay(arrivalTs, 0, 0);
@@ -1698,7 +1714,7 @@ const TransportApp = ({ userProfileData }) => {
                                 // ============ VETVA PRE SUPERSTRUCTURE TÍM ============
                                 if (isGlobalFirstDay) {
                                     // prvý deň: z miesta zrazu na prvú udalosť
-                                    if (meetingPointStop && current.location !== meetingPointStop.name) {
+                                    if (meetingPointStop && !isSamePlaceForTransfer(meetingPointStop.name, current.location)) {
                                         const arrivalTs = current.startTs;
                                         const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
                                         const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
@@ -1731,17 +1747,22 @@ const TransportApp = ({ userProfileData }) => {
                                         })();
                                         const sources = new Set();
                                         groupAccommodations.forEach((a) => {
-                                            if (a && a.trim() && a.trim() !== current.location) sources.add(a.trim());
+                                            if (a && a.trim()) sources.add(a.trim());
                                         });
-                                        if (meetingPointStop && meetingPointStop.name !== current.location) {
+                                        if (meetingPointStop) {
                                             sources.add(meetingPointStop.name);
                                         }
+                                        // NOVÉ: vyhoď zdroje, ktoré sú rovnaké ako cieľ
+                                        const filteredSources = [...sources].filter(
+                                            (src) => !isSamePlaceForTransfer(src, current.location)
+                                        );
+                            
                                         const arrivalTs = current.startTs;
                                         const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
                                         const departureTs = timestampOnDay(arrivalTs, 0, 0);
                                         const departureStr = formatFullFromTs(departureTs) || '00:00';
                                         if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
-                                            sources.forEach((src) => {
+                                            filteredSources.forEach((src) => {
                                                 const isMP = meetingPointStop && src === meetingPointStop.name;
                                                 const fromLabel = isMP ? `miesto zrazu ${src}` : `ubytovanie ${src}`;
                                                 let whenStr;
@@ -1761,7 +1782,6 @@ const TransportApp = ({ userProfileData }) => {
                                     }
                                 }
                             }
-                        }
 
                         enriched.push(current);
 
@@ -1773,49 +1793,54 @@ const TransportApp = ({ userProfileData }) => {
                             currentIsTimedEvent &&
                             current.location &&
                             next.location &&
-                            current.location !== next.location &&
                             currentDay != null &&
                             nextDay != null &&
                             currentDay === nextDay
                         ) {
-                            const departureTs =
-                                current.endTs != null ? current.endTs : current.startTs;
-                            const arrivalTs =
-                                next.startTs != null ? next.startTs : null;
-                        
-                            if (
-                                departureTs != null &&
-                                arrivalTs != null &&
-                                departureTs >= arrivalTs
-                            ) {
+                            // NOVÉ: negenerovať presun, ak je miesto odkiaľ rovnaké ako miesto kam
+                            if (isSamePlaceForTransfer(current.location, next.location)) {
+                                // preskočiť – to isté miesto
                             } else {
-                                const departureStr = formatFullFromTs(departureTs);
-                                const arrivalStr = formatFullFromTs(arrivalTs);
+                                const departureTs =
+                                    current.endTs != null ? current.endTs : current.startTs;
+                                const arrivalTs =
+                                    next.startTs != null ? next.startTs : null;
                         
-                                let whenStr;
-                                if (departureStr && arrivalStr) {
-                                    whenStr = `${departureStr} – ${arrivalStr}`;
-                                } else if (departureStr) {
-                                    whenStr = departureStr;
-                                } else if (arrivalStr) {
-                                    whenStr = arrivalStr;
+                                if (
+                                    departureTs != null &&
+                                    arrivalTs != null &&
+                                    departureTs >= arrivalTs
+                                ) {
+                                    // neplatný čas – negenerovať
                                 } else {
-                                    whenStr = current.when;
-                                }
+                                    const departureStr = formatFullFromTs(departureTs);
+                                    const arrivalStr = formatFullFromTs(arrivalTs);
                         
-                                enriched.push({
-                                    ts: current.ts + 0.5,
-                                    when: whenStr,
-                                    type: 'transfer',
-                                    text: buildTransferText(
-                                        current,
-                                        next,
-                                        `${current.location}`,
-                                        `${next.location}`
-                                    ),
-                                    location: null,
-                                    isTransfer: true,
-                                });
+                                    let whenStr;
+                                    if (departureStr && arrivalStr) {
+                                        whenStr = `${departureStr} – ${arrivalStr}`;
+                                    } else if (departureStr) {
+                                        whenStr = departureStr;
+                                    } else if (arrivalStr) {
+                                        whenStr = arrivalStr;
+                                    } else {
+                                        whenStr = current.when;
+                                    }
+                        
+                                    enriched.push({
+                                        ts: current.ts + 0.5,
+                                        when: whenStr,
+                                        type: 'transfer',
+                                        text: buildTransferText(
+                                            current,
+                                            next,
+                                            `${current.location}`,
+                                            `${next.location}`
+                                        ),
+                                        location: null,
+                                        isTransfer: true,
+                                    });
+                                }
                             }
                         }
 
@@ -1826,43 +1851,47 @@ const TransportApp = ({ userProfileData }) => {
                             currentIsTimedEvent &&
                             current.location &&
                             next.location &&
-                            current.location !== next.location &&
                             currentDay != null &&
                             nextDay != null &&
                             currentDay !== nextDay
                         ) {
-                            const departureTs =
-                                current.endTs != null ? current.endTs : current.startTs;
-                            const arrivalTs =
-                                next.startTs != null ? next.startTs : null;
-
-                            if (
-                                departureTs != null &&
-                                arrivalTs != null &&
-                                departureTs < arrivalTs
-                            ) {
-                                const departureStr = formatFullFromTs(departureTs);
-                                const arrivalStr = formatFullFromTs(arrivalTs);
-
-                                let whenStr;
-                                if (departureStr && arrivalStr) {
-                                    whenStr = `${departureStr} – ${arrivalStr}`;
-                                } else if (departureStr) {
-                                    whenStr = departureStr;
-                                } else if (arrivalStr) {
-                                    whenStr = arrivalStr;
-                                } else {
-                                    whenStr = current.when;
+                            // NOVÉ: negenerovať presun, ak je miesto odkiaľ rovnaké ako miesto kam
+                            if (isSamePlaceForTransfer(current.location, next.location)) {
+                                // preskočiť
+                            } else {
+                                const departureTs =
+                                    current.endTs != null ? current.endTs : current.startTs;
+                                const arrivalTs =
+                                    next.startTs != null ? next.startTs : null;
+                        
+                                if (
+                                    departureTs != null &&
+                                    arrivalTs != null &&
+                                    departureTs < arrivalTs
+                                ) {
+                                    const departureStr = formatFullFromTs(departureTs);
+                                    const arrivalStr = formatFullFromTs(arrivalTs);
+                        
+                                    let whenStr;
+                                    if (departureStr && arrivalStr) {
+                                        whenStr = `${departureStr} – ${arrivalStr}`;
+                                    } else if (departureStr) {
+                                        whenStr = departureStr;
+                                    } else if (arrivalStr) {
+                                        whenStr = arrivalStr;
+                                    } else {
+                                        whenStr = current.when;
+                                    }
+                        
+                                    enriched.push({
+                                        ts: current.ts + 0.5,
+                                        when: whenStr,
+                                        type: 'transfer',
+                                        text: `Presun z ${current.location} do ${next.location}`,
+                                        location: null,
+                                        isTransfer: true,
+                                    });
                                 }
-
-                                enriched.push({
-                                    ts: current.ts + 0.5,
-                                    when: whenStr,
-                                    type: 'transfer',
-                                    text: `Presun z ${current.location} do ${next.location}`,
-                                    location: null,
-                                    isTransfer: true,
-                                });
                             }
                         }
                                             
@@ -1922,7 +1951,6 @@ const TransportApp = ({ userProfileData }) => {
                                 });
                             })();
                         
-                            // ✅ NOVÉ: Pomocné premenné pre tento blok
                             const meetingPointStopForDay = (() => {
                                 if (!isMeetingPointDay) return null;
                                 const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isMeetingPointStop === true);
@@ -1943,7 +1971,8 @@ const TransportApp = ({ userProfileData }) => {
                             // === DEŇ MIESTA ZRAZU ===
                             if (isMeetingPointDay) {
                                 const returnMP = meetingPointStop;
-                                if (returnMP && current.location !== returnMP.name) {
+                                // NOVÉ: presun na miesto zrazu – iba ak sa líši od current.location
+                                if (returnMP && !isSamePlaceForTransfer(current.location, returnMP.name)) {
                                     const departureTs = current.endTs != null ? current.endTs : current.startTs;
                                     const departureStr = formatFullFromTs(departureTs) || current.when;
                                     const arrivalTs = timestampOnDay(departureTs, 23, 59);
@@ -1959,23 +1988,28 @@ const TransportApp = ({ userProfileData }) => {
                                         });
                                     }
                                 }
+                                // NOVÉ: z miesta zrazu na ubytovanie – iba ak sa líši
                                 if (teamIsInUsers && hasAccommodation && returnMP) {
-                                    const departureTs = timestampOnDay(current.endTs || current.startTs, 23, 0);
-                                    const departureStr = formatFullFromTs(departureTs) || '23:00';
-                                    const arrivalTs = timestampOnDay(departureTs, 23, 59);
-                                    const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
-                                    if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
-                                        enriched.push({
-                                            ts: current.ts + 1.5,
-                                            when: `${departureStr} – ${arrivalStr}`,
-                                            type: 'transfer',
-                                            text: `Presun z miesto zrazu ${returnMP.name} do ubytovanie ${accommodationName.trim()}`,
-                                            location: null,
-                                            isTransfer: true,
-                                        });
+                                    const dest = accommodationName.trim();
+                                    if (!isSamePlaceForTransfer(returnMP.name, dest)) {
+                                        const departureTs = timestampOnDay(current.endTs || current.startTs, 23, 0);
+                                        const departureStr = formatFullFromTs(departureTs) || '23:00';
+                                        const arrivalTs = timestampOnDay(departureTs, 23, 59);
+                                        const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
+                                        if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
+                                            enriched.push({
+                                                ts: current.ts + 1.5,
+                                                when: `${departureStr} – ${arrivalStr}`,
+                                                type: 'transfer',
+                                                text: `Presun z miesto zrazu ${returnMP.name} do ubytovanie ${dest}`,
+                                                location: null,
+                                                isTransfer: true,
+                                            });
+                                        }
                                     }
                                 }
-                                if (isGlobalLastDay && returnMP && externalArrivalStop && externalArrivalStop.name !== returnMP.name) {
+                                // NOVÉ: z miesta zrazu na externú zastávku – iba ak sa líši
+                                if (isGlobalLastDay && returnMP && externalArrivalStop && !isSamePlaceForTransfer(returnMP.name, externalArrivalStop.name)) {
                                     const departureTs = timestampOnDay(current.endTs || current.startTs, 23, 0);
                                     const departureStr = formatFullFromTs(departureTs) || '23:00';
                                     const arrivalTs = timestampOnDay(departureTs, 23, 59);
@@ -2002,15 +2036,19 @@ const TransportApp = ({ userProfileData }) => {
                                     const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
                                     if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
                                         if (hasAccommodation) {
-                                            enriched.push({
-                                                ts: current.ts + 1,
-                                                when: `${departureStr} – ${arrivalStr}`,
-                                                type: 'transfer',
-                                                text: `Presun z ${current.location} do ubytovanie ${accommodationName.trim()}`,
-                                                location: null,
-                                                isTransfer: true,
-                                            });
-                                        } else if (meetingPointStop && current.location !== meetingPointStop.name) {
+                                            const dest = accommodationName.trim();
+                                            // NOVÉ: iba ak sa miesto líši
+                                            if (!isSamePlaceForTransfer(current.location, dest)) {
+                                                enriched.push({
+                                                    ts: current.ts + 1,
+                                                    when: `${departureStr} – ${arrivalStr}`,
+                                                    type: 'transfer',
+                                                    text: `Presun z ${current.location} do ubytovanie ${dest}`,
+                                                    location: null,
+                                                    isTransfer: true,
+                                                });
+                                            }
+                                        } else if (meetingPointStop && !isSamePlaceForTransfer(current.location, meetingPointStop.name)) {
                                             enriched.push({
                                                 ts: current.ts + 1,
                                                 when: `${departureStr} – ${arrivalStr}`,
@@ -2036,17 +2074,20 @@ const TransportApp = ({ userProfileData }) => {
                         
                                         groupAccommodations.forEach((a) => {
                                             if (!a || !a.trim()) return;
-                                            if (a.trim() === current.location) return;
+                                            const dest = a.trim();
+                                            // NOVÉ: iba ak sa miesto líši
+                                            if (isSamePlaceForTransfer(current.location, dest)) return;
                                             enriched.push({
                                                 ts: current.ts + 1,
                                                 when: `${departureStr} – ${arrivalStr}`,
                                                 type: 'transfer',
-                                                text: `Presun z ${current.location} do ubytovanie ${a.trim()}`,
+                                                text: `Presun z ${current.location} do ubytovanie ${dest}`,
                                                 location: null,
                                                 isTransfer: true,
                                             });
                                         });
-                                        if (meetingPointStop && current.location !== meetingPointStop.name) {
+                                        // NOVÉ: miesto zrazu – iba ak sa líši
+                                        if (meetingPointStop && !isSamePlaceForTransfer(current.location, meetingPointStop.name)) {
                                             enriched.push({
                                                 ts: current.ts + 1.5,
                                                 when: `${departureStr} – ${arrivalStr}`,
@@ -2083,19 +2124,14 @@ const TransportApp = ({ userProfileData }) => {
                                 return fromStops || null;
                             })();
                         
-                            // Dôležitá zmena: už nevyžadujeme, aby current.location bolo miesto zrazu.
-                            // Zdrojom presunu je vždy miesto zrazu.
                             if (
                                 teamIsInUsersForMeetingPoint &&
                                 meetingPointStopForReturn &&
                                 teamAccommodationsList.length > 0
                             ) {
-                                // Zisti najneskorší koniec udalosti v rámci celej kategórie
-                                // v tento deň (cez všetky tímy v kategórii – používateľské
-                                // aj superstructure).
                                 const categoryClean = cleanCategory(category);
                                 let latestEndTsForCategoryOnDay = null;
-                        
+                            
                                 Object.values(grouped[categoryClean] || {}).forEach((teamEvents) => {
                                     (teamEvents || []).forEach((ev) => {
                                         const evDay = extractDayKeyFromWhen(ev.when);
@@ -2111,32 +2147,31 @@ const TransportApp = ({ userProfileData }) => {
                                         }
                                     });
                                 });
-                        
-                                // Fallback – aspoň koniec aktuálnej udalosti
+                            
                                 if (latestEndTsForCategoryOnDay == null) {
                                     latestEndTsForCategoryOnDay =
                                         current.endTs != null ? current.endTs : current.startTs;
                                 }
-                        
+                            
                                 if (latestEndTsForCategoryOnDay != null) {
                                     const departureTs = latestEndTsForCategoryOnDay;
                                     const dayRefTs = departureTs;
-                        
+                            
                                     const arrivalTs = timestampOnDay(dayRefTs, 23, 59);
                                     const departureStr = formatFullFromTs(departureTs) || current.when;
                                     const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
-                        
+                            
                                     if (
                                         departureTs != null &&
                                         arrivalTs != null &&
                                         departureTs < arrivalTs
                                     ) {
                                         const whenStr = `${departureStr} – ${arrivalStr}`;
-                        
+                            
                                         teamAccommodationsList.forEach((accomName) => {
                                             if (!accomName) return;
-                                            // Zdrojom presunu je miesto zrazu, nie aktuálna lokalita tímu,
-                                            // takže nepreskakujeme ani keď accomName === current.location.
+                                            // NOVÉ: nevygeneruj, ak sa miesto zrazu rovná ubytovaniu
+                                            if (isSamePlaceForTransfer(meetingPointStopForReturn.name, accomName)) return;
                                             enriched.push({
                                                 ts: current.ts + 1.5,
                                                 when: whenStr,
@@ -2185,9 +2220,19 @@ const TransportApp = ({ userProfileData }) => {
                                     fromLocationText = m[1].trim();
                                     toLocationText = m[2].trim();
                                 }
+                            
+                                // NOVÉ: preskočiť, ak ide o to isté miesto
+                                if (fromLocationText && toLocationText && isSamePlaceForTransfer(fromLocationText, toLocationText)) {
+                                    return;
+                                }
 
                                 const fromId = resolvePlaceIdByName(fromLocationText);
                                 const toId = resolvePlaceIdByName(toLocationText);
+                            
+                                // NOVÉ: ak sa nepodarilo rozpoznať názvy alebo id sú rovnaké, preskočiť
+                                if (fromId && toId && fromId === toId) {
+                                    return;
+                                }
 
                                 const evDayKey = extractDayKeyFromWhen(ev.when) || null;
 
