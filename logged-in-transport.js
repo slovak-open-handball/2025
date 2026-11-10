@@ -10879,125 +10879,35 @@ const TransportApp = ({ userProfileData }) => {
         // ---- ROZHODNUTIE, ČO ZOBRAZIŤ ----
         const hasActivePlaceFilter =
             !!selectedFromPlaceFilter || !!selectedToPlaceFilter;
-        
+
         // Ak je filter aktívny a po filtrovaní nezostali žiadne presuny,
         // useEffect vyššie práve beží a filter čoskoro resetuje.
-        // V tomto kole box nezobrazíme – počkáme na reset.
+        // V tomto kole box nezobrazíme – počkáme na reset filtra.
         if (hasActivePlaceFilter && filtered.length === 0) {
             return null;
         }
-        
-        const fallbackList = filtered.length > 0
-            ? filtered
-            : baseFilteredAfterPartial;
-        
-        const sortedTransfers = sortTransfersList(fallbackList);
-        
+
+        // Ak pre daný deň neexistujú žiadne presuny, box sa nezobrazí.
         const dayHasAnyTransfers = filteredByDay.length > 0;
         if (!dayHasAnyTransfers) {
             return null;
         }
-        
-        if (sortedTransfers.length === 0) {
-            return null;
-        }
 
-        // Zisti, či pre zvolený filter miesta existuje aspoň JEDEN parent
-        // v `savedTransfers` pre daný deň/kategóriu (bez ohľadu na to, či je
-        // už priradený alebo peší). Ak áno, ale `filtered` je prázdny, znamená to,
-        // že všetky presuny zodpovedajúce filtru sú už priradené/pešie → hláška.
-        // Ak NIE, filter nemá pre daný deň žiadny zmysel → filter sa má zrušiť
-        // (to rieši useEffect vyššie), a hlášku neukazujeme.
-        const filterHasAnyParentMatch = (() => {
-            if (!hasActivePlaceFilter) return false;
-            const dayKeyFilter = selectedDayKey || null;
-            const categoryFilter = selectedCategoryFilter
-                ? cleanCategory(selectedCategoryFilter)
-                : null;
-            return (savedTransfers || []).some((p) => {
-                if (dayKeyFilter && p.dayKey !== dayKeyFilter) return false;
-                if (categoryFilter && cleanCategory(p.category || '') !== categoryFilter) return false;
-                const pFromId = p.fromId || null;
-                const pToId = p.toId || null;
-                if (selectedFromPlaceFilter) {
-                    if (!pFromId || String(pFromId) !== String(selectedFromPlaceFilter)) return false;
-                }
-                if (selectedToPlaceFilter) {
-                    if (!pToId || String(pToId) !== String(selectedToPlaceFilter)) return false;
-                }
-                return true;
-            });
-        })();
-
-        // Hlášku "Pre zvolený filter miesta neexistujú žiadne presuny" zobrazíme
-        // IBA ak filter má aspoň jeden parent (t. j. miesta sú relevantné),
-        // ale všetky zodpovedajúce presuny sú už priradené/pešie.
-        const filterHasNoMatchesAtAll =
-            hasActivePlaceFilter &&
-            filterHasAnyParentMatch &&
-            filtered.length === 0 &&
-            baseFilteredAfterPartial.length > 0;
-
-        // Ak po filtrovaní neostalo nič, ale baseFilteredAfterPartial má záznamy,
-        // zobrazíme všetky presuny (filter sa práve resetuje alebo nemá zmysel).
+        // Fallback – ak filter miesta nezobrazil nič (napr. sa práve resetuje),
+        // zobrazíme všetky presuny.
         const fallbackList = filtered.length > 0
             ? filtered
             : baseFilteredAfterPartial;
 
         const sortedTransfers = sortTransfersList(fallbackList);
 
-        const dayHasAnyTransfers = filteredByDay.length > 0;
-        if (!dayHasAnyTransfers) {
-            return null;
-        }
-        
-        if (filterHasNoMatchesAtAll) {
-            // Filter je aktívny a naozaj nemá žiadne dáta → box s hláškou.
-            return React.createElement(
-                'div',
-                {
-                    className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
-                    style: { width: '420px', maxWidth: '100%' }
-                },
-                React.createElement(
-                    'div',
-                    {
-                        className: 'relative px-5 py-3 flex items-center justify-center text-white',
-                        style: { backgroundColor: '#7c3aed' }
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-bus mr-2' }),
-                    React.createElement(
-                        'h3',
-                        { className: 'text-lg font-bold text-center' },
-                        'Vygenerované presuny'
-                    ),
-                    React.createElement(
-                        'span',
-                        { className: 'absolute right-3 text-xs bg-white/20 rounded-full px-2 py-0.5' },
-                        '0'
-                    )
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'px-3 pt-2 pb-2 border-b border-gray-100 flex flex-col gap-2' },
-                    renderPlaceFilters(baseFilteredAfterPartial),
-                    renderSortButtons()
-                ),
-                React.createElement(
-                    'p',
-                    { className: 'text-center text-gray-500 py-6 text-sm italic px-3' },
-                    'Pre zvolený filter miesta neexistujú žiadne presuny. Skúste zmeniť alebo zrušiť filter.'
-                )
-            );
-        }
-
+        // Ak po filtrovaní nezostali žiadne presuny (všetky sú priradené/pešie),
+        // box "Vygenerované presuny" sa vôbec nezobrazí.
         if (sortedTransfers.length === 0) {
             return null;
         }
 
-        // Inak zobraz plný box (so `sortedTransfers`, ktoré môžu byť aj prázdne,
-        // ak `baseFilteredAfterPartial` je prázdne — vtedy box zobrazí hlášku
-        // "Zatiaľ žiadne vygenerované presuny").
+        // Plný box
         return React.createElement(
             'div',
             {
