@@ -10812,40 +10812,34 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         // ---- ROZHODNUTIE, ČO ZOBRAZIŤ ----
-        // Ak existuje aspoň jeden presun v baseFilteredAfterPartial (t.j. bez miestového filtra),
-        // box musíme zobraziť VŽDY. Ak `filtered` je prázdne, ale baseFilteredAfterPartial nie,
-        // znamená to, že filter sa práve resetuje — zobrazíme všetky presuny.
-        const hasAnyTransferToShow = baseFilteredAfterPartial.length > 0;
+        // Ak existuje aspoň jeden presun v expandedTransfers (t.j. po základnom
+        // filtrovaní podľa dňa/kategórie), box musíme zobraziť VŽDY.
+        const hasAnyTransferToShow = expandedTransfers.length > 0;
 
-        // Ak sú aktívne filtre a výsledok je prázdny → zobraz box s hláškou.
         const hasActivePlaceFilter =
             !!selectedFromPlaceFilter || !!selectedToPlaceFilter;
 
-        // Ak filter je aktívny, ale pre daný filter neexistuje ani jeden záznam,
-        // zobrazíme box s hláškou (používateľ má možnosť filter zmeniť).
-        const filterHasNoMatchesAtAll = hasActivePlaceFilter && filtered.length === 0;
+        // Ak sú aktívne filtre a výsledok je prázdny → zobraz box s hláškou.
+        const filterHasNoMatchesAtAll =
+            hasActivePlaceFilter &&
+            filtered.length === 0 &&
+            baseFilteredAfterPartial.length > 0;
 
         // Ak po filtrovaní neostalo nič, ale baseFilteredAfterPartial má záznamy,
-        // znamená to, že filter sa práve resetuje — zobrazíme všetky presuny.
+        // zobrazíme všetky presuny (filter sa práve resetuje alebo nemá zmysel).
         const fallbackList = filtered.length > 0
             ? filtered
             : baseFilteredAfterPartial;
 
         const sortedTransfers = sortTransfersList(fallbackList);
 
-        if (!hasAnyTransferToShow && sortedTransfers.length === 0) {
-            // Neexistujú žiadne presuny vôbec → box sa nezobrazí.
+        if (!hasAnyTransferToShow) {
+            // Neexistujú žiadne presuny vôbec (pre daný deň/kategóriu) → box sa nezobrazí.
             return null;
         }
 
-        if (filterHasNoMatchesAtAll && !hasAnyTransferToShow) {
-            // Nemáme žiadne dáta ani pre filter, ani bez filtra → nič.
-            return null;
-        }
-
-        // Ak je filter aktívny a naozaj nemá žiadne dáta (baseFilteredAfterPartial je tiež prázdne),
-        // zobraz box s hláškou.
-        if (hasActivePlaceFilter && filtered.length === 0 && !hasAnyTransferToShow) {
+        if (filterHasNoMatchesAtAll) {
+            // Filter je aktívny a naozaj nemá žiadne dáta → box s hláškou.
             return React.createElement(
                 'div',
                 {
@@ -10884,6 +10878,9 @@ const TransportApp = ({ userProfileData }) => {
             );
         }
 
+        // Inak zobraz plný box (so `sortedTransfers`, ktoré môžu byť aj prázdne,
+        // ak `baseFilteredAfterPartial` je prázdne — vtedy box zobrazí hlášku
+        // "Zatiaľ žiadne vygenerované presuny").
         return React.createElement(
             'div',
             {
