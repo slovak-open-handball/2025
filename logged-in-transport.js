@@ -1263,6 +1263,15 @@ const TransportApp = ({ userProfileData }) => {
                     set.add(dayKey);
                 });
             });
+
+            const getTeamGroupCharFromName = (teamName) => {
+                if (!teamName) return null;
+                const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+                if (m) return m[1].toUpperCase();
+                // fallback – posledné veľké písmeno
+                const m2 = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(String(teamName).trim().toUpperCase());
+                return m2 ? m2[1] : null;
+            };
     
             categories.forEach((category) => {
                 if (normalizedFilter && cleanCategory(category) !== normalizedFilter) return;
@@ -1568,6 +1577,123 @@ const TransportApp = ({ userProfileData }) => {
                                     && t.isRegistered === true
                             );
                             const teamIsSuperstructure = !teamIsInUsers;
+
+                            const isPlacementMatchEvent = (() => {
+                                if (current.type !== 'match') return false;
+                                // Detekcia z textu – "[o X. miesto]"
+                                if (/\[o\s+\d+\.\s*miesto\]/i.test(String(current.text || ''))) return true;
+                                // Detekcia z bufferu
+                                const matchRec = (matchesBufferRef.current || []).find((m) => {
+                                    if (cleanCategory(m.category) !== cleanCategory(category)) return false;
+                                    if (m.home !== teamName && m.away !== teamName) return false;
+                                    return m.isPlacementMatch === true;
+                                });
+                                return !!matchRec;
+                            })();
+                            
+                            if (isPlacementMatchEvent && current.location) {
+                                const teamGroupChar = getTeamGroupCharFromName(teamName);
+                                if (teamGroupChar) {
+                                    // Nájdi všetky tímy v skupine s daným písmenom
+                                    const teamsInGroupWithChar = new Set();
+                                    (teamsArrivalBufferRef.current || []).forEach((t) => {
+                                        if (cleanCategory(t.category) !== cleanCategory(category)) return;
+                                        if (!t.teamName) return;
+                                        const tGroupChar = getGroupLastChar(t.groupName);
+                                        if (tGroupChar === teamGroupChar) {
+                                            teamsInGroupWithChar.add(t.teamName);
+                                            return;
+                                        }
+                                        const tNameChar = getTeamGroupCharFromName(t.teamName);
+                                        if (tNameChar === teamGroupChar) {
+                                            teamsInGroupWithChar.add(t.teamName);
+                                        }
+                                    });
+                            
+                                    const dayForMatch = currentDay;
+                                    const lastPlacesByTeam = new Map();
+                            
+                                    if (dayForMatch) {
+                                        // Posledné zápasy skupiny v danom dni
+                                        matchesBufferRef.current.forEach((m) => {
+                                            if (cleanCategory(m.category) !== cleanCategory(category)) return;
+                                            let dayKey = null;
+                                            if (m.scheduledTime) {
+                                                const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                                if (mm) {
+                                                    dayKey = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
+                                                }
+                                            }
+                                            if (!dayKey && m.scheduledTs != null) {
+                                                const dt = new Date(m.scheduledTs);
+                                                dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                            }
+                                            if (dayKey !== dayForMatch) return;
+                                            if (!m.hallName) return;
+                            
+                                            [m.home, m.away].forEach((tn) => {
+                                                if (!tn) return;
+                                                if (!teamsInGroupWithChar.has(tn)) return;
+                                                // Neberieme do úvahy samotný zápas o umiestnenie (aktuálny)
+                                                if (tn === teamName && m.scheduledTs === current.startTs) return;
+                                                const endTs = m.scheduledEndTs != null ? m.scheduledEndTs : m.scheduledTs;
+                                                const existing = lastPlacesByTeam.get(tn);
+                                                if (!existing || (endTs != null && endTs > (existing.endTs ?? -Infinity))) {
+                                                    lastPlacesByTeam.set(tn, { location: m.hallName, endTs });
+                                                }
+                                            });
+                                        });
+                            
+                                        // Posledné stravovania skupiny v danom dni
+                                        cateringBufferRef.current.forEach((c) => {
+                                            if (cleanCategory(c.category) !== cleanCategory(category)) return;
+                                            if (c.dayKey !== dayForMatch) return;
+                                            if (!c.placeName) return;
+                                            if (!teamsInGroupWithChar.has(c.teamName)) return;
+                                            const endTs = c.slotToTs != null ? c.slotToTs : c.ts;
+                                            const existing = lastPlacesByTeam.get(c.teamName);
+                                            if (!existing || (endTs != null && endTs > (existing.endTs ?? -Infinity))) {
+                                                lastPlacesByTeam.set(c.teamName, { location: c.placeName, endTs });
+                                            }
+                                        });
+                                    }
+                            
+                                    // Vygeneruj presun z každého miesta poslednej udalosti skupiny na miesto zápasu
+                                    if (lastPlacesByTeam.size > 0) {
+                                        const currentMatchStartTs = current.startTs;
+                                        lastPlacesByTeam.forEach((info) => {
+                                            if (!info.location) return;
+                                            if (isSamePlaceForTransfer(info.location, current.location)) return;
+                            
+                                            const departureTs = info.endTs;
+                                            const departureStr = formatFullFromTs(departureTs) || current.when;
+                                            const arrivalStr = formatFullFromTs(currentMatchStartTs) || current.when;
+                            
+                                            if (
+                                                departureTs != null &&
+                                                currentMatchStartTs != null &&
+                                                departureTs >= currentMatchStartTs
+                                            ) {
+                                                return;
+                                            }
+                            
+                                            let whenStr;
+                                            if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                            else if (arrivalStr) whenStr = arrivalStr;
+                                            else whenStr = current.when;
+                            
+                                            enriched.push({
+                                                ts: current.ts - 1,
+                                                when: whenStr,
+                                                type: 'transfer',
+                                                text: `Presun z ${info.location} do ${current.location}`,
+                                                location: null,
+                                                isTransfer: true,
+                                            });
+                                        });
+                                    }
+                                }
+                            }
 
                             const isPavukMatchNoIdentifier = (() => {
                                 if (current.type !== 'match') return false;
@@ -1886,7 +2012,9 @@ const TransportApp = ({ userProfileData }) => {
                                     return false;
                                 })();
 
-                                if (isPavukMatchEvent && isPavukFollowUpMatchSamePlace) {
+                                if (isPlacementMatchEvent) {
+                                    // skip – presun už bol vygenerovaný z poslednej udalosti skupiny
+                                } else if (isPavukMatchEvent && isPavukFollowUpMatchSamePlace) {
                                     // skip – nadväzujúci pavúkový zápas na tom istom mieste
                                     // nemá ranný presun z miesta zrazu
                                 } else if (isPavukMatchEvent) {
@@ -2147,7 +2275,9 @@ const TransportApp = ({ userProfileData }) => {
                                 })();
 
                                 // NOVÉ: Ak v tento deň má udalosť aspoň jeden users tím, negeneruj ranné presuny pre SS tím
-                                if (anyUsersTeamHasEventToday) {
+                                if (isPlacementMatchEvent) {
+                                    // skip – presun už bol vygenerovaný z poslednej udalosti skupiny
+                                } else if (anyUsersTeamHasEventToday) {
                                     // skip – pravidlo: ak hrá users tím, SS tím nemá ranné presuny
                                 } else if (isPavukMatchEventForSS && isPavukFollowUpMatchSamePlaceForSS) {
                                     // skip – nadväzujúci pavúkový zápas na tom istom mieste
@@ -3716,6 +3846,8 @@ const TransportApp = ({ userProfileData }) => {
                     matchType: data.matchType || null,
                     homeTeamIdentifier: data.homeTeamIdentifier || null,
                     awayTeamIdentifier: data.awayTeamIdentifier || null,
+                    isPlacementMatch: data.isPlacementMatch === true,
+                    placementRank: data.placementRank ?? null,
                 });
             });
 
