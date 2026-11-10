@@ -2909,6 +2909,7 @@ const TransportApp = ({ userProfileData }) => {
                                             });
                                         }
                                     }
+                                }
                             }
                         }
                         
@@ -10623,16 +10624,12 @@ const TransportApp = ({ userProfileData }) => {
                         intermediateStopIds: [],
                         _parentKey: t.key,
                         _parentRoute: `${resolvePlaceNameById(t.fromId)} → ${resolvePlaceNameById(t.toId)}`,
-                        _remainingMinutes: null,
-                        _isAssigned: false,
+                        _remainingMinutes: remainingMinutes,
+                        _isAssigned: segmentAssigned[i],
                         _hasRealTime: hasRealTime,
                         isWalking: false,
-                        _displayStartTs: parentSegmentForThisIdx && parentSegmentForThisIdx.startTs != null
-                            ? parentSegmentForThisIdx.startTs
-                            : null,
-                        _displayEndTs: parentSegmentForThisIdx && parentSegmentForThisIdx.endTs != null
-                            ? parentSegmentForThisIdx.endTs
-                            : null,
+                        _displayStartTs: ft.startTs,
+                        _displayEndTs: ft.endTs,
                     });
                 }
                 return;
