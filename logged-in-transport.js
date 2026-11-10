@@ -3029,8 +3029,6 @@ const TransportApp = ({ userProfileData }) => {
                             })),
                         });
                     });
-
-                    console.log('[TRANSPORT][travelTimes] Načítané trvania:', Object.keys(map).length, map);
                 
                     const lookup = teamsLookupRef.current || {};
                     transfers.forEach((t) => {
