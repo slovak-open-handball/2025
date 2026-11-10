@@ -1783,9 +1783,39 @@ const TransportApp = ({ userProfileData }) => {
                         
                             // ============ VETVA PRE USERS TÍM ============
                             if (teamIsInUsers) {
-                                // Ak v tento deň hrá superstructure tím, negeneruj pre users tím nič
+                                // Ak v tento deň hrá superstructure tím:
+                                // - users tím s ubytovaním → žiadny ranný presun
+                                // - users tím BEZ ubytovania → presun z miesta zrazu na prvú udalosť dňa
                                 if (anySuperstructureTeamHasEventToday) {
-                                    // skip – pravidlo: ak hrá SS tím, users tím nemá ranné presuny
+                                    const hasAccommodationForMorning =
+                                        accommodationName && accommodationName.trim() !== '';
+
+                                    if (!hasAccommodationForMorning && meetingPointStop) {
+                                        const fromLocationName = meetingPointStop.name;
+                                        const fromLabel = `miesto zrazu ${meetingPointStop.name}`;
+
+                                        if (!isSamePlaceForTransfer(fromLocationName, current.location)) {
+                                            const arrivalTs = current.startTs;
+                                            const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
+                                            const departureTs = timestampOnDay(arrivalTs, 0, 0);
+                                            const departureStr = formatFullFromTs(departureTs) || '00:00';
+
+                                            if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
+                                                let whenStr;
+                                                if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                                else if (arrivalStr) whenStr = arrivalStr;
+                                                else whenStr = current.when;
+                                                enriched.push({
+                                                    ts: current.ts - 1,
+                                                    when: whenStr,
+                                                    type: 'transfer',
+                                                    text: `Presun z ${fromLabel} do ${current.location}`,
+                                                    location: null,
+                                                    isTransfer: true,
+                                                });
+                                            }
+                                        }
+                                    }
                                 } else if (isGlobalFirstDay) {
                                     // PRVÝ DEŇ: ranný presun pred prvou udalosťou
                                     const arrivalTypeNorm = String(teamArrivalType || '')
@@ -1890,8 +1920,10 @@ const TransportApp = ({ userProfileData }) => {
                                     // negeneruj ranné presuny (ani z miesta zrazu).
                                     // Tím už je na mieste z predchádzajúceho zápasu.
                                 } else if (isGlobalFirstDay) {
-                                    // prvý deň: z miesta zrazu na prvú udalosť
-                                    if (meetingPointStop && !isSamePlaceForTransfer(meetingPointStop.name, current.location)) {
+                                    // NOVÉ: pavúkový zápas – negenerovať ani presun z miesta zrazu
+                                    if (isPavukTeamNameForMorning) {
+                                        // skip – pavúkový tím nemá ranný presun z miesta zrazu
+                                    } else if (meetingPointStop && !isSamePlaceForTransfer(meetingPointStop.name, current.location)) {
                                         const arrivalTs = current.startTs;
                                         const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
                                         const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
