@@ -13079,9 +13079,7 @@ const TransportApp = ({ userProfileData }) => {
 
                                 setSelectedDayForTimeline('');
                                 window.showGlobalNotification(
-                                    selectedDayForTimeline
-                                        ? `Časová os pre kategóriu ${cat} bola vygenerovaná (deň miesta zrazu: ${selectedDayForTimeline}).`
-                                        : `Časová os pre kategóriu ${cat} bola vygenerovaná.`,
+                                    `Časová os pre kategóriu ${cat} bola vygenerovaná.`,
                                     'success'
                                 );
                             },
