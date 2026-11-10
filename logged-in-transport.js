@@ -4139,6 +4139,63 @@ const TransportApp = ({ userProfileData }) => {
             setShowOnlyPartialTransfers(false);
         }
     }, [savedTransfers, selectedDayKey, selectedCategoryFilter, showOnlyPartialTransfers]);
+
+    useEffect(() => {
+        if (!selectedFromPlaceFilter && !selectedToPlaceFilter) return;
+
+        const dayKeyFilter = selectedDayKey || null;
+        const categoryFilter = selectedCategoryFilter
+            ? cleanCategory(selectedCategoryFilter)
+            : null;
+
+        const hasAnyUnassignedMatchingFilter = (savedTransfers || []).some((parent) => {
+            if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return false;
+            if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return false;
+
+            const fromId = parent.fromId || null;
+            const toId = parent.toId || null;
+
+            if (selectedFromPlaceFilter) {
+                if (!fromId || String(fromId) !== String(selectedFromPlaceFilter)) return false;
+            }
+            if (selectedToPlaceFilter) {
+                if (!toId || String(toId) !== String(selectedToPlaceFilter)) return false;
+            }
+
+            // Ak je parent úplne priradený (všetky segmenty priradené alebo pešie),
+            // nezobrazí sa v boxe "Vygenerované presuny" → nepovažujeme ho za zhodu.
+            const segments = Array.isArray(parent.segments) ? parent.segments : [];
+            if (parent.isWalking === true && segments.length === 0) return false;
+
+            if (segments.length === 0) {
+                // Priamy presun bez segmentov – ak nie je priradený, považujeme za zhodu.
+                if (parent.isWalking === true) return false;
+                return true;
+            }
+
+            // Má aspoň jeden nepriradený a nepeší segment?
+            const hasAnyUnassignedSegment = segments.some((seg) => {
+                if (!seg) return false;
+                if (seg.isWalking === true) return false;
+                if (seg.busId && seg.boardingRowId && seg.alightingRowId) return false;
+                if (seg.busAssigned === true && seg.boardingRowId && seg.alightingRowId) return false;
+                return true;
+            });
+
+            return hasAnyUnassignedSegment;
+        });
+
+        if (!hasAnyUnassignedMatchingFilter) {
+            setSelectedFromPlaceFilter('');
+            setSelectedToPlaceFilter('');
+        }
+    }, [
+        savedTransfers,
+        selectedDayKey,
+        selectedCategoryFilter,
+        selectedFromPlaceFilter,
+        selectedToPlaceFilter,
+    ]);
     
     const buildRowId = (busId, dayKey, order) => {
         return `${busId}__${dayKey}__${order}`;
