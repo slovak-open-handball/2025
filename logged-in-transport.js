@@ -1203,6 +1203,79 @@ const TransportApp = ({ userProfileData }) => {
             }
             return null;
         };
+
+        // NOVÉ: Vráti všetky tímy v kategórii, ktoré patria do skupiny s daným písmenom.
+        // Primárne cez groupName, fallback cez posledné písmeno názvu tímu.
+        const getTeamsInGroupByChar = (category, groupChar) => {
+            if (!category || !groupChar) return new Set();
+            const cat = cleanCategory(category);
+            const char = String(groupChar).toUpperCase();
+            const result = new Set();
+        
+            (teamsArrivalBufferRef.current || []).forEach((t) => {
+                if (cleanCategory(t.category) !== cat) return;
+                if (!t.teamName) return;
+                const tn = String(t.teamName).trim();
+        
+                // 1) Primárne cez groupName
+                const gChar = getGroupLastChar(t.groupName);
+                if (gChar === char) {
+                    result.add(tn);
+                    return;
+                }
+        
+                // 2) Fallback cez posledné písmeno názvu tímu
+                // (aby sme zachytili superstructure tímy, ktoré nemajú groupName)
+                const nameMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                if (nameMatch && nameMatch[1].toUpperCase() === char) {
+                    result.add(tn);
+                }
+            });
+        
+            return result;
+        };
+        
+        // NOVÉ: Logovanie všetkých skupín a tímov v nich pre danú kategóriu
+        const logGroupsAndTeamsForCategory = (category) => {
+            const cat = cleanCategory(category);
+            const groupsMap = new Map(); // groupName -> Set(teamNames)
+        
+            (teamsArrivalBufferRef.current || []).forEach((t) => {
+                if (cleanCategory(t.category) !== cat) return;
+                if (!t.teamName) return;
+                const tn = String(t.teamName).trim();
+                const gName = t.groupName ? String(t.groupName).trim() : '(bez groupName)';
+                if (!groupsMap.has(gName)) groupsMap.set(gName, new Set());
+                groupsMap.get(gName).add(tn);
+            });
+        
+            console.log(`\n[TRANSPORT][GROUPS] ██ Skupiny v kategórii ${cat} ██`);
+            const sortedGroupNames = [...groupsMap.keys()].sort((a, b) =>
+                a.localeCompare(b, 'sk', { sensitivity: 'base' })
+            );
+            if (sortedGroupNames.length === 0) {
+                console.log(`  (žiadne tímy v kategórii ${cat})`);
+            } else {
+                sortedGroupNames.forEach((gName) => {
+                    const teams = [...groupsMap.get(gName)].sort((a, b) =>
+                        a.localeCompare(b, 'sk', { sensitivity: 'base' })
+                    );
+                    const gChar = getGroupLastChar(gName);
+                    console.log(
+                        `%c  Skupina: "${gName}" (písmeno: ${gChar || '—'}) – ${teams.length} tímov:`,
+                        'font-weight: bold; color: #7c3aed;'
+                    );
+                    teams.forEach((tn) => {
+                        const nameChar = (() => {
+                            const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                            return m ? m[1].toUpperCase() : '—';
+                        })();
+                        console.log(`    • ${tn}  [písmeno názvu: ${nameChar}]`);
+                    });
+                });
+            }
+            console.log('[TRANSPORT][GROUPS] ─────────────────────────────');
+        };
     
         const categories = Object.keys(grouped).sort((a, b) =>
             a.localeCompare(b, 'sk', { sensitivity: 'base' })
@@ -1276,6 +1349,10 @@ const TransportApp = ({ userProfileData }) => {
             categories.forEach((category) => {
                 if (normalizedFilter && cleanCategory(category) !== normalizedFilter) return;
                 console.log(`\n[TRANSPORT] ██ Kategória: ${category} ██`);
+
+                // NOVÉ: Vypíš všetky skupiny a tímy v nich pre túto kategóriu
+                logGroupsAndTeamsForCategory(category);
+
                 const teams = Object.keys(grouped[category]).sort((a, b) =>
                     a.localeCompare(b, 'sk', { sensitivity: 'base' })
                 );
@@ -1584,21 +1661,17 @@ const TransportApp = ({ userProfileData }) => {
                             if (isPlacementMatchEvent && current.location) {
                                 const teamGroupChar = getTeamGroupCharFromName(teamName);
                                 if (teamGroupChar) {
-                                    // Nájdi všetky tímy v skupine s daným písmenom
-                                    const teamsInGroupWithChar = new Set();
-                                    (teamsArrivalBufferRef.current || []).forEach((t) => {
-                                        if (cleanCategory(t.category) !== cleanCategory(category)) return;
-                                        if (!t.teamName) return;
-                                        const tGroupChar = getGroupLastChar(t.groupName);
-                                        if (tGroupChar === teamGroupChar) {
-                                            teamsInGroupWithChar.add(t.teamName);
-                                            return;
-                                        }
-                                        const tNameChar = getTeamGroupCharFromName(t.teamName);
-                                        if (tNameChar === teamGroupChar) {
-                                            teamsInGroupWithChar.add(t.teamName);
-                                        }
-                                    });
+                                    // NOVÉ: Použi helper na zistenie tímov v skupine
+                                    const teamsInGroupWithChar = getTeamsInGroupByChar(category, teamGroupChar);
+
+                                    // NOVÉ: Log – pre tím, ktorý je v zápase o umiestnenie, vypíš, čo sa našlo
+                                    console.log(
+                                        `%c[TRANSPORT][PLACEMENT] Tím "${teamName}" (písmeno skupiny: ${teamGroupChar}) – nájdených ${teamsInGroupWithChar.size} tímov v skupine "${teamGroupChar}":`,
+                                        'font-weight: bold; color: #ea580c;'
+                                    );
+                                    [...teamsInGroupWithChar]
+                                        .sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }))
+                                        .forEach((tn) => console.log(`    • ${tn}`));
                             
                                     const dayForMatch = currentDay;
                                     const currentMatchStartTs = current.startTs;
