@@ -1783,10 +1783,19 @@ const TransportApp = ({ userProfileData }) => {
                         
                             // ============ VETVA PRE USERS TÍM ============
                             if (teamIsInUsers) {
-                                // Ak v tento deň hrá superstructure tím:
-                                // - users tím S ubytovaním → ranný presun Z UBYTOVANIA na prvú udalosť dňa
-                                // - users tím BEZ ubytovania → ranný presun Z MIESTA ZRAZU na prvú udalosť dňa
-                                if (anySuperstructureTeamHasEventToday) {
+                                // NOVÉ: Ak je aktuálna udalosť pavúkový zápas (tím má v názve
+                                // identifikátor WSF/LSF/WQF/W8F/W16F), negeneruj ranný presun
+                                // z miesta zrazu pred touto udalosťou.
+                                const isPavukMatchEvent =
+                                    current.type === 'match' &&
+                                    /\b(WSF|LSF|WQF|W8F|W16F)\d*/i.test(String(teamName));
+
+                                if (isPavukMatchEvent) {
+                                    // skip – pavúkový zápas nemá ranný presun z miesta zrazu
+                                } else if (anySuperstructureTeamHasEventToday) {
+                                    // Ak v tento deň hrá superstructure tím:
+                                    // - users tím S ubytovaním → ranný presun Z UBYTOVANIA na prvú udalosť dňa
+                                    // - users tím BEZ ubytovania → ranný presun Z MIESTA ZRAZU na prvú udalosť dňa
                                     const hasAccommodationForMorning =
                                         accommodationName && accommodationName.trim() !== '';
 
