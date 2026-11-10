@@ -2648,6 +2648,12 @@ const TransportApp = ({ userProfileData }) => {
                             }
                         }
                         
+                        // === DEŇ MIESTA ZRAZU – návrat z miesta zrazu na ubytovanie ===
+                        // Ak je zadaný deň miesta zrazu a práve prebieha posledná udalosť dňa
+                        // pre daný tím, vygeneruje sa presun z miesta zrazu na ubytovanie.
+                        // Čas odchodu je najneskorší koniec udalosti spomedzi VŠETKÝCH tímov
+                        // v danej kategórii v tento deň (aby sa neodchádzalo pred skončením
+                        // posledného zápasu/stravovania v kategórii).
                         if (
                             meetingPointDayKey &&
                             meetingPointDayKey !== '' &&
@@ -2734,11 +2740,12 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                             }
                         }
+                    }
 
-                        enriched.sort((a, b) => {
-                            if (a.ts !== b.ts) return a.ts - b.ts;
-                            return String(a.text).localeCompare(String(b.text), 'sk');
-                        });
+                    enriched.sort((a, b) => {
+                        if (a.ts !== b.ts) return a.ts - b.ts;
+                        return String(a.text).localeCompare(String(b.text), 'sk');
+                    });
                     
                     try {
                         const transfersForTeam = enriched.filter((ev) => ev.isTransfer === true);
