@@ -15296,7 +15296,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                             'div',
                                                                             {
                                                                                 className:
-                                                                                    'absolute z-[9999] left-0 top-full mt-1 ' +
+                                                                                    'absolute z-[9999] left-0 bottom-full mb-2 ' +
                                                                                     'hidden group-hover/busroute:block ' +
                                                                                     'bg-gray-900 text-white text-[11px] rounded-md shadow-xl px-2.5 py-2 ' +
                                                                                     'whitespace-normal pointer-events-none',
@@ -15326,9 +15326,9 @@ const TransportApp = ({ userProfileData }) => {
                                                                             ),
                                                                             React.createElement('div', {
                                                                                 className:
-                                                                                    'absolute left-4 top-0 -translate-y-full w-0 h-0 ' +
-                                                                                    'border-l-4 border-r-4 border-b-4 ' +
-                                                                                    'border-l-transparent border-r-transparent border-b-gray-900',
+                                                                                    'absolute left-4 top-full w-0 h-0 ' +
+                                                                                    'border-l-4 border-r-4 border-t-4 ' +
+                                                                                    'border-l-transparent border-r-transparent border-t-gray-900',
                                                                                 style: { marginTop: '-1px' },
                                                                             })
                                                                         )
