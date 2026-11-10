@@ -1302,18 +1302,8 @@ const TransportApp = ({ userProfileData }) => {
                         const g = getGroupForSuperstructureTeam(category, teamName);
                         if (g) return g;
                         if (ssInfo && ssInfo.lastChar) return `skupina ${ssInfo.lastChar}`;
-                        
-                        const nameMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
-                        if (nameMatch) {
-                            const lastChar = nameMatch[1];
-                            const groups = teamsByGroup[category] || {};
-                            for (const [gName, teamSet] of Object.entries(groups)) {
-                                const gLastChar = gName.trim().slice(-1).toUpperCase();
-                                if (gLastChar === lastChar) return gName;
-                            }
-                            return `skupina ${lastChar}`;
-                        }
-                        
+                        // NOVÉ: Odstránený fallback na posledné písmeno názvu tímu –
+                        // skupina sa má určiť výhradne z groupName alebo ssInfo.
                         return null;
                     })();
 
@@ -1611,10 +1601,14 @@ const TransportApp = ({ userProfileData }) => {
                                     });
                             
                                     const dayForMatch = currentDay;
-                                    const lastPlacesByTeam = new Map();
+                                    const currentMatchStartTs = current.startTs;
                             
-                                    if (dayForMatch) {
-                                        // Posledné zápasy skupiny v danom dni
+                                    if (dayForMatch && teamsInGroupWithChar.size > 0) {
+                                        // NOVÉ: Pre každé miesto poslednej udalosti skupiny (match alebo catering)
+                                        // v danom dni nájdeme NAJSKORŠÍ koniec (endTs), aby sme mali
+                                        // jednotný "posledný koniec skupiny" pre každé miesto.
+                                        const lastEndByPlace = new Map(); // placeName -> endTs (najneskorší koniec)
+                            
                                         matchesBufferRef.current.forEach((m) => {
                                             if (cleanCategory(m.category) !== cleanCategory(category)) return;
                                             let dayKey = null;
@@ -1637,60 +1631,67 @@ const TransportApp = ({ userProfileData }) => {
                                                 // Neberieme do úvahy samotný zápas o umiestnenie (aktuálny)
                                                 if (tn === teamName && m.scheduledTs === current.startTs) return;
                                                 const endTs = m.scheduledEndTs != null ? m.scheduledEndTs : m.scheduledTs;
-                                                const existing = lastPlacesByTeam.get(tn);
-                                                if (!existing || (endTs != null && endTs > (existing.endTs ?? -Infinity))) {
-                                                    lastPlacesByTeam.set(tn, { location: m.hallName, endTs });
+                                                if (endTs == null) return;
+                                                const existing = lastEndByPlace.get(m.hallName);
+                                                if (!existing || endTs > existing) {
+                                                    lastEndByPlace.set(m.hallName, endTs);
                                                 }
                                             });
                                         });
                             
-                                        // Posledné stravovania skupiny v danom dni
                                         cateringBufferRef.current.forEach((c) => {
                                             if (cleanCategory(c.category) !== cleanCategory(category)) return;
+                                            if (c.isSuperstructure === true) return;
                                             if (c.dayKey !== dayForMatch) return;
                                             if (!c.placeName) return;
                                             if (!teamsInGroupWithChar.has(c.teamName)) return;
                                             const endTs = c.slotToTs != null ? c.slotToTs : c.ts;
-                                            const existing = lastPlacesByTeam.get(c.teamName);
-                                            if (!existing || (endTs != null && endTs > (existing.endTs ?? -Infinity))) {
-                                                lastPlacesByTeam.set(c.teamName, { location: c.placeName, endTs });
+                                            if (endTs == null) return;
+                                            const existing = lastEndByPlace.get(c.placeName);
+                                            if (!existing || endTs > existing) {
+                                                lastEndByPlace.set(c.placeName, endTs);
                                             }
                                         });
-                                    }
                             
-                                    // Vygeneruj presun z každého miesta poslednej udalosti skupiny na miesto zápasu
-                                    if (lastPlacesByTeam.size > 0) {
-                                        const currentMatchStartTs = current.startTs;
-                                        lastPlacesByTeam.forEach((info) => {
-                                            if (!info.location) return;
-                                            if (isSamePlaceForTransfer(info.location, current.location)) return;
-                            
-                                            const departureTs = info.endTs;
-                                            const departureStr = formatFullFromTs(departureTs) || current.when;
-                                            const arrivalStr = formatFullFromTs(currentMatchStartTs) || current.when;
-                            
-                                            if (
-                                                departureTs != null &&
-                                                currentMatchStartTs != null &&
-                                                departureTs >= currentMatchStartTs
-                                            ) {
-                                                return;
+                                        // NOVÉ: Nájdeme miesto s najneskorším koncom – to je "posledná udalosť skupiny".
+                                        let latestPlace = null;
+                                        let latestEndTs = -Infinity;
+                                        lastEndByPlace.forEach((endTs, placeName) => {
+                                            if (endTs > latestEndTs) {
+                                                latestEndTs = endTs;
+                                                latestPlace = placeName;
                                             }
-                            
-                                            let whenStr;
-                                            if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
-                                            else if (arrivalStr) whenStr = arrivalStr;
-                                            else whenStr = current.when;
-                            
-                                            enriched.push({
-                                                ts: current.ts - 1,
-                                                when: whenStr,
-                                                type: 'transfer',
-                                                text: `Presun z ${info.location} do ${current.location}`,
-                                                location: null,
-                                                isTransfer: true,
-                                            });
                                         });
+                            
+                                        // Ak sme našli aspoň jedno miesto, vygeneruj JEDEN presun
+                                        // z miesta s najneskorším koncom na miesto zápasu o umiestnenie.
+                                        if (latestPlace && latestEndTs != null && isFinite(latestEndTs)) {
+                                            if (!isSamePlaceForTransfer(latestPlace, current.location)) {
+                                                const departureTs = latestEndTs;
+                                                const departureStr = formatFullFromTs(departureTs) || current.when;
+                                                const arrivalStr = formatFullFromTs(currentMatchStartTs) || current.when;
+                            
+                                                if (
+                                                    !(departureTs != null &&
+                                                      currentMatchStartTs != null &&
+                                                      departureTs >= currentMatchStartTs)
+                                                ) {
+                                                    let whenStr;
+                                                    if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                                    else if (arrivalStr) whenStr = arrivalStr;
+                                                    else whenStr = current.when;
+                            
+                                                    enriched.push({
+                                                        ts: current.ts - 1,
+                                                        when: whenStr,
+                                                        type: 'transfer',
+                                                        text: `Presun z ${latestPlace} do ${current.location}`,
+                                                        location: null,
+                                                        isTransfer: true,
+                                                    });
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1736,14 +1737,9 @@ const TransportApp = ({ userProfileData }) => {
                                     (teamsArrivalBufferRef.current || []).forEach((t) => {
                                         if (cleanCategory(t.category) !== cleanCategory(category)) return;
                                         if (!t.teamName) return;
+                                        // NOVÉ: Skupina sa určuje VÝHRADNE z groupName, NIE z posledného písmena názvu tímu.
                                         const tGroupChar = getGroupLastChar(t.groupName);
                                         if (tGroupChar === teamNameLastChar) {
-                                            teamsInGroupWithChar.add(t.teamName);
-                                            return;
-                                        }
-                                        // Fallback: podľa posledného písmena názvu tímu
-                                        const tNameMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(t.teamName).trim());
-                                        if (tNameMatch && tNameMatch[1].toUpperCase() === teamNameLastChar) {
                                             teamsInGroupWithChar.add(t.teamName);
                                         }
                                     });
