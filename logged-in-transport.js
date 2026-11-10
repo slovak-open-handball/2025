@@ -2683,90 +2683,90 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                             }
                         }
-                    }
-
-                    if (
-                        meetingPointDayKey &&
-                        meetingPointDayKey !== '' &&
-                        isLastEventOfDay &&
-                        currentDay != null &&
-                        currentDay === meetingPointDayKey
-                    ) {
-                        const teamIsInUsersForMeetingPoint = teamsArrivalBufferRef.current.some(
-                            (t) => cleanCategory(t.category) === cleanCategory(category)
-                                && t.teamName === teamName
-                                && t.isRegistered === true
-                        );
-
-                        const meetingPointStopForReturn = (() => {
-                            const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isMeetingPointStop === true);
-                            if (fromAllPlaces) return fromAllPlaces;
-                            const fromStops = (stopsList || []).find((p) => p.isMeetingPointStop === true);
-                            return fromStops || null;
-                        })();
-
+                        
                         if (
-                            teamIsInUsersForMeetingPoint &&
-                            meetingPointStopForReturn &&
-                            current.location &&
-                            current.location === meetingPointStopForReturn.name &&
-                            teamAccommodationsList.length > 0
+                            meetingPointDayKey &&
+                            meetingPointDayKey !== '' &&
+                            isLastEventOfDay &&
+                            currentDay != null &&
+                            currentDay === meetingPointDayKey
                         ) {
-                            // Zisti najneskorší koniec udalosti v rámci celej kategórie
-                            // v tento deň (cez všetky tímy v kategórii).
-                            const categoryClean = cleanCategory(category);
-                            let latestEndTsForCategoryOnDay = null;
+                            const teamIsInUsersForMeetingPoint = teamsArrivalBufferRef.current.some(
+                                (t) => cleanCategory(t.category) === cleanCategory(category)
+                                    && t.teamName === teamName
+                                    && t.isRegistered === true
+                            );
 
-                            Object.values(grouped[categoryClean] || {}).forEach((teamEvents) => {
-                                (teamEvents || []).forEach((ev) => {
-                                    const evDay = extractDayKeyFromWhen(ev.when);
-                                    if (evDay !== currentDay) return;
-                                    if (ev.endTs != null) {
-                                        if (latestEndTsForCategoryOnDay == null || ev.endTs > latestEndTsForCategoryOnDay) {
-                                            latestEndTsForCategoryOnDay = ev.endTs;
+                            const meetingPointStopForReturn = (() => {
+                                const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isMeetingPointStop === true);
+                                if (fromAllPlaces) return fromAllPlaces;
+                                const fromStops = (stopsList || []).find((p) => p.isMeetingPointStop === true);
+                                return fromStops || null;
+                            })();
+
+                            if (
+                                teamIsInUsersForMeetingPoint &&
+                                meetingPointStopForReturn &&
+                                current.location &&
+                                current.location === meetingPointStopForReturn.name &&
+                                teamAccommodationsList.length > 0
+                            ) {
+                                // Zisti najneskorší koniec udalosti v rámci celej kategórie
+                                // v tento deň (cez všetky tímy v kategórii).
+                                const categoryClean = cleanCategory(category);
+                                let latestEndTsForCategoryOnDay = null;
+
+                                Object.values(grouped[categoryClean] || {}).forEach((teamEvents) => {
+                                    (teamEvents || []).forEach((ev) => {
+                                        const evDay = extractDayKeyFromWhen(ev.when);
+                                        if (evDay !== currentDay) return;
+                                        if (ev.endTs != null) {
+                                            if (latestEndTsForCategoryOnDay == null || ev.endTs > latestEndTsForCategoryOnDay) {
+                                                latestEndTsForCategoryOnDay = ev.endTs;
+                                            }
+                                        } else if (ev.startTs != null) {
+                                            if (latestEndTsForCategoryOnDay == null || ev.startTs > latestEndTsForCategoryOnDay) {
+                                                latestEndTsForCategoryOnDay = ev.startTs;
+                                            }
                                         }
-                                    } else if (ev.startTs != null) {
-                                        if (latestEndTsForCategoryOnDay == null || ev.startTs > latestEndTsForCategoryOnDay) {
-                                            latestEndTsForCategoryOnDay = ev.startTs;
-                                        }
-                                    }
-                                });
-                            });
-
-                            // Fallback – aspoň koniec aktuálnej udalosti
-                            if (latestEndTsForCategoryOnDay == null) {
-                                latestEndTsForCategoryOnDay =
-                                    current.endTs != null ? current.endTs : current.startTs;
-                            }
-
-                            if (latestEndTsForCategoryOnDay != null) {
-                                const departureTs = latestEndTsForCategoryOnDay;
-                                const dayRefTs = departureTs;
-
-                                const arrivalTs = timestampOnDay(dayRefTs, 23, 59);
-                                const departureStr = formatFullFromTs(departureTs) || current.when;
-                                const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
-
-                                if (
-                                    departureTs != null &&
-                                    arrivalTs != null &&
-                                    departureTs < arrivalTs
-                                ) {
-                                    const whenStr = `${departureStr} – ${arrivalStr}`;
-
-                                    teamAccommodationsList.forEach((accomName) => {
-                                        if (!accomName) return;
-                                        if (accomName === current.location) return;
-
-                                        enriched.push({
-                                            ts: current.ts + 1.5,
-                                            when: whenStr,
-                                            type: 'transfer',
-                                            text: `Presun z miesto zrazu ${meetingPointStopForReturn.name} do ubytovanie ${accomName}`,
-                                            location: null,
-                                            isTransfer: true,
-                                        });
                                     });
+                                });
+
+                                // Fallback – aspoň koniec aktuálnej udalosti
+                                if (latestEndTsForCategoryOnDay == null) {
+                                    latestEndTsForCategoryOnDay =
+                                        current.endTs != null ? current.endTs : current.startTs;
+                                }
+
+                                if (latestEndTsForCategoryOnDay != null) {
+                                    const departureTs = latestEndTsForCategoryOnDay;
+                                    const dayRefTs = departureTs;
+
+                                    const arrivalTs = timestampOnDay(dayRefTs, 23, 59);
+                                    const departureStr = formatFullFromTs(departureTs) || current.when;
+                                    const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
+
+                                    if (
+                                        departureTs != null &&
+                                        arrivalTs != null &&
+                                        departureTs < arrivalTs
+                                    ) {
+                                        const whenStr = `${departureStr} – ${arrivalStr}`;
+
+                                        teamAccommodationsList.forEach((accomName) => {
+                                            if (!accomName) return;
+                                            if (accomName === current.location) return;
+
+                                            enriched.push({
+                                                ts: current.ts + 1.5,
+                                                when: whenStr,
+                                                type: 'transfer',
+                                                text: `Presun z miesto zrazu ${meetingPointStopForReturn.name} do ubytovanie ${accomName}`,
+                                                location: null,
+                                                isTransfer: true,
+                                            });
+                                        });
+                                    }
                                 }
                             }
                         }
@@ -2776,7 +2776,7 @@ const TransportApp = ({ userProfileData }) => {
                         if (a.ts !== b.ts) return a.ts - b.ts;
                         return String(a.text).localeCompare(String(b.text), 'sk');
                     });
-
+                    
                     try {
                         const transfersForTeam = enriched.filter((ev) => ev.isTransfer === true);
                         if (transfersForTeam.length > 0 && window.db) {
