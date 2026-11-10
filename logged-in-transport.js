@@ -645,6 +645,7 @@ const TransportApp = ({ userProfileData }) => {
     const [showDeleteTransfersModal, setShowDeleteTransfersModal] = useState(false);
     const [sortTransfersBy, setSortTransfersBy] = useState('departure');
     const [selectedFromPlaceFilter, setSelectedFromPlaceFilter] = useState('');
+    const [selectedToPlaceFilter, setSelectedToPlaceFilter] = useState('');
     const [selectedCategoryForDelete, setSelectedCategoryForDelete] = useState('');    
     const [missingTravelTimeWarning, setMissingTravelTimeWarning] = useState([]);
     const [placesLoaded, setPlacesLoaded] = useState(false);
@@ -4059,6 +4060,7 @@ const TransportApp = ({ userProfileData }) => {
 
     useEffect(() => {
         setSelectedFromPlaceFilter('');
+        setSelectedToPlaceFilter('');
     }, [selectedDayKey, selectedCategoryFilter]);
 
     useEffect(() => {
@@ -10327,16 +10329,24 @@ const TransportApp = ({ userProfileData }) => {
             ? baseFilteredFirstOnly.filter((t) => t._parentKey && t._parentRoute)
             : baseFilteredFirstOnly;
 
-        // Filter podľa miesta začiatku presunu (selectbox "Miesto začiatku presunu")
+        // Filter podľa miesta začiatku a miesta konca presunu
+        // (selectboxy "Miesto začiatku presunu" a "Miesto konca presunu")
         const filtered = baseFilteredAfterPartial.filter((t) => {
-            if (!selectedFromPlaceFilter) return true;
+            // Filter podľa miesta začiatku
+            if (selectedFromPlaceFilter) {
+                const fromId = t.fromId || null;
+                if (!fromId) return false;
+                if (String(fromId) !== String(selectedFromPlaceFilter)) return false;
+            }
 
-            // Zisti ID miesta začiatku presunu/segmentu:
-            // - pre segment (t._parentKey) použijeme t.fromId (segment má vlastné fromId)
-            // - pre celý presun použijeme t.fromId
-            const fromId = t.fromId || null;
-            if (!fromId) return false;
-            return String(fromId) === String(selectedFromPlaceFilter);
+            // Filter podľa miesta konca
+            if (selectedToPlaceFilter) {
+                const toId = t.toId || null;
+                if (!toId) return false;
+                if (String(toId) !== String(selectedToPlaceFilter)) return false;
+            }
+
+            return true;
         });
         
         const getTransferStartTsForSort = (t) => {
@@ -10771,6 +10781,7 @@ const TransportApp = ({ userProfileData }) => {
                 'div',
                 { className: 'px-3 pt-2 pb-2 border-b border-gray-100 flex flex-col gap-2' },
                 // NOVÉ: Selectbox na výber miesta začiatku presunu – UMiestnený NAD tlačidlami zoradenia
+                // NOVÉ: Selectbox na výber miesta začiatku presunu – UMiestnený NAD tlačidlami zoradenia
                 (() => {
                     // Zoznam všetkých miest, ktoré sa vyskytujú ako začiatočné body presunov/segmentov
                     // v práve zobrazenom (dňom a kategóriou filtrovanom) zozname.
@@ -10796,10 +10807,6 @@ const TransportApp = ({ userProfileData }) => {
                     const fromPlaceOptions = [...fromPlaceOptionsMap.values()]
                         .sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
 
-                    // Ak je selectedFromPlaceFilter nastavený na miesto, ktoré už nie je v zozname
-                    // (napr. po zmene dňa/kategórie), nič nemeniť – filter jednoducho vráti prázdny zoznam.
-                    // Používateľ môže vybrať "Všetky miesta začiatku".
-
                     return React.createElement(
                         'div',
                         { className: 'flex items-center gap-2' },
@@ -10822,6 +10829,63 @@ const TransportApp = ({ userProfileData }) => {
                             },
                             React.createElement('option', { value: '' }, '— Všetky miesta začiatku —'),
                             fromPlaceOptions.map((opt) =>
+                                React.createElement(
+                                    'option',
+                                    { key: opt.id, value: opt.id },
+                                    opt.name
+                                )
+                            )
+                        )
+                    );
+                })(),
+                // NOVÉ: Selectbox na výber miesta konca presunu – pod selectboxom miesta začiatku
+                (() => {
+                    // Zoznam všetkých miest, ktoré sa vyskytujú ako koncové body presunov/segmentov
+                    // v práve zobrazenom (dňom a kategóriou filtrovanom) zozname.
+                    const toPlaceOptionsMap = new Map();
+
+                    baseFilteredAfterPartial.forEach((t) => {
+                        const toId = t.toId || null;
+                        if (!toId) return;
+                        const idStr = String(toId);
+                        if (toPlaceOptionsMap.has(idStr)) return;
+
+                        const name = resolvePlaceNameById(toId) || idStr;
+
+                        // Zisti typ miesta (pre ikonu a zobrazenie)
+                        const place = (allPlacesRef.current || []).find((p) => String(p.id) === idStr);
+                        toPlaceOptionsMap.set(idStr, {
+                            id: idStr,
+                            name,
+                            type: place?.type || null,
+                        });
+                    });
+
+                    const toPlaceOptions = [...toPlaceOptionsMap.values()]
+                        .sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
+
+                    return React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-2' },
+                        React.createElement(
+                            'label',
+                            {
+                                className: 'text-xs font-medium text-gray-600 whitespace-nowrap',
+                                title: 'Zobraziť iba presuny, ktoré končia na zvolenom mieste',
+                            },
+                            'Miesto konca:'
+                        ),
+                        React.createElement(
+                            'select',
+                            {
+                                value: selectedToPlaceFilter,
+                                onChange: (e) => setSelectedToPlaceFilter(e.target.value),
+                                disabled: toPlaceOptions.length === 0,
+                                title: 'Filtrovať presuny podľa miesta, kde presun končí',
+                                className: 'flex-1 min-w-0 px-2 py-1.5 rounded-md text-xs font-medium border border-violet-300 bg-white text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed',
+                            },
+                            React.createElement('option', { value: '' }, '— Všetky miesta konca —'),
+                            toPlaceOptions.map((opt) =>
                                 React.createElement(
                                     'option',
                                     { key: opt.id, value: opt.id },
