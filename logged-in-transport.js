@@ -4066,43 +4066,46 @@ const TransportApp = ({ userProfileData }) => {
     useEffect(() => {
         if (!selectedFromPlaceFilter && !selectedToPlaceFilter) return;
 
-        const parentsForCurrentContext = (savedTransfers || []).filter((t) => {
-            if (selectedDayKey && t.dayKey !== selectedDayKey) return false;
-            if (
-                selectedCategoryFilter &&
-                cleanCategory(t.category || '') !== cleanCategory(selectedCategoryFilter)
-            ) {
-                return false;
-            }
-            return true;
-        });
+        const dayKeyFilter = selectedDayKey || null;
+        const categoryFilter = selectedCategoryFilter
+            ? cleanCategory(selectedCategoryFilter)
+            : null;
 
-        const availableFromIds = new Set();
-        const availableToIds = new Set();
+        const hasAnyParentMatch = (savedTransfers || []).some((t) => {
+            if (dayKeyFilter && t.dayKey !== dayKeyFilter) return false;
+            if (categoryFilter && cleanCategory(t.category || '') !== categoryFilter) return false;
 
-        parentsForCurrentContext.forEach((t) => {
-            if (t.fromId) availableFromIds.add(String(t.fromId));
-            if (t.toId) availableToIds.add(String(t.toId));
+            const fromId = t.fromId ? String(t.fromId) : null;
+            const toId = t.toId ? String(t.toId) : null;
 
+            // Skontroluj parent.fromId / parent.toId
+            let fromMatch = !selectedFromPlaceFilter
+                || (fromId && fromId === String(selectedFromPlaceFilter));
+            let toMatch = !selectedToPlaceFilter
+                || (toId && toId === String(selectedToPlaceFilter));
+
+            if (fromMatch && toMatch) return true;
+
+            // Skontroluj segmenty
             const segments = Array.isArray(t.segments) ? t.segments : [];
-            segments.forEach((seg) => {
-                if (!seg) return;
-                if (seg.fromId) availableFromIds.add(String(seg.fromId));
-                if (seg.toId) availableToIds.add(String(seg.toId));
+            const hasSegMatch = segments.some((seg) => {
+                if (!seg) return false;
+                const segFromId = seg.fromId ? String(seg.fromId) : null;
+                const segToId = seg.toId ? String(seg.toId) : null;
+
+                const segFromMatch = !selectedFromPlaceFilter
+                    || (segFromId && segFromId === String(selectedFromPlaceFilter));
+                const segToMatch = !selectedToPlaceFilter
+                    || (segToId && segToId === String(selectedToPlaceFilter));
+
+                return segFromMatch && segToMatch;
             });
+
+            return hasSegMatch;
         });
 
-        if (
-            selectedFromPlaceFilter &&
-            !availableFromIds.has(String(selectedFromPlaceFilter))
-        ) {
+        if (!hasAnyParentMatch) {
             setSelectedFromPlaceFilter('');
-        }
-
-        if (
-            selectedToPlaceFilter &&
-            !availableToIds.has(String(selectedToPlaceFilter))
-        ) {
             setSelectedToPlaceFilter('');
         }
     }, [
@@ -4139,63 +4142,6 @@ const TransportApp = ({ userProfileData }) => {
             setShowOnlyPartialTransfers(false);
         }
     }, [savedTransfers, selectedDayKey, selectedCategoryFilter, showOnlyPartialTransfers]);
-
-    useEffect(() => {
-        if (!selectedFromPlaceFilter && !selectedToPlaceFilter) return;
-
-        const dayKeyFilter = selectedDayKey || null;
-        const categoryFilter = selectedCategoryFilter
-            ? cleanCategory(selectedCategoryFilter)
-            : null;
-
-        const hasAnyUnassignedMatchingFilter = (savedTransfers || []).some((parent) => {
-            if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return false;
-            if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return false;
-
-            const fromId = parent.fromId || null;
-            const toId = parent.toId || null;
-
-            if (selectedFromPlaceFilter) {
-                if (!fromId || String(fromId) !== String(selectedFromPlaceFilter)) return false;
-            }
-            if (selectedToPlaceFilter) {
-                if (!toId || String(toId) !== String(selectedToPlaceFilter)) return false;
-            }
-
-            // Ak je parent úplne priradený (všetky segmenty priradené alebo pešie),
-            // nezobrazí sa v boxe "Vygenerované presuny" → nepovažujeme ho za zhodu.
-            const segments = Array.isArray(parent.segments) ? parent.segments : [];
-            if (parent.isWalking === true && segments.length === 0) return false;
-
-            if (segments.length === 0) {
-                // Priamy presun bez segmentov – ak nie je priradený, považujeme za zhodu.
-                if (parent.isWalking === true) return false;
-                return true;
-            }
-
-            // Má aspoň jeden nepriradený a nepeší segment?
-            const hasAnyUnassignedSegment = segments.some((seg) => {
-                if (!seg) return false;
-                if (seg.isWalking === true) return false;
-                if (seg.busId && seg.boardingRowId && seg.alightingRowId) return false;
-                if (seg.busAssigned === true && seg.boardingRowId && seg.alightingRowId) return false;
-                return true;
-            });
-
-            return hasAnyUnassignedSegment;
-        });
-
-        if (!hasAnyUnassignedMatchingFilter) {
-            setSelectedFromPlaceFilter('');
-            setSelectedToPlaceFilter('');
-        }
-    }, [
-        savedTransfers,
-        selectedDayKey,
-        selectedCategoryFilter,
-        selectedFromPlaceFilter,
-        selectedToPlaceFilter,
-    ]);
     
     const buildRowId = (busId, dayKey, order) => {
         return `${busId}__${dayKey}__${order}`;
