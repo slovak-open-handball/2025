@@ -10944,20 +10944,37 @@ const TransportApp = ({ userProfileData }) => {
         });
 
         if (sortedTransfers.length === 0) {
-            // Ak sú aktívne selectboxy (miesto začiatku / konca) a výsledok je prázdny,
-            // zobrazíme plnohodnotný box so selectboxami, tlačidlami a hláškou,
-            // aby používateľ mohol filter zmeniť alebo zrušiť.
+            // Zisti, či sú selectboxy ešte aktívne, ale filter už nemá žiadne dáta
+            // (napr. po priradení posledného presunu, ktorý filtru vyhovoval).
             const hasActivePlaceFilter =
                 !!selectedFromPlaceFilter || !!selectedToPlaceFilter;
-
-            if (hasActivePlaceFilter) {
+        
+            // Over, či filter ešte vôbec zodpovedá niečomu v aktuálnych dátach.
+            const placeFilterStillHasData = (() => {
+                if (!hasActivePlaceFilter) return false;
+                return baseFilteredAfterPartial.some((t) => {
+                    if (selectedFromPlaceFilter) {
+                        const fromId = t.fromId || null;
+                        if (!fromId) return false;
+                        if (String(fromId) !== String(selectedFromPlaceFilter)) return false;
+                    }
+                    if (selectedToPlaceFilter) {
+                        const toId = t.toId || null;
+                        if (!toId) return false;
+                        if (String(toId) !== String(selectedToPlaceFilter)) return false;
+                    }
+                    return true;
+                });
+            })();
+        
+            // Ak filter už nemá dáta (bol resetovaný alebo sa minul), zobraz plný box bez hlášky.
+            if (hasActivePlaceFilter && placeFilterStillHasData) {
                 return React.createElement(
                     'div',
                     {
                         className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
                         style: { width: '420px', maxWidth: '100%' }
                     },
-                    // Hlavička boxu
                     React.createElement(
                         'div',
                         {
@@ -10976,14 +10993,12 @@ const TransportApp = ({ userProfileData }) => {
                             '0'
                         )
                     ),
-                    // Ovládacie prvky (selectboxy + tlačidlá zoradenia) – zdieľané s plným boxom
                     React.createElement(
                         'div',
                         { className: 'px-3 pt-2 pb-2 border-b border-gray-100 flex flex-col gap-2' },
                         renderPlaceFilters(baseFilteredAfterPartial),
                         renderSortButtons()
                     ),
-                    // Hláška o prázdnom výsledku
                     React.createElement(
                         'p',
                         { className: 'text-center text-gray-500 py-6 text-sm italic px-3' },
@@ -10991,7 +11006,7 @@ const TransportApp = ({ userProfileData }) => {
                     )
                 );
             }
-
+        
             return null;
         }
     
