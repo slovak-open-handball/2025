@@ -1569,31 +1569,6 @@ const TransportApp = ({ userProfileData }) => {
                                     });
                                 });
                             })();
-                            
-                            if (!anyUsersTeamHasEventToday && meetingPointStop && externalArrivalStop) {
-                                // presun z poslednej udalosti na miesto zrazu (ak ešte nie je)
-                                if (current.location !== meetingPointStop.name) {
-                                    enriched.push({
-                                        ts: current.ts + 2,
-                                        when: `${departureStr} – ${arrivalStr}`,
-                                        type: 'transfer',
-                                        text: `Presun z ${current.location} do miesto zrazu ${meetingPointStop.name}`,
-                                        location: null,
-                                        isTransfer: true,
-                                    });
-                                }
-                                // presun z miesta zrazu na nástupnú/výstupnú zastávku
-                                if (externalArrivalStop.name !== meetingPointStop.name) {
-                                    enriched.push({
-                                        ts: current.ts + 2.5,
-                                        when: `${departureStr} – ${arrivalStr}`,
-                                        type: 'transfer',
-                                        text: `Presun z miesto zrazu ${meetingPointStop.name} do zastávka ${externalArrivalStop.name}`,
-                                        location: null,
-                                        isTransfer: true,
-                                    });
-                                }
-                            }
                         
                             // Pomocná: existuje aspoň jeden superstructure tím v kategórii, ktorý má v tento deň udalosť?
                             const anySuperstructureTeamHasEventToday = (() => {
@@ -1923,7 +1898,26 @@ const TransportApp = ({ userProfileData }) => {
                                 currentDay != null && currentDay === meetingPointDayKey;
                         
                             const isGlobalLastDay = currentDay === globalLastDay;
-                        
+
+                            // Pomocné premenné pre tento blok
+                            const meetingPointStopForDay = (() => {
+                                if (!isMeetingPointDay) return null;
+                                const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isMeetingPointStop === true);
+                                if (fromAllPlaces) return fromAllPlaces;
+                                const fromStops = (stopsList || []).find((p) => p.isMeetingPointStop === true);
+                                return fromStops || null;
+                            })();
+
+                            const externalArrivalStopForDay = (() => {
+                                const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isExternalArrivalStop === true);
+                                if (fromAllPlaces) return fromAllPlaces;
+                                const fromStops = (stopsList || []).find((p) => p.isExternalArrivalStop === true);
+                                return fromStops || null;
+                            })();
+                            
+                            const accommodationNameForBlock = accommodationName; // (ak ho používaš nižšie)
+                            const groupCharForSS = ssGroupCharByTeam[`${cleanCategory(category)}|${teamName}`];
+                                                    
                             // Pomocná: existuje aspoň jeden superstructure tím v kategórii, ktorý má v tento deň udalosť?
                             const anySuperstructureTeamHasEventToday = (() => {
                                 if (!currentDay) return false;
@@ -2080,99 +2074,6 @@ const TransportApp = ({ userProfileData }) => {
                         
                         // === DEŇ MIESTA ZRAZU – návrat z miesta zrazu na ubytovanie (používateľský tím) ===
                         // (Táto časť zostáva nezmenená, len je vizuálne oddelená.)
-                        if (
-                            meetingPointDayKey &&
-                            meetingPointDayKey !== '' &&
-                            isLastEventOfDay &&
-                            currentDay != null &&
-                            currentDay === meetingPointDayKey
-                        ) {
-                            const teamIsInUsersForMeetingPoint = teamsArrivalBufferRef.current.some(
-                                (t) => cleanCategory(t.category) === cleanCategory(category)
-                                    && t.teamName === teamName
-                                    && t.isRegistered === true
-                            );
-                        
-                            const meetingPointStopForReturn = (() => {
-                                const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isMeetingPointStop === true);
-                                if (fromAllPlaces) return fromAllPlaces;
-                                const fromStops = (stopsList || []).find((p) => p.isMeetingPointStop === true);
-                                return fromStops || null;
-                            })();
-                        
-                            // Dôležitá zmena: už nevyžadujeme, aby current.location bolo miesto zrazu.
-                            // Zdrojom presunu je vždy miesto zrazu.
-                            if (
-                                teamIsInUsersForMeetingPoint &&
-                                meetingPointStopForReturn &&
-                                teamAccommodationsList.length > 0
-                            ) {
-                                // Zisti najneskorší koniec udalosti v rámci celej kategórie
-                                // v tento deň (cez všetky tímy v kategórii – používateľské
-                                // aj superstructure).
-                                const categoryClean = cleanCategory(category);
-                                let latestEndTsForCategoryOnDay = null;
-                        
-                                Object.values(grouped[categoryClean] || {}).forEach((teamEvents) => {
-                                    (teamEvents || []).forEach((ev) => {
-                                        const evDay = extractDayKeyFromWhen(ev.when);
-                                        if (evDay !== currentDay) return;
-                                        if (ev.endTs != null) {
-                                            if (latestEndTsForCategoryOnDay == null || ev.endTs > latestEndTsForCategoryOnDay) {
-                                                latestEndTsForCategoryOnDay = ev.endTs;
-                                            }
-                                        } else if (ev.startTs != null) {
-                                            if (latestEndTsForCategoryOnDay == null || ev.startTs > latestEndTsForCategoryOnDay) {
-                                                latestEndTsForCategoryOnDay = ev.startTs;
-                                            }
-                                        }
-                                    });
-                                });
-                        
-                                // Fallback – aspoň koniec aktuálnej udalosti
-                                if (latestEndTsForCategoryOnDay == null) {
-                                    latestEndTsForCategoryOnDay =
-                                        current.endTs != null ? current.endTs : current.startTs;
-                                }
-                        
-                                if (latestEndTsForCategoryOnDay != null) {
-                                    const departureTs = latestEndTsForCategoryOnDay;
-                                    const dayRefTs = departureTs;
-                        
-                                    const arrivalTs = timestampOnDay(dayRefTs, 23, 59);
-                                    const departureStr = formatFullFromTs(departureTs) || current.when;
-                                    const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
-                        
-                                    if (
-                                        departureTs != null &&
-                                        arrivalTs != null &&
-                                        departureTs < arrivalTs
-                                    ) {
-                                        const whenStr = `${departureStr} – ${arrivalStr}`;
-                        
-                                        teamAccommodationsList.forEach((accomName) => {
-                                            if (!accomName) return;
-                                            // Zdrojom presunu je miesto zrazu, nie aktuálna lokalita tímu,
-                                            // takže nepreskakujeme ani keď accomName === current.location.
-                                            enriched.push({
-                                                ts: current.ts + 1.5,
-                                                when: whenStr,
-                                                type: 'transfer',
-                                                text: `Presun z miesto zrazu ${meetingPointStopForReturn.name} do ubytovanie ${accomName}`,
-                                                location: null,
-                                                isTransfer: true,
-                                            });
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // === DEŇ MIESTA ZRAZU – návrat z miesta zrazu na ubytovanie (používateľský tím) ===
-                        // Pre používateľský tím sa v deň miesta zrazu vygeneruje presun z miesta zrazu
-                        // na jeho ubytovanie. Čas odchodu = najneskorší koniec akejkoľvek udalosti
-                        // spomedzi VŠETKÝCH tímov v danej kategórii v tento deň. Tento presun sa
-                        // generuje bez ohľadu na to, kde sa nachádza posledná udalosť tímu.
                         if (
                             meetingPointDayKey &&
                             meetingPointDayKey !== '' &&
