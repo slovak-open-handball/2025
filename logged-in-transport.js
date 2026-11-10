@@ -1556,6 +1556,34 @@ const TransportApp = ({ userProfileData }) => {
                                 globalFirstDay != null &&
                                 currentDay === globalFirstDay;
                         
+                            // NOVÉ: Zisti, či ide o pavúkový tím
+                            const isPavukTeamNameForMorning =
+                                /\b(WSF|LSF|WQF|W8F|W16F)\d*/i.test(String(teamName));
+                        
+                            // NOVÉ: Zisti, či aktuálna udalosť je prvý pavúkový zápas tímu v danom dni.
+                            // Ak tím má v ten istý deň skôr iný pavúkový zápas, aktuálna udalosť
+                            // nie je prvá a ranné presuny sa negenerujú (tím už je na mieste).
+                            const isFirstPavukMatchOfDay = (() => {
+                                if (!isPavukTeamNameForMorning) return true;
+                                if (!currentDay) return true;
+                                if (current.type !== 'match') return true;
+                        
+                                const currentTs =
+                                    current.ts ?? current.startTs ?? Number.POSITIVE_INFINITY;
+                        
+                                const earlierSameDayMatches = events.filter((ev) => {
+                                    if (ev === current) return false;
+                                    if (ev.type !== 'match') return false;
+                                    const evDay = extractDayKeyFromWhen(ev.when);
+                                    if (evDay !== currentDay) return false;
+                                    const evTs =
+                                        ev.ts ?? ev.startTs ?? Number.POSITIVE_INFINITY;
+                                    return evTs < currentTs;
+                                });
+                        
+                                return earlierSameDayMatches.length === 0;
+                            })();
+                        
                             // Pomocná: existuje aspoň jeden users tím v kategórii, ktorý má v tento deň udalosť?
                             const anyUsersTeamHasEventToday = (() => {
                                 if (!currentDay) return false;
@@ -1625,10 +1653,10 @@ const TransportApp = ({ userProfileData }) => {
                                         .trim();
                                     const hasPublicTransport = arrivalTypeNorm.includes('verejn') || arrivalTypeNorm.includes('autobus') || arrivalTypeNorm.includes('vlak');
                                     const hasOwnOrNoTransport = arrivalTypeNorm.includes('vlastn') || arrivalTypeNorm.includes('bez dopravy') || arrivalTypeNorm.includes('ziadna') || arrivalTypeNorm.includes('žiadna');
-                            
+                        
                                     let fromLocationName = null;
                                     let fromLabel = null;
-                            
+                        
                                     if (hasPublicTransport && externalArrivalStop) {
                                         fromLocationName = externalArrivalStop.name;
                                         fromLabel = `zastávka ${externalArrivalStop.name}`;
@@ -1636,7 +1664,7 @@ const TransportApp = ({ userProfileData }) => {
                                         fromLocationName = meetingPointStop.name;
                                         fromLabel = `miesto zrazu ${meetingPointStop.name}`;
                                     }
-                            
+                        
                                     if (fromLocationName && !isSamePlaceForTransfer(fromLocationName, current.location)) {
                                         const arrivalTs = current.startTs;
                                         const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
@@ -1715,6 +1743,10 @@ const TransportApp = ({ userProfileData }) => {
                                 // NOVÉ: Ak v tento deň má udalosť aspoň jeden users tím, negeneruj ranné presuny pre SS tím
                                 if (anyUsersTeamHasEventToday) {
                                     // skip – pravidlo: ak hrá users tím, SS tím nemá ranné presuny
+                                } else if (!isFirstPavukMatchOfDay) {
+                                    // NOVÉ: Ak ide o pavúkový tím a má v ten deň skôr iný pavúkový zápas,
+                                    // negeneruj ranné presuny (ani z miesta zrazu).
+                                    // Tím už je na mieste z predchádzajúceho zápasu.
                                 } else if (isGlobalFirstDay) {
                                     // prvý deň: z miesta zrazu na prvú udalosť
                                     if (meetingPointStop && !isSamePlaceForTransfer(meetingPointStop.name, current.location)) {
@@ -1759,7 +1791,7 @@ const TransportApp = ({ userProfileData }) => {
                                         const filteredSources = [...sources].filter(
                                             (src) => !isSamePlaceForTransfer(src, current.location)
                                         );
-                            
+                        
                                         const arrivalTs = current.startTs;
                                         const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
                                         const departureTs = timestampOnDay(arrivalTs, 0, 0);
