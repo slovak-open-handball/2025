@@ -2285,9 +2285,23 @@ const TransportApp = ({ userProfileData }) => {
                                             && !useExternalStopOnFirstDay
                                             && shouldGenerateAccommodationTransfers;
                                     })();
+
+                                    // NOVÉ: Ak tím nemá ubytovanie (users tím bez ubytovne)
+                                    // a negeneruje sa ranný presun z ubytovne ani z externá zastávky,
+                                    // ale existuje miesto zrazu, vygeneruj ranný presun z miesta zrazu.
+                                    const useMeetingPointAsMorningSource =
+                                        teamIsInUsers &&
+                                        !useExternalStopOnFirstDay &&
+                                        !useAccommodationAsSource &&
+                                        !useMeetingPointOnFirstDay &&
+                                        !shouldGenerateAccommodationTransfers &&
+                                        !!meetingPointStop;
                                 
                                     const shouldGenerateMorningTransfer =
-                                        useExternalStopOnFirstDay || useAccommodationAsSource || useMeetingPointOnFirstDay;
+                                        useExternalStopOnFirstDay ||
+                                        useAccommodationAsSource ||
+                                        useMeetingPointOnFirstDay ||
+                                        useMeetingPointAsMorningSource;
                                 
                                     if (shouldGenerateMorningTransfer) {
                                         const morningFromLocations = (() => {
@@ -2299,6 +2313,13 @@ const TransportApp = ({ userProfileData }) => {
                                                 }];
                                             }
                                             if (useMeetingPointOnFirstDay) {
+                                                return [{
+                                                    name: meetingPointStop.name,
+                                                    isExternalStop: false,
+                                                    isMeetingPoint: true,
+                                                }];
+                                            }
+                                            if (useMeetingPointAsMorningSource) {
                                                 return [{
                                                     name: meetingPointStop.name,
                                                     isExternalStop: false,
@@ -2391,6 +2412,62 @@ const TransportApp = ({ userProfileData }) => {
                                                 isTransfer: true,
                                             });
                                         });
+                                    }
+
+                                    // NOVÉ: Pre superstructure tím, ktorý nemá skupinové ranné presuny,
+                                    // vygeneruj ranný presun z miesta zrazu na prvú udalosť dňa
+                                    // (ak je miesto zrazu definované a nie je totožné s cieľom).
+                                    if (
+                                        !teamIsInUsers &&
+                                        meetingPointStop &&
+                                        current.location &&
+                                        current.location !== meetingPointStop.name
+                                    ) {
+                                        const dayRefTs =
+                                            current.startTs != null
+                                                ? current.startTs
+                                                : midnightFromWhen(current.when);
+
+                                        const arrivalTs = current.startTs != null ? current.startTs : null;
+                                        const arrivalStr =
+                                            formatFullFromTs(arrivalTs) || current.when;
+
+                                        const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
+                                        let departureTs;
+                                        let departureStr;
+
+                                        if (globalArrivalTs != null && isFinite(globalArrivalTs)) {
+                                            departureTs = globalArrivalTs;
+                                            departureStr = formatFullFromTs(departureTs) || '—';
+                                        } else {
+                                            departureTs = timestampOnDay(dayRefTs, 0, 0);
+                                            departureStr = formatFullFromTs(departureTs) || '00:00';
+                                        }
+
+                                        if (
+                                            departureTs != null &&
+                                            arrivalTs != null &&
+                                            departureTs >= arrivalTs
+                                        ) {
+                                        } else {
+                                            let whenStr;
+                                            if (departureStr && arrivalStr) {
+                                                whenStr = `${departureStr} – ${arrivalStr}`;
+                                            } else if (arrivalStr) {
+                                                whenStr = arrivalStr;
+                                            } else {
+                                                whenStr = current.when;
+                                            }
+
+                                            enriched.push({
+                                                ts: current.ts - 1,
+                                                when: whenStr,
+                                                type: 'transfer',
+                                                text: `Presun z miesto zrazu ${meetingPointStop.name} do ${current.location}`,
+                                                location: null,
+                                                isTransfer: true,
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -2767,9 +2844,11 @@ const TransportApp = ({ userProfileData }) => {
                                 // 3) Ak je to superstructure tím a JE posledný deň turnaja,
                                 //    vygeneruj presun na miesto zrazu (z poslednej udalosti)
                                 //    a presun z miesta zrazu na nástupnú/výstupnú zastávku.
+                                //    Toto sa vykoná AJ pre users tímy, ktoré nemajú ubytovanie,
+                                //    aby sa zabezpečil presun na miesto zrazu a následne na zastávku.
+                                const isLastDayForThisTeam = currentDay === globalLastDay;
                                 if (
-                                    !teamIsInUsers &&
-                                    currentDay === globalLastDay &&
+                                    isLastDayForThisTeam &&
                                     meetingPointStopForDay &&
                                     externalArrivalStopForDay &&
                                     current.location !== meetingPointStopForDay.name
@@ -2829,7 +2908,6 @@ const TransportApp = ({ userProfileData }) => {
                                             });
                                         }
                                     }
-                                }
                             }
                         }
                         
