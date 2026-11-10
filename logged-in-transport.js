@@ -2648,11 +2648,11 @@ const TransportApp = ({ userProfileData }) => {
                             }
                         }
                         
-                        // === DEŇ MIESTA ZRAZU – návrat z miesta zrazu na ubytovanie ===
-                        // Ak je zadaný deň miesta zrazu a práve prebieha posledná udalosť dňa
-                        // pre daný tím, vygeneruje sa presun z miesta zrazu na ubytovanie.
-                        // Čas odchodu = najneskorší koniec akejkoľvek udalosti spomedzi
-                        // VŠETKÝCH tímov v danej kategórii v tento deň.
+                        // === DEŇ MIESTA ZRAZU – návrat z miesta zrazu na ubytovanie (používateľský tím) ===
+                        // Pre používateľský tím sa v deň miesta zrazu vygeneruje presun z miesta zrazu
+                        // na jeho ubytovanie. Čas odchodu = najneskorší koniec akejkoľvek udalosti
+                        // spomedzi VŠETKÝCH tímov v danej kategórii v tento deň. Tento presun sa
+                        // generuje bez ohľadu na to, kde sa nachádza posledná udalosť tímu.
                         if (
                             meetingPointDayKey &&
                             meetingPointDayKey !== '' &&
@@ -2665,19 +2665,19 @@ const TransportApp = ({ userProfileData }) => {
                                     && t.teamName === teamName
                                     && t.isRegistered === true
                             );
-
+                        
                             const meetingPointStopForReturn = (() => {
                                 const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isMeetingPointStop === true);
                                 if (fromAllPlaces) return fromAllPlaces;
                                 const fromStops = (stopsList || []).find((p) => p.isMeetingPointStop === true);
                                 return fromStops || null;
                             })();
-
+                        
+                            // Dôležitá zmena: už nevyžadujeme, aby current.location bolo miesto zrazu.
+                            // Zdrojom presunu je vždy miesto zrazu.
                             if (
                                 teamIsInUsersForMeetingPoint &&
                                 meetingPointStopForReturn &&
-                                current.location &&
-                                current.location === meetingPointStopForReturn.name &&
                                 teamAccommodationsList.length > 0
                             ) {
                                 // Zisti najneskorší koniec udalosti v rámci celej kategórie
@@ -2685,7 +2685,7 @@ const TransportApp = ({ userProfileData }) => {
                                 // aj superstructure).
                                 const categoryClean = cleanCategory(category);
                                 let latestEndTsForCategoryOnDay = null;
-
+                        
                                 Object.values(grouped[categoryClean] || {}).forEach((teamEvents) => {
                                     (teamEvents || []).forEach((ev) => {
                                         const evDay = extractDayKeyFromWhen(ev.when);
@@ -2701,32 +2701,32 @@ const TransportApp = ({ userProfileData }) => {
                                         }
                                     });
                                 });
-
+                        
                                 // Fallback – aspoň koniec aktuálnej udalosti
                                 if (latestEndTsForCategoryOnDay == null) {
                                     latestEndTsForCategoryOnDay =
                                         current.endTs != null ? current.endTs : current.startTs;
                                 }
-
+                        
                                 if (latestEndTsForCategoryOnDay != null) {
                                     const departureTs = latestEndTsForCategoryOnDay;
                                     const dayRefTs = departureTs;
-
+                        
                                     const arrivalTs = timestampOnDay(dayRefTs, 23, 59);
                                     const departureStr = formatFullFromTs(departureTs) || current.when;
                                     const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
-
+                        
                                     if (
                                         departureTs != null &&
                                         arrivalTs != null &&
                                         departureTs < arrivalTs
                                     ) {
                                         const whenStr = `${departureStr} – ${arrivalStr}`;
-
+                        
                                         teamAccommodationsList.forEach((accomName) => {
                                             if (!accomName) return;
-                                            if (accomName === current.location) return;
-
+                                            // Zdrojom presunu je miesto zrazu, nie aktuálna lokalita tímu,
+                                            // takže nepreskakujeme ani keď accomName === current.location.
                                             enriched.push({
                                                 ts: current.ts + 1.5,
                                                 when: whenStr,
