@@ -646,6 +646,7 @@ const TransportApp = ({ userProfileData }) => {
     const teamsLoadedRef = useRef(false);
     const teamsLookupLoadedRef = useRef(false);
     const travelTimesLoadedRef = useRef(false);
+    const meetingPointDayKeyRef = useRef('');
     const [activeView, setActiveView] = useState('planovanie');
     const [allPlaces, setAllPlaces] = useState([]);
     const [stopsList, setStopsList] = useState([]);
@@ -668,6 +669,7 @@ const TransportApp = ({ userProfileData }) => {
     const [transportColors, setTransportColors] = useState({});
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [selectedCategoryForTimeline, setSelectedCategoryForTimeline] = useState('');
+    const [selectedDayForTimeline, setSelectedDayForTimeline] = useState('');    
     const [showOnlyPartialTransfers, setShowOnlyPartialTransfers] = useState(false);
     const [showDeleteTransfersModal, setShowDeleteTransfersModal] = useState(false);
     const [sortTransfersBy, setSortTransfersBy] = useState('departure');
@@ -888,6 +890,8 @@ const TransportApp = ({ userProfileData }) => {
 
     const rebuildAndLogTimeline = (force = false, categoryFilter = null) => {
         if (!force && !timelineGenerationRequestedRef.current) return;
+
+        const meetingPointDayKey = meetingPointDayKeyRef.current || '';
         if (!matchesLoadedRef.current || !cateringLoadedRef.current || !teamsLoadedRef.current) return;
         if (!teamsLookupLoadedRef.current) return;
         if (!travelTimesLoaded) {
@@ -2555,14 +2559,80 @@ const TransportApp = ({ userProfileData }) => {
                         }
                                             
                         const isVeryLastEventOfTeam = (next == null);
-                    
+
+                        // Zisti, či je aktuálny deň dňom, kedy sa majú večerné presuny
+                        // namiesto na ubytovanie generovať na miesto zrazu.
+                        const isMeetingPointDay =
+                            meetingPointDayKey != null &&
+                            meetingPointDayKey !== '' &&
+                            currentDay != null &&
+                            currentDay === meetingPointDayKey;
+                        
+                        const meetingPointStopForDay = (() => {
+                            if (!isMeetingPointDay) return null;
+                            const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isMeetingPointStop === true);
+                            if (fromAllPlaces) return fromAllPlaces;
+                            const fromStops = (stopsList || []).find((p) => p.isMeetingPointStop === true);
+                            return fromStops || null;
+                        })();
+                        
                         if (
                             isLastEventOfDay &&
                             !isVeryLastEventOfTeam &&
                             currentDay !== globalLastDay &&
                             current.location
                         ) {
-                            if (shouldGenerateAccommodationTransfers) {
+                            if (isMeetingPointDay) {
+                                // === DEŇ MIESTA ZRAZU ===
+                                // Namiesto presunu na ubytovanie vygeneruj presun na miesto zrazu.
+                                if (meetingPointStopForDay && current.location !== meetingPointStopForDay.name) {
+                                    const departureTs =
+                                        current.endTs != null ? current.endTs : current.startTs;
+                        
+                                    const dayRefTs =
+                                        departureTs != null
+                                            ? departureTs
+                                            : midnightFromWhen(current.when);
+                        
+                                    const departureStr =
+                                        formatFullFromTs(departureTs) || current.when;
+                        
+                                    const arrivalTs =
+                                        dayRefTs != null
+                                            ? timestampOnDay(dayRefTs, 23, 59)
+                                            : null;
+                        
+                                    const arrivalStr =
+                                        formatFullFromTs(arrivalTs) || '23:59';
+                        
+                                    if (
+                                        departureTs != null &&
+                                        arrivalTs != null &&
+                                        departureTs >= arrivalTs
+                                    ) {
+                                        // nezmyselný rozsah – negeneruj
+                                    } else {
+                                        let whenStr;
+                                        if (departureStr && arrivalStr) {
+                                            whenStr = `${departureStr} – ${arrivalStr}`;
+                                        } else if (departureStr) {
+                                            whenStr = departureStr;
+                                        } else {
+                                            whenStr = current.when;
+                                        }
+                        
+                                        enriched.push({
+                                            ts: current.ts + 1,
+                                            when: whenStr,
+                                            type: 'transfer',
+                                            text: `Presun z ${current.location} do miesto zrazu ${meetingPointStopForDay.name}`,
+                                            location: null,
+                                            isTransfer: true,
+                                        });
+                                    }
+                                }
+                            } else if (shouldGenerateAccommodationTransfers) {
+                                // === BEŽNÝ DEŇ ===
                                 const departureTs =
                                     current.endTs != null ? current.endTs : current.startTs;
                         
@@ -2606,6 +2676,93 @@ const TransportApp = ({ userProfileData }) => {
                                             when: whenStr,
                                             type: 'transfer',
                                             text: `Presun z ${current.location} do ubytovanie ${accomName}`,
+                                            location: null,
+                                            isTransfer: true,
+                                        });
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    if (
+                        meetingPointDayKey &&
+                        meetingPointDayKey !== '' &&
+                        isLastEventOfDay &&
+                        currentDay != null &&
+                        currentDay === meetingPointDayKey
+                    ) {
+                        const teamIsInUsersForMeetingPoint = teamsArrivalBufferRef.current.some(
+                            (t) => cleanCategory(t.category) === cleanCategory(category)
+                                && t.teamName === teamName
+                                && t.isRegistered === true
+                        );
+
+                        const meetingPointStopForReturn = (() => {
+                            const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isMeetingPointStop === true);
+                            if (fromAllPlaces) return fromAllPlaces;
+                            const fromStops = (stopsList || []).find((p) => p.isMeetingPointStop === true);
+                            return fromStops || null;
+                        })();
+
+                        if (
+                            teamIsInUsersForMeetingPoint &&
+                            meetingPointStopForReturn &&
+                            current.location &&
+                            current.location === meetingPointStopForReturn.name &&
+                            teamAccommodationsList.length > 0
+                        ) {
+                            // Zisti najneskorší koniec udalosti v rámci celej kategórie
+                            // v tento deň (cez všetky tímy v kategórii).
+                            const categoryClean = cleanCategory(category);
+                            let latestEndTsForCategoryOnDay = null;
+
+                            Object.values(grouped[categoryClean] || {}).forEach((teamEvents) => {
+                                (teamEvents || []).forEach((ev) => {
+                                    const evDay = extractDayKeyFromWhen(ev.when);
+                                    if (evDay !== currentDay) return;
+                                    if (ev.endTs != null) {
+                                        if (latestEndTsForCategoryOnDay == null || ev.endTs > latestEndTsForCategoryOnDay) {
+                                            latestEndTsForCategoryOnDay = ev.endTs;
+                                        }
+                                    } else if (ev.startTs != null) {
+                                        if (latestEndTsForCategoryOnDay == null || ev.startTs > latestEndTsForCategoryOnDay) {
+                                            latestEndTsForCategoryOnDay = ev.startTs;
+                                        }
+                                    }
+                                });
+                            });
+
+                            // Fallback – aspoň koniec aktuálnej udalosti
+                            if (latestEndTsForCategoryOnDay == null) {
+                                latestEndTsForCategoryOnDay =
+                                    current.endTs != null ? current.endTs : current.startTs;
+                            }
+
+                            if (latestEndTsForCategoryOnDay != null) {
+                                const departureTs = latestEndTsForCategoryOnDay;
+                                const dayRefTs = departureTs;
+
+                                const arrivalTs = timestampOnDay(dayRefTs, 23, 59);
+                                const departureStr = formatFullFromTs(departureTs) || current.when;
+                                const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
+
+                                if (
+                                    departureTs != null &&
+                                    arrivalTs != null &&
+                                    departureTs < arrivalTs
+                                ) {
+                                    const whenStr = `${departureStr} – ${arrivalStr}`;
+
+                                    teamAccommodationsList.forEach((accomName) => {
+                                        if (!accomName) return;
+                                        if (accomName === current.location) return;
+
+                                        enriched.push({
+                                            ts: current.ts + 1.5,
+                                            when: whenStr,
+                                            type: 'transfer',
+                                            text: `Presun z miesto zrazu ${meetingPointStopForReturn.name} do ubytovanie ${accomName}`,
                                             location: null,
                                             isTransfer: true,
                                         });
@@ -3873,6 +4030,10 @@ const TransportApp = ({ userProfileData }) => {
             if (unsubscribeWalkingRules) unsubscribeWalkingRules();
         };
     }, []);
+
+    useEffect(() => {
+        meetingPointDayKeyRef.current = selectedDayForTimeline || '';
+    }, [selectedDayForTimeline]);
 
     useEffect(() => {
         allPlacesRef.current = allPlaces;
@@ -12953,7 +13114,10 @@ const TransportApp = ({ userProfileData }) => {
             'div',
             {
                 className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
-                onClick: () => setShowCategoryModal(false)
+                onClick: () => {
+                    setShowCategoryModal(false);
+                    setSelectedDayForTimeline('');
+                }
             },
             React.createElement(
                 'div',
@@ -12988,7 +13152,7 @@ const TransportApp = ({ userProfileData }) => {
                     {
                         value: selectedCategoryForTimeline,
                         onChange: (e) => setSelectedCategoryForTimeline(e.target.value),
-                        className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors mb-6'
+                        className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors mb-4'
                     },
                     getAvailableCategories().map((cat) =>
                         React.createElement(
@@ -12999,13 +13163,42 @@ const TransportApp = ({ userProfileData }) => {
                     )
                 ),
                 React.createElement(
+                    'p',
+                    { className: 'text-xs text-gray-600 mb-1 italic leading-snug' },
+                    'Vyberte deň, pre ktorý sa po poslednej udalosti každého tímu vygenerujú presuny pre všetky tímy na miesto zrazu a z miesta zrazu sa vygenerujú presuny na miesta ubytovania.'
+                ),
+                React.createElement(
+                    'label',
+                    { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Deň (voliteľné)'
+                ),
+                React.createElement(
+                    'select',
+                    {
+                        value: selectedDayForTimeline,
+                        onChange: (e) => setSelectedDayForTimeline(e.target.value),
+                        className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors mb-6'
+                    },
+                    React.createElement('option', { value: '' }, '— žiadny (bežné generovanie) —'),
+                    tournamentDays.map((day) =>
+                        React.createElement(
+                            'option',
+                            { key: day.dayKey, value: day.dayKey },
+                            `${day.dayName.charAt(0).toUpperCase() + day.dayName.slice(1)} – ${day.dateLabel}`
+                        )
+                    )
+                ),
+                React.createElement(
                     'div',
                     { className: 'flex justify-end gap-3' },
                     React.createElement(
                         'button',
                         {
                             type: 'button',
-                            onClick: () => setShowCategoryModal(false),
+                            onClick: () => {
+                                setShowCategoryModal(false);
+                                setSelectedDayForTimeline('');
+                            },
                             className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
                         },
                         'Zrušiť'
@@ -13020,11 +13213,14 @@ const TransportApp = ({ userProfileData }) => {
                                     window.showGlobalNotification('Najprv vyberte kategóriu.', 'error');
                                     return;
                                 }
-                            
+
+                                // Nastav ref na vybraný deň ešte pred generovaním
+                                meetingPointDayKeyRef.current = selectedDayForTimeline || '';
+
                                 const existingForCat = savedTransfers.filter(
                                     (t) => cleanCategory(t.category || '') === cleanCategory(cat)
                                 );
-                            
+
                                 if (existingForCat.length > 0) {
                                     setRegenTransfersModal({
                                         category: cat,
@@ -13033,12 +13229,15 @@ const TransportApp = ({ userProfileData }) => {
                                     setShowCategoryModal(false);
                                     return;
                                 }
-                            
+
                                 timelineGenerationRequestedRef.current = true;
                                 rebuildAndLogTimeline(true, cat);
                                 setShowCategoryModal(false);
+                                setSelectedDayForTimeline('');
                                 window.showGlobalNotification(
-                                    `Časová os pre kategóriu ${cat} bola vygenerovaná.`,
+                                    selectedDayForTimeline
+                                        ? `Časová os pre kategóriu ${cat} bola vygenerovaná (deň miesta zrazu: ${selectedDayForTimeline}).`
+                                        : `Časová os pre kategóriu ${cat} bola vygenerovaná.`,
                                     'success'
                                 );
                             },
@@ -13088,6 +13287,7 @@ const TransportApp = ({ userProfileData }) => {
                                     return;
                                 }
                                 setSelectedCategoryForTimeline(cats[0]);
+                                setSelectedDayForTimeline('');
                                 setShowCategoryModal(true);
                             },
                             className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-green-200 bg-green-50 hover:bg-green-100 transition-colors flex items-center gap-3'
