@@ -202,6 +202,24 @@ const placeTypeIcons = {
     zastavka:      { icon: 'fa-bus', color: '#2563eb', label: 'Zastávka' },
 };
 
+const SPIDER_IDENTIFIER_PREFIXES = [
+    'W16F', 'L16F', 'W8F', 'L8F', 'WQF', 'LQF', 'WSF', 'LSF',
+    'W32F', 'L32F', 'WR16', 'LR16', 'WR32', 'LR32',
+    'WF', 'LF'
+];
+
+// NOVÉ: Regex pre detekciu pavúkového identifikátora v názve tímu
+const SPIDER_IDENTIFIER_REGEX = new RegExp(
+    '\\b(' + SPIDER_IDENTIFIER_PREFIXES.join('|') + ')\\d*',
+    'i'
+);
+
+// NOVÉ: Pomocná funkcia – vráti true, ak názov tímu obsahuje pavúkový identifikátor
+const isSpiderTeamName = (teamName) => {
+    if (!teamName) return false;
+    return SPIDER_IDENTIFIER_REGEX.test(String(teamName));
+};
+
 const TRANSPORT_SETTINGS_COLLECTION = 'settings';
 const TRANSPORT_SETTINGS_DOC = 'transportTravelTimes';
 const TRANSPORT_TRANSFERS_FIELD = 'transfers';
@@ -746,7 +764,7 @@ const TransportApp = ({ userProfileData }) => {
         const lines = [];
         lines.push(`\n  [TRANSPORT] Tím: ${teamName} (počet udalostí: ${events.length})`);
 
-        const isPavukTeam = /\b(WSF|LSF|WQF|W8F|W16F)\d*/i.test(String(teamName));
+        const isPavukTeam = isSpiderTeamName(teamName);
         
         if (isSuperstructureTeam && !isPavukTeam) {
             let groupChar = getGroupLastChar(teamGroupName);
@@ -1555,7 +1573,7 @@ const TransportApp = ({ userProfileData }) => {
                                 if (current.type !== 'match') return false;
 
                                 // Zisti, či ide o pavúkový zápas podľa názvu (WSF/LSF/WQF/W8F/W16F)
-                                const isPavukTeamName = /\b(WSF|LSF|WQF|W8F|W16F)\d*/i.test(String(teamName));
+                                const isPavukTeamName = isSpiderTeamName(teamName);
                                 if (!isPavukTeamName) return false;
                             
                                 // Zisti, či ide o zápas s neidentifikovateľným tímom
@@ -1566,7 +1584,7 @@ const TransportApp = ({ userProfileData }) => {
                                 const homeName = matchParts[1].trim();
                                 const awayName = matchParts[2].trim();
                             
-                                const hasPavukIdentifier = (name) => /\b(WSF|LSF|WQF|W8F|W16F)\d*/i.test(name);
+                                const hasPavukIdentifier = (name) => isSpiderTeamName(name);
                                 if (hasPavukIdentifier(homeName) || hasPavukIdentifier(awayName)) {
                                     // Aspoň jeden tím má pavúkový identifikátor – nie je to tento prípad
                                     return false;
@@ -1699,8 +1717,7 @@ const TransportApp = ({ userProfileData }) => {
                                 currentDay === globalFirstDay;
                         
                             // NOVÉ: Zisti, či ide o pavúkový tím
-                            const isPavukTeamNameForMorning =
-                                /\b(WSF|LSF|WQF|W8F|W16F)\d*/i.test(String(teamName));
+                            const isPavukTeamNameForMorning = isSpiderTeamName(teamName);
                         
                             // NOVÉ: Zisti, či aktuálna udalosť je prvý pavúkový zápas tímu v danom dni.
                             // Ak tím má v ten istý deň skôr iný pavúkový zápas, aktuálna udalosť
@@ -1788,7 +1805,7 @@ const TransportApp = ({ userProfileData }) => {
                                 // z miesta zrazu pred touto udalosťou.
                                 const isPavukMatchEvent =
                                     current.type === 'match' &&
-                                    /\b(WSF|LSF|WQF|W8F|W16F)\d*/i.test(String(teamName));
+                                    isSpiderTeamName(teamName);
 
                                 // NOVÉ: Zisti, či je tento pavúkový zápas "nadväzujúci" – t.j.
                                 // tím už odohral v ten istý deň skôr iný pavúkový zápas, alebo
@@ -2012,7 +2029,7 @@ const TransportApp = ({ userProfileData }) => {
                                 // NOVÉ: Zisti, či je aktuálna udalosť pavúkový zápas
                                 const isPavukMatchEventForSS =
                                     current.type === 'match' &&
-                                    /\b(WSF|LSF|WQF|W8F|W16F)\d*/i.test(String(teamName));
+                                    isSpiderTeamName(teamName);
 
                                 // NOVÉ: Zisti, či je tento pavúkový zápas "nadväzujúci" – t.j.
                                 // tím už odohral v ten istý deň skôr iný pavúkový zápas, alebo
@@ -2278,7 +2295,7 @@ const TransportApp = ({ userProfileData }) => {
                             }
                         }
 
-                        const isPavukTeamName = /\b(WSF|LSF|WQF|W8F|W16F)\d*/i.test(String(teamName));
+                        const isPavukTeamName = isSpiderTeamName(teamName);
                         if (
                             isPavukTeamName &&
                             next &&
