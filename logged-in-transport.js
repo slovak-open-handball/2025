@@ -9617,9 +9617,27 @@ const TransportApp = ({ userProfileData }) => {
         const filteredBuses = selectedBusId
             ? buses.filter((b) => b.id === selectedBusId)
             : buses;    
+        const transfersForCurrentDay = savedTransfers.filter((t) => {
+            if (selectedDayKey && t.dayKey !== selectedDayKey) return false;
+            if (
+                selectedCategoryFilter &&
+                cleanCategory(t.category || '') !== cleanCategory(selectedCategoryFilter)
+            ) {
+                return false;
+            }
+            return true;
+        });
+
+        const hasWalkingTransfersForDay = savedTransfers.some(
+            (t) =>
+                t.isWalking === true &&
+                (!selectedDayKey || t.dayKey === selectedDayKey)
+        );
+
         const hasAnythingToRender =
             filteredBuses.length > 0 ||
-            savedTransfers.some((t) => t.isWalking === true && (!selectedDayKey || t.dayKey === selectedDayKey));    
+            transfersForCurrentDay.length > 0 ||
+            hasWalkingTransfersForDay;
         return React.createElement(
             'div',
             { className: 'w-full flex flex-col items-start justify-start py-6 relative min-h-[400px]' },    
@@ -10812,9 +10830,9 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         // ---- ROZHODNUTIE, ČO ZOBRAZIŤ ----
-        // POZOR: `expandedTransfers` obsahuje VŠETKY presuny (aj priradené,
-        // aj nepriradené). Preto `hasAnyTransferToShow` musí vychádzať z neho,
-        // inak po priradení posledného presunu zmizne celý box.
+        // `expandedTransfers` obsahuje VŠETKY presuny pre daný deň/kategóriu
+        // (aj priradené, aj nepriradené). Ak je prázdny, pre daný deň
+        // neexistujú žiadne presuny a box sa nesmie zobraziť.
         const hasAnyTransferToShow = expandedTransfers.length > 0;
 
         const hasActivePlaceFilter =
@@ -10835,11 +10853,24 @@ const TransportApp = ({ userProfileData }) => {
 
         const sortedTransfers = sortTransfersList(fallbackList);
 
+        // NOVÉ: Ak pre daný deň/kategóriu neexistujú ŽIADNE presuny,
+        // box sa nezobrazí vôbec (žiadny prázdny box s hláškou).
         if (!hasAnyTransferToShow) {
-            // Neexistujú žiadne presuny vôbec (pre daný deň/kategóriu) → box sa nezobrazí.
             return null;
         }
 
+        // NOVÉ: Ak deň/kategória má záznamy, ale po aplikovaní všetkých
+        // filtrov (vrátane čiastočných presunov a miest) neostal ani jeden
+        // záznam na zobrazenie, box tiež nezobrazíme.
+        // Výnimka: ak je aktívny filter miesta a naozaj nemá dáta,
+        // chceme používateľovi ukázať hlášku (riešené nižšie cez
+        // filterHasNoMatchesAtAll).
+        const dayHasNoTransfersToShow =
+            !filterHasNoMatchesAtAll && sortedTransfers.length === 0;
+        if (dayHasNoTransfersToShow) {
+            return null;
+        }
+        
         if (filterHasNoMatchesAtAll) {
             // Filter je aktívny a naozaj nemá žiadne dáta → box s hláškou.
             return React.createElement(
