@@ -4061,7 +4061,57 @@ const TransportApp = ({ userProfileData }) => {
     useEffect(() => {
         setSelectedFromPlaceFilter('');
         setSelectedToPlaceFilter('');
-    }, [selectedDayKey, selectedCategoryFilter]);
+    }, [selectedDayKey, selectedCategoryFilter, showOnlyPartialTransfers]);
+
+    useEffect(() => {
+        if (!selectedFromPlaceFilter && !selectedToPlaceFilter) return;
+
+        const parentsForCurrentContext = (savedTransfers || []).filter((t) => {
+            if (selectedDayKey && t.dayKey !== selectedDayKey) return false;
+            if (
+                selectedCategoryFilter &&
+                cleanCategory(t.category || '') !== cleanCategory(selectedCategoryFilter)
+            ) {
+                return false;
+            }
+            return true;
+        });
+
+        const availableFromIds = new Set();
+        const availableToIds = new Set();
+
+        parentsForCurrentContext.forEach((t) => {
+            if (t.fromId) availableFromIds.add(String(t.fromId));
+            if (t.toId) availableToIds.add(String(t.toId));
+
+            const segments = Array.isArray(t.segments) ? t.segments : [];
+            segments.forEach((seg) => {
+                if (!seg) return;
+                if (seg.fromId) availableFromIds.add(String(seg.fromId));
+                if (seg.toId) availableToIds.add(String(seg.toId));
+            });
+        });
+
+        if (
+            selectedFromPlaceFilter &&
+            !availableFromIds.has(String(selectedFromPlaceFilter))
+        ) {
+            setSelectedFromPlaceFilter('');
+        }
+
+        if (
+            selectedToPlaceFilter &&
+            !availableToIds.has(String(selectedToPlaceFilter))
+        ) {
+            setSelectedToPlaceFilter('');
+        }
+    }, [
+        savedTransfers,
+        selectedDayKey,
+        selectedCategoryFilter,
+        selectedFromPlaceFilter,
+        selectedToPlaceFilter,
+    ]);
 
     useEffect(() => {
         if (!showOnlyPartialTransfers) return;
@@ -10750,6 +10800,45 @@ const TransportApp = ({ userProfileData }) => {
         });
 
         if (sortedTransfers.length === 0) {
+            // Ak sú aktívne selectboxy (miesto začiatku / konca) a výsledok je prázdny,
+            // zobrazíme box s hláškou namiesto skrytia celého boxu.
+            const hasActivePlaceFilter =
+                !!selectedFromPlaceFilter || !!selectedToPlaceFilter;
+
+            if (hasActivePlaceFilter) {
+                const transportColorForHeader = null;
+                return React.createElement(
+                    'div',
+                    {
+                        className: 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex-shrink-0',
+                        style: { width: '420px', maxWidth: '100%' }
+                    },
+                    React.createElement(
+                        'div',
+                        {
+                            className: 'relative px-5 py-3 flex items-center justify-center text-white',
+                            style: { backgroundColor: '#7c3aed' }
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-bus mr-2' }),
+                        React.createElement(
+                            'h3',
+                            { className: 'text-lg font-bold text-center' },
+                            'Vygenerované presuny'
+                        ),
+                        React.createElement(
+                            'span',
+                            { className: 'absolute right-3 text-xs bg-white/20 rounded-full px-2 py-0.5' },
+                            '0'
+                        )
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-center text-gray-500 py-6 text-sm italic px-3' },
+                        'Pre zvolený filter miesta neexistujú žiadne presuny. Skúste zmeniť alebo zrušiť filter.'
+                    )
+                );
+            }
+
             return null;
         }
     
