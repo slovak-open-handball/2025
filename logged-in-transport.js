@@ -10623,12 +10623,16 @@ const TransportApp = ({ userProfileData }) => {
                         intermediateStopIds: [],
                         _parentKey: t.key,
                         _parentRoute: `${resolvePlaceNameById(t.fromId)} → ${resolvePlaceNameById(t.toId)}`,
-                        _remainingMinutes: remainingMinutes,
-                        _isAssigned: segmentAssigned[i],
+                        _remainingMinutes: null,
+                        _isAssigned: false,
                         _hasRealTime: hasRealTime,
                         isWalking: false,
-                        _displayStartTs: ft.startTs,
-                        _displayEndTs: ft.endTs,
+                        _displayStartTs: parentSegmentForThisIdx && parentSegmentForThisIdx.startTs != null
+                            ? parentSegmentForThisIdx.startTs
+                            : null,
+                        _displayEndTs: parentSegmentForThisIdx && parentSegmentForThisIdx.endTs != null
+                            ? parentSegmentForThisIdx.endTs
+                            : null,
                     });
                 }
                 return;
