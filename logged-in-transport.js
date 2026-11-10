@@ -15301,70 +15301,80 @@ const TransportApp = ({ userProfileData }) => {
                                                                 if (bOrder == null || aOrder == null) {
                                                                     return { total: 0, teams: [] };
                                                                 }
-
-                                                                // Zbierame tímy v troch skupinách:
-                                                                //  - inBus: tímy, ktoré sú v buse medzi nástupom a výstupom (bOrder < order < aOrder),
-                                                                //  - boardingHere: tímy, ktoré nastupujú na nástupnej zastávke (boardingRow),
-                                                                //  - alightingHere: tímy, ktoré vystupujú na výstupnej zastávke (alightingRow).
-                                                                const inBus = new Set();
-                                                                const boardingHere = new Set();
-                                                                const alightingHere = new Set();
-
-                                                                (savedTransfersRef.current || []).forEach((parent) => {
-                                                                    if (parent.dayKey !== dayKey) return;
-                                                                    if (parent.isWalking === true) return;
-
-                                                                    const effectiveCategory = cleanCategory(parent.category || '');
-                                                                    let effectiveTeamName = String(parent.teamName || '').trim();
-                                                                    if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
-                                                                        const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
-                                                                        const info = (teamsLookupRef.current || {})[lookupKey];
-                                                                        if (info && info.teamName) effectiveTeamName = info.teamName;
-                                                                    }
-                                                                    if (!effectiveTeamName) {
-                                                                        const parts = String(parent.key || '').split('||');
-                                                                        if (parts.length >= 2) {
-                                                                            const keyTeamName = String(parts[1] || '').trim();
-                                                                            if (keyTeamName) effectiveTeamName = keyTeamName;
+                                                            
+                                                                // Zoznam všetkých busRows pre daný bus a deň, zoradený podľa order
+                                                                const rowsKey = `${busId}|${dayKey}`;
+                                                                const rowsForBus = (busRows[rowsKey] || [])
+                                                                    .slice()
+                                                                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+                                                            
+                                                                // Pre každý riadok na trase (od boardingRow po alightingRow vrátane)
+                                                                // vypočítame obsadenosť rovnakým spôsobom ako v renderBusRow
+                                                                // a vezmeme maximum.
+                                                                let maxTotal = 0;
+                                                                let maxTeams = [];
+                                                            
+                                                                for (const row of rowsForBus) {
+                                                                    const currentOrder = parseOrderFromRowId(row.rowId);
+                                                                    if (currentOrder == null) continue;
+                                                                    if (currentOrder < bOrder) continue;
+                                                                    if (currentOrder > aOrder) continue;
+                                                            
+                                                                    // Presne rovnaký výpočet ako v renderBusRow (stĺpec "Počet")
+                                                                    const teamsAtThisStop = new Set();
+                                                            
+                                                                    (savedTransfersRef.current || []).forEach((parent) => {
+                                                                        if (parent.dayKey !== dayKey) return;
+                                                                        if (parent.isWalking === true) return;
+                                                            
+                                                                        const effectiveCategory = cleanCategory(parent.category || '');
+                                                                        let effectiveTeamName = String(parent.teamName || '').trim();
+                                                                        if (!effectiveTeamName && parent.teamUid != null && parent.teamIndex != null) {
+                                                                            const lookupKey = `${parent.teamUid}|${effectiveCategory}|${parent.teamIndex}`;
+                                                                            const info = (teamsLookupRef.current || {})[lookupKey];
+                                                                            if (info && info.teamName) effectiveTeamName = info.teamName;
                                                                         }
-                                                                    }
-                                                                    if (!effectiveTeamName) return;
-
-                                                                    const teamKeyStr = `${effectiveTeamName}|${effectiveCategory}`;
-
-                                                                    (parent.segments || []).forEach((seg) => {
-                                                                        if (seg.busId !== busId) return;
-                                                                        if (seg.isWalking === true) return;
-
-                                                                        const segBOrder = parseOrderFromRowId(seg.boardingRowId);
-                                                                        const segAOrder = parseOrderFromRowId(seg.alightingRowId);
-                                                                        if (segBOrder == null || segAOrder == null) return;
-
-                                                                        // Tím nastupuje na tejto zastávke (nástupná zastávka ponúkanej trasy)
-                                                                        if (segBOrder === bOrder) {
-                                                                            boardingHere.add(teamKeyStr);
+                                                                        if (!effectiveTeamName) {
+                                                                            const parts = String(parent.key || '').split('||');
+                                                                            if (parts.length >= 2) {
+                                                                                const keyTeamName = String(parts[1] || '').trim();
+                                                                                if (keyTeamName) effectiveTeamName = keyTeamName;
+                                                                            }
                                                                         }
-                                                                        // Tím vystupuje na tejto zastávke (výstupná zastávka ponúkanej trasy)
-                                                                        if (segAOrder === aOrder) {
-                                                                            alightingHere.add(teamKeyStr);
-                                                                        }
-                                                                        // Tím je v buse medzi nástupom a výstupom (už je v buse a ostáva v ňom)
-                                                                        if (segBOrder < bOrder && segAOrder > bOrder) {
-                                                                            inBus.add(teamKeyStr);
-                                                                        }
+                                                                        if (!effectiveTeamName) return;
+                                                            
+                                                                        const teamKeyStr = `${effectiveTeamName}|${effectiveCategory}`;
+                                                            
+                                                                        (parent.segments || []).forEach((seg) => {
+                                                                            if (seg.busId !== busId) return;
+                                                                            if (seg.isWalking === true) return;
+                                                            
+                                                                            const segBOrder = parseOrderFromRowId(seg.boardingRowId);
+                                                                            const segAOrder = parseOrderFromRowId(seg.alightingRowId);
+                                                                            if (segBOrder == null || segAOrder == null) return;
+                                                            
+                                                                            const isBoardingHere = (seg.boardingRowId === row.rowId) || (segBOrder === currentOrder);
+                                                                            const isAlightingHere = (seg.alightingRowId === row.rowId) || (segAOrder === currentOrder);
+                                                                            const isStillInBus = (segBOrder < currentOrder && segAOrder > currentOrder);
+                                                            
+                                                                            if (isBoardingHere || isAlightingHere || isStillInBus) {
+                                                                                teamsAtThisStop.add(teamKeyStr);
+                                                                            }
+                                                                        });
                                                                     });
-                                                                });
-
-                                                                // Zjednotenie tímov – každý tím sa počíta len raz.
-                                                                const teamsSet = new Set([
-                                                                    ...inBus,
-                                                                    ...boardingHere,
-                                                                    ...alightingHere,
-                                                                ]);
-                                                                const teams = [...teamsSet];
-                                                                const total = teams.reduce((sum, tk) => sum + getTeamMembersCount(tk), 0);
-
-                                                                return { total, teams };
+                                                            
+                                                                    const totalAtThisStop = [...teamsAtThisStop].reduce(
+                                                                        (sum, tk) => sum + getTeamMembersCount(tk),
+                                                                        0
+                                                                    );
+                                                            
+                                                                    if (totalAtThisStop > maxTotal) {
+                                                                        maxTotal = totalAtThisStop;
+                                                                        maxTeams = [...teamsAtThisStop];
+                                                                    }
+                                                                }
+                                                            
+                                                                return { total: maxTotal, teams: maxTeams };
                                                             };
                                                         
                                                             const occupancy = computeBusOccupancy();
