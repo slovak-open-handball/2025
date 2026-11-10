@@ -10841,6 +10841,10 @@ const TransportApp = ({ userProfileData }) => {
         const hasActivePlaceFilter =
             !!selectedFromPlaceFilter || !!selectedToPlaceFilter;
 
+        if (hasActivePlaceFilter && filtered.length === 0) {
+            return null;
+        }
+
         // Zisti, či pre zvolený filter miesta existuje aspoň JEDEN parent
         // v `savedTransfers` pre daný deň/kategóriu (bez ohľadu na to, či je
         // už priradený alebo peší). Ak áno, ale `filtered` je prázdny, znamená to,
