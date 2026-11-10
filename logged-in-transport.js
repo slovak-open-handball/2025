@@ -10853,21 +10853,8 @@ const TransportApp = ({ userProfileData }) => {
 
         const sortedTransfers = sortTransfersList(fallbackList);
 
-        // NOVÉ: Ak pre daný deň/kategóriu neexistujú ŽIADNE presuny,
-        // box sa nezobrazí vôbec (žiadny prázdny box s hláškou).
-        if (!hasAnyTransferToShow) {
-            return null;
-        }
-
-        // NOVÉ: Ak deň/kategória má záznamy, ale po aplikovaní všetkých
-        // filtrov (vrátane čiastočných presunov a miest) neostal ani jeden
-        // záznam na zobrazenie, box tiež nezobrazíme.
-        // Výnimka: ak je aktívny filter miesta a naozaj nemá dáta,
-        // chceme používateľovi ukázať hlášku (riešené nižšie cez
-        // filterHasNoMatchesAtAll).
-        const dayHasNoTransfersToShow =
-            !filterHasNoMatchesAtAll && sortedTransfers.length === 0;
-        if (dayHasNoTransfersToShow) {
+        const dayHasAnyTransfers = filteredByDay.length > 0;
+        if (!dayHasAnyTransfers) {
             return null;
         }
         
