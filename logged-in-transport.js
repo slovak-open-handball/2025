@@ -2289,11 +2289,12 @@ const TransportApp = ({ userProfileData }) => {
                                     // NOVÉ: Ak tím nemá ubytovanie (users tím bez ubytovne)
                                     // a negeneruje sa ranný presun z ubytovne ani z externá zastávky,
                                     // ale existuje miesto zrazu, vygeneruj ranný presun z miesta zrazu.
+                                    // POZOR: Toto platí AJ pre prvý deň turnaja – ak tím nemá vlastnú dopravu
+                                    // ani ubytovanie, ale je definované miesto zrazu, presun sa vygeneruje z neho.
                                     const useMeetingPointAsMorningSource =
                                         teamIsInUsers &&
                                         !useExternalStopOnFirstDay &&
                                         !useAccommodationAsSource &&
-                                        !useMeetingPointOnFirstDay &&
                                         !shouldGenerateAccommodationTransfers &&
                                         !!meetingPointStop;
                                 
