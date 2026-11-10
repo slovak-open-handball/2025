@@ -2651,9 +2651,8 @@ const TransportApp = ({ userProfileData }) => {
                         // === DEŇ MIESTA ZRAZU – návrat z miesta zrazu na ubytovanie ===
                         // Ak je zadaný deň miesta zrazu a práve prebieha posledná udalosť dňa
                         // pre daný tím, vygeneruje sa presun z miesta zrazu na ubytovanie.
-                        // Čas odchodu je najneskorší koniec udalosti spomedzi VŠETKÝCH tímov
-                        // v danej kategórii v tento deň (aby sa neodchádzalo pred skončením
-                        // posledného zápasu/stravovania v kategórii).
+                        // Čas odchodu = najneskorší koniec akejkoľvek udalosti spomedzi
+                        // VŠETKÝCH tímov v danej kategórii v tento deň.
                         if (
                             meetingPointDayKey &&
                             meetingPointDayKey !== '' &&
@@ -2682,7 +2681,8 @@ const TransportApp = ({ userProfileData }) => {
                                 teamAccommodationsList.length > 0
                             ) {
                                 // Zisti najneskorší koniec udalosti v rámci celej kategórie
-                                // v tento deň (cez všetky tímy v kategórii).
+                                // v tento deň (cez všetky tímy v kategórii – používateľské
+                                // aj superstructure).
                                 const categoryClean = cleanCategory(category);
                                 let latestEndTsForCategoryOnDay = null;
 
