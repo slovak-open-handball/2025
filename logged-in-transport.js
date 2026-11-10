@@ -13044,6 +13044,14 @@ const TransportApp = ({ userProfileData }) => {
                                 timelineGenerationRequestedRef.current = true;
                                 rebuildAndLogTimeline(true, cat);
                                 setShowCategoryModal(false);
+                            
+                                setTimeout(async () => {
+                                    try {
+                                        await setAllWalkingTransfersAsWalking();
+                                    } catch (e) {
+                                    }
+                                }, 800);
+                            
                                 setSelectedDayForTimeline('');
                                 window.showGlobalNotification(
                                     selectedDayForTimeline
@@ -15600,6 +15608,14 @@ const TransportApp = ({ userProfileData }) => {
                                 setRegenTransfersModal(null);
                                 timelineGenerationRequestedRef.current = true;
                                 rebuildAndLogTimeline(true, cat);
+
+                                setTimeout(async () => {
+                                    try {
+                                        await setAllWalkingTransfersAsWalking();
+                                    } catch (e) {
+                                    }
+                                }, 800);
+                            
                                 window.showGlobalNotification(
                                     `Časová os pre kategóriu ${cat} bola znova vygenerovaná (dogenerované len chýbajúce).`,
                                     'success'
