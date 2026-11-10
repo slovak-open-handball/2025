@@ -15507,22 +15507,22 @@ const TransportApp = ({ userProfileData }) => {
                                                                     )
                                                             );
                                                         })(),
-                                                        React.createElement(
-                                                            'div',
-                                                            { className: 'flex flex-col items-end gap-1' },
-                                                            hasBoarding && React.createElement(
-                                                                'span',
-                                                                { className: 'flex items-center gap-1 text-emerald-600' },
-                                                                React.createElement('i', { className: 'fa-solid fa-right-to-bracket' }),
-                                                                'Nástup'
-                                                            ),
-                                                            hasAlighting && React.createElement(
-                                                                'span',
-                                                                { className: 'flex items-center gap-1 text-red-600' },
-                                                                React.createElement('i', { className: 'fa-solid fa-right-from-bracket' }),
-                                                                'Výstup'
-                                                            )
-                                                        )
+//                                                        React.createElement(
+//                                                            'div',
+//                                                            { className: 'flex flex-col items-end gap-1' },
+//                                                            hasBoarding && React.createElement(
+//                                                                'span',
+//                                                                { className: 'flex items-center gap-1 text-emerald-600' },
+//                                                                React.createElement('i', { className: 'fa-solid fa-right-to-bracket' }),
+//                                                                'Nástup'
+//                                                            ),
+//                                                            hasAlighting && React.createElement(
+//                                                                'span',
+//                                                                { className: 'flex items-center gap-1 text-red-600' },
+//                                                                React.createElement('i', { className: 'fa-solid fa-right-from-bracket' }),
+//                                                                'Výstup'
+//                                                            )
+//                                                        )
                                                     )
                                                 )
                                             )
