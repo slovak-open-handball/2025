@@ -1712,7 +1712,10 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                             } else {
                                 // ============ VETVA PRE SUPERSTRUCTURE TÍM ============
-                                if (isGlobalFirstDay) {
+                                // NOVÉ: Ak v tento deň má udalosť aspoň jeden users tím, negeneruj ranné presuny pre SS tím
+                                if (anyUsersTeamHasEventToday) {
+                                    // skip – pravidlo: ak hrá users tím, SS tím nemá ranné presuny
+                                } else if (isGlobalFirstDay) {
                                     // prvý deň: z miesta zrazu na prvú udalosť
                                     if (meetingPointStop && !isSamePlaceForTransfer(meetingPointStop.name, current.location)) {
                                         const arrivalTs = current.startTs;
