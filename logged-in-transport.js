@@ -1958,36 +1958,11 @@ const TransportApp = ({ userProfileData }) => {
                                             }
                                         };
                             
-                                        const derivedGroupName = `skupina ${groupCharPre}`;
-                                        const cacheKey = `${cleanCategory(category)}|${derivedGroupName}`;
-                                        const cacheAccoms = (window.__transport_accommodationsByGroup || {})[cacheKey] || [];
-
-                                        if (cacheAccoms.length > 0) {
-                                            cacheAccoms.forEach((accomName) => {
-                                                if (!accomName) return;
-                                                updateUniqueSource(accomName.trim(), null);
-                                            });
-                                        } else {
-                                            (teamsArrivalBufferRef.current || []).forEach((t) => {
-                                                if (cleanCategory(t.category) !== cleanCategory(category)) return;
-                                                if (!t.teamName) return;
-                                                if (t.teamName === teamName) return;
-                                                if (!t.accommodationName || t.accommodationName.trim() === '') return;
-                                        
-                                                let belongsToChar = false;
-                                                if (t.groupName) {
-                                                    belongsToChar = groupBelongsToChar(t.groupName, groupCharPre);
-                                                } else {
-                                                    const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(t.teamName).trim());
-                                                    if (m && m[1].toUpperCase() === groupCharPre) {
-                                                        belongsToChar = true;
-                                                    }
-                                                }
-                                                if (!belongsToChar) return;
-
-                                                updateUniqueSource(t.accommodationName.trim(), null);
-                                            });
-                                        }
+                                        const lastCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+                                        teamAccommodationsList.forEach((accomName) => {
+                                            if (!accomName) return;
+                                            updateUniqueSource(accomName.trim(), null);
+                                        });
                             
                                         const destinationArrivalStr =
                                             formatFullFromTs(destinationEvent.startTs) || destinationEvent.when;
