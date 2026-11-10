@@ -4065,56 +4065,100 @@ const TransportApp = ({ userProfileData }) => {
 
     useEffect(() => {
         if (!selectedFromPlaceFilter && !selectedToPlaceFilter) return;
-
+    
         const dayKeyFilter = selectedDayKey || null;
         const categoryFilter = selectedCategoryFilter
             ? cleanCategory(selectedCategoryFilter)
             : null;
-
+    
+        // Pomocná funkcia: existuje aspoň jeden parent (bez ohľadu na priradenie)
         const hasAnyParentMatch = (savedTransfers || []).some((t) => {
             if (dayKeyFilter && t.dayKey !== dayKeyFilter) return false;
             if (categoryFilter && cleanCategory(t.category || '') !== categoryFilter) return false;
-
+    
             const fromId = t.fromId ? String(t.fromId) : null;
             const toId = t.toId ? String(t.toId) : null;
-
-            // Skontroluj parent.fromId / parent.toId
+    
             let fromMatch = !selectedFromPlaceFilter
                 || (fromId && fromId === String(selectedFromPlaceFilter));
             let toMatch = !selectedToPlaceFilter
                 || (toId && toId === String(selectedToPlaceFilter));
-
+    
             if (fromMatch && toMatch) return true;
-
-            // Skontroluj segmenty
+    
             const segments = Array.isArray(t.segments) ? t.segments : [];
             const hasSegMatch = segments.some((seg) => {
                 if (!seg) return false;
                 const segFromId = seg.fromId ? String(seg.fromId) : null;
                 const segToId = seg.toId ? String(seg.toId) : null;
-
+    
                 const segFromMatch = !selectedFromPlaceFilter
                     || (segFromId && segFromId === String(selectedFromPlaceFilter));
                 const segToMatch = !selectedToPlaceFilter
                     || (segToId && segToId === String(selectedToPlaceFilter));
-
+    
                 return segFromMatch && segToMatch;
             });
-
+    
             return hasSegMatch;
         });
-
+    
         if (!hasAnyParentMatch) {
             setSelectedFromPlaceFilter('');
             setSelectedToPlaceFilter('');
+            return;
         }
-    }, [
-        savedTransfers,
-        selectedDayKey,
-        selectedCategoryFilter,
-        selectedFromPlaceFilter,
-        selectedToPlaceFilter,
-    ]);
+    
+        // NOVÉ: Ak pre daný filter existuje parent, ale všetky zodpovedajúce
+        // segmenty sú už priradené/pešie, filter treba resetovať.
+        const hasAnyUnassignedForFilter = (savedTransfers || []).some((t) => {
+            if (dayKeyFilter && t.dayKey !== dayKeyFilter) return false;
+            if (categoryFilter && cleanCategory(t.category || '') !== categoryFilter) return false;
+    
+            // Musí ísť o parent (nie segment)
+            if (t._parentKey && t._parentKey !== t.key) return false;
+    
+            const segments = Array.isArray(t.segments) ? t.segments : [];
+    
+            if (segments.length === 0) {
+                const fromId = t.fromId ? String(t.fromId) : null;
+                const toId = t.toId ? String(t.toId) : null;
+                const fromMatch = !selectedFromPlaceFilter
+                    || (fromId && fromId === String(selectedFromPlaceFilter));
+                const toMatch = !selectedToPlaceFilter
+                    || (toId && toId === String(selectedToPlaceFilter));
+                if (!(fromMatch && toMatch)) return false;
+                if (t.isWalking === true) return false;
+                return true;
+            }
+    
+            return segments.some((seg) => {
+                if (!seg) return false;
+    
+                const segFromId = seg.fromId ? String(seg.fromId) : null;
+                const segToId = seg.toId ? String(seg.toId) : null;
+    
+                const segFromMatch = !selectedFromPlaceFilter
+                    || (segFromId && segFromId === String(selectedFromPlaceFilter));
+                const segToMatch = !selectedToPlaceFilter
+                    || (segToId && segToId === String(selectedToPlaceFilter));
+    
+                if (!(segFromMatch && segToMatch)) return false;
+    
+                // Peší alebo priradený k busu → nie je nepriradený
+                if (seg.isWalking === true) return false;
+                if (seg.busId && seg.boardingRowId && seg.alightingRowId) return false;
+                if (seg.busAssigned === true && seg.boardingRowId && seg.alightingRowId) return false;
+    
+                return true;
+            });
+        });
+    
+        if (!hasAnyUnassignedForFilter) {
+            setSelectedFromPlaceFilter('');
+            setSelectedToPlaceFilter('');
+        }
+    }, [savedTransfers, selectedDayKey, selectedCategoryFilter, selectedFromPlaceFilter, selectedToPlaceFilter]);
 
     useEffect(() => {
         if (!showOnlyPartialTransfers) return;
@@ -10833,15 +10877,28 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         // ---- ROZHODNUTIE, ČO ZOBRAZIŤ ----
-        // `expandedTransfers` obsahuje VŠETKY presuny pre daný deň/kategóriu
-        // (aj priradené, aj nepriradené). Ak je prázdny, pre daný deň
-        // neexistujú žiadne presuny a box sa nesmie zobraziť.
-        const hasAnyTransferToShow = expandedTransfers.length > 0;
-
         const hasActivePlaceFilter =
             !!selectedFromPlaceFilter || !!selectedToPlaceFilter;
-
+        
+        // Ak je filter aktívny a po filtrovaní nezostali žiadne presuny,
+        // useEffect vyššie práve beží a filter čoskoro resetuje.
+        // V tomto kole box nezobrazíme – počkáme na reset.
         if (hasActivePlaceFilter && filtered.length === 0) {
+            return null;
+        }
+        
+        const fallbackList = filtered.length > 0
+            ? filtered
+            : baseFilteredAfterPartial;
+        
+        const sortedTransfers = sortTransfersList(fallbackList);
+        
+        const dayHasAnyTransfers = filteredByDay.length > 0;
+        if (!dayHasAnyTransfers) {
+            return null;
+        }
+        
+        if (sortedTransfers.length === 0) {
             return null;
         }
 
