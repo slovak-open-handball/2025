@@ -1540,6 +1540,7 @@ const TransportApp = ({ userProfileData }) => {
                                 globalFirstDay != null &&
                                 currentDay === globalFirstDay;
                         
+                            // Pomocná: existuje aspoň jeden users tím v kategórii, ktorý má v tento deň udalosť?
                             const anyUsersTeamHasEventToday = (() => {
                                 if (!currentDay) return false;
                                 const categoryClean = cleanCategory(category);
@@ -1550,16 +1551,16 @@ const TransportApp = ({ userProfileData }) => {
                                     const hasMatch = (matchesBufferRef.current || []).some((m) => {
                                         if (cleanCategory(m.category) !== categoryClean) return false;
                                         if (m.home !== t.teamName && m.away !== t.teamName) return false;
-                                        let dk = null;
+                                        let dayKey = null;
                                         if (m.scheduledTime) {
                                             const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
-                                            if (mm) dk = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
+                                            if (mm) dayKey = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
                                         }
-                                        if (!dk && m.scheduledTs != null) {
+                                        if (!dayKey && m.scheduledTs != null) {
                                             const dt = new Date(m.scheduledTs);
-                                            dk = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                            dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
                                         }
-                                        return dk === currentDay;
+                                        return dayKey === currentDay;
                                     });
                                     if (hasMatch) return true;
                                     return (cateringBufferRef.current || []).some((c) => {
@@ -1695,8 +1696,6 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                             } else {
                                 // ============ VETVA PRE SUPERSTRUCTURE TÍM ============
-                                // Ak v tento deň hrá superstructure tím a ide o deň hry, presun z poslednej udalosti iných SS tímov
-                                // rieši sa nižšie v inom bloku. Tu len ranný presun pre SS tím.
                                 if (isGlobalFirstDay) {
                                     // prvý deň: z miesta zrazu na prvú udalosť
                                     if (meetingPointStop && current.location !== meetingPointStop.name) {
@@ -1898,26 +1897,7 @@ const TransportApp = ({ userProfileData }) => {
                                 currentDay != null && currentDay === meetingPointDayKey;
                         
                             const isGlobalLastDay = currentDay === globalLastDay;
-
-                            // Pomocné premenné pre tento blok
-                            const meetingPointStopForDay = (() => {
-                                if (!isMeetingPointDay) return null;
-                                const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isMeetingPointStop === true);
-                                if (fromAllPlaces) return fromAllPlaces;
-                                const fromStops = (stopsList || []).find((p) => p.isMeetingPointStop === true);
-                                return fromStops || null;
-                            })();
-
-                            const externalArrivalStopForDay = (() => {
-                                const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isExternalArrivalStop === true);
-                                if (fromAllPlaces) return fromAllPlaces;
-                                const fromStops = (stopsList || []).find((p) => p.isExternalArrivalStop === true);
-                                return fromStops || null;
-                            })();
-                            
-                            const accommodationNameForBlock = accommodationName; // (ak ho používaš nižšie)
-                            const groupCharForSS = ssGroupCharByTeam[`${cleanCategory(category)}|${teamName}`];
-                                                    
+                        
                             // Pomocná: existuje aspoň jeden superstructure tím v kategórii, ktorý má v tento deň udalosť?
                             const anySuperstructureTeamHasEventToday = (() => {
                                 if (!currentDay) return false;
@@ -1942,11 +1922,28 @@ const TransportApp = ({ userProfileData }) => {
                                 });
                             })();
                         
+                            // ✅ NOVÉ: Pomocné premenné pre tento blok
+                            const meetingPointStopForDay = (() => {
+                                if (!isMeetingPointDay) return null;
+                                const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isMeetingPointStop === true);
+                                if (fromAllPlaces) return fromAllPlaces;
+                                const fromStops = (stopsList || []).find((p) => p.isMeetingPointStop === true);
+                                return fromStops || null;
+                            })();
+                        
+                            const externalArrivalStopForDay = (() => {
+                                const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isExternalArrivalStop === true);
+                                if (fromAllPlaces) return fromAllPlaces;
+                                const fromStops = (stopsList || []).find((p) => p.isExternalArrivalStop === true);
+                                return fromStops || null;
+                            })();
+                        
+                            const groupCharForSS = ssGroupCharByTeam[`${cleanCategory(category)}|${teamName}`];
+                        
                             // === DEŇ MIESTA ZRAZU ===
                             if (isMeetingPointDay) {
                                 const returnMP = meetingPointStop;
                                 if (returnMP && current.location !== returnMP.name) {
-                                    // presun z poslednej udalosti na miesto zrazu
                                     const departureTs = current.endTs != null ? current.endTs : current.startTs;
                                     const departureStr = formatFullFromTs(departureTs) || current.when;
                                     const arrivalTs = timestampOnDay(departureTs, 23, 59);
@@ -1962,7 +1959,6 @@ const TransportApp = ({ userProfileData }) => {
                                         });
                                     }
                                 }
-                                // users tím s ubytovaním: z miesta zrazu na ubytovanie
                                 if (teamIsInUsers && hasAccommodation && returnMP) {
                                     const departureTs = timestampOnDay(current.endTs || current.startTs, 23, 0);
                                     const departureStr = formatFullFromTs(departureTs) || '23:00';
@@ -1979,7 +1975,6 @@ const TransportApp = ({ userProfileData }) => {
                                         });
                                     }
                                 }
-                                // ak je posledný deň a existuje nástupná zastávka: z miesta zrazu na zastávku
                                 if (isGlobalLastDay && returnMP && externalArrivalStop && externalArrivalStop.name !== returnMP.name) {
                                     const departureTs = timestampOnDay(current.endTs || current.startTs, 23, 0);
                                     const departureStr = formatFullFromTs(departureTs) || '23:00';
@@ -1998,12 +1993,9 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                             } else {
                                 // === BEŽNÝ DEŇ ===
-                        
-                                // Ak v tento deň hrá superstructure tím → users tím nemá večerné presuny
                                 const usersEveningBlocked = teamIsInUsers && anySuperstructureTeamHasEventToday;
                         
                                 if (teamIsInUsers && !usersEveningBlocked) {
-                                    // USERS TÍM: z poslednej udalosti na ubytovanie (ak má), inak na miesto zrazu
                                     const departureTs = current.endTs != null ? current.endTs : current.startTs;
                                     const departureStr = formatFullFromTs(departureTs) || current.when;
                                     const arrivalTs = timestampOnDay(departureTs, 23, 59);
@@ -2030,7 +2022,6 @@ const TransportApp = ({ userProfileData }) => {
                                         }
                                     }
                                 } else if (!teamIsInUsers) {
-                                    // SUPERSTRUCTURE TÍM
                                     const departureTs = current.endTs != null ? current.endTs : current.startTs;
                                     const departureStr = formatFullFromTs(departureTs) || current.when;
                                     const arrivalTs = timestampOnDay(departureTs, 23, 59);
@@ -2043,7 +2034,6 @@ const TransportApp = ({ userProfileData }) => {
                                             return (window.__transport_accommodationsByGroup || {})[cacheKey] || [];
                                         })();
                         
-                                        // z poslednej udalosti na všetky ubytovne skupiny
                                         groupAccommodations.forEach((a) => {
                                             if (!a || !a.trim()) return;
                                             if (a.trim() === current.location) return;
@@ -2056,7 +2046,6 @@ const TransportApp = ({ userProfileData }) => {
                                                 isTransfer: true,
                                             });
                                         });
-                                        // NOVÉ: aj na miesto zrazu
                                         if (meetingPointStop && current.location !== meetingPointStop.name) {
                                             enriched.push({
                                                 ts: current.ts + 1.5,
