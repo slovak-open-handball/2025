@@ -2094,11 +2094,51 @@ const TransportApp = ({ userProfileData }) => {
                                 })();
 
                                 // NOVÉ: Ak v tento deň má udalosť aspoň jeden users tím, negeneruj ranné presuny pre SS tím
+                                const categoryAlreadyPlayedAtSamePlaceTodayForSS = (() => {
+                                    if (!currentDay) return false;
+                                    if (!current.location) return false;
+                                    if (current.type !== 'match') return false;
+
+                                    const currentStartTs =
+                                        current.startTs ?? current.ts ?? Number.POSITIVE_INFINITY;
+
+                                    return matchesBufferRef.current.some((m) => {
+                                        if (cleanCategory(m.category) !== cleanCategory(category)) return false;
+                                        if (!m.hallName) return false;
+                                        if (!isSamePlaceForTransfer(m.hallName, current.location)) return false;
+
+                                        let dk = null;
+                                        if (m.scheduledTime) {
+                                            const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                            if (mm) {
+                                                dk = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
+                                            }
+                                        }
+                                        if (!dk && m.scheduledTs != null) {
+                                            const dt = new Date(m.scheduledTs);
+                                            dk = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                        }
+                                        if (dk !== currentDay) return false;
+
+                                        const mEndTs =
+                                            m.scheduledEndTs != null
+                                                ? m.scheduledEndTs
+                                                : (m.scheduledTs != null ? m.scheduledTs : null);
+                                        if (mEndTs == null) return false;
+                                        return mEndTs <= currentStartTs;
+                                    });
+                                })();
+
+                                // NOVÉ: Ak v tento deň má udalosť aspoň jeden users tím, negeneruj ranné presuny pre SS tím
                                 if (anyUsersTeamHasEventToday) {
                                     // skip – pravidlo: ak hrá users tím, SS tím nemá ranné presuny
                                 } else if (isPavukMatchEventForSS && isPavukFollowUpMatchSamePlaceForSS) {
                                     // skip – nadväzujúci pavúkový zápas na tom istom mieste
                                     // nemá ranný presun z miesta zrazu
+                                } else if (isPavukMatchEventForSS && categoryAlreadyPlayedAtSamePlaceTodayForSS) {
+                                    // NOVÉ: V kategórii sa v ten istý deň už hral zápas v tej istej
+                                    // hale (napr. semifinále v UNIZA) – pavúkový tím (LSF/WSF)
+                                    // je už na mieste, ranný presun z miesta zrazu sa negeneruje.
                                 } else if (!isFirstPavukMatchOfDay) {
                                     // NOVÉ: Ak ide o pavúkový tím a má v ten deň skôr iný pavúkový zápas,
                                     // negeneruj ranné presuny (ani z miesta zrazu).
