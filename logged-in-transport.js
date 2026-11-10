@@ -317,24 +317,7 @@ const TransportApp = ({ userProfileData }) => {
         const norm = normalizePlaceName(raw);
         const found = (allPlacesRef.current || []).find(
             (p) => normalizePlaceName(p.name) === norm
-        );
-    
-        if (!found) {
-            console.warn('[TRANSPORT][resolvePlaceIdByName] Nenájdené miesto podľa názvu:', {
-                placeName: raw,
-                normalized: norm,
-                availableNames: (allPlacesRef.current || []).map((p) => p.name),
-            });
-        } else {
-            console.log('[TRANSPORT][resolvePlaceIdByName] Nájdené miesto podľa názvu:', {
-                placeName: raw,
-                normalized: norm,
-                id: found.id,
-                name: found.name,
-                type: found.type,
-            });
-        }
-    
+        );    
         return found ? found.id : null;
     }
 
