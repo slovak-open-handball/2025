@@ -8125,6 +8125,28 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
+    const waitForTransfersUpdate = (categoryName, timeoutMs = 5000) => {
+        const cat = cleanCategory(categoryName);
+        const startCount = (savedTransfersRef.current || []).filter(
+            (t) => cleanCategory(t.category || '') === cat
+        ).length;
+
+        return new Promise((resolve) => {
+            const start = Date.now();
+            const tick = () => {
+                const currentCount = (savedTransfersRef.current || []).filter(
+                    (t) => cleanCategory(t.category || '') === cat
+                ).length;
+                if (currentCount !== startCount || Date.now() - start > timeoutMs) {
+                    resolve(currentCount);
+                    return;
+                }
+                setTimeout(tick, 100);
+            };
+            tick();
+        });
+    };
+
     const applyWalkingRulesToParent = async (parentKey) => {
         if (!window.db || !parentKey) return;
         if (!Array.isArray(walkingRules) || walkingRules.length === 0) return;
@@ -13044,14 +13066,17 @@ const TransportApp = ({ userProfileData }) => {
                                 timelineGenerationRequestedRef.current = true;
                                 rebuildAndLogTimeline(true, cat);
                                 setShowCategoryModal(false);
-                            
-                                setTimeout(async () => {
-                                    try {
-                                        await setAllWalkingTransfersAsWalking();
-                                    } catch (e) {
-                                    }
-                                }, 800);
-                            
+
+                                // Počkať na aktualizáciu savedTransfersRef.current z Firestore
+                                await waitForTransfersUpdate(cat);
+
+                                // Spustiť rovnakú funkciu ako tlačidlo „Nastaviť presun peši medzi blízkymi miestami"
+                                try {
+                                    await setAllWalkingTransfersAsWalking();
+                                } catch (e) {
+                                    // ignore
+                                }
+
                                 setSelectedDayForTimeline('');
                                 window.showGlobalNotification(
                                     selectedDayForTimeline
@@ -15609,13 +15634,16 @@ const TransportApp = ({ userProfileData }) => {
                                 timelineGenerationRequestedRef.current = true;
                                 rebuildAndLogTimeline(true, cat);
 
-                                setTimeout(async () => {
-                                    try {
-                                        await setAllWalkingTransfersAsWalking();
-                                    } catch (e) {
-                                    }
-                                }, 800);
-                            
+                                // Počkať na aktualizáciu savedTransfersRef.current z Firestore
+                                await waitForTransfersUpdate(cat);
+
+                                // Spustiť rovnakú funkciu ako tlačidlo „Nastaviť presun peši medzi blízkymi miestami"
+                                try {
+                                    await setAllWalkingTransfersAsWalking();
+                                } catch (e) {
+                                    // ignore
+                                }
+
                                 window.showGlobalNotification(
                                     `Časová os pre kategóriu ${cat} bola znova vygenerovaná (dogenerované len chýbajúce).`,
                                     'success'
