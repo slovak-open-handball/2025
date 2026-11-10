@@ -3330,8 +3330,8 @@ const TransportApp = ({ userProfileData }) => {
                     });
                 } else {
                 }
-                superstructureGroupsRef.current = map;
-                    Object.fromEntries(Object.entries(map).map(([k, v]) => [k, [...v]]))
+                superstructureGroupsRef.current = Object.fromEntries(
+                    Object.entries(map).map(([k, v]) => [k, [...v]])
                 );
                 if (matchesLoadedRef.current && cateringLoadedRef.current && teamsLoadedRef.current) {
                     rebuildAndLogTimeline();
