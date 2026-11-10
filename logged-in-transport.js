@@ -1204,8 +1204,6 @@ const TransportApp = ({ userProfileData }) => {
             return null;
         };
 
-        // NOVÉ: Vráti všetky tímy v kategórii, ktoré patria do skupiny s daným písmenom.
-        // Primárne cez groupName, fallback cez posledné písmeno názvu tímu.
         const getTeamsInGroupByChar = (category, groupChar) => {
             if (!category || !groupChar) return new Set();
             const cat = cleanCategory(category);
@@ -1217,17 +1215,10 @@ const TransportApp = ({ userProfileData }) => {
                 if (!t.teamName) return;
                 const tn = String(t.teamName).trim();
         
-                // 1) Primárne cez groupName
+                // Skupina sa určuje IBA z groupName (rovnako ako v AddTeamsGroupApp,
+                // kde sa tím priraďuje do skupiny výhradne cez groupName).
                 const gChar = getGroupLastChar(t.groupName);
                 if (gChar === char) {
-                    result.add(tn);
-                    return;
-                }
-        
-                // 2) Fallback cez posledné písmeno názvu tímu
-                // (aby sme zachytili superstructure tímy, ktoré nemajú groupName)
-                const nameMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
-                if (nameMatch && nameMatch[1].toUpperCase() === char) {
                     result.add(tn);
                 }
             });
@@ -1339,10 +1330,26 @@ const TransportApp = ({ userProfileData }) => {
 
             const getTeamGroupCharFromName = (teamName) => {
                 if (!teamName) return null;
-                const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+                const s = String(teamName).trim();
+            
+                // 1) Priorita: skupina z teamsArrivalBuffer (groupName) – rovnako ako v AddTeamsGroupApp.
+                //    Toto je jediný správny zdroj pravdy pre skupinu tímu.
+                const teamInfo = (teamsArrivalBufferRef.current || []).find(
+                    (t) => String(t.teamName || '').trim() === s
+                );
+                if (teamInfo && teamInfo.groupName) {
+                    const gChar = getGroupLastChar(teamInfo.groupName);
+                    if (gChar) return gChar;
+                }
+            
+                // 2) Fallback: posledné písmeno názvu tímu (napr. "U12 D 5F" → "F")
+                //    Použije sa iba ak tím nemá groupName (napr. superstructure tím
+                //    bez priradenia do skupiny).
+                const m = /\d([A-ZÁ-Ž])\s*$/.exec(s);
                 if (m) return m[1].toUpperCase();
-                // fallback – posledné veľké písmeno
-                const m2 = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(String(teamName).trim().toUpperCase());
+            
+                // 3) Fallback: posledné veľké písmeno
+                const m2 = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(s.toUpperCase());
                 return m2 ? m2[1] : null;
             };
     
