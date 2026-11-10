@@ -1280,11 +1280,20 @@ const TransportApp = ({ userProfileData }) => {
             (teamsArrivalBufferRef.current || []).forEach((t) => {
                 if (!t.isSuperstructure) return;
                 if (!t.teamName) return;
-
+            
+                // NOVÉ: Pre superstructure tím určujeme písmeno skupiny VÝHRADNE
+                // z groupName. Fallback na posledné písmeno názvu tímu je nesprávny
+                // pre pavúkové tímy (LSF02 → F), ktoré patria do skupiny podľa groupName.
                 let char = getGroupLastChar(t.groupName);
-                if (!char) char = getGroupLastChar(t.teamName);
+            
+                // Ak tím nemá groupName a nie je to pavúkový tím, skúsime posledné
+                // písmeno názvu tímu (napr. "U12 D 5A" → A).
+                if (!char && !isSpiderTeamName(t.teamName)) {
+                    char = getGroupLastChar(t.teamName);
+                }
+            
                 if (!char) return;
-
+            
                 const key = `${cleanCategory(t.category)}|${t.teamName}`;
                 ssGroupCharByTeam[key] = char;
                 if (!ssPlayDatesByTeam[key]) ssPlayDatesByTeam[key] = new Set();
@@ -1331,24 +1340,53 @@ const TransportApp = ({ userProfileData }) => {
             const getTeamGroupCharFromName = (teamName) => {
                 if (!teamName) return null;
                 const s = String(teamName).trim();
+                const cat = cleanCategory(category || '');
             
-                // 1) Priorita: skupina z teamsArrivalBuffer (groupName) – rovnako ako v AddTeamsGroupApp.
-                //    Toto je jediný správny zdroj pravdy pre skupinu tímu.
+                // NOVÉ: Zisti, či ide o superstructure tím – teda tím, ktorého názov
+                // obsahuje názov kategórie (napr. "U12 D LSF02" pre kategóriu "U12 D").
+                // Pre takéto tímy sa skupina určuje VÝHRADNE z groupName v teamsArrivalBuffer,
+                // NIE z posledného písmena názvu tímu.
                 const teamInfo = (teamsArrivalBufferRef.current || []).find(
                     (t) => String(t.teamName || '').trim() === s
                 );
+            
                 if (teamInfo && teamInfo.groupName) {
+                    // Priorita: skupina z teamsArrivalBuffer (groupName) – toto je jediný
+                    // správny zdroj pravdy pre skupinu tímu, rovnako ako v AddTeamsGroupApp.
                     const gChar = getGroupLastChar(teamInfo.groupName);
                     if (gChar) return gChar;
                 }
             
-                // 2) Fallback: posledné písmeno názvu tímu (napr. "U12 D 5F" → "F")
-                //    Použije sa iba ak tím nemá groupName (napr. superstructure tím
-                //    bez priradenia do skupiny).
+                // Ak tím nemá groupName, ale je to superstructure tím (názov obsahuje
+                // názov kategórie), NEPOUŽÍVAME fallback na posledné písmeno názvu tímu,
+                // pretože to by ho nesprávne zaradilo do skupiny F (LSF02 → F).
+                const isSuperstructureTeam = (() => {
+                    if (teamInfo && teamInfo.isSuperstructure === true) return true;
+                    if (cat && s.startsWith(cat + ' ')) return true;
+                    // Fallback: ak tím nemá groupName a názov obsahuje kategóriu
+                    if (!teamInfo && cat && s.startsWith(cat + ' ')) return true;
+                    return false;
+                })();
+            
+                if (isSuperstructureTeam) {
+                    // Pre superstructure tím bez groupName skúsime nájsť skupinu
+                    // podľa posledného písmena názvu tímu, ale LEN ak to nie je
+                    // pavúkový identifikátor (WSF/LSF/WQF/W8F/W16F atď.).
+                    if (!isSpiderTeamName(s)) {
+                        const m = /\d([A-ZÁ-Ž])\s*$/.exec(s);
+                        if (m) return m[1].toUpperCase();
+                    }
+                    // Ak je to pavúkový tím bez groupName, vrátime null –
+                    // skupina sa určí inak (napr. cez ssGroupCharByTeam).
+                    return null;
+                }
+            
+                // Pre používateľské tímy (neregistrované superstructure tímy bez groupName)
+                // použijeme fallback na posledné písmeno názvu tímu.
                 const m = /\d([A-ZÁ-Ž])\s*$/.exec(s);
                 if (m) return m[1].toUpperCase();
             
-                // 3) Fallback: posledné veľké písmeno
+                // Fallback: posledné veľké písmeno
                 const m2 = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(s.toUpperCase());
                 return m2 ? m2[1] : null;
             };
