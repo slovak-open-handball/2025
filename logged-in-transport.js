@@ -10770,39 +10770,7 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { className: 'px-3 pt-2 pb-2 border-b border-gray-100 flex flex-col gap-2' },
-                React.createElement(
-                    'div',
-                    { className: 'flex items-center justify-center gap-2' },
-                    React.createElement(
-                        'button',
-                        {
-                            type: 'button',
-                            onClick: () => setSortTransfersBy('departure'),
-                            className: `px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-                                sortTransfersBy === 'departure'
-                                    ? 'bg-violet-600 text-white'
-                                    : 'bg-white text-violet-600 border border-violet-300 hover:bg-violet-50'
-                            }`,
-                            title: 'Zoradiť presuny podľa času odchodu (od najskoršieho)'
-                        },
-                        'Čas odchodu'
-                    ),
-                    React.createElement(
-                        'button',
-                        {
-                            type: 'button',
-                            onClick: () => setSortTransfersBy('arrival'),
-                            className: `px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-                                sortTransfersBy === 'arrival'
-                                    ? 'bg-violet-600 text-white'
-                                    : 'bg-white text-violet-600 border border-violet-300 hover:bg-violet-50'
-                            }`,
-                            title: 'Zoradiť presuny podľa času príchodu (od najskoršieho)'
-                        },
-                        'Čas príchodu'
-                    )
-                ),
-                // NOVÉ: Selectbox na výber miesta začiatku presunu
+                // NOVÉ: Selectbox na výber miesta začiatku presunu – UMiestnený NAD tlačidlami zoradenia
                 (() => {
                     // Zoznam všetkých miest, ktoré sa vyskytujú ako začiatočné body presunov/segmentov
                     // v práve zobrazenom (dňom a kategóriou filtrovanom) zozname.
@@ -10862,7 +10830,40 @@ const TransportApp = ({ userProfileData }) => {
                             )
                         )
                     );
-                })()
+                })(),
+                // Tlačidlá zoradenia – teraz POD selectboxom
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-center gap-2' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setSortTransfersBy('departure'),
+                            className: `px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                                sortTransfersBy === 'departure'
+                                    ? 'bg-violet-600 text-white'
+                                    : 'bg-white text-violet-600 border border-violet-300 hover:bg-violet-50'
+                            }`,
+                            title: 'Zoradiť presuny podľa času odchodu (od najskoršieho)'
+                        },
+                        'Čas odchodu'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setSortTransfersBy('arrival'),
+                            className: `px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                                sortTransfersBy === 'arrival'
+                                    ? 'bg-violet-600 text-white'
+                                    : 'bg-white text-violet-600 border border-violet-300 hover:bg-violet-50'
+                            }`,
+                            title: 'Zoradiť presuny podľa času príchodu (od najskoršieho)'
+                        },
+                        'Čas príchodu'
+                    )
+                )
             ),
             (() => {
                 const showPartialCheckbox = hasAnyPartialTransfer;
