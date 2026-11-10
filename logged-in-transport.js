@@ -2548,6 +2548,70 @@ const TransportApp = ({ userProfileData }) => {
                             currentDay !== globalLastDay &&
                             current.location
                         ) {
+                            const teamIsInUsers = teamsArrivalBufferRef.current.some(
+                                (t) => cleanCategory(t.category) === cleanCategory(category)
+                                    && t.teamName === teamName
+                                    && t.isRegistered === true
+                            );
+
+                            const hasAccommodation = teamAccommodationsList.length > 0;
+
+                            // Zisti, či sa pre users tím v tento deň generujú večerné presuny na ubytovne.
+                            // Stačí, ak existuje aspoň jeden users tím v kategórii s ubytovaním,
+                            // ktorý má v tento deň poslednú udalosť (alebo akýkoľvek event).
+                            const usersTeamsHaveEveningTransfers = (() => {
+                                if (!currentDay) return false;
+                                const categoryClean = cleanCategory(category);
+                                return (teamsArrivalBufferRef.current || []).some((t) => {
+                                    if (cleanCategory(t.category) !== categoryClean) return false;
+                                    if (t.isRegistered !== true) return false;
+                                    if (t.isSuperstructure === true) return false;
+                                    if (!t.accommodationName || t.accommodationName.trim() === '') return false;
+                                    // Má tím v tento deň nejakú udalosť?
+                                    const hasMatch = (matchesBufferRef.current || []).some((m) => {
+                                        if (cleanCategory(m.category) !== categoryClean) return false;
+                                        if (m.home !== t.teamName && m.away !== t.teamName) return false;
+                                        let dayKey = null;
+                                        if (m.scheduledTime) {
+                                            const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                            if (mm) {
+                                                const d = String(mm[1]).padStart(2, '0');
+                                                const mo = String(mm[2]).padStart(2, '0');
+                                                const y = mm[3];
+                                                dayKey = `${y}-${mo}-${d}`;
+                                            }
+                                        }
+                                        if (!dayKey && m.scheduledTs != null) {
+                                            const dt = new Date(m.scheduledTs);
+                                            dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                        }
+                                        return dayKey === currentDay;
+                                    });
+                                    if (hasMatch) return true;
+                                    const hasCatering = (cateringBufferRef.current || []).some((c) => {
+                                        if (cleanCategory(c.category) !== categoryClean) return false;
+                                        if (c.teamName !== t.teamName) return false;
+                                        return c.dayKey === currentDay;
+                                    });
+                                    return hasCatering;
+                                });
+                            })();
+
+                            const meetingPointStopForDay = (() => {
+                                if (!isMeetingPointDay) return null;
+                                const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isMeetingPointStop === true);
+                                if (fromAllPlaces) return fromAllPlaces;
+                                const fromStops = (stopsList || []).find((p) => p.isMeetingPointStop === true);
+                                return fromStops || null;
+                            })();
+
+                            const externalArrivalStopForDay = (() => {
+                                const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isExternalArrivalStop === true);
+                                if (fromAllPlaces) return fromAllPlaces;
+                                const fromStops = (stopsList || []).find((p) => p.isExternalArrivalStop === true);
+                                return fromStops || null;
+                            })();
+
                             if (isMeetingPointDay) {
                                 // === DEŇ MIESTA ZRAZU ===
                                 // Namiesto presunu na ubytovanie vygeneruj presun na miesto zrazu.
@@ -2597,55 +2661,289 @@ const TransportApp = ({ userProfileData }) => {
                                         });
                                     }
                                 }
-                            } else if (shouldGenerateAccommodationTransfers) {
-                                // === BEŽNÝ DEŇ ===
-                                const departureTs =
-                                    current.endTs != null ? current.endTs : current.startTs;
-                        
-                                const dayRefTs =
-                                    departureTs != null
-                                        ? departureTs
-                                        : midnightFromWhen(current.when);
-                        
-                                const departureStr =
-                                    formatFullFromTs(departureTs) || current.when;
-                        
-                                const arrivalTs =
-                                    dayRefTs != null
-                                        ? timestampOnDay(dayRefTs, 23, 59)
-                                        : null;
-                        
-                                const arrivalStr =
-                                    formatFullFromTs(arrivalTs) || '23:59';
-                        
+                            } else {
+                                // === BEŽNÝ DEŇ (nie deň miesta zrazu) ===
+
+                                // 1) Ak tím NEMÁ ubytovanie a sú to users tímy,
+                                //    a v tento deň sa pre users tímy generujú večerné presuny na ubytovne,
+                                //    vygeneruj presun z miesta poslednej udalosti na miesto zrazu.
                                 if (
-                                    departureTs != null &&
-                                    arrivalTs != null &&
-                                    departureTs >= arrivalTs
+                                    teamIsInUsers &&
+                                    !hasAccommodation &&
+                                    usersTeamsHaveEveningTransfers &&
+                                    meetingPointStopForDay &&
+                                    current.location !== meetingPointStopForDay.name
                                 ) {
-                                } else {
-                                    let whenStr;
-                                    if (departureStr && arrivalStr) {
-                                        whenStr = `${departureStr} – ${arrivalStr}`;
-                                    } else if (departureStr) {
-                                        whenStr = departureStr;
-                                    } else {
-                                        whenStr = current.when;
-                                    }
-                        
-                                    teamAccommodationsList.forEach((accomName) => {
-                                        if (!accomName) return;
-                                        if (accomName === current.location) return;
-                        
+                                    const departureTs =
+                                        current.endTs != null ? current.endTs : current.startTs;
+
+                                    const dayRefTs =
+                                        departureTs != null
+                                            ? departureTs
+                                            : midnightFromWhen(current.when);
+
+                                    const departureStr =
+                                        formatFullFromTs(departureTs) || current.when;
+
+                                    const arrivalTs =
+                                        dayRefTs != null
+                                            ? timestampOnDay(dayRefTs, 23, 59)
+                                            : null;
+
+                                    const arrivalStr =
+                                        formatFullFromTs(arrivalTs) || '23:59';
+
+                                    if (
+                                        departureTs != null &&
+                                        arrivalTs != null &&
+                                        departureTs < arrivalTs
+                                    ) {
+                                        let whenStr;
+                                        if (departureStr && arrivalStr) {
+                                            whenStr = `${departureStr} – ${arrivalStr}`;
+                                        } else if (departureStr) {
+                                            whenStr = departureStr;
+                                        } else {
+                                            whenStr = current.when;
+                                        }
+
                                         enriched.push({
                                             ts: current.ts + 1,
                                             when: whenStr,
                                             type: 'transfer',
-                                            text: `Presun z ${current.location} do ubytovanie ${accomName}`,
+                                            text: `Presun z ${current.location} do miesto zrazu ${meetingPointStopForDay.name}`,
                                             location: null,
                                             isTransfer: true,
                                         });
+                                    }
+                                }
+
+                                // 2) Ak je to superstructure tím a negenerujú sa presuny na miesto zrazu
+                                //    a potom na ubytovňu, ale priamo na ubytovňu,
+                                //    vygeneruj aj presun na miesto zrazu (z poslednej udalosti)
+                                //    a aj presun na ubytovňu (z miesta zrazu).
+                                if (
+                                    !teamIsInUsers &&
+                                    hasAccommodation &&
+                                    !isMeetingPointDay &&
+                                    meetingPointStopForDay &&
+                                    current.location !== meetingPointStopForDay.name
+                                ) {
+                                    // Najprv presun z poslednej udalosti na miesto zrazu
+                                    const departureTs =
+                                        current.endTs != null ? current.endTs : current.startTs;
+
+                                    const dayRefTs =
+                                        departureTs != null
+                                            ? departureTs
+                                            : midnightFromWhen(current.when);
+
+                                    const departureStr =
+                                        formatFullFromTs(departureTs) || current.when;
+
+                                    const arrivalTs =
+                                        dayRefTs != null
+                                            ? timestampOnDay(dayRefTs, 23, 59)
+                                            : null;
+
+                                    const arrivalStr =
+                                        formatFullFromTs(arrivalTs) || '23:59';
+
+                                    if (
+                                        departureTs != null &&
+                                        arrivalTs != null &&
+                                        departureTs < arrivalTs
+                                    ) {
+                                        let whenStr;
+                                        if (departureStr && arrivalStr) {
+                                            whenStr = `${departureStr} – ${arrivalStr}`;
+                                        } else if (departureStr) {
+                                            whenStr = departureStr;
+                                        } else {
+                                            whenStr = current.when;
+                                        }
+
+                                        enriched.push({
+                                            ts: current.ts + 1,
+                                            when: whenStr,
+                                            type: 'transfer',
+                                            text: `Presun z ${current.location} do miesto zrazu ${meetingPointStopForDay.name}`,
+                                            location: null,
+                                            isTransfer: true,
+                                        });
+
+                                        // Potom presun z miesta zrazu na ubytovňu (všetky ubytovne)
+                                        teamAccommodationsList.forEach((accomName) => {
+                                            if (!accomName) return;
+                                            if (accomName === meetingPointStopForDay.name) return;
+
+                                            enriched.push({
+                                                ts: current.ts + 1.5,
+                                                when: whenStr,
+                                                type: 'transfer',
+                                                text: `Presun z miesto zrazu ${meetingPointStopForDay.name} do ubytovanie ${accomName}`,
+                                                location: null,
+                                                isTransfer: true,
+                                            });
+                                        });
+                                    }
+                                }
+
+                                // 3) Ak je to superstructure tím a JE posledný deň turnaja,
+                                //    vygeneruj presun na miesto zrazu (z poslednej udalosti)
+                                //    a presun z miesta zrazu na nástupnú/výstupnú zastávku.
+                                if (
+                                    !teamIsInUsers &&
+                                    currentDay === globalLastDay &&
+                                    meetingPointStopForDay &&
+                                    externalArrivalStopForDay &&
+                                    current.location !== meetingPointStopForDay.name
+                                ) {
+                                    // Presun z poslednej udalosti na miesto zrazu
+                                    const departureTs =
+                                        current.endTs != null ? current.endTs : current.startTs;
+
+                                    const dayRefTs =
+                                        departureTs != null
+                                            ? departureTs
+                                            : midnightFromWhen(current.when);
+
+                                    const departureStr =
+                                        formatFullFromTs(departureTs) || current.when;
+
+                                    const arrivalTs =
+                                        dayRefTs != null
+                                            ? timestampOnDay(dayRefTs, 23, 59)
+                                            : null;
+
+                                    const arrivalStr =
+                                        formatFullFromTs(arrivalTs) || '23:59';
+
+                                    if (
+                                        departureTs != null &&
+                                        arrivalTs != null &&
+                                        departureTs < arrivalTs
+                                    ) {
+                                        let whenStr;
+                                        if (departureStr && arrivalStr) {
+                                            whenStr = `${departureStr} – ${arrivalStr}`;
+                                        } else if (departureStr) {
+                                            whenStr = departureStr;
+                                        } else {
+                                            whenStr = current.when;
+                                        }
+
+                                        enriched.push({
+                                            ts: current.ts + 1,
+                                            when: whenStr,
+                                            type: 'transfer',
+                                            text: `Presun z ${current.location} do miesto zrazu ${meetingPointStopForDay.name}`,
+                                            location: null,
+                                            isTransfer: true,
+                                        });
+
+                                        // Presun z miesta zrazu na nástupnú/výstupnú zastávku
+                                        if (externalArrivalStopForDay.name !== meetingPointStopForDay.name) {
+                                            enriched.push({
+                                                ts: current.ts + 1.5,
+                                                when: whenStr,
+                                                type: 'transfer',
+                                                text: `Presun z miesto zrazu ${meetingPointStopForDay.name} do zastávka ${externalArrivalStopForDay.name}`,
+                                                location: null,
+                                                isTransfer: true,
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // === DEŇ MIESTA ZRAZU – návrat z miesta zrazu na ubytovanie (používateľský tím) ===
+                        // (Táto časť zostáva nezmenená, len je vizuálne oddelená.)
+                        if (
+                            meetingPointDayKey &&
+                            meetingPointDayKey !== '' &&
+                            isLastEventOfDay &&
+                            currentDay != null &&
+                            currentDay === meetingPointDayKey
+                        ) {
+                            const teamIsInUsersForMeetingPoint = teamsArrivalBufferRef.current.some(
+                                (t) => cleanCategory(t.category) === cleanCategory(category)
+                                    && t.teamName === teamName
+                                    && t.isRegistered === true
+                            );
+                        
+                            const meetingPointStopForReturn = (() => {
+                                const fromAllPlaces = (allPlacesRef.current || []).find((p) => p.isMeetingPointStop === true);
+                                if (fromAllPlaces) return fromAllPlaces;
+                                const fromStops = (stopsList || []).find((p) => p.isMeetingPointStop === true);
+                                return fromStops || null;
+                            })();
+                        
+                            // Dôležitá zmena: už nevyžadujeme, aby current.location bolo miesto zrazu.
+                            // Zdrojom presunu je vždy miesto zrazu.
+                            if (
+                                teamIsInUsersForMeetingPoint &&
+                                meetingPointStopForReturn &&
+                                teamAccommodationsList.length > 0
+                            ) {
+                                // Zisti najneskorší koniec udalosti v rámci celej kategórie
+                                // v tento deň (cez všetky tímy v kategórii – používateľské
+                                // aj superstructure).
+                                const categoryClean = cleanCategory(category);
+                                let latestEndTsForCategoryOnDay = null;
+                        
+                                Object.values(grouped[categoryClean] || {}).forEach((teamEvents) => {
+                                    (teamEvents || []).forEach((ev) => {
+                                        const evDay = extractDayKeyFromWhen(ev.when);
+                                        if (evDay !== currentDay) return;
+                                        if (ev.endTs != null) {
+                                            if (latestEndTsForCategoryOnDay == null || ev.endTs > latestEndTsForCategoryOnDay) {
+                                                latestEndTsForCategoryOnDay = ev.endTs;
+                                            }
+                                        } else if (ev.startTs != null) {
+                                            if (latestEndTsForCategoryOnDay == null || ev.startTs > latestEndTsForCategoryOnDay) {
+                                                latestEndTsForCategoryOnDay = ev.startTs;
+                                            }
+                                        }
                                     });
+                                });
+                        
+                                // Fallback – aspoň koniec aktuálnej udalosti
+                                if (latestEndTsForCategoryOnDay == null) {
+                                    latestEndTsForCategoryOnDay =
+                                        current.endTs != null ? current.endTs : current.startTs;
+                                }
+                        
+                                if (latestEndTsForCategoryOnDay != null) {
+                                    const departureTs = latestEndTsForCategoryOnDay;
+                                    const dayRefTs = departureTs;
+                        
+                                    const arrivalTs = timestampOnDay(dayRefTs, 23, 59);
+                                    const departureStr = formatFullFromTs(departureTs) || current.when;
+                                    const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
+                        
+                                    if (
+                                        departureTs != null &&
+                                        arrivalTs != null &&
+                                        departureTs < arrivalTs
+                                    ) {
+                                        const whenStr = `${departureStr} – ${arrivalStr}`;
+                        
+                                        teamAccommodationsList.forEach((accomName) => {
+                                            if (!accomName) return;
+                                            // Zdrojom presunu je miesto zrazu, nie aktuálna lokalita tímu,
+                                            // takže nepreskakujeme ani keď accomName === current.location.
+                                            enriched.push({
+                                                ts: current.ts + 1.5,
+                                                when: whenStr,
+                                                type: 'transfer',
+                                                text: `Presun z miesto zrazu ${meetingPointStopForReturn.name} do ubytovanie ${accomName}`,
+                                                location: null,
+                                                isTransfer: true,
+                                            });
+                                        });
+                                    }
                                 }
                             }
                         }
