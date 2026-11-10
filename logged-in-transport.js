@@ -2008,21 +2008,6 @@ const TransportApp = ({ userProfileData }) => {
                                     }
                                 }
                             } else {
-                                } else {
-                                // ============ VETVA PRE SUPERSTRUCTURE TÍM ============
-                                // NOVÉ: Ak v tento deň má udalosť aspoň jeden users tím, negeneruj ranné presuny pre SS tím
-                                if (anyUsersTeamHasEventToday) {
-                                    // skip – pravidlo: ak hrá users tím, SS tím nemá ranné presuny
-                                } else if (!isFirstPavukMatchOfDay) {
-                                    // NOVÉ: Ak ide o pavúkový tím a má v ten deň skôr iný pavúkový zápas,
-                                    // negeneruj ranné presuny (ani z miesta zrazu).
-                                    // Tím už je na mieste z predchádzajúceho zápasu.
-                                } else if (isGlobalFirstDay) {
-*/
-
-// NOVÝ KÓD (nahradiť vyššie uvedené):
-
-                            } else {
                                 // ============ VETVA PRE SUPERSTRUCTURE TÍM ============
                                 // NOVÉ: Zisti, či je aktuálna udalosť pavúkový zápas
                                 const isPavukMatchEventForSS =
