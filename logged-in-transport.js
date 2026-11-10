@@ -10812,14 +10812,16 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         // ---- ROZHODNUTIE, ČO ZOBRAZIŤ ----
-        // Ak existuje aspoň jeden presun v expandedTransfers (t.j. po základnom
-        // filtrovaní podľa dňa/kategórie), box musíme zobraziť VŽDY.
+        // POZOR: `expandedTransfers` obsahuje VŠETKY presuny (aj priradené,
+        // aj nepriradené). Preto `hasAnyTransferToShow` musí vychádzať z neho,
+        // inak po priradení posledného presunu zmizne celý box.
         const hasAnyTransferToShow = expandedTransfers.length > 0;
 
         const hasActivePlaceFilter =
             !!selectedFromPlaceFilter || !!selectedToPlaceFilter;
 
-        // Ak sú aktívne filtre a výsledok je prázdny → zobraz box s hláškou.
+        // Ak sú aktívne filtre a výsledok je prázdny, ale existujú nejaké
+        // presuny pre daný filter (baseFilteredAfterPartial), zobraz box s hláškou.
         const filterHasNoMatchesAtAll =
             hasActivePlaceFilter &&
             filtered.length === 0 &&
