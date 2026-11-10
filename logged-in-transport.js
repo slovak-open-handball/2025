@@ -10895,10 +10895,39 @@ const TransportApp = ({ userProfileData }) => {
         const hasActivePlaceFilter =
             !!selectedFromPlaceFilter || !!selectedToPlaceFilter;
 
-        // Ak sú aktívne filtre a výsledok je prázdny, ale existujú nejaké
-        // presuny pre daný filter (baseFilteredAfterPartial), zobraz box s hláškou.
+        // Zisti, či pre zvolený filter miesta existuje aspoň JEDEN parent
+        // v `savedTransfers` pre daný deň/kategóriu (bez ohľadu na to, či je
+        // už priradený alebo peší). Ak áno, ale `filtered` je prázdny, znamená to,
+        // že všetky presuny zodpovedajúce filtru sú už priradené/pešie → hláška.
+        // Ak NIE, filter nemá pre daný deň žiadny zmysel → filter sa má zrušiť
+        // (to rieši useEffect vyššie), a hlášku neukazujeme.
+        const filterHasAnyParentMatch = (() => {
+            if (!hasActivePlaceFilter) return false;
+            const dayKeyFilter = selectedDayKey || null;
+            const categoryFilter = selectedCategoryFilter
+                ? cleanCategory(selectedCategoryFilter)
+                : null;
+            return (savedTransfers || []).some((p) => {
+                if (dayKeyFilter && p.dayKey !== dayKeyFilter) return false;
+                if (categoryFilter && cleanCategory(p.category || '') !== categoryFilter) return false;
+                const pFromId = p.fromId || null;
+                const pToId = p.toId || null;
+                if (selectedFromPlaceFilter) {
+                    if (!pFromId || String(pFromId) !== String(selectedFromPlaceFilter)) return false;
+                }
+                if (selectedToPlaceFilter) {
+                    if (!pToId || String(pToId) !== String(selectedToPlaceFilter)) return false;
+                }
+                return true;
+            });
+        })();
+
+        // Hlášku "Pre zvolený filter miesta neexistujú žiadne presuny" zobrazíme
+        // IBA ak filter má aspoň jeden parent (t. j. miesta sú relevantné),
+        // ale všetky zodpovedajúce presuny sú už priradené/pešie.
         const filterHasNoMatchesAtAll =
             hasActivePlaceFilter &&
+            filterHasAnyParentMatch &&
             filtered.length === 0 &&
             baseFilteredAfterPartial.length > 0;
 
@@ -11088,7 +11117,9 @@ const TransportApp = ({ userProfileData }) => {
                     { className: 'text-center text-gray-500 py-6 text-sm italic px-3' },
                     showOnlyPartialTransfers
                         ? 'Žiadne presuny, ktoré by boli časťou väčšieho presunu (s medzizastávkami).'
-                        : 'Zatiaľ žiadne vygenerované presuny. Kliknite na + vpravo dole a vygenerujte časovú os.'
+                        : (hasActivePlaceFilter
+                            ? 'Všetky presuny pre zvolený filter miesta sú už priradené k autobusu alebo označené ako peši. Filter sa automaticky zruší, aby sa zobrazili ostatné nepriradené presuny.'
+                            : 'Všetky presuny pre tento deň sú už priradené k autobusu alebo označené ako peši. Nové presuny pridáte tlačidlom + vpravo dole.')
                 )
                 : React.createElement(
                     'div',
