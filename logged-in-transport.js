@@ -2734,12 +2734,11 @@ const TransportApp = ({ userProfileData }) => {
                                 }
                             }
                         }
-                    }
 
-                    enriched.sort((a, b) => {
-                        if (a.ts !== b.ts) return a.ts - b.ts;
-                        return String(a.text).localeCompare(String(b.text), 'sk');
-                    });
+                        enriched.sort((a, b) => {
+                            if (a.ts !== b.ts) return a.ts - b.ts;
+                            return String(a.text).localeCompare(String(b.text), 'sk');
+                        });
                     
                     try {
                         const transfersForTeam = enriched.filter((ev) => ev.isTransfer === true);
