@@ -1397,24 +1397,37 @@ const TransportApp = ({ userProfileData }) => {
                         return;
                     }
         
-                    // Bežný superstructure tím – posledné písmeno názvu určuje skupinu
-                    const lastCharFromName = getGroupLastChar(t.groupName);
+                    // Skupina sa určuje primárne z groupName.
+                    // Ak superstructure tím NEMÁ groupName, použije sa posledné písmeno názvu tímu
+                    // (napr. "U12 CH 1D" → skupina D) – LEN ak to nie je pavúkový tím.
+                    let lastCharFromName = getGroupLastChar(t.groupName);
+                    let lastCharSource = 'groupName';
+
+                    if (!lastCharFromName && !isSpiderTeamName(tn)) {
+                        const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                        if (m) {
+                            lastCharFromName = m[1].toUpperCase();
+                            lastCharSource = 'posledné písmeno názvu tímu (bez groupName)';
+                        }
+                    }
 
                     console.log(
                         `%c  Superstructure tím: "${tn}"`,
                         'font-weight: bold; color: #ea580c;'
                     );
                     console.log(`    • groupName: ${t.groupName ? String(t.groupName).trim() : '(žiadny)'}`);
-                    console.log(`    • posledné písmeno názvu tímu (NEPOUŽÍVA SA na určenie skupiny): ${(() => {
+                    console.log(`    • posledné písmeno názvu tímu: ${(() => {
                         const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
                         return m ? m[1].toUpperCase() : '—';
                     })()}`);
 
                     if (!lastCharFromName) {
-                        console.log(`    → (nepodarilo sa určiť písmeno skupiny z groupName)`);
+                        console.log(`    → (nepodarilo sa určiť písmeno skupiny ani z groupName, ani z posledného písmena názvu tímu)`);
                         console.log('    ─────────────────────────────');
                         return;
                     }
+
+                    console.log(`    • písmeno skupiny: ${lastCharFromName} (zdroj: ${lastCharSource})`);
         
                     // Nájdi všetky tímy v skupine s týmto písmenom (podľa groupName).
                     const teamsInSameGroup = [];
