@@ -1397,9 +1397,13 @@ const TransportApp = ({ userProfileData }) => {
                         return;
                     }
         
-                    // Skupina sa určuje primárne z groupName.
-                    // Ak superstructure tím NEMÁ groupName, použije sa posledné písmeno názvu tímu
-                    // (napr. "U12 CH 1D" → skupina D) – LEN ak to nie je pavúkový tím.
+                    // Písmeno skupiny:
+                    //  - ak má tím groupName → písmeno z groupName
+                    //  - ak nemá groupName a nie je pavúkový → písmeno z posledného
+                    //    písmena názvu tímu (napr. "U12 CH 1D" → "D").
+                    // POZOR: Toto písmeno NIE JE skupina, do ktorej tím patrí.
+                    // Používa sa len na to, aby sme vypísali tímy, ktoré patria
+                    // do skupiny s týmto písmenom (t.j. skupina "skupina D").
                     let lastCharFromName = getGroupLastChar(t.groupName);
                     let lastCharSource = 'groupName';
 
@@ -1429,7 +1433,10 @@ const TransportApp = ({ userProfileData }) => {
 
                     console.log(`    • písmeno skupiny: ${lastCharFromName} (zdroj: ${lastCharSource})`);
         
-                    // Nájdi všetky tímy v skupine s týmto písmenom (podľa groupName).
+                    // Nájdi všetky tímy, ktoré patria do skupiny s písmenom lastCharFromName.
+                    // Skupina sa určuje VÝHRADNE z groupName (rovnako ako v AddTeamsGroupApp).
+                    // Superstructure tím sám seba nezaradzujeme podľa posledného písmena názvu –
+                    // iba vypisujeme, ktoré tímy patria do skupiny s týmto písmenom.
                     const teamsInSameGroup = [];
                     (teamsArrivalBufferRef.current || []).forEach((other) => {
                         if (cleanCategory(other.category) !== cat) return;
@@ -1437,7 +1444,8 @@ const TransportApp = ({ userProfileData }) => {
                         const otherTn = String(other.teamName).trim();
                         if (otherTn === tn) return; // seba preskočíme
 
-                        if (teamBelongsToGroupChar(other, lastCharFromName)) {
+                        const otherGroupChar = getGroupLastChar(other.groupName);
+                        if (otherGroupChar === lastCharFromName) {
                             teamsInSameGroup.push(otherTn);
                         }
                     });
