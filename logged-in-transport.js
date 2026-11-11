@@ -758,6 +758,8 @@ const TransportApp = ({ userProfileData }) => {
     const [assignBusSaving, setAssignBusSaving] = useState(false);
     const [removeWalkingModal, setRemoveWalkingModal] = useState(null);
     const [removeWalkingSaving, setRemoveWalkingSaving] = useState(false);
+    const [setWalkingConfirmModal, setSetWalkingConfirmModal] = useState(null); 
+    const [setWalkingConfirmSaving, setSetWalkingConfirmSaving] = useState(false);
     const [walkingBatchSaving, setWalkingBatchSaving] = useState(false);
     const [deleteTransferModal, setDeleteTransferModal] = useState(null);
     const [deleteTransferSaving, setDeleteTransferSaving] = useState(false);
@@ -8998,7 +9000,8 @@ const TransportApp = ({ userProfileData }) => {
         await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: { [parentKey]: payload } }, { merge: true });
     };
 
-    const setTransferAsWalking = async (transfer) => {
+    const setTransferAsWalking = async (transfer, options = {}) => {
+        const { silent = false } = options;
         if (!window.db || !transfer) return;
         try {
             const parentKey = transfer._parentKey || transfer.key;
@@ -9045,7 +9048,7 @@ const TransportApp = ({ userProfileData }) => {
                     draft.walkingSetBy = (userProfileData && userProfileData.email) || null;
                 }
             });
-
+    
             await updateParentTransfer(parentKey, (draft) => {
                 const segIdx = transfer._parentKey
                     ? findSegmentIndex(draft.segments, transfer.fromId, transfer.toId)
@@ -9071,9 +9074,11 @@ const TransportApp = ({ userProfileData }) => {
                     draft.walkingSetBy = (userProfileData && userProfileData.email) || null;
                 }
             });
-
+    
             window.showGlobalNotification('Presun bol označený ako peši.', 'success');
-            setTransferActionModal(null);
+            if (!silent) {
+                setTransferActionModal(null);
+            }
         } catch (err) {
             window.showGlobalNotification('Nepodarilo sa označiť presun ako peši.', 'error');
         }
@@ -15706,7 +15711,11 @@ const TransportApp = ({ userProfileData }) => {
                         'button',
                         {
                             type: 'button',
-                            onClick: () => setTransferAsWalking(transferActionModal.transfer),
+                            onClick: () => {
+                                const t = transferActionModal.transfer;
+                                setSetWalkingConfirmModal({ transfer: t });
+                                setTransferActionModal(null);
+                            },
                             className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors flex items-center gap-3'
                         },
                         React.createElement('i', { className: 'fa-solid fa-person-walking text-emerald-600 text-xl w-6 text-center' }),
@@ -16603,6 +16612,112 @@ const TransportApp = ({ userProfileData }) => {
                 )
             );
         })() || null,
+        setWalkingConfirmModal && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100001] p-4',
+                onClick: () => {
+                    if (setWalkingConfirmSaving) return;
+                    setSetWalkingConfirmModal(null);
+                }
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl max-w-md w-full p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3 mb-4' },
+                    React.createElement('i', {
+                        className: 'fa-solid fa-person-walking text-emerald-600 text-2xl mt-0.5'
+                    }),
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-800' },
+                        'Nastaviť presun peši'
+                    )
+                ),
+                (() => {
+                    const tr = setWalkingConfirmModal.transfer;
+                    const transportColor = getTransportColorForCategory(tr.category);
+                    const boxBg = transportColor ? lightenHex(transportColor, 0.15) : null;
+                    return React.createElement(
+                        'div',
+                        {
+                            className: 'mb-4 text-sm text-gray-700 flex flex-col leading-snug rounded-md px-3 py-2',
+                            style: {
+                                position: 'relative',
+                                borderLeft: transportColor ? `6px solid ${transportColor}` : '2px solid #c4b5fd',
+                                ...(boxBg ? { backgroundColor: boxBg } : { backgroundColor: '#f5f3ff' }),
+                            },
+                        },
+                        tr.teamName &&
+                            React.createElement(
+                                'span',
+                                {
+                                    className: 'text-sm font-semibold',
+                                    style: { color: transportColor || '#5b21b6' },
+                                    title: 'Tím',
+                                },
+                                tr.teamName
+                            ),
+                        React.createElement(
+                            'span',
+                            { className: 'text-sm text-gray-900 font-medium' },
+                            `${resolvePlaceNameById(tr.fromId) || '?'} → ${resolvePlaceNameById(tr.toId) || '?'}`
+                        ),
+                        tr.when &&
+                            React.createElement(
+                                'span',
+                                { className: 'text-sm text-gray-600' },
+                                tr.when
+                            )
+                    );
+                })(),
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-gray-600 mb-4' },
+                    'Naozaj chcete nastaviť tento presun ako peši? Presun sa presunie do boxu "Peši" a nebude ho možné priradiť k autobusu.'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => setSetWalkingConfirmModal(null),
+                            disabled: setWalkingConfirmSaving,
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: async () => {
+                                if (setWalkingConfirmSaving) return;
+                                const tr = setWalkingConfirmModal.transfer;
+                                setSetWalkingConfirmSaving(true);
+                                try {
+                                    await setTransferAsWalking(tr, { silent: true });
+                                    setSetWalkingConfirmModal(null);
+                                } finally {
+                                    setSetWalkingConfirmSaving(false);
+                                }
+                            },
+                            disabled: setWalkingConfirmSaving,
+                            className: 'px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors disabled:opacity-60 flex items-center gap-2'
+                        },
+                        setWalkingConfirmSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                        'Áno, nastaviť peši'
+                    )
+                )
+            )
+        ),
         removeWalkingModal && React.createElement(
             'div',
             {
