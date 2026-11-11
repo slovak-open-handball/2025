@@ -1665,27 +1665,70 @@ const TransportApp = ({ userProfileData }) => {
                     if (isSuperstructureTeam && teamGroupName) {
                         const groupCharForLog = getGroupLastChar(teamGroupName);
                         if (groupCharForLog) {
-                            const teamsInGroupForLog = [];
-                            (teamsArrivalBufferRef.current || []).forEach((other) => {
-                                if (cleanCategory(other.category) !== cleanCategory(category)) return;
-                                if (!other.teamName) return;
-                                if (String(other.teamName).trim() === teamName) return;
-                                const otherChar = getGroupLastChar(other.groupName);
-                                if (otherChar === groupCharForLog) {
-                                    teamsInGroupForLog.push(String(other.teamName).trim());
+                            // NOVÉ: Zisti, či sa v udalostiach tímu v danom dni (zápas alebo stravovanie)
+                            // nachádza názov tímu obsahujúci niektorý z SPIDER_IDENTIFIER_PREFIXES.
+                            const hasSpiderTeamInEvents = (() => {
+                                if (!currentDay) return false;
+                    
+                                // Prejdi udalosti tímu v tomto dni
+                                const dayEvents = events.filter((ev) => {
+                                    const evDay = extractDayKeyFromWhen(ev.when);
+                                    return evDay != null && evDay === currentDay;
+                                });
+                    
+                                for (const ev of dayEvents) {
+                                    // Zápas – z textu "Home vs Away [o X. miesto] | Hala"
+                                    if (ev.type === 'match') {
+                                        const matchParts = /^(.+?) vs (.+?)(?:\s*\[.*?\])?(?:\s*\|.*)?$/.exec(String(ev.text || ''));
+                                        if (matchParts) {
+                                            const homeName = matchParts[1].trim();
+                                            const awayName = matchParts[2].trim();
+                                            if (isSpiderTeamName(homeName) || isSpiderTeamName(awayName)) {
+                                                return true;
+                                            }
+                                        }
+                                    }
+                    
+                                    // Stravovanie – skontroluj cateringBufferRef pre tento tím v danom dni
+                                    // (catering eventy sú per tím, ale pre istotu skontrolujeme aj buffer)
+                                    if (ev.type === 'catering') {
+                                        const hasSpiderInCatering = (cateringBufferRef.current || []).some((c) => {
+                                            if (cleanCategory(c.category) !== cleanCategory(category)) return false;
+                                            if (c.dayKey !== currentDay) return false;
+                                            if (c.teamName === teamName) return false;
+                                            return isSpiderTeamName(c.teamName);
+                                        });
+                                        if (hasSpiderInCatering) return true;
+                                    }
                                 }
-                            });
-                            const uniqueTeamsForLog = [...new Set(teamsInGroupForLog)].sort((a, b) =>
-                                a.localeCompare(b, 'sk', { sensitivity: 'base' })
-                            );
-                            console.log(
-                                `%c[TRANSPORT][GROUP-MEMBERS] Tím "${teamName}" (skupina "${teamGroupName}", písmeno ${groupCharForLog}) – tímy v skupine (${uniqueTeamsForLog.length}):`,
-                                'font-weight: bold; color: #7c3aed;'
-                            );
-                            if (uniqueTeamsForLog.length === 0) {
-                                console.log('    (žiadne iné tímy v skupine)');
-                            } else {
-                                uniqueTeamsForLog.forEach((tn) => console.log(`    • ${tn}`));
+                                return false;
+                            })();
+                    
+                            // NOVÉ: Ak sa v udalostiach tímu v danom dni nachádza pavúkový tím,
+                            // log [TRANSPORT][GROUP-MEMBERS] sa NEVYPÍŠE.
+                            if (!hasSpiderTeamInEvents) {
+                                const teamsInGroupForLog = [];
+                                (teamsArrivalBufferRef.current || []).forEach((other) => {
+                                    if (cleanCategory(other.category) !== cleanCategory(category)) return;
+                                    if (!other.teamName) return;
+                                    if (String(other.teamName).trim() === teamName) return;
+                                    const otherChar = getGroupLastChar(other.groupName);
+                                    if (otherChar === groupCharForLog) {
+                                        teamsInGroupForLog.push(String(other.teamName).trim());
+                                    }
+                                });
+                                const uniqueTeamsForLog = [...new Set(teamsInGroupForLog)].sort((a, b) =>
+                                    a.localeCompare(b, 'sk', { sensitivity: 'base' })
+                                );
+                                console.log(
+                                    `%c[TRANSPORT][GROUP-MEMBERS] Tím "${teamName}" (skupina "${teamGroupName}", písmeno ${groupCharForLog}) – tímy v skupine (${uniqueTeamsForLog.length}):`,
+                                    'font-weight: bold; color: #7c3aed;'
+                                );
+                                if (uniqueTeamsForLog.length === 0) {
+                                    console.log('    (žiadne iné tímy v skupine)');
+                                } else {
+                                    uniqueTeamsForLog.forEach((tn) => console.log(`    • ${tn}`));
+                                }
                             }
                         }
                     }
