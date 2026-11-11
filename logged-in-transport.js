@@ -1826,13 +1826,35 @@ const TransportApp = ({ userProfileData }) => {
                                 } else {
                                     // Pôvodné správanie – ak nie je pavúkový tím v udalostiach,
                                     // vypíš tímy v skupine podľa posledného písmena.
+                                    // NOVÉ: tím sa zahrnie do vlastného zoznamu LEN vtedy,
+                                    // ak jeho posledné písmeno názvu NIE JE rovnaké ako
+                                    // písmeno skupiny (t.j. nie je to "seba-zaradenie"
+                                    // podľa posledného písmena názvu).
+                                    const currentTeamLastChar = (() => {
+                                        const s = String(teamName || '').trim();
+                                        if (!s) return null;
+                                        if (isSpiderTeamName(s)) return null;
+                                        const m = /\d([A-ZÁ-Ž])\s*$/.exec(s);
+                                        if (m) return m[1].toUpperCase();
+                                        const m2 = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(s.toUpperCase());
+                                        return m2 ? m2[1] : null;
+                                    })();
+
+                                    const includeSelf =
+                                        !currentTeamLastChar ||
+                                        currentTeamLastChar !== groupCharForLog;
+
                                     const teamsInGroupForLog = [];
                                     (teamsArrivalBufferRef.current || []).forEach((other) => {
                                         if (cleanCategory(other.category) !== cleanCategory(category)) return;
                                         if (!other.teamName) return;
 
+                                        const otherTn = String(other.teamName).trim();
+                                        const isSelf = otherTn === String(teamName).trim();
+                                        if (isSelf && !includeSelf) return;
+
                                         if (!teamBelongsToGroupChar(other, groupCharForLog)) return;
-                                        teamsInGroupForLog.push(String(other.teamName).trim());
+                                        teamsInGroupForLog.push(otherTn);
                                     });
                                     const uniqueTeamsForLog = [...new Set(teamsInGroupForLog)].sort((a, b) =>
                                         a.localeCompare(b, 'sk', { sensitivity: 'base' })
