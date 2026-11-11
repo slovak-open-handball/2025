@@ -1310,17 +1310,29 @@ const TransportApp = ({ userProfileData }) => {
             // Pomocná: zistí, či tím patrí do skupiny s daným písmenom
             const teamBelongsToGroupChar = (team, groupChar) => {
                 if (!team || !team.teamName || !groupChar) return false;
-        
+                const tn = String(team.teamName).trim();
+
                 // 1) Priorita: groupName tímu
                 if (team.groupName) {
                     const gChar = getGroupLastChar(team.groupName);
                     if (gChar === groupChar) return true;
                 }
-        
-                // 2) Fallback: posledné písmeno názvu tímu – LEN ak nejde o superstructure tím
-                const nameChar = getGroupCharFromTeamName(team.teamName, cat);
-                if (nameChar === groupChar) return true;
-        
+
+                // 2) Fallback: tímy, ktoré hrajú zápasy v skupine s daným písmenom
+                //    (cez teamsByGroup naplnený z matches)
+                const groups = teamsByGroup[cleanCategory(team.category)] || {};
+                for (const [gName, teamSet] of Object.entries(groups)) {
+                    const gChar = getGroupLastChar(gName);
+                    if (gChar === groupChar && teamSet.has(tn)) return true;
+                }
+
+                // 3) Fallback: posledné písmeno názvu tímu pre superstructure tímy bez groupName
+                //    (ale len ak nejde o pavúkový tím)
+                if (team.isSuperstructure === true && !team.groupName && !isSpiderTeamName(tn)) {
+                    const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                    if (m && m[1].toUpperCase() === groupChar) return true;
+                }
+
                 return false;
             };
         
@@ -1450,19 +1462,15 @@ const TransportApp = ({ userProfileData }) => {
                         if (cleanCategory(other.category) !== cat) return;
                         if (!other.teamName) return;
                         const otherTn = String(other.teamName).trim();
-                        if (otherTn === tn) return; // seba preskočíme
+                        if (otherTn === tn) return;
+
+                        if (!teamBelongsToGroupChar(other, lastCharFromName)) return;
                     
-                        // Skupina sa určuje VÝHRADNE podľa groupName – pre users aj superstructure tímy.
-                        const otherGroupChar = getGroupLastChar(other.groupName);
-                        if (otherGroupChar !== lastCharFromName) return;
-                    
-                        // 1) Priorita: users tím – skupina podľa groupName
                         if (other.isRegistered === true) {
                             teamsInSameGroupUsers.push(otherTn);
                             return;
                         }
-                    
-                        // 2) Superstructure tím – skupina podľa groupName
+
                         if (other.isSuperstructure === true) {
                             teamsInSameGroupSuperstructure.push(otherTn);
                         }
@@ -1814,10 +1822,9 @@ const TransportApp = ({ userProfileData }) => {
                                         if (cleanCategory(other.category) !== cleanCategory(category)) return;
                                         if (!other.teamName) return;
                                         if (String(other.teamName).trim() === teamName) return;
-                                        const otherChar = getGroupLastChar(other.groupName);
-                                        if (otherChar === groupCharForLog) {
-                                            teamsInGroupForLog.push(String(other.teamName).trim());
-                                        }
+
+                                        if (!teamBelongsToGroupChar(other, groupCharForLog)) return;
+                                        teamsInGroupForLog.push(String(other.teamName).trim());
                                     });
                                     const uniqueTeamsForLog = [...new Set(teamsInGroupForLog)].sort((a, b) =>
                                         a.localeCompare(b, 'sk', { sensitivity: 'base' })
