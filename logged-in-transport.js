@@ -1443,28 +1443,55 @@ const TransportApp = ({ userProfileData }) => {
 
                     console.log(`    • písmeno skupiny: ${lastCharFromName} (zdroj: ${lastCharSource})`);
         
-                    // Nájdi všetky tímy, ktoré patria do skupiny s písmenom lastCharFromName.
-                    // Skupina sa určuje VÝHRADNE z groupName (rovnako ako v AddTeamsGroupApp).
-                    // Superstructure tím sám seba nezaradzujeme podľa posledného písmena názvu –
-                    // iba vypisujeme, ktoré tímy patria do skupiny s týmto písmenom.
-                    const teamsInSameGroup = [];
+                    const teamsInSameGroupUsers = [];
+                    const teamsInSameGroupSuperstructure = [];
+                    
                     (teamsArrivalBufferRef.current || []).forEach((other) => {
                         if (cleanCategory(other.category) !== cat) return;
                         if (!other.teamName) return;
                         const otherTn = String(other.teamName).trim();
                         if (otherTn === tn) return; // seba preskočíme
-
-                        const otherGroupChar = getGroupLastChar(other.groupName);
-                        if (otherGroupChar === lastCharFromName) {
-                            teamsInSameGroup.push(otherTn);
+                    
+                        // 1) Priorita: users tím – skupina podľa groupName
+                        if (other.isRegistered === true) {
+                            const otherGroupChar = getGroupLastChar(other.groupName);
+                            if (otherGroupChar === lastCharFromName) {
+                                teamsInSameGroupUsers.push(otherTn);
+                            }
+                            return;
+                        }
+                    
+                        // 2) Superstructure tím – najprv podľa groupName
+                        if (other.isSuperstructure === true) {
+                            if (other.groupName) {
+                                const otherGroupChar = getGroupLastChar(other.groupName);
+                                if (otherGroupChar === lastCharFromName) {
+                                    teamsInSameGroupSuperstructure.push(otherTn);
+                                    return;
+                                }
+                            }
+                            // Ak nemá groupName, skúsime posledné písmeno názvu tímu
+                            // (LEN ak to nie je pavúkový tím – pavúkový identifikátor nie je skupina)
+                            if (!isSpiderTeamName(otherTn)) {
+                                const nameMatch = /\d([A-ZÁ-Ž])\s*$/.exec(otherTn);
+                                if (nameMatch && nameMatch[1].toUpperCase() === lastCharFromName) {
+                                    teamsInSameGroupSuperstructure.push(otherTn);
+                                }
+                            }
                         }
                     });
-        
+                    
+                    // NOVÉ: Ak sa našli users tímy, použijeme len ich.
+                    // Ak sa nenašli, použijeme superstructure tímy.
+                    const teamsInSameGroup = teamsInSameGroupUsers.length > 0
+                        ? teamsInSameGroupUsers
+                        : teamsInSameGroupSuperstructure;
+                    
                     // Deduplikácia a zoradenie
                     const uniqueTeams = [...new Set(teamsInSameGroup)].sort((a, b) =>
                         a.localeCompare(b, 'sk', { sensitivity: 'base' })
                     );
-        
+                    
                     if (uniqueTeams.length > 0) {
                         console.log(
                             `%c    → Tímy v skupine "${lastCharFromName}" (${uniqueTeams.length}):`,
