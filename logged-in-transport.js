@@ -3212,6 +3212,10 @@ const TransportApp = ({ userProfileData }) => {
                                     // NOVÉ: pavúkový zápas – negenerovať ani presun z miesta zrazu
                                     if (isPavukTeamNameForMorning) {
                                         // skip – pavúkový tím nemá ranný presun z miesta zrazu
+                                    } else if (anyTeamInSameGroupAlreadyAtSamePlaceToday) {
+                                        // NOVÉ: Ak niektorý iný tím z rovnakej skupiny už v ten istý deň
+                                        // hral/bol na ROVNAKOM mieste, aktuálny superstructure tím je už
+                                        // "na mieste" → negeneruj ani ranný presun z miesta zrazu.
                                     } else if (meetingPointStop && !isSamePlaceForTransfer(meetingPointStop.name, current.location)) {
                                         const arrivalTs = current.startTs;
                                         const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
