@@ -1256,21 +1256,18 @@ const TransportApp = ({ userProfileData }) => {
             const tn = String(team.teamName).trim();
             if (!tn) return false;
 
-            // NOVÉ: Pre superstructure tímy (tímy, ktoré nie sú v users) sa skupina
-            // určuje VÝHRADNE z posledného písmena názvu tímu (napr. "U12 D 3F" → F).
-            // Do tejto skupiny sa však zaraďujú IBA tímy, ktorých groupName končí
-            // na toto písmeno (nie tímy, ktorých názov končí na toto písmeno).
-            if (team.isRegistered !== true) {
+            // NOVÉ: Ak má tím zadefinovaný groupName, je pre zaradenie do skupiny
+            // smerodajný ON – či už ide o superstructure tím alebo users tím.
+            // Ak groupName končí na hľadané písmeno, tím patrí do skupiny.
+            if (team.groupName) {
                 if (isSpiderTeamName(tn)) return false;
-                if (!team.groupName) return false;
                 const gChar = getGroupLastChar(team.groupName);
                 return gChar === groupChar;
             }
 
-            // Pre users tímy (registrované) je prioritou groupName – ak ho majú.
-            if (team.groupName) {
-                const gChar = getGroupLastChar(team.groupName);
-                return gChar === groupChar;
+            // Superstructure tím bez groupName – nemáme podľa čoho zaradiť.
+            if (team.isRegistered !== true) {
+                return false;
             }
 
             // Users tím bez groupName – fallback na posledné písmeno názvu tímu.
