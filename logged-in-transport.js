@@ -1230,31 +1230,31 @@ const TransportApp = ({ userProfileData }) => {
         // + pre každý superstructure tím (tím, ktorého názov obsahuje názov kategórie)
         //   vypíšeme všetky tímy, ktoré sú v skupine určenej POSLEDNÝM PÍSMENOM názvu tímu.
         //
-        // DÔLEŽITÉ: Superstructure tím NEPATRÍ do skupiny podľa svojho posledného písmena!
-        // Posledné písmeno názvu tímu (napr. "U12 D 1F" → "F", "U12 D LSF01" → "F")
-        // URČUJE, do ktorej skupiny sa má tím pozrieť (napr. "skupina F"),
-        // a z tejto skupiny vypíšeme VŠETKY tímy, ktoré do nej patria.
+        // DÔLEŽITÉ:
+        //  - Pre BEŽNÝ superstructure tím (napr. "U12 D 1F", "U12 D 5A") je posledné
+        //    písmeno názvu tímu označením skupiny (F, A, ...). Vypíšeme všetky tímy
+        //    z tejto skupiny.
+        //  - Pre PAVÚKOVÝ tím (napr. "U12 D LSF01", "U12 D WSF02", "U12 D WQF01")
+        //    posledné písmeno "F" NIE JE označením skupiny – je súčasťou pavúkového
+        //    identifikátora. Preto pre pavúkové tímy NEVYPISUJEME skupinu, ale
+        //    iba označíme, že ide o pavúkový tím (spider team).
         const logGroupsAndTeamsForCategory = (category) => {
             const cat = cleanCategory(category);
         
-            // Pomocná: vráti posledné písmeno názvu tímu (napr. "U12 D 1F" → "F", "U12 D LSF01" → "F")
-            // Ale POZOR: pre pavúkové tímy (LSF01, WSF02, WQF01...) je posledné písmeno
-            // súčasťou identifikátora, nie skupiny. Preto pre pavúkové tímy
-            // použijeme posledné písmeno z SPIDER_IDENTIFIER_PREFIXES, ktoré je vždy "F"
-            // (LSF, WSF, WQF, W8F, W16F atď. – všetky končia na "F").
+            // Pomocná: vráti posledné písmeno názvu BEŽNÉHO superstructure tímu
+            // (napr. "U12 D 1F" → "F", "U12 D 5A" → "A").
+            // Pre pavúkové tímy vráti null – tie sa nepovažujú za skupinu.
             const getTeamNameLastChar = (teamName) => {
                 if (!teamName) return null;
                 const s = String(teamName).trim();
                 if (!s) return null;
         
-                // Pre pavúkové tímy (LSF01, WSF02, WQF01, W8F01, W16F01 atď.)
-                // je skupina vždy "F" (podľa koncovky pavúkového identifikátora).
+                // Pavúkový tím – posledné písmeno NIE JE skupina
                 if (isSpiderTeamName(s)) {
-                    return 'F';
+                    return null;
                 }
         
-                // Pre bežné superstructure tímy (napr. "U12 D 1F", "U12 D 5A")
-                // vezmeme posledné písmeno názvu tímu.
+                // Bežný superstructure tím – posledné písmeno názvu tímu
                 const m = /\d([A-ZÁ-Ž])\s*$/.exec(s);
                 if (m) return m[1].toUpperCase();
         
@@ -1314,6 +1314,7 @@ const TransportApp = ({ userProfileData }) => {
                     );
                     teams.forEach((tn) => {
                         const nameChar = (() => {
+                            if (isSpiderTeamName(tn)) return 'SPIDER';
                             const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
                             return m ? m[1].toUpperCase() : '—';
                         })();
@@ -1324,8 +1325,7 @@ const TransportApp = ({ userProfileData }) => {
             console.log('[TRANSPORT][GROUPS] ─────────────────────────────');
         
             // ============================================================
-            // 2. ČASŤ: Pre každý superstructure tím vypíš všetky tímy
-            //    zo skupiny určenej POSLEDNÝM PÍSMENOM názvu tímu.
+            // 2. ČASŤ: Pre každý superstructure tím vypíš info o skupine
             // ============================================================
             const superstructureTeamsInCategory = (teamsArrivalBufferRef.current || []).filter(
                 (t) => cleanCategory(t.category) === cat
@@ -1342,9 +1342,22 @@ const TransportApp = ({ userProfileData }) => {
                 superstructureTeamsInCategory.forEach((t) => {
                     const tn = String(t.teamName).trim();
         
-                    // POSLEDNÉ PÍSMENO NÁZVU TÍMU URČUJE SKUPINU, do ktorej sa má pozrieť.
-                    // Napr. "U12 D 1F" → "F" → skupina "F"
-                    // Napr. "U12 D LSF01" → "F" (pavúkový tím) → skupina "F"
+                    // NOVÉ: Pavúkový tím – nevypisujeme skupinu, iba označíme, že ide o spider team
+                    if (isSpiderTeamName(tn)) {
+                        console.log(
+                            `%c  Superstructure tím: "${tn}"`,
+                            'font-weight: bold; color: #ea580c;'
+                        );
+                        console.log(
+                            `%c    → SPIDER TEAM (pavúkový tím) – nepatrí do žiadnej skupiny podľa posledného písmena.`,
+                            'font-weight: bold; color: #7c3aed;'
+                        );
+                        console.log(`    • groupName: ${t.groupName ? String(t.groupName).trim() : '(žiadny)'}`);
+                        console.log('    ─────────────────────────────');
+                        return;
+                    }
+        
+                    // Bežný superstructure tím – posledné písmeno názvu určuje skupinu
                     const lastCharFromName = getTeamNameLastChar(tn);
         
                     console.log(
@@ -1361,9 +1374,6 @@ const TransportApp = ({ userProfileData }) => {
                     }
         
                     // Nájdi všetky tímy v skupine s týmto písmenom.
-                    // Do úvahy berieme:
-                    //  - tímy, ktorých groupName končí na toto písmeno
-                    //  - tímy, ktorých názov končí na toto písmeno (ale len ak nie sú pavúkové)
                     const teamsInSameGroup = [];
                     (teamsArrivalBufferRef.current || []).forEach((other) => {
                         if (cleanCategory(other.category) !== cat) return;
