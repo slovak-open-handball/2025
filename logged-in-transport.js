@@ -1526,10 +1526,10 @@ const TransportApp = ({ userProfileData }) => {
                 });
             });
 
-            const getTeamGroupCharFromName = (teamName) => {
+            const getTeamGroupCharFromName = (teamName, categoryOverride) => {
                 if (!teamName) return null;
                 const s = String(teamName).trim();
-                const cat = cleanCategory(category || '');
+                const cat = cleanCategory(categoryOverride || '');
             
                 // NOVÉ: Zisti, či ide o superstructure tím – teda tím, ktorého názov
                 // obsahuje názov kategórie (napr. "U12 D LSF02" pre kategóriu "U12 D").
@@ -1920,7 +1920,7 @@ const TransportApp = ({ userProfileData }) => {
                             })();
                             
                             if (isPlacementMatchEvent && current.location) {
-                                const teamGroupChar = getTeamGroupCharFromName(teamName);
+                                const teamGroupChar = getTeamGroupCharFromName(teamName, category);
                                 if (teamGroupChar) {
                                     // NOVÉ: Použi helper na zistenie tímov v skupine
                                     const teamsInGroupWithChar = getTeamsInGroupByChar(category, teamGroupChar);
