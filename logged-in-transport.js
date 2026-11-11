@@ -1452,24 +1452,19 @@ const TransportApp = ({ userProfileData }) => {
                         const otherTn = String(other.teamName).trim();
                         if (otherTn === tn) return; // seba preskočíme
                     
+                        // Skupina sa určuje VÝHRADNE podľa groupName – pre users aj superstructure tímy.
+                        const otherGroupChar = getGroupLastChar(other.groupName);
+                        if (otherGroupChar !== lastCharFromName) return;
+                    
                         // 1) Priorita: users tím – skupina podľa groupName
                         if (other.isRegistered === true) {
-                            const otherGroupChar = getGroupLastChar(other.groupName);
-                            if (otherGroupChar === lastCharFromName) {
-                                teamsInSameGroupUsers.push(otherTn);
-                            }
+                            teamsInSameGroupUsers.push(otherTn);
                             return;
                         }
                     
-                        // 2) Superstructure tím – skupina VÝHRADNE podľa groupName.
-                        //    NEPOUŽÍVAME fallback na posledné písmeno názvu tímu –
-                        //    superstructure tím sa nesmie zaradiť do skupiny len preto,
-                        //    že jeho názov končí na rovnaké písmeno (napr. "U12 CH 4D" → D).
+                        // 2) Superstructure tím – skupina podľa groupName
                         if (other.isSuperstructure === true) {
-                            const otherGroupChar = getGroupLastChar(other.groupName);
-                            if (otherGroupChar === lastCharFromName) {
-                                teamsInSameGroupSuperstructure.push(otherTn);
-                            }
+                            teamsInSameGroupSuperstructure.push(otherTn);
                         }
                     });
                     
