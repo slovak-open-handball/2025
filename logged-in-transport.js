@@ -9331,9 +9331,50 @@ const TransportApp = ({ userProfileData }) => {
             if (boardingRow) parts.push('nástup');
             if (alightingRow) parts.push('výstup');
             if (parts.length === 0) parts.push(side === 'in' ? 'nástup' : 'výstup');
-
+            
+            // NOVÉ: Zisti názov autobusu a čas odchodu z nástupnej zastávky
+            const busForNotification = (buses || []).find((b) => b.id === busId) || null;
+            const busNameForNotification = busForNotification
+                ? String(busForNotification.name || '').trim()
+                : null;
+            
+            // Čas odchodu = timeFrom na boardingRow (ak existuje), inak timeFrom na alightingRow
+            let departureTimeForNotification = null;
+            let boardingPlaceNameForNotification = null;
+            if (boardingRow) {
+                if (boardingRow.timeFrom && /^\d{1,2}:\d{2}$/.test(boardingRow.timeFrom)) {
+                    departureTimeForNotification = boardingRow.timeFrom;
+                }
+                const bpId = boardingRow.placeFromId || null;
+                if (bpId) {
+                    boardingPlaceNameForNotification = resolvePlaceNameById(bpId) || null;
+                }
+            } else if (alightingRow) {
+                if (alightingRow.timeFrom && /^\d{1,2}:\d{2}$/.test(alightingRow.timeFrom)) {
+                    departureTimeForNotification = alightingRow.timeFrom;
+                }
+                const bpId = alightingRow.placeFromId || null;
+                if (bpId) {
+                    boardingPlaceNameForNotification = resolvePlaceNameById(bpId) || null;
+                }
+            }
+            
+            // NOVÉ: Zostav detailný popis – názov busu + čas odchodu (a miesto, ak je)
+            const busDetails = [];
+            if (busNameForNotification) {
+                busDetails.push(busNameForNotification);
+            }
+            if (departureTimeForNotification) {
+                if (boardingPlaceNameForNotification) {
+                    busDetails.push(`${departureTimeForNotification} (${boardingPlaceNameForNotification})`);
+                } else {
+                    busDetails.push(departureTimeForNotification);
+                }
+            }
+            const busDetailsStr = busDetails.length > 0 ? ` – ${busDetails.join(' • ')}` : '';
+            
             window.showGlobalNotification(
-                `Tím ${transfer.teamName} bol priradený (${parts.join(' + ')}).`,
+                `Tím ${transfer.teamName} bol priradený (${parts.join(' + ')})${busDetailsStr}.`,
                 'success'
             );
 
