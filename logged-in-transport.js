@@ -1227,6 +1227,8 @@ const TransportApp = ({ userProfileData }) => {
         };
         
         // NOVÉ: Logovanie všetkých skupín a tímov v nich pre danú kategóriu
+        // + pre každý superstructure tím (tím, ktorého názov obsahuje názov kategórie)
+        //   vypíšeme všetky tímy, ktoré sú v jeho skupine (podľa groupName alebo posledného písmena).
         const logGroupsAndTeamsForCategory = (category) => {
             const cat = cleanCategory(category);
             const groupsMap = new Map(); // groupName -> Set(teamNames)
@@ -1266,6 +1268,87 @@ const TransportApp = ({ userProfileData }) => {
                 });
             }
             console.log('[TRANSPORT][GROUPS] ─────────────────────────────');
+        
+            // NOVÉ: Pre každý superstructure tím v tejto kategórii vypíš, do ktorej skupiny patrí
+            // a všetky tímy, ktoré sú v tejto skupine.
+            const superstructureTeamsInCategory = (teamsArrivalBufferRef.current || []).filter(
+                (t) => cleanCategory(t.category) === cat
+                    && t.isSuperstructure === true
+                    && t.teamName
+            );
+        
+            if (superstructureTeamsInCategory.length > 0) {
+                console.log(
+                    `%c[TRANSPORT][SUPERSTRUCTURE] ██ Superstructure tímy v kategórii ${cat} a ich skupiny ██`,
+                    'font-weight: bold; color: #ea580c;'
+                );
+        
+                superstructureTeamsInCategory.forEach((t) => {
+                    const tn = String(t.teamName).trim();
+                    const gName = t.groupName ? String(t.groupName).trim() : null;
+                    const gChar = gName ? getGroupLastChar(gName) : null;
+                    const derivedCharFromName = (() => {
+                        // Pre superstructure tím bez groupName skúsime posledné písmeno názvu,
+                        // ale len ak to nie je pavúkový identifikátor (WSF/LSF/...).
+                        if (isSpiderTeamName(tn)) return null;
+                        const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                        return m ? m[1].toUpperCase() : null;
+                    })();
+        
+                    const effectiveChar = gChar || derivedCharFromName;
+        
+                    console.log(
+                        `%c  Superstructure tím: "${tn}"`,
+                        'font-weight: bold; color: #ea580c;'
+                    );
+                    console.log(`    • groupName: ${gName || '(žiadny)'}`);
+                    console.log(`    • písmeno skupiny (z groupName): ${gChar || '—'}`);
+                    console.log(`    • písmeno z názvu tímu: ${derivedCharFromName || '—'}`);
+                    console.log(`    • efektívne písmeno skupiny: ${effectiveChar || '—'}`);
+        
+                    if (effectiveChar) {
+                        // Nájdi všetky tímy v tejto skupine (rovnaké písmeno skupiny)
+                        const teamsInSameGroup = [];
+                        (teamsArrivalBufferRef.current || []).forEach((other) => {
+                            if (cleanCategory(other.category) !== cat) return;
+                            if (!other.teamName) return;
+                            if (String(other.teamName).trim() === tn) return; // seba preskočíme
+        
+                            const otherGroupChar = getGroupLastChar(other.groupName);
+                            if (otherGroupChar === effectiveChar) {
+                                teamsInSameGroup.push(String(other.teamName).trim());
+                            }
+                        });
+        
+                        // Deduplikácia a zoradenie
+                        const uniqueTeams = [...new Set(teamsInSameGroup)].sort((a, b) =>
+                            a.localeCompare(b, 'sk', { sensitivity: 'base' })
+                        );
+        
+                        if (uniqueTeams.length > 0) {
+                            console.log(
+                                `%c    → Tímy v skupine "${effectiveChar}" (${uniqueTeams.length}):`,
+                                'font-weight: bold; color: #16a34a;'
+                            );
+                            uniqueTeams.forEach((otherTn) => {
+                                console.log(`        • ${otherTn}`);
+                            });
+                        } else {
+                            console.log(
+                                `    → (žiadne iné tímy v skupine "${effectiveChar}")`
+                            );
+                        }
+                    } else {
+                        console.log(`    → (nepodarilo sa určiť písmeno skupiny)`);
+                    }
+                    console.log('    ─────────────────────────────');
+                });
+        
+                console.log(
+                    '%c[TRANSPORT][SUPERSTRUCTURE] ─────────────────────────────',
+                    'color: #ea580c;'
+                );
+            }
         };
     
         const categories = Object.keys(grouped).sort((a, b) =>
@@ -1424,10 +1507,37 @@ const TransportApp = ({ userProfileData }) => {
                         const g = getGroupForSuperstructureTeam(category, teamName);
                         if (g) return g;
                         if (ssInfo && ssInfo.lastChar) return `skupina ${ssInfo.lastChar}`;
-                        // NOVÉ: Odstránený fallback na posledné písmeno názvu tímu –
-                        // skupina sa má určiť výhradne z groupName alebo ssInfo.
                         return null;
                     })();
+                    
+                    // NOVÉ: Ak ide o superstructure tím (názov obsahuje kategóriu), vypíš všetky tímy v jeho skupine
+                    if (isSuperstructureTeam && teamGroupName) {
+                        const groupCharForLog = getGroupLastChar(teamGroupName);
+                        if (groupCharForLog) {
+                            const teamsInGroupForLog = [];
+                            (teamsArrivalBufferRef.current || []).forEach((other) => {
+                                if (cleanCategory(other.category) !== cleanCategory(category)) return;
+                                if (!other.teamName) return;
+                                if (String(other.teamName).trim() === teamName) return;
+                                const otherChar = getGroupLastChar(other.groupName);
+                                if (otherChar === groupCharForLog) {
+                                    teamsInGroupForLog.push(String(other.teamName).trim());
+                                }
+                            });
+                            const uniqueTeamsForLog = [...new Set(teamsInGroupForLog)].sort((a, b) =>
+                                a.localeCompare(b, 'sk', { sensitivity: 'base' })
+                            );
+                            console.log(
+                                `%c[TRANSPORT][GROUP-MEMBERS] Tím "${teamName}" (skupina "${teamGroupName}", písmeno ${groupCharForLog}) – tímy v skupine (${uniqueTeamsForLog.length}):`,
+                                'font-weight: bold; color: #7c3aed;'
+                            );
+                            if (uniqueTeamsForLog.length === 0) {
+                                console.log('    (žiadne iné tímy v skupine)');
+                            } else {
+                                uniqueTeamsForLog.forEach((tn) => console.log(`    • ${tn}`));
+                            }
+                        }
+                    }
 
                     const isSuperstructureTeam = (() => {
                         if (ssInfo && ssInfo.isSuperstructure) return true;
