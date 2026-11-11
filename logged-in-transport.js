@@ -16679,7 +16679,7 @@ const TransportApp = ({ userProfileData }) => {
                 React.createElement(
                     'p',
                     { className: 'text-sm text-gray-600 mb-4' },
-                    'Naozaj chcete nastaviť tento presun ako peši? Presun sa presunie do boxu "Peši" a nebude ho možné priradiť k autobusu.'
+                    'Naozaj chcete nastaviť tento presun peši?'
                 ),
                 React.createElement(
                     'div',
