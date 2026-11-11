@@ -16201,11 +16201,50 @@ const TransportApp = ({ userProfileData }) => {
                                         });
                                     
                                         if (matchingKeys.length > 0) {
-                                            const preferredMatch = matchesWithRowMatch.find(
-                                                (item) => item.rowMatches && item.isPreferred && item.match
+                                            // NOVÉ: Namiesto výberu prvého "preferred" matchu vyberieme ten
+                                            // s NAJKRATŠOU jazdnou dobou (rozdiel medzi nástupom a výstupom).
+                                            // Ak má viac matchov rovnakú (najkratšiu) dobu, uprednostníme
+                                            // preferred match (superstructure tím) – inak prvý v poradí.
+                                            const computeMatchDuration = (matchItem) => {
+                                                if (!matchItem || !matchItem.match) return Number.POSITIVE_INFINITY;
+                                                const m = matchItem.match;
+                                                const boardStr = String(m.boardingTime || '').trim();
+                                                const alightStr = String(m.alightingTime || '').trim();
+                                                const timeRe = /^\d{1,2}:\d{2}$/;
+                                                if (!timeRe.test(boardStr) || !timeRe.test(alightStr)) {
+                                                    return Number.POSITIVE_INFINITY;
+                                                }
+                                                const [bh, bm] = boardStr.split(':').map(Number);
+                                                const [ah, am] = alightStr.split(':').map(Number);
+                                                let diff = (ah * 60 + am) - (bh * 60 + bm);
+                                                if (diff < 0) diff += 24 * 60;
+                                                return diff > 0 ? diff : Number.POSITIVE_INFINITY;
+                                            };
+                                        
+                                            // Kandidáti, ktorí zodpovedajú riadku (rowMatches === true)
+                                            const rowMatchCandidates = matchesWithRowMatch.filter(
+                                                (item) => item.rowMatches && item.match
                                             );
-                                            const chosen = preferredMatch || matchesWithRowMatch.find((item) => item.rowMatches && item.match);
-                                    
+                                        
+                                            // Zoradiť podľa: 1) najkratšia jazdná doba, 2) preferred (superstructure), 3) pôvodné poradie
+                                            const sortedCandidates = [...rowMatchCandidates].sort((a, b) => {
+                                                const durA = computeMatchDuration(a);
+                                                const durB = computeMatchDuration(b);
+                                                if (durA !== durB) return durA - durB;
+                                                // Rovnaká doba – uprednostniť preferred (superstructure)
+                                                if (a.isPreferred !== b.isPreferred) return a.isPreferred ? -1 : 1;
+                                                return 0;
+                                            });
+                                        
+                                            // Fallback: ak žiadny rowMatch nie je, použi preferred match alebo prvý
+                                            let chosen = sortedCandidates[0] || null;
+                                            if (!chosen) {
+                                                const preferredMatch = matchesWithRowMatch.find(
+                                                    (item) => item.isPreferred && item.match
+                                                );
+                                                chosen = preferredMatch || matchesWithRowMatch.find((item) => item.match);
+                                            }
+                                        
                                             if (chosen && chosen.match) {
                                                 const dm = chosen.match;
                                                 const defaultKey = `${dm.bus.id}|${dm.boardingRow?.id || ''}|${dm.alightingRow?.id || ''}|${dm.side}`;
