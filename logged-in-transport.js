@@ -2934,7 +2934,8 @@ const TransportApp = ({ userProfileData }) => {
                                             } else if (teamsInSameGroup.length > 0 && !anyOtherTeamInSameGroupHasEventToday) {
                                                 // NOVÉ: V tento deň hrá iba tento superstructure tím a žiadny iný tím
                                                 // v jeho skupine nemá udalosť. Vygeneruj zvozy z ubytovní (ubytovní
-                                                // tímov v tej istej skupine) na miesto prvej udalosti tohto tímu.
+                                                // tímov v tej istej skupine) a z miesta zrazu na miesto prvej
+                                                // udalosti tohto tímu.
                                                 //
                                                 // Ubytovne získame z AccommodationsByGroup cache (rovnaký zdroj ako
                                                 // pri ranných presunoch pre superstructure tím).
@@ -2942,20 +2943,20 @@ const TransportApp = ({ userProfileData }) => {
                                                     const cacheKey = `${cleanCategory(category)}|skupina ${ssTeamLastChar}`;
                                                     return (window.__transport_accommodationsByGroup || {})[cacheKey] || [];
                                                 })();
-                                
+                                            
                                                 const currentEventStartTs = current.startTs ?? current.ts ?? null;
                                                 const arrivalStr = formatFullFromTs(currentEventStartTs) || current.when;
-                                
+                                            
                                                 // Pre každú ubytovňu (okrem tej, kde sa aktuálna udalosť nachádza)
                                                 // vygeneruj presun z ubytovne na miesto prvej udalosti.
                                                 groupAccommodations.forEach((accomName) => {
                                                     if (!accomName || !accomName.trim()) return;
                                                     const fromPlace = accomName.trim();
                                                     if (isSamePlaceForTransfer(fromPlace, current.location)) return;
-                                
+                                            
                                                     const departureTs = timestampOnDay(currentEventStartTs, 0, 0);
                                                     const departureStr = formatFullFromTs(departureTs) || '00:00';
-                                
+                                            
                                                     if (
                                                         departureTs != null &&
                                                         currentEventStartTs != null &&
@@ -2963,12 +2964,12 @@ const TransportApp = ({ userProfileData }) => {
                                                     ) {
                                                         return;
                                                     }
-                                
+                                            
                                                     let whenStr;
                                                     if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
                                                     else if (arrivalStr) whenStr = arrivalStr;
                                                     else whenStr = current.when;
-                                
+                                            
                                                     enriched.push({
                                                         ts: current.ts - 1,
                                                         when: whenStr,
@@ -2978,6 +2979,29 @@ const TransportApp = ({ userProfileData }) => {
                                                         isTransfer: true,
                                                     });
                                                 });
+                                            
+                                                // NOVÉ: Vygeneruj aj presun z miesta zrazu (ak existuje) na miesto
+                                                // prvej udalosti tímu – len ak sa miesto zrazu líši od cieľa.
+                                                if (meetingPointStop && !isSamePlaceForTransfer(meetingPointStop.name, current.location)) {
+                                                    const departureTs = timestampOnDay(currentEventStartTs, 0, 0);
+                                                    const departureStr = formatFullFromTs(departureTs) || '00:00';
+                                            
+                                                    if (!(departureTs != null && currentEventStartTs != null && departureTs >= currentEventStartTs)) {
+                                                        let whenStr;
+                                                        if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                                        else if (arrivalStr) whenStr = arrivalStr;
+                                                        else whenStr = current.when;
+                                            
+                                                        enriched.push({
+                                                            ts: current.ts - 1,
+                                                            when: whenStr,
+                                                            type: 'transfer',
+                                                            text: `Presun z miesto zrazu ${meetingPointStop.name} do ${current.location}`,
+                                                            location: null,
+                                                            isTransfer: true,
+                                                        });
+                                                    }
+                                                }
                                             } else if (teamsInSameGroup.length > 0) {
                                                 // Fallback – žiadny iný tím v skupine nemá udalosť, ale ani
                                                 // nemáme ubytovne v cache. Skúsime vygenerovať zvozy z ubytovní
@@ -2990,22 +3014,22 @@ const TransportApp = ({ userProfileData }) => {
                                                         return teamBelongsToGroupChar(t, ssTeamLastChar);
                                                     }
                                                 );
-                                
+                                            
                                                 const currentEventStartTs = current.startTs ?? current.ts ?? null;
                                                 const arrivalStr = formatFullFromTs(currentEventStartTs) || current.when;
-                                
+                                            
                                                 const uniqueAccommodations = new Set();
                                                 teamsInSameGroupWithAccommodation.forEach((t) => {
                                                     const a = String(t.accommodationName || '').trim();
                                                     if (a) uniqueAccommodations.add(a);
                                                 });
-                                
+                                            
                                                 uniqueAccommodations.forEach((accomName) => {
                                                     if (isSamePlaceForTransfer(accomName, current.location)) return;
-                                
+                                            
                                                     const departureTs = timestampOnDay(currentEventStartTs, 0, 0);
                                                     const departureStr = formatFullFromTs(departureTs) || '00:00';
-                                
+                                            
                                                     if (
                                                         departureTs != null &&
                                                         currentEventStartTs != null &&
@@ -3013,12 +3037,12 @@ const TransportApp = ({ userProfileData }) => {
                                                     ) {
                                                         return;
                                                     }
-                                
+                                            
                                                     let whenStr;
                                                     if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
                                                     else if (arrivalStr) whenStr = arrivalStr;
                                                     else whenStr = current.when;
-                                
+                                            
                                                     enriched.push({
                                                         ts: current.ts - 1,
                                                         when: whenStr,
@@ -3028,9 +3052,30 @@ const TransportApp = ({ userProfileData }) => {
                                                         isTransfer: true,
                                                     });
                                                 });
+                                            
+                                                // NOVÉ: Vygeneruj aj presun z miesta zrazu (ak existuje) na miesto
+                                                // prvej udalosti tímu – len ak sa miesto zrazu líši od cieľa.
+                                                if (meetingPointStop && !isSamePlaceForTransfer(meetingPointStop.name, current.location)) {
+                                                    const departureTs = timestampOnDay(currentEventStartTs, 0, 0);
+                                                    const departureStr = formatFullFromTs(departureTs) || '00:00';
+                                            
+                                                    if (!(departureTs != null && currentEventStartTs != null && departureTs >= currentEventStartTs)) {
+                                                        let whenStr;
+                                                        if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                                        else if (arrivalStr) whenStr = arrivalStr;
+                                                        else whenStr = current.when;
+                                            
+                                                        enriched.push({
+                                                            ts: current.ts - 1,
+                                                            when: whenStr,
+                                                            type: 'transfer',
+                                                            text: `Presun z miesto zrazu ${meetingPointStop.name} do ${current.location}`,
+                                                            location: null,
+                                                            isTransfer: true,
+                                                        });
+                                                    }
+                                                }
                                             }
-                                        }
-                                    }
                                 }
 
                                 // NOVÉ: Zisti, či je tento pavúkový zápas "nadväzujúci" – t.j.
