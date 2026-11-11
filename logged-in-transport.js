@@ -1663,146 +1663,160 @@ const TransportApp = ({ userProfileData }) => {
                     if (isSuperstructureTeam && teamGroupName) {
                         const groupCharForLog = getGroupLastChar(teamGroupName);
                         if (groupCharForLog) {
-                            // NOVÉ: Zisti, či sa v udalostiach tímu v danom dni (zápas alebo stravovanie)
-                            // nachádza názov tímu obsahujúci niektorý z SPIDER_IDENTIFIER_PREFIXES.
-                            const spiderMatchInEvents = (() => {
-                                if (!currentDay) return null;
-                    
-                                // Prejdi udalosti tímu v tomto dni
-                                const dayEvents = events
-                                    .filter((ev) => {
-                                        const evDay = extractDayKeyFromWhen(ev.when);
-                                        return evDay != null && evDay === currentDay;
-                                    })
-                                    .sort((a, b) => {
-                                        const ta = a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY);
-                                        const tb = b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY);
-                                        return ta - tb;
-                                    });
-                    
-                                for (const ev of dayEvents) {
-                                    // Zápas – z textu "Home vs Away [o X. miesto] | Hala"
-                                    if (ev.type === 'match') {
-                                        const matchParts = /^(.+?) vs (.+?)(?:\s*\[.*?\])?(?:\s*\|.*)?$/.exec(String(ev.text || ''));
-                                        if (matchParts) {
-                                            const homeName = matchParts[1].trim();
-                                            const awayName = matchParts[2].trim();
-                                            const spiderTeam = isSpiderTeamName(homeName) ? homeName
-                                                : (isSpiderTeamName(awayName) ? awayName : null);
-                                            if (spiderTeam) {
-                                                // Zisti, či ide o pavúkový zápas (WSF/LSF/WQF/LQF/...)
-                                                const spiderPrefixMatch = new RegExp(
-                                                    '\\b(' + SPIDER_IDENTIFIER_PREFIXES.join('|') + ')',
-                                                    'i'
-                                                ).exec(spiderTeam);
-                                                const spiderPrefix = spiderPrefixMatch ? spiderPrefixMatch[1].toUpperCase() : null;
-                                                return {
-                                                    event: ev,
-                                                    spiderTeam,
-                                                    spiderPrefix,
-                                                    homeName,
-                                                    awayName,
-                                                };
-                                            }
-                                        }
-                                    }
-                                }
-                                return null;
+                            // NOVÉ: Zisti deň (dayKey) pre tento tím – použijeme deň z udalostí tímu.
+                            // Ak tím nemá žiadne udalosti, log preskočíme (nemá zmysel).
+                            const currentDayForLog = (() => {
+                                const dayKeys = (events || [])
+                                    .map((ev) => extractDayKeyFromWhen(ev.when))
+                                    .filter(Boolean)
+                                    .sort();
+                                if (dayKeys.length === 0) return null;
+                                // Ak má tím viac dní, vezmeme prvý (najskorší) – log sa vykoná pre tento deň.
+                                return dayKeys[0];
                             })();
                     
-                            // NOVÉ: Ak sa v udalostiach tímu v danom dni nachádza pavúkový tím,
-                            // vypíš informáciu o pavúkovom zápase a tímy, ktoré doň patria podľa chronológie
-                            // (tím z predchádzajúcej udalosti).
-                            if (spiderMatchInEvents) {
-                                const { event: spiderEvent, spiderTeam, spiderPrefix, homeName, awayName } = spiderMatchInEvents;
+                            if (!currentDayForLog) {
+                                // Tím nemá žiadne udalosti – log [GROUP-MEMBERS] sa nevykoná.
+                            } else {
+                                // NOVÉ: Zisti, či sa v udalostiach tímu v danom dni (zápas alebo stravovanie)
+                                // nachádza názov tímu obsahujúci niektorý z SPIDER_IDENTIFIER_PREFIXES.
+                                const spiderMatchInEvents = (() => {
+                                    // Prejdi udalosti tímu v tomto dni
+                                    const dayEvents = events
+                                        .filter((ev) => {
+                                            const evDay = extractDayKeyFromWhen(ev.when);
+                                            return evDay != null && evDay === currentDayForLog;
+                                        })
+                                        .sort((a, b) => {
+                                            const ta = a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY);
+                                            const tb = b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY);
+                                            return ta - tb;
+                                        });
                     
-                                // Zisti typ pavúkového zápasu podľa prefixu
-                                const spiderTypeLabel = (() => {
-                                    if (!spiderPrefix) return 'pavúkový zápas';
-                                    if (spiderPrefix === 'WSF' || spiderPrefix === 'LSF') return 'semifinále';
-                                    if (spiderPrefix === 'WQF' || spiderPrefix === 'LQF') return 'štvrťfinále';
-                                    if (spiderPrefix === 'W16F' || spiderPrefix === 'L16F') return 'osemfinále';
-                                    if (spiderPrefix === 'W8F' || spiderPrefix === 'L8F') return 'osemnásťfinále';
-                                    if (spiderPrefix === 'W32F' || spiderPrefix === 'L32F') return '32-finále';
-                                    return 'pavúkový zápas';
-                                })();
-                    
-                                // Nájdi predchádzajúcu udalosť pre tím, ktorý patrí do tohto pavúkového zápasu
-                                // podľa chronológie (pred spiderEvent).
-                                const spiderEventStartTs = spiderEvent.startTs != null
-                                    ? spiderEvent.startTs
-                                    : (spiderEvent.ts != null ? spiderEvent.ts : Number.POSITIVE_INFINITY);
-                    
-                                const prevEventsForTeams = events
-                                    .filter((ev) => {
-                                        if (ev === spiderEvent) return false;
-                                        const evDay = extractDayKeyFromWhen(ev.when);
-                                        if (evDay !== currentDay) return false;
-                                        const evStartTs = ev.startTs != null ? ev.startTs : (ev.ts != null ? ev.ts : Number.POSITIVE_INFINITY);
-                                        if (evStartTs >= spiderEventStartTs) return false;
-                                        // Zisti, či sa udalosť týka niektorého z tímov v pavúkovom zápase
+                                    for (const ev of dayEvents) {
+                                        // Zápas – z textu "Home vs Away [o X. miesto] | Hala"
                                         if (ev.type === 'match') {
-                                            const mp = /^(.+?) vs (.+?)(?:\s*\[.*?\])?(?:\s*\|.*)?$/.exec(String(ev.text || ''));
-                                            if (mp) {
-                                                const h = mp[1].trim();
-                                                const a = mp[2].trim();
-                                                return h === homeName || a === homeName || h === awayName || a === awayName;
+                                            const matchParts = /^(.+?) vs (.+?)(?:\s*\[.*?\])?(?:\s*\|.*)?$/.exec(String(ev.text || ''));
+                                            if (matchParts) {
+                                                const homeName = matchParts[1].trim();
+                                                const awayName = matchParts[2].trim();
+                                                const spiderTeam = isSpiderTeamName(homeName) ? homeName
+                                                    : (isSpiderTeamName(awayName) ? awayName : null);
+                                                if (spiderTeam) {
+                                                    // Zisti, či ide o pavúkový zápas (WSF/LSF/WQF/LQF/...)
+                                                    const spiderPrefixMatch = new RegExp(
+                                                        '\\b(' + SPIDER_IDENTIFIER_PREFIXES.join('|') + ')',
+                                                        'i'
+                                                    ).exec(spiderTeam);
+                                                    const spiderPrefix = spiderPrefixMatch ? spiderPrefixMatch[1].toUpperCase() : null;
+                                                    return {
+                                                        event: ev,
+                                                        spiderTeam,
+                                                        spiderPrefix,
+                                                        homeName,
+                                                        awayName,
+                                                    };
+                                                }
                                             }
                                         }
-                                        return false;
-                                    })
-                                    .sort((a, b) => {
-                                        const ta = a.endTs != null ? a.endTs : (a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY));
-                                        const tb = b.endTs != null ? b.endTs : (b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY));
-                                        return tb - ta;
-                                    });
-                    
-                                const lastPrevEvent = prevEventsForTeams.length > 0 ? prevEventsForTeams[0] : null;
-                                const prevTeams = (() => {
-                                    if (!lastPrevEvent) return [];
-                                    if (lastPrevEvent.type === 'match') {
-                                        const mp = /^(.+?) vs (.+?)(?:\s*\[.*?\])?(?:\s*\|.*)?$/.exec(String(lastPrevEvent.text || ''));
-                                        if (mp) {
-                                            return [mp[1].trim(), mp[2].trim()].filter(Boolean);
-                                        }
                                     }
-                                    return [];
+                                    return null;
                                 })();
                     
-                                console.log(
-                                    `%c[TRANSPORT][GROUP-MEMBERS] Pavúkový zápas (${spiderTypeLabel}): "${spiderTeam}" – tímy v zápase podľa chronológie:`,
-                                    'font-weight: bold; color: #ea580c;'
-                                );
-                                if (prevTeams.length > 0) {
-                                    console.log(`    • Predchádzajúca udalosť: ${lastPrevEvent.when || '—'} | ${lastPrevEvent.text || ''}`);
-                                    prevTeams.forEach((tn) => console.log(`    • ${tn}`));
-                                } else {
-                                    console.log('    (žiadna predchádzajúca udalosť pre tímy v pavúkovom zápase)');
-                                }
-                            } else {
-                                // Pôvodné správanie – ak nie je pavúkový tím v udalostiach,
-                                // vypíš tímy v skupine podľa posledného písmena.
-                                const teamsInGroupForLog = [];
-                                (teamsArrivalBufferRef.current || []).forEach((other) => {
-                                    if (cleanCategory(other.category) !== cleanCategory(category)) return;
-                                    if (!other.teamName) return;
-                                    if (String(other.teamName).trim() === teamName) return;
-                                    const otherChar = getGroupLastChar(other.groupName);
-                                    if (otherChar === groupCharForLog) {
-                                        teamsInGroupForLog.push(String(other.teamName).trim());
+                                // NOVÉ: Ak sa v udalostiach tímu v danom dni nachádza pavúkový tím,
+                                // vypíš informáciu o pavúkovom zápase a tímy, ktoré doň patria podľa chronológie
+                                // (tím z predchádzajúcej udalosti).
+                                if (spiderMatchInEvents) {
+                                    const { event: spiderEvent, spiderTeam, spiderPrefix, homeName, awayName } = spiderMatchInEvents;
+                    
+                                    // Zisti typ pavúkového zápasu podľa prefixu
+                                    const spiderTypeLabel = (() => {
+                                        if (!spiderPrefix) return 'pavúkový zápas';
+                                        if (spiderPrefix === 'WSF' || spiderPrefix === 'LSF') return 'semifinále';
+                                        if (spiderPrefix === 'WQF' || spiderPrefix === 'LQF') return 'štvrťfinále';
+                                        if (spiderPrefix === 'W16F' || spiderPrefix === 'L16F') return 'osemfinále';
+                                        if (spiderPrefix === 'W8F' || spiderPrefix === 'L8F') return 'osemnásťfinále';
+                                        if (spiderPrefix === 'W32F' || spiderPrefix === 'L32F') return '32-finále';
+                                        return 'pavúkový zápas';
+                                    })();
+                    
+                                    // Nájdi predchádzajúcu udalosť pre tím, ktorý patrí do tohto pavúkového zápasu
+                                    // podľa chronológie (pred spiderEvent).
+                                    const spiderEventStartTs = spiderEvent.startTs != null
+                                        ? spiderEvent.startTs
+                                        : (spiderEvent.ts != null ? spiderEvent.ts : Number.POSITIVE_INFINITY);
+                    
+                                    const prevEventsForTeams = events
+                                        .filter((ev) => {
+                                            if (ev === spiderEvent) return false;
+                                            const evDay = extractDayKeyFromWhen(ev.when);
+                                            if (evDay !== currentDayForLog) return false;
+                                            const evStartTs = ev.startTs != null ? ev.startTs : (ev.ts != null ? ev.ts : Number.POSITIVE_INFINITY);
+                                            if (evStartTs >= spiderEventStartTs) return false;
+                                            // Zisti, či sa udalosť týka niektorého z tímov v pavúkovom zápase
+                                            if (ev.type === 'match') {
+                                                const mp = /^(.+?) vs (.+?)(?:\s*\[.*?\])?(?:\s*\|.*)?$/.exec(String(ev.text || ''));
+                                                if (mp) {
+                                                    const h = mp[1].trim();
+                                                    const a = mp[2].trim();
+                                                    return h === homeName || a === homeName || h === awayName || a === awayName;
+                                                }
+                                            }
+                                            return false;
+                                        })
+                                        .sort((a, b) => {
+                                            const ta = a.endTs != null ? a.endTs : (a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY));
+                                            const tb = b.endTs != null ? b.endTs : (b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY));
+                                            return tb - ta;
+                                        });
+                    
+                                    const lastPrevEvent = prevEventsForTeams.length > 0 ? prevEventsForTeams[0] : null;
+                                    const prevTeams = (() => {
+                                        if (!lastPrevEvent) return [];
+                                        if (lastPrevEvent.type === 'match') {
+                                            const mp = /^(.+?) vs (.+?)(?:\s*\[.*?\])?(?:\s*\|.*)?$/.exec(String(lastPrevEvent.text || ''));
+                                            if (mp) {
+                                                return [mp[1].trim(), mp[2].trim()].filter(Boolean);
+                                            }
+                                        }
+                                        return [];
+                                    })();
+                    
+                                    console.log(
+                                        `%c[TRANSPORT][GROUP-MEMBERS] Pavúkový zápas (${spiderTypeLabel}): "${spiderTeam}" – tímy v zápase podľa chronológie:`,
+                                        'font-weight: bold; color: #ea580c;'
+                                    );
+                                    if (prevTeams.length > 0) {
+                                        console.log(`    • Predchádzajúca udalosť: ${lastPrevEvent.when || '—'} | ${lastPrevEvent.text || ''}`);
+                                        prevTeams.forEach((tn) => console.log(`    • ${tn}`));
+                                    } else {
+                                        console.log('    (žiadna predchádzajúca udalosť pre tímy v pavúkovom zápase)');
                                     }
-                                });
-                                const uniqueTeamsForLog = [...new Set(teamsInGroupForLog)].sort((a, b) =>
-                                    a.localeCompare(b, 'sk', { sensitivity: 'base' })
-                                );
-                                console.log(
-                                    `%c[TRANSPORT][GROUP-MEMBERS] Tím "${teamName}" (skupina "${teamGroupName}", písmeno ${groupCharForLog}) – tímy v skupine (${uniqueTeamsForLog.length}):`,
-                                    'font-weight: bold; color: #7c3aed;'
-                                );
-                                if (uniqueTeamsForLog.length === 0) {
-                                    console.log('    (žiadne iné tímy v skupine)');
                                 } else {
-                                    uniqueTeamsForLog.forEach((tn) => console.log(`    • ${tn}`));
+                                    // Pôvodné správanie – ak nie je pavúkový tím v udalostiach,
+                                    // vypíš tímy v skupine podľa posledného písmena.
+                                    const teamsInGroupForLog = [];
+                                    (teamsArrivalBufferRef.current || []).forEach((other) => {
+                                        if (cleanCategory(other.category) !== cleanCategory(category)) return;
+                                        if (!other.teamName) return;
+                                        if (String(other.teamName).trim() === teamName) return;
+                                        const otherChar = getGroupLastChar(other.groupName);
+                                        if (otherChar === groupCharForLog) {
+                                            teamsInGroupForLog.push(String(other.teamName).trim());
+                                        }
+                                    });
+                                    const uniqueTeamsForLog = [...new Set(teamsInGroupForLog)].sort((a, b) =>
+                                        a.localeCompare(b, 'sk', { sensitivity: 'base' })
+                                    );
+                                    console.log(
+                                        `%c[TRANSPORT][GROUP-MEMBERS] Tím "${teamName}" (skupina "${teamGroupName}", písmeno ${groupCharForLog}) – tímy v skupine (${uniqueTeamsForLog.length}):`,
+                                        'font-weight: bold; color: #7c3aed;'
+                                    );
+                                    if (uniqueTeamsForLog.length === 0) {
+                                        console.log('    (žiadne iné tímy v skupine)');
+                                    } else {
+                                        uniqueTeamsForLog.forEach((tn) => console.log(`    • ${tn}`));
+                                    }
                                 }
                             }
                         }
