@@ -1306,6 +1306,32 @@ const TransportApp = ({ userProfileData }) => {
         
             return result;
         };
+
+        const getGroupForSuperstructureTeam = (category, teamName) => {
+            const cat = cleanCategory(category);
+            const tn = String(teamName || '').trim();
+            if (!cat || !tn) return null;
+
+            // 1) Skús buffer
+            const fromBuffer = (teamsArrivalBufferRef.current || []).find(
+                (t) => cleanCategory(t.category) === cat && String(t.teamName || '').trim() === tn
+            );
+            if (fromBuffer && fromBuffer.groupName) {
+                return String(fromBuffer.groupName).trim();
+            }
+
+            // 2) Skús settings/superstructureGroups
+            const ssGroups = superstructureGroupsRef.current || {};
+            for (const [groupKey, teamNames] of Object.entries(ssGroups)) {
+                const [keyCat, keyGroup] = String(groupKey).split('|');
+                if (cleanCategory(keyCat) !== cat) continue;
+                if (!Array.isArray(teamNames)) continue;
+                if (teamNames.some((n) => String(n || '').trim() === tn)) {
+                    return keyGroup;
+                }
+            }
+            return null;
+        };
         
         // NOVÉ: Logovanie všetkých skupín a tímov v nich pre danú kategóriu
         // + pre každý superstructure tím (tím, ktorého názov obsahuje názov kategórie)
@@ -1687,6 +1713,8 @@ const TransportApp = ({ userProfileData }) => {
 
                     const teamGroupName = (() => {
                         if (ssInfo && ssInfo.groupName) return ssInfo.groupName;
+                        const g = getGroupForSuperstructureTeam(category, teamName);
+                        if (g) return g;
                         if (ssInfo && ssInfo.lastChar) return `skupina ${ssInfo.lastChar}`;
                         return null;
                     })();
