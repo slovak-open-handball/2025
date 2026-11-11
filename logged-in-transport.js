@@ -220,6 +220,35 @@ const isSpiderTeamName = (teamName) => {
     return SPIDER_IDENTIFIER_REGEX.test(String(teamName));
 };
 
+// NOVÉ: Pomocná funkcia – vráti true, ak ide o superstructure tím
+const isSuperstructureTeamName = (teamName, category) => {
+    if (!teamName) return false;
+    const tn = String(teamName).trim();
+    if (!tn) return false;
+    const cat = cleanCategory(category || '');
+    if (cat && tn.startsWith(cat + ' ')) return true;
+    if (isSpiderTeamName(tn)) return true;
+    const info = (window.__transport_teamsArrivalBuffer || []).find(
+        (t) => cleanCategory(t.category) === cat && String(t.teamName || '').trim() === tn
+    );
+    if (info && info.isSuperstructure === true) return true;
+    if (info && info.isRegistered !== true) return true;
+    return false;
+};
+
+// NOVÉ: Zistí písmeno skupiny z názvu tímu – LEN pre registrované (users) tímy.
+// Pre superstructure tímy vracia null.
+const getGroupCharFromTeamName = (teamName, category) => {
+    if (!teamName) return null;
+    const tn = String(teamName).trim();
+    if (!tn) return null;
+    if (isSuperstructureTeamName(tn, category)) return null;
+    const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+    if (m) return m[1].toUpperCase();
+    const m2 = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(tn.toUpperCase());
+    return m2 ? m2[1] : null;
+};
+
 const TRANSPORT_SETTINGS_COLLECTION = 'settings';
 const TRANSPORT_SETTINGS_DOC = 'transportTravelTimes';
 const TRANSPORT_TRANSFERS_FIELD = 'transfers';
@@ -280,6 +309,34 @@ const TransportApp = ({ userProfileData }) => {
     const placesMapRef = useRef({});    
 
     const teamsLookupRef = useRef({});
+
+    const isSuperstructureTeamName = (teamName, category) => {
+        if (!teamName) return false;
+        const tn = String(teamName).trim();
+        if (!tn) return false;
+        const cat = cleanCategory(category || '');
+        if (cat && tn.startsWith(cat + ' ')) return true;
+        if (isSpiderTeamName(tn)) return true;
+        const info = (teamsArrivalBufferRef.current || []).find(
+            (t) => cleanCategory(t.category) === cat && String(t.teamName || '').trim() === tn
+        );
+        if (info && info.isSuperstructure === true) return true;
+        if (info && info.isRegistered !== true) return true;
+        return false;
+    };
+
+    // NOVÉ: Zistí písmeno skupiny z názvu tímu – LEN pre registrované (users) tímy.
+    // Pre superstructure tímy vracia null.
+    const getGroupCharFromTeamName = (teamName, category) => {
+        if (!teamName) return null;
+        const tn = String(teamName).trim();
+        if (!tn) return null;
+        if (isSuperstructureTeamName(tn, category)) return null;
+        const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+        if (m) return m[1].toUpperCase();
+        const m2 = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(tn.toUpperCase());
+        return m2 ? m2[1] : null;
+    };
 
     function resolvePlaceNameById(placeId) {
         if (!placeId) return '';
@@ -1246,21 +1303,7 @@ const TransportApp = ({ userProfileData }) => {
             // Pre pavúkové tímy vráti null – tie sa nepovažujú za skupinu.
             const getTeamNameLastChar = (teamName) => {
                 if (!teamName) return null;
-                const s = String(teamName).trim();
-                if (!s) return null;
-        
-                // Pavúkový tím – posledné písmeno NIE JE skupina
-                if (isSpiderTeamName(s)) {
-                    return null;
-                }
-        
-                // Bežný superstructure tím – posledné písmeno názvu tímu
-                const m = /\d([A-ZÁ-Ž])\s*$/.exec(s);
-                if (m) return m[1].toUpperCase();
-        
-                // Fallback: posledné veľké písmeno v názve
-                const m2 = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(s.toUpperCase());
-                return m2 ? m2[1] : null;
+                return getGroupCharFromTeamName(teamName, cat);
             };
         
             // Pomocná: zistí, či tím patrí do skupiny s daným písmenom
@@ -1273,11 +1316,9 @@ const TransportApp = ({ userProfileData }) => {
                     if (gChar === groupChar) return true;
                 }
         
-                // 2) Fallback: posledné písmeno názvu tímu (ale len ak to nie je pavúkový tím)
-                if (!isSpiderTeamName(team.teamName)) {
-                    const nameChar = getTeamNameLastChar(team.teamName);
-                    if (nameChar === groupChar) return true;
-                }
+                // 2) Fallback: posledné písmeno názvu tímu – LEN ak nejde o superstructure tím
+                const nameChar = getGroupCharFromTeamName(team.teamName, cat);
+                if (nameChar === groupChar) return true;
         
                 return false;
             };
@@ -1315,8 +1356,7 @@ const TransportApp = ({ userProfileData }) => {
                     teams.forEach((tn) => {
                         const nameChar = (() => {
                             if (isSpiderTeamName(tn)) return 'SPIDER';
-                            const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
-                            return m ? m[1].toUpperCase() : '—';
+                            return getGroupCharFromTeamName(tn, cat) || '—';
                         })();
                         console.log(`    • ${tn}  [písmeno názvu: ${nameChar}]`);
                     });
@@ -1358,29 +1398,32 @@ const TransportApp = ({ userProfileData }) => {
                     }
         
                     // Bežný superstructure tím – posledné písmeno názvu určuje skupinu
-                    const lastCharFromName = getTeamNameLastChar(tn);
-        
+                    const lastCharFromName = getGroupLastChar(t.groupName);
+
                     console.log(
                         `%c  Superstructure tím: "${tn}"`,
                         'font-weight: bold; color: #ea580c;'
                     );
                     console.log(`    • groupName: ${t.groupName ? String(t.groupName).trim() : '(žiadny)'}`);
-                    console.log(`    • posledné písmeno názvu tímu (určuje skupinu): ${lastCharFromName || '—'}`);
-        
+                    console.log(`    • posledné písmeno názvu tímu (NEPOUŽÍVA SA na určenie skupiny): ${(() => {
+                        const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                        return m ? m[1].toUpperCase() : '—';
+                    })()}`);
+
                     if (!lastCharFromName) {
-                        console.log(`    → (nepodarilo sa určiť písmeno skupiny z názvu tímu)`);
+                        console.log(`    → (nepodarilo sa určiť písmeno skupiny z groupName)`);
                         console.log('    ─────────────────────────────');
                         return;
                     }
         
-                    // Nájdi všetky tímy v skupine s týmto písmenom.
+                    // Nájdi všetky tímy v skupine s týmto písmenom (podľa groupName).
                     const teamsInSameGroup = [];
                     (teamsArrivalBufferRef.current || []).forEach((other) => {
                         if (cleanCategory(other.category) !== cat) return;
                         if (!other.teamName) return;
                         const otherTn = String(other.teamName).trim();
                         if (otherTn === tn) return; // seba preskočíme
-        
+
                         if (teamBelongsToGroupChar(other, lastCharFromName)) {
                             teamsInSameGroup.push(otherTn);
                         }
@@ -4027,24 +4070,10 @@ const TransportApp = ({ userProfileData }) => {
                         existing.isSuperstructure = true;
                         existing.isRegistered = false;
                     } else {
-                        let derivedGroupName = null;
-                        const nameMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(trimmedName).trim());
-                        if (nameMatch) {
-                            const lastChar = nameMatch[1];
-                            const candidateGroups = new Set();
-                            buffer.forEach((b) => {
-                                if (b.category === cat && b.groupName) {
-                                    const gLastChar = String(b.groupName).trim().slice(-1).toUpperCase();
-                                    if (gLastChar === lastChar) candidateGroups.add(b.groupName);
-                                }
-                            });
-                            if (candidateGroups.size > 0) {
-                                derivedGroupName = [...candidateGroups][0];
-                            } else {
-                                derivedGroupName = `skupina ${lastChar}`;
-                            }
-                        }
-                        
+                        // NOVÉ: Pre superstructure tím sa skupina NIKDY neodvodzuje
+                        // z posledného písmena názvu tímu (U12 D 1A NEPATRÍ do skupiny A).
+                        // Skupina sa určuje VÝHRADNE z groupName, ktorý príde z Firestore
+                        // (cez AddTeamsGroupApp / superstructureGroups).
                         buffer.push({
                             category: cat,
                             teamName: trimmedName,
@@ -4052,7 +4081,7 @@ const TransportApp = ({ userProfileData }) => {
                             accommodationName: '',
                             arrivalDisplay: '---',
                             arrivalType: '',
-                            groupName: derivedGroupName, 
+                            groupName: null,
                             order: null,
                             isSuperstructure: true,
                             isRegistered: false,
