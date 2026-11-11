@@ -3109,13 +3109,13 @@ const TransportApp = ({ userProfileData }) => {
                                     });
                                 })();
                             
-                                const anyTeamInSameGroupHasEventToday = (() => {
+                                const anyTeamInSameGroupAlreadyAtSamePlaceToday = (() => {
                                     if (!currentDay) return false;
                                     const categoryClean = cleanCategory(category);
-                            
+                                
                                     // Pre pavúkový tím nemá zmysel – pavúkový tím nemá skupinu podľa groupName.
                                     if (isSpiderTeamName(teamName)) return false;
-                            
+                                
                                     // Zisti groupName aktuálneho tímu (z bufferu alebo zo settings/superstructureGroups)
                                     const currentTeamInfo = (teamsArrivalBufferRef.current || []).find(
                                         (t) => cleanCategory(t.category) === categoryClean
@@ -3124,7 +3124,7 @@ const TransportApp = ({ userProfileData }) => {
                                     let currentTeamGroupName = currentTeamInfo && currentTeamInfo.groupName
                                         ? String(currentTeamInfo.groupName).trim()
                                         : null;
-                            
+                                
                                     // Fallback: ak tím nemá groupName v bufferi, skúsime settings/superstructureGroups
                                     if (!currentTeamGroupName) {
                                         const ssGroups = superstructureGroupsRef.current || {};
@@ -3138,23 +3138,27 @@ const TransportApp = ({ userProfileData }) => {
                                             }
                                         }
                                     }
-                            
+                                
                                     if (!currentTeamGroupName) return false;
-                            
+                                
+                                    // Miesto prvej udalosti aktuálneho tímu v danom dni
+                                    const currentEventPlace = current.location || null;
+                                    if (!currentEventPlace) return false;
+                                
                                     // Prejdi všetky tímy v rovnakej skupine (okrem aktuálneho) a zisti,
-                                    // či niektorý má v currentDay udalosť (zápas alebo stravovanie).
+                                    // či niektorý už v ten deň hral/bol na ROVNAKOM mieste.
                                     return (teamsArrivalBufferRef.current || []).some((other) => {
                                         if (cleanCategory(other.category) !== categoryClean) return false;
                                         if (!other.teamName) return false;
                                         const otherTn = String(other.teamName).trim();
                                         if (otherTn === String(teamName || '').trim()) return false;
-                            
+                                
                                         // Musí ísť o tím v rovnakej skupine
                                         const otherGroupName = other.groupName ? String(other.groupName).trim() : null;
                                         if (!otherGroupName || otherGroupName !== currentTeamGroupName) return false;
-                            
-                                        // Má udalosť v currentDay?
-                                        const hasMatch = (matchesBufferRef.current || []).some((m) => {
+                                
+                                        // 1) Zápasy iného tímu v ten istý deň – hľadaj, či hral na rovnakom mieste
+                                        const hasMatchAtSamePlace = (matchesBufferRef.current || []).some((m) => {
                                             if (cleanCategory(m.category) !== categoryClean) return false;
                                             if (m.home !== otherTn && m.away !== otherTn) return false;
                                             let dayKey = null;
@@ -3166,14 +3170,19 @@ const TransportApp = ({ userProfileData }) => {
                                                 const dt = new Date(m.scheduledTs);
                                                 dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
                                             }
-                                            return dayKey === currentDay;
+                                            if (dayKey !== currentDay) return false;
+                                            if (!m.hallName) return false;
+                                            return isSamePlaceForTransfer(m.hallName, currentEventPlace);
                                         });
-                                        if (hasMatch) return true;
-                            
+                                        if (hasMatchAtSamePlace) return true;
+                                
+                                        // 2) Stravovanie iného tímu v ten istý deň – hľadaj, či bolo na rovnakom mieste
                                         return (cateringBufferRef.current || []).some((c) => {
                                             if (cleanCategory(c.category) !== categoryClean) return false;
                                             if (String(c.teamName || '').trim() !== otherTn) return false;
-                                            return c.dayKey === currentDay;
+                                            if (c.dayKey !== currentDay) return false;
+                                            if (!c.placeName) return false;
+                                            return isSamePlaceForTransfer(c.placeName, currentEventPlace);
                                         });
                                     });
                                 })();
@@ -3181,7 +3190,7 @@ const TransportApp = ({ userProfileData }) => {
                                 // NOVÉ: Ak v tento deň má udalosť aspoň jeden users tím, negeneruj ranné presuny pre SS tím
                                 if (isPlacementMatchEvent) {
                                     // skip – presun už bol vygenerovaný z poslednej udalosti skupiny
-                                } else if (anyTeamInSameGroupHasEventToday) {
+                                } else if (anyTeamInSameGroupAlreadyAtSamePlaceToday) {
                                     // NOVÉ: Ak v tento deň hrá aspoň jeden INÝ tím v rovnakej skupine,
                                     // ranné presuny z ubytovní/miesta zrazu sa NEGENERUJÚ.
                                     // Presuny sa generujú z miesta poslednej udalosti skupiny
