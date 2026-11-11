@@ -1404,10 +1404,19 @@ const TransportApp = ({ userProfileData }) => {
                     // POZOR: Toto písmeno NIE JE skupina, do ktorej tím patrí.
                     // Používa sa len na to, aby sme vypísali tímy, ktoré patria
                     // do skupiny s týmto písmenom (t.j. skupina "skupina D").
+                    if (isSpiderTeamName(tn)) {
+                        console.log(`    → PAVÚKOVÝ TÍM – skupina sa neurčuje podľa posledného písmena názvu.`);
+                        console.log('    ─────────────────────────────');
+                        return;
+                    }
+
+                    // Skupina sa určuje primárne z groupName.
+                    // Ak superstructure tím NEMÁ groupName, použije sa posledné písmeno názvu tímu
+                    // (napr. "U12 CH 1D" → skupina D).
                     let lastCharFromName = getGroupLastChar(t.groupName);
                     let lastCharSource = 'groupName';
 
-                    if (!lastCharFromName && !isSpiderTeamName(tn)) {
+                    if (!lastCharFromName) {
                         const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
                         if (m) {
                             lastCharFromName = m[1].toUpperCase();
