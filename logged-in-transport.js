@@ -1572,6 +1572,18 @@ const TransportApp = ({ userProfileData }) => {
                         if (ssInfo && ssInfo.lastChar) return `skupina ${ssInfo.lastChar}`;
                         return null;
                     })();
+
+                    const isSuperstructureTeam = (() => {
+                        if (ssInfo && ssInfo.isSuperstructure) return true;
+                        const inUsers = teamsArrivalBufferRef.current.some(
+                            (t) => cleanCategory(t.category) === cleanCategory(category)
+                                && t.teamName === teamName
+                                && t.isRegistered === true
+                        );
+                        if (!inUsers) return true;
+                        if (/\d[A-ZÁ-Ž]\s*$/.test(String(teamName).trim())) return true;
+                        return false;
+                    })();
                     
                     // NOVÉ: Ak ide o superstructure tím (názov obsahuje kategóriu), vypíš všetky tímy v jeho skupine
                     if (isSuperstructureTeam && teamGroupName) {
@@ -1601,18 +1613,6 @@ const TransportApp = ({ userProfileData }) => {
                             }
                         }
                     }
-
-                    const isSuperstructureTeam = (() => {
-                        if (ssInfo && ssInfo.isSuperstructure) return true;
-                        const inUsers = teamsArrivalBufferRef.current.some(
-                            (t) => cleanCategory(t.category) === cleanCategory(category)
-                                && t.teamName === teamName
-                                && t.isRegistered === true
-                        );
-                        if (!inUsers) return true;
-                        if (/\d[A-ZÁ-Ž]\s*$/.test(String(teamName).trim())) return true;
-                        return false;
-                    })();
 
                     if (isSuperstructureTeam) {
                         const ssTeamKeyPre = `${cleanCategory(category)}|${teamName}`;
