@@ -1256,36 +1256,28 @@ const TransportApp = ({ userProfileData }) => {
             const tn = String(team.teamName).trim();
             if (!tn) return false;
 
+            // Pavúkový tím sa nikdy nezaraduje podľa posledného písmena názvu.
+            if (isSpiderTeamName(tn)) return false;
+
             // NOVÉ: Ak má tím zadefinovaný groupName, je pre zaradenie do skupiny
             // smerodajný ON – či už ide o superstructure tím alebo users tím.
-            // Ak groupName končí na hľadané písmeno, tím patrí do skupiny.
             if (team.groupName) {
-                if (isSpiderTeamName(tn)) return false;
                 const gChar = getGroupLastChar(team.groupName);
                 return gChar === groupChar;
             }
 
-            // Superstructure tím bez groupName – nemáme podľa čoho zaradiť.
-            if (team.isRegistered !== true) {
-                return false;
+            // NOVÉ: Tím bez groupName – pre superstructure tím (napr. "U12 D 1G")
+            // aj users tím použijeme posledné písmeno názvu tímu (napr. "G").
+            // Týmto sa zabezpečí, že superstructure tím "U12 D 1G" sa zaradí
+            // do skupiny "G" a nájdu sa všetky tímy, ktoré do nej patria.
+            const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+            if (m) {
+                return m[1].toUpperCase() === groupChar;
             }
 
-            // Users tím bez groupName – fallback na posledné písmeno názvu tímu.
-            let nameLastChar = null;
-            if (!isSpiderTeamName(tn)) {
-                const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
-                if (m) nameLastChar = m[1].toUpperCase();
-            }
-
-            if (nameLastChar && nameLastChar === groupChar) {
-                return false;
-            }
-
-            const groups = teamsByGroup[cleanCategory(team.category)] || {};
-            for (const [gName, teamSet] of Object.entries(groups)) {
-                const gChar = getGroupLastChar(gName);
-                if (gChar === groupChar && teamSet.has(tn)) return true;
-            }
+            // Fallback: posledné veľké písmeno v názve tímu.
+            const m2 = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(tn.toUpperCase());
+            if (m2) return m2[1] === groupChar;
 
             return false;
         };
