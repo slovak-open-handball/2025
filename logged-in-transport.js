@@ -1255,22 +1255,45 @@ const TransportApp = ({ userProfileData }) => {
             if (!team || !team.teamName || !groupChar) return false;
             const tn = String(team.teamName).trim();
             if (!tn) return false;
-
+        
             // Pavúkový tím sa nikdy nezaraduje podľa posledného písmena názvu.
             if (isSpiderTeamName(tn)) return false;
-
-            // Ak má tím zadefinovaný groupName, je pre zaradenie do skupiny smerodajný ON.
+        
+            const cat = cleanCategory(team.category || '');
+        
+            // Ak má tím zadefinovaný groupName v bufferi, je pre zaradenie do skupiny smerodajný ON.
             if (team.groupName) {
                 const gChar = getGroupLastChar(team.groupName);
                 return gChar === groupChar;
             }
-
+        
+            // NOVÉ: Superstructure tím bez groupName v bufferi – skúsime nájsť groupName
+            // priamo v settings/superstructureGroups (superstructureGroupsRef.current).
+            // Toto je jediný správny zdroj pravdy pre skupinu superstructure tímu.
+            if (team.isSuperstructure === true) {
+                const ssGroups = superstructureGroupsRef.current || {};
+                for (const [groupKey, teamNames] of Object.entries(ssGroups)) {
+                    // groupKey je v tvare "kategória|skupina X"
+                    const [keyCat, keyGroup] = String(groupKey).split('|');
+                    if (cleanCategory(keyCat) !== cat) continue;
+                    if (!Array.isArray(teamNames)) continue;
+                    const isInGroup = teamNames.some(
+                        (n) => String(n || '').trim() === tn
+                    );
+                    if (isInGroup) {
+                        const gChar = getGroupLastChar(keyGroup);
+                        return gChar === groupChar;
+                    }
+                }
+                // Ak tím nie je v žiadnej skupine v settings/superstructureGroups,
+                // nevypisujeme chybu – jednoducho nie je zaradený.
+                return false;
+            }
+        
             // NOVÉ: Tím bez groupName sa NEZARAĎUJE podľa posledného písmena názvu.
             // Do konzoly vypíšeme, že pre tím sa nenašiel groupName.
             try {
-                const cat = cleanCategory(team.category || '');
                 const msg = `[TRANSPORT][GROUP-MEMBERS] Pre tím "${tn}" (kategória: ${cat}) sa nenašiel groupName – nie je možné ho zaradiť do skupiny "${groupChar}".`;
-                // Aby sa log neopakoval príliš veľa krát pri každom volaní, použijeme set.
                 if (!window.__transport_missingGroupNameLogged) {
                     window.__transport_missingGroupNameLogged = new Set();
                 }
@@ -1281,7 +1304,7 @@ const TransportApp = ({ userProfileData }) => {
                 }
             } catch (e) {
             }
-
+        
             return false;
         };
     
@@ -4446,15 +4469,27 @@ const TransportApp = ({ userProfileData }) => {
 
                 ssTeamsFromMatches.forEach(({ category: cat, teamName: trimmedName }) => {
                     const key = `${cat}|${trimmedName}`;
+                
+                    // NOVÉ: Zisti groupName zo settings/superstructureGroups
+                    // (superstructureGroupsRef.current má tvar { "kategória|skupina X": [teamName, ...] })
+                    let resolvedGroupName = null;
+                    const ssGroups = superstructureGroupsRef.current || {};
+                    for (const [groupKey, teamNames] of Object.entries(ssGroups)) {
+                        const [keyCat, keyGroup] = String(groupKey).split('|');
+                        if (cleanCategory(keyCat) !== cat) continue;
+                        if (!Array.isArray(teamNames)) continue;
+                        if (teamNames.some((n) => String(n || '').trim() === trimmedName)) {
+                            resolvedGroupName = keyGroup;
+                            break;
+                        }
+                    }
+                
                     if (existingByKey.has(key)) {
                         const existing = existingByKey.get(key);
                         existing.isSuperstructure = true;
                         existing.isRegistered = false;
+                        if (resolvedGroupName) existing.groupName = resolvedGroupName;
                     } else {
-                        // NOVÉ: Pre superstructure tím sa skupina NIKDY neodvodzuje
-                        // z posledného písmena názvu tímu (U12 D 1A NEPATRÍ do skupiny A).
-                        // Skupina sa určuje VÝHRADNE z groupName, ktorý príde z Firestore
-                        // (cez AddTeamsGroupApp / superstructureGroups).
                         buffer.push({
                             category: cat,
                             teamName: trimmedName,
@@ -4462,7 +4497,7 @@ const TransportApp = ({ userProfileData }) => {
                             accommodationName: '',
                             arrivalDisplay: '---',
                             arrivalType: '',
-                            groupName: null,
+                            groupName: resolvedGroupName,   // NOVÉ: doplnený groupName zo settings/superstructureGroups
                             order: null,
                             isSuperstructure: true,
                             isRegistered: false,
