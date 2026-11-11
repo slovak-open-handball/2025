@@ -1461,28 +1461,20 @@ const TransportApp = ({ userProfileData }) => {
                             return;
                         }
                     
-                        // 2) Superstructure tím – najprv podľa groupName
+                        // 2) Superstructure tím – skupina VÝHRADNE podľa groupName.
+                        //    NEPOUŽÍVAME fallback na posledné písmeno názvu tímu –
+                        //    superstructure tím sa nesmie zaradiť do skupiny len preto,
+                        //    že jeho názov končí na rovnaké písmeno (napr. "U12 CH 4D" → D).
                         if (other.isSuperstructure === true) {
-                            if (other.groupName) {
-                                const otherGroupChar = getGroupLastChar(other.groupName);
-                                if (otherGroupChar === lastCharFromName) {
-                                    teamsInSameGroupSuperstructure.push(otherTn);
-                                    return;
-                                }
-                            }
-                            // Ak nemá groupName, skúsime posledné písmeno názvu tímu
-                            // (LEN ak to nie je pavúkový tím – pavúkový identifikátor nie je skupina)
-                            if (!isSpiderTeamName(otherTn)) {
-                                const nameMatch = /\d([A-ZÁ-Ž])\s*$/.exec(otherTn);
-                                if (nameMatch && nameMatch[1].toUpperCase() === lastCharFromName) {
-                                    teamsInSameGroupSuperstructure.push(otherTn);
-                                }
+                            const otherGroupChar = getGroupLastChar(other.groupName);
+                            if (otherGroupChar === lastCharFromName) {
+                                teamsInSameGroupSuperstructure.push(otherTn);
                             }
                         }
                     });
                     
                     // NOVÉ: Ak sa našli users tímy, použijeme len ich.
-                    // Ak sa nenašli, použijeme superstructure tímy.
+                    // Ak sa nenašli, použijeme superstructure tímy (zaradené výhradne podľa groupName).
                     const teamsInSameGroup = teamsInSameGroupUsers.length > 0
                         ? teamsInSameGroupUsers
                         : teamsInSameGroupSuperstructure;
