@@ -1250,6 +1250,35 @@ const TransportApp = ({ userProfileData }) => {
             const gChar = getGroupLastChar(groupName);
             return gChar === char;
         };
+
+        const teamBelongsToGroupChar = (team, groupChar) => {
+            if (!team || !team.teamName || !groupChar) return false;
+            const tn = String(team.teamName).trim();
+            if (!tn) return false;
+
+            // 1) Priorita: groupName tímu
+            if (team.groupName) {
+                const gChar = getGroupLastChar(team.groupName);
+                if (gChar === groupChar) return true;
+            }
+
+            // 2) Fallback: tím hrá zápasy v skupine s daným písmenom
+            //    (teamsByGroup je naplnený aj z matches, takže to pokryje prípady,
+            //     keď tím nemá groupName, ale hrá v skupine "skupina D" atď.)
+            const groups = teamsByGroup[cleanCategory(team.category)] || {};
+            for (const [gName, teamSet] of Object.entries(groups)) {
+                const gChar = getGroupLastChar(gName);
+                if (gChar === groupChar && teamSet.has(tn)) return true;
+            }
+
+            // 3) Fallback: posledné písmeno názvu tímu pre superstructure tímy bez groupName
+            if (team.isSuperstructure === true && !team.groupName && !isSpiderTeamName(tn)) {
+                const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                if (m && m[1].toUpperCase() === groupChar) return true;
+            }
+
+            return false;
+        };
     
         const getGroupForSuperstructureTeam = (category, teamName) => {
             const groups = teamsByGroup[category] || {};
@@ -1305,35 +1334,6 @@ const TransportApp = ({ userProfileData }) => {
             const getTeamNameLastChar = (teamName) => {
                 if (!teamName) return null;
                 return getGroupCharFromTeamName(teamName, cat);
-            };
-        
-            // Pomocná: zistí, či tím patrí do skupiny s daným písmenom
-            const teamBelongsToGroupChar = (team, groupChar) => {
-                if (!team || !team.teamName || !groupChar) return false;
-                const tn = String(team.teamName).trim();
-
-                // 1) Priorita: groupName tímu
-                if (team.groupName) {
-                    const gChar = getGroupLastChar(team.groupName);
-                    if (gChar === groupChar) return true;
-                }
-
-                // 2) Fallback: tímy, ktoré hrajú zápasy v skupine s daným písmenom
-                //    (cez teamsByGroup naplnený z matches)
-                const groups = teamsByGroup[cleanCategory(team.category)] || {};
-                for (const [gName, teamSet] of Object.entries(groups)) {
-                    const gChar = getGroupLastChar(gName);
-                    if (gChar === groupChar && teamSet.has(tn)) return true;
-                }
-
-                // 3) Fallback: posledné písmeno názvu tímu pre superstructure tímy bez groupName
-                //    (ale len ak nejde o pavúkový tím)
-                if (team.isSuperstructure === true && !team.groupName && !isSpiderTeamName(tn)) {
-                    const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
-                    if (m && m[1].toUpperCase() === groupChar) return true;
-                }
-
-                return false;
             };
         
             // ============================================================
