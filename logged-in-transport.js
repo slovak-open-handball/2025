@@ -1272,8 +1272,11 @@ const TransportApp = ({ userProfileData }) => {
                 if (!t.teamName) return;
                 const tn = String(t.teamName).trim();
         
-                // Skupina sa určuje IBA z groupName (rovnako ako v AddTeamsGroupApp,
-                // kde sa tím priraďuje do skupiny výhradne cez groupName).
+                // Pavúkový tím sa NIKDY nezaradzuje do skupiny podľa posledného
+                // písmena názvu – jeho identifikátor (LSF/WSF/WQF/W8F/W16F…) nie je
+                // označením skupiny. Skupina sa určuje IBA z groupName.
+                if (isSpiderTeamName(tn)) return;
+        
                 const gChar = getGroupLastChar(t.groupName);
                 if (gChar === char) {
                     result.add(tn);
