@@ -5238,13 +5238,21 @@ const TransportApp = ({ userProfileData }) => {
                                     alightingTs != null &&
                                     alightingTs > boardingTs;
 
+                                // NOVÉ: Zisti, či sa časy segmentu naozaj zmenili oproti uloženým hodnotám.
+                                // Ak sa nezmenili, segment sa NESMIE odpojiť len preto, že parent.when sa prepočítal.
+                                const timesChanged =
+                                    s.startTs !== boardingTs ||
+                                    s.endTs !== alightingTs;
+
+                                // NOVÉ: outsideParent sa kontroluje LEN ak sa časy zmenili.
                                 const outsideParent =
+                                    timesChanged &&
                                     timesValid &&
                                     parentStartTs != null &&
                                     parentEndTs != null &&
                                     (boardingTs < parentStartTs || alightingTs > parentEndTs);
 
-                                // NEW: ak sú časy neplatné alebo mimo parent range → odpojiť segment
+                                // NEW: ak sú časy neplatné, alebo sa zmenili a sú mimo parent range → odpojiť segment
                                 if (!timesValid || outsideParent) {
                                     changed = true;
                                     return {
@@ -5472,12 +5480,19 @@ const TransportApp = ({ userProfileData }) => {
 
                 // NOVÉ: ak sú časy neplatné (výstup <= nástup) alebo mimo parent range
                 // → segment treba odpojiť z busu, rovnako ako pri manuálnom odstránení tímu.
+                // NOVÉ: ak sú časy neplatné (výstup <= nástup) alebo mimo parent range
+                // → segment treba odpojiť z busu, rovnako ako pri manuálnom odstránení tímu.
                 const timesValid =
                     boardingTs != null &&
                     alightingTs != null &&
                     alightingTs > boardingTs;
 
+                const timesChanged =
+                    seg.startTs !== boardingTs ||
+                    seg.endTs !== alightingTs;
+
                 const outsideParent =
+                    timesChanged &&
                     timesValid &&
                     effectiveParentRange != null &&
                     (boardingTs < effectiveParentRange.startTs || alightingTs > effectiveParentRange.endTs);
@@ -6498,8 +6513,14 @@ const TransportApp = ({ userProfileData }) => {
                                 alightingTs != null &&
                                 alightingTs > boardingTs;
 
-                            // NEW: ak sú časy mimo parent range, segment odpojiť
+                            // NOVÉ: Zisti, či sa časy segmentu naozaj zmenili oproti uloženým hodnotám.
+                            const timesChanged =
+                                s.startTs !== boardingTs ||
+                                s.endTs !== alightingTs;
+
+                            // NEW: ak sú časy neplatné, alebo sa zmenili a sú mimo parent range, segment odpojiť
                             const outsideParent =
+                                timesChanged &&
                                 timesValid &&
                                 effectiveParentRange != null &&
                                 (boardingTs < effectiveParentRange.startTs || alightingTs > effectiveParentRange.endTs);
