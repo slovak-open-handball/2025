@@ -1687,8 +1687,6 @@ const TransportApp = ({ userProfileData }) => {
 
                     const teamGroupName = (() => {
                         if (ssInfo && ssInfo.groupName) return ssInfo.groupName;
-                        const g = getGroupForSuperstructureTeam(category, teamName);
-                        if (g) return g;
                         if (ssInfo && ssInfo.lastChar) return `skupina ${ssInfo.lastChar}`;
                         return null;
                     })();
