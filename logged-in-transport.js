@@ -3076,6 +3076,8 @@ const TransportApp = ({ userProfileData }) => {
                                                     }
                                                 }
                                             }
+                                        }
+                                    }
                                 }
 
                                 // NOVÉ: Zisti, či je tento pavúkový zápas "nadväzujúci" – t.j.
