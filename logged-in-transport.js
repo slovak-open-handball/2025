@@ -9327,11 +9327,6 @@ const TransportApp = ({ userProfileData }) => {
                 await recomputeParentSegments(parent);
             }
 
-            const parts = [];
-            if (boardingRow) parts.push('nástup');
-            if (alightingRow) parts.push('výstup');
-            if (parts.length === 0) parts.push(side === 'in' ? 'nástup' : 'výstup');
-            
             // NOVÉ: Zisti názov autobusu a čas odchodu z nástupnej zastávky
             const busForNotification = (buses || []).find((b) => b.id === busId) || null;
             const busNameForNotification = busForNotification
@@ -9374,7 +9369,7 @@ const TransportApp = ({ userProfileData }) => {
             const busDetailsStr = busDetails.length > 0 ? ` – ${busDetails.join(' • ')}` : '';
             
             window.showGlobalNotification(
-                `Tím ${transfer.teamName} bol priradený (${parts.join(' + ')})${busDetailsStr}.`,
+                `Tím ${transfer.teamName} bol priradený${busDetailsStr}.`,
                 'success'
             );
 
