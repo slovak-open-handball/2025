@@ -1830,7 +1830,6 @@ const TransportApp = ({ userProfileData }) => {
                                     (teamsArrivalBufferRef.current || []).forEach((other) => {
                                         if (cleanCategory(other.category) !== cleanCategory(category)) return;
                                         if (!other.teamName) return;
-                                        if (String(other.teamName).trim() === teamName) return;
 
                                         if (!teamBelongsToGroupChar(other, groupCharForLog)) return;
                                         teamsInGroupForLog.push(String(other.teamName).trim());
