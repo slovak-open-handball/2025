@@ -1390,7 +1390,7 @@ const TransportApp = ({ userProfileData }) => {
                 const m2 = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(s.toUpperCase());
                 return m2 ? m2[1] : null;
             };
-    
+                
             categories.forEach((category) => {
                 if (normalizedFilter && cleanCategory(category) !== normalizedFilter) return;
                 console.log(`\n[TRANSPORT] ██ Kategória: ${category} ██`);
