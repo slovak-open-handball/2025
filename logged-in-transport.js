@@ -2706,16 +2706,22 @@ const TransportApp = ({ userProfileData }) => {
                                     current.type === 'match' &&
                                     isSpiderTeamName(teamName);
 
-                                // NOVÉ: Ak ide o superstructure tím (nie pavúkový), ktorý má v tento deň
-                                // udalosť spolu s users tímami, vygeneruj presuny z posledných miest
-                                // users tímov v skupine (určenej posledným písmenom názvu superstructure tímu)
-                                // na miesto prvej udalosti superstructure tímu v danom dni.
+                                // NOVÉ: Pre superstructure tím (nie pavúkový) vždy, keď má v danom dni
+                                // prvú udalosť, vygeneruj presuny z miest posledných udalostí tímov
+                                // v skupine určenej posledným písmenom názvu superstructure tímu.
+                                //
+                                // Týka sa to:
+                                //  - dňa, kedy hrajú aj users tímy (pôvodné správanie)
+                                //  - AJ dňa, kedy users tímy nehrajú, ale superstructure tím má
+                                //    v ten deň udalosť a jeho skupina má v ten deň udalosti
+                                //    (napr. skupina G hrá 27. 12. 2026 – posledné udalosti
+                                //    tímov 1G..5G sú v UNIZA / Javorku).
                                 const isSuperstructureTeamForDailyTransfer =
                                     !teamIsInUsers && !isSpiderTeamName(teamName) && currentDay != null && current.location;
 
                                 if (isSuperstructureTeamForDailyTransfer) {
                                     // Zisti písmeno skupiny z posledného písmena názvu superstructure tímu
-                                    // (napr. "U12 CH 1A" → "A").
+                                    // (napr. "U12 CH 1A" → "A", "U12 D 3G" → "G").
                                     const ssTeamLastChar = (() => {
                                         const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
                                         if (m) return m[1].toUpperCase();
@@ -2723,55 +2729,39 @@ const TransportApp = ({ userProfileData }) => {
                                     })();
 
                                     if (ssTeamLastChar) {
-                                        // Zisti, či v ten istý deň má udalosť aspoň jeden users tím v kategórii.
-                                        const anyUsersTeamHasEventOnCurrentDay = (() => {
-                                            const categoryClean = cleanCategory(category);
-                                            return (teamsArrivalBufferRef.current || []).some((t) => {
-                                                if (cleanCategory(t.category) !== categoryClean) return false;
-                                                if (t.isRegistered !== true) return false;
-                                                if (t.isSuperstructure === true) return false;
-                                                const hasMatch = (matchesBufferRef.current || []).some((m) => {
-                                                    if (cleanCategory(m.category) !== categoryClean) return false;
-                                                    if (m.home !== t.teamName && m.away !== t.teamName) return false;
-                                                    let dayKey = null;
-                                                    if (m.scheduledTime) {
-                                                        const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
-                                                        if (mm) dayKey = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
-                                                    }
-                                                    if (!dayKey && m.scheduledTs != null) {
-                                                        const dt = new Date(m.scheduledTs);
-                                                        dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-                                                    }
-                                                    return dayKey === currentDay;
-                                                });
-                                                if (hasMatch) return true;
-                                                return (cateringBufferRef.current || []).some((c) => {
-                                                    if (cleanCategory(c.category) !== categoryClean) return false;
-                                                    if (c.teamName !== t.teamName) return false;
-                                                    return c.dayKey === currentDay;
-                                                });
-                                            });
-                                        })();
+                                        // Zisti, či je aktuálna udalosť PRVÁ udalosť superstructure tímu v danom dni.
+                                        const currentStartTsForFirst =
+                                            current.startTs ?? current.ts ?? Number.POSITIVE_INFINITY;
+                                        const hasEarlierSameDayEventForSS = events.some((ev) => {
+                                            if (ev === current) return false;
+                                            const evDay = extractDayKeyFromWhen(ev.when);
+                                            if (evDay !== currentDay) return false;
+                                            const evTs =
+                                                ev.startTs ?? ev.ts ?? Number.POSITIVE_INFINITY;
+                                            return evTs < currentStartTsForFirst;
+                                        });
 
-                                        if (anyUsersTeamHasEventOnCurrentDay) {
-                                            // Zisti, či aktuálna udalosť je PRVÁ udalosť superstructure tímu v danom dni.
-                                            const currentStartTsForFirst =
-                                                current.startTs ?? current.ts ?? Number.POSITIVE_INFINITY;
-                                            const hasEarlierSameDayEventForSS = events.some((ev) => {
-                                                if (ev === current) return false;
-                                                const evDay = extractDayKeyFromWhen(ev.when);
-                                                if (evDay !== currentDay) return false;
-                                                const evTs =
-                                                    ev.startTs ?? ev.ts ?? Number.POSITIVE_INFINITY;
-                                                return evTs < currentStartTsForFirst;
-                                            });
+                                        if (!hasEarlierSameDayEventForSS) {
+                                            // Zisti, či v tento deň má aspoň jeden tím v skupine
+                                            // s písmenom ssTeamLastChar udalosť (zápas alebo stravovanie).
+                                            //
+                                            // Tým v skupine môže byť:
+                                            //  - users tím (isRegistered === true) s groupName končiacim na ssTeamLastChar
+                                            //  - superstructure tím s groupName končiacim na ssTeamLastChar
+                                            const teamsInSameGroup = (teamsArrivalBufferRef.current || []).filter(
+                                                (t) => {
+                                                    if (cleanCategory(t.category) !== cleanCategory(category)) return false;
+                                                    if (!t.teamName) return false;
+                                                    return teamBelongsToGroupChar(t, ssTeamLastChar);
+                                                }
+                                            );
 
-                                            if (!hasEarlierSameDayEventForSS) {
-                                                // Pre každé miesto poslednej udalosti users tímov v skupine
-                                                // s písmenom ssTeamLastChar v danom dni nájdi najneskorší koniec.
+                                            if (teamsInSameGroup.length > 0) {
+                                                // Pre každé miesto poslednej udalosti tímov v skupine
+                                                // v danom dni nájdi najneskorší koniec.
                                                 const lastEndByPlace = new Map(); // placeName -> endTs
 
-                                                // 1) Zápasy users tímov v skupine s daným písmenom
+                                                // 1) Zápasy tímov v skupine
                                                 matchesBufferRef.current.forEach((m) => {
                                                     if (cleanCategory(m.category) !== cleanCategory(category)) return;
                                                     let dayKey = null;
@@ -2790,13 +2780,12 @@ const TransportApp = ({ userProfileData }) => {
 
                                                     [m.home, m.away].forEach((tn) => {
                                                         if (!tn) return;
-                                                        // Iba users tímy v skupine s písmenom ssTeamLastChar
+                                                        // Iba tímy v skupine s písmenom ssTeamLastChar
                                                         const teamInfo = (teamsArrivalBufferRef.current || []).find(
                                                             (t) => cleanCategory(t.category) === cleanCategory(category)
                                                                 && String(t.teamName || '').trim() === String(tn).trim()
                                                         );
                                                         if (!teamInfo) return;
-                                                        if (teamInfo.isRegistered !== true) return;
                                                         if (!teamBelongsToGroupChar(teamInfo, ssTeamLastChar)) return;
                                                         const endTs = m.scheduledEndTs != null ? m.scheduledEndTs : m.scheduledTs;
                                                         if (endTs == null) return;
@@ -2807,10 +2796,9 @@ const TransportApp = ({ userProfileData }) => {
                                                     });
                                                 });
 
-                                                // 2) Stravovanie users tímov v skupine s daným písmenom
+                                                // 2) Stravovanie tímov v skupine
                                                 cateringBufferRef.current.forEach((c) => {
                                                     if (cleanCategory(c.category) !== cleanCategory(category)) return;
-                                                    if (c.isSuperstructure === true) return;
                                                     if (c.dayKey !== currentDay) return;
                                                     if (!c.placeName) return;
 
@@ -2819,7 +2807,6 @@ const TransportApp = ({ userProfileData }) => {
                                                             && String(t.teamName || '').trim() === String(c.teamName || '').trim()
                                                     );
                                                     if (!teamInfo) return;
-                                                    if (teamInfo.isRegistered !== true) return;
                                                     if (!teamBelongsToGroupChar(teamInfo, ssTeamLastChar)) return;
 
                                                     const endTs = c.slotToTs != null ? c.slotToTs : c.ts;
