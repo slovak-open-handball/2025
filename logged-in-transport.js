@@ -1259,25 +1259,28 @@ const TransportApp = ({ userProfileData }) => {
             // Pavúkový tím sa nikdy nezaraduje podľa posledného písmena názvu.
             if (isSpiderTeamName(tn)) return false;
 
-            // NOVÉ: Ak má tím zadefinovaný groupName, je pre zaradenie do skupiny
-            // smerodajný ON – či už ide o superstructure tím alebo users tím.
+            // Ak má tím zadefinovaný groupName, je pre zaradenie do skupiny smerodajný ON.
             if (team.groupName) {
                 const gChar = getGroupLastChar(team.groupName);
                 return gChar === groupChar;
             }
 
-            // NOVÉ: Tím bez groupName – pre superstructure tím (napr. "U12 D 1G")
-            // aj users tím použijeme posledné písmeno názvu tímu (napr. "G").
-            // Týmto sa zabezpečí, že superstructure tím "U12 D 1G" sa zaradí
-            // do skupiny "G" a nájdu sa všetky tímy, ktoré do nej patria.
-            const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
-            if (m) {
-                return m[1].toUpperCase() === groupChar;
+            // NOVÉ: Tím bez groupName sa NEZARAĎUJE podľa posledného písmena názvu.
+            // Do konzoly vypíšeme, že pre tím sa nenašiel groupName.
+            try {
+                const cat = cleanCategory(team.category || '');
+                const msg = `[TRANSPORT][GROUP-MEMBERS] Pre tím "${tn}" (kategória: ${cat}) sa nenašiel groupName – nie je možné ho zaradiť do skupiny "${groupChar}".`;
+                // Aby sa log neopakoval príliš veľa krát pri každom volaní, použijeme set.
+                if (!window.__transport_missingGroupNameLogged) {
+                    window.__transport_missingGroupNameLogged = new Set();
+                }
+                const dedupKey = `${cat}|${tn}|${groupChar}`;
+                if (!window.__transport_missingGroupNameLogged.has(dedupKey)) {
+                    window.__transport_missingGroupNameLogged.add(dedupKey);
+                    console.log('%c' + msg, 'color: #b91c1c; font-weight: bold;');
+                }
+            } catch (e) {
             }
-
-            // Fallback: posledné veľké písmeno v názve tímu.
-            const m2 = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(tn.toUpperCase());
-            if (m2) return m2[1] === groupChar;
 
             return false;
         };
@@ -1373,7 +1376,26 @@ const TransportApp = ({ userProfileData }) => {
                             if (isSpiderTeamName(tn)) return 'SPIDER';
                             return getGroupCharFromTeamName(tn, cat) || '—';
                         })();
-                        console.log(`    • ${tn}  [písmeno názvu: ${nameChar}]`);
+
+                        // NOVÉ: Vypíš groupName tímu (alebo upozornenie, že chýba).
+                        const teamRecord = (teamsArrivalBufferRef.current || []).find(
+                            (t) => cleanCategory(t.category) === cat && String(t.teamName || '').trim() === tn
+                        );
+                        const teamGroupName = teamRecord && teamRecord.groupName
+                            ? String(teamRecord.groupName).trim()
+                            : null;
+                        const groupNameLabel = teamGroupName
+                            ? `groupName: "${teamGroupName}"`
+                            : `groupName: (chýba!)`;
+
+                        if (teamGroupName) {
+                            console.log(`    • ${tn}  [písmeno názvu: ${nameChar}]  [${groupNameLabel}]`);
+                        } else {
+                            console.log(
+                                '%c' + `    • ${tn}  [písmeno názvu: ${nameChar}]  [${groupNameLabel}]`,
+                                'color: #b91c1c;'
+                            );
+                        }
                     });
                 });
             }
