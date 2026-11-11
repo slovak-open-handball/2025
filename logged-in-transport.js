@@ -1255,37 +1255,42 @@ const TransportApp = ({ userProfileData }) => {
             if (!team || !team.teamName || !groupChar) return false;
             const tn = String(team.teamName).trim();
             if (!tn) return false;
-        
-            // 1) Priorita: groupName tímu – ak má groupName, je autoritatívny.
+
+            // NOVÉ: Pre superstructure tímy (tímy, ktoré nie sú v users) sa skupina
+            // určuje VÝHRADNE z posledného písmena názvu tímu (napr. "U12 D 3F" → F).
+            // To platí aj v prípade, ak má tím v teamsArrivalBuffer nastavený groupName
+            // (napr. "skupina F - skupina G") – pre superstructure tím je smerodajné
+            // posledné písmeno názvu.
+            if (team.isRegistered !== true) {
+                if (isSpiderTeamName(tn)) return false;
+                const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                if (!m) return false;
+                return m[1].toUpperCase() === groupChar;
+            }
+
+            // Pre users tímy (registrované) je prioritou groupName – ak ho majú.
             if (team.groupName) {
                 const gChar = getGroupLastChar(team.groupName);
                 return gChar === groupChar;
             }
-        
-            // 2) Tím nemá groupName.
-            //    Zisti posledné písmeno názvu tímu (ak nejde o pavúkový tím,
-            //    ktorého posledné písmeno je súčasťou identifikátora, nie skupiny).
+
+            // Users tím bez groupName – fallback na posledné písmeno názvu tímu.
             let nameLastChar = null;
             if (!isSpiderTeamName(tn)) {
                 const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
                 if (m) nameLastChar = m[1].toUpperCase();
             }
-        
-            // 3) Ak názov tímu končí PRESNE na písmeno hľadanej skupiny,
-            //    tím sa NESMIE zobraziť v tejto skupine (posledné písmeno názvu
-            //    nie je označením skupiny – je len súčasťou názvu tímu).
+
             if (nameLastChar && nameLastChar === groupChar) {
                 return false;
             }
-        
-            // 4) Inak tím patrí do skupiny len ak je v teamsByGroup pre skupinu
-            //    s daným písmenom (t.j. hrá zápasy v tejto skupine).
+
             const groups = teamsByGroup[cleanCategory(team.category)] || {};
             for (const [gName, teamSet] of Object.entries(groups)) {
                 const gChar = getGroupLastChar(gName);
                 if (gChar === groupChar && teamSet.has(tn)) return true;
             }
-        
+
             return false;
         };
     
