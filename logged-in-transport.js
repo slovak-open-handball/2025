@@ -1255,28 +1255,37 @@ const TransportApp = ({ userProfileData }) => {
             if (!team || !team.teamName || !groupChar) return false;
             const tn = String(team.teamName).trim();
             if (!tn) return false;
-
-            // 1) Priorita: groupName tímu
+        
+            // 1) Priorita: groupName tímu – ak má groupName, je autoritatívny.
             if (team.groupName) {
                 const gChar = getGroupLastChar(team.groupName);
-                if (gChar === groupChar) return true;
+                return gChar === groupChar;
             }
-
-            // 2) Fallback: tím hrá zápasy v skupine s daným písmenom
-            //    (teamsByGroup je naplnený aj z matches, takže to pokryje prípady,
-            //     keď tím nemá groupName, ale hrá v skupine "skupina D" atď.)
+        
+            // 2) Tím nemá groupName.
+            //    Zisti posledné písmeno názvu tímu (ak nejde o pavúkový tím,
+            //    ktorého posledné písmeno je súčasťou identifikátora, nie skupiny).
+            let nameLastChar = null;
+            if (!isSpiderTeamName(tn)) {
+                const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                if (m) nameLastChar = m[1].toUpperCase();
+            }
+        
+            // 3) Ak názov tímu končí PRESNE na písmeno hľadanej skupiny,
+            //    tím sa NESMIE zobraziť v tejto skupine (posledné písmeno názvu
+            //    nie je označením skupiny – je len súčasťou názvu tímu).
+            if (nameLastChar && nameLastChar === groupChar) {
+                return false;
+            }
+        
+            // 4) Inak tím patrí do skupiny len ak je v teamsByGroup pre skupinu
+            //    s daným písmenom (t.j. hrá zápasy v tejto skupine).
             const groups = teamsByGroup[cleanCategory(team.category)] || {};
             for (const [gName, teamSet] of Object.entries(groups)) {
                 const gChar = getGroupLastChar(gName);
                 if (gChar === groupChar && teamSet.has(tn)) return true;
             }
-
-            // 3) Fallback: posledné písmeno názvu tímu pre superstructure tímy bez groupName
-            if (team.isSuperstructure === true && !team.groupName && !isSpiderTeamName(tn)) {
-                const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
-                if (m && m[1].toUpperCase() === groupChar) return true;
-            }
-
+        
             return false;
         };
     
