@@ -3258,7 +3258,7 @@ const TransportApp = ({ userProfileData }) => {
                                         const filteredSources = [...sources].filter(
                                             (src) => !isSamePlaceForTransfer(src, current.location)
                                         );
-                            
+
                                         const arrivalTs = current.startTs;
                                         const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
                                         const departureTs = timestampOnDay(arrivalTs, 0, 0);
