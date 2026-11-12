@@ -2639,7 +2639,7 @@ class TransportGenerator {
                                         if (m) return m[1].toUpperCase();
                                         return getGroupLastChar(String(teamName).trim());
                                     })();
-
+                                
                                     if (ssTeamLastChar) {
                                         const currentStartTsForFirst =
                                             current.startTs ?? current.ts ?? Number.POSITIVE_INFINITY;
@@ -2651,8 +2651,42 @@ class TransportGenerator {
                                                 ev.startTs ?? ev.ts ?? Number.POSITIVE_INFINITY;
                                             return evTs < currentStartTsForFirst;
                                         });
-
-                                        if (!hasEarlierSameDayEventForSS) {
+                                
+                                        // NOVÉ: ak v tento deň nemá žiadny user tím udalosť (hrá iba superstructure),
+                                        // negeneruj ranné presuny z ubytovní ani z miesta zrazu pre superstructure tímy.
+                                        const anyUserTeamHasEventTodayForSS = (() => {
+                                            if (!currentDay) return false;
+                                            const categoryClean = cleanCategory(category);
+                                            return (this.ctx.teamsArrivalBufferRef?.current || []).some((t) => {
+                                                if (cleanCategory(t.category) !== categoryClean) return false;
+                                                if (t.isRegistered !== true) return false;
+                                                if (t.isSuperstructure === true) return false;
+                                
+                                                const hasMatch = (this.ctx.matchesBufferRef?.current || []).some((m) => {
+                                                    if (cleanCategory(m.category) !== categoryClean) return false;
+                                                    if (m.home !== t.teamName && m.away !== t.teamName) return false;
+                                                    let dayKey = null;
+                                                    if (m.scheduledTime) {
+                                                        const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                                        if (mm) dayKey = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
+                                                    }
+                                                    if (!dayKey && m.scheduledTs != null) {
+                                                        const dt = new Date(m.scheduledTs);
+                                                        dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                                    }
+                                                    return dayKey === currentDay;
+                                                });
+                                                if (hasMatch) return true;
+                                
+                                                return (this.ctx.cateringBufferRef?.current || []).some((c) => {
+                                                    if (cleanCategory(c.category) !== categoryClean) return false;
+                                                    if (c.teamName !== t.teamName) return false;
+                                                    return c.dayKey === currentDay;
+                                                });
+                                            });
+                                        })();
+                                
+                                        if (!hasEarlierSameDayEventForSS && anyUserTeamHasEventTodayForSS) {
                                             const otherTeamsInSameGroup = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
                                                 if (cleanCategory(t.category) !== cleanCategory(category)) return false;
                                                 if (!t.teamName) return false;
