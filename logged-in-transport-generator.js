@@ -2134,7 +2134,7 @@ class TransportGenerator {
                                     });
                                 });
                             
-                                // Pôvodná logika generovania presunov (nezmenená)
+                                // Pôvodná logika generovania presunov (upravená)
                                 superstructureFirstPlacesByDay.forEach((placesMap, dayKey) => {
                                     if (userTeamDays.has(dayKey)) return;
                                 
@@ -2156,10 +2156,10 @@ class TransportGenerator {
                                 
                                     placesMap.forEach((info, destinationLocation) => {
                                         if (!destinationLocation) return;
-                                        // POZOR: Zámerne NEkontrolujeme isSamePlaceForTransfer,
-                                        // pretože ide o prvú udalosť SS tímu v ten deň a presun
-                                        // sa má vygenerovať aj vtedy, ak je miesto rovnaké ako
-                                        // ubytovanie/miesto zrazu (ide o iný tím).
+                                
+                                        // Ak je miesto rovnaké ako ubytovanie/miesto zrazu,
+                                        // presun sa NEgeneruje.
+                                        if (this.isSamePlaceForTransfer(fromLocationName, destinationLocation)) return;
                                 
                                         const arrivalTs = info.firstEventTs;
                                         if (arrivalTs == null || !isFinite(arrivalTs)) return;
