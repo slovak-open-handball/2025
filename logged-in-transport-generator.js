@@ -2684,6 +2684,12 @@ class TransportGenerator {
                                                 });
                                             });
                                         })();
+
+                                        // DIAGNOSTIKA
+                                            console.log(
+                                                `%c[TRANSPORT][SS-DIAG] Tím "${teamName}", deň ${currentDay}: ssTeamLastChar=${ssTeamLastChar}, hasEarlierSameDayEventForSS=${hasEarlierSameDayEventForSS}, anyUserTeamHasEventTodayForSS=${anyUserTeamHasEventTodayForSS}`,
+                                                'color: #b91c1c; font-weight: bold;'
+                                            );
                                 
                                         if (!hasEarlierSameDayEventForSS && anyUserTeamHasEventTodayForSS) {
                                             const otherTeamsInSameGroup = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
@@ -2692,6 +2698,11 @@ class TransportGenerator {
                                                 if (String(t.teamName).trim() === String(teamName).trim()) return false;
                                                 return teamBelongsToGroupChar(t, ssTeamLastChar);
                                             });
+
+                                            console.log(
+                                                `%c[TRANSPORT][SS-DIAG] otherTeamsInSameGroup: ${otherTeamsInSameGroup.length} tímov`,
+                                                'color: #b91c1c;'
+                                            );                                            
 
                                             const lastPlaceByTeamInGroup = (() => {
                                                 if (!currentDay) return new Map();
