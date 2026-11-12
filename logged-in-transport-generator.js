@@ -1700,6 +1700,14 @@ class TransportGenerator {
                                     return !!(info && info.isRegistered === true);
                                 };
 
+                                const isRealRegisteredTeamPre = (tn) => {
+                                    if (!tn) return false;
+                                    const info = (this.ctx.teamsArrivalBufferRef?.current || []).find(
+                                        (t) => cleanCategory(t.category) === cleanCategory(category) && t.teamName === tn
+                                    );
+                                    return !!(info && info.isRegistered === true);
+                                };
+
                                 const firstPlayDayPre = (() => {
                                     let firstDayKey = null;
                                     events.forEach((ev) => {
