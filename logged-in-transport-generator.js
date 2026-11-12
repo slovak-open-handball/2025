@@ -3334,9 +3334,15 @@ class TransportGenerator {
                                     !this.isSamePlaceForTransfer(meetingPointStop.name, current.location)
                                 ) {
                                     // ═══════════════════════════════════════════════════════════
+                                    // ← KĽÚČOVÁ ZMENA:
                                     // Pre SS tím sa NEGENERUJÚ ranné presuny z ubytovní.
+                                    //
                                     // Výnimka: v ten deň NEMÁ udalosť žiadny user tím
-                                    // → presun z miesta zrazu na miesto prvej udalosti.
+                                    // v kategórii (anyUsersTeamHasEventToday === false)
+                                    // → pre SS tím sa vygeneruje presun z miesta zrazu
+                                    // na miesto prvej udalosti.
+                                    // (Bez ohľadu na to, či ide o prvý deň turnaja,
+                                    //  a bez ohľadu na typ dopravy SS tímu.)
                                     // ═══════════════════════════════════════════════════════════
                                     const arrivalTs = current.startTs;
                                     const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
