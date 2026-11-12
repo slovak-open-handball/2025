@@ -484,31 +484,661 @@ const TransportApp = ({ userProfileData }) => {
     };
 
     const recomputeParentSegmentsInPlace = (draft) => {
-        // skopírované z generátora
-        // this.ctx?.busRows → busRows
-        // this.ctx?.savedTransfersRef?.current → savedTransfersRef.current
+        if (!draft) return;
+        const originalWhenFromDraft = draft.when;
+        const stops = Array.isArray(draft.intermediateStopIds) ? draft.intermediateStopIds : [];
+        const fromId = draft.fromId || null;
+        const toId = draft.toId || null;
+        const routeIdsRaw = [fromId, ...stops, toId].filter(Boolean);
+        const routeIds = [];
+        routeIdsRaw.forEach((id) => {
+            if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
+        });
+        if (routeIds.length < 2) return;
+    
+        if (!Array.isArray(draft.segments) || draft.segments.length !== routeIds.length - 1) {
+            draft.segments = routeIds.slice(0, -1).map((id, i) => ({
+                fromId: id,
+                toId: routeIds[i + 1],
+                startTs: null, endTs: null, when: null,
+                isWalking: false, busAssigned: false,
+                walkingSetAt: null, walkingSetBy: null,
+            }));
+        } else {
+            draft.segments = draft.segments.map((s, i) => ({
+                ...s,
+                fromId: routeIds[i],
+                toId: routeIds[i + 1],
+            }));
+        }
+    
+        const dayKey = draft.dayKey || '';
+        const teamName = String(draft.teamName || '').trim();
+        const category = cleanCategory(draft.category || '');
+    
+        const allBusRowsForDay = [];
+        Object.entries(busRows || {}).forEach(([busKey, rows]) => {
+            const bDayKey = busKey.split('|')[1];
+            if (bDayKey !== dayKey) return;
+            (rows || []).forEach((row) => allBusRowsForDay.push({ ...row, _busKey: busKey }));
+        });
+        allBusRowsForDay.sort((a, b) => (a.timeFrom || '').localeCompare(b.timeFrom || ''));
+    
+        const teamKey = `${teamName}|${category}`;
+        const matchesTeam = (rowTeams) => {
+            if (!Array.isArray(rowTeams)) return false;
+            return rowTeams.some((tk) => {
+                const s = String(tk).trim();
+                if (s === teamKey) return true;
+                const [tn, cat] = s.split('|');
+                return String(tn).trim() === teamName && cleanCategory(cat) === category;
+            });
+        };
+    
+        const findBusTimesForSegment = (fromIdSeg, toIdSeg) => {
+            const parentSeg = draft.segments.find(
+                (s) => s.fromId === fromIdSeg && s.toId === toIdSeg
+            );
+            if (!parentSeg || !parentSeg.busId) return { boardingTs: null, alightingTs: null, busId: null };
+            const boardingRow = allBusRowsForDay.find(
+                (r) => r.rowId === parentSeg.boardingRowId && String(r._busKey).split('|')[0] === parentSeg.busId
+            );
+            const alightingRow = allBusRowsForDay.find(
+                (r) => r.rowId === parentSeg.alightingRowId && String(r._busKey).split('|')[0] === parentSeg.busId
+            );
+            let boardingTs = null;
+            let alightingTs = null;
+            const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+            if (dm) {
+                if (boardingRow && boardingRow.timeFrom) {
+                    const [h, mi] = boardingRow.timeFrom.split(':').map(Number);
+                    boardingTs = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
+                }
+                if (alightingRow && alightingRow.timeTo) {
+                    const [h, mi] = alightingRow.timeTo.split(':').map(Number);
+                    alightingTs = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), h, mi, 0, 0).getTime();
+                }
+            }
+            return { boardingTs, alightingTs, busId: parentSeg.busId };
+        };
+    
+        draft.segments = draft.segments.map((seg) => {
+            if (
+                seg.busAssigned === true &&
+                seg.busId != null &&
+                seg.startTs != null &&
+                seg.endTs != null &&
+                seg.endTs > seg.startTs
+            ) {
+                return {
+                    ...seg,
+                    isWalking: false,
+                    when: `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`,
+                };
+            }
+            const busTimes = findBusTimesForSegment(seg.fromId || null, seg.toId || null);
+            if (busTimes.boardingTs != null && busTimes.alightingTs != null && busTimes.alightingTs > busTimes.boardingTs) {
+                return {
+                    ...seg,
+                    startTs: busTimes.boardingTs,
+                    endTs: busTimes.alightingTs,
+                    when: `${formatTsLocal(busTimes.boardingTs)} – ${formatTsLocal(busTimes.alightingTs)}`,
+                    isWalking: false,
+                    busAssigned: true,
+                    busId: busTimes.busId || seg.busId || null,
+                };
+            }
+            const hadRealBusTimes =
+                seg.busAssigned === true &&
+                seg.busId != null &&
+                seg.startTs != null &&
+                seg.endTs != null &&
+                seg.endTs > seg.startTs;
+            if (hadRealBusTimes) {
+                return {
+                    ...seg,
+                    isWalking: false,
+                    when: `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`,
+                };
+            }
+            const hasBusAssignmentMarkers =
+                (seg.busId != null && seg.boardingRowId && seg.alightingRowId)
+                || (seg.busAssigned === true && seg.boardingRowId && seg.alightingRowId);
+            if (hasBusAssignmentMarkers) {
+                return {
+                    ...seg,
+                    isWalking: false,
+                    busAssigned: true,
+                    busId: seg.busId || null,
+                    when: seg.startTs != null && seg.endTs != null
+                        ? `${formatTsLocal(seg.startTs)} – ${formatTsLocal(seg.endTs)}`
+                        : (seg.startTs != null ? formatTsLocal(seg.startTs) : (seg.endTs != null ? formatTsLocal(seg.endTs) : null)),
+                };
+            }
+            return {
+                ...seg,
+                startTs: null,
+                endTs: null,
+                when: null,
+                busAssigned: false,
+                busId: null,
+            };
+        });
+    
+        const nonWalkingSegments = draft.segments.filter((s) => s.isWalking !== true);
+        const busSegments = nonWalkingSegments.filter((s) => s.busAssigned === true);
+    
+        const savedParentWhen = (() => {
+            if (!draft.key) return null;
+            const savedRec = (savedTransfersRef.current || []).find((s) => s.key === draft.key);
+            if (savedRec && savedRec.when && String(savedRec.when).trim() !== '') {
+                return savedRec.when;
+            }
+            return null;
+        })();
+    
+        const parentHasSavedWhen = !!(savedParentWhen && String(savedParentWhen).trim() !== '');
+    
+        const segStartList = [];
+        const segEndList = [];
+        draft.segments.forEach((s) => {
+            if (s.startTs != null) segStartList.push(s.startTs);
+            if (s.endTs != null) {
+                segEndList.push(s.endTs);
+            } else if (s.isWalking === true && s.startTs != null) {
+                segEndList.push(s.startTs + 60 * 1000);
+            }
+        });
+    
+        const hasUnassignedSegments = draft.segments.some(
+            (s) => s.isWalking !== true && (s.startTs == null || s.endTs == null)
+        );
+    
+        const savedParentWhenFallback = (() => {
+            if (savedParentWhen && String(savedParentWhen).trim() !== '') return savedParentWhen;
+            if (originalWhenFromDraft && String(originalWhenFromDraft).trim() !== '') return String(originalWhenFromDraft).trim();
+            return null;
+        })();
+    
+        if (busSegments.length > 0 && busSegments.some((s) => s.startTs != null && s.endTs != null) && !hasUnassignedSegments) {
+            const busStart = busSegments.map((s) => s.startTs).filter((ts) => ts != null);
+            const busEnd = busSegments.map((s) => {
+                if (s.endTs != null) return s.endTs;
+                if (s.isWalking === true && s.startTs != null) return s.startTs + 60 * 1000;
+                return null;
+            }).filter((ts) => ts != null);
+            if (busStart.length > 0 && busEnd.length > 0) {
+                draft.when = `${formatTsLocal(Math.min(...busStart))} – ${formatTsLocal(Math.max(...busEnd))}`;
+            } else if (busStart.length > 0) {
+                draft.when = formatTsLocal(Math.min(...busStart));
+            } else if (busEnd.length > 0) {
+                draft.when = formatTsLocal(Math.max(...busEnd));
+            } else {
+                draft.when = savedParentWhenFallback || '';
+            }
+        } else if (segStartList.length > 0 && segEndList.length > 0 && !hasUnassignedSegments) {
+            draft.when = `${formatTsLocal(Math.min(...segStartList))} – ${formatTsLocal(Math.max(...segEndList))}`;
+        } else if (segStartList.length > 0 || segEndList.length > 0) {
+            const allStarts = segStartList.filter((ts) => ts != null);
+            const allEnds = segEndList.filter((ts) => ts != null);
+            if (allStarts.length > 0 && allEnds.length > 0) {
+                draft.when = `${formatTsLocal(Math.min(...allStarts))} – ${formatTsLocal(Math.max(...allEnds))}`;
+            } else if (allStarts.length > 0) {
+                draft.when = formatTsLocal(Math.min(...allStarts));
+            } else if (allEnds.length > 0) {
+                draft.when = formatTsLocal(Math.max(...allEnds));
+            } else {
+                draft.when = savedParentWhenFallback || '';
+            }
+        } else {
+            draft.when = savedParentWhenFallback || '';
+        }
+    
+        if (parentHasSavedWhen) {
+            draft.when = savedParentWhen;
+        }
     };
 
     const computeProvisionalSegmentRange = (transfer) => {
-        // skopírované z generátora
-        // this.ctx.savedTransfersRef?.current → savedTransfersRef.current
-    };
-
-    const applyWalkingRulesToParent = async (parentKey) => {
-        // skopírované z generátora
-        // this.ctx.walkingRules → walkingRules
-        // this.ctx.savedTransfersRef → savedTransfersRef
-        // this.resolvePlaceNameById → resolvePlaceNameById
-        // this.ctx.updateParentTransferImpl → updateParentTransfer
-        // this.ctx.userProfileData → userProfileData
+        if (!transfer) return null;
+        const parentKey = transfer._parentKey || transfer.key;
+        if (!parentKey) return null;
+        const parentRec = (savedTransfersRef.current || []).find((s) => s.key === parentKey);
+        if (!parentRec) return null;
+    
+        let parentRange = null;
+        if (parentRec.when && String(parentRec.when).trim() !== '') {
+            parentRange = parseTransferWhenToRange(parentRec.when);
+        }
+        if (!parentRange || parentRange.startTs == null || parentRange.endTs == null) {
+            let earliestStart = null;
+            let latestEnd = null;
+            (parentRec.segments || []).forEach((s) => {
+                if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) earliestStart = s.startTs;
+                if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) latestEnd = s.endTs;
+            });
+            if (earliestStart != null && latestEnd != null) {
+                parentRange = { startTs: earliestStart, endTs: latestEnd };
+            }
+        }
+        if (!parentRange || parentRange.startTs == null || parentRange.endTs == null) {
+            const dayKey = parentRec.dayKey || transfer.dayKey;
+            if (dayKey) {
+                const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+                if (dm) {
+                    const dayStart = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), 0, 0, 0, 0).getTime();
+                    parentRange = { startTs: dayStart, endTs: dayStart + 24 * 60 * 60 * 1000 - 60000 };
+                }
+            }
+        }
+        if (!parentRange || parentRange.startTs == null || parentRange.endTs == null) return null;
+    
+        let PARENT_START = parentRange.startTs;
+        let PARENT_END = parentRange.endTs;
+    
+        (parentRec.segments || []).forEach((seg) => {
+            if (!seg) return;
+            if (seg.startTs != null && seg.startTs < PARENT_START) PARENT_START = seg.startTs;
+            if (seg.endTs != null && seg.endTs > PARENT_END) PARENT_END = seg.endTs;
+        });
+    
+        const parentSegments = [];
+        if (Array.isArray(parentRec.segments) && parentRec.segments.length > 0) {
+            parentRec.segments.forEach((seg, idx) => {
+                const segFromId = seg.fromId || null;
+                const segToId = seg.toId || null;
+                if (!segFromId || !segToId) return;
+                const isWalkingSeg = seg.isWalking === true;
+                let range = null;
+                if (isWalkingSeg) {
+                    if (seg.startTs != null) range = { startTs: seg.startTs, endTs: seg.startTs };
+                    else if (seg.endTs != null) range = { startTs: seg.endTs, endTs: seg.endTs };
+                } else {
+                    if (seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs) {
+                        range = { startTs: seg.startTs, endTs: seg.endTs };
+                    } else if (seg.startTs != null) {
+                        range = { startTs: seg.startTs, endTs: null };
+                    } else if (seg.endTs != null) {
+                        range = { startTs: null, endTs: seg.endTs };
+                    }
+                }
+                parentSegments.push({
+                    idx,
+                    fromId: segFromId,
+                    toId: segToId,
+                    isWalking: isWalkingSeg,
+                    range,
+                });
+            });
+        }
+    
+        const currentFromId = transfer.fromId || null;
+        const currentToId = transfer.toId || null;
+        if (!currentFromId || !currentToId) return null;
+    
+        const isCurrentInList = parentSegments.some(
+            (seg) => seg.fromId === currentFromId && seg.toId === currentToId
+        );
+        if (!isCurrentInList) {
+            parentSegments.push({
+                idx: parentSegments.length,
+                fromId: currentFromId,
+                toId: currentToId,
+                isWalking: transfer.isWalking === true,
+                range: null,
+            });
+        }
+        parentSegments.sort((a, b) => (a.idx || 0) - (b.idx || 0));
+    
+        let prevResolvedEndTs = null;
+        for (const seg of parentSegments) {
+            const isCurrent = seg.fromId === currentFromId && seg.toId === currentToId;
+            if (isCurrent) break;
+            if (seg.isWalking === true) continue;
+            if (seg.range && seg.range.endTs != null) {
+                const e = seg.range.endTs;
+                if (prevResolvedEndTs == null || e > prevResolvedEndTs) prevResolvedEndTs = e;
+            }
+        }
+    
+        let nextResolvedStartTs = null;
+        let foundCurrent = false;
+        for (const seg of parentSegments) {
+            const isCurrent = seg.fromId === currentFromId && seg.toId === currentToId;
+            if (isCurrent) { foundCurrent = true; continue; }
+            if (!foundCurrent) continue;
+            if (seg.isWalking === true) continue;
+            if (seg.range && seg.range.startTs != null) {
+                const s = seg.range.startTs;
+                if (nextResolvedStartTs == null || s < nextResolvedStartTs) nextResolvedStartTs = s;
+            }
+        }
+    
+        const startTsForDisplay = prevResolvedEndTs != null ? prevResolvedEndTs : PARENT_START;
+        let endTsForDisplay;
+        if (nextResolvedStartTs != null && nextResolvedStartTs > startTsForDisplay) {
+            endTsForDisplay = nextResolvedStartTs;
+        } else {
+            endTsForDisplay = PARENT_END;
+        }
+    
+        if (endTsForDisplay <= startTsForDisplay) {
+            if (PARENT_END > startTsForDisplay) {
+                return { startTs: startTsForDisplay, endTs: PARENT_END };
+            }
+            return null;
+        }
+        return { startTs: startTsForDisplay, endTs: endTsForDisplay };
     };
 
     const preloadAccommodationsForSuperstructureTeams = async () => {
-        // skopírované z pôvodného súboru
+        if (!window.__transport_accommodationsByGroup) {
+            window.__transport_accommodationsByGroup = {};
+        }
+
+        const toLoad = new Set();
+
+        (teamsArrivalBufferRef.current || []).forEach((t) => {
+            if (!t.isSuperstructure) return;
+            if (!t.teamName) return;
+            const lastCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(t.teamName).trim());
+            if (!lastCharMatch) return;
+            const derivedGroupName = `skupina ${lastCharMatch[1].toUpperCase()}`;
+            const key = `${cleanCategory(t.category)}|${derivedGroupName}`;
+            toLoad.add(key);
+        });
+
+        for (const key of toLoad) {
+            if (window.__transport_accommodationsByGroup[key]) continue;
+            const [cat, grp] = key.split('|');
+            try {
+                const result = await window.listAccommodationsByCategoryAndGroup(cat, grp);
+                window.__transport_accommodationsByGroup[key] = Array.isArray(result) ? result : [];
+            } catch (err) {
+                window.__transport_accommodationsByGroup[key] = [];
+            }
+        }
     };
 
     const getTeamEventsForCustomTransfer = (category, teamName) => {
-        // skopírované z pôvodného súboru
+        if (!category || !teamName) return [];
+        const cat = cleanCategory(category);
+        const name = String(teamName || '').trim();
+        const events = [];
+        (matchesBufferRef.current || []).forEach((m) => {
+            if (cleanCategory(m.category) !== cat) return;
+            if (m.home !== name && m.away !== name) return;
+            const startTs = m.scheduledTs ?? null;
+            const endTs = m.scheduledEndTs ?? startTs;
+            const timeRange = m.scheduledTime
+                ? (m.scheduledEndTime ? `${m.scheduledTime} – ${m.scheduledEndTime}` : m.scheduledTime)
+                : 'nenaplánované';
+            const text = `${m.home} vs ${m.away}${m.special}${m.hallName ? ` | ${m.hallName}` : ''}`;
+            events.push({
+                ts: m.scheduledTs ?? Number.POSITIVE_INFINITY,
+                startTs,
+                endTs,
+                when: timeRange,
+                type: 'match',
+                text,
+                location: m.hallName || null,
+            });
+        });
+    
+        (cateringBufferRef.current || []).forEach((c) => {
+            if (cleanCategory(c.category) !== cat) return;
+            if (c.teamName !== name) return;
+    
+            const mealLabel = c.mealType === 'lunch' ? 'Obed' : c.mealType === 'dinner' ? 'Večera' : c.mealType;
+            const formattedDay = c.dayKey ? (formatDateDDMMYYYY(c.dayKey) || c.dayKey) : '?';
+            const timeRange = c.slotFrom
+                ? (c.slotTo ? `${c.slotFrom} – ${c.slotTo}` : c.slotFrom)
+                : '--:--';
+    
+            const startTs = c.ts ?? null;
+            const endTs = c.slotToTs ?? startTs;
+    
+            events.push({
+                ts: c.ts ?? Number.POSITIVE_INFINITY,
+                startTs,
+                endTs,
+                when: ` ${formattedDay} ${timeRange}`.trim(),
+                type: 'catering',
+                text: `${mealLabel} (${timeRange}) → ${c.placeName}`,
+                location: c.placeName || null,
+            });
+        });
+    
+        const teamInfo = (teamsArrivalBufferRef.current || []).find(
+            (t) => cleanCategory(t.category) === cat && t.teamName === name
+        );
+    
+        if (teamInfo) {
+            if (teamInfo.accommodationName) {
+                events.push({
+                    ts: -Infinity,
+                    startTs: null,
+                    endTs: null,
+                    when: '—',
+                    type: 'accommodation',
+                    text: `Ubytovanie: ${teamInfo.accommodationName} (typ: ${teamInfo.accommodationType || 'neurčený'})`,
+                    location: teamInfo.accommodationName,
+                });
+            }
+        }
+        (savedTransfersRef.current || []).forEach((t) => {
+            if (cleanCategory(t.category || '') !== cat) return;
+            if (String(t.teamName || '').trim() !== name) return;
+            if (t._parentKey && t._parentKey !== t.key) return;
+            const stopsIds = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
+            const routeIdsRaw = [t.fromId, ...stopsIds, t.toId].filter(Boolean);
+            const routeIds = [];
+            routeIdsRaw.forEach((id) => {
+                if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
+            });
+            if (routeIds.length < 2) return;
+            const parentSegments = Array.isArray(t.segments) ? t.segments : [];
+            const parentWhenRange = parseTransferWhenToRange(t.when);
+            const parentRoutePlaces = routeIds.map((id) => resolvePlaceNameById(id));
+            for (let i = 0; i < routeIds.length - 1; i++) {
+                const fromId = routeIds[i];
+                const toId = routeIds[i + 1];
+                if (fromId === toId) continue;
+                const segIdx = findSegmentIndex(parentSegments, fromId, toId);
+                const seg = segIdx !== -1 ? parentSegments[segIdx] : null;
+                const isWalking = !!(seg && seg.isWalking === true);
+                const hasRealTimes = !!(seg && seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs);
+                const busId = seg && seg.busId ? String(seg.busId) : null;
+                const busName = busId
+                    ? (buses.find((b) => b.id === busId)?.name || `Bus ${busId}`)
+                    : null;
+                let startTs = null;
+                let endTs = null;
+                let timeLabel = '';
+                if (isWalking) {
+                    const parentRange = (() => {
+                        const parsedFromWhen = parseWhenRangeToTs(t.when);
+                        if (parsedFromWhen && parsedFromWhen.startTs != null && parsedFromWhen.endTs != null) {
+                            if (parsedFromWhen.endTs > parsedFromWhen.startTs) {
+                                return { startTs: parsedFromWhen.startTs, endTs: parsedFromWhen.endTs };
+                            }
+                        }
+                        let earliestStart = null;
+                        let latestEnd = null;
+                        parentSegments.forEach((s) => {
+                            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
+                                earliestStart = s.startTs;
+                            }
+                            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
+                                latestEnd = s.endTs;
+                            } else if (s.isWalking === true && s.startTs != null) {
+                                const candidateEnd = s.startTs + 60 * 1000;
+                                if (latestEnd == null || candidateEnd > latestEnd) {
+                                    latestEnd = candidateEnd;
+                                }
+                            }
+                        });
+                        if (earliestStart != null && latestEnd != null) {
+                            return { startTs: earliestStart, endTs: latestEnd };
+                        }
+                        if (parsedFromWhen && parsedFromWhen.startTs != null) {
+                            return { startTs: parsedFromWhen.startTs, endTs: parsedFromWhen.endTs };
+                        }
+                        return null;
+                    })();
+    
+                    let prevSegmentEndTs = null;
+                    for (let k = i - 1; k >= 0; k--) {
+                        const s2 = parentSegments[k];
+                        if (!s2) continue;
+                        if (s2.endTs != null) { prevSegmentEndTs = s2.endTs; break; }
+                        if (s2.startTs != null) { prevSegmentEndTs = s2.startTs; break; }
+                    }
+    
+                    let nextSegmentStartTs = null;
+                    for (let k = i + 1; k < parentSegments.length; k++) {
+                        const s2 = parentSegments[k];
+                        if (!s2) continue;
+                        if (s2.startTs != null) { nextSegmentStartTs = s2.startTs; break; }
+                        if (s2.endTs != null) { nextSegmentStartTs = s2.endTs; break; }
+                    }
+    
+                    const parentStartTs = parentRange && parentRange.startTs != null ? parentRange.startTs : null;
+                    const parentEndTs = parentRange && parentRange.endTs != null ? parentRange.endTs : null;
+    
+                    let displayStartTs = null;
+                    let displayEndTs = null;
+    
+                    if (prevSegmentEndTs != null) {
+                        displayStartTs = prevSegmentEndTs;
+                    } else if (parentStartTs != null) {
+                        displayStartTs = parentStartTs;
+                    }
+    
+                    if (nextSegmentStartTs != null) {
+                        displayEndTs = nextSegmentStartTs;
+                    } else if (parentEndTs != null && parentEndTs > (displayStartTs || 0)) {
+                        displayEndTs = parentEndTs;
+                    } else if (displayStartTs != null) {
+                        displayEndTs = displayStartTs + 60 * 1000;
+                    }
+    
+                    if (
+                        parentSegments.length === 1 &&
+                        parentStartTs != null &&
+                        parentEndTs != null
+                    ) {
+                        displayStartTs = parentStartTs;
+                        displayEndTs = parentEndTs;
+                    }
+    
+                    if (
+                        displayStartTs != null &&
+                        (displayEndTs == null || displayEndTs <= displayStartTs) &&
+                        parentEndTs != null &&
+                        parentEndTs > displayStartTs
+                    ) {
+                        displayEndTs = parentEndTs;
+                    }
+    
+                    if (
+                        displayStartTs != null &&
+                        (displayEndTs == null || displayEndTs <= displayStartTs)
+                    ) {
+                        displayEndTs = displayStartTs + 60 * 1000;
+                    }
+    
+                    startTs = displayStartTs;
+                    endTs = displayEndTs;
+    
+                    const fmtTime = (ts) => {
+                        if (ts == null) return null;
+                        const f = formatTsLocal(ts);
+                        return f ? /(\d{2}:\d{2})$/.exec(f)?.[1] || null : null;
+                    };
+                    const startTime = fmtTime(displayStartTs);
+                    const endTime = fmtTime(displayEndTs);
+                    if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
+                    else if (startTime) timeLabel = startTime;
+                    else if (endTime) timeLabel = endTime;
+                    else timeLabel = 'PEŠI';
+                } else if (hasRealTimes) {
+                    startTs = seg.startTs;
+                    endTs = seg.endTs;
+                    const startTime = /(\d{2}:\d{2})$/.exec(formatTsLocal(startTs) || '')?.[1] || '';
+                    const endTime = /(\d{2}:\d{2})$/.exec(formatTsLocal(endTs) || '')?.[1] || '';
+                    timeLabel = `${startTime} – ${endTime}`;
+                } else {
+                    try {
+                        const provisional = computeProvisionalSegmentRange({
+                            ...t,
+                            fromId: fromId,
+                            toId: toId,
+                            _parentKey: t.key,
+                        });
+                        if (provisional && provisional.startTs != null) {
+                            const startTime = /(\d{2}:\d{2})$/.exec(formatTsLocal(provisional.startTs) || '')?.[1] || '';
+                            const endTime = provisional.endTs != null
+                                ? /(\d{2}:\d{2})$/.exec(formatTsLocal(provisional.endTs) || '')?.[1] || ''
+                                : '';
+                            timeLabel = endTime ? `${startTime} – ${endTime}` : startTime;
+                        }
+                    } catch (e) { 
+                    }
+                    if (!timeLabel) timeLabel = 'nepriradený';
+                }
+                let dayKey = t.dayKey || null;
+                if (!dayKey) {
+                    if (startTs != null) {
+                        const d = new Date(startTs);
+                        dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    } else if (parentWhenRange && parentWhenRange.startTs != null) {
+                        const d = new Date(parentWhenRange.startTs);
+                        dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    } else if (t.when) {
+                        const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(t.when));
+                        if (m) {
+                            const d = String(m[1]).padStart(2, '0');
+                            const mo = String(m[2]).padStart(2, '0');
+                            const y = m[3];
+                            dayKey = `${y}-${mo}-${d}`;
+                        }
+                    }
+                }
+                const sortTs = startTs != null
+                    ? startTs
+                    : (parentWhenRange && parentWhenRange.startTs != null ? parentWhenRange.startTs : Number.POSITIVE_INFINITY);
+                const fromName = resolvePlaceNameById(fromId);
+                const toName = resolvePlaceNameById(toId);
+                const routeLabel = `${fromName} → ${toName}`;
+                events.push({
+                    ts: sortTs,
+                    startTs: startTs,
+                    endTs: endTs,
+                    when: timeLabel,
+                    type: 'transfer',
+                    text: `Presun: ${routeLabel}${busName ? ` (${busName})` : ''}`,
+                    location: null,
+                    _isAssigned: hasRealTimes,
+                    _isWalking: isWalking,
+                    _busName: busName,
+                    _routeLabel: routeLabel,
+                    _fromId: fromId,
+                    _toId: toId,
+                    _fromLocation: fromName,
+                    _toLocation: toName,
+                    _dayKey: dayKey,
+                    _isTransferRow: true,
+                    _routePlaces: parentRoutePlaces,
+                });
+            }
+        });
+        events.sort((a, b) => {
+            if (a.ts !== b.ts) return a.ts - b.ts;
+            return String(a.text).localeCompare(String(b.text), 'sk');
+        });
+    
+        return events;
     };
 
     const logTransferDbDocument = async (transfer) => {
