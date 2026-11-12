@@ -1604,7 +1604,47 @@ class TransportGenerator {
                                     if (uniqueTeamsForLog.length === 0) {
                                         console.log('    (žiadne iné tímy v skupine)');
                                     } else {
-                                        uniqueTeamsForLog.forEach((tn) => console.log(`    • ${tn}`));
+                                        uniqueTeamsForLog.forEach((tn) => {
+                                            console.log(`    • ${tn}`);
+                                    
+                                            // Získame udalosti pre tento tím z grouped[category][tn]
+                                            const teamEvents = (grouped[cleanCategory(category)] && grouped[cleanCategory(category)][tn]) || [];
+                                    
+                                            // Zoskupíme udalosti podľa dňa (dayKey)
+                                            const eventsByDay = new Map();
+                                            teamEvents.forEach((ev) => {
+                                                const dayKey = extractDayKeyFromWhen(ev.when);
+                                                if (!dayKey) return;
+                                                if (!eventsByDay.has(dayKey)) eventsByDay.set(dayKey, []);
+                                                eventsByDay.get(dayKey).push(ev);
+                                            });
+                                    
+                                            // Pre každý deň nájdeme prvú a poslednú udalosť
+                                            const sortedDays = [...eventsByDay.keys()].sort();
+                                            sortedDays.forEach((dayKey) => {
+                                                const dayEvents = eventsByDay.get(dayKey);
+                                                // Zoradíme udalosti podľa času (startTs alebo ts)
+                                                dayEvents.sort((a, b) => {
+                                                    const ta = a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY);
+                                                    const tb = b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY);
+                                                    if (ta !== tb) return ta - tb;
+                                                    return String(a.text).localeCompare(String(b.text), 'sk');
+                                                });
+                                    
+                                                const firstEvent = dayEvents[0];
+                                                const lastEvent = dayEvents[dayEvents.length - 1];
+                                    
+                                                const formatEventInfo = (ev) => {
+                                                    const timeStr = ev.when ? ev.when.split(' – ')[0] : '—';
+                                                    const place = ev.location || '(bez miesta)';
+                                                    return `${timeStr} | ${place}`;
+                                                };
+                                    
+                                                console.log(`        ${formatDateDDMMYYYY(dayKey) || dayKey}:`);
+                                                console.log(`          Prvá: ${formatEventInfo(firstEvent)}`);
+                                                console.log(`          Posledná: ${formatEventInfo(lastEvent)}`);
+                                            });
+                                        });
                                     }
                                 }
                             }
