@@ -2532,7 +2532,6 @@ class TransportGenerator {
                                 if (isPlacementMatchEvent) {
                                 } else if (isPavukMatchEvent && isPavukFollowUpMatchSamePlace) {
                                 } else if (isPavukMatchEvent) {
-                                } else if (anySuperstructureTeamHasEventToday) {
                                 } else if (isGlobalFirstDay) {
                                     const arrivalTypeNorm = String(teamArrivalType || '')
                                         .toLowerCase()
