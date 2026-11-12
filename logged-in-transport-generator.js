@@ -2637,20 +2637,18 @@ class TransportGenerator {
                                 } else if (isGlobalFirstDay) {
                                     // ═══════════════════════════════════════════════════════════
                                     // ← ZMENA: Prvý deň turnaja – pre USER TÍM:
-                                    //   • ak NEMÁ nastavenú dopravu → presun z miesta zrazu
-                                    //     na miesto prvej udalosti
                                     //   • ak MÁ verejnú dopravu → presun zo zastávky
-                                    //   • ak MÁ vlastnú dopravu → presun z miesta zrazu
-                                    //   • ak MÁ "bez dopravy" → presun z miesta zrazu
+                                    //   • inak (vlastná doprava, bez dopravy, alebo
+                                    //     nemá nastavenú dopravu) → presun z miesta zrazu
                                     // ═══════════════════════════════════════════════════════════
                                     const arrivalTypeNorm = String(teamArrivalType || '')
                                         .toLowerCase()
                                         .normalize('NFD')
                                         .replace(/[\u0300-\u036f]/g, '')
                                         .trim();
-                                    const hasNoTransportConfigured = !arrivalTypeNorm;
                                     const hasPublicTransport = arrivalTypeNorm.includes('verejn') || arrivalTypeNorm.includes('autobus') || arrivalTypeNorm.includes('vlak');
-                                    const hasOwnOrNoTransport = arrivalTypeNorm.includes('vlastn') || arrivalTypeNorm.includes('bez dopravy') || arrivalTypeNorm.includes('ziadna') || arrivalTypeNorm.includes('žiadna');
+                                    // ← ZMENA: všetko ostatné (vrátane vlastnej dopravy) → miesto zrazu
+                                    const useMeetingPoint = !hasPublicTransport;
                         
                                     let fromLocationName = null;
                                     let fromLabel = null;
@@ -2658,8 +2656,9 @@ class TransportGenerator {
                                     if (hasPublicTransport && externalArrivalStop) {
                                         fromLocationName = externalArrivalStop.name;
                                         fromLabel = `zastávka ${externalArrivalStop.name}`;
-                                    } else if ((hasOwnOrNoTransport || hasNoTransportConfigured) && meetingPointStop) {
-                                        // ← ZMENA: ak nemá nastavenú dopravu, použi miesto zrazu
+                                    } else if (useMeetingPoint && meetingPointStop) {
+                                        // ← ZMENA: vlastná doprava / bez dopravy / nemá nastavenú dopravu
+                                        //   → presun z miesta zrazu
                                         fromLocationName = meetingPointStop.name;
                                         fromLabel = `miesto zrazu ${meetingPointStop.name}`;
                                     }
