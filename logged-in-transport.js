@@ -2373,7 +2373,7 @@ const TransportApp = ({ userProfileData }) => {
         setSelectedToPlaceFilter('');
     }, [selectedDayKey, selectedCategoryFilter, showOnlyPartialTransfers]);
 
-useEffect(() => {
+    useEffect(() => {
         if (!selectedFromPlaceFilter && !selectedToPlaceFilter) return;
 
         const dayKeyFilter = selectedDayKey || null;
@@ -2388,66 +2388,103 @@ useEffect(() => {
             ? normalizePlaceName(resolvePlaceNameById(selectedToPlaceFilter) || '')
             : '';
 
-        const segmentMatchesPlaceFilter = (seg) => {
-            if (!seg) return false;
+        const segmentMatchesPlaceFilter = (fromId, toId) => {
             if (fromFilterNorm) {
-                const segFromNorm = normalizePlaceName(resolvePlaceNameById(seg.fromId) || '');
+                const segFromNorm = normalizePlaceName(resolvePlaceNameById(fromId) || '');
                 if (!segFromNorm || segFromNorm !== fromFilterNorm) return false;
             }
             if (toFilterNorm) {
-                const segToNorm = normalizePlaceName(resolvePlaceNameById(seg.toId) || '');
+                const segToNorm = normalizePlaceName(resolvePlaceNameById(toId) || '');
                 if (!segToNorm || segToNorm !== toFilterNorm) return false;
             }
             return true;
         };
 
-        const parentMatchesPlaceFilter = (t) => {
-            if (!t) return false;
-            if (fromFilterNorm) {
-                const fromNorm = normalizePlaceName(resolvePlaceNameById(t.fromId) || '');
-                if (!fromNorm || fromNorm !== fromFilterNorm) return false;
+        // Zostav zoznam "expanded" segmentov presne tak, ako ich vidí renderSavedTransfers.
+        // Pre každý parent:
+        //  - ak nemá medzizastávky a má len 1 segment -> použijeme parent.fromId/toId
+        //  - inak rozdelíme na segmenty podľa intermediateStopIds (alebo podľa parent.segments)
+        const expandedSegments = [];
+
+        (savedTransfers || []).forEach((parent) => {
+            if (parent._parentKey && parent._parentKey !== parent.key) return; // nie je parent
+            if (parent.isWalking === true) return;
+            if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return;
+            if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return;
+
+            const stopsIds = Array.isArray(parent.intermediateStopIds)
+                ? parent.intermediateStopIds.filter(Boolean)
+                : [];
+            const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
+
+            const hasMultipleSegments = parentSegments.length > 1;
+            const shouldSplitIntoSegments = stopsIds.length > 0 || hasMultipleSegments;
+
+            if (!shouldSplitIntoSegments) {
+                // Priamy presun – jeden segment z parent.fromId do parent.toId
+                const fromId = parent.fromId || null;
+                const toId = parent.toId || null;
+                if (!fromId || !toId) return;
+                if (!segmentMatchesPlaceFilter(fromId, toId)) return;
+                if (parent.isWalking === true) return;
+
+                expandedSegments.push({
+                    parentKey: parent.key,
+                    fromId,
+                    toId,
+                    isWalking: false,
+                    isAssigned: false,
+                    parent,
+                });
+                return;
             }
-            if (toFilterNorm) {
-                const toNorm = normalizePlaceName(resolvePlaceNameById(t.toId) || '');
-                if (!toNorm || toNorm !== toFilterNorm) return false;
-            }
-            return true;
-        };
 
-        const parentsForFilter = (savedTransfers || []).filter((t) => {
-            if (t._parentKey && t._parentKey !== t.key) return false;
-            if (t.isWalking === true) return false;
-            if (dayKeyFilter && t.dayKey !== dayKeyFilter) return false;
-            if (categoryFilter && cleanCategory(t.category || '') !== categoryFilter) return false;
-            return true;
-        });
-
-        // Skontroluj, či pre daný filter existuje aspoň jeden NEpriradený segment
-        // (buď priamo parent, alebo niektorý z jeho segmentov).
-        const hasAnyUnassignedForFilter = parentsForFilter.some((t) => {
-            const segments = Array.isArray(t.segments) ? t.segments : [];
-
-            if (segments.length === 0) {
-                if (!parentMatchesPlaceFilter(t)) return false;
-                if (t.isWalking === true) return false;
-                return true;
-            }
-
-            return segments.some((seg) => {
-                if (!seg) return false;
-                if (!segmentMatchesPlaceFilter(seg)) return false;
-                if (seg.isWalking === true) return false;
-                if (seg.busId && seg.boardingRowId && seg.alightingRowId) return false;
-                if (seg.busAssigned === true && seg.boardingRowId && seg.alightingRowId) return false;
-                return true;
+            // Rozdelenie na segmenty
+            const routeIdsRaw = [parent.fromId, ...stopsIds, parent.toId].filter(Boolean);
+            const routeIds = [];
+            routeIdsRaw.forEach((id) => {
+                if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
             });
+            if (routeIds.length < 2) return;
+
+            for (let i = 0; i < routeIds.length - 1; i++) {
+                const fromId = routeIds[i];
+                const toId = routeIds[i + 1];
+                if (fromId === toId) continue;
+                if (!segmentMatchesPlaceFilter(fromId, toId)) continue;
+
+                const seg = parentSegments.find(
+                    (s) => s && s.fromId === fromId && s.toId === toId
+                ) || null;
+
+                const isWalking = !!(seg && seg.isWalking === true);
+                if (isWalking) continue;
+
+                const hasBusAssignment =
+                    !!(seg && (
+                        (seg.busId && seg.boardingRowId && seg.alightingRowId) ||
+                        (seg.busAssigned === true && seg.boardingRowId && seg.alightingRowId)
+                    ));
+
+                if (hasBusAssignment) continue;
+
+                expandedSegments.push({
+                    parentKey: parent.key,
+                    fromId,
+                    toId,
+                    isWalking: false,
+                    isAssigned: false,
+                    parent,
+                });
+            }
         });
 
-        if (!hasAnyUnassignedForFilter) {
+        // Ak pre daný filter neexistuje žiadny nepriradený segment → reset filtra
+        if (expandedSegments.length === 0) {
             setSelectedFromPlaceFilter('');
             setSelectedToPlaceFilter('');
         }
-    }, [savedTransfers, selectedDayKey, selectedCategoryFilter, selectedFromPlaceFilter, selectedToPlaceFilter, allPlaces]);
+    }, [savedTransfers, selectedDayKey, selectedCategoryFilter, selectedFromPlaceFilter, selectedToPlaceFilter, selectedBusId, sortTransfersBy, allPlaces]);
 
     useEffect(() => {
         if (!showOnlyPartialTransfers) return;
