@@ -1660,6 +1660,7 @@ class TransportGenerator {
                                     if (cleanCategory(t.category) !== cleanCategory(category)) return false;
                                     if (t.isRegistered !== true) return false;
                                     if (t.isSuperstructure === true) return false;
+                                
                                     const hasMatch = (this.ctx.matchesBufferRef?.current || []).some((m) => {
                                         if (cleanCategory(m.category) !== cleanCategory(category)) return false;
                                         if (m.home !== t.teamName && m.away !== t.teamName) return false;
@@ -1675,18 +1676,20 @@ class TransportGenerator {
                                         return dayKey === groupPlayDay;
                                     });
                                     if (hasMatch) return true;
+                                
                                     return (this.ctx.cateringBufferRef?.current || []).some((c) => {
                                         if (cleanCategory(c.category) !== cleanCategory(category)) return false;
                                         if (c.teamName !== t.teamName) return false;
                                         return c.dayKey === groupPlayDay;
                                     });
                                 });
-                                
+
                                 if (!anyUserTeamHasEventOnDay) {
-                                    // V tento deň nehrá žiadny user tím – presuny pre superstructure tím sa negenerujú.
-                                    // Presuny z ubytovní na miesto prvej udalosti superstructure tímu generuje user tím.
+                                    // V tento deň nehrá žiadny user tím – pre superstructure tím negenerujeme
+                                    // presuny z ubytovne ani z miesta zrazu na miesto prvej udalosti.
                                     return;
                                 }
+                                
                                 const teamHasEventOnDay = (() => {
                                     const fromEvents = events.some((ev) => extractDayKeyFromWhen(ev.when) === groupPlayDay);
                                     if (fromEvents) return true;
