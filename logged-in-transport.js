@@ -1225,6 +1225,7 @@ const TransportApp = ({ userProfileData }) => {
     const [deleteTransferModal, setDeleteTransferModal] = useState(null);
     const [deleteTransferSaving, setDeleteTransferSaving] = useState(false);
     const [regenTransfersModal, setRegenTransfersModal] = useState(null);
+    const [isGeneratingTransfers, setIsGeneratingTransfers] = useState(false);
     const [walkingAssignments, setWalkingAssignments] = useState({});
     const [walkingSettingsLoaded, setWalkingSettingsLoaded] = useState(false);
     const [walkingSaving, setWalkingSaving] = useState(false);
@@ -10704,6 +10705,7 @@ const TransportApp = ({ userProfileData }) => {
             {
                 className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100000] p-4',
                 onClick: () => {
+                    if (isGeneratingTransfers) return;
                     setShowCategoryModal(false);
                     setSelectedDayForTimeline('');
                 }
@@ -10785,6 +10787,7 @@ const TransportApp = ({ userProfileData }) => {
                         {
                             type: 'button',
                             onClick: () => {
+                                if (isGeneratingTransfers) return;
                                 setShowCategoryModal(false);
                                 setSelectedDayForTimeline('');
                             },
@@ -10796,27 +10799,34 @@ const TransportApp = ({ userProfileData }) => {
                         'button',
                         {
                             type: 'button',
+                            disabled: isGeneratingTransfers,
                             onClick: async () => {
                                 const cat = selectedCategoryForTimeline;
                                 if (!cat) {
                                     window.showGlobalNotification('Najprv vyberte kategóriu.', 'error');
                                     return;
                                 }
-
+                    
+                                // Zabráň dvojkliku
+                                if (isGeneratingTransfers) return;
+                    
                                 const existingForCat = savedTransfers.filter(
                                     (t) => cleanCategory(t.category || '') === cleanCategory(cat)
                                 );
-
+                    
                                 if (existingForCat.length > 0) {
                                     setRegenTransfersModal({
                                         category: cat,
                                         existingCount: existingForCat.length,
                                     });
+                                    if (isGeneratingTransfers) return;
                                     setShowCategoryModal(false);
                                     return;
                                 }
-
-                                // Zavoláme generátor z nového súboru
+                    
+                                // Nastav indikáciu generovania
+                                setIsGeneratingTransfers(true);
+                    
                                 try {
                                     await TransportGenerator.generateTransfers({
                                         category: cat,
@@ -10826,14 +10836,22 @@ const TransportApp = ({ userProfileData }) => {
                                 } catch (err) {
                                     console.error('[TRANSPORT] Chyba pri generovaní presunov:', err);
                                     window.showGlobalNotification('Nepodarilo sa vygenerovať presuny.', 'error');
+                                } finally {
+                                    setIsGeneratingTransfers(false);
                                 }
-                            
+
+                                if (isGeneratingTransfers) return;
                                 setShowCategoryModal(false);
                                 setSelectedDayForTimeline('');
                             },
-                            className: 'px-4 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-colors'
+                            className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                                isGeneratingTransfers
+                                    ? 'bg-green-400 text-white cursor-not-allowed opacity-80'
+                                    : 'bg-green-600 text-white hover:bg-green-700'
+                            }`
                         },
-                        'Vygenerovať'
+                        isGeneratingTransfers && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                        isGeneratingTransfers ? 'Generujem...' : 'Vygenerovať'
                     )
                 )
             )
@@ -13508,10 +13526,11 @@ const TransportApp = ({ userProfileData }) => {
                         'button',
                         {
                             type: 'button',
+                            disabled: isGeneratingTransfers,
                             onClick: async () => {
                                 const cat = regenTransfersModal.category;
                                 setRegenTransfersModal(null);
-
+                                setIsGeneratingTransfers(true);
                                 try {
                                     await TransportGenerator.generateTransfers({
                                         category: cat,
@@ -13520,11 +13539,18 @@ const TransportApp = ({ userProfileData }) => {
                                     });
                                 } catch (err) {
                                     window.showGlobalNotification('Nepodarilo sa znova vygenerovať presuny.', 'error');
+                                } finally {
+                                    setIsGeneratingTransfers(false);
                                 }
                             },
-                            className: 'px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 transition-colors'
+                            className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                                isGeneratingTransfers
+                                    ? 'bg-amber-400 text-white cursor-not-allowed opacity-80'
+                                    : 'bg-amber-600 text-white hover:bg-amber-700'
+                            }`
                         },
-                        'Vygenerovať znova'
+                        isGeneratingTransfers && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                        isGeneratingTransfers ? 'Generujem...' : 'Vygenerovať znova'
                     )
                 )
             )
