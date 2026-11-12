@@ -2373,102 +2373,81 @@ const TransportApp = ({ userProfileData }) => {
         setSelectedToPlaceFilter('');
     }, [selectedDayKey, selectedCategoryFilter, showOnlyPartialTransfers]);
 
-    useEffect(() => {
+useEffect(() => {
         if (!selectedFromPlaceFilter && !selectedToPlaceFilter) return;
-    
+
         const dayKeyFilter = selectedDayKey || null;
         const categoryFilter = selectedCategoryFilter
             ? cleanCategory(selectedCategoryFilter)
             : null;
-    
-        // Pomocná funkcia: existuje aspoň jeden parent (bez ohľadu na priradenie)
-        const hasAnyParentMatch = (savedTransfers || []).some((t) => {
-            if (dayKeyFilter && t.dayKey !== dayKeyFilter) return false;
-            if (categoryFilter && cleanCategory(t.category || '') !== categoryFilter) return false;
-    
-            const fromId = t.fromId ? String(t.fromId) : null;
-            const toId = t.toId ? String(t.toId) : null;
-    
-            let fromMatch = !selectedFromPlaceFilter
-                || (fromId && fromId === String(selectedFromPlaceFilter));
-            let toMatch = !selectedToPlaceFilter
-                || (toId && toId === String(selectedToPlaceFilter));
-    
-            if (fromMatch && toMatch) return true;
-    
-            const segments = Array.isArray(t.segments) ? t.segments : [];
-            const hasSegMatch = segments.some((seg) => {
-                if (!seg) return false;
-                const segFromId = seg.fromId ? String(seg.fromId) : null;
-                const segToId = seg.toId ? String(seg.toId) : null;
-    
-                const segFromMatch = !selectedFromPlaceFilter
-                    || (segFromId && segFromId === String(selectedFromPlaceFilter));
-                const segToMatch = !selectedToPlaceFilter
-                    || (segToId && segToId === String(selectedToPlaceFilter));
-    
-                return segFromMatch && segToMatch;
-            });
-    
-            return hasSegMatch;
-        });
-    
-        if (!hasAnyParentMatch) {
-            setSelectedFromPlaceFilter('');
-            setSelectedToPlaceFilter('');
-            return;
-        }
-    
-        // NOVÉ: Ak pre daný filter existuje parent, ale všetky zodpovedajúce
-        // segmenty sú už priradené/pešie, filter treba resetovať.
-        const hasAnyUnassignedForFilter = (savedTransfers || []).some((t) => {
-            if (dayKeyFilter && t.dayKey !== dayKeyFilter) return false;
-            if (categoryFilter && cleanCategory(t.category || '') !== categoryFilter) return false;
-    
-            // Musí ísť o parent (nie segment)
+
+        const fromFilterNorm = selectedFromPlaceFilter
+            ? normalizePlaceName(resolvePlaceNameById(selectedFromPlaceFilter) || '')
+            : '';
+        const toFilterNorm = selectedToPlaceFilter
+            ? normalizePlaceName(resolvePlaceNameById(selectedToPlaceFilter) || '')
+            : '';
+
+        const segmentMatchesPlaceFilter = (seg) => {
+            if (!seg) return false;
+            if (fromFilterNorm) {
+                const segFromNorm = normalizePlaceName(resolvePlaceNameById(seg.fromId) || '');
+                if (!segFromNorm || segFromNorm !== fromFilterNorm) return false;
+            }
+            if (toFilterNorm) {
+                const segToNorm = normalizePlaceName(resolvePlaceNameById(seg.toId) || '');
+                if (!segToNorm || segToNorm !== toFilterNorm) return false;
+            }
+            return true;
+        };
+
+        const parentMatchesPlaceFilter = (t) => {
+            if (!t) return false;
+            if (fromFilterNorm) {
+                const fromNorm = normalizePlaceName(resolvePlaceNameById(t.fromId) || '');
+                if (!fromNorm || fromNorm !== fromFilterNorm) return false;
+            }
+            if (toFilterNorm) {
+                const toNorm = normalizePlaceName(resolvePlaceNameById(t.toId) || '');
+                if (!toNorm || toNorm !== toFilterNorm) return false;
+            }
+            return true;
+        };
+
+        const parentsForFilter = (savedTransfers || []).filter((t) => {
             if (t._parentKey && t._parentKey !== t.key) return false;
-    
+            if (t.isWalking === true) return false;
+            if (dayKeyFilter && t.dayKey !== dayKeyFilter) return false;
+            if (categoryFilter && cleanCategory(t.category || '') !== categoryFilter) return false;
+            return true;
+        });
+
+        // Skontroluj, či pre daný filter existuje aspoň jeden NEpriradený segment
+        // (buď priamo parent, alebo niektorý z jeho segmentov).
+        const hasAnyUnassignedForFilter = parentsForFilter.some((t) => {
             const segments = Array.isArray(t.segments) ? t.segments : [];
-    
+
             if (segments.length === 0) {
-                const fromId = t.fromId ? String(t.fromId) : null;
-                const toId = t.toId ? String(t.toId) : null;
-                const fromMatch = !selectedFromPlaceFilter
-                    || (fromId && fromId === String(selectedFromPlaceFilter));
-                const toMatch = !selectedToPlaceFilter
-                    || (toId && toId === String(selectedToPlaceFilter));
-                if (!(fromMatch && toMatch)) return false;
+                if (!parentMatchesPlaceFilter(t)) return false;
                 if (t.isWalking === true) return false;
                 return true;
             }
-    
+
             return segments.some((seg) => {
                 if (!seg) return false;
-    
-                const segFromId = seg.fromId ? String(seg.fromId) : null;
-                const segToId = seg.toId ? String(seg.toId) : null;
-    
-                const segFromMatch = !selectedFromPlaceFilter
-                    || (segFromId && segFromId === String(selectedFromPlaceFilter));
-                const segToMatch = !selectedToPlaceFilter
-                    || (segToId && segToId === String(selectedToPlaceFilter));
-    
-                if (!(segFromMatch && segToMatch)) return false;
-    
-                // Peší alebo priradený k busu → nie je nepriradený
+                if (!segmentMatchesPlaceFilter(seg)) return false;
                 if (seg.isWalking === true) return false;
                 if (seg.busId && seg.boardingRowId && seg.alightingRowId) return false;
                 if (seg.busAssigned === true && seg.boardingRowId && seg.alightingRowId) return false;
-    
                 return true;
             });
         });
-    
+
         if (!hasAnyUnassignedForFilter) {
             setSelectedFromPlaceFilter('');
             setSelectedToPlaceFilter('');
         }
-    }, [savedTransfers, selectedDayKey, selectedCategoryFilter, selectedFromPlaceFilter, selectedToPlaceFilter]);
+    }, [savedTransfers, selectedDayKey, selectedCategoryFilter, selectedFromPlaceFilter, selectedToPlaceFilter, allPlaces]);
 
     useEffect(() => {
         if (!showOnlyPartialTransfers) return;
