@@ -3308,92 +3308,37 @@ class TransportGenerator {
                                 })();
                         
                                 // ═══════════════════════════════════════════════════════════════
-                                // ← ZMENA: celá logika ranných presunov je teraz VNÚTRI
-                                //   vetvy `else if (anyUsersTeamHasEventToday)`.
-                                //   Ak žiadny user tím v kategórii nemá v ten deň udalosť,
-                                //   ranné presuny z ubytovní / miesta zrazu sa NEGENERUJÚ.
+                                // Ranné presuny pre SUPERSTRUCTURE tím sa NEGENERUJÚ vôbec.
+                                // Výnimka: prvý deň turnaja z miesta zrazu (ak je definované),
+                                // lebo tam ide o presun z miesta zrazu, nie z ubytovne.
                                 // ═══════════════════════════════════════════════════════════════
                                 if (isPlacementMatchEvent) {
                                     // placement match – bez ranného presunu
                                 } else if (anyTeamInSameGroupAlreadyAtSamePlaceToday) {
                                     // už niekto zo skupiny je na tom istom mieste – netreba presun
-                                } else if (!anyUsersTeamHasEventToday) {
-                                    // ← NOVÉ: žiadny user tím v kategórii nemá dnes udalosť
-                                    //   → pre SS tím sa NEgeneruje ranný presun z ubytovania
-                                    //   ani z miesta zrazu na miesto prvej udalosti.
-                                } else if (isPavukMatchEventForSS && isPavukFollowUpMatchSamePlaceForSS) {
-                                    // pavúk – nadväzujúci zápas na tom istom mieste
-                                } else if (isPavukMatchEventForSS && categoryAlreadyPlayedAtSamePlaceTodayForSS) {
-                                    // pavúk – kategória už dnes hrala na tom istom mieste
-                                } else if (!isFirstPavukMatchOfDay) {
-                                    // pavúk – nie je prvý zápas dňa
-                                } else if (isGlobalFirstDay) {
-                                    if (isPavukTeamNameForMorning) {
-                                        // pavúkový tím – bez ranného presunu
-                                    } else if (meetingPointStop && !this.isSamePlaceForTransfer(meetingPointStop.name, current.location)) {
-                                        const arrivalTs = current.startTs;
-                                        const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
-                                        const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
-                                        const departureTs = globalArrivalTs != null && isFinite(globalArrivalTs)
-                                            ? globalArrivalTs
-                                            : timestampOnDay(arrivalTs, 0, 0);
-                                        const departureStr = formatFullFromTs(departureTs) || '00:00';
-                                        if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
-                                            let whenStr;
-                                            if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
-                                            else if (arrivalStr) whenStr = arrivalStr;
-                                            else whenStr = current.when;
-                                            enriched.push({
-                                                ts: current.ts - 1,
-                                                when: whenStr,
-                                                type: 'transfer',
-                                                text: `Presun z miesto zrazu ${meetingPointStop.name} do ${current.location}`,
-                                                location: null,
-                                                isTransfer: true,
-                                            });
-                                        }
-                                    }
-                                } else {
-                                    // štandardný ranný presun z ubytovní skupiny / miesta zrazu
-                                    const groupChar = groupCharForSS;
-                                    if (groupChar) {
-                                        const groupAccommodations = (() => {
-                                            const cacheKey = `${cleanCategory(category)}|skupina ${groupChar}`;
-                                            return (window.__transport_accommodationsByGroup || {})[cacheKey] || [];
-                                        })();
-                                        const sources = new Set();
-                                        groupAccommodations.forEach((a) => {
-                                            if (a && a.trim()) sources.add(a.trim());
+                                } else if (isGlobalFirstDay && !isPavukTeamNameForMorning && meetingPointStop && !this.isSamePlaceForTransfer(meetingPointStop.name, current.location)) {
+                                    // Prvý deň turnaja – presun z miesta zrazu na miesto prvej udalosti.
+                                    // (Toto nie je ranný presun z ubytovne, preto ho nechávame.)
+                                    const arrivalTs = current.startTs;
+                                    const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
+                                    const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
+                                    const departureTs = globalArrivalTs != null && isFinite(globalArrivalTs)
+                                        ? globalArrivalTs
+                                        : timestampOnDay(arrivalTs, 0, 0);
+                                    const departureStr = formatFullFromTs(departureTs) || '00:00';
+                                    if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
+                                        let whenStr;
+                                        if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                        else if (arrivalStr) whenStr = arrivalStr;
+                                        else whenStr = current.when;
+                                        enriched.push({
+                                            ts: current.ts - 1,
+                                            when: whenStr,
+                                            type: 'transfer',
+                                            text: `Presun z miesto zrazu ${meetingPointStop.name} do ${current.location}`,
+                                            location: null,
+                                            isTransfer: true,
                                         });
-                                        if (meetingPointStop) {
-                                            sources.add(meetingPointStop.name);
-                                        }
-                                        const filteredSources = [...sources].filter(
-                                            (src) => !this.isSamePlaceForTransfer(src, current.location)
-                                        );
-                        
-                                        const arrivalTs = current.startTs;
-                                        const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
-                                        const departureTs = timestampOnDay(arrivalTs, 0, 0);
-                                        const departureStr = formatFullFromTs(departureTs) || '00:00';
-                                        if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
-                                            filteredSources.forEach((src) => {
-                                                const isMP = meetingPointStop && src === meetingPointStop.name;
-                                                const fromLabel = isMP ? `miesto zrazu ${src}` : `ubytovanie ${src}`;
-                                                let whenStr;
-                                                if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
-                                                else if (arrivalStr) whenStr = arrivalStr;
-                                                else whenStr = current.when;
-                                                enriched.push({
-                                                    ts: current.ts - 1,
-                                                    when: whenStr,
-                                                    type: 'transfer',
-                                                    text: `Presun z ${fromLabel} do ${current.location}`,
-                                                    location: null,
-                                                    isTransfer: true,
-                                                });
-                                            });
-                                        }
                                     }
                                 }
                             }
