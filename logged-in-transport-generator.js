@@ -2027,68 +2027,104 @@ class TransportGenerator {
                                     });
                                 });
                             
+                                // ─────────────────────────────────────────────────────────────
+                                // Detailný výpis udalostí
+                                // - pre USER TÍM: len udalosti TOHTO tímu
+                                // - pre SUPERSTRUCTURE TÍM: udalosti všetkých relevantných tímov
+                                // ─────────────────────────────────────────────────────────────
                                 const allRelevantChars = new Set(continuationGroupCharsSet);
                                 allRelevantChars.add(userTeamGroupChar);
-
-                                const allRelevantTeams = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
-                                    if (cleanCategory(t.category) !== cleanCategory(category)) return false;
-                                    if (!t.teamName) return false;
-                                    if (isSpiderTeamName(t.teamName)) return false;
-
-                                    const tn = String(t.teamName).trim();
-                                    const isUserTeam = t.isRegistered === true;
                                 
-                                    if (isUserTeam) {
-                                        // USER TÍM → kontroluj groupName
-                                        const groupChar = getGroupLastChar(t.groupName);
-                                        return !!(groupChar && allRelevantChars.has(groupChar));
-                                    } else {
-                                        // SUPERSTRUCTURE TÍM → kontroluj názov tímu (posledné písmeno)
-                                        const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
-                                        const nameChar = nameCharMatch ? nameCharMatch[1].toUpperCase() : null;
-                                        return !!(nameChar && allRelevantChars.has(nameChar));
-                                    }
-                                });
-                            
-                                // Vypíš udalosti pre každý deň a každý relevantný tím
-                                const eventsByDayForAllRelevant = new Map();
-                                allRelevantTeams.forEach((t) => {
-                                    const tn = String(t.teamName).trim();
-                                    const teamEvents = grouped[cleanCategory(category)]?.[tn] || [];
-                            
-                                    teamEvents.forEach((ev) => {
-                                        const dk = extractDayKeyFromWhen(ev.when);
-                                        if (!dk) return;
-                                        if (!eventsByDayForAllRelevant.has(dk)) eventsByDayForAllRelevant.set(dk, new Map());
-                                        const teamsMap = eventsByDayForAllRelevant.get(dk);
-                                        if (!teamsMap.has(tn)) teamsMap.set(tn, []);
-                                        teamsMap.get(tn).push(ev);
-                                    });
-                                });
-                            
                                 console.log(
                                     `  → Detailný výpis udalostí pre tímy s písmenami ${[...allRelevantChars].sort().join(', ')}:`
                                 );
-                                [...eventsByDayForAllRelevant.keys()].sort().forEach((dayKey) => {
-                                    const teamsMap = eventsByDayForAllRelevant.get(dayKey);
-                                    const dayLabel = formatDateDDMMYYYY(dayKey) || dayKey;
-                                    console.log(`  → Deň ${dayLabel}:`);
-                                    [...teamsMap.keys()].sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' })).forEach((tn) => {
-                                        const evs = teamsMap.get(tn);
+                                
+                                if (teamIsInUsers) {
+                                    // Pre user tím vypíš len udalosti TOHTO tímu
+                                    const thisTeamEvents = grouped[cleanCategory(category)]?.[teamName] || [];
+                                    const eventsByDayThisTeam = new Map();
+                                    thisTeamEvents.forEach((ev) => {
+                                        const dk = extractDayKeyFromWhen(ev.when);
+                                        if (!dk) return;
+                                        if (!eventsByDayThisTeam.has(dk)) eventsByDayThisTeam.set(dk, []);
+                                        eventsByDayThisTeam.get(dk).push(ev);
+                                    });
+                                
+                                    [...eventsByDayThisTeam.keys()].sort().forEach((dayKey) => {
+                                        const evs = eventsByDayThisTeam.get(dayKey);
                                         evs.sort((a, b) => {
                                             const ta = a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY);
                                             const tb = b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY);
                                             if (ta !== tb) return ta - tb;
                                             return String(a.text).localeCompare(String(b.text), 'sk');
                                         });
-                                        console.log(`      • ${tn}:`);
+                                        const dayLabel = formatDateDDMMYYYY(dayKey) || dayKey;
+                                        console.log(`  → Deň ${dayLabel}:`);
+                                        console.log(`      • ${teamName}:`);
                                         evs.forEach((ev) => {
                                             const place = ev.location || '(bez miesta)';
                                             const timeStr = ev.when || '—';
                                             console.log(`          ${timeStr} | ${place} | ${ev.text || ''}`);
                                         });
                                     });
-                                });
+                                } else {
+                                    // Pre superstructure tím vypíš udalosti všetkých relevantných tímov
+                                    const allRelevantTeams = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
+                                        if (cleanCategory(t.category) !== cleanCategory(category)) return false;
+                                        if (!t.teamName) return false;
+                                        if (isSpiderTeamName(t.teamName)) return false;
+                                
+                                        const tn = String(t.teamName).trim();
+                                        const isUserTeam = t.isRegistered === true;
+                                
+                                        if (isUserTeam) {
+                                            // USER TÍM → kontroluj groupName
+                                            const groupChar = getGroupLastChar(t.groupName);
+                                            return !!(groupChar && allRelevantChars.has(groupChar));
+                                        } else {
+                                            // SUPERSTRUCTURE TÍM → kontroluj názov tímu (posledné písmeno)
+                                            const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                                            const nameChar = nameCharMatch ? nameCharMatch[1].toUpperCase() : null;
+                                            return !!(nameChar && allRelevantChars.has(nameChar));
+                                        }
+                                    });
+                                
+                                    const eventsByDayForAllRelevant = new Map();
+                                    allRelevantTeams.forEach((t) => {
+                                        const tn = String(t.teamName).trim();
+                                        const teamEvents = grouped[cleanCategory(category)]?.[tn] || [];
+                                
+                                        teamEvents.forEach((ev) => {
+                                            const dk = extractDayKeyFromWhen(ev.when);
+                                            if (!dk) return;
+                                            if (!eventsByDayForAllRelevant.has(dk)) eventsByDayForAllRelevant.set(dk, new Map());
+                                            const teamsMap = eventsByDayForAllRelevant.get(dk);
+                                            if (!teamsMap.has(tn)) teamsMap.set(tn, []);
+                                            teamsMap.get(tn).push(ev);
+                                        });
+                                    });
+                                
+                                    [...eventsByDayForAllRelevant.keys()].sort().forEach((dayKey) => {
+                                        const teamsMap = eventsByDayForAllRelevant.get(dayKey);
+                                        const dayLabel = formatDateDDMMYYYY(dayKey) || dayKey;
+                                        console.log(`  → Deň ${dayLabel}:`);
+                                        [...teamsMap.keys()].sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' })).forEach((tn) => {
+                                            const evs = teamsMap.get(tn);
+                                            evs.sort((a, b) => {
+                                                const ta = a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY);
+                                                const tb = b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY);
+                                                if (ta !== tb) return ta - tb;
+                                                return String(a.text).localeCompare(String(b.text), 'sk');
+                                            });
+                                            console.log(`      • ${tn}:`);
+                                            evs.forEach((ev) => {
+                                                const place = ev.location || '(bez miesta)';
+                                                const timeStr = ev.when || '—';
+                                                console.log(`          ${timeStr} | ${place} | ${ev.text || ''}`);
+                                            });
+                                        });
+                                    });
+                                }
                             
                                 // Pôvodný výpis (miesta prvých udalostí SS tímov) – zachovaný
                                 superstructureFirstPlacesByDay.forEach((placesMap, dayKey) => {
