@@ -1986,11 +1986,11 @@ class TransportGenerator {
                                 // Pre každý superstructure tím nájdi jeho prvú udalosť v každom dni
                                 // a zoskup podľa dňa -> množina miest prvých udalostí
                                 const superstructureFirstPlacesByDay = new Map();
-
+                            
                                 superstructureTeamsWithSameChar.forEach((ssTeam) => {
                                     const ssTeamName = String(ssTeam.teamName).trim();
                                     const ssTeamEvents = grouped[cleanCategory(category)]?.[ssTeamName] || [];
-
+                            
                                     const ssEventsByDay = new Map();
                                     ssTeamEvents.forEach((ev) => {
                                         const dk = extractDayKeyFromWhen(ev.when);
@@ -1999,7 +1999,7 @@ class TransportGenerator {
                                         if (!ssEventsByDay.has(dk)) ssEventsByDay.set(dk, []);
                                         ssEventsByDay.get(dk).push(ev);
                                     });
-
+                            
                                     ssEventsByDay.forEach((dayEvents, dayKey) => {
                                         dayEvents.sort((a, b) => {
                                             const ta = a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY);
@@ -2007,10 +2007,10 @@ class TransportGenerator {
                                             if (ta !== tb) return ta - tb;
                                             return String(a.text).localeCompare(String(b.text), 'sk');
                                         });
-
+                            
                                         const firstEvent = dayEvents[0];
                                         if (!firstEvent || !firstEvent.location) return;
-                                    
+                            
                                         if (!superstructureFirstPlacesByDay.has(dayKey)) {
                                             superstructureFirstPlacesByDay.set(dayKey, new Map());
                                         }
@@ -2026,25 +2026,91 @@ class TransportGenerator {
                                         }
                                     });
                                 });
-
+                            
+                                // ─────────────────────────────────────────────────────────────
+                                // NOVÉ: detailný výpis všetkých udalostí pre všetky tímy,
+                                // ktorých názov alebo groupName obsahuje niektoré z písmen
+                                // v continuationGroupCharsSet (vrátane userTeamGroupChar).
+                                // ─────────────────────────────────────────────────────────────
+                                const allRelevantChars = new Set(continuationGroupCharsSet);
+                                allRelevantChars.add(userTeamGroupChar);
+                            
+                                const allRelevantTeams = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
+                                    if (cleanCategory(t.category) !== cleanCategory(category)) return false;
+                                    if (!t.teamName) return false;
+                                    if (isSpiderTeamName(t.teamName)) return false;
+                            
+                                    const tn = String(t.teamName).trim();
+                                    // Over posledné písmeno názvu
+                                    const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                                    const nameChar = nameCharMatch ? nameCharMatch[1].toUpperCase() : null;
+                                    if (nameChar && allRelevantChars.has(nameChar)) return true;
+                            
+                                    // Over groupName
+                                    const groupChar = getGroupLastChar(t.groupName);
+                                    if (groupChar && allRelevantChars.has(groupChar)) return true;
+                            
+                                    return false;
+                                });
+                            
+                                // Vypíš udalosti pre každý deň a každý relevantný tím
+                                const eventsByDayForAllRelevant = new Map();
+                                allRelevantTeams.forEach((t) => {
+                                    const tn = String(t.teamName).trim();
+                                    const teamEvents = grouped[cleanCategory(category)]?.[tn] || [];
+                            
+                                    teamEvents.forEach((ev) => {
+                                        const dk = extractDayKeyFromWhen(ev.when);
+                                        if (!dk) return;
+                                        if (!eventsByDayForAllRelevant.has(dk)) eventsByDayForAllRelevant.set(dk, new Map());
+                                        const teamsMap = eventsByDayForAllRelevant.get(dk);
+                                        if (!teamsMap.has(tn)) teamsMap.set(tn, []);
+                                        teamsMap.get(tn).push(ev);
+                                    });
+                                });
+                            
+                                console.log(
+                                    `  → Detailný výpis udalostí pre tímy s písmenami ${[...allRelevantChars].sort().join(', ')}:`
+                                );
+                                [...eventsByDayForAllRelevant.keys()].sort().forEach((dayKey) => {
+                                    const teamsMap = eventsByDayForAllRelevant.get(dayKey);
+                                    const dayLabel = formatDateDDMMYYYY(dayKey) || dayKey;
+                                    console.log(`  → Deň ${dayLabel}:`);
+                                    [...teamsMap.keys()].sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' })).forEach((tn) => {
+                                        const evs = teamsMap.get(tn);
+                                        evs.sort((a, b) => {
+                                            const ta = a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY);
+                                            const tb = b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY);
+                                            if (ta !== tb) return ta - tb;
+                                            return String(a.text).localeCompare(String(b.text), 'sk');
+                                        });
+                                        console.log(`      • ${tn}:`);
+                                        evs.forEach((ev) => {
+                                            const place = ev.location || '(bez miesta)';
+                                            const timeStr = ev.when || '—';
+                                            console.log(`          ${timeStr} | ${place} | ${ev.text || ''}`);
+                                        });
+                                    });
+                                });
+                            
+                                // Pôvodný výpis (miesta prvých udalostí SS tímov) – zachovaný
                                 superstructureFirstPlacesByDay.forEach((placesMap, dayKey) => {
                                     console.log(`  → Deň ${dayKey}: miesta prvých udalostí SS tímov:`);
                                     placesMap.forEach((info, loc) => {
                                         console.log(`      • ${loc} (SS tím: ${info.ssTeamName}, čas: ${info.firstEvent.when})`);
                                     });
                                 });
-
-                                // Pre každý deň, kedy superstructure tím hrá a user tím nemá udalosť,
-                                // vygeneruj presun z ubytovne user tímu na KAŽDÉ miesto prvej udalosti
+                            
+                                // Pôvodná logika generovania presunov (nezmenená)
                                 superstructureFirstPlacesByDay.forEach((placesMap, dayKey) => {
                                     if (userTeamDays.has(dayKey)) return;
-
+                            
                                     const userTeamHasEventOnDay = events.some((ev) => {
                                         const evDay = extractDayKeyFromWhen(ev.when);
                                         return evDay === dayKey && ev.location;
                                     });
                                     if (userTeamHasEventOnDay) return;
-
+                            
                                     const hasAccommodation = accommodationName && accommodationName.trim() !== '';
                                     const fromLocationName = hasAccommodation
                                         ? accommodationName.trim()
@@ -2052,27 +2118,27 @@ class TransportGenerator {
                                     const fromLabel = hasAccommodation
                                         ? `ubytovanie ${accommodationName.trim()}`
                                         : (meetingPointStop ? `miesto zrazu ${meetingPointStop.name}` : null);
-
+                            
                                     if (!fromLocationName) return;
-
+                            
                                     placesMap.forEach((info, destinationLocation) => {
                                         if (!destinationLocation) return;
                                         if (this.isSamePlaceForTransfer(fromLocationName, destinationLocation)) return;
-
+                            
                                         const arrivalTs = info.firstEventTs;
                                         if (arrivalTs == null || !isFinite(arrivalTs)) return;
-
+                            
                                         const arrivalStr = formatFullFromTs(arrivalTs) || info.firstEvent.when || '—';
                                         const departureTs = timestampOnDay(arrivalTs, 0, 0);
                                         const departureStr = formatFullFromTs(departureTs) || '00:00';
-
+                            
                                         if (departureTs != null && arrivalTs != null && departureTs >= arrivalTs) return;
-
+                            
                                         let whenStr;
                                         if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
                                         else if (arrivalStr) whenStr = arrivalStr;
                                         else whenStr = info.firstEvent.when || '—';
-
+                            
                                         enriched.push({
                                             ts: info.firstEventTs - 1,
                                             when: whenStr,
