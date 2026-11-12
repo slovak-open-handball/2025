@@ -3069,18 +3069,21 @@ class TransportGenerator {
                                                 // ← KĽÚČOVÁ ZMENA:
                                                 // Žiadny user tím v skupine nemá v ten deň udalosť
                                                 // s miestom → pre SS tím sa NEGENERUJÚ ranné presuny
-                                                // z ubytovní. Jediná výnimka: prvý deň turnaja
-                                                // z miesta zrazu (ak je definované) – to nie je
-                                                // ranný presun z ubytovne.
+                                                // z ubytovní.
+                                                //
+                                                // ALE: ak v ten deň NEMÁ udalosť žiadny user tím
+                                                // v celej kategórii (anyUsersTeamHasEventToday === false),
+                                                // pre KAŽDÝ SS tím sa vygeneruje presun z miesta zrazu
+                                                // na miesto prvej udalosti.
                                                 // ═══════════════════════════════════════════════════════════
                                                 if (
-                                                    isGlobalFirstDay &&
+                                                    !anyUsersTeamHasEventToday &&
                                                     !isPavukTeamNameForMorning &&
                                                     meetingPointStop &&
                                                     !this.isSamePlaceForTransfer(meetingPointStop.name, current.location)
                                                 ) {
-                                                    // Prvý deň turnaja – presun z miesta zrazu
-                                                    // na miesto prvej udalosti.
+                                                    // V ten deň nehrá žiadny user tím → presun
+                                                    // z miesta zrazu na miesto prvej udalosti.
                                                     const arrivalTs = current.startTs;
                                                     const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
                                                     const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
