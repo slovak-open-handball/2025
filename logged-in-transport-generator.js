@@ -3332,45 +3332,32 @@ class TransportGenerator {
                                     !isPavukTeamNameForMorning &&
                                     meetingPointStop &&
                                     !this.isSamePlaceForTransfer(meetingPointStop.name, current.location)
-                                } else {
+                                ) {
                                     // ═══════════════════════════════════════════════════════════
-                                    // ← KĽÚČOVÁ ZMENA:
                                     // Pre SS tím sa NEGENERUJÚ ranné presuny z ubytovní.
-                                    //
                                     // Výnimka: v ten deň NEMÁ udalosť žiadny user tím
-                                    // v kategórii (anyUsersTeamHasEventToday === false)
-                                    // → pre SS tím sa vygeneruje presun z miesta zrazu
-                                    // na miesto prvej udalosti.
-                                    // (Bez ohľadu na to, či ide o prvý deň turnaja,
-                                    //  a bez ohľadu na typ dopravy SS tímu.)
+                                    // → presun z miesta zrazu na miesto prvej udalosti.
                                     // ═══════════════════════════════════════════════════════════
-                                    if (
-                                        !anyUsersTeamHasEventToday &&
-                                        !isPavukTeamNameForMorning &&
-                                        meetingPointStop &&
-                                        !this.isSamePlaceForTransfer(meetingPointStop.name, current.location)
-                                    ) {
-                                        const arrivalTs = current.startTs;
-                                        const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
-                                        const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
-                                        const departureTs = globalArrivalTs != null && isFinite(globalArrivalTs)
-                                            ? globalArrivalTs
-                                            : timestampOnDay(arrivalTs, 0, 0);
-                                        const departureStr = formatFullFromTs(departureTs) || '00:00';
-                                        if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
-                                            let whenStr;
-                                            if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
-                                            else if (arrivalStr) whenStr = arrivalStr;
-                                            else whenStr = current.when;
-                                            enriched.push({
-                                                ts: current.ts - 1,
-                                                when: whenStr,
-                                                type: 'transfer',
-                                                text: `Presun z miesto zrazu ${meetingPointStop.name} do ${current.location}`,
-                                                location: null,
-                                                isTransfer: true,
-                                            });
-                                        }
+                                    const arrivalTs = current.startTs;
+                                    const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
+                                    const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
+                                    const departureTs = globalArrivalTs != null && isFinite(globalArrivalTs)
+                                        ? globalArrivalTs
+                                        : timestampOnDay(arrivalTs, 0, 0);
+                                    const departureStr = formatFullFromTs(departureTs) || '00:00';
+                                    if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
+                                        let whenStr;
+                                        if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                        else if (arrivalStr) whenStr = arrivalStr;
+                                        else whenStr = current.when;
+                                        enriched.push({
+                                            ts: current.ts - 1,
+                                            when: whenStr,
+                                            type: 'transfer',
+                                            text: `Presun z miesto zrazu ${meetingPointStop.name} do ${current.location}`,
+                                            location: null,
+                                            isTransfer: true,
+                                        });
                                     }
                                 }
                             }
