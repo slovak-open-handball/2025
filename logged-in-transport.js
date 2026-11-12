@@ -1241,6 +1241,9 @@ const TransportApp = ({ userProfileData }) => {
     const [newWalkingRuleToType, setNewWalkingRuleToType] = useState('');
     const [deleteWalkingRuleModal, setDeleteWalkingRuleModal] = useState(null);
     const [deleteWalkingRuleSaving, setDeleteWalkingRuleSaving] = useState(false);
+    const [showBulkIntermediateModal, setShowBulkIntermediateModal] = useState(null);
+    const [bulkIntermediateStopId, setBulkIntermediateStopId] = useState('');
+    const [bulkIntermediateSaving, setBulkIntermediateSaving] = useState(false);
 
     window.printTeamTimeline = (teamName) => {
         if (!teamName || typeof teamName !== 'string') {
@@ -5346,6 +5349,165 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
+    const applyBulkIntermediateStop = async () => {
+        if (!window.db) return;
+        if (!showBulkIntermediateModal) return;
+        if (!bulkIntermediateStopId) {
+            window.showGlobalNotification('Najprv vyberte zastávku.', 'error');
+            return;
+        }
+
+        const side = showBulkIntermediateModal.side; // 'from' alebo 'to'
+        const stopId = bulkIntermediateStopId;
+        const stopName = resolvePlaceNameById(stopId) || '';
+        if (!stopName) {
+            window.showGlobalNotification('Vybraná zastávka sa nenašla.', 'error');
+            return;
+        }
+
+        // Zisti aktuálne zobrazené parent kľúče (rovnaká logika ako pri filtrovaní v renderSavedTransfers)
+        const dayKeyFilter = selectedDayKey || null;
+        const categoryFilter = selectedCategoryFilter
+            ? cleanCategory(selectedCategoryFilter)
+            : null;
+        const fromPlaceFilter = selectedFromPlaceFilter || null;
+        const toPlaceFilter = selectedToPlaceFilter || null;
+
+        // Zoznam parentov, ktoré sú aktuálne zobrazené (rovnaký filter ako v renderSavedTransfers)
+        const candidateParents = (savedTransfersRef.current || []).filter((t) => {
+            if (t._parentKey && t._parentKey !== t.key) return false; // len parenti
+            if (t.isWalking === true) return false;
+            if (dayKeyFilter && t.dayKey !== dayKeyFilter) return false;
+            if (categoryFilter && cleanCategory(t.category || '') !== categoryFilter) return false;
+
+            // Filter podľa miesta začiatku/konca (rovnaká logika ako renderSavedTransfers)
+            if (fromPlaceFilter) {
+                const matchesFrom =
+                    String(t.fromId || '') === String(fromPlaceFilter) ||
+                    (Array.isArray(t.segments) && t.segments.some((s) => s && String(s.fromId || '') === String(fromPlaceFilter)));
+                if (!matchesFrom) return false;
+            }
+            if (toPlaceFilter) {
+                const matchesTo =
+                    String(t.toId || '') === String(toPlaceFilter) ||
+                    (Array.isArray(t.segments) && t.segments.some((s) => s && String(s.toId || '') === String(toPlaceFilter)));
+                if (!matchesTo) return false;
+            }
+            return true;
+        });
+
+        if (candidateParents.length === 0) {
+            window.showGlobalNotification('Pre zvolený filter nie sú žiadne presuny.', 'info');
+            return;
+        }
+
+        setBulkIntermediateSaving(true);
+        let updatedCount = 0;
+        let skippedCount = 0;
+
+        try {
+            for (const parent of candidateParents) {
+                try {
+                    // Vypočítaj nové medzizastávky
+                    const existingStops = Array.isArray(parent.intermediateStopIds)
+                        ? [...parent.intermediateStopIds]
+                        : [];
+
+                    // Ak už zastávka v trase je (medzi from a to), preskočíme
+                    const alreadyInRoute =
+                        String(parent.fromId || '') === String(stopId) ||
+                        String(parent.toId || '') === String(stopId) ||
+                        existingStops.some((s) => String(s) === String(stopId));
+                    if (alreadyInRoute) {
+                        skippedCount += 1;
+                        continue;
+                    }
+
+                    let newStopIds;
+                    if (side === 'from') {
+                        // pridaj hneď za miesto začiatku
+                        newStopIds = [stopId, ...existingStops];
+                    } else {
+                        // pridaj pred miesto konca
+                        newStopIds = [...existingStops, stopId];
+                    }
+
+                    const draft = {
+                        ...parent,
+                        intermediateStopIds: newStopIds,
+                        segments: Array.isArray(parent.segments)
+                            ? parent.segments.map((s) => ({ ...s }))
+                            : buildDefaultSegments(parent),
+                    };
+
+                    // Zachovaj staré segmenty (isWalking a pod.) – buildDefaultSegments vytvorí nové
+                    const oldSegments = Array.isArray(parent.segments) ? parent.segments : [];
+                    const newDefaultSegments = buildDefaultSegments({
+                        ...draft,
+                        intermediateStopIds: newStopIds,
+                    });
+                    newDefaultSegments.forEach((s) => {
+                        const old = oldSegments.find(
+                            (o) => o.fromId === s.fromId && o.toId === s.toId
+                        );
+                        if (old) {
+                            s.isWalking = old.isWalking === true;
+                            s.walkingSetAt = old.walkingSetAt || null;
+                            s.walkingSetBy = old.walkingSetBy || null;
+                            s.busAssigned = old.busAssigned === true;
+                            s.busId = old.busId || null;
+                            s.boardingRowId = old.boardingRowId || null;
+                            s.alightingRowId = old.alightingRowId || null;
+                            s.startTs = old.startTs != null ? old.startTs : null;
+                            s.endTs = old.endTs != null ? old.endTs : null;
+                            s.when = old.when || null;
+                        }
+                    });
+                    draft.segments = newDefaultSegments;
+
+                    // Zachovaj pôvodný when
+                    if (parent.when && String(parent.when).trim() !== '') {
+                        draft.when = parent.when;
+                    }
+
+                    recomputeParentSegmentsInPlace(draft);
+
+                    await updateParentTransfer(parent.key, (d) => {
+                        d.intermediateStopIds = newStopIds;
+                        d.segments = draft.segments.map((s) => ({ ...s }));
+                        d.when = draft.when;
+                    });
+
+                    updatedCount += 1;
+                } catch (e) {
+                    skippedCount += 1;
+                }
+            }
+
+            if (updatedCount > 0) {
+                window.showGlobalNotification(
+                    `Medzizastávka ${stopName} bola pridaná k ${updatedCount} presunom.` +
+                    (skippedCount > 0 ? ` (${skippedCount} preskočených – už ju obsahovali)` : ''),
+                    'success'
+                );
+            } else {
+                window.showGlobalNotification(
+                    skippedCount > 0
+                        ? `Medzizastávku ${stopName} už obsahuje každý zobrazený presun.`
+                        : 'Nepodarilo sa upraviť žiadny presun.',
+                    skippedCount > 0 ? 'info' : 'error'
+                );
+            }
+
+            setShowBulkIntermediateModal(null);
+            setBulkIntermediateStopId('');
+        } catch (err) {
+            window.showGlobalNotification('Nepodarilo sa hromadne pridať medzizastávku.', 'error');
+        } finally {
+            setBulkIntermediateSaving(false);
+        }
+    };
+
     const isSegmentCoveredByBus = (segment) => {
         if (!segment) return false;
 
@@ -7459,64 +7621,102 @@ const TransportApp = ({ userProfileData }) => {
             // Miesto začiatku
             React.createElement(
                 'div',
-                { className: 'flex items-center gap-2' },
+                { className: 'flex flex-col gap-1' },
                 React.createElement(
-                    'label',
-                    {
-                        className: 'text-xs font-medium text-gray-600 whitespace-nowrap',
-                        title: 'Zobraziť iba presuny, ktoré začínajú na zvolenom mieste',
-                    },
-                    'Miesto začiatku:'
-                ),
-                React.createElement(
-                    'select',
-                    {
-                        value: selectedFromPlaceFilter,
-                        onChange: (e) => setSelectedFromPlaceFilter(e.target.value),
-                        disabled: fromPlaceOptions.length === 0,
-                        title: 'Filtrovať presuny podľa miesta, kde presun začína',
-                        className: 'flex-1 min-w-0 px-2 py-1.5 rounded-md text-xs font-medium border border-violet-300 bg-white text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed',
-                    },
-                    React.createElement('option', { value: '' }, '— Všetky miesta začiatku —'),
-                    fromPlaceOptions.map((opt) =>
-                        React.createElement(
-                            'option',
-                            { key: opt.id, value: opt.id },
-                            opt.name
+                    'div',
+                    { className: 'flex items-center gap-2' },
+                    React.createElement(
+                        'label',
+                        {
+                            className: 'text-xs font-medium text-gray-600 whitespace-nowrap',
+                            title: 'Zobraziť iba presuny, ktoré začínajú na zvolenom mieste',
+                        },
+                        'Miesto začiatku:'
+                    ),
+                    React.createElement(
+                        'select',
+                        {
+                            value: selectedFromPlaceFilter,
+                            onChange: (e) => setSelectedFromPlaceFilter(e.target.value),
+                            disabled: fromPlaceOptions.length === 0,
+                            title: 'Filtrovať presuny podľa miesta, kde presun začína',
+                            className: 'flex-1 min-w-0 px-2 py-1.5 rounded-md text-xs font-medium border border-violet-300 bg-white text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed',
+                        },
+                        React.createElement('option', { value: '' }, '— Všetky miesta začiatku —'),
+                        fromPlaceOptions.map((opt) =>
+                            React.createElement(
+                                'option',
+                                { key: opt.id, value: opt.id },
+                                opt.name
+                            )
                         )
                     )
-                )
+                ),
+                selectedFromPlaceFilter &&
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => {
+                                setBulkIntermediateStopId('');
+                                setShowBulkIntermediateModal({ side: 'from' });
+                            },
+                            className: 'self-end px-3 py-1.5 rounded-md text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 transition-colors flex items-center gap-1.5',
+                            title: 'Hromadne pridať medzizastávku hneď za miesto začiatku pre všetky zobrazené presuny',
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-layer-group' }),
+                        'Hromadne nastaviť prestupnú zastávku'
+                    )
             ),
             // Miesto konca
             React.createElement(
                 'div',
-                { className: 'flex items-center gap-2' },
+                { className: 'flex flex-col gap-1' },
                 React.createElement(
-                    'label',
-                    {
-                        className: 'text-xs font-medium text-gray-600 whitespace-nowrap',
-                        title: 'Zobraziť iba presuny, ktoré končia na zvolenom mieste',
-                    },
-                    'Miesto konca:'
-                ),
-                React.createElement(
-                    'select',
-                    {
-                        value: selectedToPlaceFilter,
-                        onChange: (e) => setSelectedToPlaceFilter(e.target.value),
-                        disabled: toPlaceOptions.length === 0,
-                        title: 'Filtrovať presuny podľa miesta, kde presun končí',
-                        className: 'flex-1 min-w-0 px-2 py-1.5 rounded-md text-xs font-medium border border-violet-300 bg-white text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed',
-                    },
-                    React.createElement('option', { value: '' }, '— Všetky miesta konca —'),
-                    toPlaceOptions.map((opt) =>
-                        React.createElement(
-                            'option',
-                            { key: opt.id, value: opt.id },
-                            opt.name
+                    'div',
+                    { className: 'flex items-center gap-2' },
+                    React.createElement(
+                        'label',
+                        {
+                            className: 'text-xs font-medium text-gray-600 whitespace-nowrap',
+                            title: 'Zobraziť iba presuny, ktoré končia na zvolenom mieste',
+                        },
+                        'Miesto konca:'
+                    ),
+                    React.createElement(
+                        'select',
+                        {
+                            value: selectedToPlaceFilter,
+                            onChange: (e) => setSelectedToPlaceFilter(e.target.value),
+                            disabled: toPlaceOptions.length === 0,
+                            title: 'Filtrovať presuny podľa miesta, kde presun končí',
+                            className: 'flex-1 min-w-0 px-2 py-1.5 rounded-md text-xs font-medium border border-violet-300 bg-white text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed',
+                        },
+                        React.createElement('option', { value: '' }, '— Všetky miesta konca —'),
+                        toPlaceOptions.map((opt) =>
+                            React.createElement(
+                                'option',
+                                { key: opt.id, value: opt.id },
+                                opt.name
+                            )
                         )
                     )
-                )
+                ),
+                selectedToPlaceFilter &&
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: () => {
+                                setBulkIntermediateStopId('');
+                                setShowBulkIntermediateModal({ side: 'to' });
+                            },
+                            className: 'self-end px-3 py-1.5 rounded-md text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 transition-colors flex items-center gap-1.5',
+                            title: 'Hromadne pridať medzizastávku pred miesto konca pre všetky zobrazené presuny',
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-layer-group' }),
+                        'Hromadne nastaviť prestupnú zastávku'
+                    )
             )
         );
     };
@@ -10447,6 +10647,149 @@ const TransportApp = ({ userProfileData }) => {
                 )
             )
         ),
+        showBulkIntermediateModal && (() => {
+            const side = showBulkIntermediateModal.side;
+            const stopsOnlyForBulk = (stopsList || []).filter(
+                (s) => String(s.type || '').trim().toLowerCase() === 'zastavka'
+            );
+            const selectedStopId = bulkIntermediateStopId;
+            const selectedStopName = selectedStopId ? (resolvePlaceNameById(selectedStopId) || '') : '';
+            return React.createElement(
+                'div',
+                {
+                    className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-[100002] p-4',
+                    onClick: () => {
+                        if (bulkIntermediateSaving) return;
+                        setShowBulkIntermediateModal(null);
+                        setBulkIntermediateStopId('');
+                    }
+                },
+                React.createElement(
+                    'div',
+                    {
+                        className: 'bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto',
+                        onClick: (e) => e.stopPropagation()
+                    },
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-start gap-3 mb-4' },
+                        React.createElement('i', {
+                            className: 'fa-solid fa-layer-group text-violet-600 text-2xl mt-0.5'
+                        }),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement(
+                                'h3',
+                                { className: 'text-lg font-semibold text-gray-800' },
+                                'Hromadne nastaviť prestupnú zastávku'
+                            ),
+                            React.createElement(
+                                'p',
+                                { className: 'text-xs text-gray-500 mt-0.5' },
+                                side === 'from'
+                                    ? 'Vybraná zastávka sa pridá hneď za miesto začiatku do každého zobrazeného presunu.'
+                                    : 'Vybraná zastávka sa pridá pred miesto konca do každého zobrazeného presunu.'
+                            )
+                        )
+                    ),
+                    React.createElement(
+                        'label',
+                        { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                        'Vyberte prestupnú zastávku'
+                    ),
+                    stopsOnlyForBulk.length === 0
+                        ? React.createElement(
+                            'p',
+                            { className: 'text-sm text-gray-500 italic mb-4' },
+                            'Nie sú dostupné žiadne zastávky.'
+                        )
+                        : React.createElement(
+                            'div',
+                            {
+                                className: 'border border-gray-300 rounded-lg max-h-[320px] overflow-y-auto mb-4 bg-white'
+                            },
+                            stopsOnlyForBulk.map((s) => {
+                                const isChecked = String(selectedStopId) === String(s.id);
+                                return React.createElement(
+                                    'label',
+                                    {
+                                        key: s.id,
+                                        className: `flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 ${
+                                            isChecked ? 'bg-violet-50' : 'hover:bg-gray-50'
+                                        }`
+                                    },
+                                    React.createElement('input', {
+                                        type: 'radio',
+                                        name: 'bulkIntermediateStop',
+                                        checked: isChecked,
+                                        onChange: () => setBulkIntermediateStopId(s.id),
+                                        disabled: bulkIntermediateSaving,
+                                        className: 'w-4 h-4 accent-violet-600 cursor-pointer',
+                                    }),
+                                    React.createElement(
+                                        'span',
+                                        { className: 'inline-flex items-center text-sm text-gray-800' },
+                                        React.createElement('i', { className: 'fa-solid fa-bus text-blue-600 mr-2' }),
+                                        s.name
+                                    )
+                                );
+                            })
+                        ),
+                    selectedStopName &&
+                        React.createElement(
+                            'div',
+                            {
+                                className: 'mb-4 p-3 bg-violet-50 border border-violet-200 rounded-lg text-sm text-violet-800 flex items-start gap-2'
+                            },
+                            React.createElement('i', { className: 'fa-solid fa-circle-info mt-0.5' }),
+                            React.createElement(
+                                'span',
+                                null,
+                                side === 'from'
+                                    ? `Zastávka ${selectedStopName} sa vloží hneď za miesto začiatku presunu.`
+                                    : `Zastávka ${selectedStopName} sa vloží pred miesto konca presunu.`
+                            )
+                        ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex justify-end gap-3' },
+                        React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: () => {
+                                    if (bulkIntermediateSaving) return;
+                                    setShowBulkIntermediateModal(null);
+                                    setBulkIntermediateStopId('');
+                                },
+                                disabled: bulkIntermediateSaving,
+                                className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
+                            },
+                            'Zrušiť'
+                        ),
+                        (() => {
+                            const isBlocked = bulkIntermediateSaving || !selectedStopId;
+                            const baseCls = 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2';
+                            const enabledCls = 'bg-violet-600 text-white hover:bg-violet-700';
+                            const blockedCls = 'bg-white border-2 border-violet-600 text-violet-600 cursor-not-allowed';
+                            return React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: applyBulkIntermediateStop,
+                                    disabled: isBlocked,
+                                    title: isBlocked ? 'Najprv vyberte zastávku.' : undefined,
+                                    className: `${baseCls} ${isBlocked ? blockedCls : enabledCls}`,
+                                },
+                                bulkIntermediateSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                                'Pridať ku všetkým'
+                            );
+                        })()
+                    )
+                )
+            );
+        })(),
         confirmModal && React.createElement(
             'div',
             {
