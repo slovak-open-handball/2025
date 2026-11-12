@@ -690,7 +690,7 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         try {
-            window.TransportGenerator.window.TransportGenerator.rebuildAndLogTimeline(true);
+            window.TransportGenerator.rebuildAndLogTimeline(true);
         } finally {
             console.log = originalLog;
         }
