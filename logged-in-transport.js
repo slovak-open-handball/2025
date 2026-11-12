@@ -10683,6 +10683,41 @@ const applyBulkIntermediateStop = async () => {
             );
             const selectedStopId = bulkIntermediateStopId;
             const selectedStopName = selectedStopId ? (resolvePlaceNameById(selectedStopId) || '') : '';
+        
+            // NOVÉ: vypočítaj počet parentov, ktoré budú hromadne upravené (rovnaký filter ako v applyBulkIntermediateStop)
+            const computeBulkCandidateParents = () => {
+                const dayKeyFilter = selectedDayKey || null;
+                const categoryFilter = selectedCategoryFilter
+                    ? cleanCategory(selectedCategoryFilter)
+                    : null;
+                const fromPlaceFilter = selectedFromPlaceFilter || null;
+                const toPlaceFilter = selectedToPlaceFilter || null;
+        
+                return (savedTransfersRef.current || []).filter((t) => {
+                    if (t._parentKey && t._parentKey !== t.key) return false;
+                    if (t.isWalking === true) return false;
+                    if (dayKeyFilter && t.dayKey !== dayKeyFilter) return false;
+                    if (categoryFilter && cleanCategory(t.category || '') !== categoryFilter) return false;
+        
+                    if (fromPlaceFilter) {
+                        const matchesFrom =
+                            String(t.fromId || '') === String(fromPlaceFilter) ||
+                            (Array.isArray(t.segments) && t.segments.some((s) => s && String(s.fromId || '') === String(fromPlaceFilter)));
+                        if (!matchesFrom) return false;
+                    }
+                    if (toPlaceFilter) {
+                        const matchesTo =
+                            String(t.toId || '') === String(toPlaceFilter) ||
+                            (Array.isArray(t.segments) && t.segments.some((s) => s && String(s.toId || '') === String(toPlaceFilter)));
+                        if (!matchesTo) return false;
+                    }
+                    return true;
+                });
+            };
+        
+            const candidateParents = computeBulkCandidateParents();
+            const totalCandidates = candidateParents.length;
+        
             return React.createElement(
                 'div',
                 {
@@ -10802,6 +10837,14 @@ const applyBulkIntermediateStop = async () => {
                             const baseCls = 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2';
                             const enabledCls = 'bg-violet-600 text-white hover:bg-violet-700';
                             const blockedCls = 'bg-white border-2 border-violet-600 text-violet-600 cursor-not-allowed';
+        
+                            const countText = totalCandidates > 0 ? ` (${totalCandidates})` : '';
+        
+                            // NOVÉ: ak práve prebieha hromadné pridávanie, zobraz "Ostáva" namiesto "Pridať ku všetkým"
+                            const buttonLabel = bulkIntermediateSaving
+                                ? `Ostáva: ${totalCandidates}`
+                                : `Pridať ku všetkým${countText}`;
+        
                             return React.createElement(
                                 'button',
                                 {
@@ -10812,7 +10855,7 @@ const applyBulkIntermediateStop = async () => {
                                     className: `${baseCls} ${isBlocked ? blockedCls : enabledCls}`,
                                 },
                                 bulkIntermediateSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
-                                'Pridať ku všetkým'
+                                buttonLabel
                             );
                         })()
                     )
