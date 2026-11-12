@@ -7604,43 +7604,75 @@ const TransportApp = ({ userProfileData }) => {
     
     const renderPlaceFilters = (baseFilteredForOptions) => {
         const list = Array.isArray(baseFilteredForOptions) ? baseFilteredForOptions : [];
-
-        // Selectbox "Miesto začiatku"
-        const fromPlaceOptionsMap = new Map();
+    
+        // Pomocná funkcia: pre dané ID vráti normalizovaný názov miesta
+        const getNormalizedPlaceName = (placeId) => {
+            if (!placeId) return '';
+            const name = resolvePlaceNameById(placeId) || '';
+            return normalizePlaceName(name);
+        };
+    
+        // Zoznam všetkých miest (pre dohľadanie ID podľa názvu)
+        const allPlaces = Array.isArray(allPlacesRef.current) ? allPlacesRef.current : [];
+        const findPlaceIdByNormName = (normName) => {
+            if (!normName) return null;
+            const found = allPlaces.find(
+                (p) => p && normalizePlaceName(p.name) === normName
+            );
+            return found ? found.id : null;
+        };
+    
+        // Selectbox "Miesto začiatku" – zjednotené podľa normalizovaného názvu
+        const fromPlaceOptionsMap = new Map(); // key = normalized name, value = { id, name, type }
         list.forEach((t) => {
             const fromId = t.fromId || null;
             if (!fromId) return;
-            const idStr = String(fromId);
-            if (fromPlaceOptionsMap.has(idStr)) return;
-            const name = resolvePlaceNameById(fromId) || idStr;
-            const place = (allPlacesRef.current || []).find((p) => String(p.id) === idStr);
-            fromPlaceOptionsMap.set(idStr, {
-                id: idStr,
+            const normName = getNormalizedPlaceName(fromId);
+            if (!normName) return;
+            if (fromPlaceOptionsMap.has(normName)) return;
+            // Preferuj kanonické ID podľa názvu (aby filter fungoval konzistentne)
+            const canonicalId = findPlaceIdByNormName(normName) || String(fromId);
+            const name = resolvePlaceNameById(canonicalId) || resolvePlaceNameById(fromId) || String(fromId);
+            const place = allPlaces.find((p) => String(p.id) === String(canonicalId));
+            fromPlaceOptionsMap.set(normName, {
+                id: canonicalId,
                 name,
                 type: place?.type || null,
+                normName,
             });
         });
         const fromPlaceOptions = [...fromPlaceOptionsMap.values()]
             .sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
-
-        // Selectbox "Miesto konca"
+    
+        // Selectbox "Miesto konca" – zjednotené podľa normalizovaného názvu
         const toPlaceOptionsMap = new Map();
         list.forEach((t) => {
             const toId = t.toId || null;
             if (!toId) return;
-            const idStr = String(toId);
-            if (toPlaceOptionsMap.has(idStr)) return;
-            const name = resolvePlaceNameById(toId) || idStr;
-            const place = (allPlacesRef.current || []).find((p) => String(p.id) === idStr);
-            toPlaceOptionsMap.set(idStr, {
-                id: idStr,
+            const normName = getNormalizedPlaceName(toId);
+            if (!normName) return;
+            if (toPlaceOptionsMap.has(normName)) return;
+            const canonicalId = findPlaceIdByNormName(normName) || String(toId);
+            const name = resolvePlaceNameById(canonicalId) || resolvePlaceNameById(toId) || String(toId);
+            const place = allPlaces.find((p) => String(p.id) === String(canonicalId));
+            toPlaceOptionsMap.set(normName, {
+                id: canonicalId,
                 name,
                 type: place?.type || null,
+                normName,
             });
         });
         const toPlaceOptions = [...toPlaceOptionsMap.values()]
             .sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
-
+    
+        // Aktuálne zvolené hodnoty – nájdeme normalizovaný názov podľa vybraného ID
+        const selectedFromNorm = selectedFromPlaceFilter
+            ? getNormalizedPlaceName(selectedFromPlaceFilter)
+            : '';
+        const selectedToNorm = selectedToPlaceFilter
+            ? getNormalizedPlaceName(selectedToPlaceFilter)
+            : '';
+    
         return React.createElement(
             React.Fragment,
             null,
@@ -7662,8 +7694,17 @@ const TransportApp = ({ userProfileData }) => {
                     React.createElement(
                         'select',
                         {
-                            value: selectedFromPlaceFilter,
-                            onChange: (e) => setSelectedFromPlaceFilter(e.target.value),
+                            value: selectedFromNorm,
+                            onChange: (e) => {
+                                const newNorm = e.target.value;
+                                if (!newNorm) {
+                                    setSelectedFromPlaceFilter('');
+                                    return;
+                                }
+                                const opt = fromPlaceOptions.find((o) => o.normName === newNorm);
+                                const idToSet = opt ? String(opt.id) : newNorm;
+                                setSelectedFromPlaceFilter(idToSet);
+                            },
                             disabled: fromPlaceOptions.length === 0,
                             title: 'Filtrovať presuny podľa miesta, kde presun začína',
                             className: 'flex-1 min-w-0 px-2 py-1.5 rounded-md text-xs font-medium border border-violet-300 bg-white text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed',
@@ -7672,7 +7713,7 @@ const TransportApp = ({ userProfileData }) => {
                         fromPlaceOptions.map((opt) =>
                             React.createElement(
                                 'option',
-                                { key: opt.id, value: opt.id },
+                                { key: opt.normName, value: opt.normName },
                                 opt.name
                             )
                         )
@@ -7712,8 +7753,17 @@ const TransportApp = ({ userProfileData }) => {
                     React.createElement(
                         'select',
                         {
-                            value: selectedToPlaceFilter,
-                            onChange: (e) => setSelectedToPlaceFilter(e.target.value),
+                            value: selectedToNorm,
+                            onChange: (e) => {
+                                const newNorm = e.target.value;
+                                if (!newNorm) {
+                                    setSelectedToPlaceFilter('');
+                                    return;
+                                }
+                                const opt = toPlaceOptions.find((o) => o.normName === newNorm);
+                                const idToSet = opt ? String(opt.id) : newNorm;
+                                setSelectedToPlaceFilter(idToSet);
+                            },
                             disabled: toPlaceOptions.length === 0,
                             title: 'Filtrovať presuny podľa miesta, kde presun končí',
                             className: 'flex-1 min-w-0 px-2 py-1.5 rounded-md text-xs font-medium border border-violet-300 bg-white text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed',
@@ -7722,7 +7772,7 @@ const TransportApp = ({ userProfileData }) => {
                         toPlaceOptions.map((opt) =>
                             React.createElement(
                                 'option',
-                                { key: opt.id, value: opt.id },
+                                { key: opt.normName, value: opt.normName },
                                 opt.name
                             )
                         )
@@ -8714,18 +8764,20 @@ const TransportApp = ({ userProfileData }) => {
             ? baseFilteredFirstOnly.filter((t) => t._parentKey && t._parentRoute)
             : baseFilteredFirstOnly;
 
-        // Filter podľa miesta začiatku a miesta konca presunu
-        // (selectboxy "Miesto začiatku presunu" a "Miesto konca presunu")
         const filtered = baseFilteredAfterPartial.filter((t) => {
             if (selectedFromPlaceFilter) {
                 const fromId = t.fromId || null;
                 if (!fromId) return false;
-                if (String(fromId) !== String(selectedFromPlaceFilter)) return false;
+                const fromNameNorm = normalizePlaceName(resolvePlaceNameById(fromId) || '');
+                const filterNameNorm = normalizePlaceName(resolvePlaceNameById(selectedFromPlaceFilter) || '');
+                if (!fromNameNorm || !filterNameNorm || fromNameNorm !== filterNameNorm) return false;
             }
             if (selectedToPlaceFilter) {
                 const toId = t.toId || null;
                 if (!toId) return false;
-                if (String(toId) !== String(selectedToPlaceFilter)) return false;
+                const toNameNorm = normalizePlaceName(resolvePlaceNameById(toId) || '');
+                const filterNameNorm = normalizePlaceName(resolvePlaceNameById(selectedToPlaceFilter) || '');
+                if (!toNameNorm || !filterNameNorm || toNameNorm !== filterNameNorm) return false;
             }
             return true;
         });
