@@ -2755,6 +2755,54 @@ class TransportGenerator {
                                             const anyOtherTeamHasEvent = lastPlaceByTeamInGroup.size > 0;
 
                                             if (anyOtherTeamHasEvent) {
+                                                // ─────────────────────────────────────────────────────────────
+                                                // 0) VÝPIS POSLEDNÝCH UDALOSTÍ VŠETKÝCH USER TÍMOV V SKUPINE
+                                                //    pre daný deň (pred generovaním presunov SS tímu)
+                                                // ─────────────────────────────────────────────────────────────
+                                                const ssTeamNameForLog = String(teamName).trim();
+                                                const groupCharForLog = ssTeamLastChar;
+                                            
+                                                // Zoradený zoznam user tímov v skupine (podľa mena)
+                                                const sortedUserTeamsForLog = [...otherTeamsInSameGroup]
+                                                    .map((t) => String(t.teamName || '').trim())
+                                                    .filter(Boolean)
+                                                    .sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
+                                            
+                                                console.log(
+                                                    `%c[TRANSPORT][SS-LAST-EVENTS] Deň ${currentDay} – SS tím "${ssTeamNameForLog}" (skupina ${groupCharForLog}) – posledné udalosti user tímov v skupine:`,
+                                                    'font-weight: bold; color: #7c3aed;'
+                                                );
+                                            
+                                                sortedUserTeamsForLog.forEach((otherTn) => {
+                                                    const teamEventsOnDay = (grouped[cleanCategory(category)]?.[otherTn] || [])
+                                                        .filter((ev) => {
+                                                            const evDay = extractDayKeyFromWhen(ev.when);
+                                                            return evDay === currentDay && ev.location;
+                                                        })
+                                                        .sort((a, b) => {
+                                                            const ta = a.endTs != null ? a.endTs : (a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY));
+                                                            const tb = b.endTs != null ? b.endTs : (b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY));
+                                                            return tb - ta; // zostupne – posledná udalosť prvá
+                                                        });
+                                            
+                                                    if (teamEventsOnDay.length === 0) {
+                                                        console.log(`    • ${otherTn}: (žiadna udalosť s miestom v tento deň)`);
+                                                        return;
+                                                    }
+                                            
+                                                    const lastEv = teamEventsOnDay[0];
+                                                    const lastTimeStr =
+                                                        lastEv.endTs != null
+                                                            ? (formatFullFromTs(lastEv.endTs) || lastEv.when || '—')
+                                                            : (lastEv.startTs != null
+                                                                ? (formatFullFromTs(lastEv.startTs) || lastEv.when || '—')
+                                                                : (lastEv.when || '—'));
+                                                    console.log(
+                                                        `    • ${otherTn}: ${lastTimeStr} | ${lastEv.location} | ${lastEv.text || ''}`
+                                                    );
+                                                });
+                                                console.log('[TRANSPORT][SS-LAST-EVENTS] ─────────────────────────────');
+                                            
                                                 // 1) Pre každé miesto nájdi najneskorší endTs spomedzi user tímov,
                                                 //    ktoré na tom mieste končili.
                                                 const latestEndByPlace = new Map(); // placeName -> { endTs, teamName }
