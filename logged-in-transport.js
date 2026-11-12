@@ -13084,9 +13084,8 @@ const TransportApp = ({ userProfileData }) => {
                                                                     const shortcut = getTeamShortcut(cat, tn);
                                                                     const cleanTeamName = stripCategoryFromTeamName(tn, cat);
                                                                     const label = shortcut || cleanTeamName;
-                                                                    const members = getTeamMembersCount(tk);
                                                                     const color = getCategoryTextColor(cat);
-                                                                    return { label, teamName: cleanTeamName, members, color };
+                                                                    return { label, teamName: cleanTeamName, color };
                                                                 })
                                                                 .filter((x) => !!x.label)
                                                                 .sort((a, b) => {
@@ -13122,7 +13121,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { className: 'font-semibold mb-1 text-gray-200' },
-                                                                                `V autobuse: ${total} členov`
+                                                                                `V autobuse: ${teamTooltipItems.length} tímov`
                                                                             ),
                                                                             React.createElement(
                                                                                 'ul',
