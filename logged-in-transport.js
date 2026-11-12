@@ -12441,13 +12441,13 @@ const TransportApp = ({ userProfileData }) => {
                                 const availableStops = stopsList
                                     .filter((s) => String(s.type || '').trim().toLowerCase() === 'zastavka')
                                     .filter((s) => {
-                                        const stopNameNorm = normalizePlaceName(s.name);                                
-                                        if (parentFromNameNorm && stopNameNorm === parentFromNameNorm) return false;                                
-                                        if (parentToNameNorm && stopNameNorm === parentToNameNorm) return false;                                
-                                        if (s.name === stopValue) return true;                                
+                                        const stopNameNorm = normalizePlaceName(s.name);
+                                        if (parentFromNameNorm && stopNameNorm === parentFromNameNorm) return false;
+                                        if (parentToNameNorm && stopNameNorm === parentToNameNorm) return false;
+                                        if (s.name === stopValue) return true;
                                         return !selectedElsewhere.has(s.name);
                                     });
-                                
+
                                 return React.createElement(
                                     'li',
                                     {
@@ -12458,6 +12458,23 @@ const TransportApp = ({ userProfileData }) => {
                                         'span',
                                         { className: 'text-xs text-gray-500 w-6 text-right' },
                                         `${idx + 1}.`
+                                    ),
+                                    // NOVÉ: "+" pred selectboxom – vloží medzizastávku o riadok vyššie
+                                    React.createElement(
+                                        'button',
+                                        {
+                                            type: 'button',
+                                            onClick: () => {
+                                                setEditingTransferStops((prev) => {
+                                                    const copy = [...prev];
+                                                    copy.splice(idx, 0, '');
+                                                    return copy;
+                                                });
+                                            },
+                                            className: 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded w-7 h-7 flex items-center justify-center',
+                                            title: 'Vložiť medzizastávku nad tento riadok'
+                                        },
+                                        React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
                                     ),
                                     React.createElement(
                                         'select',
