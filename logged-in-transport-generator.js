@@ -3064,79 +3064,39 @@ class TransportGenerator {
                                                         });
                                                     }
                                                 }
-                                            } else if (isGlobalFirstDay) {
+                                            } else if (
+                                                !isPavukTeamNameForMorning &&
+                                                meetingPointStop &&
+                                                !this.isSamePlaceForTransfer(meetingPointStop.name, current.location)
+                                            ) {
                                                 // ═══════════════════════════════════════════════════════════
-                                                // Prvý deň turnaja – pre USER TÍM:
-                                                //   • ak MÁ verejnú dopravu → presun zo zastávky
-                                                //   • inak (nemá nastavenú dopravu, vlastná doprava, bez dopravy)
-                                                //     → presun z miesta zrazu
+                                                // ← ZMENA: Presun z miesta zrazu sa generuje pre SS tím
+                                                //   vždy, keď v jeho skupine (podľa posledného písmena)
+                                                //   nemá udalosť žiadny user tím s miestom
+                                                //   (anyOtherTeamHasEvent === false).
+                                                //   Generuje sa len raz za deň – pre prvú udalosť dňa
+                                                //   (sme vnútri isFirstEventOfDay).
                                                 // ═══════════════════════════════════════════════════════════
-                                                const arrivalTypeNorm = String(teamArrivalType || '')
-                                                    .toLowerCase()
-                                                    .normalize('NFD')
-                                                    .replace(/[\u0300-\u036f]/g, '')
-                                                    .trim();
-                                                const hasPublicTransport =
-                                                    arrivalTypeNorm.includes('verejn')
-                                                    || arrivalTypeNorm.includes('autobus')
-                                                    || arrivalTypeNorm.includes('vlak');
-                                            
-                                                let fromLocationName = null;
-                                                let fromLabel = null;
-                                            
-                                                if (hasPublicTransport) {
-                                                    if (externalArrivalStop) {
-                                                        fromLocationName = externalArrivalStop.name;
-                                                        fromLabel = `zastávka ${externalArrivalStop.name}`;
-                                                    }
-                                                } else {
-                                                    if (meetingPointStop) {
-                                                        fromLocationName = meetingPointStop.name;
-                                                        fromLabel = `miesto zrazu ${meetingPointStop.name}`;
-                                                    }
-                                                }
-                                            
-                                                if (fromLocationName && !this.isSamePlaceForTransfer(fromLocationName, current.location)) {
-                                                    const arrivalTs = current.startTs;
-                                                    const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
-                                                    let departureTs;
-                                                    let departureStr;
-                                                    if (hasPublicTransport) {
-                                                        const teamArrivalTime =
-                                                            (arrivalTimeByTeam[category] && arrivalTimeByTeam[category][teamName]) || '';
-                                                        if (teamArrivalTime && /^\d{1,2}:\d{2}$/.test(teamArrivalTime)) {
-                                                            const [h, mi] = teamArrivalTime.split(':').map(Number);
-                                                            departureTs = timestampOnDay(arrivalTs || midnightFromWhen(current.when), h, mi);
-                                                            departureStr = formatFullFromTs(departureTs) || teamArrivalTime;
-                                                        } else {
-                                                            departureTs = timestampOnDay(arrivalTs, 0, 0);
-                                                            departureStr = formatFullFromTs(departureTs) || '00:00';
-                                                        }
-                                                    } else {
-                                                        const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
-                                                        if (globalArrivalTs != null && isFinite(globalArrivalTs)) {
-                                                            departureTs = globalArrivalTs;
-                                                            departureStr = formatFullFromTs(departureTs) || '—';
-                                                        } else {
-                                                            departureTs = timestampOnDay(arrivalTs, 0, 0);
-                                                            departureStr = formatFullFromTs(departureTs) || '00:00';
-                                                        }
-                                                    }
-                                                    const skip = departureTs != null && arrivalTs != null && departureTs >= arrivalTs;
-                                                    if (!skip) {
-                                                        let whenStr;
-                                                        if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
-                                                        else if (arrivalStr) whenStr = arrivalStr;
-                                                        else whenStr = current.when;
-                                                        enriched.push({
-                                                            ts: current.ts - 1,
-                                                            when: whenStr,
-                                                            type: 'transfer',
-                                                            text: `Presun z ${fromLabel} do ${current.location}`,
-                                                            location: null,
-                                                            isTransfer: true,
-                                                        });
-                                                    }
+                                                const arrivalTs = current.startTs;
+                                                const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
+                                                const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
+                                                const departureTs = globalArrivalTs != null && isFinite(globalArrivalTs)
+                                                    ? globalArrivalTs
+                                                    : timestampOnDay(arrivalTs, 0, 0);
+                                                const departureStr = formatFullFromTs(departureTs) || '00:00';
+                                                if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
+                                                    let whenStr;
+                                                    if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                                    else if (arrivalStr) whenStr = arrivalStr;
+                                                    else whenStr = current.when;
+                                                    enriched.push({
+                                                        ts: current.ts - 1,
+                                                        when: whenStr,
+                                                        type: 'transfer',
+                                                        text: `Presun z miesta zrazu ${meetingPointStop.name} do ${current.location}`,
+                                                        location: null,
+                                                        isTransfer: true,
+                                                    });
                                                 }
                                             }
                                         }
