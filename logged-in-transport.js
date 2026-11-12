@@ -2400,14 +2400,19 @@ const TransportApp = ({ userProfileData }) => {
             return true;
         };
 
-        // Zostav zoznam "expanded" segmentov presne tak, ako ich vidí renderSavedTransfers.
-        // Pre každý parent:
-        //  - ak nemá medzizastávky a má len 1 segment -> použijeme parent.fromId/toId
-        //  - inak rozdelíme na segmenty podľa intermediateStopIds (alebo podľa parent.segments)
+        // Pomocná: je segment priradený k busu alebo peší? (rovnaká logika ako v renderSavedTransfers)
+        const isSegmentAssignedOrWalking = (seg) => {
+            if (!seg) return false;
+            if (seg.isWalking === true) return true;
+            if (seg.busId && seg.boardingRowId && seg.alightingRowId) return true;
+            if (seg.busAssigned === true && seg.boardingRowId && seg.alightingRowId) return true;
+            return false;
+        };
+
         const expandedSegments = [];
 
         (savedTransfers || []).forEach((parent) => {
-            if (parent._parentKey && parent._parentKey !== parent.key) return; // nie je parent
+            if (parent._parentKey && parent._parentKey !== parent.key) return;
             if (parent.isWalking === true) return;
             if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return;
             if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return;
@@ -2426,16 +2431,15 @@ const TransportApp = ({ userProfileData }) => {
                 const toId = parent.toId || null;
                 if (!fromId || !toId) return;
                 if (!segmentMatchesPlaceFilter(fromId, toId)) return;
-                if (parent.isWalking === true) return;
 
-                expandedSegments.push({
-                    parentKey: parent.key,
-                    fromId,
-                    toId,
-                    isWalking: false,
-                    isAssigned: false,
-                    parent,
-                });
+                // NOVÉ: skontroluj priradenie/pešie aj pri priamom presune
+                const seg = parentSegments.find(
+                    (s) => s && s.fromId === fromId && s.toId === toId
+                ) || parentSegments[0] || null;
+
+                if (isSegmentAssignedOrWalking(seg)) return;
+
+                expandedSegments.push({ parentKey: parent.key });
                 return;
             }
 
@@ -2457,25 +2461,9 @@ const TransportApp = ({ userProfileData }) => {
                     (s) => s && s.fromId === fromId && s.toId === toId
                 ) || null;
 
-                const isWalking = !!(seg && seg.isWalking === true);
-                if (isWalking) continue;
+                if (isSegmentAssignedOrWalking(seg)) continue;
 
-                const hasBusAssignment =
-                    !!(seg && (
-                        (seg.busId && seg.boardingRowId && seg.alightingRowId) ||
-                        (seg.busAssigned === true && seg.boardingRowId && seg.alightingRowId)
-                    ));
-
-                if (hasBusAssignment) continue;
-
-                expandedSegments.push({
-                    parentKey: parent.key,
-                    fromId,
-                    toId,
-                    isWalking: false,
-                    isAssigned: false,
-                    parent,
-                });
+                expandedSegments.push({ parentKey: parent.key });
             }
         });
 
