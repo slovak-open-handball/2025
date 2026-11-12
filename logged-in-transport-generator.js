@@ -1923,10 +1923,6 @@ class TransportGenerator {
                             );
                             console.log(`  Skupiny, ktoré sú pokračovaním "${userTeamGroupChar}": ${[...continuationGroupCharsSet].filter(c => c !== userTeamGroupChar).join(', ') || '(žiadne)'}`);
                             
-                            // Nájdi superstructure tímy, ktoré:
-                            // 1. Majú posledné písmeno názvu = userTeamGroupChar, ALEBO
-                            // 2. Patria do skupiny, ktorá je pokračovaním userTeamGroupChar, ALEBO
-                            // 3. Nemajú groupName, ale ich posledné písmeno názvu je v continuationGroupCharsSet
                             const superstructureTeamsWithSameChar = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
                                 if (cleanCategory(t.category) !== cleanCategory(category)) return false;
                                 if (!t.teamName) return false;
@@ -1935,21 +1931,20 @@ class TransportGenerator {
                                 const tn = String(t.teamName).trim();
                                 const lastCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
                                 const nameChar = lastCharMatch ? lastCharMatch[1].toUpperCase() : null;
-                                
+
                                 // 1. Priamo: posledné písmeno názvu = userTeamGroupChar
                                 if (nameChar === userTeamGroupChar) return true;
-                                
-                                // 2. Skupina je pokračovaním: groupName končí na písmeno, ktoré je v continuationGroupCharsSet
+                            
+                                // 2. Posledné písmeno názvu je v continuationGroupCharsSet
+                                //    (napr. 3E, 4E, 1E – posledné písmeno E, ktoré je pokračovaním C)
+                                if (nameChar && continuationGroupCharsSet.has(nameChar)) return true;
+                            
+                                // 3. Skupina je pokračovaním: groupName končí na písmeno, ktoré je v continuationGroupCharsSet
                                 const groupChar = getGroupLastChar(t.groupName);
                                 if (groupChar && continuationGroupCharsSet.has(groupChar)) {
                                     return true;
                                 }
-                                
-                                // 3. Superstructure tím bez groupName, ale jeho posledné písmeno názvu
-                                //    je v continuationGroupCharsSet (napr. 4E, 2E – patria do skupiny E, ktorá je pokračovaním C)
-                                if (!t.groupName && nameChar && continuationGroupCharsSet.has(nameChar)) {
-                                    return true;
-                                }
+                            
                                 return false;
                             });
 
