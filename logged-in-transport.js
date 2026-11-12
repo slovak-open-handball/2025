@@ -1244,6 +1244,7 @@ const TransportApp = ({ userProfileData }) => {
     const [showBulkIntermediateModal, setShowBulkIntermediateModal] = useState(null);
     const [bulkIntermediateStopId, setBulkIntermediateStopId] = useState('');
     const [bulkIntermediateSaving, setBulkIntermediateSaving] = useState(false);
+    const [bulkIntermediateRemaining, setBulkIntermediateRemaining] = useState(0);
 
     window.printTeamTimeline = (teamName) => {
         if (!teamName || typeof teamName !== 'string') {
@@ -5349,38 +5350,35 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
-const applyBulkIntermediateStop = async () => {
+    const applyBulkIntermediateStop = async () => {
         if (!window.db) return;
         if (!showBulkIntermediateModal) return;
         if (!bulkIntermediateStopId) {
             window.showGlobalNotification('Najprv vyberte zastávku.', 'error');
             return;
         }
-
-        const side = showBulkIntermediateModal.side; // 'from' alebo 'to'
+    
+        const side = showBulkIntermediateModal.side;
         const stopId = bulkIntermediateStopId;
         const stopName = resolvePlaceNameById(stopId) || '';
         if (!stopName) {
             window.showGlobalNotification('Vybraná zastávka sa nenašla.', 'error');
             return;
         }
-
-        // Zisti aktuálne zobrazené parent kľúče (rovnaká logika ako pri filtrovaní v renderSavedTransfers)
+    
         const dayKeyFilter = selectedDayKey || null;
         const categoryFilter = selectedCategoryFilter
             ? cleanCategory(selectedCategoryFilter)
             : null;
         const fromPlaceFilter = selectedFromPlaceFilter || null;
         const toPlaceFilter = selectedToPlaceFilter || null;
-
-        // Zoznam parentov, ktoré sú aktuálne zobrazené (rovnaký filter ako v renderSavedTransfers)
+    
         const candidateParents = (savedTransfersRef.current || []).filter((t) => {
-            if (t._parentKey && t._parentKey !== t.key) return false; // len parenti
+            if (t._parentKey && t._parentKey !== t.key) return false;
             if (t.isWalking === true) return false;
             if (dayKeyFilter && t.dayKey !== dayKeyFilter) return false;
             if (categoryFilter && cleanCategory(t.category || '') !== categoryFilter) return false;
-
-            // Filter podľa miesta začiatku/konca (rovnaká logika ako renderSavedTransfers)
+    
             if (fromPlaceFilter) {
                 const matchesFrom =
                     String(t.fromId || '') === String(fromPlaceFilter) ||
@@ -5395,28 +5393,26 @@ const applyBulkIntermediateStop = async () => {
             }
             return true;
         });
-
+    
         if (candidateParents.length === 0) {
             window.showGlobalNotification('Pre zvolený filter nie sú žiadne presuny.', 'info');
             return;
         }
-
+    
         setBulkIntermediateSaving(true);
+        setBulkIntermediateRemaining(candidateParents.length);
+    
         let updatedCount = 0;
         let skippedCount = 0;
-
-        // NOVÉ: zoznam parent kľúčov, ktoré boli skutočne upravené
         const updatedParentKeys = [];
-
+    
         try {
             for (const parent of candidateParents) {
                 try {
-                    // Vypočítaj nové medzizastávky
                     const existingStops = Array.isArray(parent.intermediateStopIds)
                         ? [...parent.intermediateStopIds]
                         : [];
-
-                    // Ak už zastávka v trase je (medzi from a to), preskočíme
+    
                     const alreadyInRoute =
                         String(parent.fromId || '') === String(stopId) ||
                         String(parent.toId || '') === String(stopId) ||
@@ -5425,16 +5421,14 @@ const applyBulkIntermediateStop = async () => {
                         skippedCount += 1;
                         continue;
                     }
-
+    
                     let newStopIds;
                     if (side === 'from') {
-                        // pridaj hneď za miesto začiatku
                         newStopIds = [stopId, ...existingStops];
                     } else {
-                        // pridaj pred miesto konca
                         newStopIds = [...existingStops, stopId];
                     }
-
+    
                     const draft = {
                         ...parent,
                         intermediateStopIds: newStopIds,
@@ -5442,8 +5436,7 @@ const applyBulkIntermediateStop = async () => {
                             ? parent.segments.map((s) => ({ ...s }))
                             : buildDefaultSegments(parent),
                     };
-
-                    // Zachovaj staré segmenty (isWalking a pod.) – buildDefaultSegments vytvorí nové
+    
                     const oldSegments = Array.isArray(parent.segments) ? parent.segments : [];
                     const newDefaultSegments = buildDefaultSegments({
                         ...draft,
@@ -5467,28 +5460,29 @@ const applyBulkIntermediateStop = async () => {
                         }
                     });
                     draft.segments = newDefaultSegments;
-
-                    // Zachovaj pôvodný when
+    
                     if (parent.when && String(parent.when).trim() !== '') {
                         draft.when = parent.when;
                     }
-
+    
                     recomputeParentSegmentsInPlace(draft);
-
+    
                     await updateParentTransfer(parent.key, (d) => {
                         d.intermediateStopIds = newStopIds;
                         d.segments = draft.segments.map((s) => ({ ...s }));
                         d.when = draft.when;
                     });
-
-                    // NOVÉ: zapamätaj si kľúč upraveného parenta
+    
                     updatedParentKeys.push(parent.key);
                     updatedCount += 1;
                 } catch (e) {
                     skippedCount += 1;
+                } finally {
+                    // NOVÉ: priebežne znižuj počet zostávajúcich
+                    setBulkIntermediateRemaining((prev) => Math.max(0, prev - 1));
                 }
             }
-
+    
             if (updatedCount > 0) {
                 window.showGlobalNotification(
                     `Medzizastávka ${stopName} bola pridaná k ${updatedCount} presunom.` +
@@ -5503,13 +5497,10 @@ const applyBulkIntermediateStop = async () => {
                     skippedCount > 0 ? 'info' : 'error'
                 );
             }
-
+    
             setShowBulkIntermediateModal(null);
             setBulkIntermediateStopId('');
-
-            // NOVÉ: po úspešnom hromadnom pridaní medzizastávky
-            // spusti rovnakú logiku ako tlačidlo
-            // "Nastaviť presun peši medzi blízkymi miestami".
+    
             if (updatedParentKeys.length > 0 && window.TransportGenerator && typeof window.TransportGenerator.setAllWalkingTransfersAsWalking === 'function') {
                 setWalkingBatchSaving(true);
                 try {
@@ -5535,6 +5526,7 @@ const applyBulkIntermediateStop = async () => {
             window.showGlobalNotification('Nepodarilo sa hromadne pridať medzizastávku.', 'error');
         } finally {
             setBulkIntermediateSaving(false);
+            setBulkIntermediateRemaining(0);
         }
     };
 
@@ -10837,14 +10829,14 @@ const applyBulkIntermediateStop = async () => {
                             const baseCls = 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2';
                             const enabledCls = 'bg-violet-600 text-white hover:bg-violet-700';
                             const blockedCls = 'bg-white border-2 border-violet-600 text-violet-600 cursor-not-allowed';
-        
+
                             const countText = totalCandidates > 0 ? ` (${totalCandidates})` : '';
-        
-                            // NOVÉ: ak práve prebieha hromadné pridávanie, zobraz "Ostáva" namiesto "Pridať ku všetkým"
+
+                            // NOVÉ: počas spracovania zobraz "Ostáva: N", inak "Pridať ku všetkým (N)"
                             const buttonLabel = bulkIntermediateSaving
-                                ? `Ostáva: ${totalCandidates}`
-                                : `Pridať ku všetkým${countText}`;
-        
+                                ? `Ostáva: ${bulkIntermediateRemaining}`
+                                : `Pridať ku všetkým ${countText}`;
+
                             return React.createElement(
                                 'button',
                                 {
