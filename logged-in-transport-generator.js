@@ -1889,8 +1889,18 @@ class TransportGenerator {
                                 const lastCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
                                 const nameChar = lastCharMatch ? lastCharMatch[1].toUpperCase() : null;
                                 if (!nameChar) return;
-                                const groupChar = getGroupLastChar(t.groupName);
+                                
+                                // Skús získať groupChar z groupName, ak existuje
+                                let groupChar = getGroupLastChar(t.groupName);
+                                
+                                // Ak nemá groupName, použi posledné písmeno názvu ako groupChar
+                                // (podľa pravidla "posledné písmeno názvu = písmeno skupiny")
+                                if (!groupChar) {
+                                    groupChar = nameChar;
+                                }
+                                
                                 if (!groupChar) return;
+                                
                                 if (!groupCharToContinuationChars.has(groupChar)) {
                                     groupCharToContinuationChars.set(groupChar, new Set());
                                 }
@@ -1904,8 +1914,8 @@ class TransportGenerator {
                                     continuationGroupCharsSet.add(groupChar);
                                 }
                             });
-
-                            console.log('\n\n\n\n\n')
+                            
+                            console.log('\n\n\n\n\n\n');
                             
                             console.log(
                                 `%c[TRANSPORT][SS-DAYS] Tím "${teamName}" (skupina "${userTeamGroupName}", písmeno ${userTeamGroupChar}):`,
