@@ -1038,14 +1038,12 @@ class TransportGenerator {
             }
 
             try {
-                const msg = `[TRANSPORT][GROUP-MEMBERS] Pre tím "${tn}" (kategória: ${cat}) sa nenašiel groupName – nie je možné ho zaradiť do skupiny "${groupChar}".`;
                 if (!window.__transport_missingGroupNameLogged) {
                     window.__transport_missingGroupNameLogged = new Set();
                 }
                 const dedupKey = `${cat}|${tn}|${groupChar}`;
                 if (!window.__transport_missingGroupNameLogged.has(dedupKey)) {
                     window.__transport_missingGroupNameLogged.add(dedupKey);
-                    console.log('%c' + msg, 'color: #b91c1c; font-weight: bold;');
                 }
             } catch (e) {
             }
