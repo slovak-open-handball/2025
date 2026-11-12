@@ -1859,141 +1859,147 @@ class TransportGenerator {
                             && t.isRegistered === true
                     );
 
-                    if (teamIsInUsers && events.length > 0) {
-                        // Zisti, v ktorých dňoch má user tím udalosti
-                        const userTeamDays = new Set();
-                        events.forEach((ev) => {
-                            const dk = extractDayKeyFromWhen(ev.when);
-                            if (dk) userTeamDays.add(dk);
-                        });
-                    
-                        // Zisti dni, v ktorých hrá superstructure tím (pre kategóriu)
-                        const superstructureDays = new Map(); // dayKey -> { firstEvent, superstructureTeamName, groupChar }
-                        const categoryClean = cleanCategory(category);
-                        
-                        (this.ctx.matchesBufferRef?.current || []).forEach((m) => {
-                            if (cleanCategory(m.category) !== categoryClean) return;
-                            if (!m.scheduledTime && m.scheduledTs == null) return;
-                            
-                            let dayKey = null;
-                            if (m.scheduledTime) {
-                                const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
-                                if (mm) {
-                                    dayKey = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
-                                }
-                            }
-                            if (!dayKey && m.scheduledTs != null) {
-                                const dt = new Date(m.scheduledTs);
-                                dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-                            }
-                            if (!dayKey) return;
-                            
-                            // Zisti, či ide o superstructure tím
-                            const homeIsSS = isSpiderTeamName(m.home) || (() => {
-                                const info = (this.ctx.teamsArrivalBufferRef?.current || []).find(
-                                    (t) => cleanCategory(t.category) === categoryClean && String(t.teamName || '').trim() === String(m.home || '').trim()
-                                );
-                                return info && info.isSuperstructure === true;
-                            })();
-                            const awayIsSS = isSpiderTeamName(m.away) || (() => {
-                                const info = (this.ctx.teamsArrivalBufferRef?.current || []).find(
-                                    (t) => cleanCategory(t.category) === categoryClean && String(t.teamName || '').trim() === String(m.away || '').trim()
-                                );
-                                return info && info.isSuperstructure === true;
-                            })();
-                            
-                            const ssTeamName = homeIsSS ? m.home : (awayIsSS ? m.away : null);
-                            if (!ssTeamName) return;
-                            
-                            // Zisti posledné písmeno superstructure tímu
-                            const lastCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(ssTeamName).trim());
-                            const ssGroupChar = lastCharMatch ? lastCharMatch[1].toUpperCase() : null;
-                            if (!ssGroupChar) return;
-                            
-                            // Zisti, či user tím patrí do skupiny s rovnakým posledným písmenom
-                            const userTeamInfo = (this.ctx.teamsArrivalBufferRef?.current || []).find(
-                                (t) => cleanCategory(t.category) === cleanCategory(category)
-                                    && String(t.teamName || '').trim() === String(teamName || '').trim()
-                                    && t.isRegistered === true
-                            );
-                            const userTeamGroupName = userTeamInfo && userTeamInfo.groupName
-                                ? String(userTeamInfo.groupName).trim()
-                                : teamGroupName;
-                            const userTeamGroupChar = userTeamGroupName ? getGroupLastChar(userTeamGroupName) : null;
-                            if (userTeamGroupChar !== ssGroupChar) return;
-                            
-                            // Ulož prvú udalosť superstructure tímu pre daný deň
-                            const eventStartTs = m.scheduledTs ?? Number.POSITIVE_INFINITY;
-                            if (!superstructureDays.has(dayKey)) {
-                                superstructureDays.set(dayKey, {
-                                    firstEvent: {
-                                        startTs: m.scheduledTs,
-                                        location: m.hallName || null,
-                                        when: m.scheduledTime || null,
-                                        text: `${m.home} vs ${m.away}`,
-                                        type: 'match',
-                                        ts: eventStartTs,
-                                    },
-                                    superstructureTeamName: ssTeamName,
-                                    groupChar: ssGroupChar,
-                                });
-                            } else {
-                                const existing = superstructureDays.get(dayKey);
-                                if (eventStartTs < (existing.firstEvent.startTs ?? Number.POSITIVE_INFINITY)) {
-                                    existing.firstEvent = {
-                                        startTs: m.scheduledTs,
-                                        location: m.hallName || null,
-                                        when: m.scheduledTime || null,
-                                        text: `${m.home} vs ${m.away}`,
-                                        type: 'match',
-                                        ts: eventStartTs,
-                                    };
-                                    existing.superstructureTeamName = ssTeamName;
-                                }
-                            }
-                        });
-                        
-                        // Pre každý deň, kedy superstructure tím hrá a user tím nemá udalosť, vygeneruj presun
-                        superstructureDays.forEach((info, dayKey) => {
-                            if (userTeamDays.has(dayKey)) return; // user tím má v tento deň udalosť
-                            
-                            const firstEvent = info.firstEvent;
-                            if (!firstEvent.location) return;
-                            
-                            const hasAccommodation = accommodationName && accommodationName.trim() !== '';
-                            const fromLocationName = hasAccommodation
-                                ? accommodationName.trim()
-                                : (meetingPointStop ? meetingPointStop.name : null);
-                            const fromLabel = hasAccommodation
-                                ? `ubytovanie ${accommodationName.trim()}`
-                                : (meetingPointStop ? `miesto zrazu ${meetingPointStop.name}` : null);
-                            
-                            if (!fromLocationName) return;
-                            if (this.isSamePlaceForTransfer(fromLocationName, firstEvent.location)) return;
-                            
-                            const arrivalTs = firstEvent.startTs;
-                            if (arrivalTs == null) return;
-                            
-                            const arrivalStr = formatFullFromTs(arrivalTs) || firstEvent.when || '—';
-                            const departureTs = timestampOnDay(arrivalTs, 0, 0);
-                            const departureStr = formatFullFromTs(departureTs) || '00:00';
-                            
-                            if (departureTs != null && arrivalTs != null && departureTs >= arrivalTs) return;
-                            
-                            let whenStr;
-                            if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
-                            else if (arrivalStr) whenStr = arrivalStr;
-                            else whenStr = firstEvent.when || '—';
-                            
-                            enriched.push({
-                                ts: firstEvent.ts - 1,
-                                when: whenStr,
-                                type: 'transfer',
-                                text: `Presun z ${fromLabel} do ${firstEvent.location}`,
-                                location: null,
-                                isTransfer: true,
+                    if (teamIsInUsers) {
+                        // Pre user tím zisti groupName a jeho posledné písmeno
+                        const userTeamInfo = (this.ctx.teamsArrivalBufferRef?.current || []).find(
+                            (t) => cleanCategory(t.category) === cleanCategory(category)
+                                && String(t.teamName || '').trim() === String(teamName || '').trim()
+                                && t.isRegistered === true
+                        );
+                        const userTeamGroupName = userTeamInfo && userTeamInfo.groupName
+                            ? String(userTeamInfo.groupName).trim()
+                            : teamGroupName;
+                        const userTeamGroupChar = userTeamGroupName ? getGroupLastChar(userTeamGroupName) : null;
+
+                        if (userTeamGroupChar) {
+                            // Zisti dni, v ktorých má user tím udalosti
+                            const userTeamDays = new Set();
+                            events.forEach((ev) => {
+                                const dk = extractDayKeyFromWhen(ev.when);
+                                if (dk) userTeamDays.add(dk);
                             });
-                        });
+
+                            // Nájdi všetky superstructure tímy v kategórii s rovnakým posledným písmenom
+                            const superstructureTeamsWithSameChar = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
+                                if (cleanCategory(t.category) !== cleanCategory(category)) return false;
+                                if (!t.teamName) return false;
+                                if (t.isSuperstructure !== true) return false;
+                                if (isSpiderTeamName(t.teamName)) return false;
+                                const tn = String(t.teamName).trim();
+                                const lastCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                                const ssChar = lastCharMatch ? lastCharMatch[1].toUpperCase() : null;
+                                return ssChar === userTeamGroupChar;
+                            });
+
+                            console.log(
+                                `%c[TRANSPORT][SS-DAYS] Tím "${teamName}" (skupina "${userTeamGroupName}", písmeno ${userTeamGroupChar}):`,
+                                'font-weight: bold; color: #7c3aed;'
+                            );
+                            console.log(`  Superstructure tímy s rovnakým písmenom: ${superstructureTeamsWithSameChar.map(t => t.teamName).join(', ') || '(žiadne)'}`);
+                            console.log(`  Dni user tímu: ${[...userTeamDays].join(', ') || '(žiadne)'}`);
+
+                            if (superstructureTeamsWithSameChar.length > 0) {
+                                // Pre každý superstructure tím nájdi jeho prvú udalosť v každom dni
+                                // a zoskup podľa dňa -> množina miest prvých udalostí
+                                const superstructureFirstPlacesByDay = new Map();
+
+                                superstructureTeamsWithSameChar.forEach((ssTeam) => {
+                                    const ssTeamName = String(ssTeam.teamName).trim();
+                                    const ssTeamEvents = grouped[cleanCategory(category)]?.[ssTeamName] || [];
+
+                                    const ssEventsByDay = new Map();
+                                    ssTeamEvents.forEach((ev) => {
+                                        const dk = extractDayKeyFromWhen(ev.when);
+                                        if (!dk) return;
+                                        if (!ev.location) return;
+                                        if (!ssEventsByDay.has(dk)) ssEventsByDay.set(dk, []);
+                                        ssEventsByDay.get(dk).push(ev);
+                                    });
+
+                                    ssEventsByDay.forEach((dayEvents, dayKey) => {
+                                        dayEvents.sort((a, b) => {
+                                            const ta = a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY);
+                                            const tb = b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY);
+                                            if (ta !== tb) return ta - tb;
+                                            return String(a.text).localeCompare(String(b.text), 'sk');
+                                        });
+                                        const firstEvent = dayEvents[0];
+                                        if (!firstEvent || !firstEvent.location) return;
+
+                                        if (!superstructureFirstPlacesByDay.has(dayKey)) {
+                                            superstructureFirstPlacesByDay.set(dayKey, new Map());
+                                        }
+                                        const placesMap = superstructureFirstPlacesByDay.get(dayKey);
+                                        const existing = placesMap.get(firstEvent.location);
+                                        const firstTs = firstEvent.startTs != null ? firstEvent.startTs : (firstEvent.ts != null ? firstEvent.ts : Number.POSITIVE_INFINITY);
+                                        if (!existing || firstTs < existing.firstEventTs) {
+                                            placesMap.set(firstEvent.location, {
+                                                firstEventTs: firstTs,
+                                                firstEvent,
+                                                ssTeamName,
+                                            });
+                                        }
+                                    });
+                                });
+
+                                superstructureFirstPlacesByDay.forEach((placesMap, dayKey) => {
+                                    console.log(`  → Deň ${dayKey}: miesta prvých udalostí SS tímov:`);
+                                    placesMap.forEach((info, loc) => {
+                                        console.log(`      • ${loc} (SS tím: ${info.ssTeamName}, čas: ${info.firstEvent.when})`);
+                                    });
+                                });
+
+                                // Pre každý deň, kedy superstructure tím hrá a user tím nemá udalosť,
+                                // vygeneruj presun z ubytovne user tímu na KAŽDÉ miesto prvej udalosti
+                                superstructureFirstPlacesByDay.forEach((placesMap, dayKey) => {
+                                    if (userTeamDays.has(dayKey)) return;
+
+                                    const userTeamHasEventOnDay = events.some((ev) => {
+                                        const evDay = extractDayKeyFromWhen(ev.when);
+                                        return evDay === dayKey && ev.location;
+                                    });
+                                    if (userTeamHasEventOnDay) return;
+
+                                    const hasAccommodation = accommodationName && accommodationName.trim() !== '';
+                                    const fromLocationName = hasAccommodation
+                                        ? accommodationName.trim()
+                                        : (meetingPointStop ? meetingPointStop.name : null);
+                                    const fromLabel = hasAccommodation
+                                        ? `ubytovanie ${accommodationName.trim()}`
+                                        : (meetingPointStop ? `miesto zrazu ${meetingPointStop.name}` : null);
+
+                                    if (!fromLocationName) return;
+
+                                    placesMap.forEach((info, destinationLocation) => {
+                                        if (!destinationLocation) return;
+                                        if (this.isSamePlaceForTransfer(fromLocationName, destinationLocation)) return;
+
+                                        const arrivalTs = info.firstEventTs;
+                                        if (arrivalTs == null || !isFinite(arrivalTs)) return;
+
+                                        const arrivalStr = formatFullFromTs(arrivalTs) || info.firstEvent.when || '—';
+                                        const departureTs = timestampOnDay(arrivalTs, 0, 0);
+                                        const departureStr = formatFullFromTs(departureTs) || '00:00';
+
+                                        if (departureTs != null && arrivalTs != null && departureTs >= arrivalTs) return;
+
+                                        let whenStr;
+                                        if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                        else if (arrivalStr) whenStr = arrivalStr;
+                                        else whenStr = info.firstEvent.when || '—';
+
+                                        enriched.push({
+                                            ts: info.firstEventTs - 1,
+                                            when: whenStr,
+                                            type: 'transfer',
+                                            text: `Presun z ${fromLabel} do ${destinationLocation}`,
+                                            location: null,
+                                            isTransfer: true,
+                                        });
+                                    });
+                                });
+                            }
+                        }
                     }
 
                     for (let i = 0; i < events.length; i++) {
