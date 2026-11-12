@@ -2027,30 +2027,27 @@ class TransportGenerator {
                                     });
                                 });
                             
-                                // ─────────────────────────────────────────────────────────────
-                                // NOVÉ: detailný výpis všetkých udalostí pre všetky tímy,
-                                // ktorých názov alebo groupName obsahuje niektoré z písmen
-                                // v continuationGroupCharsSet (vrátane userTeamGroupChar).
-                                // ─────────────────────────────────────────────────────────────
                                 const allRelevantChars = new Set(continuationGroupCharsSet);
                                 allRelevantChars.add(userTeamGroupChar);
-                            
+
                                 const allRelevantTeams = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
                                     if (cleanCategory(t.category) !== cleanCategory(category)) return false;
                                     if (!t.teamName) return false;
                                     if (isSpiderTeamName(t.teamName)) return false;
-                            
+
                                     const tn = String(t.teamName).trim();
-                                    // Over posledné písmeno názvu
-                                    const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
-                                    const nameChar = nameCharMatch ? nameCharMatch[1].toUpperCase() : null;
-                                    if (nameChar && allRelevantChars.has(nameChar)) return true;
-                            
-                                    // Over groupName
-                                    const groupChar = getGroupLastChar(t.groupName);
-                                    if (groupChar && allRelevantChars.has(groupChar)) return true;
-                            
-                                    return false;
+                                    const isUserTeam = t.isRegistered === true;
+                                
+                                    if (isUserTeam) {
+                                        // USER TÍM → kontroluj groupName
+                                        const groupChar = getGroupLastChar(t.groupName);
+                                        return !!(groupChar && allRelevantChars.has(groupChar));
+                                    } else {
+                                        // SUPERSTRUCTURE TÍM → kontroluj názov tímu (posledné písmeno)
+                                        const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                                        const nameChar = nameCharMatch ? nameCharMatch[1].toUpperCase() : null;
+                                        return !!(nameChar && allRelevantChars.has(nameChar));
+                                    }
                                 });
                             
                                 // Vypíš udalosti pre každý deň a každý relevantný tím
