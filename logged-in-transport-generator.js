@@ -2757,12 +2757,10 @@ class TransportGenerator {
                                             if (anyOtherTeamHasEvent) {
                                                 // ─────────────────────────────────────────────────────────────
                                                 // 0) VÝPIS POSLEDNÝCH UDALOSTÍ VŠETKÝCH USER TÍMOV V SKUPINE
-                                                //    pre daný deň (pred generovaním presunov SS tímu)
                                                 // ─────────────────────────────────────────────────────────────
                                                 const ssTeamNameForLog = String(teamName).trim();
                                                 const groupCharForLog = ssTeamLastChar;
                                             
-                                                // Zoradený zoznam user tímov v skupine (podľa mena)
                                                 const sortedUserTeamsForLog = [...otherTeamsInSameGroup]
                                                     .map((t) => String(t.teamName || '').trim())
                                                     .filter(Boolean)
@@ -2773,6 +2771,8 @@ class TransportGenerator {
                                                     'font-weight: bold; color: #7c3aed;'
                                                 );
                                             
+                                                // Zozbieraj posledné udalosti user tímov (pre výpis aj pre výpočet)
+                                                const lastEventByUserTeam = new Map(); // teamName -> { location, endTs, when, text }
                                                 sortedUserTeamsForLog.forEach((otherTn) => {
                                                     const teamEventsOnDay = (grouped[cleanCategory(category)]?.[otherTn] || [])
                                                         .filter((ev) => {
@@ -2791,59 +2791,72 @@ class TransportGenerator {
                                                     }
                                             
                                                     const lastEv = teamEventsOnDay[0];
-                                                    const lastTimeStr =
+                                                    const lastEndTs =
                                                         lastEv.endTs != null
-                                                            ? (formatFullFromTs(lastEv.endTs) || lastEv.when || '—')
-                                                            : (lastEv.startTs != null
-                                                                ? (formatFullFromTs(lastEv.startTs) || lastEv.when || '—')
-                                                                : (lastEv.when || '—'));
+                                                            ? lastEv.endTs
+                                                            : (lastEv.startTs != null ? lastEv.startTs : (lastEv.ts != null ? lastEv.ts : null));
+                                                    const lastTimeStr =
+                                                        lastEndTs != null
+                                                            ? (formatFullFromTs(lastEndTs) || lastEv.when || '—')
+                                                            : (lastEv.when || '—');
+                                            
+                                                    lastEventByUserTeam.set(otherTn, {
+                                                        location: lastEv.location,
+                                                        endTs: lastEndTs,
+                                                        when: lastEv.when,
+                                                        text: lastEv.text,
+                                                    });
+                                            
                                                     console.log(
                                                         `    • ${otherTn}: ${lastTimeStr} | ${lastEv.location} | ${lastEv.text || ''}`
                                                     );
                                                 });
                                                 console.log('[TRANSPORT][SS-LAST-EVENTS] ─────────────────────────────');
                                             
-                                                // 1) Pre každé miesto nájdi najneskorší endTs spomedzi user tímov,
-                                                //    ktoré na tom mieste končili.
-                                                const latestEndByPlace = new Map(); // placeName -> { endTs, teamName }
-                                                lastPlaceByTeamInGroup.forEach((info, otherTn) => {
-                                                    if (!info.location) return;
-                                                    if (info.endTs == null || !isFinite(info.endTs)) return;
-                                                    const existing = latestEndByPlace.get(info.location);
-                                                    if (!existing || info.endTs > existing.endTs) {
-                                                        latestEndByPlace.set(info.location, { endTs: info.endTs, teamName: otherTn });
+                                                // 1) Nájdi NAJNESKORŠÍ koniec spomedzi VŠETKÝCH user tímov v skupine
+                                                //    (na akomkoľvek mieste) – to bude jednotný čas odchodu pre všetky presuny.
+                                                let globalLatestEndTs = -Infinity;
+                                                lastEventByUserTeam.forEach((info) => {
+                                                    if (info.endTs != null && isFinite(info.endTs) && info.endTs > globalLatestEndTs) {
+                                                        globalLatestEndTs = info.endTs;
                                                     }
                                                 });
                                             
-                                                if (latestEndByPlace.size === 0) return;
+                                                if (globalLatestEndTs === -Infinity) return;
+                                            
+                                                // 2) Zozbieraj unikátne miesta (bez duplikátov a bez miesta, kde SS tím práve je)
+                                                const uniquePlaces = new Set();
+                                                lastEventByUserTeam.forEach((info) => {
+                                                    if (!info.location) return;
+                                                    if (this.isSamePlaceForTransfer(info.location, current.location)) return;
+                                                    uniquePlaces.add(info.location);
+                                                });
+                                            
+                                                if (uniquePlaces.size === 0) return;
                                             
                                                 const currentEventStartTs = current.startTs ?? current.ts ?? null;
                                             
-                                                // 2) Pre každé miesto vygeneruj presun s časom odchodu = najneskorší
-                                                //    koniec user tímu NA TOM ISTOM mieste.
-                                                latestEndByPlace.forEach((info, placeName) => {
-                                                    if (!placeName) return;
-                                                    if (this.isSamePlaceForTransfer(placeName, current.location)) return;
+                                                // 3) Presun má zmysel len ak najneskorší koniec user tímu je PRED
+                                                //    začiatkom udalosti SS tímu (inak SS tím nestíha).
+                                                if (
+                                                    currentEventStartTs != null &&
+                                                    globalLatestEndTs >= currentEventStartTs
+                                                ) {
+                                                    return;
+                                                }
                                             
-                                                    const departureTs = info.endTs;
+                                                // 4) Jednotný čas odchodu = najneskorší koniec spomedzi VŠETKÝCH user tímov
+                                                const departureTs = globalLatestEndTs;
+                                                const departureStr = formatFullFromTs(departureTs) || current.when;
+                                                const arrivalStr = formatFullFromTs(currentEventStartTs) || current.when;
                                             
-                                                    // Presun má zmysel len ak najneskorší koniec na tomto mieste je
-                                                    // PRED začiatkom udalosti SS tímu.
-                                                    if (
-                                                        currentEventStartTs != null &&
-                                                        departureTs >= currentEventStartTs
-                                                    ) {
-                                                        return;
-                                                    }
+                                                let whenStr;
+                                                if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                                else if (arrivalStr) whenStr = arrivalStr;
+                                                else whenStr = current.when;
                                             
-                                                    const departureStr = formatFullFromTs(departureTs) || current.when;
-                                                    const arrivalStr = formatFullFromTs(currentEventStartTs) || current.when;
-                                            
-                                                    let whenStr;
-                                                    if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
-                                                    else if (arrivalStr) whenStr = arrivalStr;
-                                                    else whenStr = current.when;
-                                            
+                                                // 5) Pre KAŽDÉ miesto vygeneruj presun s jednotným časom odchodu
+                                                uniquePlaces.forEach((placeName) => {
                                                     enriched.push({
                                                         ts: current.ts - 1,
                                                         when: whenStr,
