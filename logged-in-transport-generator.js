@@ -2880,6 +2880,60 @@ class TransportGenerator {
                                                     }
                                                 }
                                             } else {
+                                                // NOVÉ: Ak žiadny user tím v skupine nemá v ten deň udalosť,
+                                                // ale SS tím má udalosť v ten deň a existuje miesto zrazu
+                                                // (alebo ubytovanie skupiny), vygeneruj presun z miesta zrazu
+                                                // (príp. ubytovania) na miesto udalosti SS tímu.
+                                                const ssTeamHasEventToday = currentDay != null && current.location != null;
+                                                const hasMeetingPoint = !!meetingPointStop;
+                                            
+                                                if (ssTeamHasEventToday && hasMeetingPoint) {
+                                                    const groupChar = ssTeamLastChar;
+                                                    const groupAccommodations = (() => {
+                                                        if (!groupChar) return [];
+                                                        const cacheKey = `${cleanCategory(category)}|skupina ${groupChar}`;
+                                                        return (window.__transport_accommodationsByGroup || {})[cacheKey] || [];
+                                                    })();
+                                            
+                                                    const sources = new Set();
+                                                    // 1) Mišto zrazu (prednostne)
+                                                    if (meetingPointStop && meetingPointStop.name) {
+                                                        sources.add(meetingPointStop.name);
+                                                    }
+                                                    // 2) Ubytovania skupiny (fallback)
+                                                    groupAccommodations.forEach((a) => {
+                                                        if (a && a.trim()) sources.add(a.trim());
+                                                    });
+                                            
+                                                    const filteredSources = [...sources].filter(
+                                                        (src) => !this.isSamePlaceForTransfer(src, current.location)
+                                                    );
+                                            
+                                                    const arrivalTs = current.startTs;
+                                                    const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
+                                                    const departureTs = timestampOnDay(arrivalTs, 0, 0);
+                                                    const departureStr = formatFullFromTs(departureTs) || '00:00';
+                                            
+                                                    if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
+                                                        filteredSources.forEach((src) => {
+                                                            const isMP = meetingPointStop && src === meetingPointStop.name;
+                                                            const fromLabel = isMP ? `miesto zrazu ${src}` : `ubytovanie ${src}`;
+                                                            let whenStr;
+                                                            if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                                            else if (arrivalStr) whenStr = arrivalStr;
+                                                            else whenStr = current.when;
+                                                            enriched.push({
+                                                                ts: current.ts - 1,
+                                                                when: whenStr,
+                                                                type: 'transfer',
+                                                                text: `Presun z ${fromLabel} do ${current.location}`,
+                                                                location: null,
+                                                                isTransfer: true,
+                                                            });
+                                                        });
+                                                    }
+                                                }
+                                                
                                                 if (anyUsersTeamHasEventToday) {
                                                 } else if (isPavukMatchEventForSS && isPavukFollowUpMatchSamePlaceForSS) {
                                                 } else if (isPavukMatchEventForSS && categoryAlreadyPlayedAtSamePlaceTodayForSS) {
