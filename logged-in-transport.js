@@ -10187,10 +10187,10 @@ useEffect(() => {
                                 window.showGlobalNotification('Nie sú dostupné žiadne kategórie.', 'error');
                                 return;
                             }
-//                            setShowTransferTypeModal(true);
-                            setSelectedCategoryForTimeline(cats[0]);
-                            setSelectedDayForTimeline('');
-                            setShowCategoryModal(true);
+                            setShowTransferTypeModal(true);
+//                            setSelectedCategoryForTimeline(cats[0]);
+//                            setSelectedDayForTimeline('');
+//                            setShowCategoryModal(true);
                         },
                         className: 'w-full h-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0',
                         title: 'Vygenerovať presuny'
