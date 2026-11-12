@@ -1891,6 +1891,7 @@ class TransportGenerator {
                                 return ssChar === userTeamGroupChar;
                             });
 
+                            console.log('\n\n\n\n\n');
                             console.log(
                                 `%c[TRANSPORT][SS-DAYS] Tím "${teamName}" (skupina "${userTeamGroupName}", písmeno ${userTeamGroupChar}):`,
                                 'font-weight: bold; color: #7c3aed;'
