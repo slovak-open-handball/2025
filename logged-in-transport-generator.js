@@ -2635,11 +2635,20 @@ class TransportGenerator {
                                 } else if (isPavukMatchEvent && isPavukFollowUpMatchSamePlace) {
                                 } else if (isPavukMatchEvent) {
                                 } else if (isGlobalFirstDay) {
+                                    // ═══════════════════════════════════════════════════════════
+                                    // ← ZMENA: Prvý deň turnaja – pre USER TÍM:
+                                    //   • ak NEMÁ nastavenú dopravu → presun z miesta zrazu
+                                    //     na miesto prvej udalosti
+                                    //   • ak MÁ verejnú dopravu → presun zo zastávky
+                                    //   • ak MÁ vlastnú dopravu → presun z miesta zrazu
+                                    //   • ak MÁ "bez dopravy" → presun z miesta zrazu
+                                    // ═══════════════════════════════════════════════════════════
                                     const arrivalTypeNorm = String(teamArrivalType || '')
                                         .toLowerCase()
                                         .normalize('NFD')
                                         .replace(/[\u0300-\u036f]/g, '')
                                         .trim();
+                                    const hasNoTransportConfigured = !arrivalTypeNorm;
                                     const hasPublicTransport = arrivalTypeNorm.includes('verejn') || arrivalTypeNorm.includes('autobus') || arrivalTypeNorm.includes('vlak');
                                     const hasOwnOrNoTransport = arrivalTypeNorm.includes('vlastn') || arrivalTypeNorm.includes('bez dopravy') || arrivalTypeNorm.includes('ziadna') || arrivalTypeNorm.includes('žiadna');
                         
@@ -2649,7 +2658,8 @@ class TransportGenerator {
                                     if (hasPublicTransport && externalArrivalStop) {
                                         fromLocationName = externalArrivalStop.name;
                                         fromLabel = `zastávka ${externalArrivalStop.name}`;
-                                    } else if (hasOwnOrNoTransport && meetingPointStop) {
+                                    } else if ((hasOwnOrNoTransport || hasNoTransportConfigured) && meetingPointStop) {
+                                        // ← ZMENA: ak nemá nastavenú dopravu, použi miesto zrazu
                                         fromLocationName = meetingPointStop.name;
                                         fromLabel = `miesto zrazu ${meetingPointStop.name}`;
                                     }
@@ -3308,17 +3318,25 @@ class TransportGenerator {
                                 })();
                         
                                 // ═══════════════════════════════════════════════════════════════
-                                // Ranné presuny pre SUPERSTRUCTURE tím sa NEGENERUJÚ vôbec.
-                                // Výnimka: prvý deň turnaja z miesta zrazu (ak je definované),
-                                // lebo tam ide o presun z miesta zrazu, nie z ubytovne.
+                                // ← ZMENA: Pre SUPERSTRUCTURE tím:
+                                //  • ranný presun z ubytovní sa NEGENERUJE nikdy
+                                //  • ranný presun z miesta zrazu na miesto prvej udalosti sa
+                                //    generuje LEN ak v ten deň nehrá žiadny user tím
+                                //    (anyUsersTeamHasEventToday === false)
                                 // ═══════════════════════════════════════════════════════════════
                                 if (isPlacementMatchEvent) {
                                     // placement match – bez ranného presunu
                                 } else if (anyTeamInSameGroupAlreadyAtSamePlaceToday) {
                                     // už niekto zo skupiny je na tom istom mieste – netreba presun
-                                } else if (isGlobalFirstDay && !isPavukTeamNameForMorning && meetingPointStop && !this.isSamePlaceForTransfer(meetingPointStop.name, current.location)) {
-                                    // Prvý deň turnaja – presun z miesta zrazu na miesto prvej udalosti.
-                                    // (Toto nie je ranný presun z ubytovne, preto ho nechávame.)
+                                } else if (
+                                    !anyUsersTeamHasEventToday &&
+                                    !isPavukTeamNameForMorning &&
+                                    meetingPointStop &&
+                                    !this.isSamePlaceForTransfer(meetingPointStop.name, current.location)
+                                ) {
+                                    // ← KĽÚČOVÁ ZMENA:
+                                    // V ten deň nehrá žiadny user tím → pre SS tím
+                                    // vygeneruj presun z miesta zrazu na miesto prvej udalosti.
                                     const arrivalTs = current.startTs;
                                     const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
                                     const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
