@@ -5511,6 +5511,7 @@ const applyBulkIntermediateStop = async () => {
             // spusti rovnakú logiku ako tlačidlo
             // "Nastaviť presun peši medzi blízkymi miestami".
             if (updatedParentKeys.length > 0 && window.TransportGenerator && typeof window.TransportGenerator.setAllWalkingTransfersAsWalking === 'function') {
+                setWalkingBatchSaving(true);
                 try {
                     await window.TransportGenerator.setAllWalkingTransfersAsWalking({
                         dayKey: dayKeyFilter || null,
@@ -5518,7 +5519,6 @@ const applyBulkIntermediateStop = async () => {
                         parentKeys: updatedParentKeys,
                     });
                 } catch (walkingErr) {
-                    // Ak by generator nepodporoval parentKeys, skúsime bez nich (globálne pre deň/kategóriu)
                     try {
                         await window.TransportGenerator.setAllWalkingTransfersAsWalking({
                             dayKey: dayKeyFilter || null,
@@ -5527,6 +5527,8 @@ const applyBulkIntermediateStop = async () => {
                     } catch (walkingErr2) {
                         console.error('[TRANSPORT] Nepodarilo sa spustiť nastavenie peších presunov po hromadnom pridaní medzizastávky:', walkingErr2);
                     }
+                } finally {
+                    setWalkingBatchSaving(false);
                 }
             }
         } catch (err) {
