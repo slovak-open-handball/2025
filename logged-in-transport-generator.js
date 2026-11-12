@@ -2137,13 +2137,13 @@ class TransportGenerator {
                                 // Pôvodná logika generovania presunov (nezmenená)
                                 superstructureFirstPlacesByDay.forEach((placesMap, dayKey) => {
                                     if (userTeamDays.has(dayKey)) return;
-                            
+                                
                                     const userTeamHasEventOnDay = events.some((ev) => {
                                         const evDay = extractDayKeyFromWhen(ev.when);
                                         return evDay === dayKey && ev.location;
                                     });
                                     if (userTeamHasEventOnDay) return;
-                            
+                                
                                     const hasAccommodation = accommodationName && accommodationName.trim() !== '';
                                     const fromLocationName = hasAccommodation
                                         ? accommodationName.trim()
@@ -2151,27 +2151,30 @@ class TransportGenerator {
                                     const fromLabel = hasAccommodation
                                         ? `ubytovanie ${accommodationName.trim()}`
                                         : (meetingPointStop ? `miesto zrazu ${meetingPointStop.name}` : null);
-                            
+                                
                                     if (!fromLocationName) return;
-                            
+                                
                                     placesMap.forEach((info, destinationLocation) => {
                                         if (!destinationLocation) return;
-                                        if (this.isSamePlaceForTransfer(fromLocationName, destinationLocation)) return;
-                            
+                                        // POZOR: Zámerne NEkontrolujeme isSamePlaceForTransfer,
+                                        // pretože ide o prvú udalosť SS tímu v ten deň a presun
+                                        // sa má vygenerovať aj vtedy, ak je miesto rovnaké ako
+                                        // ubytovanie/miesto zrazu (ide o iný tím).
+                                
                                         const arrivalTs = info.firstEventTs;
                                         if (arrivalTs == null || !isFinite(arrivalTs)) return;
-                            
+                                
                                         const arrivalStr = formatFullFromTs(arrivalTs) || info.firstEvent.when || '—';
                                         const departureTs = timestampOnDay(arrivalTs, 0, 0);
                                         const departureStr = formatFullFromTs(departureTs) || '00:00';
-                            
+                                
                                         if (departureTs != null && arrivalTs != null && departureTs >= arrivalTs) return;
-                            
+                                
                                         let whenStr;
                                         if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
                                         else if (arrivalStr) whenStr = arrivalStr;
                                         else whenStr = info.firstEvent.when || '—';
-                            
+                                
                                         enriched.push({
                                             ts: info.firstEventTs - 1,
                                             when: whenStr,
