@@ -2700,11 +2700,11 @@ class TransportGenerator {
                                                 if (String(t.teamName).trim() === String(teamName).trim()) return false;
                                                 return true;
                                             });
-                                
+                                        
                                             let otherTeamsInSameGroup = allUserTeamsInCategory.filter((t) =>
                                                 teamBelongsToGroupChar(t, ssTeamLastChar)
                                             );
-                                
+                                        
                                             if (otherTeamsInSameGroup.length === 0) {
                                                 console.log(
                                                     `%c[TRANSPORT][SS-DIAG] Fallback: žiadne tímy v skupine "${ssTeamLastChar}", používam všetky user tímy v kategórii (${allUserTeamsInCategory.length}).`,
@@ -2717,12 +2717,12 @@ class TransportGenerator {
                                                     'color: #b91c1c;'
                                                 );
                                             }
-                                
+                                        
                                             const lastPlaceByTeamInGroup = (() => {
                                                 if (!currentDay) return new Map();
                                                 const result = new Map();
                                                 const categoryClean = cleanCategory(category);
-                                
+                                        
                                                 (this.ctx.matchesBufferRef?.current || []).forEach((m) => {
                                                     if (cleanCategory(m.category) !== categoryClean) return;
                                                     let dayKey = null;
@@ -2738,67 +2738,67 @@ class TransportGenerator {
                                                     }
                                                     if (dayKey !== currentDay) return;
                                                     if (!m.hallName) return;
-                                
+                                        
                                                     [m.home, m.away].forEach((tn) => {
                                                         if (!tn) return;
                                                         const otherTn = String(tn).trim();
                                                         if (otherTn === String(teamName || '').trim()) return;
                                                         if (!otherTeamsInSameGroup.some(t => String(t.teamName).trim() === otherTn)) return;
-                                
+                                        
                                                         const endTs = m.scheduledEndTs != null ? m.scheduledEndTs : m.scheduledTs;
                                                         if (endTs == null) return;
-                                
+                                        
                                                         const existing = result.get(otherTn);
                                                         if (!existing || endTs > existing.endTs) {
                                                             result.set(otherTn, { location: m.hallName, endTs });
                                                         }
                                                     });
                                                 });
-                                
+                                        
                                                 (this.ctx.cateringBufferRef?.current || []).forEach((c) => {
                                                     if (cleanCategory(c.category) !== categoryClean) return;
                                                     if (c.dayKey !== currentDay) return;
                                                     if (!c.placeName) return;
-                                
+                                        
                                                     const otherTn = String(c.teamName || '').trim();
                                                     if (!otherTn) return;
                                                     if (otherTn === String(teamName || '').trim()) return;
                                                     if (!otherTeamsInSameGroup.some(t => String(t.teamName).trim() === otherTn)) return;
-                                
+                                        
                                                     const endTs = c.slotToTs != null ? c.slotToTs : c.ts;
                                                     if (endTs == null) return;
-                                
+                                        
                                                     const existing = result.get(otherTn);
                                                     if (!existing || endTs > existing.endTs) {
                                                         result.set(otherTn, { location: c.placeName, endTs });
                                                     }
                                                 });
-                                
+                                        
                                                 return result;
                                             })();
-                                
+                                        
                                             const anyOtherTeamHasEvent = lastPlaceByTeamInGroup.size > 0;
-                                
+                                        
                                             console.log(
                                                 `%c[TRANSPORT][SS-DIAG] lastPlaceByTeamInGroup: ${lastPlaceByTeamInGroup.size} záznamov`,
                                                 'color: #b91c1c;'
                                             );
-                                
+                                        
                                             if (anyOtherTeamHasEvent) {
                                                 // VÝPIS POSLEDNÝCH UDALOSTÍ
                                                 const ssTeamNameForLog = String(teamName).trim();
                                                 const groupCharForLog = ssTeamLastChar;
-                                
+                                        
                                                 const sortedUserTeamsForLog = [...otherTeamsInSameGroup]
                                                     .map((t) => String(t.teamName || '').trim())
                                                     .filter(Boolean)
                                                     .sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
-                                
+                                        
                                                 console.log(
                                                     `%c[TRANSPORT][SS-LAST-EVENTS] Deň ${currentDay} – SS tím "${ssTeamNameForLog}" (skupina ${groupCharForLog}) – posledné udalosti user tímov v skupine:`,
                                                     'font-weight: bold; color: #7c3aed;'
                                                 );
-                                
+                                        
                                                 const lastEventByUserTeam = new Map();
                                                 sortedUserTeamsForLog.forEach((otherTn) => {
                                                     const teamEventsOnDay = (grouped[cleanCategory(category)]?.[otherTn] || [])
@@ -2811,12 +2811,12 @@ class TransportGenerator {
                                                             const tb = b.endTs != null ? b.endTs : (b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY));
                                                             return tb - ta;
                                                         });
-                                
+                                        
                                                     if (teamEventsOnDay.length === 0) {
                                                         console.log(`    • ${otherTn}: (žiadna udalosť s miestom v tento deň)`);
                                                         return;
                                                     }
-                                
+                                        
                                                     const lastEv = teamEventsOnDay[0];
                                                     const lastEndTs =
                                                         lastEv.endTs != null
@@ -2826,27 +2826,27 @@ class TransportGenerator {
                                                         lastEndTs != null
                                                             ? (formatFullFromTs(lastEndTs) || lastEv.when || '—')
                                                             : (lastEv.when || '—');
-                                
+                                        
                                                     lastEventByUserTeam.set(otherTn, {
                                                         location: lastEv.location,
                                                         endTs: lastEndTs,
                                                         when: lastEv.when,
                                                         text: lastEv.text,
                                                     });
-                                
+                                        
                                                     console.log(
                                                         `    • ${otherTn}: ${lastTimeStr} | ${lastEv.location} | ${lastEv.text || ''}`
                                                     );
                                                 });
                                                 console.log('[TRANSPORT][SS-LAST-EVENTS] ─────────────────────────────');
-                                
+                                        
                                                 let globalLatestEndTs = -Infinity;
                                                 lastEventByUserTeam.forEach((info) => {
                                                     if (info.endTs != null && isFinite(info.endTs) && info.endTs > globalLatestEndTs) {
                                                         globalLatestEndTs = info.endTs;
                                                     }
                                                 });
-                                
+                                        
                                                 if (globalLatestEndTs !== -Infinity) {
                                                     const uniquePlaces = new Set();
                                                     lastEventByUserTeam.forEach((info) => {
@@ -2854,19 +2854,19 @@ class TransportGenerator {
                                                         if (this.isSamePlaceForTransfer(info.location, current.location)) return;
                                                         uniquePlaces.add(info.location);
                                                     });
-                                
+                                        
                                                     const currentEventStartTs = current.startTs ?? current.ts ?? null;
-                                
+                                        
                                                     if (uniquePlaces.size > 0 &&
                                                         !(currentEventStartTs != null && globalLatestEndTs >= currentEventStartTs)) {
                                                         const departureStr = formatFullFromTs(globalLatestEndTs) || current.when;
                                                         const arrivalStr = formatFullFromTs(currentEventStartTs) || current.when;
-                                
+                                        
                                                         let whenStr;
                                                         if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
                                                         else if (arrivalStr) whenStr = arrivalStr;
                                                         else whenStr = current.when;
-                                
+                                        
                                                         uniquePlaces.forEach((placeName) => {
                                                             enriched.push({
                                                                 ts: current.ts - 1,
@@ -2880,40 +2880,35 @@ class TransportGenerator {
                                                     }
                                                 }
                                             } else {
-                                                // NOVÉ: Ak žiadny user tím v skupine nemá v ten deň udalosť,
-                                                // ale SS tím má udalosť v ten deň a existuje miesto zrazu
-                                                // (alebo ubytovanie skupiny), vygeneruj presun z miesta zrazu
-                                                // (príp. ubytovania) na miesto udalosti SS tímu.
+                                                // NOVÉ: Žiadny user tím v skupine nemá v ten deň udalosť.
+                                                // Ak SS tím má udalosť a existuje miesto zrazu / ubytovanie skupiny,
+                                                // vygeneruj presun z miesta zrazu (príp. ubytovania) na miesto udalosti.
                                                 const ssTeamHasEventToday = currentDay != null && current.location != null;
-                                                const hasMeetingPoint = !!meetingPointStop;
-                                            
-                                                if (ssTeamHasEventToday && hasMeetingPoint) {
+                                                if (ssTeamHasEventToday) {
                                                     const groupChar = ssTeamLastChar;
                                                     const groupAccommodations = (() => {
                                                         if (!groupChar) return [];
                                                         const cacheKey = `${cleanCategory(category)}|skupina ${groupChar}`;
                                                         return (window.__transport_accommodationsByGroup || {})[cacheKey] || [];
                                                     })();
-                                            
+                                        
                                                     const sources = new Set();
-                                                    // 1) Mišto zrazu (prednostne)
                                                     if (meetingPointStop && meetingPointStop.name) {
                                                         sources.add(meetingPointStop.name);
                                                     }
-                                                    // 2) Ubytovania skupiny (fallback)
                                                     groupAccommodations.forEach((a) => {
                                                         if (a && a.trim()) sources.add(a.trim());
                                                     });
-                                            
+                                        
                                                     const filteredSources = [...sources].filter(
                                                         (src) => !this.isSamePlaceForTransfer(src, current.location)
                                                     );
-                                            
+                                        
                                                     const arrivalTs = current.startTs;
                                                     const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
                                                     const departureTs = timestampOnDay(arrivalTs, 0, 0);
                                                     const departureStr = formatFullFromTs(departureTs) || '00:00';
-                                            
+                                        
                                                     if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
                                                         filteredSources.forEach((src) => {
                                                             const isMP = meetingPointStop && src === meetingPointStop.name;
@@ -2931,78 +2926,6 @@ class TransportGenerator {
                                                                 isTransfer: true,
                                                             });
                                                         });
-                                                    }
-                                                }
-                                                
-                                                if (anyUsersTeamHasEventToday) {
-                                                } else if (isPavukMatchEventForSS && isPavukFollowUpMatchSamePlaceForSS) {
-                                                } else if (isPavukMatchEventForSS && categoryAlreadyPlayedAtSamePlaceTodayForSS) {
-                                                } else if (!isFirstPavukMatchOfDay) {
-                                                } else if (isGlobalFirstDay) {
-                                                    if (isPavukTeamNameForMorning) {
-                                                    } else if (meetingPointStop && !this.isSamePlaceForTransfer(meetingPointStop.name, current.location)) {
-                                                        const arrivalTs = current.startTs;
-                                                        const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
-                                                        const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
-                                                        const departureTs = globalArrivalTs != null && isFinite(globalArrivalTs)
-                                                            ? globalArrivalTs
-                                                            : timestampOnDay(arrivalTs, 0, 0);
-                                                        const departureStr = formatFullFromTs(departureTs) || '00:00';
-                                                        if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
-                                                            let whenStr;
-                                                            if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
-                                                            else if (arrivalStr) whenStr = arrivalStr;
-                                                            else whenStr = current.when;
-                                                            enriched.push({
-                                                                ts: current.ts - 1,
-                                                                when: whenStr,
-                                                                type: 'transfer',
-                                                                text: `Presun z miesto zrazu ${meetingPointStop.name} do ${current.location}`,
-                                                                location: null,
-                                                                isTransfer: true,
-                                                            });
-                                                        }
-                                                    }
-                                                } else {
-                                                    const groupChar = groupCharForSS;
-                                                    if (groupChar) {
-                                                        const groupAccommodations = (() => {
-                                                            const cacheKey = `${cleanCategory(category)}|skupina ${groupChar}`;
-                                                            return (window.__transport_accommodationsByGroup || {})[cacheKey] || [];
-                                                        })();
-                                                        const sources = new Set();
-                                                        groupAccommodations.forEach((a) => {
-                                                            if (a && a.trim()) sources.add(a.trim());
-                                                        });
-                                                        if (meetingPointStop) {
-                                                            sources.add(meetingPointStop.name);
-                                                        }
-                                                        const filteredSources = [...sources].filter(
-                                                            (src) => !this.isSamePlaceForTransfer(src, current.location)
-                                                        );
-                                
-                                                        const arrivalTs = current.startTs;
-                                                        const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
-                                                        const departureTs = timestampOnDay(arrivalTs, 0, 0);
-                                                        const departureStr = formatFullFromTs(departureTs) || '00:00';
-                                                        if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
-                                                            filteredSources.forEach((src) => {
-                                                                const isMP = meetingPointStop && src === meetingPointStop.name;
-                                                                const fromLabel = isMP ? `miesto zrazu ${src}` : `ubytovanie ${src}`;
-                                                                let whenStr;
-                                                                if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
-                                                                else if (arrivalStr) whenStr = arrivalStr;
-                                                                else whenStr = current.when;
-                                                                enriched.push({
-                                                                    ts: current.ts - 1,
-                                                                    when: whenStr,
-                                                                    type: 'transfer',
-                                                                    text: `Presun z ${fromLabel} do ${current.location}`,
-                                                                    location: null,
-                                                                    isTransfer: true,
-                                                                });
-                                                            });
-                                                        }
                                                     }
                                                 }
                                             }
