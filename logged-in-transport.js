@@ -1241,41 +1241,6 @@ const TransportApp = ({ userProfileData }) => {
     const [deleteWalkingRuleModal, setDeleteWalkingRuleModal] = useState(null);
     const [deleteWalkingRuleSaving, setDeleteWalkingRuleSaving] = useState(false);
 
-        useEffect(() => {
-        if (window.TransportGenerator && typeof window.TransportGenerator.setContext === 'function') {
-            window.TransportGenerator.setContext({
-                // Refs
-                savedTransfersRef,
-                matchesBufferRef,
-                cateringBufferRef,
-                teamsArrivalBufferRef,
-                allPlacesRef,
-                superstructureGroupsRef,
-                placesMapRef,
-                teamsLookupRef,
-                meetingPointDayKeyRef,
-                timelineGenerationRequestedRef,
-                matchesLoadedRef,
-                cateringLoadedRef,
-                teamsLoadedRef,
-                teamsLookupLoadedRef,
-                // State (gettery)
-                get busRows() { return busRows; },
-                get buses() { return buses; },
-                get savedTransfers() { return savedTransfers; },
-                get stopsList() { return stopsList; },
-                get walkingRules() { return walkingRules; },
-                get travelTimesLoaded() { return travelTimesLoaded; },
-                // User
-                userProfileData,
-                // Delegácie
-                updateParentTransferImpl: (parentKey, mutator) => updateParentTransfer(parentKey, mutator),
-            });
-        }
-    }, [
-        busRows, buses, savedTransfers, stopsList, walkingRules, travelTimesLoaded,
-    ]);
-
     window.printTeamTimeline = (teamName) => {
         if (!teamName || typeof teamName !== 'string') {
             return;
@@ -6125,6 +6090,41 @@ const TransportApp = ({ userProfileData }) => {
 
         await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: { [parentKey]: payload } }, { merge: true });
     };
+
+    useEffect(() => {
+        if (window.TransportGenerator && typeof window.TransportGenerator.setContext === 'function') {
+            window.TransportGenerator.setContext({
+                // Refs
+                savedTransfersRef,
+                matchesBufferRef,
+                cateringBufferRef,
+                teamsArrivalBufferRef,
+                allPlacesRef,
+                superstructureGroupsRef,
+                placesMapRef,
+                teamsLookupRef,
+                meetingPointDayKeyRef,
+                timelineGenerationRequestedRef,
+                matchesLoadedRef,
+                cateringLoadedRef,
+                teamsLoadedRef,
+                teamsLookupLoadedRef,
+                // State (gettery)
+                get busRows() { return busRows; },
+                get buses() { return buses; },
+                get savedTransfers() { return savedTransfers; },
+                get stopsList() { return stopsList; },
+                get walkingRules() { return walkingRules; },
+                get travelTimesLoaded() { return travelTimesLoaded; },
+                // User
+                userProfileData,
+                // Delegácie
+                updateParentTransferImpl: (parentKey, mutator) => updateParentTransfer(parentKey, mutator),
+            });
+        }
+    }, [
+        busRows, buses, savedTransfers, stopsList, walkingRules, travelTimesLoaded,
+    ]);    
 
     const setTransferAsWalking = async (transfer, options = {}) => {
         const { silent = false } = options;
