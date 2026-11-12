@@ -3307,15 +3307,29 @@ class TransportGenerator {
                                     });
                                 })();
                         
+                                // ═══════════════════════════════════════════════════════════════
+                                // ← ZMENA: celá logika ranných presunov je teraz VNÚTRI
+                                //   vetvy `else if (anyUsersTeamHasEventToday)`.
+                                //   Ak žiadny user tím v kategórii nemá v ten deň udalosť,
+                                //   ranné presuny z ubytovní / miesta zrazu sa NEGENERUJÚ.
+                                // ═══════════════════════════════════════════════════════════════
                                 if (isPlacementMatchEvent) {
+                                    // placement match – bez ranného presunu
                                 } else if (anyTeamInSameGroupAlreadyAtSamePlaceToday) {
-                                } else if (anyUsersTeamHasEventToday) {
+                                    // už niekto zo skupiny je na tom istom mieste – netreba presun
+                                } else if (!anyUsersTeamHasEventToday) {
+                                    // ← NOVÉ: žiadny user tím v kategórii nemá dnes udalosť
+                                    //   → pre SS tím sa NEgeneruje ranný presun z ubytovania
+                                    //   ani z miesta zrazu na miesto prvej udalosti.
                                 } else if (isPavukMatchEventForSS && isPavukFollowUpMatchSamePlaceForSS) {
+                                    // pavúk – nadväzujúci zápas na tom istom mieste
                                 } else if (isPavukMatchEventForSS && categoryAlreadyPlayedAtSamePlaceTodayForSS) {
+                                    // pavúk – kategória už dnes hrala na tom istom mieste
                                 } else if (!isFirstPavukMatchOfDay) {
+                                    // pavúk – nie je prvý zápas dňa
                                 } else if (isGlobalFirstDay) {
                                     if (isPavukTeamNameForMorning) {
-                                    } else if (anyTeamInSameGroupAlreadyAtSamePlaceToday) {
+                                        // pavúkový tím – bez ranného presunu
                                     } else if (meetingPointStop && !this.isSamePlaceForTransfer(meetingPointStop.name, current.location)) {
                                         const arrivalTs = current.startTs;
                                         const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
@@ -3340,6 +3354,7 @@ class TransportGenerator {
                                         }
                                     }
                                 } else {
+                                    // štandardný ranný presun z ubytovní skupiny / miesta zrazu
                                     const groupChar = groupCharForSS;
                                     if (groupChar) {
                                         const groupAccommodations = (() => {
@@ -3383,7 +3398,7 @@ class TransportGenerator {
                                 }
                             }
                         }
-
+                        
                         enriched.push(current);
 
                         const currentIsTimedEvent =
