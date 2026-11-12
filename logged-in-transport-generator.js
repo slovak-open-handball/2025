@@ -1853,6 +1853,12 @@ class TransportGenerator {
                         }
                     }
 
+                    const teamIsInUsers = (this.ctx.teamsArrivalBufferRef?.current || []).some(
+                        (t) => cleanCategory(t.category) === cleanCategory(category)
+                            && t.teamName === teamName
+                            && t.isRegistered === true
+                    );
+
                     if (teamIsInUsers && events.length > 0) {
                         // Zisti, v ktorých dňoch má user tím udalosti
                         const userTeamDays = new Set();
@@ -1906,6 +1912,15 @@ class TransportGenerator {
                             
                             // Zisti, či user tím patrí do skupiny s rovnakým posledným písmenom
                             const userTeamGroupChar = teamGroupName ? getGroupLastChar(teamGroupName) : null;
+                            const userTeamInfo = (this.ctx.teamsArrivalBufferRef?.current || []).find(
+                                (t) => cleanCategory(t.category) === cleanCategory(category)
+                                    && String(t.teamName || '').trim() === String(teamName || '').trim()
+                                    && t.isRegistered === true
+                            );
+                            const userTeamGroupName = userTeamInfo && userTeamInfo.groupName
+                                ? String(userTeamInfo.groupName).trim()
+                                : teamGroupName;
+                            const userTeamGroupChar = userTeamGroupName ? getGroupLastChar(userTeamGroupName) : null;
                             if (userTeamGroupChar !== ssGroupChar) return;
                             
                             // Ulož prvú udalosť superstructure tímu pre daný deň
