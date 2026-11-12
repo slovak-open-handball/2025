@@ -5144,7 +5144,7 @@ useEffect(() => {
                 const fromName = resolvePlaceNameById(segFromId) || '';
                 const toName = resolvePlaceNameById(segToId) || '';
                 window.showGlobalNotification(
-                    `Časť presunu ${fromName} → ${toName} bola odstránená.`,
+                    `Celkový presun ${fromName} → ${toName} bol odstránený.`,
                     'success'
                 );
                 setDeleteTransferModal(null);
@@ -9237,7 +9237,7 @@ useEffect(() => {
                                 routeLabel = `${resolvePlaceNameById(t.fromId)} → ${resolvePlaceNameById(t.toId)}`;
                             }
                             const parentInfoLabel = t._parentKey && t._parentRoute
-                                ? `časť presunu ${t._parentRoute}`
+                                ? `celkový presun ${t._parentRoute}`
                                 : null;
 
                             const parseTimeLabelRange = (label) => {
