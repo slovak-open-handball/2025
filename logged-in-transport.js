@@ -10824,6 +10824,7 @@ const TransportApp = ({ userProfileData }) => {
                                         isRegen: false,
                                     });
                                 } catch (err) {
+                                    console.error('[TRANSPORT] Chyba pri generovaní presunov:', err);
                                     window.showGlobalNotification('Nepodarilo sa vygenerovať presuny.', 'error');
                                 }
                             
