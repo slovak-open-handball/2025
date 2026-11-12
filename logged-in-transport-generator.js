@@ -2755,52 +2755,62 @@ class TransportGenerator {
                                             const anyOtherTeamHasEvent = lastPlaceByTeamInGroup.size > 0;
 
                                             if (anyOtherTeamHasEvent) {
-                                                const lastPlacesDifferentFromCurrent = new Map();
+                                                // 1) Nájdi najneskorší koniec spomedzi VŠETKÝCH user tímov v skupine
+                                                let latestEndTsOverall = -Infinity;
+                                                lastPlaceByTeamInGroup.forEach((info) => {
+                                                    if (info.endTs != null && isFinite(info.endTs) && info.endTs > latestEndTsOverall) {
+                                                        latestEndTsOverall = info.endTs;
+                                                    }
+                                                });
+                                            
+                                                if (latestEndTsOverall === -Infinity) {
+                                                    // žiadny user tím v skupine nemá na tento deň časový údaj
+                                                    return;
+                                                }
+                                            
+                                                const currentEventStartTs = current.startTs ?? current.ts ?? null;
+                                            
+                                                // 2) Presun má zmysel len ak najneskorší koniec user tímu je PRED
+                                                //    začiatkom udalosti SS tímu (inak SS tím nestíha / už je na mieste).
+                                                if (
+                                                    currentEventStartTs == null ||
+                                                    latestEndTsOverall >= currentEventStartTs
+                                                ) {
+                                                    // SS tím sa nemôže presunúť – najneskorší user tím končí neskôr/rovnako
+                                                    return;
+                                                }
+                                            
+                                                // 3) Zozbieraj unikátne miesta (bez duplikátov a bez miesta, kde SS tím práve je)
+                                                const uniquePlaces = new Set();
                                                 lastPlaceByTeamInGroup.forEach((info) => {
                                                     if (!info.location) return;
                                                     if (this.isSamePlaceForTransfer(info.location, current.location)) return;
-                                                    const existing = lastPlacesDifferentFromCurrent.get(info.location);
-                                                    if (!existing || info.endTs > existing) {
-                                                        lastPlacesDifferentFromCurrent.set(info.location, info.endTs);
-                                                    }
+                                                    uniquePlaces.add(info.location);
                                                 });
-
-                                                const hasAnyDifferentLastPlace = lastPlacesDifferentFromCurrent.size > 0;
-
-                                                if (hasAnyDifferentLastPlace) {
-                                                    const currentEventStartTs = current.startTs ?? current.ts ?? null;
-                                                    const arrivalStr = formatFullFromTs(currentEventStartTs) || current.when;
-
-                                                    lastPlacesDifferentFromCurrent.forEach((endTs, placeName) => {
-                                                        if (!placeName) return;
-                                                        if (this.isSamePlaceForTransfer(placeName, current.location)) return;
-
-                                                        const departureTs = endTs;
-                                                        const departureStr = formatFullFromTs(departureTs) || current.when;
-
-                                                        if (
-                                                            departureTs != null &&
-                                                            currentEventStartTs != null &&
-                                                            departureTs >= currentEventStartTs
-                                                        ) {
-                                                            return;
-                                                        }
-
-                                                        let whenStr;
-                                                        if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
-                                                        else if (arrivalStr) whenStr = arrivalStr;
-                                                        else whenStr = current.when;
-
-                                                        enriched.push({
-                                                            ts: current.ts - 1,
-                                                            when: whenStr,
-                                                            type: 'transfer',
-                                                            text: `Presun z ${placeName} do ${current.location}`,
-                                                            location: null,
-                                                            isTransfer: true,
-                                                        });
+                                            
+                                                if (uniquePlaces.size === 0) return;
+                                            
+                                                // 4) Jednotný čas odchodu = najneskorší koniec spomedzi všetkých user tímov
+                                                const departureTs = latestEndTsOverall;
+                                                const departureStr = formatFullFromTs(departureTs) || current.when;
+                                                const arrivalStr = formatFullFromTs(currentEventStartTs) || current.when;
+                                            
+                                                let whenStr;
+                                                if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                                else if (arrivalStr) whenStr = arrivalStr;
+                                                else whenStr = current.when;
+                                            
+                                                // 5) Vygeneruj presun z KAŽDÉHO miesta, ale s rovnakým časom odchodu
+                                                uniquePlaces.forEach((placeName) => {
+                                                    enriched.push({
+                                                        ts: current.ts - 1,
+                                                        when: whenStr,
+                                                        type: 'transfer',
+                                                        text: `Presun z ${placeName} do ${current.location}`,
+                                                        location: null,
+                                                        isTransfer: true,
                                                     });
-                                                }
+                                                });
                                             } else {
                                                 if (anyUsersTeamHasEventToday) {
                                                 } else if (isPavukMatchEventForSS && isPavukFollowUpMatchSamePlaceForSS) {
