@@ -5527,6 +5527,11 @@ const TransportApp = ({ userProfileData }) => {
         } finally {
             setBulkIntermediateSaving(false);
             setBulkIntermediateRemaining(0);
+    
+            // NOVÉ: reset filtra miesta začiatku/konca, aby sa box „Vygenerované presuny"
+            // nezasekol v prázdnom stave, keď sa všetky zodpovedajúce presuny už upravili
+            setSelectedFromPlaceFilter('');
+            setSelectedToPlaceFilter('');
         }
     };
 
