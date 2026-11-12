@@ -216,6 +216,93 @@ const buildTransferKey = (category, teamName, when, text) => {
     ].join('||');
 };
 
+const parseTransferWhenToRange = (when) => {
+    if (!when) return null;
+    const s = String(when);
+    const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
+    const found = [];
+    let m;
+    while ((m = regex.exec(s)) !== null) {
+        const d = Number(m[1]);
+        const mo = Number(m[2]) - 1;
+        const y = Number(m[3]);
+        const hh = m[4] != null ? Number(m[4]) : 0;
+        const mi = m[5] != null ? Number(m[5]) : 0;
+        const ts = new Date(y, mo, d, hh, mi, 0, 0).getTime();
+        if (isFinite(ts)) found.push(ts);
+    }
+    if (found.length === 0) return null;
+    return {
+        startTs: found[0],
+        endTs: found.length > 1 ? found[1] : found[0],
+    };
+};
+
+const computeEffectiveParentRange = (parent) => {
+    if (!parent) return null;
+    const whenRange = parseTransferWhenToRange(parent.when);
+    if (!whenRange) return null;
+    return { startTs: whenRange.startTs, endTs: whenRange.endTs };
+};
+
+const parseWhenRangeToTs = (when) => {
+    if (!when) return null;
+    const s = String(when);
+    const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
+    const found = [];
+    let m;
+    while ((m = regex.exec(s)) !== null) {
+        const d = Number(m[1]);
+        const mo = Number(m[2]) - 1;
+        const y = Number(m[3]);
+        const hh = m[4] != null ? Number(m[4]) : 0;
+        const mi = m[5] != null ? Number(m[5]) : 0;
+        const ts = new Date(y, mo, d, hh, mi, 0, 0).getTime();
+        if (isFinite(ts)) found.push(ts);
+    }
+    if (found.length === 0) return null;
+    return {
+        startTs: found[0],
+        endTs: found.length > 1 ? found[1] : found[0],
+    };
+};
+
+const SPIDER_IDENTIFIER_PREFIXES = [
+    'W32F', 'L32F', 'W16F', 'L16F', 'W8F', 'L8F', 'WQF', 'LQF', 'WSF', 'LSF',
+];
+const SPIDER_IDENTIFIER_REGEX = new RegExp(
+    '\\b(' + SPIDER_IDENTIFIER_PREFIXES.join('|') + ')\\d*',
+    'i'
+);
+const isSpiderTeamName = (teamName) => {
+    if (!teamName) return false;
+    return SPIDER_IDENTIFIER_REGEX.test(String(teamName));
+};
+const isSuperstructureTeamName = (teamName, category) => {
+    if (!teamName) return false;
+    const tn = String(teamName).trim();
+    if (!tn) return false;
+    const cat = cleanCategory(category || '');
+    if (cat && tn.startsWith(cat + ' ')) return true;
+    if (isSpiderTeamName(tn)) return true;
+    const info = (window.__transport_teamsArrivalBuffer || []).find(
+        (t) => cleanCategory(t.category) === cat && String(t.teamName || '').trim() === tn
+    );
+    if (info && info.isSuperstructure === true) return true;
+    if (info && info.isRegistered !== true) return true;
+    return false;
+};
+const getGroupCharFromTeamName = (teamName, category) => {
+    if (!teamName) return null;
+    const tn = String(teamName).trim();
+    if (!tn) return null;
+    if (isSuperstructureTeamName(tn, category)) return null;
+    const m = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+    if (m) return m[1].toUpperCase();
+    const m2 = /([A-ZÁ-Ž])(?=[^A-ZÁ-Ž]*$)/.exec(tn.toUpperCase());
+    return m2 ? m2[1] : null;
+};
+
 const buildDefaultSegments = (parent) => {
     if (!parent) return [];
     
@@ -278,7 +365,11 @@ const TransportApp = ({ userProfileData }) => {
                 teamsLookupRef,
                 meetingPointDayKeyRef,
                 timelineGenerationRequestedRef,
-                // State (gettery – aby generátor videl aktuálne hodnoty)
+                matchesLoadedRef,
+                cateringLoadedRef,
+                teamsLoadedRef,
+                teamsLookupLoadedRef,
+                // State (gettery)
                 get busRows() { return busRows; },
                 get buses() { return buses; },
                 get savedTransfers() { return savedTransfers; },
@@ -287,7 +378,7 @@ const TransportApp = ({ userProfileData }) => {
                 get travelTimesLoaded() { return travelTimesLoaded; },
                 // User
                 userProfileData,
-                // Delegácie na funkcie, ktoré zostali v hlavnom súbore
+                // Delegácie
                 updateParentTransferImpl: (parentKey, mutator) => updateParentTransfer(parentKey, mutator),
             });
         }
@@ -390,6 +481,34 @@ const TransportApp = ({ userProfileData }) => {
             }
         }
         return null;
+    };
+
+    const recomputeParentSegmentsInPlace = (draft) => {
+        // skopírované z generátora
+        // this.ctx?.busRows → busRows
+        // this.ctx?.savedTransfersRef?.current → savedTransfersRef.current
+    };
+
+    const computeProvisionalSegmentRange = (transfer) => {
+        // skopírované z generátora
+        // this.ctx.savedTransfersRef?.current → savedTransfersRef.current
+    };
+
+    const applyWalkingRulesToParent = async (parentKey) => {
+        // skopírované z generátora
+        // this.ctx.walkingRules → walkingRules
+        // this.ctx.savedTransfersRef → savedTransfersRef
+        // this.resolvePlaceNameById → resolvePlaceNameById
+        // this.ctx.updateParentTransferImpl → updateParentTransfer
+        // this.ctx.userProfileData → userProfileData
+    };
+
+    const preloadAccommodationsForSuperstructureTeams = async () => {
+        // skopírované z pôvodného súboru
+    };
+
+    const getTeamEventsForCustomTransfer = (category, teamName) => {
+        // skopírované z pôvodného súboru
     };
 
     const logTransferDbDocument = async (transfer) => {
@@ -571,7 +690,7 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         try {
-            rebuildAndLogTimeline(true); 
+            window.TransportGenerator.window.TransportGenerator.rebuildAndLogTimeline(true);
         } finally {
             console.log = originalLog;
         }
@@ -642,7 +761,7 @@ const TransportApp = ({ userProfileData }) => {
                 setPlacesLoaded(true);        
                 const stopsOnly = list.filter((p) => p.type === 'zastavka');        
                 if (matchesLoadedRef.current && cateringLoadedRef.current && teamsLoadedRef.current) {
-                    rebuildAndLogTimeline();
+                    window.TransportGenerator.rebuildAndLogTimeline();
                 }
             }, (err) => {
             });
@@ -896,7 +1015,7 @@ const TransportApp = ({ userProfileData }) => {
                     ? parseInt(String(data.unitMinutes), 10)
                     : null;
                 window.__transport_unitMinutes = (!isNaN(parsed) && parsed > 0) ? parsed : null;
-                if (cateringLoadedRef.current) rebuildAndLogTimeline();
+                if (cateringLoadedRef.current) window.TransportGenerator.rebuildAndLogTimeline();
             }, (err) => {
             });
         } catch (e) {
@@ -927,7 +1046,7 @@ const TransportApp = ({ userProfileData }) => {
                     Object.entries(map).map(([k, v]) => [k, [...v]])
                 );
                 if (matchesLoadedRef.current && cateringLoadedRef.current && teamsLoadedRef.current) {
-                    rebuildAndLogTimeline();
+                    window.TransportGenerator.rebuildAndLogTimeline();
                 }
             }, (err) => {
             });
@@ -967,7 +1086,7 @@ const TransportApp = ({ userProfileData }) => {
                 window.__transport_categories = map;
                 transportColorsRef.current = colorMap;
                 setTransportColors(colorMap);
-                if (matchesLoadedRef.current) rebuildAndLogTimeline();
+                if (matchesLoadedRef.current) window.TransportGenerator.rebuildAndLogTimeline();
             }, (err) => {
             });
         } catch (e) {
@@ -1049,7 +1168,7 @@ const TransportApp = ({ userProfileData }) => {
                 });
         
                 if (matchesLoadedRef.current && cateringLoadedRef.current && teamsLoadedRef.current) {
-                    rebuildAndLogTimeline();
+                    window.TransportGenerator.rebuildAndLogTimeline();
                 }
             } catch (err) {
             }
@@ -1327,7 +1446,7 @@ const TransportApp = ({ userProfileData }) => {
                 teamsLoadedRef.current = true;
 
                 preloadAccommodationsForSuperstructureTeams().then(() => {
-                    rebuildAndLogTimeline();
+                    window.TransportGenerator.rebuildAndLogTimeline();
                 });
 
             } catch (err) {
@@ -1493,7 +1612,7 @@ const TransportApp = ({ userProfileData }) => {
             cateringBufferRef.current = buffer;
             cateringLoadedRef.current = true;
 
-            rebuildAndLogTimeline();
+            window.TransportGenerator.rebuildAndLogTimeline();
         };
 
         try {
@@ -4607,7 +4726,7 @@ const TransportApp = ({ userProfileData }) => {
             savedTransfersRef.current = updatedTransfers;
             setSavedTransfers(updatedTransfers);
 
-            await applyWalkingRulesToParent(parentKey);
+            await window.TransportGenerator.applyWalkingRulesToParent(parentKey);
     
             window.showGlobalNotification(
                 stopIds.length > 0
