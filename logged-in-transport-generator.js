@@ -1904,6 +1904,8 @@ class TransportGenerator {
                                     continuationGroupCharsSet.add(groupChar);
                                 }
                             });
+
+                            console.log('\n\n\n\n\n')
                             
                             console.log(
                                 `%c[TRANSPORT][SS-DAYS] Tím "${teamName}" (skupina "${userTeamGroupName}", písmeno ${userTeamGroupChar}):`,
