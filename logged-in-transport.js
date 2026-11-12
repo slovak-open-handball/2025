@@ -10857,8 +10857,14 @@ const TransportApp = ({ userProfileData }) => {
                                     : 'bg-green-600 text-white hover:bg-green-700'
                             }`
                         },
-                        isGeneratingTransfers && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
-                        isGeneratingTransfers ? 'Generujem...' : 'Vygenerovať'
+                        isGeneratingTransfers
+                            ? React.createElement(
+                                React.Fragment,
+                                null,
+                                React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                                React.createElement('span', null, 'Generujem...')
+                            )
+                            : React.createElement('span', null, 'Vygenerovať')
                     )
                 )
             )
