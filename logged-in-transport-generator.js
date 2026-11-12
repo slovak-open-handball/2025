@@ -1251,7 +1251,6 @@ class TransportGenerator {
                         if (cleanCategory(other.category) !== cat) return;
                         if (!other.teamName) return;
                         const otherTn = String(other.teamName).trim();
-                        if (otherTn === tn) return;
 
                         if (!teamBelongsToGroupChar(other, lastCharFromName)) return;
 
