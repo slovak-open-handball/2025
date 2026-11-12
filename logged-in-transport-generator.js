@@ -1656,6 +1656,37 @@ class TransportGenerator {
                             const groupPlayDays = [...ssPlayDatesByTeam[ssTeamKeyPre]].sort();
 
                             groupPlayDays.forEach((groupPlayDay) => {
+                                const anyUserTeamHasEventOnDay = (this.ctx.teamsArrivalBufferRef?.current || []).some((t) => {
+                                    if (cleanCategory(t.category) !== cleanCategory(category)) return false;
+                                    if (t.isRegistered !== true) return false;
+                                    if (t.isSuperstructure === true) return false;
+                                    const hasMatch = (this.ctx.matchesBufferRef?.current || []).some((m) => {
+                                        if (cleanCategory(m.category) !== cleanCategory(category)) return false;
+                                        if (m.home !== t.teamName && m.away !== t.teamName) return false;
+                                        let dayKey = null;
+                                        if (m.scheduledTime) {
+                                            const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                            if (mm) dayKey = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
+                                        }
+                                        if (!dayKey && m.scheduledTs != null) {
+                                            const dt = new Date(m.scheduledTs);
+                                            dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                        }
+                                        return dayKey === groupPlayDay;
+                                    });
+                                    if (hasMatch) return true;
+                                    return (this.ctx.cateringBufferRef?.current || []).some((c) => {
+                                        if (cleanCategory(c.category) !== cleanCategory(category)) return false;
+                                        if (c.teamName !== t.teamName) return false;
+                                        return c.dayKey === groupPlayDay;
+                                    });
+                                });
+                                
+                                if (!anyUserTeamHasEventOnDay) {
+                                    // V tento deň nehrá žiadny user tím – presuny pre superstructure tím sa negenerujú.
+                                    // Presuny z ubytovní na miesto prvej udalosti superstructure tímu generuje user tím.
+                                    return;
+                                }
                                 const teamHasEventOnDay = (() => {
                                     const fromEvents = events.some((ev) => extractDayKeyFromWhen(ev.when) === groupPlayDay);
                                     if (fromEvents) return true;
