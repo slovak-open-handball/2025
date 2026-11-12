@@ -1968,22 +1968,25 @@ class TransportGenerator {
                                             if (ta !== tb) return ta - tb;
                                             return String(a.text).localeCompare(String(b.text), 'sk');
                                         });
-                                        const firstEvent = dayEvents[0];
-                                        if (!firstEvent || !firstEvent.location) return;
 
                                         if (!superstructureFirstPlacesByDay.has(dayKey)) {
                                             superstructureFirstPlacesByDay.set(dayKey, new Map());
                                         }
                                         const placesMap = superstructureFirstPlacesByDay.get(dayKey);
-                                        const existing = placesMap.get(firstEvent.location);
-                                        const firstTs = firstEvent.startTs != null ? firstEvent.startTs : (firstEvent.ts != null ? firstEvent.ts : Number.POSITIVE_INFINITY);
-                                        if (!existing || firstTs < existing.firstEventTs) {
-                                            placesMap.set(firstEvent.location, {
-                                                firstEventTs: firstTs,
-                                                firstEvent,
-                                                ssTeamName,
-                                            });
-                                        }
+                                    
+                                        // Prejdi VŠETKY udalosti superstructure tímu v danom dni
+                                        dayEvents.forEach((ev) => {
+                                            if (!ev.location) return;
+                                            const evTs = ev.startTs != null ? ev.startTs : (ev.ts != null ? ev.ts : Number.POSITIVE_INFINITY);
+                                            const existing = placesMap.get(ev.location);
+                                            if (!existing || evTs < existing.firstEventTs) {
+                                                placesMap.set(ev.location, {
+                                                    firstEventTs: evTs,
+                                                    firstEvent: ev,
+                                                    ssTeamName,
+                                                });
+                                            }
+                                        });
                                     });
                                 });
 
