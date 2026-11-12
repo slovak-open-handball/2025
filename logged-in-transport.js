@@ -4190,6 +4190,13 @@ const TransportApp = ({ userProfileData }) => {
         return 0;
     };
 
+    const formatTimovLabel = (count) => {
+        const n = Number(count) || 0;
+        if (n === 1) return 'tím';
+        if (n >= 2 && n <= 4) return 'tímy';
+        return 'tímov';
+    };
+
     const getTeamTooltipLabel = (teamKey) => {
         const parts = String(teamKey).split('|');
         const teamName = (parts[0] || '').trim();
@@ -13121,7 +13128,7 @@ const TransportApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { className: 'font-semibold mb-1 text-gray-200' },
-                                                                                `V autobuse: ${teamTooltipItems.length} tímov`
+                                                                                `V autobuse: ${teamTooltipItems.length} ${formatTimovLabel(teamTooltipItems.length)}`
                                                                             ),
                                                                             React.createElement(
                                                                                 'ul',
