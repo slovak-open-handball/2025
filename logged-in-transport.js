@@ -5349,7 +5349,7 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
-    const applyBulkIntermediateStop = async () => {
+const applyBulkIntermediateStop = async () => {
         if (!window.db) return;
         if (!showBulkIntermediateModal) return;
         if (!bulkIntermediateStopId) {
@@ -5404,6 +5404,9 @@ const TransportApp = ({ userProfileData }) => {
         setBulkIntermediateSaving(true);
         let updatedCount = 0;
         let skippedCount = 0;
+
+        // NOVÉ: zoznam parent kľúčov, ktoré boli skutočne upravené
+        const updatedParentKeys = [];
 
         try {
             for (const parent of candidateParents) {
@@ -5478,6 +5481,8 @@ const TransportApp = ({ userProfileData }) => {
                         d.when = draft.when;
                     });
 
+                    // NOVÉ: zapamätaj si kľúč upraveného parenta
+                    updatedParentKeys.push(parent.key);
                     updatedCount += 1;
                 } catch (e) {
                     skippedCount += 1;
@@ -5501,6 +5506,29 @@ const TransportApp = ({ userProfileData }) => {
 
             setShowBulkIntermediateModal(null);
             setBulkIntermediateStopId('');
+
+            // NOVÉ: po úspešnom hromadnom pridaní medzizastávky
+            // spusti rovnakú logiku ako tlačidlo
+            // "Nastaviť presun peši medzi blízkymi miestami".
+            if (updatedParentKeys.length > 0 && window.TransportGenerator && typeof window.TransportGenerator.setAllWalkingTransfersAsWalking === 'function') {
+                try {
+                    await window.TransportGenerator.setAllWalkingTransfersAsWalking({
+                        dayKey: dayKeyFilter || null,
+                        category: categoryFilter || null,
+                        parentKeys: updatedParentKeys,
+                    });
+                } catch (walkingErr) {
+                    // Ak by generator nepodporoval parentKeys, skúsime bez nich (globálne pre deň/kategóriu)
+                    try {
+                        await window.TransportGenerator.setAllWalkingTransfersAsWalking({
+                            dayKey: dayKeyFilter || null,
+                            category: categoryFilter || null,
+                        });
+                    } catch (walkingErr2) {
+                        console.error('[TRANSPORT] Nepodarilo sa spustiť nastavenie peších presunov po hromadnom pridaní medzizastávky:', walkingErr2);
+                    }
+                }
+            }
         } catch (err) {
             window.showGlobalNotification('Nepodarilo sa hromadne pridať medzizastávku.', 'error');
         } finally {
@@ -6580,7 +6608,6 @@ const TransportApp = ({ userProfileData }) => {
                 await recomputeParentSegments(parent);
             }
 
-            // NOVÉ: Zisti názov autobusu a čas odchodu z nástupnej zastávky
             const busForNotification = (buses || []).find((b) => b.id === busId) || null;
             const busNameForNotification = busForNotification
                 ? String(busForNotification.name || '').trim()
