@@ -1911,7 +1911,6 @@ class TransportGenerator {
                             if (!ssGroupChar) return;
                             
                             // Zisti, či user tím patrí do skupiny s rovnakým posledným písmenom
-                            const userTeamGroupChar = teamGroupName ? getGroupLastChar(teamGroupName) : null;
                             const userTeamInfo = (this.ctx.teamsArrivalBufferRef?.current || []).find(
                                 (t) => cleanCategory(t.category) === cleanCategory(category)
                                     && String(t.teamName || '').trim() === String(teamName || '').trim()
