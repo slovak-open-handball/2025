@@ -3072,17 +3072,19 @@ class TransportGenerator {
                                                 // ═══════════════════════════════════════════════════════════
                                                 // ← ZMENA: Presun z miesta zrazu sa generuje pre SS tím
                                                 //   vždy, keď v jeho skupine (podľa posledného písmena)
-                                                //   nemá udalosť žiadny user tím s miestom
-                                                //   (anyOtherTeamHasEvent === false).
-                                                //   Generuje sa len raz za deň – pre prvú udalosť dňa
-                                                //   (sme vnútri isFirstEventOfDay).
+                                                //   nemá udalosť žiadny user tím s miestom.
+                                                //   Generuje sa len raz za deň – pre prvú udalosť dňa.
+                                                //
+                                                //   DÔLEŽITÉ: departureTs musí byť POLNOC DŇA PRÍCHODU
+                                                //   (nie globalArrivalTs), inak sa presun zobrazí pod
+                                                //   nesprávnym dňom v časovej osi.
                                                 // ═══════════════════════════════════════════════════════════
                                                 const arrivalTs = current.startTs;
                                                 const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
-                                                const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
-                                                const departureTs = globalArrivalTs != null && isFinite(globalArrivalTs)
-                                                    ? globalArrivalTs
-                                                    : timestampOnDay(arrivalTs, 0, 0);
+                                                // ← KĽÚČOVÁ ZMENA: vždy použiť polnoc dňa príchodu,
+                                                //   aby `when` začínal dňom príchodu (a presun sa
+                                                //   zobrazil pod správnym dňom).
+                                                const departureTs = timestampOnDay(arrivalTs, 0, 0);
                                                 const departureStr = formatFullFromTs(departureTs) || '00:00';
                                                 if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
                                                     let whenStr;
