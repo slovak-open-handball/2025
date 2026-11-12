@@ -1879,7 +1879,42 @@ class TransportGenerator {
                                 if (dk) userTeamDays.add(dk);
                             });
 
-                            // Nájdi všetky superstructure tímy v kategórii s rovnakým posledným písmenom
+                            const groupCharToContinuationChars = new Map(); // groupChar -> Set<originalChar>
+                            (this.ctx.teamsArrivalBufferRef?.current || []).forEach((t) => {
+                                if (cleanCategory(t.category) !== cleanCategory(category)) return;
+                                if (!t.teamName) return;
+                                if (t.isSuperstructure !== true) return;
+                                if (isSpiderTeamName(t.teamName)) return;
+                                const tn = String(t.teamName).trim();
+                                const lastCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                                const nameChar = lastCharMatch ? lastCharMatch[1].toUpperCase() : null;
+                                if (!nameChar) return;
+                                const groupChar = getGroupLastChar(t.groupName);
+                                if (!groupChar) return;
+                                if (!groupCharToContinuationChars.has(groupChar)) {
+                                    groupCharToContinuationChars.set(groupChar, new Set());
+                                }
+                                groupCharToContinuationChars.get(groupChar).add(nameChar);
+                            });
+                            
+                            // Zisti, ktoré skupiny sú pokračovaním userTeamGroupChar
+                            const continuationGroupCharsSet = new Set([userTeamGroupChar]);
+                            groupCharToContinuationChars.forEach((originalChars, groupChar) => {
+                                if (originalChars.has(userTeamGroupChar)) {
+                                    continuationGroupCharsSet.add(groupChar);
+                                }
+                            });
+                            
+                            console.log(
+                                `%c[TRANSPORT][SS-DAYS] Tím "${teamName}" (skupina "${userTeamGroupName}", písmeno ${userTeamGroupChar}):`,
+                                'font-weight: bold; color: #7c3aed;'
+                            );
+                            console.log(`  Skupiny, ktoré sú pokračovaním "${userTeamGroupChar}": ${[...continuationGroupCharsSet].filter(c => c !== userTeamGroupChar).join(', ') || '(žiadne)'}`);
+                            
+                            // Nájdi superstructure tímy, ktoré:
+                            // 1. Majú posledné písmeno názvu = userTeamGroupChar, ALEBO
+                            // 2. Patria do skupiny, ktorá je pokračovaním userTeamGroupChar, ALEBO
+                            // 3. Nemajú groupName, ale ich posledné písmeno názvu je v continuationGroupCharsSet
                             const superstructureTeamsWithSameChar = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
                                 if (cleanCategory(t.category) !== cleanCategory(category)) return false;
                                 if (!t.teamName) return false;
@@ -1887,17 +1922,24 @@ class TransportGenerator {
                                 if (isSpiderTeamName(t.teamName)) return false;
                                 const tn = String(t.teamName).trim();
                                 const lastCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
-                                const ssChar = lastCharMatch ? lastCharMatch[1].toUpperCase() : null;
-                                return ssChar === userTeamGroupChar;
+                                const nameChar = lastCharMatch ? lastCharMatch[1].toUpperCase() : null;
+                                
+                                // 1. Priamo: posledné písmeno názvu = userTeamGroupChar
+                                if (nameChar === userTeamGroupChar) return true;
+                                
+                                // 2. Skupina je pokračovaním: groupName končí na písmeno, ktoré je v continuationGroupCharsSet
+                                const groupChar = getGroupLastChar(t.groupName);
+                                if (groupChar && continuationGroupCharsSet.has(groupChar)) {
+                                    return true;
+                                }
+                                
+                                // 3. Superstructure tím bez groupName, ale jeho posledné písmeno názvu
+                                //    je v continuationGroupCharsSet (napr. 4E, 2E – patria do skupiny E, ktorá je pokračovaním C)
+                                if (!t.groupName && nameChar && continuationGroupCharsSet.has(nameChar)) {
+                                    return true;
+                                }
+                                return false;
                             });
-
-                            console.log('\n\n\n\n\n');
-                            console.log(
-                                `%c[TRANSPORT][SS-DAYS] Tím "${teamName}" (skupina "${userTeamGroupName}", písmeno ${userTeamGroupChar}):`,
-                                'font-weight: bold; color: #7c3aed;'
-                            );
-                            console.log(`  Superstructure tímy s rovnakým písmenom: ${superstructureTeamsWithSameChar.map(t => t.teamName).join(', ') || '(žiadne)'}`);
-                            console.log(`  Dni user tímu: ${[...userTeamDays].join(', ') || '(žiadne)'}`);
 
                             if (superstructureTeamsWithSameChar.length > 0) {
                                 // Pre každý superstructure tím nájdi jeho prvú udalosť v každom dni
