@@ -3996,6 +3996,11 @@ class TransportGenerator {
                         // NOVÉ: Pre SUPERSTRUCTURE tím – posledná udalosť tímu v posledný deň
                         // turnaja → presun na miesto nástupu/výstupu s miestom zrazu ako
                         // medzizastávkou.
+                        //
+                        // POZOR: Negeneruj tento presun, ak tím ešte bude hrať ďalší zápas
+                        // v pavúku (napr. 4C môže hrať 1I, 2I, 3I, 4I, 5I, 6I, 10I, 15I, ...
+                        // – zápasy o umiestnenie alebo finále), ktorý je naplánovaný na
+                        // neskorší deň. Počet zápasov v pavúku NIE JE obmedzený.
                         // ═══════════════════════════════════════════════════════════════════════
                         if (
                             isVeryLastEventOfTeam &&
@@ -4012,67 +4017,170 @@ class TransportGenerator {
                             const isSuperstructureTeamForLastDay = !teamIsInUsersForLastDay;
                             const isPavukTeamForLastDay = isSpiderTeamName(teamName);
                         
-                            // Miesto zrazu
-                            const meetingPointStopForLastDay = (() => {
-                                const fromAllPlaces = (this.ctx.allPlacesRef?.current || []).find((p) => p.isMeetingPointStop === true);
-                                if (fromAllPlaces) return fromAllPlaces;
-                                const fromStops = (this.ctx.stopsList || []).find((p) => p.isMeetingPointStop === true);
-                                return fromStops || null;
-                            })();
+                            // ───────────────────────────────────────────────────────────────────
+                            // Zisti, či tím ešte bude hrať ďalší zápas v pavúku.
+                            //   • Pre pavúkový tím (napr. "U10 D 4C") zisti písmeno skupiny
+                            //     (posledné písmeno názvu = "C").
+                            //   • Zisti všetky "pokračujúce" skupiny (rovnaká logika ako pri
+                            //     user tímoch – mapovanie groupChar -> continuation chars).
+                            //   • Skontroluj, či v kategórii existuje zápas typu
+                            //     "<číslo><X>" (kde X je písmeno skupiny alebo jej pokračovania)
+                            //     na deň > currentDay. Počet zápasov NIE JE obmedzený
+                            //     (1X, 2X, ..., 6X, 10X, 15X, 32X, 100X, ...).
+                            // ───────────────────────────────────────────────────────────────────
+                            const pavukFutureMatchExists = (() => {
+                                // Zisti písmeno skupiny pre tento tím
+                                let teamGroupChar = null;
+                                const teamInfo = (this.ctx.teamsArrivalBufferRef?.current || []).find(
+                                    (t) => cleanCategory(t.category) === cleanCategory(category)
+                                        && String(t.teamName || '').trim() === String(teamName || '').trim()
+                                );
+                                if (teamInfo && teamInfo.groupName) {
+                                    teamGroupChar = getGroupLastChar(teamInfo.groupName);
+                                }
+                                if (!teamGroupChar) {
+                                    const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+                                    if (m) teamGroupChar = m[1].toUpperCase();
+                                }
+                                if (!teamGroupChar) return false;
                         
-                            // Miesto nástupu/výstupu (external arrival stop)
-                            const externalArrivalStopForLastDay = (() => {
-                                const fromAllPlaces = (this.ctx.allPlacesRef?.current || []).find((p) => p.isExternalArrivalStop === true);
-                                if (fromAllPlaces) return fromAllPlaces;
-                                const fromStops = (this.ctx.stopsList || []).find((p) => p.isExternalArrivalStop === true);
-                                return fromStops || null;
-                            })();
-                        
-                            if (
-                                isSuperstructureTeamForLastDay &&
-                                !isPavukTeamForLastDay &&
-                                meetingPointStopForLastDay &&
-                                externalArrivalStopForLastDay &&
-                                !this.isSamePlaceForTransfer(current.location, externalArrivalStopForLastDay.name)
-                            ) {
-                                const departureTs = current.endTs != null ? current.endTs : current.startTs;
-                                const departureStr = formatFullFromTs(departureTs) || current.when;
-                                const arrivalTs = timestampOnDay(departureTs, 23, 59);
-                                const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
-                        
-                                if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
-                                    // Zisti, či miesto zrazu nie je rovnaké ako niektorý z koncových bodov
-                                    const mpIsSameAsFrom = this.isSamePlaceForTransfer(
-                                        meetingPointStopForLastDay.name,
-                                        current.location
-                                    );
-                                    const mpIsSameAsTo = this.isSamePlaceForTransfer(
-                                        meetingPointStopForLastDay.name,
-                                        externalArrivalStopForLastDay.name
-                                    );
-                        
-                                    const intermediateStopIds = mpIsSameAsFrom || mpIsSameAsTo
-                                        ? []
-                                        : [meetingPointStopForLastDay.id];
-                        
-                                    const textParts = [`Presun z ${current.location}`];
-                                    if (intermediateStopIds.length > 0) {
-                                        textParts.push(`cez miesto zrazu ${meetingPointStopForLastDay.name}`);
+                                // Zisti "pokračujúce" skupiny (rovnaká logika ako pri user tímoch)
+                                const groupCharToContinuationChars = new Map();
+                                (this.ctx.teamsArrivalBufferRef?.current || []).forEach((t) => {
+                                    if (cleanCategory(t.category) !== cleanCategory(category)) return;
+                                    if (!t.teamName) return;
+                                    if (t.isSuperstructure !== true) return;
+                                    if (isSpiderTeamName(t.teamName)) return;
+                                    const tn = String(t.teamName).trim();
+                                    const lastCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                                    const nameChar = lastCharMatch ? lastCharMatch[1].toUpperCase() : null;
+                                    if (!nameChar) return;
+                                    let groupChar = getGroupLastChar(t.groupName);
+                                    if (!groupChar) groupChar = nameChar;
+                                    if (!groupChar) return;
+                                    if (!groupCharToContinuationChars.has(groupChar)) {
+                                        groupCharToContinuationChars.set(groupChar, new Set());
                                     }
-                                    textParts.push(`do ${externalArrivalStopForLastDay.name}`);
+                                    groupCharToContinuationChars.get(groupChar).add(nameChar);
+                                });
                         
-                                    enriched.push({
-                                        ts: current.ts + 1,
-                                        when: `${departureStr} – ${arrivalStr}`,
-                                        type: 'transfer',
-                                        text: textParts.join(' '),
-                                        location: null,
-                                        isTransfer: true,
-                                        // nové polia – prenesú sa do transfersPatch nižšie
-                                        _fromPlaceName: current.location,
-                                        _toPlaceName: externalArrivalStopForLastDay.name,
-                                        _intermediateStopIds: intermediateStopIds,
+                                const continuationCharsSet = new Set([teamGroupChar]);
+                                groupCharToContinuationChars.forEach((originalChars, groupChar) => {
+                                    if (originalChars.has(teamGroupChar)) {
+                                        continuationCharsSet.add(groupChar);
+                                    }
+                                });
+                        
+                                // ───────────────────────────────────────────────────────────────
+                                // Neobmedzený počet zápasov v pavúku – akceptuj ľubovoľné
+                                // číslo pred písmenom (1I, 2I, ..., 6I, 10I, 15I, 32I, 100I, ...).
+                                // ───────────────────────────────────────────────────────────────
+                                const pavukRegex = /^\s*(\d+)([A-ZÁ-Ž])\d*\s*$/i;
+                                let found = false;
+                        
+                                (this.ctx.matchesBufferRef?.current || []).forEach((m) => {
+                                    if (cleanCategory(m.category) !== cleanCategory(category)) return;
+                        
+                                    // Zisti deň zápasu
+                                    let dayKey = null;
+                                    if (m.scheduledTime) {
+                                        const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                        if (mm) {
+                                            dayKey = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
+                                        }
+                                    }
+                                    if (!dayKey && m.scheduledTs != null) {
+                                        const dt = new Date(m.scheduledTs);
+                                        dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                    }
+                                    if (!dayKey || dayKey <= currentDay) return;
+                        
+                                    // Skontroluj oba tímy v zápase
+                                    [m.home, m.away].forEach((tn) => {
+                                        if (!tn) return;
+                                        const s = String(tn).trim();
+                                        const match = pavukRegex.exec(s);
+                                        if (!match) return;
+                                        // match[1] = číslo (neobmedzené), match[2] = písmeno skupiny
+                                        const char = match[2].toUpperCase();
+                                        if (continuationCharsSet.has(char)) {
+                                            found = true;
+                                        }
                                     });
+                                });
+                        
+                                return found;
+                            })();
+                        
+                            if (pavukFutureMatchExists) {
+                                // Tím ešte bude hrať ďalší zápas v pavúku na neskorší deň
+                                // → negeneruj presun na miesto nástupu/výstupu.
+                                console.log(
+                                    `%c[TRANSPORT][SS-FUTURE] Tím "${teamName}" má budúci pavúkový zápas – presun na miesto nástupu/výstupu sa negeneruje.`,
+                                    'color: #b91c1c; font-weight: bold;'
+                                );
+                            } else {
+                                // Pôvodná logika – presun na miesto nástupu/výstupu s medzizastávkou
+                                const meetingPointStopForLastDay = (() => {
+                                    const fromAllPlaces = (this.ctx.allPlacesRef?.current || []).find((p) => p.isMeetingPointStop === true);
+                                    if (fromAllPlaces) return fromAllPlaces;
+                                    const fromStops = (this.ctx.stopsList || []).find((p) => p.isMeetingPointStop === true);
+                                    return fromStops || null;
+                                })();
+                        
+                                const externalArrivalStopForLastDay = (() => {
+                                    const fromAllPlaces = (this.ctx.allPlacesRef?.current || []).find((p) => p.isExternalArrivalStop === true);
+                                    if (fromAllPlaces) return fromAllPlaces;
+                                    const fromStops = (this.ctx.stopsList || []).find((p) => p.isExternalArrivalStop === true);
+                                    return fromStops || null;
+                                })();
+                        
+                                if (
+                                    isSuperstructureTeamForLastDay &&
+                                    !isPavukTeamForLastDay &&
+                                    meetingPointStopForLastDay &&
+                                    externalArrivalStopForLastDay &&
+                                    !this.isSamePlaceForTransfer(current.location, externalArrivalStopForLastDay.name)
+                                ) {
+                                    const departureTs = current.endTs != null ? current.endTs : current.startTs;
+                                    const departureStr = formatFullFromTs(departureTs) || current.when;
+                                    const arrivalTs = timestampOnDay(departureTs, 23, 59);
+                                    const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
+                        
+                                    if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
+                                        // Zisti, či miesto zrazu nie je rovnaké ako niektorý z koncových bodov
+                                        const mpIsSameAsFrom = this.isSamePlaceForTransfer(
+                                            meetingPointStopForLastDay.name,
+                                            current.location
+                                        );
+                                        const mpIsSameAsTo = this.isSamePlaceForTransfer(
+                                            meetingPointStopForLastDay.name,
+                                            externalArrivalStopForLastDay.name
+                                        );
+                        
+                                        const intermediateStopIds = mpIsSameAsFrom || mpIsSameAsTo
+                                            ? []
+                                            : [meetingPointStopForLastDay.id];
+                        
+                                        const textParts = [`Presun z ${current.location}`];
+                                        if (intermediateStopIds.length > 0) {
+                                            textParts.push(`cez miesto zrazu ${meetingPointStopForLastDay.name}`);
+                                        }
+                                        textParts.push(`do ${externalArrivalStopForLastDay.name}`);
+                        
+                                        enriched.push({
+                                            ts: current.ts + 1,
+                                            when: `${departureStr} – ${arrivalStr}`,
+                                            type: 'transfer',
+                                            text: textParts.join(' '),
+                                            location: null,
+                                            isTransfer: true,
+                                            // Nové polia – prenesú sa do transfersPatch nižšie
+                                            _fromPlaceName: current.location,
+                                            _toPlaceName: externalArrivalStopForLastDay.name,
+                                            _intermediateStopIds: intermediateStopIds,
+                                        });
+                                    }
                                 }
                             }
                         }
