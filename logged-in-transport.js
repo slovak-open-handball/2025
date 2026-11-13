@@ -5547,28 +5547,8 @@ const TransportApp = ({ userProfileData }) => {
         // Normalizovaný názov cieľovej zastávky (bez prefixov/sufixov)
         const stopNormToCheck = normalizePlaceName(stopName);
 
-        // === DOČASNÝ DEBUG ===
-        console.log('[BULK-DEBUG] stopId =', stopId);
-        console.log('[BULK-DEBUG] stopName =', stopName);
-        console.log('[BULK-DEBUG] stopNormToCheck =', JSON.stringify(stopNormToCheck));
-        console.log('[BULK-DEBUG] fromPlaceFilter =', fromPlaceFilter);
-        console.log('[BULK-DEBUG] toPlaceFilter =', toPlaceFilter);
-        console.log('[BULK-DEBUG] placesMapRef.current keys count =', Object.keys(placesMapRef.current || {}).length);
-        console.log('[BULK-DEBUG] allPlacesRef.current.length =', (allPlacesRef.current || []).length);
-        console.log('[BULK-DEBUG] stopsList.length =', (stopsList || []).length);
-        if (fromPlaceFilter) {
-            console.log('[BULK-DEBUG] getPlaceNormalizedName(fromPlaceFilter) =', JSON.stringify(getPlaceNormalizedName(fromPlaceFilter)));
-            console.log('[BULK-DEBUG] resolvePlaceNameById(fromPlaceFilter) =', JSON.stringify(resolvePlaceNameById(fromPlaceFilter)));
-        }
-        if (toPlaceFilter) {
-            console.log('[BULK-DEBUG] getPlaceNormalizedName(toPlaceFilter) =', JSON.stringify(getPlaceNormalizedName(toPlaceFilter)));
-            console.log('[BULK-DEBUG] resolvePlaceNameById(toPlaceFilter) =', JSON.stringify(resolvePlaceNameById(toPlaceFilter)));
-        }
-        console.log('[BULK-DEBUG] getPlaceNormalizedName(stopId) =', JSON.stringify(getPlaceNormalizedName(stopId)));
-        // === KONIEC DOČASNÉHO DEBUGU ===
-
-        // Pomocná: vráti normalizovaný názov miesta pre dané ID.
-        // Hľadá v placesMapRef, allPlacesRef, stopsList.
+        // ── Pomocná: vráti normalizovaný názov miesta pre dané ID. ──
+        // Hľadá v placesMapRef, allPlacesRef, stopsList, savedTransfersRef.
         // Ak sa nenašlo, vráti '' (NIE ID!) – aby porovnávanie cez názov nefungovalo na ID.
         const getPlaceNormalizedName = (placeId) => {
             if (!placeId) return '';
@@ -5586,8 +5566,7 @@ const TransportApp = ({ userProfileData }) => {
             const fromStops = (stopsList || []).find((s) => String(s.id) === id);
             if (fromStops && fromStops.name) return normalizePlaceName(fromStops.name);
 
-            // 4) FALLBACK: hľadaj v savedTransfersRef – parent má fromLocation/toLocation
-            //    (tie sú uložené ako názvy, nie ID)
+            // 4) FALLBACK: savedTransfersRef – parent má fromLocation/toLocation (názvy)
             const fromTransfers = (savedTransfersRef.current || []).find(
                 (t) => (t.fromId && String(t.fromId) === id) || (t.toId && String(t.toId) === id)
             );
@@ -5600,10 +5579,23 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
 
+            // 5) FALLBACK: rovnaké ID môže byť v segmente iného parenta
+            for (const t of (savedTransfersRef.current || [])) {
+                for (const s of (t.segments || [])) {
+                    if (!s) continue;
+                    if (s.fromId && String(s.fromId) === id && s.from) {
+                        return normalizePlaceName(s.from);
+                    }
+                    if (s.toId && String(s.toId) === id && s.to) {
+                        return normalizePlaceName(s.to);
+                    }
+                }
+            }
+
             return '';
         };
 
-        // Pomocná: zistí, či parent už obsahuje zastávku – IBA cez normalizovaný názov.
+        // ── Pomocná: zistí, či parent už obsahuje zastávku – IBA cez normalizovaný názov. ──
         const parentAlreadyContainsStop = (t) => {
             if (!t) return false;
             if (!stopNormToCheck) return false;
@@ -5632,8 +5624,8 @@ const TransportApp = ({ userProfileData }) => {
             return false;
         };
 
-        // Pomocná: zistí, či dané miesto (placeId) zodpovedá filtru (filterId)
-        // – IBA cez normalizovaný názov.
+        // ── Pomocná: zistí, či dané miesto (placeId) zodpovedá filtru (filterId)
+        // – IBA cez normalizovaný názov. ──
         const placeMatchesFilter = (placeId, filterId) => {
             if (!filterId) return true;
             const placeNorm = getPlaceNormalizedName(placeId);
@@ -5641,6 +5633,27 @@ const TransportApp = ({ userProfileData }) => {
             if (!placeNorm || !filterNorm) return false;
             return placeNorm === filterNorm;
         };
+
+        // ── DOČASNÝ DEBUG (môžete odstrániť po overení) ──
+        console.log('[BULK-DEBUG] stopId =', stopId);
+        console.log('[BULK-DEBUG] stopName =', stopName);
+        console.log('[BULK-DEBUG] stopNormToCheck =', JSON.stringify(stopNormToCheck));
+        console.log('[BULK-DEBUG] fromPlaceFilter =', fromPlaceFilter);
+        console.log('[BULK-DEBUG] toPlaceFilter =', toPlaceFilter);
+        console.log('[BULK-DEBUG] placesMapRef keys count =', Object.keys(placesMapRef.current || {}).length);
+        console.log('[BULK-DEBUG] allPlacesRef count =', (allPlacesRef.current || []).length);
+        console.log('[BULK-DEBUG] stopsList count =', (stopsList || []).length);
+        if (fromPlaceFilter) {
+            console.log('[BULK-DEBUG] fromPlaceFilter norm =', JSON.stringify(getPlaceNormalizedName(fromPlaceFilter)));
+            console.log('[BULK-DEBUG] fromPlaceFilter resolve =', JSON.stringify(resolvePlaceNameById(fromPlaceFilter)));
+        }
+        if (toPlaceFilter) {
+            console.log('[BULK-DEBUG] toPlaceFilter norm =', JSON.stringify(getPlaceNormalizedName(toPlaceFilter)));
+            console.log('[BULK-DEBUG] toPlaceFilter resolve =', JSON.stringify(resolvePlaceNameById(toPlaceFilter)));
+        }
+        console.log('[BULK-DEBUG] stopNorm =', JSON.stringify(getPlaceNormalizedName(stopId)));
+        console.log('[BULK-DEBUG] resolvePlaceNameById(stopId) =', JSON.stringify(resolvePlaceNameById(stopId)));
+        // ── KONIEC DOČASNÉHO DEBUGU ──
 
         // Zoznam segmentov (z parentov) – vytvoríme manuálne z parentov,
         // aby sme mali pod kontrolou, že porovnávame názvy, nie ID.
@@ -5709,6 +5722,10 @@ const TransportApp = ({ userProfileData }) => {
         const candidateParents = (savedTransfersRef.current || []).filter(
             (t) => candidateParentKeys.has(t.key)
         );
+
+        console.log('[BULK-DEBUG] expandedSegmentsForFilter.length =', expandedSegmentsForFilter.length);
+        console.log('[BULK-DEBUG] candidateParentKeys.size =', candidateParentKeys.size);
+        console.log('[BULK-DEBUG] candidateParents.length =', candidateParents.length);
 
         if (candidateParents.length === 0) {
             window.showGlobalNotification('Pre zvolený filter nie sú žiadne presuny bez tejto zastávky.', 'info');
