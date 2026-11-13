@@ -5528,7 +5528,7 @@ const TransportApp = ({ userProfileData }) => {
             fromPlaceFilter = selectedFromPlaceFilter || null,
             toPlaceFilter = selectedToPlaceFilter || null,
             currentStopId = bulkIntermediateStopId,
-            side = 'from',   // NOVÉ: 'from' alebo 'to'
+            side = 'from',   // NOVÉ
         } = options;
     
         const stopNormToCheck = currentStopId
@@ -5538,24 +5538,30 @@ const TransportApp = ({ userProfileData }) => {
         const parentAlreadyContainsStop = (t) => {
             if (!t) return false;
             if (!stopNormToCheck) return false;
-
             const nameMatches = (placeId) => {
-                const n = getPlaceNormalizedName(placeId);
+                if (!placeId) return false;
+                const n = normalizePlaceName(resolvePlaceNameById(placeId) || '');
                 return n && n === stopNormToCheck;
             };
-
+    
+            const existingStops = Array.isArray(t.intermediateStopIds)
+                ? t.intermediateStopIds
+                : [];
+    
             if (side === 'from') {
+                // Vkladáme hneď za fromId (pred prvú medzizastávku).
+                // Skontroluj len túto pozíciu:
+                //  - fromId už je stopId → preskočiť (nemá zmysel dávať to isté dvakrát)
+                //  - prvá medzizastávka už je stopId → preskočiť (už tam je)
                 if (nameMatches(t.fromId)) return true;
-                const existingStops = Array.isArray(t.intermediateStopIds)
-                    ? t.intermediateStopIds
-                    : [];
                 if (existingStops.length > 0 && nameMatches(existingStops[0])) return true;
                 return false;
             } else {
+                // Vkladáme tesne pred toId (za poslednú medzizastávku).
+                // Skontroluj len túto pozíciu:
+                //  - toId už je stopId → preskočiť
+                //  - posledná medzizastávka už je stopId → preskočiť
                 if (nameMatches(t.toId)) return true;
-                const existingStops = Array.isArray(t.intermediateStopIds)
-                    ? t.intermediateStopIds
-                    : [];
                 if (existingStops.length > 0 && nameMatches(existingStops[existingStops.length - 1])) return true;
                 return false;
             }
@@ -5691,18 +5697,16 @@ const TransportApp = ({ userProfileData }) => {
                 return n && n === stopNormToCheck;
             };
 
+            const existingStops = Array.isArray(t.intermediateStopIds)
+                ? t.intermediateStopIds
+                : [];
+
             if (side === 'from') {
                 if (nameMatches(t.fromId)) return true;
-                const existingStops = Array.isArray(t.intermediateStopIds)
-                    ? t.intermediateStopIds
-                    : [];
                 if (existingStops.length > 0 && nameMatches(existingStops[0])) return true;
                 return false;
             } else {
                 if (nameMatches(t.toId)) return true;
-                const existingStops = Array.isArray(t.intermediateStopIds)
-                    ? t.intermediateStopIds
-                    : [];
                 if (existingStops.length > 0 && nameMatches(existingStops[existingStops.length - 1])) return true;
                 return false;
             }
