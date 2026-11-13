@@ -5723,17 +5723,25 @@ const TransportApp = ({ userProfileData }) => {
             }
         });
 
+        // Namiesto manuálneho skladania použij rovnakú logiku ako modál
+        const expandedSegmentsForFilter = buildExpandedTransfersForFilter();
+
         // Filtrovanie segmentov podľa fromPlaceFilter / toPlaceFilter
-        // – IBA cez normalizovaný názov.
         expandedSegmentsForFilter.forEach((seg) => {
+            const parent = seg.parent;
+            if (!parent) return;
+            if (parent.isWalking === true) return;
+            if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return;
+            if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return;
+        
             if (fromPlaceFilter) {
                 if (!placeMatchesFilter(seg.fromId, fromPlaceFilter)) return;
             }
             if (toPlaceFilter) {
                 if (!placeMatchesFilter(seg.toId, toPlaceFilter)) return;
             }
-            if (parentAlreadyContainsStop(seg.parent)) return;
-            candidateParentKeys.add(seg.parentKey);
+            if (parentAlreadyContainsStop(parent)) return;
+            candidateParentKeys.add(parent.key);
         });
 
         const candidateParents = (savedTransfersRef.current || []).filter(
