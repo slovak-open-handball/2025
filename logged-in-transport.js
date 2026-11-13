@@ -5547,81 +5547,66 @@ const TransportApp = ({ userProfileData }) => {
         // Normalizovaný názov cieľovej zastávky (bez prefixov/sufixov)
         const stopNormToCheck = normalizePlaceName(stopName);
 
-        // Pomocná: zistí názov miesta pre dané ID, ale s fallbackom na ID
-        // (aby porovnávanie fungovalo aj keď placesMap ešte nie je naplnený).
-        const getPlaceNameSafe = (placeId) => {
+        // Pomocná: vráti normalizovaný názov miesta pre dané ID.
+        // Hľadá v placesMapRef, allPlacesRef, stopsList.
+        // Ak sa nenašlo, vráti '' (NIE ID!) – aby porovnávanie cez názov nefungovalo na ID.
+        const getPlaceNormalizedName = (placeId) => {
             if (!placeId) return '';
             const id = String(placeId);
+
             const fromMap = (placesMapRef.current || {})[id];
-            if (fromMap) return String(fromMap);
+            if (fromMap) return normalizePlaceName(fromMap);
+
             const fromAll = (allPlacesRef.current || []).find((p) => String(p.id) === id);
-            if (fromAll && fromAll.name) return String(fromAll.name);
+            if (fromAll && fromAll.name) return normalizePlaceName(fromAll.name);
+
             const fromStops = (stopsList || []).find((s) => String(s.id) === id);
-            if (fromStops && fromStops.name) return String(fromStops.name);
-            // Fallback: vráť ID (aby porovnávanie ID → ID fungovalo)
-            return id;
+            if (fromStops && fromStops.name) return normalizePlaceName(fromStops.name);
+
+            return '';
         };
 
-        // Pomocná: normalizovaný názov miesta pre dané ID (alebo ID ak sa nenašlo)
-        const getPlaceNorm = (placeId) => {
-            if (!placeId) return '';
-            return normalizePlaceName(getPlaceNameSafe(placeId) || '');
-        };
-
-        // Pomocná: zistí, či parent už obsahuje zastávku podľa názvu
-        // (porovnáva sa normalizovaný názov, aj ID priamo).
+        // Pomocná: zistí, či parent už obsahuje zastávku – IBA cez normalizovaný názov.
         const parentAlreadyContainsStop = (t) => {
             if (!t) return false;
             if (!stopNormToCheck) return false;
 
-            const idMatches = (placeId) => {
-                if (!placeId) return false;
-                // Priame porovnanie ID
-                if (String(placeId) === String(stopId)) return true;
-                // Porovnanie normalizovaného názvu
-                const n = getPlaceNorm(placeId);
+            const nameMatches = (placeId) => {
+                const n = getPlaceNormalizedName(placeId);
                 return n && n === stopNormToCheck;
             };
 
             // fromId, toId
-            if (idMatches(t.fromId)) return true;
-            if (idMatches(t.toId)) return true;
+            if (nameMatches(t.fromId)) return true;
+            if (nameMatches(t.toId)) return true;
 
             // intermediateStopIds
             const existingStops = Array.isArray(t.intermediateStopIds)
                 ? t.intermediateStopIds
                 : [];
-            if (existingStops.some((s) => idMatches(s))) return true;
+            if (existingStops.some((s) => nameMatches(s))) return true;
 
             // segments
             const segs = Array.isArray(t.segments) ? t.segments : [];
-            if (segs.some((s) => s && (idMatches(s.fromId) || idMatches(s.toId)))) {
+            if (segs.some((s) => s && (nameMatches(s.fromId) || nameMatches(s.toId)))) {
                 return true;
             }
 
             return false;
         };
 
-        // Pomocná: zistí, či daný segment (fromId → toId) začína/končí
-        // na mieste, ktoré zodpovedá filtru. Porovnávame ID priamo,
-        // s fallbackom na normalizovaný názov.
+        // Pomocná: zistí, či dané miesto (placeId) zodpovedá filtru (filterId)
+        // – IBA cez normalizovaný názov.
         const placeMatchesFilter = (placeId, filterId) => {
             if (!filterId) return true;
-            if (!placeId) return false;
-
-            // Priame porovnanie ID
-            if (String(placeId) === String(filterId)) return true;
-
-            // Fallback: porovnanie normalizovaného názvu
-            const placeNorm = getPlaceNorm(placeId);
-            const filterNorm = getPlaceNorm(filterId);
-            return placeNorm && filterNorm && placeNorm === filterNorm;
+            const placeNorm = getPlaceNormalizedName(placeId);
+            const filterNorm = getPlaceNormalizedName(filterId);
+            if (!placeNorm || !filterNorm) return false;
+            return placeNorm === filterNorm;
         };
 
-        // Zoznam segmentov (z parentov) – použijeme rovnakú logiku ako pôvodný kód:
-        // pre každý parent vytvoríme buď 1 segment (priamy presun) alebo N segmentov
-        // (presun s medzizastávkami). NEPOUŽÍVAME buildExpandedTransfersForFilter(),
-        // pretože ten pri porovnávaní filtrov mohol zlyhať kvôli resolvePlaceNameById.
+        // Zoznam segmentov (z parentov) – vytvoríme manuálne z parentov,
+        // aby sme mali pod kontrolou, že porovnávame názvy, nie ID.
         const candidateParentKeys = new Set();
         const expandedSegmentsForFilter = [];
 
@@ -5672,6 +5657,7 @@ const TransportApp = ({ userProfileData }) => {
         });
 
         // Filtrovanie segmentov podľa fromPlaceFilter / toPlaceFilter
+        // – IBA cez normalizovaný názov.
         expandedSegmentsForFilter.forEach((seg) => {
             if (fromPlaceFilter) {
                 if (!placeMatchesFilter(seg.fromId, fromPlaceFilter)) return;
