@@ -8098,7 +8098,9 @@ const TransportApp = ({ userProfileData }) => {
         return shortcut || teamName;
     };
     
-    const renderPlaceFilters = (baseFilteredForOptions) => {
+    const renderPlaceFilters = (baseFilteredForOptions, hidden = false) => {
+        if (hidden) return null;
+    
         const list = Array.isArray(baseFilteredForOptions) ? baseFilteredForOptions : [];
     
         // Pomocná funkcia: pre dané ID vráti normalizovaný názov miesta
@@ -8119,14 +8121,13 @@ const TransportApp = ({ userProfileData }) => {
         };
     
         // Selectbox "Miesto začiatku" – zjednotené podľa normalizovaného názvu
-        const fromPlaceOptionsMap = new Map(); // key = normalized name, value = { id, name, type }
+        const fromPlaceOptionsMap = new Map();
         list.forEach((t) => {
             const fromId = t.fromId || null;
             if (!fromId) return;
             const normName = getNormalizedPlaceName(fromId);
             if (!normName) return;
             if (fromPlaceOptionsMap.has(normName)) return;
-            // Preferuj kanonické ID podľa názvu (aby filter fungoval konzistentne)
             const canonicalId = findPlaceIdByNormName(normName) || String(fromId);
             const name = resolvePlaceNameById(canonicalId) || resolvePlaceNameById(fromId) || String(fromId);
             const place = allPlaces.find((p) => String(p.id) === String(canonicalId));
@@ -8292,9 +8293,9 @@ const TransportApp = ({ userProfileData }) => {
             )
         );
     };
-
     // Jediná definícia tlačidiel zoradenia "Čas odchodu" / "Čas príchodu".
-    const renderSortButtons = () => {
+    const renderSortButtons = (hidden = false) => {
+        if (hidden) return null;
         return React.createElement(
             'div',
             { className: 'flex items-center justify-center gap-2' },
@@ -9594,6 +9595,11 @@ const TransportApp = ({ userProfileData }) => {
             return null;
         }
 
+        // NOVÉ: Ak beží hromadné nastavovanie peších presunov (tlačidlo zobrazuje
+        // "Počet presunov peši, ktoré ostáva priradiť: X"), skryjeme filtre miest
+        // a tlačidlá zoradenia "Čas odchodu" / "Čas príchodu".
+        const isWalkingBatchLoading = walkingBatchSaving === true;
+
         // Plný box
         return React.createElement(
             'div',
@@ -9622,8 +9628,8 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { className: 'px-3 pt-2 pb-2 border-b border-gray-100 flex flex-col gap-2' },
-                renderPlaceFilters(baseFilteredAfterPartial),
-                renderSortButtons()
+                renderPlaceFilters(baseFilteredAfterPartial, isWalkingBatchLoading),
+                renderSortButtons(isWalkingBatchLoading)
             ),
             (() => {
                 const showPartialCheckbox = hasAnyPartialTransfer;
