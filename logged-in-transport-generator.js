@@ -4210,71 +4210,14 @@ class TransportGenerator {
                                     return fromStops || null;
                                 })();
                         
-                                // Zisti, či tím ide do pavúka (je pavúkový tím alebo nemá groupName)
-                                const teamInfoForPavukCheck = (this.ctx.teamsArrivalBufferRef?.current || []).find(
-                                    (t) => cleanCategory(t.category) === cleanCategory(category)
-                                        && String(t.teamName || '').trim() === String(teamName || '').trim()
-                                );
-                                const teamHasNoGroupName = !teamInfoForPavukCheck || !teamInfoForPavukCheck.groupName;
-                                const teamGoesToPavuk = isPavukTeamForLastDay || teamHasNoGroupName;
-
                                 if (
                                     isSuperstructureTeamForLastDay &&
-                                    (isPavukTeamForLastDay || teamHasNoGroupName) &&  // ← ZMENA
+                                    !isPavukTeamForLastDay &&
                                     meetingPointStopForLastDay &&
                                     externalArrivalStopForLastDay &&
                                     !this.isSamePlaceForTransfer(current.location, externalArrivalStopForLastDay.name)
                                 ) {
-                                    // ═══════════════════════════════════════════════════════════════
-                                    // ← ZMENA: Pre tímy idúce do pavúka (pavúkový tím alebo tím,
-                                    //   ktorý má budúci pavúkový zápas) nastav čas začiatku presunu
-                                    //   až po poslednej/najneskoršom konci udalosti pavúkového
-                                    //   zápasu v posledný deň turnaja.
-                                    // ═══════════════════════════════════════════════════════════════
-                                    let departureTs = current.endTs != null ? current.endTs : current.startTs;
-
-                                    if (teamGoesToPavuk) {
-                                        // Nájdi najneskorší koniec udalosti pavúkového zápasu v posledný deň turnaja
-                                        let latestPavukEndTs = null;
-                                        const categoryClean = cleanCategory(category);
-                                        
-                                        (this.ctx.matchesBufferRef?.current || []).forEach((m) => {
-                                            if (cleanCategory(m.category) !== categoryClean) return;
-                                            
-                                            let dayKey = null;
-                                            if (m.scheduledTime) {
-                                                const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
-                                                if (mm) {
-                                                    dayKey = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
-                                                }
-                                            }
-                                            if (!dayKey && m.scheduledTs != null) {
-                                                const dt = new Date(m.scheduledTs);
-                                                dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-                                            }
-                                            if (dayKey !== globalLastDay) return;
-                                            
-                                            // Skontroluj, či ide o pavúkový zápas (aspoň jeden tím má pavúkový identifikátor)
-                                            const homeIsPavuk = isSpiderTeamName(m.home);
-                                            const awayIsPavuk = isSpiderTeamName(m.away);
-                                            if (!homeIsPavuk && !awayIsPavuk) return;
-                                            
-                                            const endTs = m.scheduledEndTs != null
-                                                ? m.scheduledEndTs
-                                                : (m.scheduledTs != null ? m.scheduledTs : null);
-                                            if (endTs == null) return;
-                                            
-                                            if (latestPavukEndTs == null || endTs > latestPavukEndTs) {
-                                                latestPavukEndTs = endTs;
-                                            }
-                                        });
-
-                                        // Ak existuje neskorší koniec pavúkového zápasu, použi ho
-                                        if (latestPavukEndTs != null && latestPavukEndTs > departureTs) {
-                                            departureTs = latestPavukEndTs;
-                                        }
-                                    }
-
+                                    const departureTs = current.endTs != null ? current.endTs : current.startTs;
                                     const departureStr = formatFullFromTs(departureTs) || current.when;
                                     const arrivalTs = timestampOnDay(departureTs, 23, 59);
                                     const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
