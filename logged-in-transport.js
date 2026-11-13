@@ -9770,7 +9770,54 @@ const TransportApp = ({ userProfileData }) => {
                                 { className: 'whitespace-nowrap' },
                                 walkingBatchSaving
                                     ? `Počet presunov, ktoré ostáva priradiť: ${walkingBatchRemaining}`
-                                    : 'Nastaviť presun peši medzi blízkymi miestami'
+                                    : (() => {
+                                        // Spočítaj kandidátov na označenie ako peši (rovnaká logika ako v onClick).
+                                        // Zobrazíme ich aj keď operácia nebeží, aby používateľ videl,
+                                        // koľko presunov ešte treba označiť ako peši.
+                                        if (!Array.isArray(walkingRules) || walkingRules.length === 0) {
+                                            return 'Nastaviť presun peši medzi blízkymi miestami';
+                                        }
+                                        const rulePairs = new Set(
+                                            walkingRules.map((r) => `${r.fromPlaceNameNorm}||${r.toPlaceNameNorm}`)
+                                        );
+                                        const isPairWalking = (fromId, toId) => {
+                                            if (!fromId || !toId) return false;
+                                            const fromNameNorm = normalizePlaceName(resolvePlaceNameById(fromId) || '');
+                                            const toNameNorm = normalizePlaceName(resolvePlaceNameById(toId) || '');
+                                            if (!fromNameNorm || !toNameNorm) return false;
+                                            return rulePairs.has(`${fromNameNorm}||${toNameNorm}`);
+                                        };
+                                        const dayKeyFilter = selectedDayKey || null;
+                                        const categoryFilter = selectedCategoryFilter
+                                            ? cleanCategory(selectedCategoryFilter)
+                                            : null;
+                                        let count = 0;
+                                        for (const parent of savedTransfersRef.current || []) {
+                                            if (!Array.isArray(parent.segments)) continue;
+                                            if (dayKeyFilter && parent.dayKey !== dayKeyFilter) continue;
+                                            if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) continue;
+                                            const stopsIds = Array.isArray(parent.intermediateStopIds) ? parent.intermediateStopIds : [];
+                                            if (stopsIds.length === 0) {
+                                                if (parent.isWalking === true) continue;
+                                                if (!isPairWalking(parent.fromId, parent.toId)) continue;
+                                                const segIdx = findSegmentIndex(parent.segments, parent.fromId, parent.toId);
+                                                if (segIdx === -1) continue;
+                                                const seg = parent.segments[segIdx];
+                                                if (!seg || seg.isWalking === true) continue;
+                                                count += 1;
+                                            } else {
+                                                for (const seg of parent.segments) {
+                                                    if (!seg || seg.isWalking === true) continue;
+                                                    if (!isPairWalking(seg.fromId, seg.toId)) continue;
+                                                    count += 1;
+                                                }
+                                            }
+                                        }
+                                        if (count > 0) {
+                                            return `Nastaviť presun peši medzi blízkymi miestami (${count})`;
+                                        }
+                                        return 'Nastaviť presun peši medzi blízkymi miestami';
+                                    })()
                             )
                         )
                         : React.createElement('span', null),
