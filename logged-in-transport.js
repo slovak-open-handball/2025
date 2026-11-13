@@ -3910,7 +3910,7 @@ const TransportApp = ({ userProfileData }) => {
                 });
             });
     
-            stage = 'updateTransfersAfterRemove';
+                        stage = 'updateTransfersAfterRemove';
             if (removedOrder != null) {
                 const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
                 const snap = await getDoc(docRef);
@@ -3918,7 +3918,7 @@ const TransportApp = ({ userProfileData }) => {
                     const data = snap.data() || {};
                     const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
                     const tUpdates = {};
-    
+
                     const shiftRowId = (rowIdStr) => {
                         if (!rowIdStr) return rowIdStr;
                         const parts = String(rowIdStr).split('__');
@@ -3931,7 +3931,34 @@ const TransportApp = ({ userProfileData }) => {
                         parts[parts.length - 1] = String(newOrderNum);
                         return parts.join('__');
                     };
-    
+
+                    // NOVÉ: Pomocná – zisti nový rowId pre daný starý rowId.
+                    // Najprv skús rowIdMap (priame premapovanie z posunu riadkov),
+                    // inak použi shiftRowId (posun o -1).
+                    const resolveNewRowId = (oldRowId) => {
+                        if (!oldRowId) return oldRowId;
+                        if (rowIdMap[oldRowId]) return rowIdMap[oldRowId];
+                        return shiftRowId(oldRowId);
+                    };
+
+                    // NOVÉ: Zoznam existujúcich rowId pre daný bus a deň PO zmazaní a posune.
+                    const existingRowIdsAfterRemove = new Set();
+                    Object.entries(busRows || {}).forEach(([busKey, rows]) => {
+                        const [bId, dK] = busKey.split('|');
+                        if (bId !== busId) return;
+                        if (dK !== dayKey) return;
+                        (rows || []).forEach((r) => {
+                            if (r.id === rowId) return;
+                            if (r.rowId) existingRowIdsAfterRemove.add(r.rowId);
+                        });
+                    });
+                    // Doplň aj nové rowId z remaining (pre istotu, keby busRows ešte nebol aktualizovaný)
+                    remaining.forEach((r, i) => {
+                        const newOrder = i + 1;
+                        const newRowId = buildRowId(busId, dayKey, newOrder);
+                        existingRowIdsAfterRemove.add(newRowId);
+                    });
+
                     Object.entries(rawTransfers).forEach(([key, v]) => {
                         if (!v || !Array.isArray(v.segments)) return;
                         if (v.dayKey !== dayKey) return;
@@ -3947,22 +3974,50 @@ const TransportApp = ({ userProfileData }) => {
                             const oldBoardingRowId = s.boardingRowId || null;
                             const oldAlightingRowId = s.alightingRowId || null;
 
+                            // NOVÉ: Vypočítaj nové rowId pre boarding aj alighting.
+                            // Ak starý rowId neexistuje v rowIdMap, skús shiftRowId.
+                            // Ale POZOR: ak starý rowId už neexistuje v existingRowIdsAfterRemove
+                            // a ani shiftRowId nevráti existujúci rowId, segment treba odpojiť.
                             let newBoardingRowId = oldBoardingRowId;
                             let newAlightingRowId = oldAlightingRowId;
 
                             if (oldBoardingRowId) {
-                                if (rowIdMap[oldBoardingRowId]) {
-                                    newBoardingRowId = rowIdMap[oldBoardingRowId];
-                                } else {
-                                    newBoardingRowId = shiftRowId(oldBoardingRowId);
+                                newBoardingRowId = resolveNewRowId(oldBoardingRowId);
+                                // Ak nový rowId neexistuje v množine existujúcich, skús ešte raz cez shiftRowId
+                                if (!existingRowIdsAfterRemove.has(newBoardingRowId)) {
+                                    const shifted = shiftRowId(oldBoardingRowId);
+                                    if (existingRowIdsAfterRemove.has(shifted)) {
+                                        newBoardingRowId = shifted;
+                                    }
                                 }
                             }
                             if (oldAlightingRowId) {
-                                if (rowIdMap[oldAlightingRowId]) {
-                                    newAlightingRowId = rowIdMap[oldAlightingRowId];
-                                } else {
-                                    newAlightingRowId = shiftRowId(oldAlightingRowId);
+                                newAlightingRowId = resolveNewRowId(oldAlightingRowId);
+                                if (!existingRowIdsAfterRemove.has(newAlightingRowId)) {
+                                    const shifted = shiftRowId(oldAlightingRowId);
+                                    if (existingRowIdsAfterRemove.has(shifted)) {
+                                        newAlightingRowId = shifted;
+                                    }
                                 }
+                            }
+
+                            // NOVÉ: Ak sa nepodarilo nájsť platný nový rowId pre boarding alebo alighting,
+                            // segment treba odpojiť (riadok bol zmazaný a neexistuje náhrada).
+                            const boardingRowFound = !oldBoardingRowId || existingRowIdsAfterRemove.has(newBoardingRowId);
+                            const alightingRowFound = !oldAlightingRowId || existingRowIdsAfterRemove.has(newAlightingRowId);
+
+                            if (!boardingRowFound || !alightingRowFound) {
+                                changed = true;
+                                return {
+                                    ...s,
+                                    busAssigned: false,
+                                    busId: null,
+                                    boardingRowId: null,
+                                    alightingRowId: null,
+                                    startTs: null,
+                                    endTs: null,
+                                    when: null,
+                                };
                             }
 
                             const boardingRow = newBoardingRowId ? newRowsByRowId.get(newBoardingRowId) : null;
@@ -4042,13 +4097,23 @@ const TransportApp = ({ userProfileData }) => {
                         });
                         if (changed) tUpdates[key] = { ...v, segments: newSegments };
                     });
-    
+
                     if (Object.keys(tUpdates).length > 0) {
                         await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
+
+                        // NOVÉ: Okamžite aktualizuj aj savedTransfersRef.current a savedTransfers state,
+                        // aby syncAssignedSegmentsForBusRow videl nové rowId skôr, než dorazí Firestore listener.
+                        const updatedTransfers = (savedTransfersRef.current || []).map((parent) => {
+                            const patch = tUpdates[parent.key];
+                            if (!patch) return parent;
+                            return { ...parent, ...patch };
+                        });
+                        savedTransfersRef.current = updatedTransfers;
+                        setSavedTransfers(updatedTransfers);
                     }
                 }
             }
-    
+
             stage = 'cleanupMissingSegments';
             {
                 const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
@@ -4057,18 +4122,20 @@ const TransportApp = ({ userProfileData }) => {
                     const data = snap.data() || {};
                     const rawTransfers = data[TRANSPORT_TRANSFERS_FIELD] || {};
                     const tUpdates = {};
-    
+
+                    // NOVÉ: Zoznam existujúcich rowId pre daný bus a deň PO zmazaní a posune.
+                    // Používame remaining (už posunuté riadky) + newRowsByRowId.
                     const existingRowIdsForDay = new Set();
-                    Object.entries(busRows || {}).forEach(([busKey, rows]) => {
-                        const [bId, dK] = busKey.split('|');
-                        if (bId !== busId) return;
-                        if (dK !== dayKey) return;
-                        (rows || []).forEach((r) => {
-                            if (r.id === rowId) return;
-                            if (r.rowId) existingRowIdsForDay.add(r.rowId);
-                        });
+                    remaining.forEach((r, i) => {
+                        const newOrder = i + 1;
+                        const newRowId = buildRowId(busId, dayKey, newOrder);
+                        existingRowIdsForDay.add(newRowId);
                     });
-    
+                    // Doplň aj z newRowsByRowId (pre istotu)
+                    newRowsByRowId.forEach((_, rowIdKey) => {
+                        existingRowIdsForDay.add(rowIdKey);
+                    });
+
                     Object.entries(rawTransfers).forEach(([key, v]) => {
                         if (!v || !Array.isArray(v.segments)) return;
                         if (v.dayKey !== dayKey) return;
@@ -4076,13 +4143,14 @@ const TransportApp = ({ userProfileData }) => {
                         const newSegments = v.segments.map((s) => {
                             if (!s.busId) return s;
                             if (s.busId !== busId) return s;
-                            
+                            if (s.isWalking === true) return s;
+
                             const bRowKey = s.boardingRowId ? s.boardingRowId : null;
                             const aRowKey = s.alightingRowId ? s.alightingRowId : null;
-    
+
                             const bMissing = bRowKey && !existingRowIdsForDay.has(bRowKey);
                             const aMissing = aRowKey && !existingRowIdsForDay.has(aRowKey);
-    
+
                             if (bMissing || aMissing) {
                                 changed = true;
                                 return {
@@ -4100,9 +4168,18 @@ const TransportApp = ({ userProfileData }) => {
                         });
                         if (changed) tUpdates[key] = { ...v, segments: newSegments };
                     });
-    
+
                     if (Object.keys(tUpdates).length > 0) {
                         await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: tUpdates }, { merge: true });
+
+                        // NOVÉ: Okamžite aktualizuj aj savedTransfersRef.current a savedTransfers state.
+                        const updatedTransfers = (savedTransfersRef.current || []).map((parent) => {
+                            const patch = tUpdates[parent.key];
+                            if (!patch) return parent;
+                            return { ...parent, ...patch };
+                        });
+                        savedTransfersRef.current = updatedTransfers;
+                        setSavedTransfers(updatedTransfers);
                     }
                 }
             }
