@@ -5528,6 +5528,7 @@ const TransportApp = ({ userProfileData }) => {
             fromPlaceFilter = selectedFromPlaceFilter || null,
             toPlaceFilter = selectedToPlaceFilter || null,
             currentStopId = bulkIntermediateStopId,
+            side = 'from',   // NOVÉ: 'from' alebo 'to'
         } = options;
     
         const stopNormToCheck = currentStopId
@@ -5537,18 +5538,27 @@ const TransportApp = ({ userProfileData }) => {
         const parentAlreadyContainsStop = (t) => {
             if (!t) return false;
             if (!stopNormToCheck) return false;
+
             const nameMatches = (placeId) => {
-                if (!placeId) return false;
-                const n = normalizePlaceName(resolvePlaceNameById(placeId) || '');
+                const n = getPlaceNormalizedName(placeId);
                 return n && n === stopNormToCheck;
             };
-            if (nameMatches(t.fromId)) return true;
-            if (nameMatches(t.toId)) return true;
-            const existingStops = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
-            if (existingStops.some((s) => nameMatches(s))) return true;
-            const segs = Array.isArray(t.segments) ? t.segments : [];
-            if (segs.some((s) => s && (nameMatches(s.fromId) || nameMatches(s.toId)))) return true;
-            return false;
+
+            if (side === 'from') {
+                if (nameMatches(t.fromId)) return true;
+                const existingStops = Array.isArray(t.intermediateStopIds)
+                    ? t.intermediateStopIds
+                    : [];
+                if (existingStops.length > 0 && nameMatches(existingStops[0])) return true;
+                return false;
+            } else {
+                if (nameMatches(t.toId)) return true;
+                const existingStops = Array.isArray(t.intermediateStopIds)
+                    ? t.intermediateStopIds
+                    : [];
+                if (existingStops.length > 0 && nameMatches(existingStops[existingStops.length - 1])) return true;
+                return false;
+            }
         };
     
         const fromFilterNorm = fromPlaceFilter
@@ -5564,7 +5574,6 @@ const TransportApp = ({ userProfileData }) => {
             return nameNorm && nameNorm === targetNorm;
         };
     
-        // KĽÚČOVÉ: filtruj parentov podľa parent.fromId / parent.toId
         return (savedTransfersRef.current || []).filter((parent) => {
             if (parent._parentKey && parent._parentKey !== parent.key) return false;
             if (parent.isWalking === true) return false;
@@ -5673,7 +5682,6 @@ const TransportApp = ({ userProfileData }) => {
             return '';
         };
 
-        // ── Pomocná: zistí, či parent už obsahuje zastávku – IBA cez normalizovaný názov. ──
         const parentAlreadyContainsStop = (t) => {
             if (!t) return false;
             if (!stopNormToCheck) return false;
@@ -5683,23 +5691,21 @@ const TransportApp = ({ userProfileData }) => {
                 return n && n === stopNormToCheck;
             };
 
-            // fromId, toId
-            if (nameMatches(t.fromId)) return true;
-            if (nameMatches(t.toId)) return true;
-
-            // intermediateStopIds
-            const existingStops = Array.isArray(t.intermediateStopIds)
-                ? t.intermediateStopIds
-                : [];
-            if (existingStops.some((s) => nameMatches(s))) return true;
-
-            // segments
-            const segs = Array.isArray(t.segments) ? t.segments : [];
-            if (segs.some((s) => s && (nameMatches(s.fromId) || nameMatches(s.toId)))) {
-                return true;
+            if (side === 'from') {
+                if (nameMatches(t.fromId)) return true;
+                const existingStops = Array.isArray(t.intermediateStopIds)
+                    ? t.intermediateStopIds
+                    : [];
+                if (existingStops.length > 0 && nameMatches(existingStops[0])) return true;
+                return false;
+            } else {
+                if (nameMatches(t.toId)) return true;
+                const existingStops = Array.isArray(t.intermediateStopIds)
+                    ? t.intermediateStopIds
+                    : [];
+                if (existingStops.length > 0 && nameMatches(existingStops[existingStops.length - 1])) return true;
+                return false;
             }
-
-            return false;
         };
 
         // ── Pomocná: zistí, či dané miesto (placeId) zodpovedá filtru (filterId)
@@ -5741,6 +5747,7 @@ const TransportApp = ({ userProfileData }) => {
             fromPlaceFilter,
             toPlaceFilter,
             currentStopId: stopId,
+            side,
         });
 
         // ── DOČASNÝ DEBUG (môžete odstrániť po overení) ──
@@ -11226,6 +11233,7 @@ const TransportApp = ({ userProfileData }) => {
                 fromPlaceFilter: selectedFromPlaceFilter || null,
                 toPlaceFilter: selectedToPlaceFilter || null,
                 currentStopId: bulkIntermediateStopId,
+                side,
             });
         
             const totalCandidates = candidateParents.length;
