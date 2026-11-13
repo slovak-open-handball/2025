@@ -5582,7 +5582,7 @@ const TransportApp = ({ userProfileData }) => {
             });
         });
 
-        const stopNormToCheck = normalizePlaceName(resolvePlaceNameById(stopIdToCheck) || '');
+        const stopNormToCheck = normalizePlaceName(resolvePlaceNameById(stopId) || '');
 
         const parentAlreadyContainsStop = (t, _stopIdToCheck) => {
             if (!t) return false;
