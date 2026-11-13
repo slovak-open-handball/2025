@@ -4979,7 +4979,10 @@ const TransportApp = ({ userProfileData }) => {
                         className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 flex items-center justify-center mx-auto',
                         title: 'Odstrániť riadok',
                     }, React.createElement('i', { className: 'fa-solid fa-xmark' })),
-                !shouldHideRowActions && (() => {
+                // NOVÉ: Zelené "+" – zobrazí sa VŽDY, keď ide o posledný riadok,
+                // alebo keď je riadok bez tímov (shouldHideRowActions === false).
+                // Pri poslednom riadku sa zobrazí aj napriek tomu, že v ňom vystupuje tím.
+                (() => {
                     const effectivePlaceFromId = lockedPlaceFromId || row.placeFromId || null;
                     const hasPlaceFrom = !!effectivePlaceFromId;
                     const hasPlaceTo = !!row.placeToId;
@@ -4989,18 +4992,20 @@ const TransportApp = ({ userProfileData }) => {
                         return null;
                     }
                 
-                    // NOVÉ: Pri poslednom riadku (nextRow === null) je tlačidlo umiestnené
-                    // nižšie (bottom: '-12px'), čo môže spôsobiť, že pri hoveri nad riadkom
-                    // sa nezobrazí, lebo hover opustí oblasť riadku. Preto pri poslednom
-                    // riadku posunieme tlačidlo vyššie, aby bolo v rámci riadku.
                     const isLastRow = !nextRow;
+                    // Zelené "+" zobrazíme len ak ide o posledný riadok ALEBO riadok nemá tímy
+                    // (t. j. shouldHideRowActions === false).
+                    if (!isLastRow && shouldHideRowActions) {
+                        return null;
+                    }
                 
+                    // Pevná hodnota bottom pre všetky riadky (aj posledný).
                     return React.createElement(
                         'div',
                         {
                             className: 'absolute left-1/2 -translate-x-1/2 pointer-events-none',
                             style: {
-                                bottom: '-12px',
+                                bottom: '-2px',
                                 zIndex: 100,
                             }
                         },
