@@ -4325,9 +4325,11 @@ class TransportGenerator {
         };
     
         const initialCandidateCount = countCandidates();
-    
-        // ① POČIATOČNÝ PROGRESS
-        if (onProgress) {
+
+        // ① POČIATOČNÝ PROGRESS – zavoláme LEN ak máme nenulový počet kandidátov.
+        // Ak je initialCandidateCount === 0, počiatočný progress NEZAVOLÁME,
+        // aby neprepísal hodnotu, ktorú nastavil render (candidateCount z UI).
+        if (onProgress && initialCandidateCount > 0) {
             try {
                 onProgress({ remaining: initialCandidateCount, total: initialCandidateCount, processed: 0 });
             } catch (e) { /* ignore */ }
