@@ -5983,10 +5983,9 @@ const TransportApp = ({ userProfileData }) => {
         } finally {
             setBulkIntermediateSaving(false);
             setBulkIntermediateRemaining(0);
+            setSelectedFromPlaceFilter('');
+            setSelectedToPlaceFilter('');
         }
-        
-        setSelectedFromPlaceFilter('');
-        setSelectedToPlaceFilter('');
     };
 
     const isSegmentCoveredByBus = (segment) => {
