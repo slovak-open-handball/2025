@@ -3467,6 +3467,7 @@ class TransportGenerator {
                                             // vygeneruj presun z miesta poslednej udalosti
                                             // pokračujúceho tímu na miesto prvej udalosti SS tímu.
                                             // Ak ich je viac, vygeneruj presun pre každé unikátne miesto.
+                                            // Zjednoť miesta pokračujúcich tímov (unikátne miesta)
                                             const uniquePlacesMap = new Map();
                                             placesOfContinuationTeams.forEach((info) => {
                                                 const key = normalizePlaceName(info.location);
@@ -3477,14 +3478,38 @@ class TransportGenerator {
                                                 }
                                             });
 
+                                            // ═══════════════════════════════════════════════════════════════
+                                            // ← NOVÁ ZMENA: Čas odchodu = NAJNESKORŠÍ endTs zo VŠETKÝCH
+                                            //   posledných udalostí pokračujúcich tímov (nielen z tých,
+                                            //   ktoré skončili inde). Tak sa zabezpečí, že tím odíde až
+                                            //   vtedy, keď skončila posledná udalosť ktoréhokoľvek
+                                            //   pokračujúceho tímu.
+                                            // ═══════════════════════════════════════════════════════════════
+                                            let latestEndTsAcrossAll = null;
+                                            lastPlacesOfUserTeamsInContinuationGroups.forEach((info) => {
+                                                if (info.endTs == null) return;
+                                                if (latestEndTsAcrossAll == null || info.endTs > latestEndTsAcrossAll) {
+                                                    latestEndTsAcrossAll = info.endTs;
+                                                }
+                                            });
+                                            // Zahrň aj prípad, že niektoré miesto má endTs z placesOfContinuationTeams
+                                            placesOfContinuationTeams.forEach((info) => {
+                                                if (info.endTs == null) return;
+                                                if (latestEndTsAcrossAll == null || info.endTs > latestEndTsAcrossAll) {
+                                                    latestEndTsAcrossAll = info.endTs;
+                                                }
+                                            });
+
                                             const arrivalTs = current.startTs;
                                             const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
 
                                             uniquePlacesMap.forEach((info) => {
                                                 if (this.isSamePlaceForTransfer(info.location, current.location)) return;
 
-                                                const departureTs = info.endTs != null
-                                                    ? info.endTs
+                                                // ← Čas odchodu = najneskorší endTs zo všetkých
+                                                //   posledných udalostí pokračujúcich tímov.
+                                                const departureTs = latestEndTsAcrossAll != null
+                                                    ? latestEndTsAcrossAll
                                                     : timestampOnDay(arrivalTs, 0, 0);
                                                 const departureStr = formatFullFromTs(departureTs) || '00:00';
 
@@ -3506,30 +3531,6 @@ class TransportGenerator {
                                                     isTransfer: true,
                                                 });
                                             });
-                                        } else {
-                                            // Žiadny pokračujúci tím nemá udalosť s miestom →
-                                            // fallback: pôvodné správanie (presun z miesta zrazu).
-                                            const arrivalTs = current.startTs;
-                                            const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
-                                            const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
-                                            const departureTs = globalArrivalTs != null && isFinite(globalArrivalTs)
-                                                ? globalArrivalTs
-                                                : timestampOnDay(arrivalTs, 0, 0);
-                                            const departureStr = formatFullFromTs(departureTs) || '00:00';
-                                            if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
-                                                let whenStr;
-                                                if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
-                                                else if (arrivalStr) whenStr = arrivalStr;
-                                                else whenStr = current.when;
-                                                enriched.push({
-                                                    ts: current.ts - 1,
-                                                    when: whenStr,
-                                                    type: 'transfer',
-                                                    text: `Presun z miesto zrazu ${meetingPointStop.name} do ${current.location}`,
-                                                    location: null,
-                                                    isTransfer: true,
-                                                });
-                                            }
                                         }
                                     }
                                 }
