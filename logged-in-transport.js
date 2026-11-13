@@ -6379,17 +6379,50 @@ const TransportApp = ({ userProfileData }) => {
         if (!parent) {
             return;
         }
-
+    
         const draft = {
             ...parent,
             segments: Array.isArray(parent.segments)
                 ? parent.segments.map((s) => ({ ...s }))
                 : buildDefaultSegments(parent),
         };
-
+    
         mutator(draft);
         recomputeParentSegmentsInPlace(draft);
-
+    
+        // NOVÉ: Okamžite aktualizuj savedTransfersRef.current a savedTransfers
+        // (aby onProgress v generátore videl aktuálny stav hneď, nie až po Firestore snapshote).
+        const optimisticUpdate = (() => {
+            const basePayload = {
+                category: draft.category,
+                teamUid: draft.teamUid,
+                teamIndex: draft.teamIndex,
+                dayKey: draft.dayKey,
+                fromId: draft.fromId || null,
+                toId: draft.toId || null,
+                when: draft.when,
+                segments: (draft.segments || []).map((s) => ({ ...s })),
+            };
+            if (draft.teamName && String(draft.teamName).trim() !== '') {
+                basePayload.teamName = String(draft.teamName).trim();
+            }
+            if (Array.isArray(draft.intermediateStopIds) && draft.intermediateStopIds.length > 0) {
+                basePayload.intermediateStopIds = [...draft.intermediateStopIds];
+            }
+            if (draft.isWalking === true) {
+                basePayload.isWalking = true;
+                basePayload.walkingSetAt = draft.walkingSetAt || Timestamp.fromDate(new Date());
+                basePayload.walkingSetBy = draft.walkingSetBy || (userProfileData && userProfileData.email) || null;
+            }
+            return basePayload;
+        })();
+    
+        const updatedTransfers = (savedTransfersRef.current || []).map((s) =>
+            s.key === parentKey ? { ...s, ...optimisticUpdate } : s
+        );
+        savedTransfersRef.current = updatedTransfers;
+        setSavedTransfers(updatedTransfers);
+    
         const docRef = doc(window.db, TRANSPORT_SETTINGS_COLLECTION, TRANSPORT_SETTINGS_DOC);
         const payload = {
             category: draft.category,
@@ -6401,16 +6434,16 @@ const TransportApp = ({ userProfileData }) => {
             when: draft.when,
             segments: draft.segments,
         };
-
+    
         if (draft.teamName && String(draft.teamName).trim() !== '') {
             payload.teamName = String(draft.teamName).trim();
         }
-
+    
         if (Array.isArray(draft.intermediateStopIds) && draft.intermediateStopIds.length > 0) {
             payload.intermediateStopIds = draft.intermediateStopIds;
         } else {
         }
-
+    
         if (draft.isWalking === true) {
             payload.when = (draft.when && String(draft.when).trim() !== '')
                 ? draft.when
@@ -6430,7 +6463,7 @@ const TransportApp = ({ userProfileData }) => {
             payload.walkingSetAt = deleteField();
             payload.walkingSetBy = deleteField();
         }
-
+    
         await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: { [parentKey]: payload } }, { merge: true });
     };
 
