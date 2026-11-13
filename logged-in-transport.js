@@ -5904,6 +5904,9 @@ const TransportApp = ({ userProfileData }) => {
             setShowBulkIntermediateModal(null);
             setBulkIntermediateStopId('');
 
+            setSelectedFromPlaceFilter('');
+            setSelectedToPlaceFilter('');
+
             if (updatedParentKeys.length > 0 && window.TransportGenerator && typeof window.TransportGenerator.setAllWalkingTransfersAsWalking === 'function') {
                 // Spočítaj kandidátov rovnakou logikou ako tlačidlo „Nastaviť presun peši medzi blízkymi miestami“,
                 // aby sme mali počiatočnú hodnotu pre walkingBatchRemaining.
@@ -5983,8 +5986,6 @@ const TransportApp = ({ userProfileData }) => {
         } finally {
             setBulkIntermediateSaving(false);
             setBulkIntermediateRemaining(0);
-            setSelectedFromPlaceFilter('');
-            setSelectedToPlaceFilter('');
         }
     };
 
