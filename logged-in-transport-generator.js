@@ -4018,22 +4018,35 @@ class TransportGenerator {
                             const isPavukTeamForLastDay = isSpiderTeamName(teamName);
                         
                             const pavukFutureMatchExists = (() => {
-                                // Zisti písmeno skupiny pre tento tím
-                                let teamGroupChar = null;
+                                // ───────────────────────────────────────────────────────────────────
+                                // Zisti OBE písmená pre tento tím:
+                                //   • nameChar = posledné písmeno názvu tímu (napr. "4C" → "C")
+                                //   • groupChar = posledné písmeno groupName (napr. "skupina I" → "I")
+                                // Pre hľadanie budúcich zápasov treba použiť OBE – tím môže hrať
+                                // zápasy typu "1C", "2C", ... (ak je v skupine C) AJ "1I", "2I", ...
+                                // (ak je v skupine I). Preto continuationCharsSet musí obsahovať
+                                // obe písmená a všetky ich pokračovania.
+                                // ───────────────────────────────────────────────────────────────────
+                                const teamNameStr = String(teamName || '').trim();
+                                const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(teamNameStr);
+                                const nameChar = nameCharMatch ? nameCharMatch[1].toUpperCase() : null;
+                            
                                 const teamInfo = (this.ctx.teamsArrivalBufferRef?.current || []).find(
                                     (t) => cleanCategory(t.category) === cleanCategory(category)
-                                        && String(t.teamName || '').trim() === String(teamName || '').trim()
+                                        && String(t.teamName || '').trim() === teamNameStr
                                 );
-                                if (teamInfo && teamInfo.groupName) {
-                                    teamGroupChar = getGroupLastChar(teamInfo.groupName);
-                                }
-                                if (!teamGroupChar) {
-                                    const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
-                                    if (m) teamGroupChar = m[1].toUpperCase();
-                                }
-                                if (!teamGroupChar) return false;
+                                const groupCharFromGroupName = teamInfo && teamInfo.groupName
+                                    ? getGroupLastChar(teamInfo.groupName)
+                                    : null;
                             
-                                // Zisti "pokračujúce" skupiny (rovnaká logika ako pri user tímoch)
+                                // Pre hľadanie budúcich zápasov použi OBE písmená (nameChar aj groupChar)
+                                const baseChars = new Set();
+                                if (nameChar) baseChars.add(nameChar);
+                                if (groupCharFromGroupName) baseChars.add(groupCharFromGroupName);
+                                if (baseChars.size === 0) return false;
+                            
+                                // Zisti mapovanie groupChar -> Set<nameChar> pre všetky SS tímy
+                                // (rovnaká logika ako pri user tímoch)
                                 const groupCharToContinuationChars = new Map();
                                 (this.ctx.teamsArrivalBufferRef?.current || []).forEach((t) => {
                                     if (cleanCategory(t.category) !== cleanCategory(category)) return;
@@ -4042,23 +4055,31 @@ class TransportGenerator {
                                     if (isSpiderTeamName(t.teamName)) return;
                                     const tn = String(t.teamName).trim();
                                     const lastCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
-                                    const nameChar = lastCharMatch ? lastCharMatch[1].toUpperCase() : null;
-                                    if (!nameChar) return;
-                                    let groupChar = getGroupLastChar(t.groupName);
-                                    if (!groupChar) groupChar = nameChar;
-                                    if (!groupChar) return;
-                                    if (!groupCharToContinuationChars.has(groupChar)) {
-                                        groupCharToContinuationChars.set(groupChar, new Set());
+                                    const tNameChar = lastCharMatch ? lastCharMatch[1].toUpperCase() : null;
+                                    if (!tNameChar) return;
+                                    let tGroupChar = getGroupLastChar(t.groupName);
+                                    if (!tGroupChar) tGroupChar = tNameChar;
+                                    if (!tGroupChar) return;
+                                    if (!groupCharToContinuationChars.has(tGroupChar)) {
+                                        groupCharToContinuationChars.set(tGroupChar, new Set());
                                     }
-                                    groupCharToContinuationChars.get(groupChar).add(nameChar);
+                                    groupCharToContinuationChars.get(tGroupChar).add(tNameChar);
                                 });
                             
-                                const continuationCharsSet = new Set([teamGroupChar]);
+                                // continuationCharsSet = baseChars + všetky pokračovania pre KAŽDÝ baseChar
+                                const continuationCharsSet = new Set(baseChars);
                                 groupCharToContinuationChars.forEach((originalChars, groupChar) => {
-                                    if (originalChars.has(teamGroupChar)) {
-                                        continuationCharsSet.add(groupChar);
+                                    for (const baseChar of baseChars) {
+                                        if (originalChars.has(baseChar)) {
+                                            continuationCharsSet.add(groupChar);
+                                        }
                                     }
                                 });
+                            
+                                console.log(
+                                    `%c[TRANSPORT][SS-FUTURE-CHECK] Tím "${teamNameStr}": nameChar=${nameChar || '—'}, groupChar=${groupCharFromGroupName || '—'}, continuationCharsSet={${[...continuationCharsSet].sort().join(', ')}}`,
+                                    'color: #ea580c; font-weight: bold;'
+                                );
                             
                                 // ───────────────────────────────────────────────────────────────────
                                 // 1) Štandardné pavúkové zápasy typu "<číslo><písmeno>" (1I, 2I, ...,
@@ -4101,6 +4122,8 @@ class TransportGenerator {
                                     return false;
                                 };
                             
+                                const currentLastTs = current.endTs != null ? current.endTs : current.startTs;
+                            
                                 (this.ctx.matchesBufferRef?.current || []).forEach((m) => {
                                     if (cleanCategory(m.category) !== cleanCategory(category)) return;
                             
@@ -4116,7 +4139,16 @@ class TransportGenerator {
                                         const dt = new Date(m.scheduledTs);
                                         dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
                                     }
-                                    if (!dayKey || dayKey <= currentDay) return;
+                                    if (!dayKey) return;
+                            
+                                    // Ber zápasy na neskorší deň ALEBO v ten istý deň, ktoré začínajú neskôr
+                                    if (dayKey < currentDay) return;
+                                    if (dayKey === currentDay) {
+                                        const matchStartTs = m.scheduledTs != null ? m.scheduledTs : null;
+                                        if (matchStartTs != null && currentLastTs != null && matchStartTs <= currentLastTs) {
+                                            return;
+                                        }
+                                    }
                             
                                     // Skontroluj oba tímy v zápase
                                     [m.home, m.away].forEach((tn) => {
@@ -4142,6 +4174,18 @@ class TransportGenerator {
                                         }
                                     });
                                 });
+                            
+                                if (foundNumbered) {
+                                    console.log(
+                                        `%c[TRANSPORT][SS-FUTURE-CHECK] Tím "${teamNameStr}" MÁ budúci pavúkový zápas → presun sa negeneruje.`,
+                                        'color: #b91c1c; font-weight: bold;'
+                                    );
+                                } else {
+                                    console.log(
+                                        `%c[TRANSPORT][SS-FUTURE-CHECK] Tím "${teamNameStr}" NEMÁ budúci pavúkový zápas → presun sa vygeneruje.`,
+                                        'color: #16a34a; font-weight: bold;'
+                                    );
+                                }
                             
                                 return foundNumbered;
                             })();
