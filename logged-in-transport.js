@@ -9666,13 +9666,23 @@ const TransportApp = ({ userProfileData }) => {
                                         return;
                                     }
                                 
-                                    setWalkingBatchSaving(true);
                                     setWalkingBatchRemaining(candidateCount);
+                                    setWalkingBatchSaving(true);
                                 
+                                    // NOVÝ KÓD:
+                                    let initialProgressReceived = false;
                                     const walkingOptions = {
                                         dayKey: dayKeyFilter,
                                         category: categoryFilter,
                                         onProgress: ({ remaining, total, processed }) => {
+                                            // Prvé volanie onProgress (processed === 0) – ak remaining je 0,
+                                            // ignorujeme ho, aby sme neprepísali počiatočnú hodnotu z UI.
+                                            if (!initialProgressReceived) {
+                                                initialProgressReceived = true;
+                                                if (processed === 0 && (remaining == null || Number(remaining) === 0)) {
+                                                    return;
+                                                }
+                                            }
                                             if (remaining != null) {
                                                 setWalkingBatchRemaining(Math.max(0, Number(remaining) || 0));
                                             } else if (total != null && processed != null) {
@@ -9704,7 +9714,7 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 { className: 'whitespace-nowrap' },
                                 walkingBatchSaving
-                                    ? `Počet presunov, ktoré ostáva priradiť: ${walkingBatchRemaining}`
+                                    ? `Počet presunov, ktoré ostáva priradiť: ${walkingBatchRemaining > 0 ? walkingBatchRemaining : '…'}`
                                     : 'Nastaviť presun peši medzi blízkymi miestami'
                             )
                         )
