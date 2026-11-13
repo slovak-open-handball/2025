@@ -9767,7 +9767,7 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 { className: 'whitespace-nowrap' },
                                 walkingBatchSaving
-                                    ? `Počet presunov, ktoré ostáva priradiť: ${walkingBatchRemaining - 1}`
+                                    ? `Počet presunov peši, ktoré ostáva priradiť: ${walkingBatchRemaining - 1}`
                                     : (() => {
                                         // Spočítaj kandidátov na označenie ako peši (rovnaká logika ako v onClick).
                                         // Zobrazíme ich aj keď operácia nebeží, aby používateľ videl,
