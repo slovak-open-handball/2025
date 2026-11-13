@@ -9695,7 +9695,7 @@ const TransportApp = ({ userProfileData }) => {
 
                 return React.createElement(
                     'div',
-                    { className: 'px-3 pt-2 pb-1 border-b border-gray-100 flex items-center justify-between gap-2 flex-wrap' },
+//                    { className: 'px-3 pt-2 pb-1 border-b border-gray-100 flex items-center justify-between gap-2 flex-wrap' },
                     showWalkingButton
                         ? React.createElement(
                             'button',
