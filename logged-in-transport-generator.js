@@ -3342,26 +3342,130 @@ class TransportGenerator {
                                         // Negeneruj presun z miesta zrazu – iné tímy v skupine už majú udalosť v ten deň
                                         // (tím by mal ísť z miesta, kde sú ony, nie z miesta zrazu)
                                     } else {
-                                        const arrivalTs = current.startTs;
-                                        const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
-                                        const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
-                                        const departureTs = globalArrivalTs != null && isFinite(globalArrivalTs)
-                                            ? globalArrivalTs
-                                            : timestampOnDay(arrivalTs, 0, 0);
-                                        const departureStr = formatFullFromTs(departureTs) || '00:00';
-                                        if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
-                                            let whenStr;
-                                            if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
-                                            else if (arrivalStr) whenStr = arrivalStr;
-                                            else whenStr = current.when;
-                                            enriched.push({
-                                                ts: current.ts - 1,
-                                                when: whenStr,
-                                                type: 'transfer',
-                                                text: `Presun z miesto zrazu ${meetingPointStop.name} do ${current.location}`,
-                                                location: null,
-                                                isTransfer: true,
+                                        // ═══════════════════════════════════════════════════════════════
+                                        // ← NOVÁ ZMENA: Skontroluj, či tímy v skupinách, ktoré sú
+                                        //   "pokračovaním" tejto skupiny (napr. F pokračuje z A, C, E),
+                                        //   nemajú poslednú udalosť dňa na rovnakom mieste, ako je
+                                        //   miesto prvej udalosti tohto SS tímu. Ak áno → negeneruj
+                                        //   ranný presun z miesta zrazu.
+                                        // ═══════════════════════════════════════════════════════════════
+                                        const ssTeamLastCharForCheck = (() => {
+                                            const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+                                            if (m) return m[1].toUpperCase();
+                                            return getGroupLastChar(String(teamName).trim());
+                                        })();
+
+                                        // Zisti, ktoré skupiny sú "pokračovaním" tejto skupiny
+                                        // (rovnaká logika ako pri user tímoch – mapovanie groupChar -> originalChars)
+                                        const groupCharToOriginalChars = new Map();
+                                        (this.ctx.teamsArrivalBufferRef?.current || []).forEach((t) => {
+                                            if (cleanCategory(t.category) !== cleanCategory(category)) return;
+                                            if (!t.teamName) return;
+                                            if (t.isSuperstructure !== true) return;
+                                            if (isSpiderTeamName(t.teamName)) return;
+                                            const tn = String(t.teamName).trim();
+                                            const lastCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                                            const nameChar = lastCharMatch ? lastCharMatch[1].toUpperCase() : null;
+                                            if (!nameChar) return;
+                                            let groupChar = getGroupLastChar(t.groupName);
+                                            if (!groupChar) groupChar = nameChar;
+                                            if (!groupChar) return;
+                                            if (!groupCharToOriginalChars.has(groupChar)) {
+                                                groupCharToOriginalChars.set(groupChar, new Set());
+                                            }
+                                            groupCharToOriginalChars.get(groupChar).add(nameChar);
+                                        });
+
+                                        const continuationGroupCharsSetForSS = new Set();
+                                        if (ssTeamLastCharForCheck) {
+                                            continuationGroupCharsSetForSS.add(ssTeamLastCharForCheck);
+                                            groupCharToOriginalChars.forEach((originalChars, groupChar) => {
+                                                if (originalChars.has(ssTeamLastCharForCheck)) {
+                                                    continuationGroupCharsSetForSS.add(groupChar);
+                                                }
                                             });
+                                        }
+
+                                        // Nájdi posledné udalosti dňa user tímov v týchto skupinách
+                                        const userTeamsInContinuationGroups = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
+                                            if (cleanCategory(t.category) !== cleanCategory(category)) return false;
+                                            if (!t.teamName) return false;
+                                            if (t.isRegistered !== true) return false;
+                                            if (t.isSuperstructure === true) return false;
+                                            if (isSpiderTeamName(t.teamName)) return false;
+                                            const gName = t.groupName ? String(t.groupName).trim() : null;
+                                            if (!gName) return false;
+                                            const gChar = getGroupLastChar(gName);
+                                            if (!gChar) return false;
+                                            return continuationGroupCharsSetForSS.has(gChar);
+                                        });
+
+                                        const lastPlacesOfUserTeamsInContinuationGroups = new Map();
+                                        userTeamsInContinuationGroups.forEach((t) => {
+                                            const tn = String(t.teamName).trim();
+                                            const teamEventsOnDay = (grouped[cleanCategory(category)]?.[tn] || [])
+                                                .filter((ev) => {
+                                                    const evDay = extractDayKeyFromWhen(ev.when);
+                                                    return evDay === currentDay && ev.location;
+                                                })
+                                                .sort((a, b) => {
+                                                    const ta = a.endTs != null ? a.endTs : (a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY));
+                                                    const tb = b.endTs != null ? b.endTs : (b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY));
+                                                    return tb - ta;
+                                                });
+                                            if (teamEventsOnDay.length === 0) return;
+                                            const lastEv = teamEventsOnDay[0];
+                                            const lastEndTs = lastEv.endTs != null
+                                                ? lastEv.endTs
+                                                : (lastEv.startTs != null ? lastEv.startTs : (lastEv.ts != null ? lastEv.ts : null));
+                                            const existing = lastPlacesOfUserTeamsInContinuationGroups.get(tn);
+                                            if (!existing || (lastEndTs != null && lastEndTs > (existing.endTs ?? -Infinity))) {
+                                                lastPlacesOfUserTeamsInContinuationGroups.set(tn, {
+                                                    location: lastEv.location,
+                                                    endTs: lastEndTs,
+                                                });
+                                            }
+                                        });
+
+                                        // Skontroluj, či aspoň jeden z týchto tímov skončil na rovnakom mieste,
+                                        // ako je miesto prvej udalosti tohto SS tímu
+                                        const anyContinuationTeamEndsAtSamePlace = (() => {
+                                            if (!current.location) return false;
+                                            for (const info of lastPlacesOfUserTeamsInContinuationGroups.values()) {
+                                                if (!info.location) continue;
+                                                if (this.isSamePlaceForTransfer(info.location, current.location)) {
+                                                    return true;
+                                                }
+                                            }
+                                            return false;
+                                        })();
+
+                                        if (anyContinuationTeamEndsAtSamePlace) {
+                                            // Tímy v "pokračujúcich" skupinách končia na rovnakom mieste,
+                                            // ako je miesto prvej udalosti tohto SS tímu → negeneruj
+                                            // ranný presun z miesta zrazu (tím sa "pripojí" k nim).
+                                        } else {
+                                            const arrivalTs = current.startTs;
+                                            const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
+                                            const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
+                                            const departureTs = globalArrivalTs != null && isFinite(globalArrivalTs)
+                                                ? globalArrivalTs
+                                                : timestampOnDay(arrivalTs, 0, 0);
+                                            const departureStr = formatFullFromTs(departureTs) || '00:00';
+                                            if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
+                                                let whenStr;
+                                                if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                                else if (arrivalStr) whenStr = arrivalStr;
+                                                else whenStr = current.when;
+                                                enriched.push({
+                                                    ts: current.ts - 1,
+                                                    when: whenStr,
+                                                    type: 'transfer',
+                                                    text: `Presun z miesto zrazu ${meetingPointStop.name} do ${current.location}`,
+                                                    location: null,
+                                                    isTransfer: true,
+                                                });
+                                            }
                                         }
                                     }
                                 }
