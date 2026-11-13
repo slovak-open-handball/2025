@@ -5499,6 +5499,44 @@ const TransportApp = ({ userProfileData }) => {
         const fromPlaceFilter = selectedFromPlaceFilter || null;
         const toPlaceFilter = selectedToPlaceFilter || null;
 
+        // === BULK-DEBUG START ===
+        console.log('[BULK-DEBUG] === applyBulkIntermediateStop ===');
+        console.log('[BULK-DEBUG] side =', side);
+        console.log('[BULK-DEBUG] stopId =', stopId);
+        console.log('[BULK-DEBUG] stopName =', stopName);
+        console.log('[BULK-DEBUG] dayKeyFilter =', dayKeyFilter);
+        console.log('[BULK-DEBUG] categoryFilter =', categoryFilter);
+        console.log('[BULK-DEBUG] fromPlaceFilter =', fromPlaceFilter);
+        console.log('[BULK-DEBUG] fromPlaceFilter resolved =', fromPlaceFilter ? resolvePlaceNameById(fromPlaceFilter) : null);
+        console.log('[BULK-DEBUG] toPlaceFilter =', toPlaceFilter);
+        console.log('[BULK-DEBUG] toPlaceFilter resolved =', toPlaceFilter ? resolvePlaceNameById(toPlaceFilter) : null);
+        console.log('[BULK-DEBUG] savedTransfersRef.current.length =', (savedTransfersRef.current || []).length);
+        console.log('[BULK-DEBUG] all parents:');
+        (savedTransfersRef.current || []).forEach((t, i) => {
+            console.log(`  [${i}]`, {
+                key: t.key,
+                isWalking: t.isWalking,
+                _parentKey: t._parentKey,
+                dayKey: t.dayKey,
+                category: t.category,
+                fromId: t.fromId,
+                fromName: resolvePlaceNameById(t.fromId),
+                toId: t.toId,
+                toName: resolvePlaceNameById(t.toId),
+                hasStop: (() => {
+                    if (!t || !stopId) return false;
+                    const sid = String(stopId);
+                    if (String(t.fromId || '') === sid) return true;
+                    if (String(t.toId || '') === sid) return true;
+                    const existingStops = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
+                    if (existingStops.some((s) => String(s) === sid)) return true;
+                    const segs = Array.isArray(t.segments) ? t.segments : [];
+                    if (segs.some((s) => s && (String(s.fromId || '') === sid || String(s.toId || '') === sid))) return true;
+                    return false;
+                })(),
+            });
+        });
+
         // Pomocná: zistí, či parent už obsahuje danú zastávku v trase
         // (fromId, toId, intermediateStopIds alebo v ktoromkoľvek segmente).
         const parentAlreadyContainsStop = (t, stopIdToCheck) => {
