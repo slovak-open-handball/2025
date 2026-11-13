@@ -5547,6 +5547,26 @@ const TransportApp = ({ userProfileData }) => {
         // Normalizovaný názov cieľovej zastávky (bez prefixov/sufixov)
         const stopNormToCheck = normalizePlaceName(stopName);
 
+        // === DOČASNÝ DEBUG ===
+        console.log('[BULK-DEBUG] stopId =', stopId);
+        console.log('[BULK-DEBUG] stopName =', stopName);
+        console.log('[BULK-DEBUG] stopNormToCheck =', JSON.stringify(stopNormToCheck));
+        console.log('[BULK-DEBUG] fromPlaceFilter =', fromPlaceFilter);
+        console.log('[BULK-DEBUG] toPlaceFilter =', toPlaceFilter);
+        console.log('[BULK-DEBUG] placesMapRef.current keys count =', Object.keys(placesMapRef.current || {}).length);
+        console.log('[BULK-DEBUG] allPlacesRef.current.length =', (allPlacesRef.current || []).length);
+        console.log('[BULK-DEBUG] stopsList.length =', (stopsList || []).length);
+        if (fromPlaceFilter) {
+            console.log('[BULK-DEBUG] getPlaceNormalizedName(fromPlaceFilter) =', JSON.stringify(getPlaceNormalizedName(fromPlaceFilter)));
+            console.log('[BULK-DEBUG] resolvePlaceNameById(fromPlaceFilter) =', JSON.stringify(resolvePlaceNameById(fromPlaceFilter)));
+        }
+        if (toPlaceFilter) {
+            console.log('[BULK-DEBUG] getPlaceNormalizedName(toPlaceFilter) =', JSON.stringify(getPlaceNormalizedName(toPlaceFilter)));
+            console.log('[BULK-DEBUG] resolvePlaceNameById(toPlaceFilter) =', JSON.stringify(resolvePlaceNameById(toPlaceFilter)));
+        }
+        console.log('[BULK-DEBUG] getPlaceNormalizedName(stopId) =', JSON.stringify(getPlaceNormalizedName(stopId)));
+        // === KONIEC DOČASNÉHO DEBUGU ===
+
         // Pomocná: vráti normalizovaný názov miesta pre dané ID.
         // Hľadá v placesMapRef, allPlacesRef, stopsList.
         // Ak sa nenašlo, vráti '' (NIE ID!) – aby porovnávanie cez názov nefungovalo na ID.
