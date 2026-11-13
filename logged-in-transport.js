@@ -11289,6 +11289,12 @@ const TransportApp = ({ userProfileData }) => {
         
             const candidateParents = computeBulkCandidateParents();
             const totalCandidates = candidateParents.length;
+
+            console.log('[BULK-MODAL] totalCandidates =', totalCandidates, 
+                'fromPlaceFilter =', selectedFromPlaceFilter,
+                'fromPlaceFilter name =', resolvePlaceNameById(selectedFromPlaceFilter),
+                'toPlaceFilter =', selectedToPlaceFilter,
+                'toPlaceFilter name =', resolvePlaceNameById(selectedToPlaceFilter));
         
             return React.createElement(
                 'div',
