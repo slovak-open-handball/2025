@@ -3282,8 +3282,8 @@ class TransportGenerator {
                                 // ← ZMENA: Pre SUPERSTRUCTURE tím:
                                 //  • ranný presun z ubytovní sa NEGENERUJE nikdy
                                 //  • ranný presun z miesta zrazu na miesto prvej udalosti sa
-                                //    generuje LEN ak v ten deň nehrá žiadny user tím
-                                //    (anyUsersTeamHasEventToday === false)
+                                //    generuje LEN ak v ten deň nemá udalosť s miestom žiadny
+                                //    iný tím v jeho skupine (rovnaký groupName).
                                 // ═══════════════════════════════════════════════════════════════
                                 if (isPlacementMatchEvent) {
                                     // placement match – bez ranného presunu
@@ -3294,32 +3294,75 @@ class TransportGenerator {
                                     meetingPointStop &&
                                     !this.isSamePlaceForTransfer(meetingPointStop.name, current.location)
                                 ) {
-                                    // ═══════════════════════════════════════════════════════════════════════════
-                                    // ← ZMENA: Presun z miesta zrazu sa generuje pre SS tím vždy, keď v jeho
-                                    //   skupine (podľa posledného písmena) nemá udalosť žiadny user tím
-                                    //   s miestom. To zodpovedá prípadu anyOtherTeamHasEvent === false.
-                                    //   (Nevyžaduje sa, aby v celej kategórii nehral žiadny user tím.)
-                                    // ═══════════════════════════════════════════════════════════════════════════
-                                    const arrivalTs = current.startTs;
-                                    const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
-                                    const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
-                                    const departureTs = globalArrivalTs != null && isFinite(globalArrivalTs)
-                                        ? globalArrivalTs
-                                        : timestampOnDay(arrivalTs, 0, 0);
-                                    const departureStr = formatFullFromTs(departureTs) || '00:00';
-                                    if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
-                                        let whenStr;
-                                        if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
-                                        else if (arrivalStr) whenStr = arrivalStr;
-                                        else whenStr = current.when;
-                                        enriched.push({
-                                            ts: current.ts - 1,
-                                            when: whenStr,
-                                            type: 'transfer',
-                                            text: `Presun z miesto zrazu ${meetingPointStop.name} do ${current.location}`,
-                                            location: null,
-                                            isTransfer: true,
+                                    // Skontroluj, či v ten deň má nejaký iný tím v skupine udalosť s miestom
+                                    const currentTeamInfoForGroupCheck = (this.ctx.teamsArrivalBufferRef?.current || []).find(
+                                        (t) => cleanCategory(t.category) === cleanCategory(category)
+                                            && String(t.teamName || '').trim() === String(teamName || '').trim()
+                                    );
+                                    const currentTeamGroupNameForCheck = currentTeamInfoForGroupCheck && currentTeamInfoForGroupCheck.groupName
+                                        ? String(currentTeamInfoForGroupCheck.groupName).trim()
+                                        : null;
+
+                                    const anyOtherTeamInSameGroupHasEventToday = (() => {
+                                        if (!currentDay || !currentTeamGroupNameForCheck) return false;
+                                        const categoryClean = cleanCategory(category);
+                                        return (this.ctx.teamsArrivalBufferRef?.current || []).some((other) => {
+                                            if (cleanCategory(other.category) !== categoryClean) return false;
+                                            if (!other.teamName) return false;
+                                            const otherTn = String(other.teamName).trim();
+                                            if (otherTn === String(teamName || '').trim()) return false;
+                                            const otherGroupName = other.groupName ? String(other.groupName).trim() : null;
+                                            if (!otherGroupName || otherGroupName !== currentTeamGroupNameForCheck) return false;
+
+                                            const hasMatch = (this.ctx.matchesBufferRef?.current || []).some((m) => {
+                                                if (cleanCategory(m.category) !== categoryClean) return false;
+                                                if (m.home !== otherTn && m.away !== otherTn) return false;
+                                                let dayKey = null;
+                                                if (m.scheduledTime) {
+                                                    const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                                    if (mm) dayKey = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
+                                                }
+                                                if (!dayKey && m.scheduledTs != null) {
+                                                    const dt = new Date(m.scheduledTs);
+                                                    dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                                }
+                                                return dayKey === currentDay;
+                                            });
+                                            if (hasMatch) return true;
+
+                                            return (this.ctx.cateringBufferRef?.current || []).some((c) => {
+                                                if (cleanCategory(c.category) !== categoryClean) return false;
+                                                if (c.teamName !== otherTn) return false;
+                                                return c.dayKey === currentDay;
+                                            });
                                         });
+                                    })();
+
+                                    if (anyOtherTeamInSameGroupHasEventToday) {
+                                        // Negeneruj presun z miesta zrazu – iné tímy v skupine už majú udalosť v ten deň
+                                        // (tím by mal ísť z miesta, kde sú ony, nie z miesta zrazu)
+                                    } else {
+                                        const arrivalTs = current.startTs;
+                                        const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
+                                        const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
+                                        const departureTs = globalArrivalTs != null && isFinite(globalArrivalTs)
+                                            ? globalArrivalTs
+                                            : timestampOnDay(arrivalTs, 0, 0);
+                                        const departureStr = formatFullFromTs(departureTs) || '00:00';
+                                        if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
+                                            let whenStr;
+                                            if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                            else if (arrivalStr) whenStr = arrivalStr;
+                                            else whenStr = current.when;
+                                            enriched.push({
+                                                ts: current.ts - 1,
+                                                when: whenStr,
+                                                type: 'transfer',
+                                                text: `Presun z miesto zrazu ${meetingPointStop.name} do ${current.location}`,
+                                                location: null,
+                                                isTransfer: true,
+                                            });
+                                        }
                                     }
                                 }
                             }
