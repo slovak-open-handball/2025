@@ -5743,20 +5743,20 @@ const TransportApp = ({ userProfileData }) => {
             currentStopId: stopId,
         });
 
+        // ── DOČASNÝ DEBUG (môžete odstrániť po overení) ──
+        const debugFromFilterNorm = selectedFromPlaceFilter
+            ? normalizePlaceName(resolvePlaceNameById(selectedFromPlaceFilter) || '')
+            : '';
+        const debugStopNorm = bulkIntermediateStopId
+            ? normalizePlaceName(resolvePlaceNameById(bulkIntermediateStopId) || '')
+            : '';
+
         console.log('[BULK-DEBUG] selectedFromPlaceFilter =', selectedFromPlaceFilter);
         console.log('[BULK-DEBUG] resolvePlaceNameById(selectedFromPlaceFilter) =', resolvePlaceNameById(selectedFromPlaceFilter));
-        console.log('[BULK-DEBUG] fromFilterNorm =', JSON.stringify(
-            selectedFromPlaceFilter
-                ? normalizePlaceName(resolvePlaceNameById(selectedFromPlaceFilter) || '')
-                : ''
-        ));
+        console.log('[BULK-DEBUG] fromFilterNorm =', JSON.stringify(debugFromFilterNorm));
         console.log('[BULK-DEBUG] bulkIntermediateStopId =', bulkIntermediateStopId);
         console.log('[BULK-DEBUG] resolvePlaceNameById(bulkIntermediateStopId) =', resolvePlaceNameById(bulkIntermediateStopId));
-        console.log('[BULK-DEBUG] stopNormToCheck =', JSON.stringify(
-            bulkIntermediateStopId
-                ? normalizePlaceName(resolvePlaceNameById(bulkIntermediateStopId) || '')
-                : ''
-        ));
+        console.log('[BULK-DEBUG] stopNormToCheck =', JSON.stringify(debugStopNorm));
         console.log('[BULK-DEBUG] savedTransfers count =', (savedTransfersRef.current || []).length);
         (savedTransfersRef.current || []).forEach((p) => {
             if (p._parentKey && p._parentKey !== p.key) return;
@@ -5765,7 +5765,7 @@ const TransportApp = ({ userProfileData }) => {
                 if (!s) return false;
                 const sFromNorm = normalizePlaceName(resolvePlaceNameById(s.fromId) || '');
                 const sToNorm = normalizePlaceName(resolvePlaceNameById(s.toId) || '');
-                return sFromNorm === stopNormToCheck || sToNorm === stopNormToCheck;
+                return sFromNorm === debugStopNorm || sToNorm === debugStopNorm;
             });
             console.log('[BULK-DEBUG] parent', {
                 key: p.key,
@@ -5774,10 +5774,11 @@ const TransportApp = ({ userProfileData }) => {
                 fromNorm: pFromNorm,
                 isWalking: p.isWalking,
                 dayKey: p.dayKey,
-                matchFrom: pFromNorm === fromFilterNorm,
+                matchFrom: pFromNorm === debugFromFilterNorm,
                 alreadyContainsStop: segContainsStop,
             });
         });
+        // ── KONIEC DOČASNÉHO DEBUGU ──
 
         if (candidateParents.length === 0) {
             window.showGlobalNotification('Pre zvolený filter nie sú žiadne presuny bez tejto zastávky.', 'info');
