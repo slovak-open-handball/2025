@@ -4994,14 +4994,13 @@ const TransportApp = ({ userProfileData }) => {
                     // sa nezobrazí, lebo hover opustí oblasť riadku. Preto pri poslednom
                     // riadku posunieme tlačidlo vyššie, aby bolo v rámci riadku.
                     const isLastRow = !nextRow;
-                    const bottomOffset = isLastRow ? '-2px' : '-12px';
                 
                     return React.createElement(
                         'div',
                         {
                             className: 'absolute left-1/2 -translate-x-1/2 pointer-events-none',
                             style: {
-                                bottom: bottomOffset,
+                                bottom: '-12px',
                                 zIndex: 100,
                             }
                         },
