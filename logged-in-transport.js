@@ -9346,7 +9346,7 @@ const TransportApp = ({ userProfileData }) => {
                     return false;
                 })();
 
-                const showWalkingButton = hasAnyMatchingWalkingCandidate;
+                const showWalkingButton = hasAnyMatchingWalkingCandidate || walkingBatchSaving;
 
                 if (!showPartialCheckbox && !showWalkingButton) {
                     return null;
