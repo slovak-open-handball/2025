@@ -5521,6 +5521,67 @@ const TransportApp = ({ userProfileData }) => {
         return result;
     };
 
+    const computeBulkCandidateParents = (options = {}) => {
+        const {
+            dayKeyFilter = selectedDayKey || null,
+            categoryFilter = selectedCategoryFilter ? cleanCategory(selectedCategoryFilter) : null,
+            fromPlaceFilter = selectedFromPlaceFilter || null,
+            toPlaceFilter = selectedToPlaceFilter || null,
+            currentStopId = bulkIntermediateStopId,
+        } = options;
+    
+        const stopNormToCheck = currentStopId
+            ? normalizePlaceName(resolvePlaceNameById(currentStopId) || '')
+            : '';
+    
+        const parentAlreadyContainsStop = (t) => {
+            if (!t) return false;
+            if (!stopNormToCheck) return false;
+            const nameMatches = (placeId) => {
+                if (!placeId) return false;
+                const n = normalizePlaceName(resolvePlaceNameById(placeId) || '');
+                return n && n === stopNormToCheck;
+            };
+            if (nameMatches(t.fromId)) return true;
+            if (nameMatches(t.toId)) return true;
+            const existingStops = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
+            if (existingStops.some((s) => nameMatches(s))) return true;
+            const segs = Array.isArray(t.segments) ? t.segments : [];
+            if (segs.some((s) => s && (nameMatches(s.fromId) || nameMatches(s.toId)))) return true;
+            return false;
+        };
+    
+        const fromFilterNorm = fromPlaceFilter
+            ? normalizePlaceName(resolvePlaceNameById(fromPlaceFilter) || '')
+            : '';
+        const toFilterNorm = toPlaceFilter
+            ? normalizePlaceName(resolvePlaceNameById(toPlaceFilter) || '')
+            : '';
+    
+        const placeMatchesFilter = (placeId, targetNorm) => {
+            if (!targetNorm) return true;
+            const nameNorm = normalizePlaceName(resolvePlaceNameById(placeId) || '');
+            return nameNorm && nameNorm === targetNorm;
+        };
+    
+        // KĽÚČOVÉ: filtruj parentov podľa parent.fromId / parent.toId
+        return (savedTransfersRef.current || []).filter((parent) => {
+            if (parent._parentKey && parent._parentKey !== parent.key) return false;
+            if (parent.isWalking === true) return false;
+            if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return false;
+            if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return false;
+    
+            if (fromFilterNorm) {
+                if (!placeMatchesFilter(parent.fromId, fromFilterNorm)) return false;
+            }
+            if (toFilterNorm) {
+                if (!placeMatchesFilter(parent.toId, toFilterNorm)) return false;
+            }
+            if (currentStopId && parentAlreadyContainsStop(parent)) return false;
+            return true;
+        });
+    };
+
     const applyBulkIntermediateStop = async () => {
         if (!window.db) return;
         if (!showBulkIntermediateModal) return;
@@ -5682,24 +5743,7 @@ const TransportApp = ({ userProfileData }) => {
             currentStopId: stopId,
         });
 
-        console.log('[BULK-DEBUG] expandedSegmentsForFilter.length =', expandedSegmentsForFilter.length);
-        console.log('[BULK-DEBUG] candidateParentKeys.size =', candidateParentKeys.size);
         console.log('[BULK-DEBUG] candidateParents.length =', candidateParents.length);
-
-        // DEBUG: vypíš prvých 5 segmentov
-        expandedSegmentsForFilter.slice(0, 5).forEach((seg, idx) => {
-            console.log(`[BULK-SEG-DEBUG ${idx}]`, {
-                parentKey: seg.parentKey,
-                fromId: seg.fromId,
-                fromIdNorm: getPlaceNormalizedName(seg.fromId),
-                toId: seg.toId,
-                toIdNorm: getPlaceNormalizedName(seg.toId),
-                fromPlaceFilterNorm: fromPlaceFilter ? getPlaceNormalizedName(fromPlaceFilter) : null,
-                placeMatchesFrom: fromPlaceFilter ? placeMatchesFilter(seg.fromId, fromPlaceFilter) : null,
-                parentAlreadyContainsStop: parentAlreadyContainsStop(seg.parent),
-            });
-        });
-        // DEBUG: vypíš prvých 5 segmentov
 
         if (candidateParents.length === 0) {
             window.showGlobalNotification('Pre zvolený filter nie sú žiadne presuny bez tejto zastávky.', 'info');
@@ -11140,69 +11184,15 @@ const TransportApp = ({ userProfileData }) => {
             );
             const selectedStopId = bulkIntermediateStopId;
             const selectedStopName = selectedStopId ? (resolvePlaceNameById(selectedStopId) || '') : '';
+
+            const candidateParents = computeBulkCandidateParents({
+                dayKeyFilter: selectedDayKey || null,
+                categoryFilter: selectedCategoryFilter ? cleanCategory(selectedCategoryFilter) : null,
+                fromPlaceFilter: selectedFromPlaceFilter || null,
+                toPlaceFilter: selectedToPlaceFilter || null,
+                currentStopId: bulkIntermediateStopId,
+            });
         
-            const computeBulkCandidateParents = (options = {}) => {
-                const {
-                    dayKeyFilter = selectedDayKey || null,
-                    categoryFilter = selectedCategoryFilter ? cleanCategory(selectedCategoryFilter) : null,
-                    fromPlaceFilter = selectedFromPlaceFilter || null,
-                    toPlaceFilter = selectedToPlaceFilter || null,
-                    currentStopId = bulkIntermediateStopId,
-                } = options;
-            
-                const stopNormToCheck = currentStopId
-                    ? normalizePlaceName(resolvePlaceNameById(currentStopId) || '')
-                    : '';
-            
-                const parentAlreadyContainsStop = (t) => {
-                    if (!t) return false;
-                    if (!stopNormToCheck) return false;
-                    const nameMatches = (placeId) => {
-                        if (!placeId) return false;
-                        const n = normalizePlaceName(resolvePlaceNameById(placeId) || '');
-                        return n && n === stopNormToCheck;
-                    };
-                    if (nameMatches(t.fromId)) return true;
-                    if (nameMatches(t.toId)) return true;
-                    const existingStops = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
-                    if (existingStops.some((s) => nameMatches(s))) return true;
-                    const segs = Array.isArray(t.segments) ? t.segments : [];
-                    if (segs.some((s) => s && (nameMatches(s.fromId) || nameMatches(s.toId)))) return true;
-                    return false;
-                };
-            
-                const fromFilterNorm = fromPlaceFilter
-                    ? normalizePlaceName(resolvePlaceNameById(fromPlaceFilter) || '')
-                    : '';
-                const toFilterNorm = toPlaceFilter
-                    ? normalizePlaceName(resolvePlaceNameById(toPlaceFilter) || '')
-                    : '';
-            
-                const placeMatchesFilter = (placeId, targetNorm) => {
-                    if (!targetNorm) return true;
-                    const nameNorm = normalizePlaceName(resolvePlaceNameById(placeId) || '');
-                    return nameNorm && nameNorm === targetNorm;
-                };
-            
-                // KĽÚČOVÉ: filtruj parentov podľa parent.fromId / parent.toId
-                return (savedTransfersRef.current || []).filter((parent) => {
-                    if (parent._parentKey && parent._parentKey !== parent.key) return false;
-                    if (parent.isWalking === true) return false;
-                    if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return false;
-                    if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return false;
-            
-                    if (fromFilterNorm) {
-                        if (!placeMatchesFilter(parent.fromId, fromFilterNorm)) return false;
-                    }
-                    if (toFilterNorm) {
-                        if (!placeMatchesFilter(parent.toId, toFilterNorm)) return false;
-                    }
-                    if (currentStopId && parentAlreadyContainsStop(parent)) return false;
-                    return true;
-                });
-            };
-        
-            const candidateParents = computeBulkCandidateParents();
             const totalCandidates = candidateParents.length;
 
             console.log('[BULK-MODAL] totalCandidates =', totalCandidates, 
