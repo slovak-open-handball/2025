@@ -5574,14 +5574,31 @@ const TransportApp = ({ userProfileData }) => {
             if (!placeId) return '';
             const id = String(placeId);
 
+            // 1) placesMapRef
             const fromMap = (placesMapRef.current || {})[id];
             if (fromMap) return normalizePlaceName(fromMap);
 
+            // 2) allPlacesRef
             const fromAll = (allPlacesRef.current || []).find((p) => String(p.id) === id);
             if (fromAll && fromAll.name) return normalizePlaceName(fromAll.name);
 
+            // 3) stopsList
             const fromStops = (stopsList || []).find((s) => String(s.id) === id);
             if (fromStops && fromStops.name) return normalizePlaceName(fromStops.name);
+
+            // 4) FALLBACK: hľadaj v savedTransfersRef – parent má fromLocation/toLocation
+            //    (tie sú uložené ako názvy, nie ID)
+            const fromTransfers = (savedTransfersRef.current || []).find(
+                (t) => (t.fromId && String(t.fromId) === id) || (t.toId && String(t.toId) === id)
+            );
+            if (fromTransfers) {
+                if (fromTransfers.fromId && String(fromTransfers.fromId) === id && fromTransfers.fromLocation) {
+                    return normalizePlaceName(fromTransfers.fromLocation);
+                }
+                if (fromTransfers.toId && String(fromTransfers.toId) === id && fromTransfers.toLocation) {
+                    return normalizePlaceName(fromTransfers.toLocation);
+                }
+            }
 
             return '';
         };
