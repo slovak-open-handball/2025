@@ -14652,8 +14652,8 @@ const TransportApp = ({ userProfileData }) => {
                             },
                             className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                                 isGeneratingTransfers
-                                    ? 'bg-green-400 text-white cursor-not-allowed opacity-80'
-                                    : 'bg-green-600 text-white hover:bg-green-700'
+                                    ? 'bg-amber-400 text-white cursor-not-allowed opacity-80'
+                                    : 'bg-amber-600 text-white hover:bg-amber-700'
                             }`
                         },
                         isGeneratingTransfers
