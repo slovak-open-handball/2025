@@ -4455,11 +4455,43 @@ const TransportApp = ({ userProfileData }) => {
         })();
 
         // NOVÉ: Zisti, či má tento riadok nejaké tímy (v Nástupe alebo Výstupe).
-        // Ak áno, nezobrazíme červené X (mazanie riadku) ani zelené + (vloženie riadku).
         const teamsBoardingHereForLockCheck = getTeamsForRowSide(row.rowId, 'in');
         const hasAnyTeamsInRow =
             teamsBoardingHereForLockCheck.length > 0 ||
             teamsAlightingHere.length > 0;
+
+        // NOVÉ: Zisti, či má nasledujúci riadok nejaký tím v stĺpci Nástup.
+        // Pričom ak je nasledujúci riadok "červený" (gap > 2 min), kontrolujeme
+        // prvý riadok POD týmto červeným riadkom.
+        const getNextRowBoardingTeams = () => {
+            if (!nextRow) return [];
+            const nextIdx = currentIdx + 1;
+
+            // Zisti, či je nasledujúci riadok červený (gap > 2 min)
+            const rawGap = getGapMinutes(row.timeTo, nextRow.timeFrom);
+            const isNextRowGap = rawGap != null && rawGap > 2;
+
+            let targetRow = nextRow;
+            let targetIdx = nextIdx;
+
+            if (isNextRowGap) {
+                // Ak je červený, preskoč ho a ber prvý riadok pod ním
+                targetIdx = nextIdx + 1;
+                if (targetIdx >= allRows.length) return [];
+                targetRow = allRows[targetIdx];
+            }
+
+            return getTeamsForRowSide(targetRow.rowId, 'in');
+        };
+
+        const nextRowBoardingTeamsForLock = getNextRowBoardingTeams();
+        const hasAnyTeamsInNextRow =
+            nextRowBoardingTeamsForLock.length > 0;
+
+        // NOVÉ: Ak má aktuálny riadok tímy ALEBO nasledujúci riadok (prípadne prvý pod červeným)
+        // má tím v stĺpci Nástup, nezobrazíme červené X ani zelené +.
+        const shouldHideRowActions =
+            hasAnyTeamsInRow || hasAnyTeamsInNextRow;
     
         const removeTeamSegment = async (teamKeyToRemove, clickSide, rowObj) => {
             if (!window.db || !busId || !dayKey || !rowObj?.id) return;
@@ -4860,16 +4892,18 @@ const TransportApp = ({ userProfileData }) => {
                 return diff;
             })()),
             React.createElement('td', { className: 'border border-gray-300 p-1 text-center' },
-                // NOVÉ: Červené X (mazanie riadku) sa zobrazí len ak v riadku nie je žiadny tím
-                !hasAnyTeamsInRow &&
+                // NOVÉ: Červené X (mazanie riadku) sa zobrazí len ak riadok ani nasledujúci riadok
+                // (prípadne prvý pod červeným) nemá žiadny tím.
+                !shouldHideRowActions &&
                     React.createElement('button', {
                         type: 'button',
                         onClick: () => removeBusRow(row.id),
                         className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 flex items-center justify-center mx-auto',
                         title: 'Odstrániť riadok',
                     }, React.createElement('i', { className: 'fa-solid fa-xmark' })),
-                // NOVÉ: Zelené + (vloženie riadku) sa zobrazí len ak v riadku nie je žiadny tím
-                !hasAnyTeamsInRow && (() => {
+                // NOVÉ: Zelené + (vloženie riadku) sa zobrazí len ak riadok ani nasledujúci riadok
+                // (prípadne prvý pod červeným) nemá žiadny tím.
+                !shouldHideRowActions && (() => {
                     const effectivePlaceFromId = lockedPlaceFromId || row.placeFromId || null;
                     const hasPlaceFrom = !!effectivePlaceFromId;
                     const hasPlaceTo = !!row.placeToId;
