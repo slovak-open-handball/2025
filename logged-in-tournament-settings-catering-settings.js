@@ -364,8 +364,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
             await setDoc(cateringDocRef, {
                 times: normalized,
                 unitMinutes: hasValidUnit ? unit : null,
-                updatedAt: Timestamp.fromDate(new Date()),
-                updatedBy: userProfileData.email || null,
             }, { merge: true });
 
             setOriginalCateringTimes(normalized);
