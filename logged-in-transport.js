@@ -5732,10 +5732,10 @@ const TransportApp = ({ userProfileData }) => {
             if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return;
         
             if (fromPlaceFilter) {
-                if (!placeMatchesFilter(seg.fromId, fromPlaceFilter)) return;
+                if (!placeMatchesFilter(parent.fromId, fromPlaceFilter)) return;
             }
             if (toPlaceFilter) {
-                if (!placeMatchesFilter(seg.toId, toPlaceFilter)) return;
+                if (!placeMatchesFilter(parent.toId, toPlaceFilter)) return;
             }
             if (parentAlreadyContainsStop(parent)) return;
             candidateParentKeys.add(parent.key);
@@ -11204,42 +11204,33 @@ const TransportApp = ({ userProfileData }) => {
             const selectedStopId = bulkIntermediateStopId;
             const selectedStopName = selectedStopId ? (resolvePlaceNameById(selectedStopId) || '') : '';
         
-            const computeBulkCandidateParents = () => {
-                const dayKeyFilter = selectedDayKey || null;
-                const categoryFilter = selectedCategoryFilter
-                    ? cleanCategory(selectedCategoryFilter)
-                    : null;
-                const fromPlaceFilter = selectedFromPlaceFilter || null;
-                const toPlaceFilter = selectedToPlaceFilter || null;
-                const currentStopId = bulkIntermediateStopId;
+            const computeBulkCandidateParents = (options = {}) => {
+                const {
+                    dayKeyFilter = selectedDayKey || null,
+                    categoryFilter = selectedCategoryFilter ? cleanCategory(selectedCategoryFilter) : null,
+                    fromPlaceFilter = selectedFromPlaceFilter || null,
+                    toPlaceFilter = selectedToPlaceFilter || null,
+                    currentStopId = bulkIntermediateStopId,
+                } = options;
             
                 const stopNormToCheck = currentStopId
                     ? normalizePlaceName(resolvePlaceNameById(currentStopId) || '')
                     : '';
-
-                const parentAlreadyContainsStop = (t, _stopIdToCheck) => {
+            
+                const parentAlreadyContainsStop = (t) => {
                     if (!t) return false;
                     if (!stopNormToCheck) return false;
-
                     const nameMatches = (placeId) => {
                         if (!placeId) return false;
                         const n = normalizePlaceName(resolvePlaceNameById(placeId) || '');
                         return n && n === stopNormToCheck;
                     };
-
                     if (nameMatches(t.fromId)) return true;
                     if (nameMatches(t.toId)) return true;
-
-                    const existingStops = Array.isArray(t.intermediateStopIds)
-                        ? t.intermediateStopIds
-                        : [];
+                    const existingStops = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
                     if (existingStops.some((s) => nameMatches(s))) return true;
-                
                     const segs = Array.isArray(t.segments) ? t.segments : [];
-                    if (segs.some((s) => s && (nameMatches(s.fromId) || nameMatches(s.toId)))) {
-                        return true;
-                    }
-                
+                    if (segs.some((s) => s && (nameMatches(s.fromId) || nameMatches(s.toId)))) return true;
                     return false;
                 };
             
@@ -11256,32 +11247,22 @@ const TransportApp = ({ userProfileData }) => {
                     return nameNorm && nameNorm === targetNorm;
                 };
             
-                // NOVÉ: Pracujeme s ROZŠÍRENÝMI segmentmi
-                const expandedSegmentsAll = buildExpandedTransfersForFilter();
-                const candidateParentKeys = new Set();
-            
-                expandedSegmentsAll.forEach((seg) => {
-                    const parent = seg.parent;
-                    if (!parent) return;
-                    if (parent.isWalking === true) return;
-                    if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return;
-                    if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return;
+                // KĽÚČOVÉ: filtruj parentov podľa parent.fromId / parent.toId
+                return (savedTransfersRef.current || []).filter((parent) => {
+                    if (parent._parentKey && parent._parentKey !== parent.key) return false;
+                    if (parent.isWalking === true) return false;
+                    if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return false;
+                    if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return false;
             
                     if (fromFilterNorm) {
-                        if (!placeMatchesFilter(seg.fromId, fromFilterNorm)) return;
+                        if (!placeMatchesFilter(parent.fromId, fromFilterNorm)) return false;
                     }
                     if (toFilterNorm) {
-                        if (!placeMatchesFilter(seg.toId, toFilterNorm)) return;
+                        if (!placeMatchesFilter(parent.toId, toFilterNorm)) return false;
                     }
-            
-                    if (currentStopId && parentAlreadyContainsStop(parent, currentStopId)) return;
-            
-                    candidateParentKeys.add(parent.key);
+                    if (currentStopId && parentAlreadyContainsStop(parent)) return false;
+                    return true;
                 });
-            
-                return (savedTransfersRef.current || []).filter(
-                    (t) => candidateParentKeys.has(t.key)
-                );
             };
         
             const candidateParents = computeBulkCandidateParents();
