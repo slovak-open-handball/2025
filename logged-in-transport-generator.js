@@ -4018,6 +4018,13 @@ class TransportGenerator {
                             const isPavukTeamForLastDay = isSpiderTeamName(teamName);
                         
                             const pavukFutureMatchExists = (() => {
+                                if (!groupCharFromGroupName) {
+                                    console.log(
+                                        `%c[TRANSPORT][SS-FUTURE-CHECK] Tím "${teamNameStr}" nemá groupName (pavúkový tím) → presun sa VŽDY generuje.`,
+                                        'color: #16a34a; font-weight: bold;'
+                                    );
+                                    return false;
+                                }
                                 // Odstráni prefix kategórie z názvu tímu.
                                 // Napr. pre category = "U10 D" a teamName = "U10 D 4C" vráti "4C".
                                 const stripCategoryPrefix = (tn, cat) => {
