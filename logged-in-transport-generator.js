@@ -4368,11 +4368,10 @@ class TransportGenerator {
         });
     
         if (parentsToUpdate.size === 0) {
-            if (onProgress) {
-                try {
-                    onProgress({ remaining: 0, total: 0, processed: 0 });
-                } catch (e) { /* ignore */ }
-            }
+            // Nevoláme onProgress s remaining: 0, processed: 0 – to by v UI
+            // prepísalo počiatočnú hodnotu candidateCount na 0 a tlačidlo by
+            // zobrazilo "Počet presunov, ktoré ostáva priradiť: 0".
+            // Namiesto toho necháme UI zobraziť pôvodnú hodnotu candidateCount.
             window.showGlobalNotification?.('Nenašli sa žiadne presuny, ktoré by zodpovedali pravidlám "peši".', 'info');
             return;
         }
