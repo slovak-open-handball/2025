@@ -9328,12 +9328,14 @@ const TransportApp = ({ userProfileData }) => {
                             {
                                 type: 'button',
                                 onClick: async () => {
+                                    if (walkingBatchSaving) return;
+                                
                                     // Vypočítame počet kandidátov pre tento deň a kategóriu
                                     const dayKeyFilter = selectedDayKey || null;
                                     const categoryFilter = selectedCategoryFilter
                                         ? cleanCategory(selectedCategoryFilter)
                                         : null;
-                    
+                                
                                     const rulePairs = new Set(
                                         (walkingRules || []).map((r) => `${r.fromPlaceNameNorm}||${r.toPlaceNameNorm}`)
                                     );
@@ -9344,18 +9346,18 @@ const TransportApp = ({ userProfileData }) => {
                                         if (!fromNameNorm || !toNameNorm) return false;
                                         return rulePairs.has(`${fromNameNorm}||${toNameNorm}`);
                                     };
-                    
+                                
                                     let candidateCount = 0;
                                     for (const parent of savedTransfersRef.current || []) {
                                         if (!Array.isArray(parent.segments)) continue;
                                         if (dayKeyFilter && parent.dayKey !== dayKeyFilter) continue;
                                         if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) continue;
-                    
+                                
                                         const stopsIds = Array.isArray(parent.intermediateStopIds)
                                             ? parent.intermediateStopIds
                                             : [];
                                         const isDirectTransfer = stopsIds.length === 0;
-                    
+                                
                                         if (isDirectTransfer) {
                                             if (parent.isWalking === true) continue;
                                             const fromId = parent.fromId || null;
@@ -9378,34 +9380,45 @@ const TransportApp = ({ userProfileData }) => {
                                             }
                                         }
                                     }
-                    
+                                
+                                    // NOVÉ: Ak nie sú žiadni kandidáti, netreba nič robiť
+                                    if (candidateCount === 0) {
+                                        window.showGlobalNotification(
+                                            'Pre zvolený deň a kategóriu neexistujú žiadne presuny, ktoré by zodpovedali pravidlám peši.',
+                                            'info'
+                                        );
+                                        return;
+                                    }
+                                
+                                    // NOVÉ: Nastav flag a počiatočný počet PRED začatím operácie
+                                    setWalkingBatchSaving(true);
                                     setWalkingBatchRemaining(candidateCount);
-                    
-                                    const originalSetRemaining = (n) => {
-                                        try {
-                                            setWalkingBatchRemaining(Math.max(0, n));
-                                        } catch (e) { /* ignore */ }
-                                    };
-                    
-                                    // Ak TransportGenerator podporuje callback pre progres, použijeme ho.
-                                    // Inak aspoň nastavíme počiatočný počet a po dokončení vyčistíme.
+                                
                                     const walkingOptions = {
-                                        dayKey: selectedDayKey || null,
-                                        category: selectedCategoryFilter || null,
+                                        dayKey: dayKeyFilter,
+                                        category: categoryFilter,
                                     };
-                    
-                                    // Voliteľne: ak TransportGenerator podporuje onProgress, odovzdáme mu ho
+                                
+                                    // onProgress – ak TransportGenerator podporuje priebežný callback
                                     if (window.TransportGenerator && typeof window.TransportGenerator.setAllWalkingTransfersAsWalking === 'function') {
-                                        walkingOptions.onProgress = ({ remaining, total }) => {
+                                        walkingOptions.onProgress = ({ remaining, total, processed }) => {
                                             if (remaining != null) {
-                                                originalSetRemaining(remaining);
-                                            } else if (total != null) {
-                                                originalSetRemaining(total);
+                                                setWalkingBatchRemaining(Math.max(0, Number(remaining) || 0));
+                                            } else if (total != null && processed != null) {
+                                                setWalkingBatchRemaining(Math.max(0, Number(total) - Number(processed)));
                                             }
                                         };
                                     }
-                    
-                                    TransportGenerator.setAllWalkingTransfersAsWalking(walkingOptions);
+                                
+                                    try {
+                                        await TransportGenerator.setAllWalkingTransfersAsWalking(walkingOptions);
+                                    } catch (err) {
+                                        console.error('[TRANSPORT] Chyba pri hromadnom nastavení peších presunov:', err);
+                                        window.showGlobalNotification('Nepodarilo sa nastaviť pešie presuny.', 'error');
+                                    } finally {
+                                        setWalkingBatchSaving(false);
+                                        setWalkingBatchRemaining(0);
+                                    }
                                 },
                                 disabled: walkingBatchSaving,
                                 title: walkingBatchSaving
