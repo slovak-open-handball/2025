@@ -4453,6 +4453,13 @@ const TransportApp = ({ userProfileData }) => {
             }
             return undefined;
         })();
+
+        // NOVÉ: Zisti, či má tento riadok nejaké tímy (v Nástupe alebo Výstupe).
+        // Ak áno, nezobrazíme červené X (mazanie riadku) ani zelené + (vloženie riadku).
+        const teamsBoardingHereForLockCheck = getTeamsForRowSide(row.rowId, 'in');
+        const hasAnyTeamsInRow =
+            teamsBoardingHereForLockCheck.length > 0 ||
+            teamsAlightingHere.length > 0;
     
         const removeTeamSegment = async (teamKeyToRemove, clickSide, rowObj) => {
             if (!window.db || !busId || !dayKey || !rowObj?.id) return;
@@ -4853,13 +4860,16 @@ const TransportApp = ({ userProfileData }) => {
                 return diff;
             })()),
             React.createElement('td', { className: 'border border-gray-300 p-1 text-center' },
-                React.createElement('button', {
-                    type: 'button',
-                    onClick: () => removeBusRow(row.id),
-                    className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 flex items-center justify-center mx-auto',
-                    title: 'Odstrániť riadok',
-                }, React.createElement('i', { className: 'fa-solid fa-xmark' })),
-                (() => {
+                // NOVÉ: Červené X (mazanie riadku) sa zobrazí len ak v riadku nie je žiadny tím
+                !hasAnyTeamsInRow &&
+                    React.createElement('button', {
+                        type: 'button',
+                        onClick: () => removeBusRow(row.id),
+                        className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 flex items-center justify-center mx-auto',
+                        title: 'Odstrániť riadok',
+                    }, React.createElement('i', { className: 'fa-solid fa-xmark' })),
+                // NOVÉ: Zelené + (vloženie riadku) sa zobrazí len ak v riadku nie je žiadny tím
+                !hasAnyTeamsInRow && (() => {
                     const effectivePlaceFromId = lockedPlaceFromId || row.placeFromId || null;
                     const hasPlaceFrom = !!effectivePlaceFromId;
                     const hasPlaceTo = !!row.placeToId;
