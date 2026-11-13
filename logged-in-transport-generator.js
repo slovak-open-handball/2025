@@ -4296,7 +4296,7 @@ class TransportGenerator {
             return rulePairs.has(`${fromNameNorm}||${toNameNorm}`);
         };
     
-        // NOVÉ: spočítaj VŠETKY kandidátske segmenty (rovnaká logika ako v tlačidle)
+        // Spočítaj VŠETKY kandidátske segmenty
         const countCandidates = () => {
             let total = 0;
             (this.ctx.savedTransfersRef?.current || []).forEach((parent) => {
@@ -4326,7 +4326,7 @@ class TransportGenerator {
     
         const initialCandidateCount = countCandidates();
     
-        // NOVÉ: počiatočný progress
+        // ① POČIATOČNÝ PROGRESS
         if (onProgress) {
             try {
                 onProgress({ remaining: initialCandidateCount, total: initialCandidateCount, processed: 0 });
@@ -4424,13 +4424,13 @@ class TransportGenerator {
                             endTs: null,
                             when: null,
                             walkingSetAt: Timestamp.fromDate(new Date()),
-                            walkingSetBy = (this.ctx.userProfileData && this.ctx.userProfileData.email) || null,
+                            walkingSetBy: (this.ctx.userProfileData && this.ctx.userProfileData.email) || null,
                         };
                     });
                 });
                 updatedParentsCount += 1;
     
-                // NOVÉ: PRIEBEŽNÝ PROGRESS – prepočítaj zostávajúce kandidáty po každom parentovi
+                // ③ PRIEBEŽNÝ PROGRESS po každom parentovi
                 if (onProgress) {
                     const stillRemaining = countCandidates();
                     try {
@@ -4443,7 +4443,6 @@ class TransportGenerator {
                 }
             }
     
-            // Záverečný progress – 0 zostáva
             if (onProgress) {
                 try {
                     onProgress({ remaining: 0, total: initialCandidateCount, processed: parentKeysArr.length });
