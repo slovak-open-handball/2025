@@ -5553,59 +5553,62 @@ const TransportApp = ({ userProfileData }) => {
         const getPlaceNormalizedName = (placeIdOrName) => {
             if (!placeIdOrName) return '';
             const raw = String(placeIdOrName).trim();
-
+        
             // 1) Skús to ako ID v placesMapRef
             const fromMap = (placesMapRef.current || {})[raw];
             if (fromMap) return normalizePlaceName(fromMap);
-
+        
             // 2) Skús to ako ID v allPlacesRef
             const fromAll = (allPlacesRef.current || []).find((p) => String(p.id) === raw);
             if (fromAll && fromAll.name) return normalizePlaceName(fromAll.name);
-
+        
             // 3) Skús to ako ID v stopsList
             const fromStops = (stopsList || []).find((s) => String(s.id) === raw);
             if (fromStops && fromStops.name) return normalizePlaceName(fromStops.name);
-
-            // 4) FALLBACK: skús to ako NÁZOV – normalizuj priamo
-            //    (ak raw je "UNIZA", vráti "UNIZA")
-            const asNameNorm = normalizePlaceName(raw);
-            if (asNameNorm) {
-                // Over, či asNameNorm zodpovedá niektorému miestu (aby sme sa vyhli ID)
-                const matchesPlace = (allPlacesRef.current || []).some(
-                    (p) => p && p.name && normalizePlaceName(p.name) === asNameNorm
+        
+            // 4) FALLBACK: savedTransfersRef – parent má fromLocation/toLocation
+            //    Skontroluj, či fromLocation/toLocation je NÁZOV (nie ID).
+            //    Názov spoznáš tak, že ho normalizovaný nájdeš v allPlacesRef.
+            const allPlaces = allPlacesRef.current || [];
+            const findNameInAllPlaces = (str) => {
+                if (!str) return null;
+                const norm = normalizePlaceName(str);
+                if (!norm) return null;
+                const found = allPlaces.find(
+                    (p) => p && p.name && normalizePlaceName(p.name) === norm
                 );
-                if (matchesPlace) return asNameNorm;
-            }
-
-            // 5) FALLBACK: savedTransfersRef – parent má fromLocation/toLocation (názvy)
+                return found ? norm : null;
+            };
+        
             const fromTransfers = (savedTransfersRef.current || []).find(
                 (t) => (t.fromId && String(t.fromId) === raw) || (t.toId && String(t.toId) === raw)
             );
             if (fromTransfers) {
                 if (fromTransfers.fromId && String(fromTransfers.fromId) === raw && fromTransfers.fromLocation) {
-                    return normalizePlaceName(fromTransfers.fromLocation);
+                    const nameNorm = findNameInAllPlaces(fromTransfers.fromLocation);
+                    if (nameNorm) return nameNorm;
                 }
                 if (fromTransfers.toId && String(fromTransfers.toId) === raw && fromTransfers.toLocation) {
-                    return normalizePlaceName(fromTransfers.toLocation);
+                    const nameNorm = findNameInAllPlaces(fromTransfers.toLocation);
+                    if (nameNorm) return nameNorm;
                 }
             }
-
-            // 6) FALLBACK: rovnaké ID môže byť v segmente iného parenta
+        
+            // 5) FALLBACK: rovnaké ID môže byť v segmente iného parenta
             for (const t of (savedTransfersRef.current || [])) {
                 for (const s of (t.segments || [])) {
                     if (!s) continue;
                     if (s.fromId && String(s.fromId) === raw && s.from) {
-                        return normalizePlaceName(s.from);
+                        const nameNorm = findNameInAllPlaces(s.from);
+                        if (nameNorm) return nameNorm;
                     }
                     if (s.toId && String(s.toId) === raw && s.to) {
-                        return normalizePlaceName(s.to);
+                        const nameNorm = findNameInAllPlaces(s.to);
+                        if (nameNorm) return nameNorm;
                     }
                 }
             }
-
-            // 7) Posledný fallback: skús to ako názov priamo (aj keď nie je v allPlacesRef)
-            if (asNameNorm) return asNameNorm;
-
+        
             return '';
         };
 
