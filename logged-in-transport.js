@@ -5476,6 +5476,51 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
+    const buildExpandedTransfersForFilter = () => {
+        const result = [];
+        
+        (savedTransfersRef.current || []).forEach((parent) => {
+            if (parent._parentKey && parent._parentKey !== parent.key) return;
+            
+            const stopsIds = Array.isArray(parent.intermediateStopIds) ? parent.intermediateStopIds : [];
+            const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
+            const hasMultipleSegments = parentSegments.length > 1;
+            const shouldSplitIntoSegments = stopsIds.length > 0 || hasMultipleSegments;
+            
+            if (!shouldSplitIntoSegments) {
+                // Priamy presun – jeden segment
+                result.push({
+                    parentKey: parent.key,
+                    parent,
+                    fromId: parent.fromId || null,
+                    toId: parent.toId || null,
+                    segmentIdx: 0,
+                });
+                return;
+            }
+            
+            // Rozdelenie na segmenty
+            const routeIdsRaw = [parent.fromId, ...stopsIds, parent.toId].filter(Boolean);
+            const routeIds = [];
+            routeIdsRaw.forEach((id) => {
+                if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
+            });
+            if (routeIds.length < 2) return;
+            
+            for (let i = 0; i < routeIds.length - 1; i++) {
+                result.push({
+                    parentKey: parent.key,
+                    parent,
+                    fromId: routeIds[i],
+                    toId: routeIds[i + 1],
+                    segmentIdx: i,
+                });
+            }
+        });
+        
+        return result;
+    };
+
     const applyBulkIntermediateStop = async () => {
         if (!window.db) return;
         if (!showBulkIntermediateModal) return;
@@ -5574,29 +5619,35 @@ const TransportApp = ({ userProfileData }) => {
             return nameNorm && nameNorm === targetNorm;
         };
         
-        const candidateParents = (savedTransfersRef.current || []).filter((t) => {
-            if (t._parentKey && t._parentKey !== t.key) return false;
-            if (t.isWalking === true) return false;
-            if (dayKeyFilter && t.dayKey !== dayKeyFilter) return false;
-            if (categoryFilter && cleanCategory(t.category || '') !== categoryFilter) return false;
+        const expandedSegmentsAll = buildExpandedTransfersForFilter();
+
+        const candidateParentKeys = new Set();
         
+        expandedSegmentsAll.forEach((seg) => {
+            const parent = seg.parent;
+            if (!parent) return;
+            if (parent.isWalking === true) return;
+            if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return;
+            if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return;
+        
+            // Filter podľa fromId segmentu
             if (fromFilterNorm) {
-                const matchesFrom =
-                    placeMatchesFilter(t.fromId, fromFilterNorm) ||
-                    (Array.isArray(t.segments) && t.segments.some((s) => s && placeMatchesFilter(s.fromId, fromFilterNorm)));
-                if (!matchesFrom) return false;
+                if (!placeMatchesFilter(seg.fromId, fromFilterNorm)) return;
             }
+            // Filter podľa toId segmentu
             if (toFilterNorm) {
-                const matchesTo =
-                    placeMatchesFilter(t.toId, toFilterNorm) ||
-                    (Array.isArray(t.segments) && t.segments.some((s) => s && placeMatchesFilter(s.toId, toFilterNorm)));
-                if (!matchesTo) return false;
+                if (!placeMatchesFilter(seg.toId, toFilterNorm)) return;
             }
         
-            if (parentAlreadyContainsStop(t, stopId)) return false;
+            // Ak už parent obsahuje stopId, preskočiť
+            if (parentAlreadyContainsStop(parent, stopId)) return;
         
-            return true;
+            candidateParentKeys.add(parent.key);
         });
+        
+        const candidateParents = (savedTransfersRef.current || []).filter(
+            (t) => candidateParentKeys.has(t.key)
+        );
 
         if (candidateParents.length === 0) {
             window.showGlobalNotification('Pre zvolený filter nie sú žiadne presuny bez tejto zastávky.', 'info');
@@ -11056,7 +11107,6 @@ const TransportApp = ({ userProfileData }) => {
                     return false;
                 };
             
-                // NOVÉ: normalizované názvy pre filtre
                 const fromFilterNorm = fromPlaceFilter
                     ? normalizePlaceName(resolvePlaceNameById(fromPlaceFilter) || '')
                     : '';
@@ -11070,29 +11120,32 @@ const TransportApp = ({ userProfileData }) => {
                     return nameNorm && nameNorm === targetNorm;
                 };
             
-                return (savedTransfersRef.current || []).filter((t) => {
-                    if (t._parentKey && t._parentKey !== t.key) return false;
-                    if (t.isWalking === true) return false;
-                    if (dayKeyFilter && t.dayKey !== dayKeyFilter) return false;
-                    if (categoryFilter && cleanCategory(t.category || '') !== categoryFilter) return false;
+                // NOVÉ: Pracujeme s ROZŠÍRENÝMI segmentmi
+                const expandedSegmentsAll = buildExpandedTransfersForFilter();
+                const candidateParentKeys = new Set();
+            
+                expandedSegmentsAll.forEach((seg) => {
+                    const parent = seg.parent;
+                    if (!parent) return;
+                    if (parent.isWalking === true) return;
+                    if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return;
+                    if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return;
             
                     if (fromFilterNorm) {
-                        const matchesFrom =
-                            placeMatchesFilter(t.fromId, fromFilterNorm) ||
-                            (Array.isArray(t.segments) && t.segments.some((s) => s && placeMatchesFilter(s.fromId, fromFilterNorm)));
-                        if (!matchesFrom) return false;
+                        if (!placeMatchesFilter(seg.fromId, fromFilterNorm)) return;
                     }
                     if (toFilterNorm) {
-                        const matchesTo =
-                            placeMatchesFilter(t.toId, toFilterNorm) ||
-                            (Array.isArray(t.segments) && t.segments.some((s) => s && placeMatchesFilter(s.toId, toFilterNorm)));
-                        if (!matchesTo) return false;
+                        if (!placeMatchesFilter(seg.toId, toFilterNorm)) return;
                     }
             
-                    if (currentStopId && parentAlreadyContainsStop(t, currentStopId)) return false;
+                    if (currentStopId && parentAlreadyContainsStop(parent, currentStopId)) return;
             
-                    return true;
+                    candidateParentKeys.add(parent.key);
                 });
+            
+                return (savedTransfersRef.current || []).filter(
+                    (t) => candidateParentKeys.has(t.key)
+                );
             };
         
             const candidateParents = computeBulkCandidateParents();
