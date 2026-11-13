@@ -9811,8 +9811,8 @@ const TransportApp = ({ userProfileData }) => {
                                                 }
                                             }
                                         }
-                                        if (count > 0) {
-                                            return `Nastaviť presun peši medzi blízkymi miestami (${count})`;
+                                        if (count > 1) {
+                                            return `Nastaviť presun peši medzi blízkymi miestami (${count - 1})`;
                                         }
                                         return 'Nastaviť presun peši medzi blízkymi miestami';
                                     })()
