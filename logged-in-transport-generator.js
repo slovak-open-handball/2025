@@ -4296,34 +4296,41 @@ class TransportGenerator {
             return rulePairs.has(`${fromNameNorm}||${toNameNorm}`);
         };
     
-        // Spočítaj VŠETKY kandidátske segmenty (rovnaká logika ako v tlačidle)
-        let totalCandidates = 0;
-        (this.ctx.savedTransfersRef?.current || []).forEach((parent) => {
-            if (!Array.isArray(parent.segments)) return;
-            if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return;
-            if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return;
-            const stopsIds = Array.isArray(parent.intermediateStopIds) ? parent.intermediateStopIds : [];
-            const isDirectTransfer = stopsIds.length === 0;
-            if (isDirectTransfer) {
-                if (parent.isWalking === true) return;
-                if (!isPairWalking(parent.fromId, parent.toId)) return;
-                const segIdx = findSegmentIndex(parent.segments, parent.fromId, parent.toId);
-                if (segIdx === -1) return;
-                const seg = parent.segments[segIdx];
-                if (!seg || seg.isWalking === true) return;
-                totalCandidates += 1;
-            } else {
-                parent.segments.forEach((seg) => {
+        // NOVÉ: spočítaj VŠETKY kandidátske segmenty (rovnaká logika ako v tlačidle)
+        const countCandidates = () => {
+            let total = 0;
+            (this.ctx.savedTransfersRef?.current || []).forEach((parent) => {
+                if (!Array.isArray(parent.segments)) return;
+                if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return;
+                if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return;
+                const stopsIds = Array.isArray(parent.intermediateStopIds) ? parent.intermediateStopIds : [];
+                const isDirectTransfer = stopsIds.length === 0;
+                if (isDirectTransfer) {
+                    if (parent.isWalking === true) return;
+                    if (!isPairWalking(parent.fromId, parent.toId)) return;
+                    const segIdx = findSegmentIndex(parent.segments, parent.fromId, parent.toId);
+                    if (segIdx === -1) return;
+                    const seg = parent.segments[segIdx];
                     if (!seg || seg.isWalking === true) return;
-                    if (!isPairWalking(seg.fromId, seg.toId)) return;
-                    totalCandidates += 1;
-                });
-            }
-        });
+                    total += 1;
+                } else {
+                    parent.segments.forEach((seg) => {
+                        if (!seg || seg.isWalking === true) return;
+                        if (!isPairWalking(seg.fromId, seg.toId)) return;
+                        total += 1;
+                    });
+                }
+            });
+            return total;
+        };
     
-        // Počiatočný progress
+        const initialCandidateCount = countCandidates();
+    
+        // NOVÉ: počiatočný progress
         if (onProgress) {
-            try { onProgress({ remaining: totalCandidates, total: totalCandidates, processed: 0 }); } catch (e) { /* ignore */ }
+            try {
+                onProgress({ remaining: initialCandidateCount, total: initialCandidateCount, processed: 0 });
+            } catch (e) { /* ignore */ }
         }
     
         const parentsToUpdate = new Set();
@@ -4357,16 +4364,21 @@ class TransportGenerator {
             });
             if (hasAnyMatchingNonWalkingSegment) parentsToUpdate.add(parent.key);
         });
+    
         if (parentsToUpdate.size === 0) {
             if (onProgress) {
-                try { onProgress({ remaining: 0, total: 0, processed: 0 }); } catch (e) { /* ignore */ }
+                try {
+                    onProgress({ remaining: 0, total: 0, processed: 0 });
+                } catch (e) { /* ignore */ }
             }
             window.showGlobalNotification?.('Nenašli sa žiadne presuny, ktoré by zodpovedali pravidlám "peši".', 'info');
             return;
         }
+    
         try {
             let updatedParentsCount = 0;
             const parentKeysArr = [...parentsToUpdate];
+    
             for (let idx = 0; idx < parentKeysArr.length; idx++) {
                 const parentKey = parentKeysArr[idx];
                 const parent = (this.ctx.savedTransfersRef?.current || []).find((s) => s.key === parentKey);
@@ -4412,42 +4424,32 @@ class TransportGenerator {
                             endTs: null,
                             when: null,
                             walkingSetAt: Timestamp.fromDate(new Date()),
-                            walkingSetBy: (this.ctx.userProfileData && this.ctx.userProfileData.email) || null,
+                            walkingSetBy = (this.ctx.userProfileData && this.ctx.userProfileData.email) || null,
                         };
                     });
                 });
                 updatedParentsCount += 1;
     
-                // NOVÉ: Priebežný progress po každom parentovi – prepočítaj zostávajúce kandidáty
+                // NOVÉ: PRIEBEŽNÝ PROGRESS – prepočítaj zostávajúce kandidáty po každom parentovi
                 if (onProgress) {
-                    let stillRemaining = 0;
-                    (this.ctx.savedTransfersRef?.current || []).forEach((p) => {
-                        if (!Array.isArray(p.segments)) return;
-                        if (dayKeyFilter && p.dayKey !== dayKeyFilter) return;
-                        if (categoryFilter && cleanCategory(p.category || '') !== categoryFilter) return;
-                        const pStops = Array.isArray(p.intermediateStopIds) ? p.intermediateStopIds : [];
-                        if (pStops.length === 0) {
-                            if (p.isWalking === true) return;
-                            if (!isPairWalking(p.fromId, p.toId)) return;
-                            const sIdx = findSegmentIndex(p.segments, p.fromId, p.toId);
-                            if (sIdx === -1) return;
-                            const s = p.segments[sIdx];
-                            if (!s || s.isWalking === true) return;
-                            stillRemaining += 1;
-                        } else {
-                            p.segments.forEach((s) => {
-                                if (!s || s.isWalking === true) return;
-                                if (!isPairWalking(s.fromId, s.toId)) return;
-                                stillRemaining += 1;
-                            });
-                        }
-                    });
-                    try { onProgress({ remaining: stillRemaining, total: totalCandidates, processed: idx + 1 }); } catch (e) { /* ignore */ }
+                    const stillRemaining = countCandidates();
+                    try {
+                        onProgress({
+                            remaining: stillRemaining,
+                            total: initialCandidateCount,
+                            processed: idx + 1,
+                        });
+                    } catch (e) { /* ignore */ }
                 }
             }
+    
+            // Záverečný progress – 0 zostáva
             if (onProgress) {
-                try { onProgress({ remaining: 0, total: totalCandidates, processed: parentKeysArr.length }); } catch (e) { /* ignore */ }
+                try {
+                    onProgress({ remaining: 0, total: initialCandidateCount, processed: parentKeysArr.length });
+                } catch (e) { /* ignore */ }
             }
+    
             window.showGlobalNotification?.(`Označených ako peši: ${updatedParentsCount} presunov (vrátane častí rozdelených presunov).`, 'success');
         } catch (err) {
             window.showGlobalNotification?.('Nepodarilo sa označiť presuny ako peši.', 'error');
