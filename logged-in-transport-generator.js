@@ -3992,6 +3992,56 @@ class TransportGenerator {
                             }
                         }
 
+                        // ═══════════════════════════════════════════════════════════════
+                        // NOVÉ: Pre SUPERSTRUCTURE tím – posledná udalosť tímu
+                        // v posledný deň turnaja → presun na miesto zrazu.
+                        // ═══════════════════════════════════════════════════════════════
+                        if (
+                            isVeryLastEventOfTeam &&
+                            current.location &&
+                            currentDay != null &&
+                            globalLastDay != null &&
+                            currentDay === globalLastDay
+                        ) {
+                            const teamIsInUsersForLastDay = (this.ctx.teamsArrivalBufferRef?.current || []).some(
+                                (t) => cleanCategory(t.category) === cleanCategory(category)
+                                    && t.teamName === teamName
+                                    && t.isRegistered === true
+                            );
+                            const isSuperstructureTeamForLastDay = !teamIsInUsersForLastDay;
+                            const isPavukTeamForLastDay = isSpiderTeamName(teamName);
+
+                            const meetingPointStopForLastDay = (() => {
+                                const fromAllPlaces = (this.ctx.allPlacesRef?.current || []).find((p) => p.isMeetingPointStop === true);
+                                if (fromAllPlaces) return fromAllPlaces;
+                                const fromStops = (this.ctx.stopsList || []).find((p) => p.isMeetingPointStop === true);
+                                return fromStops || null;
+                            })();
+
+                            if (
+                                isSuperstructureTeamForLastDay &&
+                                !isPavukTeamForLastDay &&
+                                meetingPointStopForLastDay &&
+                                !this.isSamePlaceForTransfer(current.location, meetingPointStopForLastDay.name)
+                            ) {
+                                const departureTs = current.endTs != null ? current.endTs : current.startTs;
+                                const departureStr = formatFullFromTs(departureTs) || current.when;
+                                const arrivalTs = timestampOnDay(departureTs, 23, 59);
+                                const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
+
+                                if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
+                                    enriched.push({
+                                        ts: current.ts + 1,
+                                        when: `${departureStr} – ${arrivalStr}`,
+                                        type: 'transfer',
+                                        text: `Presun z ${current.location} do miesto zrazu ${meetingPointStopForLastDay.name}`,
+                                        location: null,
+                                        isTransfer: true,
+                                    });
+                                }
+                            }
+                        }
+
                         if (
                             meetingPointDayKey &&
                             meetingPointDayKey !== '' &&
