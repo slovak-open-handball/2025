@@ -9767,7 +9767,7 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 { className: 'whitespace-nowrap' },
                                 walkingBatchSaving
-                                    ? `Počet presunov, ktoré ostáva priradiť: ${walkingBatchRemaining}`
+                                    ? `Počet presunov, ktoré ostáva priradiť: ${walkingBatchRemaining - 1}`
                                     : (() => {
                                         // Spočítaj kandidátov na označenie ako peši (rovnaká logika ako v onClick).
                                         // Zobrazíme ich aj keď operácia nebeží, aby používateľ videl,
@@ -9812,7 +9812,7 @@ const TransportApp = ({ userProfileData }) => {
                                             }
                                         }
                                         if (count > 1) {
-                                            return `Nastaviť presun peši medzi blízkymi miestami (${count - 1})`;
+                                            return `Nastaviť presun peši medzi blízkymi miestami (${count})`;
                                         }
                                         return 'Nastaviť presun peši medzi blízkymi miestami';
                                     })()
