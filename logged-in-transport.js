@@ -5975,7 +5975,6 @@ const TransportApp = ({ userProfileData }) => {
                     }
                 } finally {
                     setWalkingBatchSaving(false);
-                    setWalkingBatchRemaining(0);
                 }
             }
         } catch (err) {
@@ -9753,7 +9752,6 @@ const TransportApp = ({ userProfileData }) => {
                                         window.showGlobalNotification('Nepodarilo sa nastaviť pešie presuny.', 'error');
                                     } finally {
                                         setWalkingBatchSaving(false);
-                                        setWalkingBatchRemaining(0);
                                     }
                                 },
                                 disabled: walkingBatchSaving,
