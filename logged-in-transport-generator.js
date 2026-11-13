@@ -4210,9 +4210,17 @@ class TransportGenerator {
                                     return fromStops || null;
                                 })();
                         
+                                // Zisti, či tím ide do pavúka (je pavúkový tím alebo nemá groupName)
+                                const teamInfoForPavukCheck = (this.ctx.teamsArrivalBufferRef?.current || []).find(
+                                    (t) => cleanCategory(t.category) === cleanCategory(category)
+                                        && String(t.teamName || '').trim() === String(teamName || '').trim()
+                                );
+                                const teamHasNoGroupName = !teamInfoForPavukCheck || !teamInfoForPavukCheck.groupName;
+                                const teamGoesToPavuk = isPavukTeamForLastDay || teamHasNoGroupName;
+
                                 if (
                                     isSuperstructureTeamForLastDay &&
-                                    !isPavukTeamForLastDay &&
+                                    (isPavukTeamForLastDay || teamHasNoGroupName) &&  // ← ZMENA
                                     meetingPointStopForLastDay &&
                                     externalArrivalStopForLastDay &&
                                     !this.isSamePlaceForTransfer(current.location, externalArrivalStopForLastDay.name)
@@ -4224,15 +4232,6 @@ class TransportGenerator {
                                     //   zápasu v posledný deň turnaja.
                                     // ═══════════════════════════════════════════════════════════════
                                     let departureTs = current.endTs != null ? current.endTs : current.startTs;
-
-                                    // Zisti, či tím ide do pavúka (je pavúkový tím alebo má budúci pavúkový zápas)
-                                    const teamGoesToPavuk = isPavukTeamForLastDay || (() => {
-                                        // Pre tím, ktorý nie je pavúkový, skontroluj, či má budúci pavúkový zápas
-                                        // (rovnaká logika ako pavukFutureMatchExists, ale už vieme, že pavukFutureMatchExists === false,
-                                        // takže tím NEMÁ budúci pavúkový zápas – čiže NEJDE do pavúka).
-                                        // Preto stačí vrátiť false.
-                                        return false;
-                                    })();
 
                                     if (teamGoesToPavuk) {
                                         // Nájdi najneskorší koniec udalosti pavúkového zápasu v posledný deň turnaja
