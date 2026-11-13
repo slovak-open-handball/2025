@@ -9716,7 +9716,7 @@ const TransportApp = ({ userProfileData }) => {
                                 'span',
                                 { className: 'whitespace-nowrap' },
                                 walkingBatchSaving
-                                    ? `Počet presunov, ktoré ostáva priradiť: ${walkingBatchRemaining > 0 ? walkingBatchRemaining : '…'}`
+                                    ? `Počet presunov, ktoré ostáva priradiť: ${walkingBatchRemaining}`
                                     : 'Nastaviť presun peši medzi blízkymi miestami'
                             )
                         )
