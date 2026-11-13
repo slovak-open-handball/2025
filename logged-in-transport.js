@@ -11068,7 +11068,9 @@ const TransportApp = ({ userProfileData }) => {
                                     type: 'button',
                                     onClick: applyBulkIntermediateStop,
                                     disabled: isBlocked,
-                                    title: isBlocked ? 'Najprv vyberte zastávku.' : undefined,
+                                    title: bulkIntermediateSaving
+                                        ? undefined
+                                        : (isBlocked ? 'Najprv vyberte zastávku.' : undefined),
                                     className: `${baseCls} ${isBlocked ? blockedCls : enabledCls}`,
                                 },
                                 bulkIntermediateSaving && React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
