@@ -5905,24 +5905,77 @@ const TransportApp = ({ userProfileData }) => {
             setBulkIntermediateStopId('');
 
             if (updatedParentKeys.length > 0 && window.TransportGenerator && typeof window.TransportGenerator.setAllWalkingTransfersAsWalking === 'function') {
+                // Spočítaj kandidátov rovnakou logikou ako tlačidlo „Nastaviť presun peši medzi blízkymi miestami“,
+                // aby sme mali počiatočnú hodnotu pre walkingBatchRemaining.
+                const rulePairs = new Set(
+                    (walkingRules || []).map((r) => `${r.fromPlaceNameNorm}||${r.toPlaceNameNorm}`)
+                );
+                const isPairWalking = (fromId, toId) => {
+                    if (!fromId || !toId) return false;
+                    const fromNameNorm = normalizePlaceName(resolvePlaceNameById(fromId) || '');
+                    const toNameNorm = normalizePlaceName(resolvePlaceNameById(toId) || '');
+                    if (!fromNameNorm || !toNameNorm) return false;
+                    return rulePairs.has(`${fromNameNorm}||${toNameNorm}`);
+                };
+            
+                let initialCandidateCount = 0;
+                for (const parent of savedTransfersRef.current || []) {
+                    if (!Array.isArray(parent.segments)) continue;
+                    if (dayKeyFilter && parent.dayKey !== dayKeyFilter) continue;
+                    if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) continue;
+                    const stopsIds = Array.isArray(parent.intermediateStopIds) ? parent.intermediateStopIds : [];
+                    if (stopsIds.length === 0) {
+                        if (parent.isWalking === true) continue;
+                        if (!isPairWalking(parent.fromId, parent.toId)) continue;
+                        const segIdx = findSegmentIndex(parent.segments, parent.fromId, parent.toId);
+                        if (segIdx === -1) continue;
+                        const seg = parent.segments[segIdx];
+                        if (!seg || seg.isWalking === true) continue;
+                        initialCandidateCount += 1;
+                    } else {
+                        for (const seg of parent.segments) {
+                            if (!seg || seg.isWalking === true) continue;
+                            if (!isPairWalking(seg.fromId, seg.toId)) continue;
+                            initialCandidateCount += 1;
+                        }
+                    }
+                }
+            
+                setWalkingBatchRemaining(initialCandidateCount);
                 setWalkingBatchSaving(true);
+            
+                let initialProgressReceived = false;
+                const walkingOptions = {
+                    dayKey: dayKeyFilter || null,
+                    category: categoryFilter || null,
+                    onProgress: ({ remaining, total, processed }) => {
+                        // Prvé volanie onProgress (processed === 0) – ignorujeme ho VŽDY,
+                        // aby sme neprepísali počiatočnú hodnotu initialCandidateCount z UI.
+                        if (!initialProgressReceived) {
+                            initialProgressReceived = true;
+                            if (processed === 0) {
+                                return;
+                            }
+                        }
+                        if (remaining != null) {
+                            setWalkingBatchRemaining(Math.max(0, Number(remaining) || 0));
+                        } else if (total != null && processed != null) {
+                            setWalkingBatchRemaining(Math.max(0, Number(total) - Number(processed)));
+                        }
+                    },
+                };
+            
                 try {
-                    await window.TransportGenerator.setAllWalkingTransfersAsWalking({
-                        dayKey: dayKeyFilter || null,
-                        category: categoryFilter || null,
-                        parentKeys: updatedParentKeys,
-                    });
+                    await window.TransportGenerator.setAllWalkingTransfersAsWalking(walkingOptions);
                 } catch (walkingErr) {
                     try {
-                        await window.TransportGenerator.setAllWalkingTransfersAsWalking({
-                            dayKey: dayKeyFilter || null,
-                            category: categoryFilter || null,
-                        });
+                        await window.TransportGenerator.setAllWalkingTransfersAsWalking(walkingOptions);
                     } catch (walkingErr2) {
                         console.error('[TRANSPORT] Nepodarilo sa spustiť nastavenie peších presunov po hromadnom pridaní medzizastávky:', walkingErr2);
                     }
                 } finally {
                     setWalkingBatchSaving(false);
+                    setWalkingBatchRemaining(0);
                 }
             }
         } catch (err) {
