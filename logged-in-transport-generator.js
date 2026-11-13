@@ -2238,10 +2238,29 @@ class TransportGenerator {
                                     // Prípad B: user tím býva v ubytovni s >= MIN_TEAMS_FOR_SS_TRANSFER
                                     // tímami zo svojej skupiny → negeneruj ranný presun pre user tím.
                                     // Namiesto toho vygeneruj presun pre KAŽDÝ superstructure tím
-                                    // (v tej istej skupine) z ubytovní všetkých tímov v tejto skupine
-                                    // na miesto prvej udalosti tohto SS tímu.
+                                    // (v tej istej skupine) z KAŽDEJ ubytovne VŠETKÝCH tímov v tejto
+                                    // skupine (user aj SS) na miesto prvej udalosti tohto SS tímu.
                                     // ─────────────────────────────────────────────────────────────
-                                    const allAccommodationsInGroup = [...teamsByAccommodationInGroup.values()].map(
+                                
+                                    // Zozbieraj ubytovne VŠETKÝCH tímov v skupine (user aj SS),
+                                    // nielen tých, ktoré patria user tímu.
+                                    const allAccommodationsInGroupMap = new Map(); // normalizedName -> { location }
+                                    (this.ctx.teamsArrivalBufferRef?.current || []).forEach((t) => {
+                                        if (cleanCategory(t.category) !== cleanCategory(category)) return;
+                                        if (!t.teamName) return;
+                                        const otherGroupName = t.groupName ? String(t.groupName).trim() : null;
+                                        if (!otherGroupName || otherGroupName !== String(userTeamGroupName).trim()) return;
+                                        const accName = t.accommodationName && String(t.accommodationName).trim() !== ''
+                                            ? String(t.accommodationName).trim()
+                                            : null;
+                                        if (!accName) return;
+                                        const key = normalizePlaceName(accName);
+                                        if (!key) return;
+                                        if (!allAccommodationsInGroupMap.has(key)) {
+                                            allAccommodationsInGroupMap.set(key, { location: accName });
+                                        }
+                                    });
+                                    const allAccommodationsInGroup = [...allAccommodationsInGroupMap.values()].map(
                                         (entry) => entry.location
                                     );
                                 
