@@ -9669,17 +9669,19 @@ const TransportApp = ({ userProfileData }) => {
                                     setWalkingBatchRemaining(candidateCount);
                                     setWalkingBatchSaving(true);
                                 
-                                    // NOVÝ KÓD:
                                     let initialProgressReceived = false;
                                     const walkingOptions = {
                                         dayKey: dayKeyFilter,
                                         category: categoryFilter,
                                         onProgress: ({ remaining, total, processed }) => {
-                                            // Prvé volanie onProgress (processed === 0) – ak remaining je 0,
-                                            // ignorujeme ho, aby sme neprepísali počiatočnú hodnotu z UI.
+                                            // Prvé volanie onProgress (processed === 0) – ignorujeme ho VŽDY,
+                                            // aby sme neprepísali počiatočnú hodnotu candidateCount z UI.
+                                            // Generátor síce počiatočný progress už nevolá pri nule, ale ak
+                                            // countCandidates() v generátore vráti iné číslo ako UI (napr. 0
+                                            // kvôli timingu), nesmieme ním prepísať hodnotu z UI.
                                             if (!initialProgressReceived) {
                                                 initialProgressReceived = true;
-                                                if (processed === 0 && (remaining == null || Number(remaining) === 0)) {
+                                                if (processed === 0) {
                                                     return;
                                                 }
                                             }
