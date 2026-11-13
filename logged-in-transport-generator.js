@@ -4018,16 +4018,8 @@ class TransportGenerator {
                             const isPavukTeamForLastDay = isSpiderTeamName(teamName);
                         
                             const pavukFutureMatchExists = (() => {
-                                // ───────────────────────────────────────────────────────────────────
-                                // Zisti OBE písmená pre tento tím:
-                                //   • nameChar = posledné písmeno názvu tímu (napr. "4C" → "C")
-                                //   • groupChar = posledné písmeno groupName (napr. "skupina I" → "I")
-                                // Pre hľadanie budúcich zápasov treba použiť OBE – tím môže hrať
-                                // zápasy typu "1C", "2C", ... (ak je v skupine C) AJ "1I", "2I", ...
-                                // (ak je v skupine I). Preto continuationCharsSet musí obsahovať
-                                // obe písmená a všetky ich pokračovania.
-                                // ───────────────────────────────────────────────────────────────────
-                                const teamNameStr = String(teamName || '').trim();
+                                // Odstráni prefix kategórie z názvu tímu.
+                                // Napr. pre category = "U10 D" a teamName = "U10 D 4C" vráti "4C".
                                 const stripCategoryPrefix = (tn, cat) => {
                                     if (!tn) return '';
                                     const s = String(tn).trim();
@@ -4037,6 +4029,8 @@ class TransportGenerator {
                                     if (s.startsWith(c + ' ')) return s.slice(c.length + 1).trim();
                                     return s;
                                 };
+                            
+                                const teamNameStr = String(teamName || '').trim();
                                 const bareTeamName = stripCategoryPrefix(teamNameStr, category);
                                 const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(bareTeamName);
                                 const nameChar = nameCharMatch ? nameCharMatch[1].toUpperCase() : null;
@@ -4049,14 +4043,17 @@ class TransportGenerator {
                                     ? getGroupLastChar(teamInfo.groupName)
                                     : null;
                             
-                                // Pre hľadanie budúcich zápasov použi OBE písmená (nameChar aj groupChar)
+                                // Pre hľadanie budúcich zápasov použi LEN skupinu, do ktorej tím patrí
+                                // (groupChar z groupName). Ak tím nemá groupName, použi nameChar ako fallback.
                                 const baseChars = new Set();
-                                if (nameChar) baseChars.add(nameChar);
-                                if (groupCharFromGroupName) baseChars.add(groupCharFromGroupName);
+                                if (groupCharFromGroupName) {
+                                    baseChars.add(groupCharFromGroupName);
+                                } else if (nameChar) {
+                                    baseChars.add(nameChar);
+                                }
                                 if (baseChars.size === 0) return false;
                             
                                 // Zisti mapovanie groupChar -> Set<nameChar> pre všetky SS tímy
-                                // (rovnaká logika ako pri user tímoch)
                                 const groupCharToContinuationChars = new Map();
                                 (this.ctx.teamsArrivalBufferRef?.current || []).forEach((t) => {
                                     if (cleanCategory(t.category) !== cleanCategory(category)) return;
@@ -4064,7 +4061,8 @@ class TransportGenerator {
                                     if (t.isSuperstructure !== true) return;
                                     if (isSpiderTeamName(t.teamName)) return;
                                     const tn = String(t.teamName).trim();
-                                    const lastCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                                    const bareTn = stripCategoryPrefix(tn, category);
+                                    const lastCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(bareTn);
                                     const tNameChar = lastCharMatch ? lastCharMatch[1].toUpperCase() : null;
                                     if (!tNameChar) return;
                                     let tGroupChar = getGroupLastChar(t.groupName);
@@ -4076,7 +4074,6 @@ class TransportGenerator {
                                     groupCharToContinuationChars.get(tGroupChar).add(tNameChar);
                                 });
                             
-                                // continuationCharsSet = baseChars + všetky pokračovania pre KAŽDÝ baseChar
                                 const continuationCharsSet = new Set(baseChars);
                                 groupCharToContinuationChars.forEach((originalChars, groupChar) => {
                                     for (const baseChar of baseChars) {
@@ -4087,33 +4084,21 @@ class TransportGenerator {
                                 });
                             
                                 console.log(
-                                    `%c[TRANSPORT][SS-FUTURE-CHECK] Tím "${teamNameStr}": nameChar=${nameChar || '—'}, groupChar=${groupCharFromGroupName || '—'}, continuationCharsSet={${[...continuationCharsSet].sort().join(', ')}}`,
+                                    `%c[TRANSPORT][SS-FUTURE-CHECK] Tím "${teamNameStr}": bareName="${bareTeamName}", nameChar=${nameChar || '—'}, groupChar=${groupCharFromGroupName || '—'}, continuationCharsSet={${[...continuationCharsSet].sort().join(', ')}}`,
                                     'color: #ea580c; font-weight: bold;'
                                 );
                             
-                                // ───────────────────────────────────────────────────────────────────
-                                // 1) Štandardné pavúkové zápasy typu "<číslo><písmeno>" (1I, 2I, ...,
-                                //    6I, 10I, 15I, 32I, 100I, ...) – neobmedzený počet.
-                                // ───────────────────────────────────────────────────────────────────
+                                // Pracujeme s holým označením tímu (bez prefixu kategórie),
+                                // takže regex môže byť presný: "1I", "4C", "10I", "32I", ...
                                 const pavukNumberedRegex = /^\s*(\d+)([A-ZÁ-Ž])\d*\s*$/i;
                                 let foundNumbered = false;
                             
-                                // ───────────────────────────────────────────────────────────────────
-                                // 2) Špeciálne pavúkové tímy typu LSF01, WSF01, WQF01, W16F01,
-                                //    L8F01, W32F01, ... – tieto nemajú v názve písmeno skupiny,
-                                //    takže ich musíme skontrolovať inak: ak v zápase hrá takýto
-                                //    pavúkový tím a ZÁROVEŇ je v tom istom zápase tím, ktorý patrí
-                                //    do našej skupiny (alebo jej pokračovania), považujeme to za
-                                //    budúci zápas pre náš tím.
-                                // ───────────────────────────────────────────────────────────────────
                                 const isSpecialPavukTeam = (tn) => {
                                     if (!tn) return false;
                                     const s = stripCategoryPrefix(tn, category);
                                     return /^(W|L)(32F|16F|8F|QF|SF)\d+$/i.test(s);
                                 };
                             
-                                // Pomocná funkcia: zisti, či daný tím patrí do našej skupiny
-                                // (alebo do niektorej z pokračujúcich skupín).
                                 const teamBelongsToContinuation = (tn) => {
                                     if (!tn) return false;
                                     const s = stripCategoryPrefix(tn, category);
@@ -4135,7 +4120,6 @@ class TransportGenerator {
                                 (this.ctx.matchesBufferRef?.current || []).forEach((m) => {
                                     if (cleanCategory(m.category) !== cleanCategory(category)) return;
                             
-                                    // Zisti deň zápasu
                                     let dayKey = null;
                                     if (m.scheduledTime) {
                                         const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
@@ -4149,7 +4133,6 @@ class TransportGenerator {
                                     }
                                     if (!dayKey) return;
                             
-                                    // Ber zápasy na neskorší deň ALEBO v ten istý deň, ktoré začínajú neskôr
                                     if (dayKey < currentDay) return;
                                     if (dayKey === currentDay) {
                                         const matchStartTs = m.scheduledTs != null ? m.scheduledTs : null;
@@ -4161,7 +4144,7 @@ class TransportGenerator {
                                     [m.home, m.away].forEach((tn) => {
                                         if (!tn) return;
                                         const s = stripCategoryPrefix(tn, category);
-                                    
+                            
                                         const matchNumbered = pavukNumberedRegex.exec(s);
                                         if (matchNumbered) {
                                             const char = matchNumbered[2].toUpperCase();
@@ -4169,7 +4152,7 @@ class TransportGenerator {
                                                 foundNumbered = true;
                                             }
                                         }
-
+                            
                                         if (isSpecialPavukTeam(tn)) {
                                             const otherTn = (String(m.home).trim() === String(tn).trim() ? m.away : m.home);
                                             if (otherTn && teamBelongsToContinuation(otherTn)) {
