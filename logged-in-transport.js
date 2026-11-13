@@ -9547,9 +9547,22 @@ const TransportApp = ({ userProfileData }) => {
 
         // Ak je filter aktívny a po filtrovaní nezostali žiadne presuny,
         // useEffect vyššie práve beží a filter čoskoro resetuje.
-        // V tomto kole box nezobrazíme – počkáme na reset filtra.
+        // Box skryjeme LEN ak sú aktívne OBA filtre (from aj to) a po filtrovaní
+        // nezostali žiadne presuny – vtedy používateľ čaká na reset oboch filtrov.
+        // Ak je aktívny len jeden filter, box nezobrazíme len ak po resete filtra
+        // neexistuje žiadny nepriradený presun (t.j. niet čo zobraziť).
         if (hasActivePlaceFilter && filtered.length === 0) {
-            return null;
+            const bothFiltersActive =
+                !!selectedFromPlaceFilter && !!selectedToPlaceFilter;
+    
+            // Skontroluj, či po resete filtra existuje aspoň jeden nepriradený presun
+            const hasAnyUnassignedTransfer =
+                baseFilteredAfterPartial.length > 0;
+            
+            // Box skryjeme len ak sú aktívne oba filtre A po resete niet čo zobraziť
+            if (bothFiltersActive || !hasAnyUnassignedTransfer) {
+                return null;
+            }
         }
 
         // Ak pre daný deň neexistujú žiadne presuny, box sa nezobrazí.
