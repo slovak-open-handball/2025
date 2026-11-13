@@ -5674,76 +5674,13 @@ const TransportApp = ({ userProfileData }) => {
 
         // Zoznam segmentov (z parentov) – vytvoríme manuálne z parentov,
         // aby sme mali pod kontrolou, že porovnávame názvy, nie ID.
-        const candidateParentKeys = new Set();
-        const expandedSegmentsForFilter = [];
-
-        (savedTransfersRef.current || []).forEach((parent) => {
-            if (parent._parentKey && parent._parentKey !== parent.key) return;
-            if (parent.isWalking === true) return;
-            if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return;
-            if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return;
-
-            const stopsIds = Array.isArray(parent.intermediateStopIds)
-                ? parent.intermediateStopIds.filter(Boolean)
-                : [];
-            const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
-            const hasMultipleSegments = parentSegments.length > 1;
-            const shouldSplitIntoSegments = stopsIds.length > 0 || hasMultipleSegments;
-
-            if (!shouldSplitIntoSegments) {
-                // Priamy presun – jeden segment
-                const fromId = parent.fromId || null;
-                const toId = parent.toId || null;
-                if (!fromId || !toId) return;
-
-                expandedSegmentsForFilter.push({
-                    parentKey: parent.key,
-                    parent,
-                    fromId,
-                    toId,
-                });
-                return;
-            }
-
-            // Rozdelenie na segmenty
-            const routeIdsRaw = [parent.fromId, ...stopsIds, parent.toId].filter(Boolean);
-            const routeIds = [];
-            routeIdsRaw.forEach((id) => {
-                if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
-            });
-            if (routeIds.length < 2) return;
-
-            for (let i = 0; i < routeIds.length - 1; i++) {
-                expandedSegmentsForFilter.push({
-                    parentKey: parent.key,
-                    parent,
-                    fromId: routeIds[i],
-                    toId: routeIds[i + 1],
-                });
-            }
+        const candidateParents = computeBulkCandidateParents({
+            dayKeyFilter,
+            categoryFilter,
+            fromPlaceFilter,
+            toPlaceFilter,
+            currentStopId: stopId,
         });
-
-        // Filtrovanie segmentov podľa fromPlaceFilter / toPlaceFilter
-        expandedSegmentsForFilter.forEach((seg) => {
-            const parent = seg.parent;
-            if (!parent) return;
-            if (parent.isWalking === true) return;
-            if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return;
-            if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return;
-        
-            if (fromPlaceFilter) {
-                if (!placeMatchesFilter(parent.fromId, fromPlaceFilter)) return;
-            }
-            if (toPlaceFilter) {
-                if (!placeMatchesFilter(parent.toId, toPlaceFilter)) return;
-            }
-            if (parentAlreadyContainsStop(parent)) return;
-            candidateParentKeys.add(parent.key);
-        });
-
-        const candidateParents = (savedTransfersRef.current || []).filter(
-            (t) => candidateParentKeys.has(t.key)
-        );
 
         console.log('[BULK-DEBUG] expandedSegmentsForFilter.length =', expandedSegmentsForFilter.length);
         console.log('[BULK-DEBUG] candidateParentKeys.size =', candidateParentKeys.size);
