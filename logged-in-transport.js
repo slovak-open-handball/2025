@@ -9628,7 +9628,12 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { className: 'px-3 pt-2 pb-2 border-b border-gray-100 flex flex-col gap-2' },
+                // NOVÉ: hidden = isWalkingBatchLoading – počas hromadného nastavovania peších
+                // sa skryjú selectboxy "Miesto začiatku:" / "Miesto konca:" a tlačidlá
+                // "Hromadne nastaviť prestupnú zastávku".
                 renderPlaceFilters(baseFilteredAfterPartial, isWalkingBatchLoading),
+                // NOVÉ: hidden = isWalkingBatchLoading – počas hromadného nastavovania peších
+                // sa skryjú tlačidlá "Čas odchodu" / "Čas príchodu".
                 renderSortButtons(isWalkingBatchLoading)
             ),
             (() => {
@@ -9754,11 +9759,6 @@ const TransportApp = ({ userProfileData }) => {
                                         dayKey: dayKeyFilter,
                                         category: categoryFilter,
                                         onProgress: ({ remaining, total, processed }) => {
-                                            // Prvé volanie onProgress (processed === 0) – ignorujeme ho VŽDY,
-                                            // aby sme neprepísali počiatočnú hodnotu candidateCount z UI.
-                                            // Generátor síce počiatočný progress už nevolá pri nule, ale ak
-                                            // countCandidates() v generátore vráti iné číslo ako UI (napr. 0
-                                            // kvôli timingu), nesmieme ním prepísať hodnotu z UI.
                                             if (!initialProgressReceived) {
                                                 initialProgressReceived = true;
                                                 if (processed === 0) {
@@ -9797,9 +9797,6 @@ const TransportApp = ({ userProfileData }) => {
                                 walkingBatchSaving
                                     ? `Počet presunov peši, ktoré ostáva priradiť: ${walkingBatchRemaining - 1}`
                                     : (() => {
-                                        // Spočítaj kandidátov na označenie ako peši (rovnaká logika ako v onClick).
-                                        // Zobrazíme ich aj keď operácia nebeží, aby používateľ videl,
-                                        // koľko presunov ešte treba označiť ako peši.
                                         if (!Array.isArray(walkingRules) || walkingRules.length === 0) {
                                             return 'Nastaviť presun peši medzi blízkymi miestami';
                                         }
