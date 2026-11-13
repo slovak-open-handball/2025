@@ -4017,17 +4017,6 @@ class TransportGenerator {
                             const isSuperstructureTeamForLastDay = !teamIsInUsersForLastDay;
                             const isPavukTeamForLastDay = isSpiderTeamName(teamName);
                         
-                            // ───────────────────────────────────────────────────────────────────
-                            // Zisti, či tím ešte bude hrať ďalší zápas v pavúku.
-                            //   • Pre pavúkový tím (napr. "U10 D 4C") zisti písmeno skupiny
-                            //     (posledné písmeno názvu = "C").
-                            //   • Zisti všetky "pokračujúce" skupiny (rovnaká logika ako pri
-                            //     user tímoch – mapovanie groupChar -> continuation chars).
-                            //   • Skontroluj, či v kategórii existuje zápas typu
-                            //     "<číslo><X>" (kde X je písmeno skupiny alebo jej pokračovania)
-                            //     na deň > currentDay. Počet zápasov NIE JE obmedzený
-                            //     (1X, 2X, ..., 6X, 10X, 15X, 32X, 100X, ...).
-                            // ───────────────────────────────────────────────────────────────────
                             const pavukFutureMatchExists = (() => {
                                 // Zisti písmeno skupiny pre tento tím
                                 let teamGroupChar = null;
@@ -4043,7 +4032,7 @@ class TransportGenerator {
                                     if (m) teamGroupChar = m[1].toUpperCase();
                                 }
                                 if (!teamGroupChar) return false;
-                        
+                            
                                 // Zisti "pokračujúce" skupiny (rovnaká logika ako pri user tímoch)
                                 const groupCharToContinuationChars = new Map();
                                 (this.ctx.teamsArrivalBufferRef?.current || []).forEach((t) => {
@@ -4063,24 +4052,58 @@ class TransportGenerator {
                                     }
                                     groupCharToContinuationChars.get(groupChar).add(nameChar);
                                 });
-                        
+                            
                                 const continuationCharsSet = new Set([teamGroupChar]);
                                 groupCharToContinuationChars.forEach((originalChars, groupChar) => {
                                     if (originalChars.has(teamGroupChar)) {
                                         continuationCharsSet.add(groupChar);
                                     }
                                 });
-                        
-                                // ───────────────────────────────────────────────────────────────
-                                // Neobmedzený počet zápasov v pavúku – akceptuj ľubovoľné
-                                // číslo pred písmenom (1I, 2I, ..., 6I, 10I, 15I, 32I, 100I, ...).
-                                // ───────────────────────────────────────────────────────────────
-                                const pavukRegex = /^\s*(\d+)([A-ZÁ-Ž])\d*\s*$/i;
-                                let found = false;
-                        
+                            
+                                // ───────────────────────────────────────────────────────────────────
+                                // 1) Štandardné pavúkové zápasy typu "<číslo><písmeno>" (1I, 2I, ...,
+                                //    6I, 10I, 15I, 32I, 100I, ...) – neobmedzený počet.
+                                // ───────────────────────────────────────────────────────────────────
+                                const pavukNumberedRegex = /^\s*(\d+)([A-ZÁ-Ž])\d*\s*$/i;
+                                let foundNumbered = false;
+                            
+                                // ───────────────────────────────────────────────────────────────────
+                                // 2) Špeciálne pavúkové tímy typu LSF01, WSF01, WQF01, W16F01,
+                                //    L8F01, W32F01, ... – tieto nemajú v názve písmeno skupiny,
+                                //    takže ich musíme skontrolovať inak: ak v zápase hrá takýto
+                                //    pavúkový tím a ZÁROVEŇ je v tom istom zápase tím, ktorý patrí
+                                //    do našej skupiny (alebo jej pokračovania), považujeme to za
+                                //    budúci zápas pre náš tím.
+                                // ───────────────────────────────────────────────────────────────────
+                                const isSpecialPavukTeam = (tn) => {
+                                    if (!tn) return false;
+                                    const s = String(tn).trim();
+                                    return /^(W|L)(32F|16F|8F|QF|SF)\d+$/i.test(s);
+                                };
+                            
+                                // Pomocná funkcia: zisti, či daný tím patrí do našej skupiny
+                                // (alebo do niektorej z pokračujúcich skupín).
+                                const teamBelongsToContinuation = (tn) => {
+                                    if (!tn) return false;
+                                    const s = String(tn).trim();
+                                    // Štandardný SS tím typu "4C", "5H", ...
+                                    const m = /\d([A-ZÁ-Ž])\s*$/.exec(s);
+                                    if (m && continuationCharsSet.has(m[1].toUpperCase())) return true;
+                                    // Tím má groupName – skontroluj posledné písmeno groupName
+                                    const info = (this.ctx.teamsArrivalBufferRef?.current || []).find(
+                                        (t) => cleanCategory(t.category) === cleanCategory(category)
+                                            && String(t.teamName || '').trim() === s
+                                    );
+                                    if (info && info.groupName) {
+                                        const gChar = getGroupLastChar(info.groupName);
+                                        if (gChar && continuationCharsSet.has(gChar)) return true;
+                                    }
+                                    return false;
+                                };
+                            
                                 (this.ctx.matchesBufferRef?.current || []).forEach((m) => {
                                     if (cleanCategory(m.category) !== cleanCategory(category)) return;
-                        
+                            
                                     // Zisti deň zápasu
                                     let dayKey = null;
                                     if (m.scheduledTime) {
@@ -4094,22 +4117,33 @@ class TransportGenerator {
                                         dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
                                     }
                                     if (!dayKey || dayKey <= currentDay) return;
-                        
+                            
                                     // Skontroluj oba tímy v zápase
                                     [m.home, m.away].forEach((tn) => {
                                         if (!tn) return;
                                         const s = String(tn).trim();
-                                        const match = pavukRegex.exec(s);
-                                        if (!match) return;
-                                        // match[1] = číslo (neobmedzené), match[2] = písmeno skupiny
-                                        const char = match[2].toUpperCase();
-                                        if (continuationCharsSet.has(char)) {
-                                            found = true;
+                            
+                                        // 1) Štandardný pavúkový tím typu "<číslo><písmeno>"
+                                        const matchNumbered = pavukNumberedRegex.exec(s);
+                                        if (matchNumbered) {
+                                            const char = matchNumbered[2].toUpperCase();
+                                            if (continuationCharsSet.has(char)) {
+                                                foundNumbered = true;
+                                            }
+                                        }
+                            
+                                        // 2) Špeciálny pavúkový tím (LSF01, WSF01, ...)
+                                        //    – ak je v zápase, skontroluj druhý tím v zápase
+                                        if (isSpecialPavukTeam(s)) {
+                                            const otherTn = (String(m.home).trim() === s ? m.away : m.home);
+                                            if (otherTn && teamBelongsToContinuation(otherTn)) {
+                                                foundNumbered = true;
+                                            }
                                         }
                                     });
                                 });
-                        
-                                return found;
+                            
+                                return foundNumbered;
                             })();
                         
                             if (pavukFutureMatchExists) {
