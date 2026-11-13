@@ -4018,15 +4018,7 @@ class TransportGenerator {
                             const isPavukTeamForLastDay = isSpiderTeamName(teamName);
                         
                             const pavukFutureMatchExists = (() => {
-                                if (!groupCharFromGroupName) {
-                                    console.log(
-                                        `%c[TRANSPORT][SS-FUTURE-CHECK] Tím "${teamNameStr}" nemá groupName (pavúkový tím) → presun sa VŽDY generuje.`,
-                                        'color: #16a34a; font-weight: bold;'
-                                    );
-                                    return false;
-                                }
                                 // Odstráni prefix kategórie z názvu tímu.
-                                // Napr. pre category = "U10 D" a teamName = "U10 D 4C" vráti "4C".
                                 const stripCategoryPrefix = (tn, cat) => {
                                     if (!tn) return '';
                                     const s = String(tn).trim();
@@ -4036,20 +4028,12 @@ class TransportGenerator {
                                     if (s.startsWith(c + ' ')) return s.slice(c.length + 1).trim();
                                     return s;
                                 };
-                            
+
                                 const teamNameStr = String(teamName || '').trim();
                                 const bareTeamName = stripCategoryPrefix(teamNameStr, category);
                                 const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(bareTeamName);
                                 const nameChar = nameCharMatch ? nameCharMatch[1].toUpperCase() : null;
 
-                                if (/^\s*\d+[A-ZÁ-Ž]\s*$/i.test(bareTeamName)) {
-                                    console.log(
-                                        `%c[TRANSPORT][SS-FUTURE-CHECK] Tím "${teamNameStr}" je pavúkový tím (bareName="${bareTeamName}") → presun sa VŽDY generuje.`,
-                                        'color: #16a34a; font-weight: bold;'
-                                    );
-                                    return false;
-                                }
-                            
                                 const teamInfo = (this.ctx.teamsArrivalBufferRef?.current || []).find(
                                     (t) => cleanCategory(t.category) === cleanCategory(category)
                                         && String(t.teamName || '').trim() === teamNameStr
@@ -4057,14 +4041,25 @@ class TransportGenerator {
                                 const groupCharFromGroupName = teamInfo && teamInfo.groupName
                                     ? getGroupLastChar(teamInfo.groupName)
                                     : null;
+
+                                // ───────────────────────────────────────────────────────────────────
+                                // NOVÉ: Ak tím nemá groupName (je to pavúkový tím typu "1I", "4I", ...),
+                                // nemá zmysel hľadať budúce zápasy – pavúkový tím hrá v pavúku
+                                // a jeho posledná udalosť je jeho posledný zápas. Preto pre neho
+                                // VŽDY generuj presun na miesto nástupu/výstupu.
+                                // ───────────────────────────────────────────────────────────────────
+                                if (!groupCharFromGroupName) {
+                                    console.log(
+                                        `%c[TRANSPORT][SS-FUTURE-CHECK] Tím "${teamNameStr}" nemá groupName (pavúkový tím) → presun sa VŽDY generuje.`,
+                                        'color: #16a34a; font-weight: bold;'
+                                    );
+                                    return false;
+                                }
                             
-                                // Pre hľadanie budúcich zápasov použi LEN skupinu, do ktorej tím patrí
-                                // (groupChar z groupName). Ak tím nemá groupName, použi nameChar ako fallback.
+                                // Pre hľadanie budúcich zápasov použi LEN skupinu, do ktorej tím patrí.
                                 const baseChars = new Set();
                                 if (groupCharFromGroupName) {
                                     baseChars.add(groupCharFromGroupName);
-                                } else if (nameChar) {
-                                    baseChars.add(nameChar);
                                 }
                                 if (baseChars.size === 0) return false;
                             
