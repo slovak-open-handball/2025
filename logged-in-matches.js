@@ -3300,8 +3300,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 isPlacementMatch: true,
                 placementRank: matchData.placementRank,
                 matchTitle: matchData.matchTitle,
-                createdAt: Timestamp.now(),
-                createdByUid: userProfileData?.uid || null
             };
             await addDoc(matchesRef, matchToSave);
             window.showGlobalNotification(`Zápas o ${matchData.placementRank}. miesto bol úspešne vytvorený`, 'success');
@@ -4439,8 +4437,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                     categoryName: match.categoryName,
                     groupName: match.groupName,
                     status: match.status,
-                    createdAt: Timestamp.now(),
-                    createdByUid: userProfileData?.uid || null
                 };
                 const docRef = await addDoc(matchesRef, matchData);
                 savedMatches.push({ id: docRef.id, ...matchData });
