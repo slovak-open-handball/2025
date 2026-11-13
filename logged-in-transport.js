@@ -9627,7 +9627,7 @@ const TransportApp = ({ userProfileData }) => {
             ),
             React.createElement(
                 'div',
-//                { className: 'px-3 pt-2 pb-2 border-b border-gray-100 flex flex-col gap-2' },
+                { className: 'px-3 pt-2 pb-2 flex flex-col gap-2' },
                 renderPlaceFilters(baseFilteredAfterPartial, isWalkingBatchLoading),
                 renderSortButtons(isWalkingBatchLoading)
             ),
