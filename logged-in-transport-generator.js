@@ -4034,6 +4034,14 @@ class TransportGenerator {
                                 const bareTeamName = stripCategoryPrefix(teamNameStr, category);
                                 const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(bareTeamName);
                                 const nameChar = nameCharMatch ? nameCharMatch[1].toUpperCase() : null;
+
+                                if (/^\s*\d+[A-ZÁ-Ž]\s*$/i.test(bareTeamName)) {
+                                    console.log(
+                                        `%c[TRANSPORT][SS-FUTURE-CHECK] Tím "${teamNameStr}" je pavúkový tím (bareName="${bareTeamName}") → presun sa VŽDY generuje.`,
+                                        'color: #16a34a; font-weight: bold;'
+                                    );
+                                    return false;
+                                }
                             
                                 const teamInfo = (this.ctx.teamsArrivalBufferRef?.current || []).find(
                                     (t) => cleanCategory(t.category) === cleanCategory(category)
