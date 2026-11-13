@@ -5005,7 +5005,7 @@ const TransportApp = ({ userProfileData }) => {
                         {
                             className: 'absolute left-1/2 -translate-x-1/2 pointer-events-none',
                             style: {
-                                bottom: '-2px',
+                                bottom: '-12px',
                                 zIndex: 100,
                             }
                         },
