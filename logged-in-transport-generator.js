@@ -3440,11 +3440,75 @@ class TransportGenerator {
                                             return false;
                                         })();
 
-                                        if (anyContinuationTeamEndsAtSamePlace) {
-                                            // Tímy v "pokračujúcich" skupinách končia na rovnakom mieste,
-                                            // ako je miesto prvej udalosti tohto SS tímu → negeneruj
-                                            // ranný presun z miesta zrazu (tím sa "pripojí" k nim).
+                                        // ═══════════════════════════════════════════════════════════════
+                                        // ← NOVÁ LOGIKA:
+                                        //  • Ak VŠETKY pokračujúce tímy skončili na rovnakom mieste,
+                                        //    ako je miesto prvej udalosti SS tímu → negeneruj nič.
+                                        //  • Ak NIEKTORÝ pokračujúci tím skončil INADE → vygeneruj
+                                        //    presun z miesta poslednej udalosti ľubovoľného
+                                        //    pokračujúceho tímu (toho, ktorý skončil inde) na
+                                        //    miesto prvej udalosti SS tímu.
+                                        // ═══════════════════════════════════════════════════════════════
+                                        const placesOfContinuationTeams = [];
+                                        lastPlacesOfUserTeamsInContinuationGroups.forEach((info) => {
+                                            if (!info.location) return;
+                                            if (this.isSamePlaceForTransfer(info.location, current.location)) return;
+                                            placesOfContinuationTeams.push({
+                                                location: info.location,
+                                                endTs: info.endTs,
+                                            });
+                                        });
+
+                                        if (anyContinuationTeamEndsAtSamePlace && placesOfContinuationTeams.length === 0) {
+                                            // Všetky pokračujúce tímy skončili na rovnakom mieste
+                                            // → negeneruj ranný presun z miesta zrazu.
+                                        } else if (placesOfContinuationTeams.length > 0) {
+                                            // Aspoň jeden pokračujúci tím skončil inde →
+                                            // vygeneruj presun z miesta poslednej udalosti
+                                            // pokračujúceho tímu na miesto prvej udalosti SS tímu.
+                                            // Ak ich je viac, vygeneruj presun pre každé unikátne miesto.
+                                            const uniquePlacesMap = new Map();
+                                            placesOfContinuationTeams.forEach((info) => {
+                                                const key = normalizePlaceName(info.location);
+                                                if (!key) return;
+                                                const existing = uniquePlacesMap.get(key);
+                                                if (!existing || (info.endTs != null && info.endTs > (existing.endTs ?? -Infinity))) {
+                                                    uniquePlacesMap.set(key, info);
+                                                }
+                                            });
+
+                                            const arrivalTs = current.startTs;
+                                            const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
+
+                                            uniquePlacesMap.forEach((info) => {
+                                                if (this.isSamePlaceForTransfer(info.location, current.location)) return;
+
+                                                const departureTs = info.endTs != null
+                                                    ? info.endTs
+                                                    : timestampOnDay(arrivalTs, 0, 0);
+                                                const departureStr = formatFullFromTs(departureTs) || '00:00';
+
+                                                if (departureTs != null && arrivalTs != null && departureTs >= arrivalTs) {
+                                                    return;
+                                                }
+
+                                                let whenStr;
+                                                if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                                else if (arrivalStr) whenStr = arrivalStr;
+                                                else whenStr = current.when;
+
+                                                enriched.push({
+                                                    ts: current.ts - 1,
+                                                    when: whenStr,
+                                                    type: 'transfer',
+                                                    text: `Presun z ${info.location} do ${current.location}`,
+                                                    location: null,
+                                                    isTransfer: true,
+                                                });
+                                            });
                                         } else {
+                                            // Žiadny pokračujúci tím nemá udalosť s miestom →
+                                            // fallback: pôvodné správanie (presun z miesta zrazu).
                                             const arrivalTs = current.startTs;
                                             const arrivalStr = formatFullFromTs(arrivalTs) || current.when;
                                             const globalArrivalTs = window.__transport_tournamentArrivalDate || null;
