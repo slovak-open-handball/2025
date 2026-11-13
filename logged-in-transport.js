@@ -5582,25 +5582,34 @@ const TransportApp = ({ userProfileData }) => {
             });
         });
 
-        // Pomocná: zistí, či parent už obsahuje danú zastávku v trase
-        // (fromId, toId, intermediateStopIds alebo v ktoromkoľvek segmente).
-        const parentAlreadyContainsStop = (t, stopIdToCheck) => {
+        const stopNormToCheck = normalizePlaceName(resolvePlaceNameById(stopIdToCheck) || '');
+
+        const parentAlreadyContainsStop = (t, _stopIdToCheck) => {
             if (!t) return false;
-            const sid = String(stopIdToCheck);
+            if (!stopNormToCheck) return false;
 
-            if (String(t.fromId || '') === sid) return true;
-            if (String(t.toId || '') === sid) return true;
+            const nameMatches = (placeId) => {
+                if (!placeId) return false;
+                const n = normalizePlaceName(resolvePlaceNameById(placeId) || '');
+                return n && n === stopNormToCheck;
+            };
 
+            // fromId, toId
+            if (nameMatches(t.fromId)) return true;
+            if (nameMatches(t.toId)) return true;
+
+            // intermediateStopIds
             const existingStops = Array.isArray(t.intermediateStopIds)
                 ? t.intermediateStopIds
                 : [];
-            if (existingStops.some((s) => String(s) === sid)) return true;
+            if (existingStops.some((s) => nameMatches(s))) return true;
 
+            // segments
             const segs = Array.isArray(t.segments) ? t.segments : [];
-            if (segs.some((s) => s && (String(s.fromId || '') === sid || String(s.toId || '') === sid))) {
+            if (segs.some((s) => s && (nameMatches(s.fromId) || nameMatches(s.toId)))) {
                 return true;
             }
-
+        
             return false;
         };
 
@@ -11087,23 +11096,33 @@ const TransportApp = ({ userProfileData }) => {
                 const toPlaceFilter = selectedToPlaceFilter || null;
                 const currentStopId = bulkIntermediateStopId;
             
-                const parentAlreadyContainsStop = (t, stopIdToCheck) => {
-                    if (!t || !stopIdToCheck) return false;
-                    const sid = String(stopIdToCheck);
-            
-                    if (String(t.fromId || '') === sid) return true;
-                    if (String(t.toId || '') === sid) return true;
-            
+                const stopNormToCheck = currentStopId
+                    ? normalizePlaceName(resolvePlaceNameById(currentStopId) || '')
+                    : '';
+
+                const parentAlreadyContainsStop = (t, _stopIdToCheck) => {
+                    if (!t) return false;
+                    if (!stopNormToCheck) return false;
+
+                    const nameMatches = (placeId) => {
+                        if (!placeId) return false;
+                        const n = normalizePlaceName(resolvePlaceNameById(placeId) || '');
+                        return n && n === stopNormToCheck;
+                    };
+
+                    if (nameMatches(t.fromId)) return true;
+                    if (nameMatches(t.toId)) return true;
+
                     const existingStops = Array.isArray(t.intermediateStopIds)
                         ? t.intermediateStopIds
                         : [];
-                    if (existingStops.some((s) => String(s) === sid)) return true;
-            
+                    if (existingStops.some((s) => nameMatches(s))) return true;
+                
                     const segs = Array.isArray(t.segments) ? t.segments : [];
-                    if (segs.some((s) => s && (String(s.fromId || '') === sid || String(s.toId || '') === sid))) {
+                    if (segs.some((s) => s && (nameMatches(s.fromId) || nameMatches(s.toId)))) {
                         return true;
                     }
-            
+                
                     return false;
                 };
             
