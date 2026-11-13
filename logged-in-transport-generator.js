@@ -4236,22 +4236,19 @@ class TransportGenerator {
                                     const isPavukPlayoffMatchLastDay = (() => {
                                         const teamNameStr = String(teamName || '').trim();
                                         const catStr = String(category || '').trim();
-                            
-                                        // Názov tímu musí obsahovať názov kategórie
+                                    
                                         if (!teamNameStr || !catStr) return false;
                                         if (!teamNameStr.includes(catStr)) return false;
-                            
-                                        // Kontrola prefixu pavúkového zápasu v názve tímu
-                                        // (SF = semifinále, QF = štvrťfinále, 8F/16F = osemfinále/16-finále)
-                                        const hasPlayoffPrefix = SPIDER_IDENTIFIER_REGEX.test(teamNameStr);
-                                        if (!hasPlayoffPrefix) return false;
-                            
-                                        // Skontroluj, či tím má v posledný deň turnaja naozaj zápas
-                                        // v pavúku (semifinále / štvrťfinále / osemfinále / 16-finále)
+
+                                        // Skontroluj, či tím má v posledný deň turnaja zápas v pavúku
+                                        // (semifinále / štvrťfinále / osemfinále / 16-finále).
+                                        // Prefix nemusí byť v názve tímu – stačí, že zápas má príslušné
+                                        // označenie v `special` alebo v texte ("[semifinále]", "[štvrťfinále]",
+                                        // "[osemfinále]", "[16-finále]").
                                         const hasPlayoffMatchOnLastDay = (this.ctx.matchesBufferRef?.current || []).some((m) => {
                                             if (cleanCategory(m.category) !== cleanCategory(category)) return false;
                                             if (m.home !== teamName && m.away !== teamName) return false;
-                            
+                                    
                                             // Deň zápasu musí byť posledný deň turnaja
                                             let dayKey = null;
                                             if (m.scheduledTime) {
@@ -4265,11 +4262,24 @@ class TransportGenerator {
                                                 dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
                                             }
                                             if (dayKey !== globalLastDay) return false;
-                            
-                                            // Musí ísť o pavúkový zápas (SF/QF/8F/16F) – určené podľa
-                                            // názvu tímu alebo špeciálneho označenia v zápase
+                                    
+                                            // Musí ísť o pavúkový playoff zápas – určené podľa `special`
+                                            // alebo podľa textu zápasu ("[semifinále]", "[štvrťfinále]", ...)
+                                            const specialStr = String(m.special || '').toLowerCase();
+                                            const textStr = `${m.home} vs ${m.away}${m.special || ''}`.toLowerCase();
+                                            const hasPlayoffLabel =
+                                                /semifinále|semifinale/.test(specialStr) ||
+                                                /štvrťfinále|stvrtfinale/.test(specialStr) ||
+                                                /osemfinále|osemfinale/.test(specialStr) ||
+                                                /16[\s-]*finále|16[\s-]*finale/.test(specialStr) ||
+                                                /semifinále|semifinale/.test(textStr) ||
+                                                /štvrťfinále|stvrtfinale/.test(textStr) ||
+                                                /osemfinále|osemfinale/.test(textStr) ||
+                                                /16[\s-]*finále|16[\s-]*finale/.test(textStr);
+                                    
+                                            // Alebo fallback – ak niektorý z tímov v zápase má pavúkový prefix
                                             const matchTeams = [m.home, m.away].filter(Boolean);
-                                            return matchTeams.some((tn) => {
+                                            const hasSpiderPrefix = matchTeams.some((tn) => {
                                                 const s = String(tn).trim();
                                                 if (!SPIDER_IDENTIFIER_REGEX.test(s)) return false;
                                                 const prefixMatch = new RegExp(
@@ -4278,7 +4288,6 @@ class TransportGenerator {
                                                 ).exec(s);
                                                 if (!prefixMatch) return false;
                                                 const prefix = prefixMatch[1].toUpperCase();
-                                                // Semifinále, štvrťfinále, osemfinále, 16-finále
                                                 return (
                                                     prefix === 'WSF' || prefix === 'LSF' ||
                                                     prefix === 'WQF' || prefix === 'LQF' ||
@@ -4286,8 +4295,10 @@ class TransportGenerator {
                                                     prefix === 'W16F' || prefix === 'L16F'
                                                 );
                                             });
+                                    
+                                            return hasPlayoffLabel || hasSpiderPrefix;
                                         });
-                            
+                                    
                                         return hasPlayoffMatchOnLastDay;
                                     })();
                             
