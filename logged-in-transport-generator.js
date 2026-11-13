@@ -4477,7 +4477,7 @@ class TransportGenerator {
         });
     }
 
-    async generateTransfers({ category, meetingPointDayKey = '', isRegen = false }) {
+    async generateTransfers({ category, meetingPointDayKey = '', isRegen = false, onWalkingProgress = null }) {
         if (!category) {
             window.showGlobalNotification?.('Najprv vyberte kategóriu.', 'error');
             return;
@@ -4496,7 +4496,7 @@ class TransportGenerator {
         await this.waitForTransfersUpdate(category);
 
         try {
-            await this.setAllWalkingTransfersAsWalking({ category });
+            await this.setAllWalkingTransfersAsWalking({ category, onProgress: onWalkingProgress });
         } catch (e) { /* ignore */ }
 
         window.showGlobalNotification?.(
