@@ -9627,13 +9627,8 @@ const TransportApp = ({ userProfileData }) => {
             ),
             React.createElement(
                 'div',
-                { className: 'px-3 pt-2 pb-2 border-b border-gray-100 flex flex-col gap-2' },
-                // NOVÉ: hidden = isWalkingBatchLoading – počas hromadného nastavovania peších
-                // sa skryjú selectboxy "Miesto začiatku:" / "Miesto konca:" a tlačidlá
-                // "Hromadne nastaviť prestupnú zastávku".
+//                { className: 'px-3 pt-2 pb-2 border-b border-gray-100 flex flex-col gap-2' },
                 renderPlaceFilters(baseFilteredAfterPartial, isWalkingBatchLoading),
-                // NOVÉ: hidden = isWalkingBatchLoading – počas hromadného nastavovania peších
-                // sa skryjú tlačidlá "Čas odchodu" / "Čas príchodu".
                 renderSortButtons(isWalkingBatchLoading)
             ),
             (() => {
@@ -9695,7 +9690,7 @@ const TransportApp = ({ userProfileData }) => {
 
                 return React.createElement(
                     'div',
-//                    { className: 'px-3 pt-2 pb-1 border-b border-gray-100 flex items-center justify-between gap-2 flex-wrap' },
+                    { className: 'px-3 pt-2 pb-1 border-b border-gray-100 flex items-center justify-between gap-2 flex-wrap' },
                     showWalkingButton
                         ? React.createElement(
                             'button',
