@@ -5544,72 +5544,143 @@ const TransportApp = ({ userProfileData }) => {
         const fromPlaceFilter = selectedFromPlaceFilter || null;
         const toPlaceFilter = selectedToPlaceFilter || null;
 
-        // Normalizované názvy pre porovnávanie (bez prefixov/sufixov)
+        // Normalizovaný názov cieľovej zastávky (bez prefixov/sufixov)
         const stopNormToCheck = normalizePlaceName(stopName);
 
+        // Pomocná: zistí názov miesta pre dané ID, ale s fallbackom na ID
+        // (aby porovnávanie fungovalo aj keď placesMap ešte nie je naplnený).
+        const getPlaceNameSafe = (placeId) => {
+            if (!placeId) return '';
+            const id = String(placeId);
+            const fromMap = (placesMapRef.current || {})[id];
+            if (fromMap) return String(fromMap);
+            const fromAll = (allPlacesRef.current || []).find((p) => String(p.id) === id);
+            if (fromAll && fromAll.name) return String(fromAll.name);
+            const fromStops = (stopsList || []).find((s) => String(s.id) === id);
+            if (fromStops && fromStops.name) return String(fromStops.name);
+            // Fallback: vráť ID (aby porovnávanie ID → ID fungovalo)
+            return id;
+        };
+
+        // Pomocná: normalizovaný názov miesta pre dané ID (alebo ID ak sa nenašlo)
+        const getPlaceNorm = (placeId) => {
+            if (!placeId) return '';
+            return normalizePlaceName(getPlaceNameSafe(placeId) || '');
+        };
+
+        // Pomocná: zistí, či parent už obsahuje zastávku podľa názvu
+        // (porovnáva sa normalizovaný názov, aj ID priamo).
         const parentAlreadyContainsStop = (t) => {
             if (!t) return false;
             if (!stopNormToCheck) return false;
 
-            const nameMatches = (placeId) => {
+            const idMatches = (placeId) => {
                 if (!placeId) return false;
-                const n = normalizePlaceName(resolvePlaceNameById(placeId) || '');
+                // Priame porovnanie ID
+                if (String(placeId) === String(stopId)) return true;
+                // Porovnanie normalizovaného názvu
+                const n = getPlaceNorm(placeId);
                 return n && n === stopNormToCheck;
             };
 
             // fromId, toId
-            if (nameMatches(t.fromId)) return true;
-            if (nameMatches(t.toId)) return true;
+            if (idMatches(t.fromId)) return true;
+            if (idMatches(t.toId)) return true;
 
             // intermediateStopIds
             const existingStops = Array.isArray(t.intermediateStopIds)
                 ? t.intermediateStopIds
                 : [];
-            if (existingStops.some((s) => nameMatches(s))) return true;
+            if (existingStops.some((s) => idMatches(s))) return true;
 
             // segments
             const segs = Array.isArray(t.segments) ? t.segments : [];
-            if (segs.some((s) => s && (nameMatches(s.fromId) || nameMatches(s.toId)))) {
+            if (segs.some((s) => s && (idMatches(s.fromId) || idMatches(s.toId)))) {
                 return true;
             }
 
             return false;
         };
 
-        const fromFilterNorm = fromPlaceFilter
-            ? normalizePlaceName(resolvePlaceNameById(fromPlaceFilter) || '')
-            : '';
-        const toFilterNorm = toPlaceFilter
-            ? normalizePlaceName(resolvePlaceNameById(toPlaceFilter) || '')
-            : '';
+        // Pomocná: zistí, či daný segment (fromId → toId) začína/končí
+        // na mieste, ktoré zodpovedá filtru. Porovnávame ID priamo,
+        // s fallbackom na normalizovaný názov.
+        const placeMatchesFilter = (placeId, filterId) => {
+            if (!filterId) return true;
+            if (!placeId) return false;
 
-        const placeMatchesFilter = (placeId, targetNorm) => {
-            if (!targetNorm) return true;
-            const nameNorm = normalizePlaceName(resolvePlaceNameById(placeId) || '');
-            return nameNorm && nameNorm === targetNorm;
+            // Priame porovnanie ID
+            if (String(placeId) === String(filterId)) return true;
+
+            // Fallback: porovnanie normalizovaného názvu
+            const placeNorm = getPlaceNorm(placeId);
+            const filterNorm = getPlaceNorm(filterId);
+            return placeNorm && filterNorm && placeNorm === filterNorm;
         };
 
-        // Zoznam parentov, ktorých sa má úprava týkať – vytvorený RAZ na začiatku.
-        const expandedSegmentsAll = buildExpandedTransfersForFilter();
+        // Zoznam segmentov (z parentov) – použijeme rovnakú logiku ako pôvodný kód:
+        // pre každý parent vytvoríme buď 1 segment (priamy presun) alebo N segmentov
+        // (presun s medzizastávkami). NEPOUŽÍVAME buildExpandedTransfersForFilter(),
+        // pretože ten pri porovnávaní filtrov mohol zlyhať kvôli resolvePlaceNameById.
         const candidateParentKeys = new Set();
+        const expandedSegmentsForFilter = [];
 
-        expandedSegmentsAll.forEach((seg) => {
-            const parent = seg.parent;
-            if (!parent) return;
+        (savedTransfersRef.current || []).forEach((parent) => {
+            if (parent._parentKey && parent._parentKey !== parent.key) return;
             if (parent.isWalking === true) return;
             if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return;
             if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return;
 
-            if (fromFilterNorm) {
-                if (!placeMatchesFilter(seg.fromId, fromFilterNorm)) return;
-            }
-            if (toFilterNorm) {
-                if (!placeMatchesFilter(seg.toId, toFilterNorm)) return;
+            const stopsIds = Array.isArray(parent.intermediateStopIds)
+                ? parent.intermediateStopIds.filter(Boolean)
+                : [];
+            const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
+            const hasMultipleSegments = parentSegments.length > 1;
+            const shouldSplitIntoSegments = stopsIds.length > 0 || hasMultipleSegments;
+
+            if (!shouldSplitIntoSegments) {
+                // Priamy presun – jeden segment
+                const fromId = parent.fromId || null;
+                const toId = parent.toId || null;
+                if (!fromId || !toId) return;
+
+                expandedSegmentsForFilter.push({
+                    parentKey: parent.key,
+                    parent,
+                    fromId,
+                    toId,
+                });
+                return;
             }
 
-            if (parentAlreadyContainsStop(parent)) return;
+            // Rozdelenie na segmenty
+            const routeIdsRaw = [parent.fromId, ...stopsIds, parent.toId].filter(Boolean);
+            const routeIds = [];
+            routeIdsRaw.forEach((id) => {
+                if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
+            });
+            if (routeIds.length < 2) return;
 
-            candidateParentKeys.add(parent.key);
+            for (let i = 0; i < routeIds.length - 1; i++) {
+                expandedSegmentsForFilter.push({
+                    parentKey: parent.key,
+                    parent,
+                    fromId: routeIds[i],
+                    toId: routeIds[i + 1],
+                });
+            }
+        });
+
+        // Filtrovanie segmentov podľa fromPlaceFilter / toPlaceFilter
+        expandedSegmentsForFilter.forEach((seg) => {
+            if (fromPlaceFilter) {
+                if (!placeMatchesFilter(seg.fromId, fromPlaceFilter)) return;
+            }
+            if (toPlaceFilter) {
+                if (!placeMatchesFilter(seg.toId, toPlaceFilter)) return;
+            }
+            if (parentAlreadyContainsStop(seg.parent)) return;
+            candidateParentKeys.add(seg.parentKey);
         });
 
         const candidateParents = (savedTransfersRef.current || []).filter(
@@ -5631,8 +5702,6 @@ const TransportApp = ({ userProfileData }) => {
         try {
             for (const candidateParent of candidateParents) {
                 try {
-                    // NOVÉ: Vždy si vytiahni AKTUÁLNY parent zo savedTransfersRef.current
-                    // (mohol sa medzičasom zmeniť predchádzajúcimi iteráciami).
                     const currentParent = (savedTransfersRef.current || []).find(
                         (p) => p.key === candidateParent.key
                     );
@@ -5641,7 +5710,6 @@ const TransportApp = ({ userProfileData }) => {
                         continue;
                     }
 
-                    // NOVÉ: Dvojitá kontrola na AKTUÁLNOM parentovi – ak už obsahuje stopId, preskoč.
                     if (parentAlreadyContainsStop(currentParent)) {
                         skippedCount += 1;
                         continue;
@@ -5658,7 +5726,6 @@ const TransportApp = ({ userProfileData }) => {
                         newStopIds = [...existingStops, stopId];
                     }
 
-                    // Vytvor nový zoznam segmentov podľa novej trasy
                     const oldSegments = Array.isArray(currentParent.segments)
                         ? currentParent.segments
                         : [];
@@ -5669,7 +5736,6 @@ const TransportApp = ({ userProfileData }) => {
                     };
                     const newDefaultSegments = buildDefaultSegments(baseDraft);
 
-                    // Zachovaj staré vlastnosti segmentov, ktoré sa zhodujú (fromId+toId)
                     newDefaultSegments.forEach((s) => {
                         const old = oldSegments.find(
                             (o) => o.fromId === s.fromId && o.toId === s.toId
@@ -5694,7 +5760,6 @@ const TransportApp = ({ userProfileData }) => {
                         segments: newDefaultSegments,
                     };
 
-                    // Zachovaj pôvodný when, ak existuje
                     if (currentParent.when && String(currentParent.when).trim() !== '') {
                         draft.when = currentParent.when;
                     }
