@@ -4979,24 +4979,29 @@ const TransportApp = ({ userProfileData }) => {
                         className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 flex items-center justify-center mx-auto',
                         title: 'Odstrániť riadok',
                     }, React.createElement('i', { className: 'fa-solid fa-xmark' })),
-                // NOVÉ: Zelené + (vloženie riadku) sa zobrazí len ak riadok ani nasledujúci riadok
-                // (prípadne prvý pod červeným) nemá žiadny tím.
                 !shouldHideRowActions && (() => {
                     const effectivePlaceFromId = lockedPlaceFromId || row.placeFromId || null;
                     const hasPlaceFrom = !!effectivePlaceFromId;
                     const hasPlaceTo = !!row.placeToId;
                     const canInsertRow = hasPlaceFrom && hasPlaceTo;
-    
+                
                     if (!canInsertRow) {
                         return null;
                     }
-    
+                
+                    // NOVÉ: Pri poslednom riadku (nextRow === null) je tlačidlo umiestnené
+                    // nižšie (bottom: '-12px'), čo môže spôsobiť, že pri hoveri nad riadkom
+                    // sa nezobrazí, lebo hover opustí oblasť riadku. Preto pri poslednom
+                    // riadku posunieme tlačidlo vyššie, aby bolo v rámci riadku.
+                    const isLastRow = !nextRow;
+                    const bottomOffset = isLastRow ? '-2px' : '-12px';
+                
                     return React.createElement(
                         'div',
                         {
                             className: 'absolute left-1/2 -translate-x-1/2 pointer-events-none',
                             style: {
-                                bottom: '-12px',
+                                bottom: bottomOffset,
                                 zIndex: 100,
                             }
                         },
