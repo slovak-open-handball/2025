@@ -1,6 +1,8 @@
 // logged-in-transport-generator.js
 import { doc, getDocs, setDoc, collection, Timestamp, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+const MIN_TEAMS_FOR_SS_TRANSFER = 2;
+
 // ============================================================
 // POMOCNÉ FUNKCIE (globálne v generátore)
 // ============================================================
@@ -2144,44 +2146,170 @@ class TransportGenerator {
                                     });
                                     if (userTeamHasEventOnDay) return;
                                 
-                                    const hasAccommodation = accommodationName && accommodationName.trim() !== '';
-                                    const fromLocationName = hasAccommodation
-                                        ? accommodationName.trim()
-                                        : (meetingPointStop ? meetingPointStop.name : null);
-                                    const fromLabel = hasAccommodation
-                                        ? `ubytovanie ${accommodationName.trim()}`
-                                        : (meetingPointStop ? `miesto zrazu ${meetingPointStop.name}` : null);
+                                    // ─────────────────────────────────────────────────────────────
+                                    // Zisti, koľko tímov z tej istej skupiny (rovnaké groupName
+                                    // ako user tím) býva v konkrétnej ubytovni.
+                                    // Kľúč: normalized accommodation name → Set<teamName>
+                                    // ─────────────────────────────────────────────────────────────
+                                    const teamsByAccommodationInGroup = new Map();
+                                    if (userTeamGroupName) {
+                                        (this.ctx.teamsArrivalBufferRef?.current || []).forEach((t) => {
+                                            if (cleanCategory(t.category) !== cleanCategory(category)) return;
+                                            if (!t.teamName) return;
+                                            const otherGroupName = t.groupName ? String(t.groupName).trim() : null;
+                                            if (!otherGroupName || otherGroupName !== String(userTeamGroupName).trim()) return;
+                                            const accName = t.accommodationName && String(t.accommodationName).trim() !== ''
+                                                ? String(t.accommodationName).trim()
+                                                : null;
+                                            if (!accName) return;
+                                            const key = normalizePlaceName(accName);
+                                            if (!key) return;
+                                            if (!teamsByAccommodationInGroup.has(key)) {
+                                                teamsByAccommodationInGroup.set(key, { location: accName, teams: new Set() });
+                                            }
+                                            teamsByAccommodationInGroup.get(key).teams.add(String(t.teamName).trim());
+                                        });
+                                    }
                                 
-                                    if (!fromLocationName) return;
+                                    // Urči, či user tím býva v ubytovni, kde je v rámci jeho skupiny
+                                    // menej ako MIN_TEAMS_FOR_SS_TRANSFER tímov.
+                                    const userTeamAccommodationKey = accommodationName && String(accommodationName).trim() !== ''
+                                        ? normalizePlaceName(accommodationName.trim())
+                                        : null;
+                                    const userTeamAccommodationEntry = userTeamAccommodationKey
+                                        ? teamsByAccommodationInGroup.get(userTeamAccommodationKey)
+                                        : null;
+                                    const userTeamAccommodationTeamCount = userTeamAccommodationEntry
+                                        ? userTeamAccommodationEntry.teams.size
+                                        : 0;
                                 
-                                    placesMap.forEach((info, destinationLocation) => {
-                                        if (!destinationLocation) return;
+                                    const userTeamInSmallAccommodation =
+                                        userTeamAccommodationKey != null &&
+                                        userTeamAccommodationTeamCount < MIN_TEAMS_FOR_SS_TRANSFER;
                                 
-                                        // Ak je miesto rovnaké ako ubytovanie/miesto zrazu,
-                                        // presun sa NEgeneruje.
-                                        if (this.isSamePlaceForTransfer(fromLocationName, destinationLocation)) return;
+                                    // ─────────────────────────────────────────────────────────────
+                                    // Prípad A: user tím býva v ubytovni s menej ako
+                                    // MIN_TEAMS_FOR_SS_TRANSFER tímami zo svojej skupiny
+                                    // (alebo nemá ubytovanie) → generuj ranný presun pre user tím
+                                    // z ubytovania / miesta zrazu na miesto prvej udalosti SS tímu.
+                                    // ─────────────────────────────────────────────────────────────
+                                    if (userTeamInSmallAccommodation || !userTeamAccommodationKey) {
+                                        const hasAccommodation = accommodationName && accommodationName.trim() !== '';
+                                        const fromLocationName = hasAccommodation
+                                            ? accommodationName.trim()
+                                            : (meetingPointStop ? meetingPointStop.name : null);
+                                        const fromLabel = hasAccommodation
+                                            ? `ubytovanie ${accommodationName.trim()}`
+                                            : (meetingPointStop ? `miesto zrazu ${meetingPointStop.name}` : null);
                                 
-                                        const arrivalTs = info.firstEventTs;
-                                        if (arrivalTs == null || !isFinite(arrivalTs)) return;
+                                        if (!fromLocationName) return;
                                 
-                                        const arrivalStr = formatFullFromTs(arrivalTs) || info.firstEvent.when || '—';
+                                        placesMap.forEach((info, destinationLocation) => {
+                                            if (!destinationLocation) return;
+                                            if (this.isSamePlaceForTransfer(fromLocationName, destinationLocation)) return;
+                                
+                                            const arrivalTs = info.firstEventTs;
+                                            if (arrivalTs == null || !isFinite(arrivalTs)) return;
+                                
+                                            const arrivalStr = formatFullFromTs(arrivalTs) || info.firstEvent.when || '—';
+                                            const departureTs = timestampOnDay(arrivalTs, 0, 0);
+                                            const departureStr = formatFullFromTs(departureTs) || '00:00';
+                                
+                                            if (departureTs != null && arrivalTs != null && departureTs >= arrivalTs) return;
+                                
+                                            let whenStr;
+                                            if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                            else if (arrivalStr) whenStr = arrivalStr;
+                                            else whenStr = info.firstEvent.when || '—';
+                                
+                                            enriched.push({
+                                                ts: info.firstEventTs - 1,
+                                                when: whenStr,
+                                                type: 'transfer',
+                                                text: `Presun z ${fromLabel} do ${destinationLocation}`,
+                                                location: null,
+                                                isTransfer: true,
+                                            });
+                                        });
+                                        return;
+                                    }
+                                
+                                    // ─────────────────────────────────────────────────────────────
+                                    // Prípad B: user tím býva v ubytovni s >= MIN_TEAMS_FOR_SS_TRANSFER
+                                    // tímami zo svojej skupiny → negeneruj ranný presun pre user tím.
+                                    // Namiesto toho vygeneruj presun pre KAŽDÝ superstructure tím
+                                    // (v tej istej skupine) z ubytovní všetkých tímov v tejto skupine
+                                    // na miesto prvej udalosti tohto SS tímu.
+                                    // ─────────────────────────────────────────────────────────────
+                                    const allAccommodationsInGroup = [...teamsByAccommodationInGroup.values()].map(
+                                        (entry) => entry.location
+                                    );
+                                
+                                    if (allAccommodationsInGroup.length === 0) return;
+                                
+                                    // Nájdi všetky superstructure tímy v tejto skupine (rovnaké groupName
+                                    // ako user tím), ktoré majú v tento deň udalosť s miestom.
+                                    const ssTeamsInGroup = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
+                                        if (cleanCategory(t.category) !== cleanCategory(category)) return false;
+                                        if (!t.teamName) return false;
+                                        if (t.isSuperstructure !== true) return false;
+                                        if (isSpiderTeamName(t.teamName)) return false;
+                                        const otherGroupName = t.groupName ? String(t.groupName).trim() : null;
+                                        if (!otherGroupName || otherGroupName !== String(userTeamGroupName).trim()) return false;
+                                        return true;
+                                    });
+                                
+                                    if (ssTeamsInGroup.length === 0) return;
+                                
+                                    ssTeamsInGroup.forEach((ssTeam) => {
+                                        const ssTeamName = String(ssTeam.teamName).trim();
+                                        const ssTeamEvents = grouped[cleanCategory(category)]?.[ssTeamName] || [];
+                                
+                                        // Prvá udalosť SS tímu v danom dni s miestom
+                                        const ssFirstEventOnDay = ssTeamEvents
+                                            .filter((ev) => {
+                                                const evDay = extractDayKeyFromWhen(ev.when);
+                                                return evDay === dayKey && ev.location;
+                                            })
+                                            .sort((a, b) => {
+                                                const ta = a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY);
+                                                const tb = b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY);
+                                                if (ta !== tb) return ta - tb;
+                                                return String(a.text).localeCompare(String(b.text), 'sk');
+                                            })[0];
+                                
+                                        if (!ssFirstEventOnDay || !ssFirstEventOnDay.location) return;
+                                
+                                        const destination = ssFirstEventOnDay.location;
+                                        const arrivalTs = ssFirstEventOnDay.startTs != null
+                                            ? ssFirstEventOnDay.startTs
+                                            : (ssFirstEventOnDay.ts != null && isFinite(ssFirstEventOnDay.ts)
+                                                ? ssFirstEventOnDay.ts
+                                                : null);
+                                
+                                        const arrivalStr = formatFullFromTs(arrivalTs) || ssFirstEventOnDay.when || '—';
                                         const departureTs = timestampOnDay(arrivalTs, 0, 0);
                                         const departureStr = formatFullFromTs(departureTs) || '00:00';
                                 
                                         if (departureTs != null && arrivalTs != null && departureTs >= arrivalTs) return;
                                 
-                                        let whenStr;
-                                        if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
-                                        else if (arrivalStr) whenStr = arrivalStr;
-                                        else whenStr = info.firstEvent.when || '—';
+                                        allAccommodationsInGroup.forEach((accName) => {
+                                            if (!accName) return;
+                                            if (this.isSamePlaceForTransfer(accName, destination)) return;
                                 
-                                        enriched.push({
-                                            ts: info.firstEventTs - 1,
-                                            when: whenStr,
-                                            type: 'transfer',
-                                            text: `Presun z ${fromLabel} do ${destinationLocation}`,
-                                            location: null,
-                                            isTransfer: true,
+                                            let whenStr;
+                                            if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                            else if (arrivalStr) whenStr = arrivalStr;
+                                            else whenStr = ssFirstEventOnDay.when || '—';
+                                
+                                            enriched.push({
+                                                ts: (arrivalTs != null ? arrivalTs : ssFirstEventOnDay.ts) - 1,
+                                                when: whenStr,
+                                                type: 'transfer',
+                                                text: `Presun z ${accName} do ${destination}`,
+                                                location: null,
+                                                isTransfer: true,
+                                            });
                                         });
                                     });
                                 });
