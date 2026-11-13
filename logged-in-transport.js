@@ -5521,28 +5521,42 @@ const TransportApp = ({ userProfileData }) => {
             return false;
         };
 
+        // NOVÉ: priprav normalizované názvy pre filtre (aby sme porovnávali názvy, nie ID,
+        // pre prípad, že existujú duplicitné miesta s rovnakým názvom ale rôznym ID).
+        const fromFilterNorm = fromPlaceFilter
+            ? normalizePlaceName(resolvePlaceNameById(fromPlaceFilter) || '')
+            : '';
+        const toFilterNorm = toPlaceFilter
+            ? normalizePlaceName(resolvePlaceNameById(toPlaceFilter) || '')
+            : '';
+        
+        const placeMatchesFilter = (placeId, targetNorm) => {
+            if (!targetNorm) return true;
+            const nameNorm = normalizePlaceName(resolvePlaceNameById(placeId) || '');
+            return nameNorm && nameNorm === targetNorm;
+        };
+        
         const candidateParents = (savedTransfersRef.current || []).filter((t) => {
             if (t._parentKey && t._parentKey !== t.key) return false;
             if (t.isWalking === true) return false;
             if (dayKeyFilter && t.dayKey !== dayKeyFilter) return false;
             if (categoryFilter && cleanCategory(t.category || '') !== categoryFilter) return false;
-
-            if (fromPlaceFilter) {
+        
+            if (fromFilterNorm) {
                 const matchesFrom =
-                    String(t.fromId || '') === String(fromPlaceFilter) ||
-                    (Array.isArray(t.segments) && t.segments.some((s) => s && String(s.fromId || '') === String(fromPlaceFilter)));
+                    placeMatchesFilter(t.fromId, fromFilterNorm) ||
+                    (Array.isArray(t.segments) && t.segments.some((s) => s && placeMatchesFilter(s.fromId, fromFilterNorm)));
                 if (!matchesFrom) return false;
             }
-            if (toPlaceFilter) {
+            if (toFilterNorm) {
                 const matchesTo =
-                    String(t.toId || '') === String(toPlaceFilter) ||
-                    (Array.isArray(t.segments) && t.segments.some((s) => s && String(s.toId || '') === String(toPlaceFilter)));
+                    placeMatchesFilter(t.toId, toFilterNorm) ||
+                    (Array.isArray(t.segments) && t.segments.some((s) => s && placeMatchesFilter(s.toId, toFilterNorm)));
                 if (!matchesTo) return false;
             }
-
-            // NOVÉ: ak už zastávku obsahuje, vôbec ho neberieme ako kandidáta
+        
             if (parentAlreadyContainsStop(t, stopId)) return false;
-
+        
             return true;
         });
 
