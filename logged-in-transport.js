@@ -1222,6 +1222,7 @@ const TransportApp = ({ userProfileData }) => {
     const [setWalkingConfirmModal, setSetWalkingConfirmModal] = useState(null); 
     const [setWalkingConfirmSaving, setSetWalkingConfirmSaving] = useState(false);
     const [walkingBatchSaving, setWalkingBatchSaving] = useState(false);
+    const [walkingBatchRemaining, setWalkingBatchRemaining] = useState(0);
     const [deleteTransferModal, setDeleteTransferModal] = useState(null);
     const [deleteTransferSaving, setDeleteTransferSaving] = useState(false);
     const [regenTransfersModal, setRegenTransfersModal] = useState(null);
@@ -9326,36 +9327,104 @@ const TransportApp = ({ userProfileData }) => {
                             'button',
                             {
                                 type: 'button',
-                                onClick: () => TransportGenerator.setAllWalkingTransfersAsWalking({
-                                    dayKey: selectedDayKey || null,
-                                    category: selectedCategoryFilter || null,
-                                }),
+                                onClick: async () => {
+                                    // Vypočítame počet kandidátov pre tento deň a kategóriu
+                                    const dayKeyFilter = selectedDayKey || null;
+                                    const categoryFilter = selectedCategoryFilter
+                                        ? cleanCategory(selectedCategoryFilter)
+                                        : null;
+                    
+                                    const rulePairs = new Set(
+                                        (walkingRules || []).map((r) => `${r.fromPlaceNameNorm}||${r.toPlaceNameNorm}`)
+                                    );
+                                    const isPairWalking = (fromId, toId) => {
+                                        if (!fromId || !toId) return false;
+                                        const fromNameNorm = normalizePlaceName(resolvePlaceNameById(fromId) || '');
+                                        const toNameNorm = normalizePlaceName(resolvePlaceNameById(toId) || '');
+                                        if (!fromNameNorm || !toNameNorm) return false;
+                                        return rulePairs.has(`${fromNameNorm}||${toNameNorm}`);
+                                    };
+                    
+                                    let candidateCount = 0;
+                                    for (const parent of savedTransfersRef.current || []) {
+                                        if (!Array.isArray(parent.segments)) continue;
+                                        if (dayKeyFilter && parent.dayKey !== dayKeyFilter) continue;
+                                        if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) continue;
+                    
+                                        const stopsIds = Array.isArray(parent.intermediateStopIds)
+                                            ? parent.intermediateStopIds
+                                            : [];
+                                        const isDirectTransfer = stopsIds.length === 0;
+                    
+                                        if (isDirectTransfer) {
+                                            if (parent.isWalking === true) continue;
+                                            const fromId = parent.fromId || null;
+                                            const toId = parent.toId || null;
+                                            if (!isPairWalking(fromId, toId)) continue;
+                                            const segIdx = findSegmentIndex(parent.segments, fromId, toId);
+                                            if (segIdx === -1) continue;
+                                            const seg = parent.segments[segIdx];
+                                            if (!seg) continue;
+                                            if (seg.isWalking === true) continue;
+                                            candidateCount += 1;
+                                        } else {
+                                            for (const seg of parent.segments) {
+                                                if (!seg) continue;
+                                                if (seg.isWalking === true) continue;
+                                                const segFromId = seg.fromId || null;
+                                                const segToId = seg.toId || null;
+                                                if (!isPairWalking(segFromId, segToId)) continue;
+                                                candidateCount += 1;
+                                            }
+                                        }
+                                    }
+                    
+                                    setWalkingBatchRemaining(candidateCount);
+                    
+                                    const originalSetRemaining = (n) => {
+                                        try {
+                                            setWalkingBatchRemaining(Math.max(0, n));
+                                        } catch (e) { /* ignore */ }
+                                    };
+                    
+                                    // Ak TransportGenerator podporuje callback pre progres, použijeme ho.
+                                    // Inak aspoň nastavíme počiatočný počet a po dokončení vyčistíme.
+                                    const walkingOptions = {
+                                        dayKey: selectedDayKey || null,
+                                        category: selectedCategoryFilter || null,
+                                    };
+                    
+                                    // Voliteľne: ak TransportGenerator podporuje onProgress, odovzdáme mu ho
+                                    if (window.TransportGenerator && typeof window.TransportGenerator.setAllWalkingTransfersAsWalking === 'function') {
+                                        walkingOptions.onProgress = ({ remaining, total }) => {
+                                            if (remaining != null) {
+                                                originalSetRemaining(remaining);
+                                            } else if (total != null) {
+                                                originalSetRemaining(total);
+                                            }
+                                        };
+                                    }
+                    
+                                    TransportGenerator.setAllWalkingTransfersAsWalking(walkingOptions);
+                                },
                                 disabled: walkingBatchSaving,
-                                title: 'Označí ako "peši" všetky presuny medzi miestami, ktoré sú definované v pravidlách „peši" (Nastavenia → Peši).',
+                                title: walkingBatchSaving
+                                    ? undefined
+                                    : 'Označí ako "peši" všetky presuny medzi miestami, ktoré sú definované v pravidlách „peši" (Nastavenia → Peši).',
                                 className: `inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md transition-colors ${walkingBatchSaving ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`
                             },
                             walkingBatchSaving
                                 ? React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' })
                                 : React.createElement('i', { className: 'fa-solid fa-person-walking' }),
-                            React.createElement('span', { className: 'whitespace-nowrap' }, 'Nastaviť presun peši medzi blízkymi miestami')
+                            React.createElement(
+                                'span',
+                                { className: 'whitespace-nowrap' },
+                                walkingBatchSaving
+                                    ? `Počet presunov, ktoré ostáva priradiť: ${walkingBatchRemaining}`
+                                    : 'Nastaviť presun peši medzi blízkymi miestami'
+                            )
                         )
                         : React.createElement('span', null),
-                    showPartialCheckbox
-                        ? React.createElement(
-                            'label',
-                            {
-                                className: 'ml-auto flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer select-none',
-                                title: 'Zobraziť iba tie presuny, ktoré sú súčasťou väčšieho presunu (majú medzizastávky)',
-                            },
-                            React.createElement('input', {
-                                type: 'checkbox',
-                                checked: showOnlyPartialTransfers,
-                                onChange: (e) => setShowOnlyPartialTransfers(e.target.checked),
-                                className: 'w-4 h-4 rounded accent-violet-600 cursor-pointer',
-                            }),
-                            React.createElement('span', { className: 'whitespace-nowrap' }, 'Iba časti presunov')
-                        )
-                        : React.createElement('span', null)
                 );
             })(),
             sortedTransfers.length === 0
