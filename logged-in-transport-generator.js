@@ -3997,10 +3997,12 @@ class TransportGenerator {
                         // turnaja → presun na miesto nástupu/výstupu s miestom zrazu ako
                         // medzizastávkou.
                         //
-                        // POZOR: Negeneruj tento presun, ak tím ešte bude hrať ďalší zápas
-                        // v pavúku (napr. 4C môže hrať 1I, 2I, 3I, 4I, 5I, 6I, 10I, 15I, ...
-                        // – zápasy o umiestnenie alebo finále), ktorý je naplánovaný na
-                        // neskorší deň. Počet zápasov v pavúku NIE JE obmedzený.
+                        // • Pre NEPAVÚKOVÉ tímy s budúcim pavúkovým zápasom (napr. 4C môže hrať
+                        //   1I, 2I, 3I, ...) sa presun NEGENERUJE.
+                        // • Pre PAVÚKOVÉ tímy (1F, 2F, 1G, 2G, 4I, 5I, ...), ktoré ešte budú hrať
+                        //   finále / o 3. miesto (LSF01, WSF01, ...), sa presun GENERUJE, ale
+                        //   s časom odchodu = čas konca poslednej teoretickej pavúkovej udalosti,
+                        //   ktorá začína po ich poslednej udalosti.
                         // ═══════════════════════════════════════════════════════════════════════
                         if (
                             isVeryLastEventOfTeam &&
@@ -4017,23 +4019,33 @@ class TransportGenerator {
                             const isSuperstructureTeamForLastDay = !teamIsInUsersForLastDay;
                             const isPavukTeamForLastDay = isSpiderTeamName(teamName);
                         
+                            // Pomocná funkcia na odstránenie prefixu kategórie z názvu tímu.
+                            const stripCategoryPrefix = (tn, cat) => {
+                                if (!tn) return '';
+                                const s = String(tn).trim();
+                                const c = String(cat || '').trim();
+                                if (!c) return s;
+                                if (s === c) return '';
+                                if (s.startsWith(c + ' ')) return s.slice(c.length + 1).trim();
+                                return s;
+                            };
+                        
+                            // ───────────────────────────────────────────────────────────────────
+                            // Zisti, či tím ešte bude hrať ďalší zápas v pavúku.
+                            //   • Pre pavúkový tím (napr. "U10 D 4C") zisti písmeno skupiny
+                            //     (posledné písmeno názvu = "C").
+                            //   • Zisti všetky "pokračujúce" skupiny (rovnaká logika ako pri
+                            //     user tímoch – mapovanie groupChar -> continuation chars).
+                            //   • Skontroluj, či v kategórii existuje zápas typu
+                            //     "<číslo><X>" (kde X je písmeno skupiny alebo jej pokračovania)
+                            //     na deň > currentDay. Počet zápasov NIE JE obmedzený.
+                            // ───────────────────────────────────────────────────────────────────
                             const pavukFutureMatchExists = (() => {
-                                // Odstráni prefix kategórie z názvu tímu.
-                                const stripCategoryPrefix = (tn, cat) => {
-                                    if (!tn) return '';
-                                    const s = String(tn).trim();
-                                    const c = String(cat || '').trim();
-                                    if (!c) return s;
-                                    if (s === c) return '';
-                                    if (s.startsWith(c + ' ')) return s.slice(c.length + 1).trim();
-                                    return s;
-                                };
-
                                 const teamNameStr = String(teamName || '').trim();
                                 const bareTeamName = stripCategoryPrefix(teamNameStr, category);
                                 const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(bareTeamName);
                                 const nameChar = nameCharMatch ? nameCharMatch[1].toUpperCase() : null;
-
+                        
                                 const teamInfo = (this.ctx.teamsArrivalBufferRef?.current || []).find(
                                     (t) => cleanCategory(t.category) === cleanCategory(category)
                                         && String(t.teamName || '').trim() === teamNameStr
@@ -4041,13 +4053,69 @@ class TransportGenerator {
                                 const groupCharFromGroupName = teamInfo && teamInfo.groupName
                                     ? getGroupLastChar(teamInfo.groupName)
                                     : null;
-
-                                // ───────────────────────────────────────────────────────────────────
-                                // NOVÉ: Ak tím nemá groupName (je to pavúkový tím typu "1I", "4I", ...),
-                                // nemá zmysel hľadať budúce zápasy – pavúkový tím hrá v pavúku
-                                // a jeho posledná udalosť je jeho posledný zápas. Preto pre neho
-                                // VŽDY generuj presun na miesto nástupu/výstupu.
-                                // ───────────────────────────────────────────────────────────────────
+                        
+                                // ───────────────────────────────────────────────────────────────
+                                // NOVÉ: Ak je tím pavúkový (napr. 1F, 2F, 1G, 2G, 4I, 5I) a NEMÁ
+                                // groupName, musíme skontrolovať, či v kategórii existuje budúci
+                                // pavúkový zápas (LSF, WSF, WQF, W16F, ...), ktorý začína neskôr
+                                // ako posledná udalosť tímu. Ak áno, presun sa negeneruje (bude
+                                // sa generovať s časom odchodu = koniec pavúkového zápasu).
+                                // ───────────────────────────────────────────────────────────────
+                                const isPavukTeamPattern = /^\s*\d+[A-ZÁ-Ž]\s*$/i.test(bareTeamName);
+                                if (isPavukTeamPattern && !groupCharFromGroupName) {
+                                    const currentLastTsForPavuk = current.endTs != null ? current.endTs : current.startTs;
+                                    const pavukRegexForFuture = /^(W|L)(32F|16F|8F|QF|SF)\d+$/i;
+                                    let hasFuturePavukMatch = false;
+                        
+                                    (this.ctx.matchesBufferRef?.current || []).forEach((m) => {
+                                        if (cleanCategory(m.category) !== cleanCategory(category)) return;
+                        
+                                        let dayKey = null;
+                                        if (m.scheduledTime) {
+                                            const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                            if (mm) {
+                                                dayKey = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
+                                            }
+                                        }
+                                        if (!dayKey && m.scheduledTs != null) {
+                                            const dt = new Date(m.scheduledTs);
+                                            dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                        }
+                                        if (!dayKey) return;
+                        
+                                        if (dayKey < currentDay) return;
+                                        if (dayKey === currentDay) {
+                                            const matchStartTs = m.scheduledTs != null ? m.scheduledTs : null;
+                                            if (matchStartTs != null && currentLastTsForPavuk != null && matchStartTs <= currentLastTsForPavuk) {
+                                                return;
+                                            }
+                                        }
+                        
+                                        [m.home, m.away].forEach((tn) => {
+                                            if (!tn) return;
+                                            const s = stripCategoryPrefix(tn, category);
+                                            if (pavukRegexForFuture.test(s)) {
+                                                hasFuturePavukMatch = true;
+                                            }
+                                        });
+                                    });
+                        
+                                    if (hasFuturePavukMatch) {
+                                        console.log(
+                                            `%c[TRANSPORT][SS-FUTURE-CHECK] Tím "${teamNameStr}" je pavúkový tím a má budúci pavúkový zápas → presun sa negeneruje hneď, ale až po skončení pavúkového zápasu.`,
+                                            'color: #b91c1c; font-weight: bold;'
+                                        );
+                                        return true;
+                                    }
+                        
+                                    console.log(
+                                        `%c[TRANSPORT][SS-FUTURE-CHECK] Tím "${teamNameStr}" je pavúkový tím bez budúceho pavúkového zápasu → presun sa VŽDY generuje.`,
+                                        'color: #16a34a; font-weight: bold;'
+                                    );
+                                    return false;
+                                }
+                        
+                                // Pôvodná kontrola pre tímy s groupName (4A, 4C, 4E, ...)
                                 if (!groupCharFromGroupName) {
                                     console.log(
                                         `%c[TRANSPORT][SS-FUTURE-CHECK] Tím "${teamNameStr}" nemá groupName (pavúkový tím) → presun sa VŽDY generuje.`,
@@ -4055,14 +4123,12 @@ class TransportGenerator {
                                     );
                                     return false;
                                 }
-                            
+                        
                                 // Pre hľadanie budúcich zápasov použi LEN skupinu, do ktorej tím patrí.
                                 const baseChars = new Set();
-                                if (groupCharFromGroupName) {
-                                    baseChars.add(groupCharFromGroupName);
-                                }
+                                baseChars.add(groupCharFromGroupName);
                                 if (baseChars.size === 0) return false;
-                            
+                        
                                 // Zisti mapovanie groupChar -> Set<nameChar> pre všetky SS tímy
                                 const groupCharToContinuationChars = new Map();
                                 (this.ctx.teamsArrivalBufferRef?.current || []).forEach((t) => {
@@ -4083,7 +4149,7 @@ class TransportGenerator {
                                     }
                                     groupCharToContinuationChars.get(tGroupChar).add(tNameChar);
                                 });
-                            
+                        
                                 const continuationCharsSet = new Set(baseChars);
                                 groupCharToContinuationChars.forEach((originalChars, groupChar) => {
                                     for (const baseChar of baseChars) {
@@ -4092,23 +4158,23 @@ class TransportGenerator {
                                         }
                                     }
                                 });
-                            
+                        
                                 console.log(
                                     `%c[TRANSPORT][SS-FUTURE-CHECK] Tím "${teamNameStr}": bareName="${bareTeamName}", nameChar=${nameChar || '—'}, groupChar=${groupCharFromGroupName || '—'}, continuationCharsSet={${[...continuationCharsSet].sort().join(', ')}}`,
                                     'color: #ea580c; font-weight: bold;'
                                 );
-                            
+                        
                                 // Pracujeme s holým označením tímu (bez prefixu kategórie),
                                 // takže regex môže byť presný: "1I", "4C", "10I", "32I", ...
                                 const pavukNumberedRegex = /^\s*(\d+)([A-ZÁ-Ž])\d*\s*$/i;
                                 let foundNumbered = false;
-                            
+                        
                                 const isSpecialPavukTeam = (tn) => {
                                     if (!tn) return false;
                                     const s = stripCategoryPrefix(tn, category);
                                     return /^(W|L)(32F|16F|8F|QF|SF)\d+$/i.test(s);
                                 };
-                            
+                        
                                 const teamBelongsToContinuation = (tn) => {
                                     if (!tn) return false;
                                     const s = stripCategoryPrefix(tn, category);
@@ -4124,12 +4190,12 @@ class TransportGenerator {
                                     }
                                     return false;
                                 };
-                            
+                        
                                 const currentLastTs = current.endTs != null ? current.endTs : current.startTs;
-                            
+                        
                                 (this.ctx.matchesBufferRef?.current || []).forEach((m) => {
                                     if (cleanCategory(m.category) !== cleanCategory(category)) return;
-                            
+                        
                                     let dayKey = null;
                                     if (m.scheduledTime) {
                                         const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
@@ -4142,7 +4208,7 @@ class TransportGenerator {
                                         dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
                                     }
                                     if (!dayKey) return;
-                            
+                        
                                     if (dayKey < currentDay) return;
                                     if (dayKey === currentDay) {
                                         const matchStartTs = m.scheduledTs != null ? m.scheduledTs : null;
@@ -4150,11 +4216,11 @@ class TransportGenerator {
                                             return;
                                         }
                                     }
-                            
+                        
                                     [m.home, m.away].forEach((tn) => {
                                         if (!tn) return;
                                         const s = stripCategoryPrefix(tn, category);
-                            
+                        
                                         const matchNumbered = pavukNumberedRegex.exec(s);
                                         if (matchNumbered) {
                                             const char = matchNumbered[2].toUpperCase();
@@ -4162,7 +4228,7 @@ class TransportGenerator {
                                                 foundNumbered = true;
                                             }
                                         }
-                            
+                        
                                         if (isSpecialPavukTeam(tn)) {
                                             const otherTn = (String(m.home).trim() === String(tn).trim() ? m.away : m.home);
                                             if (otherTn && teamBelongsToContinuation(otherTn)) {
@@ -4171,7 +4237,7 @@ class TransportGenerator {
                                         }
                                     });
                                 });
-                            
+                        
                                 if (foundNumbered) {
                                     console.log(
                                         `%c[TRANSPORT][SS-FUTURE-CHECK] Tím "${teamNameStr}" MÁ budúci pavúkový zápas → presun sa negeneruje.`,
@@ -4183,19 +4249,86 @@ class TransportGenerator {
                                         'color: #16a34a; font-weight: bold;'
                                     );
                                 }
-                            
+                        
                                 return foundNumbered;
                             })();
                         
-                            if (pavukFutureMatchExists) {
-                                // Tím ešte bude hrať ďalší zápas v pavúku na neskorší deň
-                                // → negeneruj presun na miesto nástupu/výstupu.
+                            // ───────────────────────────────────────────────────────────────────
+                            // NOVÉ: Pre pavúkové tímy (1F, 2F, 1G, 2G, ...), ktoré ešte budú hrať
+                            // finále / o 3. miesto, sa presun generuje, ale s časom odchodu =
+                            // čas konca poslednej teoretickej pavúkovej udalosti, ktorá začína
+                            // po ich poslednej udalosti.
+                            // ───────────────────────────────────────────────────────────────────
+                            let effectiveDepartureTs = current.endTs != null ? current.endTs : current.startTs;
+                            let effectiveDepartureStr = formatFullFromTs(effectiveDepartureTs) || current.when;
+                        
+                            if (isPavukTeamForLastDay) {
+                                const currentLastTsForPavuk = current.endTs != null ? current.endTs : current.startTs;
+                                const pavukRegexForFuture = /^(W|L)(32F|16F|8F|QF|SF)\d+$/i;
+                                let latestPavukEndTs = null;
+                        
+                                (this.ctx.matchesBufferRef?.current || []).forEach((m) => {
+                                    if (cleanCategory(m.category) !== cleanCategory(category)) return;
+                        
+                                    let dayKey = null;
+                                    if (m.scheduledTime) {
+                                        const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                        if (mm) {
+                                            dayKey = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
+                                        }
+                                    }
+                                    if (!dayKey && m.scheduledTs != null) {
+                                        const dt = new Date(m.scheduledTs);
+                                        dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                    }
+                                    if (!dayKey) return;
+                        
+                                    if (dayKey < currentDay) return;
+                                    if (dayKey === currentDay) {
+                                        const matchStartTs = m.scheduledTs != null ? m.scheduledTs : null;
+                                        if (matchStartTs != null && currentLastTsForPavuk != null && matchStartTs <= currentLastTsForPavuk) {
+                                            return;
+                                        }
+                                    }
+                        
+                                    let isPavukMatch = false;
+                                    [m.home, m.away].forEach((tn) => {
+                                        if (!tn) return;
+                                        const s = stripCategoryPrefix(tn, category);
+                                        if (pavukRegexForFuture.test(s)) {
+                                            isPavukMatch = true;
+                                        }
+                                    });
+                                    if (!isPavukMatch) return;
+                        
+                                    const matchEndTs = m.scheduledEndTs != null
+                                        ? m.scheduledEndTs
+                                        : (m.scheduledTs != null ? m.scheduledTs : null);
+                                    if (matchEndTs == null) return;
+                        
+                                    if (latestPavukEndTs == null || matchEndTs > latestPavukEndTs) {
+                                        latestPavukEndTs = matchEndTs;
+                                    }
+                                });
+                        
+                                if (latestPavukEndTs != null) {
+                                    effectiveDepartureTs = latestPavukEndTs;
+                                    effectiveDepartureStr = formatFullFromTs(latestPavukEndTs) || current.when;
+                                    console.log(
+                                        `%c[TRANSPORT][SS-PAVUK] Tím "${teamName}" – presun sa generuje s časom odchodu = koniec pavúkového zápasu: ${effectiveDepartureStr}`,
+                                        'color: #16a34a; font-weight: bold;'
+                                    );
+                                }
+                            }
+                        
+                            if (pavukFutureMatchExists && !isPavukTeamForLastDay) {
+                                // Pre ne-pavúkové tímy s budúcim pavúkovým zápasom sa presun negeneruje
                                 console.log(
                                     `%c[TRANSPORT][SS-FUTURE] Tím "${teamName}" má budúci pavúkový zápas – presun na miesto nástupu/výstupu sa negeneruje.`,
                                     'color: #b91c1c; font-weight: bold;'
                                 );
                             } else {
-                                // Pôvodná logika – presun na miesto nástupu/výstupu s medzizastávkou
+                                // Presun na miesto nástupu/výstupu s medzizastávkou
                                 const meetingPointStopForLastDay = (() => {
                                     const fromAllPlaces = (this.ctx.allPlacesRef?.current || []).find((p) => p.isMeetingPointStop === true);
                                     if (fromAllPlaces) return fromAllPlaces;
@@ -4210,20 +4343,31 @@ class TransportGenerator {
                                     return fromStops || null;
                                 })();
                         
-                                if (
+                                const canGeneratePavukTransfer =
+                                    isPavukTeamForLastDay &&
+                                    meetingPointStopForLastDay &&
+                                    externalArrivalStopForLastDay &&
+                                    !this.isSamePlaceForTransfer(current.location, externalArrivalStopForLastDay.name);
+                        
+                                const canGenerateSuperstructureTransfer =
                                     isSuperstructureTeamForLastDay &&
                                     !isPavukTeamForLastDay &&
                                     meetingPointStopForLastDay &&
                                     externalArrivalStopForLastDay &&
-                                    !this.isSamePlaceForTransfer(current.location, externalArrivalStopForLastDay.name)
-                                ) {
-                                    const departureTs = current.endTs != null ? current.endTs : current.startTs;
-                                    const departureStr = formatFullFromTs(departureTs) || current.when;
+                                    !this.isSamePlaceForTransfer(current.location, externalArrivalStopForLastDay.name);
+                        
+                                if (canGeneratePavukTransfer || canGenerateSuperstructureTransfer) {
+                                    const departureTs = canGeneratePavukTransfer
+                                        ? effectiveDepartureTs
+                                        : (current.endTs != null ? current.endTs : current.startTs);
+                                    const departureStr = canGeneratePavukTransfer
+                                        ? effectiveDepartureStr
+                                        : (formatFullFromTs(departureTs) || current.when);
+                        
                                     const arrivalTs = timestampOnDay(departureTs, 23, 59);
                                     const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
                         
                                     if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
-                                        // Zisti, či miesto zrazu nie je rovnaké ako niektorý z koncových bodov
                                         const mpIsSameAsFrom = this.isSamePlaceForTransfer(
                                             meetingPointStopForLastDay.name,
                                             current.location
@@ -4250,7 +4394,6 @@ class TransportGenerator {
                                             text: textParts.join(' '),
                                             location: null,
                                             isTransfer: true,
-                                            // Nové polia – prenesú sa do transfersPatch nižšie
                                             _fromPlaceName: current.location,
                                             _toPlaceName: externalArrivalStopForLastDay.name,
                                             _intermediateStopIds: intermediateStopIds,
