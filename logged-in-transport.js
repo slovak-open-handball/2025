@@ -329,8 +329,6 @@ const buildDefaultSegments = (parent) => {
             when: null,
             isWalking: false,
             busAssigned: false,
-            walkingSetAt: null,
-            walkingSetBy: null,
         });
     }
     return out;
@@ -467,7 +465,6 @@ const TransportApp = ({ userProfileData }) => {
                 toId: routeIds[i + 1],
                 startTs: null, endTs: null, when: null,
                 isWalking: false, busAssigned: false,
-                walkingSetAt: null, walkingSetBy: null,
             }));
         } else {
             draft.segments = draft.segments.map((s, i) => ({
@@ -1407,8 +1404,6 @@ const TransportApp = ({ userProfileData }) => {
                                 : ''),
                             dayKey: v.dayKey || null,
                             isWalking: v.isWalking === true,
-                            walkingSetAt: v.walkingSetAt || null,
-                            walkingSetBy: v.walkingSetBy || null,
                             intermediateStopIds: Array.isArray(v.intermediateStopIds)
                                 ? v.intermediateStopIds
                                 : (Array.isArray(v.intermediateStops)
@@ -5419,8 +5414,6 @@ const TransportApp = ({ userProfileData }) => {
                     );
                     if (old) {
                         s.isWalking = old.isWalking === true;
-                        s.walkingSetAt = old.walkingSetAt || null;
-                        s.walkingSetBy = old.walkingSetBy || null;
                     }
                 });
             } else {
@@ -5434,8 +5427,6 @@ const TransportApp = ({ userProfileData }) => {
                     );
                     if (old) {
                         s.isWalking = old.isWalking === true;
-                        s.walkingSetAt = old.walkingSetAt || null;
-                        s.walkingSetBy = old.walkingSetBy || null;
                     }
                 });
             }
@@ -5855,8 +5846,6 @@ const TransportApp = ({ userProfileData }) => {
                         );
                         if (old) {
                             s.isWalking = old.isWalking === true;
-                            s.walkingSetAt = old.walkingSetAt || null;
-                            s.walkingSetBy = old.walkingSetBy || null;
                             s.busAssigned = old.busAssigned === true;
                             s.busId = old.busId || null;
                             s.boardingRowId = old.boardingRowId || null;
@@ -6683,8 +6672,6 @@ const TransportApp = ({ userProfileData }) => {
         }
         if (draft.isWalking === true) {
             payload.isWalking = true;
-            payload.walkingSetAt = draft.walkingSetAt || Timestamp.fromDate(new Date());
-            payload.walkingSetBy = draft.walkingSetBy || (userProfileData && userProfileData.email) || null;
         }
 
         await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: { [parent.key]: payload } }, { merge: true });
@@ -6728,8 +6715,6 @@ const TransportApp = ({ userProfileData }) => {
             }
             if (draft.isWalking === true) {
                 basePayload.isWalking = true;
-                basePayload.walkingSetAt = draft.walkingSetAt || Timestamp.fromDate(new Date());
-                basePayload.walkingSetBy = draft.walkingSetBy || (userProfileData && userProfileData.email) || null;
             }
             return basePayload;
         })();
@@ -6773,12 +6758,8 @@ const TransportApp = ({ userProfileData }) => {
                 busAssigned: false,
             }));
             payload.isWalking = true;
-            payload.walkingSetAt = draft.walkingSetAt || Timestamp.fromDate(new Date());
-            payload.walkingSetBy = draft.walkingSetBy || (userProfileData && userProfileData.email) || null;
         } else {
             payload.isWalking = deleteField();
-            payload.walkingSetAt = deleteField();
-            payload.walkingSetBy = deleteField();
         }
     
         await setDoc(docRef, { [TRANSPORT_TRANSFERS_FIELD]: { [parentKey]: payload } }, { merge: true });
@@ -6843,8 +6824,6 @@ const TransportApp = ({ userProfileData }) => {
                     draft.segments[segIdx].startTs = null;
                     draft.segments[segIdx].endTs = null;
                     draft.segments[segIdx].when = null;
-                    draft.segments[segIdx].walkingSetAt = Timestamp.fromDate(new Date());
-                    draft.segments[segIdx].walkingSetBy = (userProfileData && userProfileData.email) || null;
                 } else {
                     draft.segments.forEach((s) => {
                         s.isWalking = true;
@@ -6855,16 +6834,12 @@ const TransportApp = ({ userProfileData }) => {
                         s.startTs = null;
                         s.endTs = null;
                         s.when = null;
-                        s.walkingSetAt = Timestamp.fromDate(new Date());
-                        s.walkingSetBy = (userProfileData && userProfileData.email) || null;
                     });
                     if (draft.when && String(draft.when).trim() !== '') {
                     } else if (parent.when && String(parent.when).trim() !== '') {
                         draft.when = parent.when;
                     }
                     draft.isWalking = true;
-                    draft.walkingSetAt = Timestamp.fromDate(new Date());
-                    draft.walkingSetBy = (userProfileData && userProfileData.email) || null;
                 }
             });
     
@@ -6875,22 +6850,16 @@ const TransportApp = ({ userProfileData }) => {
                 if (segIdx !== -1) {
                     draft.segments[segIdx].isWalking = true;
                     draft.segments[segIdx].busAssigned = false;
-                    draft.segments[segIdx].walkingSetAt = Timestamp.fromDate(new Date());
-                    draft.segments[segIdx].walkingSetBy = (userProfileData && userProfileData.email) || null;
                 } else {
                     draft.segments.forEach((s) => {
                         s.isWalking = true;
                         s.busAssigned = false;
-                        s.walkingSetAt = Timestamp.fromDate(new Date());
-                        s.walkingSetBy = (userProfileData && userProfileData.email) || null;
                     });
                     if (draft.when && String(draft.when).trim() !== '') {
                     } else if (parent.when && String(parent.when).trim() !== '') {
                         draft.when = parent.when;
                     }
                     draft.isWalking = true;
-                    draft.walkingSetAt = Timestamp.fromDate(new Date());
-                    draft.walkingSetBy = (userProfileData && userProfileData.email) || null;
                 }
             });
     
@@ -6921,8 +6890,6 @@ const TransportApp = ({ userProfileData }) => {
                 if (segIdx !== -1) {
                     const seg = draft.segments[segIdx];
                     seg.isWalking = false;
-                    seg.walkingSetAt = null;
-                    seg.walkingSetBy = null;
                     seg.busId = null;
                     seg.boardingRowId = null;
                     seg.alightingRowId = null;
@@ -6960,15 +6927,11 @@ const TransportApp = ({ userProfileData }) => {
                 } else {
                     draft.segments.forEach((s) => {
                         s.isWalking = false;
-                        s.walkingSetAt = null;
-                        s.walkingSetBy = null;
                         s.busId = null;
                         s.boardingRowId = null;
                         s.alightingRowId = null;
                     });
                     draft.isWalking = false;
-                    draft.walkingSetAt = null;
-                    draft.walkingSetBy = null;
                 }
     
                 if (originalParentWhen) {
