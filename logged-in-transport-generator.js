@@ -4187,6 +4187,15 @@ class TransportGenerator {
                                 return foundNumbered;
                             })();
                         
+                            // ═══════════════════════════════════════════════════════════════════════
+                            // UPRAVENÁ ČASŤ – presun cez miesto zrazu na miesto nástupu/výstupu
+                            // (posledný deň turnaja pre SUPERSTRUCTURE tím)
+                            //
+                            // ZMENA: Pre tímy, ktoré majú zápas v semifinále / štvrťfinále /
+                            // osemfinále / 16-finále (a ich názov tímu obsahuje názov kategórie),
+                            // sa čas začiatku presunu nastaví až po najneskoršom konci pavúkového
+                            // zápasu v posledný deň turnaja.
+                            // ═══════════════════════════════════════════════════════════════════════
                             if (pavukFutureMatchExists) {
                                 // Tím ešte bude hrať ďalší zápas v pavúku na neskorší deň
                                 // → negeneruj presun na miesto nástupu/výstupu.
@@ -4202,14 +4211,14 @@ class TransportGenerator {
                                     const fromStops = (this.ctx.stopsList || []).find((p) => p.isMeetingPointStop === true);
                                     return fromStops || null;
                                 })();
-                        
+                            
                                 const externalArrivalStopForLastDay = (() => {
                                     const fromAllPlaces = (this.ctx.allPlacesRef?.current || []).find((p) => p.isExternalArrivalStop === true);
                                     if (fromAllPlaces) return fromAllPlaces;
                                     const fromStops = (this.ctx.stopsList || []).find((p) => p.isExternalArrivalStop === true);
                                     return fromStops || null;
                                 })();
-                        
+                            
                                 if (
                                     isSuperstructureTeamForLastDay &&
                                     !isPavukTeamForLastDay &&
@@ -4217,11 +4226,134 @@ class TransportGenerator {
                                     externalArrivalStopForLastDay &&
                                     !this.isSamePlaceForTransfer(current.location, externalArrivalStopForLastDay.name)
                                 ) {
-                                    const departureTs = current.endTs != null ? current.endTs : current.startTs;
+                                    // ───────────────────────────────────────────────────────────────────
+                                    // NOVÉ: Zisti, či tím hrá v posledný deň turnaja pavúkový zápas
+                                    // typu semifinále / štvrťfinále / osemfinále / 16-finále
+                                    // a jeho názov tímu obsahuje názov kategórie.
+                                    // Ak áno, čas odchodu sa posunie až po najneskorší koniec
+                                    // pavúkového zápasu v posledný deň turnaja.
+                                    // ───────────────────────────────────────────────────────────────────
+                                    const isPavukPlayoffMatchLastDay = (() => {
+                                        const teamNameStr = String(teamName || '').trim();
+                                        const catStr = String(category || '').trim();
+                            
+                                        // Názov tímu musí obsahovať názov kategórie
+                                        if (!teamNameStr || !catStr) return false;
+                                        if (!teamNameStr.includes(catStr)) return false;
+                            
+                                        // Kontrola prefixu pavúkového zápasu v názve tímu
+                                        // (SF = semifinále, QF = štvrťfinále, 8F/16F = osemfinále/16-finále)
+                                        const hasPlayoffPrefix = SPIDER_IDENTIFIER_REGEX.test(teamNameStr);
+                                        if (!hasPlayoffPrefix) return false;
+                            
+                                        // Skontroluj, či tím má v posledný deň turnaja naozaj zápas
+                                        // v pavúku (semifinále / štvrťfinále / osemfinále / 16-finále)
+                                        const hasPlayoffMatchOnLastDay = (this.ctx.matchesBufferRef?.current || []).some((m) => {
+                                            if (cleanCategory(m.category) !== cleanCategory(category)) return false;
+                                            if (m.home !== teamName && m.away !== teamName) return false;
+                            
+                                            // Deň zápasu musí byť posledný deň turnaja
+                                            let dayKey = null;
+                                            if (m.scheduledTime) {
+                                                const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                                if (mm) {
+                                                    dayKey = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
+                                                }
+                                            }
+                                            if (!dayKey && m.scheduledTs != null) {
+                                                const dt = new Date(m.scheduledTs);
+                                                dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                            }
+                                            if (dayKey !== globalLastDay) return false;
+                            
+                                            // Musí ísť o pavúkový zápas (SF/QF/8F/16F) – určené podľa
+                                            // názvu tímu alebo špeciálneho označenia v zápase
+                                            const matchTeams = [m.home, m.away].filter(Boolean);
+                                            return matchTeams.some((tn) => {
+                                                const s = String(tn).trim();
+                                                if (!SPIDER_IDENTIFIER_REGEX.test(s)) return false;
+                                                const prefixMatch = new RegExp(
+                                                    '\\b(' + SPIDER_IDENTIFIER_PREFIXES.join('|') + ')',
+                                                    'i'
+                                                ).exec(s);
+                                                if (!prefixMatch) return false;
+                                                const prefix = prefixMatch[1].toUpperCase();
+                                                // Semifinále, štvrťfinále, osemfinále, 16-finále
+                                                return (
+                                                    prefix === 'WSF' || prefix === 'LSF' ||
+                                                    prefix === 'WQF' || prefix === 'LQF' ||
+                                                    prefix === 'W8F' || prefix === 'L8F' ||
+                                                    prefix === 'W16F' || prefix === 'L16F'
+                                                );
+                                            });
+                                        });
+                            
+                                        return hasPlayoffMatchOnLastDay;
+                                    })();
+                            
+                                    // Základný čas odchodu = koniec aktuálnej udalosti
+                                    let departureTs = current.endTs != null ? current.endTs : current.startTs;
+                            
+                                    // Ak ide o pavúkový playoff zápas v posledný deň → posuň odchod
+                                    // až po najneskorší koniec pavúkového zápasu v posledný deň turnaja
+                                    if (isPavukPlayoffMatchLastDay) {
+                                        let latestPavukEndTsOnLastDay = null;
+                            
+                                        (this.ctx.matchesBufferRef?.current || []).forEach((m) => {
+                                            if (cleanCategory(m.category) !== cleanCategory(category)) return;
+                            
+                                            // Deň zápasu musí byť posledný deň turnaja
+                                            let dayKey = null;
+                                            if (m.scheduledTime) {
+                                                const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                                if (mm) {
+                                                    dayKey = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
+                                                }
+                                            }
+                                            if (!dayKey && m.scheduledTs != null) {
+                                                const dt = new Date(m.scheduledTs);
+                                                dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                            }
+                                            if (dayKey !== globalLastDay) return;
+                            
+                                            // Musí ísť o pavúkový zápas (SF/QF/8F/16F)
+                                            const matchTeams = [m.home, m.away].filter(Boolean);
+                                            const isPavukPlayoff = matchTeams.some((tn) => {
+                                                const s = String(tn).trim();
+                                                if (!SPIDER_IDENTIFIER_REGEX.test(s)) return false;
+                                                const prefixMatch = new RegExp(
+                                                    '\\b(' + SPIDER_IDENTIFIER_PREFIXES.join('|') + ')',
+                                                    'i'
+                                                ).exec(s);
+                                                if (!prefixMatch) return false;
+                                                const prefix = prefixMatch[1].toUpperCase();
+                                                return (
+                                                    prefix === 'WSF' || prefix === 'LSF' ||
+                                                    prefix === 'WQF' || prefix === 'LQF' ||
+                                                    prefix === 'W8F' || prefix === 'L8F' ||
+                                                    prefix === 'W16F' || prefix === 'L16F'
+                                                );
+                                            });
+                                            if (!isPavukPlayoff) return;
+                            
+                                            const endTs = m.scheduledEndTs != null
+                                                ? m.scheduledEndTs
+                                                : (m.scheduledTs != null ? m.scheduledTs : null);
+                                            if (endTs == null) return;
+                                            if (latestPavukEndTsOnLastDay == null || endTs > latestPavukEndTsOnLastDay) {
+                                                latestPavukEndTsOnLastDay = endTs;
+                                            }
+                                        });
+                            
+                                        if (latestPavukEndTsOnLastDay != null) {
+                                            departureTs = latestPavukEndTsOnLastDay;
+                                        }
+                                    }
+                            
                                     const departureStr = formatFullFromTs(departureTs) || current.when;
                                     const arrivalTs = timestampOnDay(departureTs, 23, 59);
                                     const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
-                        
+                            
                                     if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
                                         // Zisti, či miesto zrazu nie je rovnaké ako niektorý z koncových bodov
                                         const mpIsSameAsFrom = this.isSamePlaceForTransfer(
@@ -4232,17 +4364,17 @@ class TransportGenerator {
                                             meetingPointStopForLastDay.name,
                                             externalArrivalStopForLastDay.name
                                         );
-                        
+                            
                                         const intermediateStopIds = mpIsSameAsFrom || mpIsSameAsTo
                                             ? []
                                             : [meetingPointStopForLastDay.id];
-                        
+                            
                                         const textParts = [`Presun z ${current.location}`];
                                         if (intermediateStopIds.length > 0) {
                                             textParts.push(`cez miesto zrazu ${meetingPointStopForLastDay.name}`);
                                         }
                                         textParts.push(`do ${externalArrivalStopForLastDay.name}`);
-                        
+                            
                                         enriched.push({
                                             ts: current.ts + 1,
                                             when: `${departureStr} – ${arrivalStr}`,
