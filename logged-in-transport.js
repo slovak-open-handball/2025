@@ -5544,47 +5544,10 @@ const TransportApp = ({ userProfileData }) => {
         const fromPlaceFilter = selectedFromPlaceFilter || null;
         const toPlaceFilter = selectedToPlaceFilter || null;
 
-        // === BULK-DEBUG START ===
-        console.log('[BULK-DEBUG] === applyBulkIntermediateStop ===');
-        console.log('[BULK-DEBUG] side =', side);
-        console.log('[BULK-DEBUG] stopId =', stopId);
-        console.log('[BULK-DEBUG] stopName =', stopName);
-        console.log('[BULK-DEBUG] dayKeyFilter =', dayKeyFilter);
-        console.log('[BULK-DEBUG] categoryFilter =', categoryFilter);
-        console.log('[BULK-DEBUG] fromPlaceFilter =', fromPlaceFilter);
-        console.log('[BULK-DEBUG] fromPlaceFilter resolved =', fromPlaceFilter ? resolvePlaceNameById(fromPlaceFilter) : null);
-        console.log('[BULK-DEBUG] toPlaceFilter =', toPlaceFilter);
-        console.log('[BULK-DEBUG] toPlaceFilter resolved =', toPlaceFilter ? resolvePlaceNameById(toPlaceFilter) : null);
-        console.log('[BULK-DEBUG] savedTransfersRef.current.length =', (savedTransfersRef.current || []).length);
-        console.log('[BULK-DEBUG] all parents:');
-        (savedTransfersRef.current || []).forEach((t, i) => {
-            console.log(`  [${i}]`, {
-                key: t.key,
-                isWalking: t.isWalking,
-                _parentKey: t._parentKey,
-                dayKey: t.dayKey,
-                category: t.category,
-                fromId: t.fromId,
-                fromName: resolvePlaceNameById(t.fromId),
-                toId: t.toId,
-                toName: resolvePlaceNameById(t.toId),
-                hasStop: (() => {
-                    if (!t || !stopId) return false;
-                    const sid = String(stopId);
-                    if (String(t.fromId || '') === sid) return true;
-                    if (String(t.toId || '') === sid) return true;
-                    const existingStops = Array.isArray(t.intermediateStopIds) ? t.intermediateStopIds : [];
-                    if (existingStops.some((s) => String(s) === sid)) return true;
-                    const segs = Array.isArray(t.segments) ? t.segments : [];
-                    if (segs.some((s) => s && (String(s.fromId || '') === sid || String(s.toId || '') === sid))) return true;
-                    return false;
-                })(),
-            });
-        });
+        // Normalizované názvy pre porovnávanie (bez prefixov/sufixov)
+        const stopNormToCheck = normalizePlaceName(stopName);
 
-        const stopNormToCheck = normalizePlaceName(resolvePlaceNameById(stopId) || '');
-
-        const parentAlreadyContainsStop = (t, _stopIdToCheck) => {
+        const parentAlreadyContainsStop = (t) => {
             if (!t) return false;
             if (!stopNormToCheck) return false;
 
@@ -5609,51 +5572,46 @@ const TransportApp = ({ userProfileData }) => {
             if (segs.some((s) => s && (nameMatches(s.fromId) || nameMatches(s.toId)))) {
                 return true;
             }
-        
+
             return false;
         };
 
-        // NOVÉ: priprav normalizované názvy pre filtre (aby sme porovnávali názvy, nie ID,
-        // pre prípad, že existujú duplicitné miesta s rovnakým názvom ale rôznym ID).
         const fromFilterNorm = fromPlaceFilter
             ? normalizePlaceName(resolvePlaceNameById(fromPlaceFilter) || '')
             : '';
         const toFilterNorm = toPlaceFilter
             ? normalizePlaceName(resolvePlaceNameById(toPlaceFilter) || '')
             : '';
-        
+
         const placeMatchesFilter = (placeId, targetNorm) => {
             if (!targetNorm) return true;
             const nameNorm = normalizePlaceName(resolvePlaceNameById(placeId) || '');
             return nameNorm && nameNorm === targetNorm;
         };
-        
-        const expandedSegmentsAll = buildExpandedTransfersForFilter();
 
+        // Zoznam parentov, ktorých sa má úprava týkať – vytvorený RAZ na začiatku.
+        const expandedSegmentsAll = buildExpandedTransfersForFilter();
         const candidateParentKeys = new Set();
-        
+
         expandedSegmentsAll.forEach((seg) => {
             const parent = seg.parent;
             if (!parent) return;
             if (parent.isWalking === true) return;
             if (dayKeyFilter && parent.dayKey !== dayKeyFilter) return;
             if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) return;
-        
-            // Filter podľa fromId segmentu
+
             if (fromFilterNorm) {
                 if (!placeMatchesFilter(seg.fromId, fromFilterNorm)) return;
             }
-            // Filter podľa toId segmentu
             if (toFilterNorm) {
                 if (!placeMatchesFilter(seg.toId, toFilterNorm)) return;
             }
-        
-            // Ak už parent obsahuje stopId, preskočiť
-            if (parentAlreadyContainsStop(parent, stopId)) return;
-        
+
+            if (parentAlreadyContainsStop(parent)) return;
+
             candidateParentKeys.add(parent.key);
         });
-        
+
         const candidateParents = (savedTransfersRef.current || []).filter(
             (t) => candidateParentKeys.has(t.key)
         );
@@ -5671,17 +5629,27 @@ const TransportApp = ({ userProfileData }) => {
         const updatedParentKeys = [];
 
         try {
-            for (const parent of candidateParents) {
+            for (const candidateParent of candidateParents) {
                 try {
-                    const existingStops = Array.isArray(parent.intermediateStopIds)
-                        ? [...parent.intermediateStopIds]
-                        : [];
-
-                    // Dvojitá kontrola (pre istotu, keby sa dáta zmenili počas iterácie)
-                    if (parentAlreadyContainsStop(parent, stopId)) {
+                    // NOVÉ: Vždy si vytiahni AKTUÁLNY parent zo savedTransfersRef.current
+                    // (mohol sa medzičasom zmeniť predchádzajúcimi iteráciami).
+                    const currentParent = (savedTransfersRef.current || []).find(
+                        (p) => p.key === candidateParent.key
+                    );
+                    if (!currentParent) {
                         skippedCount += 1;
                         continue;
                     }
+
+                    // NOVÉ: Dvojitá kontrola na AKTUÁLNOM parentovi – ak už obsahuje stopId, preskoč.
+                    if (parentAlreadyContainsStop(currentParent)) {
+                        skippedCount += 1;
+                        continue;
+                    }
+
+                    const existingStops = Array.isArray(currentParent.intermediateStopIds)
+                        ? [...currentParent.intermediateStopIds]
+                        : [];
 
                     let newStopIds;
                     if (side === 'from') {
@@ -5690,19 +5658,18 @@ const TransportApp = ({ userProfileData }) => {
                         newStopIds = [...existingStops, stopId];
                     }
 
-                    const draft = {
-                        ...parent,
-                        intermediateStopIds: newStopIds,
-                        segments: Array.isArray(parent.segments)
-                            ? parent.segments.map((s) => ({ ...s }))
-                            : buildDefaultSegments(parent),
-                    };
+                    // Vytvor nový zoznam segmentov podľa novej trasy
+                    const oldSegments = Array.isArray(currentParent.segments)
+                        ? currentParent.segments
+                        : [];
 
-                    const oldSegments = Array.isArray(parent.segments) ? parent.segments : [];
-                    const newDefaultSegments = buildDefaultSegments({
-                        ...draft,
+                    const baseDraft = {
+                        ...currentParent,
                         intermediateStopIds: newStopIds,
-                    });
+                    };
+                    const newDefaultSegments = buildDefaultSegments(baseDraft);
+
+                    // Zachovaj staré vlastnosti segmentov, ktoré sa zhodujú (fromId+toId)
                     newDefaultSegments.forEach((s) => {
                         const old = oldSegments.find(
                             (o) => o.fromId === s.fromId && o.toId === s.toId
@@ -5720,23 +5687,30 @@ const TransportApp = ({ userProfileData }) => {
                             s.when = old.when || null;
                         }
                     });
-                    draft.segments = newDefaultSegments;
 
-                    if (parent.when && String(parent.when).trim() !== '') {
-                        draft.when = parent.when;
+                    const draft = {
+                        ...currentParent,
+                        intermediateStopIds: newStopIds,
+                        segments: newDefaultSegments,
+                    };
+
+                    // Zachovaj pôvodný when, ak existuje
+                    if (currentParent.when && String(currentParent.when).trim() !== '') {
+                        draft.when = currentParent.when;
                     }
 
                     recomputeParentSegmentsInPlace(draft);
 
-                    await updateParentTransfer(parent.key, (d) => {
+                    await updateParentTransfer(currentParent.key, (d) => {
                         d.intermediateStopIds = newStopIds;
                         d.segments = draft.segments.map((s) => ({ ...s }));
                         d.when = draft.when;
                     });
 
-                    updatedParentKeys.push(parent.key);
+                    updatedParentKeys.push(currentParent.key);
                     updatedCount += 1;
                 } catch (e) {
+                    console.error('[BULK] Chyba pri úprave parenta:', e);
                     skippedCount += 1;
                 } finally {
                     setBulkIntermediateRemaining((prev) => Math.max(0, prev - 1));
@@ -5783,6 +5757,7 @@ const TransportApp = ({ userProfileData }) => {
                 }
             }
         } catch (err) {
+            console.error('[BULK] Celková chyba:', err);
             window.showGlobalNotification('Nepodarilo sa hromadne pridať medzizastávku.', 'error');
         } finally {
             setBulkIntermediateSaving(false);
