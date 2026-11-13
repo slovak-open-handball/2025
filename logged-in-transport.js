@@ -5743,7 +5743,41 @@ const TransportApp = ({ userProfileData }) => {
             currentStopId: stopId,
         });
 
-        console.log('[BULK-DEBUG] candidateParents.length =', candidateParents.length);
+        console.log('[BULK-DEBUG] selectedFromPlaceFilter =', selectedFromPlaceFilter);
+        console.log('[BULK-DEBUG] resolvePlaceNameById(selectedFromPlaceFilter) =', resolvePlaceNameById(selectedFromPlaceFilter));
+        console.log('[BULK-DEBUG] fromFilterNorm =', JSON.stringify(
+            selectedFromPlaceFilter
+                ? normalizePlaceName(resolvePlaceNameById(selectedFromPlaceFilter) || '')
+                : ''
+        ));
+        console.log('[BULK-DEBUG] bulkIntermediateStopId =', bulkIntermediateStopId);
+        console.log('[BULK-DEBUG] resolvePlaceNameById(bulkIntermediateStopId) =', resolvePlaceNameById(bulkIntermediateStopId));
+        console.log('[BULK-DEBUG] stopNormToCheck =', JSON.stringify(
+            bulkIntermediateStopId
+                ? normalizePlaceName(resolvePlaceNameById(bulkIntermediateStopId) || '')
+                : ''
+        ));
+        console.log('[BULK-DEBUG] savedTransfers count =', (savedTransfersRef.current || []).length);
+        (savedTransfersRef.current || []).forEach((p) => {
+            if (p._parentKey && p._parentKey !== p.key) return;
+            const pFromNorm = normalizePlaceName(resolvePlaceNameById(p.fromId) || '');
+            const segContainsStop = (p.segments || []).some((s) => {
+                if (!s) return false;
+                const sFromNorm = normalizePlaceName(resolvePlaceNameById(s.fromId) || '');
+                const sToNorm = normalizePlaceName(resolvePlaceNameById(s.toId) || '');
+                return sFromNorm === stopNormToCheck || sToNorm === stopNormToCheck;
+            });
+            console.log('[BULK-DEBUG] parent', {
+                key: p.key,
+                teamName: p.teamName,
+                fromId: p.fromId,
+                fromNorm: pFromNorm,
+                isWalking: p.isWalking,
+                dayKey: p.dayKey,
+                matchFrom: pFromNorm === fromFilterNorm,
+                alreadyContainsStop: segContainsStop,
+            });
+        });
 
         if (candidateParents.length === 0) {
             window.showGlobalNotification('Pre zvolený filter nie sú žiadne presuny bez tejto zastávky.', 'info');
