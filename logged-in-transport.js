@@ -5744,6 +5744,21 @@ const TransportApp = ({ userProfileData }) => {
         console.log('[BULK-DEBUG] candidateParentKeys.size =', candidateParentKeys.size);
         console.log('[BULK-DEBUG] candidateParents.length =', candidateParents.length);
 
+        // DEBUG: vypíš prvých 5 segmentov
+        expandedSegmentsForFilter.slice(0, 5).forEach((seg, idx) => {
+            console.log(`[BULK-SEG-DEBUG ${idx}]`, {
+                parentKey: seg.parentKey,
+                fromId: seg.fromId,
+                fromIdNorm: getPlaceNormalizedName(seg.fromId),
+                toId: seg.toId,
+                toIdNorm: getPlaceNormalizedName(seg.toId),
+                fromPlaceFilterNorm: fromPlaceFilter ? getPlaceNormalizedName(fromPlaceFilter) : null,
+                placeMatchesFrom: fromPlaceFilter ? placeMatchesFilter(seg.fromId, fromPlaceFilter) : null,
+                parentAlreadyContainsStop: parentAlreadyContainsStop(seg.parent),
+            });
+        });
+        // DEBUG: vypíš prvých 5 segmentov
+
         if (candidateParents.length === 0) {
             window.showGlobalNotification('Pre zvolený filter nie sú žiadne presuny bez tejto zastávky.', 'info');
             return;
