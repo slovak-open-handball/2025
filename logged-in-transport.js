@@ -5723,9 +5723,6 @@ const TransportApp = ({ userProfileData }) => {
             }
         });
 
-        // Namiesto manuálneho skladania použij rovnakú logiku ako modál
-        const expandedSegmentsForFilter = buildExpandedTransfersForFilter();
-
         // Filtrovanie segmentov podľa fromPlaceFilter / toPlaceFilter
         expandedSegmentsForFilter.forEach((seg) => {
             const parent = seg.parent;
