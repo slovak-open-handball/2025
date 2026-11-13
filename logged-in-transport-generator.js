@@ -4028,7 +4028,17 @@ class TransportGenerator {
                                 // obe písmená a všetky ich pokračovania.
                                 // ───────────────────────────────────────────────────────────────────
                                 const teamNameStr = String(teamName || '').trim();
-                                const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(teamNameStr);
+                                const stripCategoryPrefix = (tn, cat) => {
+                                    if (!tn) return '';
+                                    const s = String(tn).trim();
+                                    const c = String(cat || '').trim();
+                                    if (!c) return s;
+                                    if (s === c) return '';
+                                    if (s.startsWith(c + ' ')) return s.slice(c.length + 1).trim();
+                                    return s;
+                                };
+                                const bareTeamName = stripCategoryPrefix(teamNameStr, category);
+                                const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(bareTeamName);
                                 const nameChar = nameCharMatch ? nameCharMatch[1].toUpperCase() : null;
                             
                                 const teamInfo = (this.ctx.teamsArrivalBufferRef?.current || []).find(
@@ -4098,7 +4108,7 @@ class TransportGenerator {
                                 // ───────────────────────────────────────────────────────────────────
                                 const isSpecialPavukTeam = (tn) => {
                                     if (!tn) return false;
-                                    const s = String(tn).trim();
+                                    const s = stripCategoryPrefix(tn, category);
                                     return /^(W|L)(32F|16F|8F|QF|SF)\d+$/i.test(s);
                                 };
                             
@@ -4106,14 +4116,12 @@ class TransportGenerator {
                                 // (alebo do niektorej z pokračujúcich skupín).
                                 const teamBelongsToContinuation = (tn) => {
                                     if (!tn) return false;
-                                    const s = String(tn).trim();
-                                    // Štandardný SS tím typu "4C", "5H", ...
-                                    const m = /\d([A-ZÁ-Ž])\s*$/.exec(s);
-                                    if (m && continuationCharsSet.has(m[1].toUpperCase())) return true;
-                                    // Tím má groupName – skontroluj posledné písmeno groupName
+                                    const s = stripCategoryPrefix(tn, category);
+                                    const m = /^\s*(\d+)([A-ZÁ-Ž])\d*\s*$/i.exec(s);
+                                    if (m && continuationCharsSet.has(m[2].toUpperCase())) return true;
                                     const info = (this.ctx.teamsArrivalBufferRef?.current || []).find(
                                         (t) => cleanCategory(t.category) === cleanCategory(category)
-                                            && String(t.teamName || '').trim() === s
+                                            && String(t.teamName || '').trim() === String(tn).trim()
                                     );
                                     if (info && info.groupName) {
                                         const gChar = getGroupLastChar(info.groupName);
@@ -4150,12 +4158,10 @@ class TransportGenerator {
                                         }
                                     }
                             
-                                    // Skontroluj oba tímy v zápase
                                     [m.home, m.away].forEach((tn) => {
                                         if (!tn) return;
-                                        const s = String(tn).trim();
-                            
-                                        // 1) Štandardný pavúkový tím typu "<číslo><písmeno>"
+                                        const s = stripCategoryPrefix(tn, category);
+                                    
                                         const matchNumbered = pavukNumberedRegex.exec(s);
                                         if (matchNumbered) {
                                             const char = matchNumbered[2].toUpperCase();
@@ -4163,11 +4169,9 @@ class TransportGenerator {
                                                 foundNumbered = true;
                                             }
                                         }
-                            
-                                        // 2) Špeciálny pavúkový tím (LSF01, WSF01, ...)
-                                        //    – ak je v zápase, skontroluj druhý tím v zápase
-                                        if (isSpecialPavukTeam(s)) {
-                                            const otherTn = (String(m.home).trim() === s ? m.away : m.home);
+
+                                        if (isSpecialPavukTeam(tn)) {
+                                            const otherTn = (String(m.home).trim() === String(tn).trim() ? m.away : m.home);
                                             if (otherTn && teamBelongsToContinuation(otherTn)) {
                                                 foundNumbered = true;
                                             }
