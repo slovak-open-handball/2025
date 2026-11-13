@@ -9330,7 +9330,6 @@ const TransportApp = ({ userProfileData }) => {
                                 onClick: async () => {
                                     if (walkingBatchSaving) return;
                                 
-                                    // Vypočítame počet kandidátov pre tento deň a kategóriu
                                     const dayKeyFilter = selectedDayKey || null;
                                     const categoryFilter = selectedCategoryFilter
                                         ? cleanCategory(selectedCategoryFilter)
@@ -9352,36 +9351,24 @@ const TransportApp = ({ userProfileData }) => {
                                         if (!Array.isArray(parent.segments)) continue;
                                         if (dayKeyFilter && parent.dayKey !== dayKeyFilter) continue;
                                         if (categoryFilter && cleanCategory(parent.category || '') !== categoryFilter) continue;
-                                
-                                        const stopsIds = Array.isArray(parent.intermediateStopIds)
-                                            ? parent.intermediateStopIds
-                                            : [];
-                                        const isDirectTransfer = stopsIds.length === 0;
-                                
-                                        if (isDirectTransfer) {
+                                        const stopsIds = Array.isArray(parent.intermediateStopIds) ? parent.intermediateStopIds : [];
+                                        if (stopsIds.length === 0) {
                                             if (parent.isWalking === true) continue;
-                                            const fromId = parent.fromId || null;
-                                            const toId = parent.toId || null;
-                                            if (!isPairWalking(fromId, toId)) continue;
-                                            const segIdx = findSegmentIndex(parent.segments, fromId, toId);
+                                            if (!isPairWalking(parent.fromId, parent.toId)) continue;
+                                            const segIdx = findSegmentIndex(parent.segments, parent.fromId, parent.toId);
                                             if (segIdx === -1) continue;
                                             const seg = parent.segments[segIdx];
-                                            if (!seg) continue;
-                                            if (seg.isWalking === true) continue;
+                                            if (!seg || seg.isWalking === true) continue;
                                             candidateCount += 1;
                                         } else {
                                             for (const seg of parent.segments) {
-                                                if (!seg) continue;
-                                                if (seg.isWalking === true) continue;
-                                                const segFromId = seg.fromId || null;
-                                                const segToId = seg.toId || null;
-                                                if (!isPairWalking(segFromId, segToId)) continue;
+                                                if (!seg || seg.isWalking === true) continue;
+                                                if (!isPairWalking(seg.fromId, seg.toId)) continue;
                                                 candidateCount += 1;
                                             }
                                         }
                                     }
                                 
-                                    // NOVÉ: Ak nie sú žiadni kandidáti, netreba nič robiť
                                     if (candidateCount === 0) {
                                         window.showGlobalNotification(
                                             'Pre zvolený deň a kategóriu neexistujú žiadne presuny, ktoré by zodpovedali pravidlám peši.',
@@ -9390,25 +9377,20 @@ const TransportApp = ({ userProfileData }) => {
                                         return;
                                     }
                                 
-                                    // NOVÉ: Nastav flag a počiatočný počet PRED začatím operácie
                                     setWalkingBatchSaving(true);
                                     setWalkingBatchRemaining(candidateCount);
                                 
                                     const walkingOptions = {
                                         dayKey: dayKeyFilter,
                                         category: categoryFilter,
-                                    };
-                                
-                                    // onProgress – ak TransportGenerator podporuje priebežný callback
-                                    if (window.TransportGenerator && typeof window.TransportGenerator.setAllWalkingTransfersAsWalking === 'function') {
-                                        walkingOptions.onProgress = ({ remaining, total, processed }) => {
+                                        onProgress: ({ remaining, total, processed }) => {
                                             if (remaining != null) {
                                                 setWalkingBatchRemaining(Math.max(0, Number(remaining) || 0));
                                             } else if (total != null && processed != null) {
                                                 setWalkingBatchRemaining(Math.max(0, Number(total) - Number(processed)));
                                             }
-                                        };
-                                    }
+                                        },
+                                    };
                                 
                                     try {
                                         await TransportGenerator.setAllWalkingTransfersAsWalking(walkingOptions);
