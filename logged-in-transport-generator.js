@@ -3992,10 +3992,11 @@ class TransportGenerator {
                             }
                         }
 
-                        // ═══════════════════════════════════════════════════════════════
-                        // NOVÉ: Pre SUPERSTRUCTURE tím – posledná udalosť tímu
-                        // v posledný deň turnaja → presun na miesto zrazu.
-                        // ═══════════════════════════════════════════════════════════════
+                        // ═══════════════════════════════════════════════════════════════════════
+                        // NOVÉ: Pre SUPERSTRUCTURE tím – posledná udalosť tímu v posledný deň
+                        // turnaja → presun na miesto nástupu/výstupu s miestom zrazu ako
+                        // medzizastávkou.
+                        // ═══════════════════════════════════════════════════════════════════════
                         if (
                             isVeryLastEventOfTeam &&
                             current.location &&
@@ -4010,33 +4011,67 @@ class TransportGenerator {
                             );
                             const isSuperstructureTeamForLastDay = !teamIsInUsersForLastDay;
                             const isPavukTeamForLastDay = isSpiderTeamName(teamName);
-
+                        
+                            // Miesto zrazu
                             const meetingPointStopForLastDay = (() => {
                                 const fromAllPlaces = (this.ctx.allPlacesRef?.current || []).find((p) => p.isMeetingPointStop === true);
                                 if (fromAllPlaces) return fromAllPlaces;
                                 const fromStops = (this.ctx.stopsList || []).find((p) => p.isMeetingPointStop === true);
                                 return fromStops || null;
                             })();
-
+                        
+                            // Miesto nástupu/výstupu (external arrival stop)
+                            const externalArrivalStopForLastDay = (() => {
+                                const fromAllPlaces = (this.ctx.allPlacesRef?.current || []).find((p) => p.isExternalArrivalStop === true);
+                                if (fromAllPlaces) return fromAllPlaces;
+                                const fromStops = (this.ctx.stopsList || []).find((p) => p.isExternalArrivalStop === true);
+                                return fromStops || null;
+                            })();
+                        
                             if (
                                 isSuperstructureTeamForLastDay &&
                                 !isPavukTeamForLastDay &&
                                 meetingPointStopForLastDay &&
-                                !this.isSamePlaceForTransfer(current.location, meetingPointStopForLastDay.name)
+                                externalArrivalStopForLastDay &&
+                                !this.isSamePlaceForTransfer(current.location, externalArrivalStopForLastDay.name)
                             ) {
                                 const departureTs = current.endTs != null ? current.endTs : current.startTs;
                                 const departureStr = formatFullFromTs(departureTs) || current.when;
                                 const arrivalTs = timestampOnDay(departureTs, 23, 59);
                                 const arrivalStr = formatFullFromTs(arrivalTs) || '23:59';
-
+                        
                                 if (!(departureTs != null && arrivalTs != null && departureTs >= arrivalTs)) {
+                                    // Zisti, či miesto zrazu nie je rovnaké ako niektorý z koncových bodov
+                                    const mpIsSameAsFrom = this.isSamePlaceForTransfer(
+                                        meetingPointStopForLastDay.name,
+                                        current.location
+                                    );
+                                    const mpIsSameAsTo = this.isSamePlaceForTransfer(
+                                        meetingPointStopForLastDay.name,
+                                        externalArrivalStopForLastDay.name
+                                    );
+                        
+                                    const intermediateStopIds = mpIsSameAsFrom || mpIsSameAsTo
+                                        ? []
+                                        : [meetingPointStopForLastDay.id];
+                        
+                                    const textParts = [`Presun z ${current.location}`];
+                                    if (intermediateStopIds.length > 0) {
+                                        textParts.push(`cez miesto zrazu ${meetingPointStopForLastDay.name}`);
+                                    }
+                                    textParts.push(`do ${externalArrivalStopForLastDay.name}`);
+                        
                                     enriched.push({
                                         ts: current.ts + 1,
                                         when: `${departureStr} – ${arrivalStr}`,
                                         type: 'transfer',
-                                        text: `Presun z ${current.location} do miesto zrazu ${meetingPointStopForLastDay.name}`,
+                                        text: textParts.join(' '),
                                         location: null,
                                         isTransfer: true,
+                                        // nové polia – prenesú sa do transfersPatch nižšie
+                                        _fromPlaceName: current.location,
+                                        _toPlaceName: externalArrivalStopForLastDay.name,
+                                        _intermediateStopIds: intermediateStopIds,
                                     });
                                 }
                             }
@@ -4152,25 +4187,37 @@ class TransportGenerator {
                             transfersForTeam.forEach((ev) => {
                                 let fromLocationText = '';
                                 let toLocationText = '';
-                                const m = /^Presun z (.+?) do (.+)$/.exec(String(ev.text || ''));
-                                if (m) {
-                                    fromLocationText = m[1].trim();
-                                    toLocationText = m[2].trim();
+                            
+                                // ───────────────────────────────────────────────────────────────
+                                // NOVÉ: preferuj explicitné polia z enriched udalosti
+                                // (obsahujú ich presuny s medzizastávkou – napr. posledný deň
+                                // turnaja pre SS tím: z miesta udalosti cez miesto zrazu
+                                // na miesto nástupu/výstupu).
+                                // ───────────────────────────────────────────────────────────────
+                                if (ev._fromPlaceName && ev._toPlaceName) {
+                                    fromLocationText = String(ev._fromPlaceName).trim();
+                                    toLocationText = String(ev._toPlaceName).trim();
+                                } else {
+                                    const m = /^Presun z (.+?)(?: cez miesto zrazu .+?)? do (.+)$/.exec(String(ev.text || ''));
+                                    if (m) {
+                                        fromLocationText = m[1].trim();
+                                        toLocationText = m[2].trim();
+                                    }
                                 }
-
+                            
                                 if (fromLocationText && toLocationText && this.isSamePlaceForTransfer(fromLocationText, toLocationText)) {
                                     return;
                                 }
-
+                            
                                 const fromId = this.resolvePlaceIdByName(fromLocationText);
                                 const toId = this.resolvePlaceIdByName(toLocationText);
-
+                            
                                 if (fromId && toId && fromId === toId) {
                                     return;
                                 }
-
+                            
                                 const evDayKey = extractDayKeyFromWhen(ev.when) || null;
-
+                            
                                 const existingParentWithStops = (this.ctx.savedTransfersRef?.current || []).find((s) => {
                                     if (cleanCategory(s.category || '') !== cleanCategory(category)) return false;
                                     if (String(s.teamName || '').trim() !== teamName) return false;
@@ -4182,7 +4229,7 @@ class TransportGenerator {
                                     if (!Array.isArray(s.intermediateStopIds) || s.intermediateStopIds.length === 0) return false;
                                     return true;
                                 });
-
+                            
                                 const existingDirectParent = (this.ctx.savedTransfersRef?.current || []).find((s) => {
                                     if (cleanCategory(s.category || '') !== cleanCategory(category)) return false;
                                     if (String(s.teamName || '').trim() !== teamName) return false;
@@ -4194,16 +4241,16 @@ class TransportGenerator {
                                     if (Array.isArray(s.intermediateStopIds) && s.intermediateStopIds.length > 0) return false;
                                     return true;
                                 });
-
+                            
                                 const key = existingParentWithStops
                                     ? existingParentWithStops.key
                                     : (existingDirectParent
                                         ? existingDirectParent.key
                                         : buildTransferKey(category, teamName, ev.when, ev.text));
                                 newKeys.add(key);
-
+                            
                                 const existingSaved = existingParentWithStops || existingDirectParent || (this.ctx.savedTransfersRef?.current || []).find((s) => s.key === key);
-
+                            
                                 const baseRecord = {
                                     category: cleanCategory(category),
                                     teamUid: effectiveTeamIdentifiers.teamUid,
@@ -4213,20 +4260,29 @@ class TransportGenerator {
                                     toId,
                                     dayKey: extractDayKeyFromWhen(ev.when) || null,
                                 };
-
+                            
+                                // ───────────────────────────────────────────────────────────────
+                                // NOVÉ: Prenes medzizastávky z enriched udalosti (ak existujú).
+                                // Priorita:
+                                //   1) explicitné ev._intermediateStopIds (nový posledný presun dňa)
+                                //   2) existujúce medzizastávky v existingSaved (zachovanie stavu)
+                                // ───────────────────────────────────────────────────────────────
+                                if (Array.isArray(ev._intermediateStopIds) && ev._intermediateStopIds.length > 0) {
+                                    baseRecord.intermediateStopIds = [...ev._intermediateStopIds];
+                                } else if (existingSaved && Array.isArray(existingSaved.intermediateStopIds) && existingSaved.intermediateStopIds.length > 0) {
+                                    baseRecord.intermediateStopIds = [...existingSaved.intermediateStopIds];
+                                }
+                            
                                 if (isSuperstructureTeamForDb) baseRecord.teamName = teamName;
-
+                            
                                 if (existingSaved) {
-                                    if (Array.isArray(existingSaved.intermediateStopIds) && existingSaved.intermediateStopIds.length > 0) {
-                                        baseRecord.intermediateStopIds = [...existingSaved.intermediateStopIds];
-                                    }
                                     if (existingSaved.isWalking === true) {
                                         baseRecord.isWalking = true;
                                         baseRecord.walkingSetAt = existingSaved.walkingSetAt || Timestamp.fromDate(new Date());
                                         baseRecord.walkingSetBy = existingSaved.walkingSetBy || (this.ctx.userProfileData && this.ctx.userProfileData.email) || null;
                                     }
                                 }
-
+                            
                                 const draft = {
                                     ...baseRecord,
                                     key,
@@ -4234,7 +4290,11 @@ class TransportGenerator {
                                         ? existingSaved.segments.map((s) => ({ ...s }))
                                         : buildDefaultSegments(baseRecord),
                                 };
-
+                            
+                                // ───────────────────────────────────────────────────────────────
+                                // Ak existuje záznam s medzizastávkami, dogeneruj chýbajúce
+                                // segmenty podľa aktuálneho poradia routeIds.
+                                // ───────────────────────────────────────────────────────────────
                                 if (existingSaved && Array.isArray(existingSaved.intermediateStopIds) && existingSaved.intermediateStopIds.length > 0) {
                                     const stopsIds = existingSaved.intermediateStopIds.filter(Boolean);
                                     const routeIdsRaw = [fromId, ...stopsIds, toId].filter(Boolean);
@@ -4242,7 +4302,7 @@ class TransportGenerator {
                                     routeIdsRaw.forEach((id) => {
                                         if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
                                     });
-
+                            
                                     const existingSegs = Array.isArray(draft.segments) ? draft.segments : [];
                                     const missingSegments = [];
                                     for (let i = 0; i < routeIds.length - 1; i++) {
@@ -4254,7 +4314,7 @@ class TransportGenerator {
                                             missingSegments.push({ fromId: segFrom, toId: segTo });
                                         }
                                     }
-
+                            
                                     if (missingSegments.length > 0) {
                                         const newSegments = [];
                                         for (let i = 0; i < routeIds.length - 1; i++) {
@@ -4281,9 +4341,48 @@ class TransportGenerator {
                                         draft.segments = newSegments;
                                     }
                                 }
-
+                            
+                                // ───────────────────────────────────────────────────────────────
+                                // Ak existujú nové medzizastávky z ev._intermediateStopIds,
+                                // zabezpeč, že draft.segments zodpovedajú routeIds
+                                // (fromId → ...medzizastávky... → toId).
+                                // ───────────────────────────────────────────────────────────────
+                                if (Array.isArray(ev._intermediateStopIds) && ev._intermediateStopIds.length > 0) {
+                                    const stopsIds = ev._intermediateStopIds.filter(Boolean);
+                                    const routeIdsRaw = [fromId, ...stopsIds, toId].filter(Boolean);
+                                    const routeIds = [];
+                                    routeIdsRaw.forEach((id) => {
+                                        if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
+                                    });
+                            
+                                    const existingSegs = Array.isArray(draft.segments) ? draft.segments : [];
+                                    const newSegments = [];
+                                    for (let i = 0; i < routeIds.length - 1; i++) {
+                                        const segFrom = routeIds[i];
+                                        const segTo = routeIds[i + 1];
+                                        if (segFrom === segTo) continue;
+                                        const existingSeg = existingSegs.find((s) => s.fromId === segFrom && s.toId === segTo);
+                                        if (existingSeg) {
+                                            newSegments.push({ ...existingSeg });
+                                        } else {
+                                            newSegments.push({
+                                                fromId: segFrom,
+                                                toId: segTo,
+                                                startTs: null,
+                                                endTs: null,
+                                                when: null,
+                                                isWalking: false,
+                                                busAssigned: false,
+                                                walkingSetAt: null,
+                                                walkingSetBy: null,
+                                            });
+                                        }
+                                    }
+                                    draft.segments = newSegments;
+                                }
+                            
                                 this.recomputeParentSegmentsInPlace(draft);
-
+                            
                                 transfersPatch[key] = {
                                     category: draft.category,
                                     teamUid: draft.teamUid,
@@ -4294,17 +4393,17 @@ class TransportGenerator {
                                     when: draft.when,
                                     segments: draft.segments,
                                 };
-
+                            
                                 if (isSuperstructureTeamForDb) transfersPatch[key].teamName = teamName;
                                 if (Array.isArray(draft.intermediateStopIds) && draft.intermediateStopIds.length > 0) {
                                     transfersPatch[key].intermediateStopIds = draft.intermediateStopIds;
                                 }
-
+                            
                                 if (draft.isWalking === true) {
                                     transfersPatch[key].isWalking = true;
                                     transfersPatch[key].walkingSetAt = draft.walkingSetAt;
                                     transfersPatch[key].walkingSetBy = draft.walkingSetBy;
-
+                            
                                     transfersPatch[key].when = '';
                                     transfersPatch[key].segments = (draft.segments || []).map((s) => ({
                                         ...s,
@@ -4314,7 +4413,7 @@ class TransportGenerator {
                                         busAssigned: false,
                                     }));
                                 }
-
+                            
                                 if (existingSaved) {
                                     if (existingSaved.isWalking === true) {
                                         transfersPatch[key].isWalking = true;
