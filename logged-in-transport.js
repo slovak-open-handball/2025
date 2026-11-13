@@ -14634,8 +14634,8 @@ const TransportApp = ({ userProfileData }) => {
                             type: 'button',
                             disabled: isGeneratingTransfers,
                             onClick: async () => {
+                                if (isGeneratingTransfers) return;
                                 const cat = regenTransfersModal.category;
-                                setRegenTransfersModal(null);
                                 setIsGeneratingTransfers(true);
                                 try {
                                     await TransportGenerator.generateTransfers({
@@ -14647,12 +14647,13 @@ const TransportApp = ({ userProfileData }) => {
                                     window.showGlobalNotification('Nepodarilo sa znova vygenerovať presuny.', 'error');
                                 } finally {
                                     setIsGeneratingTransfers(false);
+                                    setRegenTransfersModal(null);
                                 }
                             },
                             className: `px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                                 isGeneratingTransfers
-                                    ? 'bg-amber-400 text-white cursor-not-allowed opacity-80'
-                                    : 'bg-amber-600 text-white hover:bg-amber-700'
+                                    ? 'bg-green-400 text-white cursor-not-allowed opacity-80'
+                                    : 'bg-green-600 text-white hover:bg-green-700'
                             }`
                         },
                         isGeneratingTransfers
