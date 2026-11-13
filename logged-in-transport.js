@@ -14623,8 +14623,12 @@ const TransportApp = ({ userProfileData }) => {
                         'button',
                         {
                             type: 'button',
-                            onClick: () => setRegenTransfersModal(null),
-                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors'
+                            onClick: () => {
+                                if (isGeneratingTransfers) return;
+                                setRegenTransfersModal(null);
+                            },
+                            disabled: isGeneratingTransfers,
+                            className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
                         },
                         'Zrušiť'
                     ),
