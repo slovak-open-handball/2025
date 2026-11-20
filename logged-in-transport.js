@@ -12875,23 +12875,23 @@ const TransportApp = ({ userProfileData }) => {
                             'ul',
                             { className: 'space-y-2' },
                             editingTransferStops.map((stopValue, idx) => {
-                                const selectedElsewhere = editingTransferStops
-                                    .filter((_, i) => i !== idx)
-                                    .map((selectedPlaceName) => {
-                                        const name = String(selectedPlaceName || '').trim();
+                                const previousStopIndex = idx - 1;
+
+                                const previousStopName = previousStopIndex >= 0
+                                    ? String(editingTransferStops[previousStopIndex] || '').trim()
+                                    : '';
                                 
-                                        if (!name) {
-                                            return null;
-                                        }
+                                const previousStopType = previousStopIndex >= 0
+                                    ? String(
+                                        editingTransferStopTypes[previousStopIndex] || 'zastavka'
+                                    ).trim()
+                                    : '';
                                 
-                                        const placeId = resolvePlaceIdByName(name);
+                                const previousStopId = previousStopName
+                                    ? resolvePlaceIdByName(previousStopName)
+                                    : null;
                                 
-                                        return {
-                                            id: placeId ? String(placeId) : null,
-                                            norm: normalizePlaceName(name),
-                                        };
-                                    })
-                                    .filter(Boolean);
+                                const previousStopNameNorm = normalizePlaceName(previousStopName);
                                 
                                 const parentFromNameNorm = normalizePlaceName(
                                     resolvePlaceNameById(editingTransfer.fromId) || ''
@@ -12907,7 +12907,7 @@ const TransportApp = ({ userProfileData }) => {
                                     ? resolvePlaceIdByName(stopValue)
                                     : null;
                                 
-                                const currentStopNorm = normalizePlaceName(stopValue || '');
+                                const currentStopNameNorm = normalizePlaceName(stopValue || '');
                                 
                                 const availablePlacesForType = (allPlaces || [])
                                     .filter(
@@ -12934,44 +12934,50 @@ const TransportApp = ({ userProfileData }) => {
                                             return false;
                                         }
                                 
-                                        // Aktuálne vybrané miesto v tomto riadku musí zostať v zozname,
+                                        // Aktuálne vybrané miesto musí zostať v tomto selectboxe,
                                         // aby sa po prekreslení nestratila jeho hodnota.
                                         const isCurrentPlace =
-                                            (currentStopId &&
-                                                placeId &&
-                                                String(currentStopId) === placeId) ||
                                             (
-                                                currentStopNorm &&
-                                                placeNameNorm === currentStopNorm
+                                                currentStopId &&
+                                                placeId &&
+                                                String(currentStopId) === placeId
+                                            ) ||
+                                            (
+                                                currentStopNameNorm &&
+                                                placeNameNorm === currentStopNameNorm
                                             );
                                 
                                         if (isCurrentPlace) {
                                             return true;
                                         }
                                 
-                                        // Rovnaké miesto už vybrané v inom riadku sa nesmie zobraziť.
-                                        const isAlreadySelectedInAnotherRow =
-                                            selectedElsewhere.some((selectedPlace) => {
-                                                if (
-                                                    selectedPlace.id &&
+                                        // Kontroluje sa iba bezprostredne predchádzajúci riadok.
+                                        // Miesta použité v ďalších riadkoch zostávajú dostupné.
+                                        const isSameAsPreviousPlace =
+                                            previousStopIndex >= 0 &&
+                                            previousStopName &&
+                                            previousStopType === selectedType &&
+                                            (
+                                                (
+                                                    previousStopId &&
                                                     placeId &&
-                                                    selectedPlace.id === placeId
-                                                ) {
-                                                    return true;
-                                                }
+                                                    String(previousStopId) === placeId
+                                                ) ||
+                                                (
+                                                    previousStopNameNorm &&
+                                                    previousStopNameNorm === placeNameNorm
+                                                )
+                                            );
                                 
-                                                return (
-                                                    selectedPlace.norm &&
-                                                    selectedPlace.norm === placeNameNorm
-                                                );
-                                            });
-                                
-                                        return !isAlreadySelectedInAnotherRow;
+                                        return !isSameAsPreviousPlace;
                                     });
                                 
                                 const placeTypeOptions = Object.entries(placeTypeIcons)
                                     .filter(([type]) =>
-                                        (allPlaces || []).some((place) => String(place.type || '').trim() === type)
+                                        (allPlaces || []).some(
+                                            (place) =>
+                                                String(place.type || '').trim() === type
+                                        )
                                     );
                                 
                                 return React.createElement(
