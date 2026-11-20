@@ -178,6 +178,17 @@ const recordLogout = async (user) => {
     }
 };
 
+const recordLogin = async (user) => {
+    if (!user || !db) return;
+    try {
+        await updateDoc(doc(db, 'users', user.uid), {
+            lastLoginAt: serverTimestamp()
+        });
+    } catch (e) {
+        console.error('Nepodarilo sa zapísať lastLoginAt:', e);
+    }
+};
+
 const isAppCheckSupported = () => {
     try {
         return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
