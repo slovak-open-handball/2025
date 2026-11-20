@@ -692,6 +692,10 @@ const getHeaderColorByRole = (role) => {
   }
 }
 
+const getHeaderHoverTextColorByRole = (role) => {
+    return '#ffffff';
+};
+
 const setupUserSettingsListener = (userId) => {
     if (!window.db || !userId) {
         return null;
@@ -1042,15 +1046,22 @@ const updateHeaderLinks = (userProfileData) => {
         
         // Nastavenie hover farby pre registračné stránky
         const hoverColor = '#e3f2fd';
+        const hoverTextColor = getHeaderHoverTextColorByRole(null);
         navLinks.forEach(link => {
-            link.addEventListener('mouseenter', function() {
+            link.removeEventListener('mouseenter', link._mouseEnterHandler);
+            link.removeEventListener('mouseleave', link._mouseLeaveHandler);
+
+            link._mouseEnterHandler = function() {
                 this.style.backgroundColor = hoverColor;
-                this.style.color = '#1a1a1a';
-            });
-            link.addEventListener('mouseleave', function() {
+                this.style.color = hoverTextColor;
+            };
+            link._mouseLeaveHandler = function() {
                 this.style.backgroundColor = 'transparent';
                 this.style.color = '';
-            });
+            };
+
+            link.addEventListener('mouseenter', link._mouseEnterHandler);
+            link.addEventListener('mouseleave', link._mouseLeaveHandler);
         });
         return;
     }
@@ -1066,15 +1077,14 @@ const updateHeaderLinks = (userProfileData) => {
             
             // NASTAVENIE HOVER FARBY PRE NAVIGAČNÉ ODKAZY PODĽA ROLY
             const hoverColor = getHoverColorByRole(userProfileData.role);
+            const hoverTextColor = getHeaderHoverTextColorByRole(userProfileData.role);
             navLinks.forEach(link => {
-                // Odstránime predchádzajúce event listenery (ak existujú)
                 link.removeEventListener('mouseenter', link._mouseEnterHandler);
                 link.removeEventListener('mouseleave', link._mouseLeaveHandler);
                 
-                // Pridáme nové event listenery
                 link._mouseEnterHandler = function() {
                     this.style.backgroundColor = hoverColor;
-                    this.style.color = '#1a1a1a';
+                    this.style.color = hoverTextColor;
                 };
                 link._mouseLeaveHandler = function() {
                     this.style.backgroundColor = 'transparent';
@@ -1116,13 +1126,14 @@ const updateHeaderLinks = (userProfileData) => {
             
             // NASTAVENIE HOVER FARBY PRE NEPRIHLÁSENÉHO POUŽÍVATEĽA
             const hoverColor = '#e3f2fd';
+            const hoverTextColor = getHeaderHoverTextColorByRole(null);
             navLinks.forEach(link => {
                 link.removeEventListener('mouseenter', link._mouseEnterHandler);
                 link.removeEventListener('mouseleave', link._mouseLeaveHandler);
                 
                 link._mouseEnterHandler = function() {
                     this.style.backgroundColor = hoverColor;
-                    this.style.color = '#1a1a1a';
+                    this.style.color = hoverTextColor;
                 };
                 link._mouseLeaveHandler = function() {
                     this.style.backgroundColor = 'transparent';
@@ -1160,11 +1171,12 @@ const updateHeaderLinks = (userProfileData) => {
 const initializeNavHoverStyles = () => {
     const navLinks = document.querySelectorAll('nav a');
     const defaultHoverColor = '#e3f2fd';
+    const defaultHoverTextColor = getHeaderHoverTextColorByRole(null);
     
     navLinks.forEach(link => {
         link._mouseEnterHandler = function() {
             this.style.backgroundColor = defaultHoverColor;
-            this.style.color = '#1a1a1a';
+            this.style.color = defaultHoverTextColor;
         };
         link._mouseLeaveHandler = function() {
             this.style.backgroundColor = 'transparent';
