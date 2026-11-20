@@ -106,7 +106,7 @@ const updateLoginButton = (isLoggedIn) => {
     if (loginLink && loginButton) {
         loginLink.style.display = 'none';        
         if (isLoggedIn) {
-            loginLink.href = 'logged-in-my-data.html';
+            loginLink.href = 'logged-in-my-data';
             loginButton.textContent = 'Moja zóna';
             const userRole = window.globalUserProfileData ? window.globalUserProfileData.role : null;
             const roleColor = getRoleColor(userRole);            
@@ -114,7 +114,7 @@ const updateLoginButton = (isLoggedIn) => {
             loginButton.style.backgroundColor = roleColor;
             loginButton.style.borderColor = roleColor;
         } else {
-            loginLink.href = 'login.html';
+            loginLink.href = 'login';
             loginButton.textContent = 'Prihlásenie';
             loginButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
             loginButton.style.backgroundColor = '';
