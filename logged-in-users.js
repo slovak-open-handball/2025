@@ -101,6 +101,12 @@ const getLoginStatus = (user) => {
   const login = toDateSafe(user?.lastLoginAt);
   const logout = toDateSafe(user?.lastLogoutAt);
 
+  console.log('STATUS', user.id, user.firstName, {
+    login: login ? login.toISOString() : null,
+    logout: logout ? logout.toISOString() : null,
+    result: !login ? false : (!logout ? true : login.getTime() > logout.getTime())
+  });
+
   if (!login) return false;
 
   // Ak chýba lastLogoutAt, považujeme používateľa za prihláseného
@@ -681,6 +687,8 @@ function UsersManagementApp() {
   
       unsubscribeUsers = onSnapshot(q, async (snapshot) => {
         if (cancelled) return;
+
+        console.log('SNAPSHOT prijatý, počet dokumentov:', snapshot.docs.length);
   
         const usersList = await Promise.all(snapshot.docs.map(async (docSnapshot) => {
           let userData = {
