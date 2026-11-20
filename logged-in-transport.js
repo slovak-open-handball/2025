@@ -12875,39 +12875,98 @@ const TransportApp = ({ userProfileData }) => {
                             'ul',
                             { className: 'space-y-2' },
                             editingTransferStops.map((stopValue, idx) => {
-                                const selectedElsewhere = new Set(
-                                    editingTransferStops
-                                        .filter((_, i) => i !== idx)
-                                        .map((s) => String(s || '').trim())
-                                        .filter(Boolean)
-                                );
+                                const selectedElsewhere = editingTransferStops
+                                    .filter((_, i) => i !== idx)
+                                    .map((selectedPlaceName) => {
+                                        const name = String(selectedPlaceName || '').trim();
+                                
+                                        if (!name) {
+                                            return null;
+                                        }
+                                
+                                        const placeId = resolvePlaceIdByName(name);
+                                
+                                        return {
+                                            id: placeId ? String(placeId) : null,
+                                            norm: normalizePlaceName(name),
+                                        };
+                                    })
+                                    .filter(Boolean);
+                                
                                 const parentFromNameNorm = normalizePlaceName(
                                     resolvePlaceNameById(editingTransfer.fromId) || ''
                                 );
+                                
                                 const parentToNameNorm = normalizePlaceName(
                                     resolvePlaceNameById(editingTransfer.toId) || ''
                                 );
-
+                                
                                 const selectedType = editingTransferStopTypes[idx] || 'zastavka';
-
+                                
+                                const currentStopId = stopValue
+                                    ? resolvePlaceIdByName(stopValue)
+                                    : null;
+                                
+                                const currentStopNorm = normalizePlaceName(stopValue || '');
+                                
                                 const availablePlacesForType = (allPlaces || [])
-                                    .filter((place) => String(place.type || '').trim() === selectedType)
+                                    .filter(
+                                        (place) =>
+                                            String(place.type || '').trim() === selectedType
+                                    )
                                     .filter((place) => {
-                                        const placeNameNorm = normalizePlaceName(place.name);
+                                        const placeName = String(place.name || '').trim();
+                                        const placeNameNorm = normalizePlaceName(placeName);
+                                        const placeId = place.id ? String(place.id) : null;
                                 
-                                        if (parentFromNameNorm && placeNameNorm === parentFromNameNorm) {
+                                        // Začiatočné a koncové miesto trasy nesmie byť medzizastávkou.
+                                        if (
+                                            parentFromNameNorm &&
+                                            placeNameNorm === parentFromNameNorm
+                                        ) {
                                             return false;
                                         }
                                 
-                                        if (parentToNameNorm && placeNameNorm === parentToNameNorm) {
+                                        if (
+                                            parentToNameNorm &&
+                                            placeNameNorm === parentToNameNorm
+                                        ) {
                                             return false;
                                         }
                                 
-                                        if (place.name === stopValue) {
+                                        // Aktuálne vybrané miesto v tomto riadku musí zostať v zozname,
+                                        // aby sa po prekreslení nestratila jeho hodnota.
+                                        const isCurrentPlace =
+                                            (currentStopId &&
+                                                placeId &&
+                                                String(currentStopId) === placeId) ||
+                                            (
+                                                currentStopNorm &&
+                                                placeNameNorm === currentStopNorm
+                                            );
+                                
+                                        if (isCurrentPlace) {
                                             return true;
                                         }
                                 
-                                        return !selectedElsewhere.has(place.name);
+                                        // Rovnaké miesto už vybrané v inom riadku sa nesmie zobraziť.
+                                        const isAlreadySelectedInAnotherRow =
+                                            selectedElsewhere.some((selectedPlace) => {
+                                                if (
+                                                    selectedPlace.id &&
+                                                    placeId &&
+                                                    selectedPlace.id === placeId
+                                                ) {
+                                                    return true;
+                                                }
+                                
+                                                return (
+                                                    selectedPlace.norm &&
+                                                    selectedPlace.norm === placeNameNorm
+                                                );
+                                            });
+                                
+                                        return !isAlreadySelectedInAnotherRow;
                                     });
                                 
                                 const placeTypeOptions = Object.entries(placeTypeIcons)
