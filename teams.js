@@ -1921,7 +1921,7 @@ const TeamEventsList = ({ teamName, categoryName, categoryId, filter, refreshKey
     const createMatchHash = (homeTeamId, awayTeamId) => {
         const encodedHome = encodeURIComponent(homeTeamId.replace(/ /g, '-'));
         const encodedAway = encodeURIComponent(awayTeamId.replace(/ /g, '-'));
-        return `matches.html#match/${encodedHome}/${encodedAway}`;
+        return `matches#match/${encodedHome}/${encodedAway}`;
     };
 
     const renderMatchRow = (entry, dayIndex, rowIndex) => {
