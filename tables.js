@@ -812,7 +812,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
         if (!match.homeTeamIdentifier || !match.awayTeamIdentifier) return '#';
         const encodedHome = encodeURIComponent(match.homeTeamIdentifier.replace(/ /g, '-'));
         const encodedAway = encodeURIComponent(match.awayTeamIdentifier.replace(/ /g, '-'));
-        return `matches.html#match/${encodedHome}/${encodedAway}`;
+        return `matches#match/${encodedHome}/${encodedAway}`;
     };
 
     const isMatchActive = (match) => {
@@ -1716,7 +1716,7 @@ const PlayoffMatchesList = ({ matches, teamNames, hallNames, categoriesData, cat
         if (!match.homeTeamIdentifier || !match.awayTeamIdentifier) return '#';
         const encodedHome = encodeURIComponent(match.homeTeamIdentifier.replace(/ /g, '-'));
         const encodedAway = encodeURIComponent(match.awayTeamIdentifier.replace(/ /g, '-'));
-        return `matches.html#match/${encodedHome}/${encodedAway}`;
+        return `matches#match/${encodedHome}/${encodedAway}`;
     };
 
     if (!matches || matches.length === 0) {
