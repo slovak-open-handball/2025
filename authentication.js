@@ -1,3 +1,5 @@
+// authentication.js
+
 window.isGlobalAuthReady = false;
 window.globalUserProfileData = null;
 window.auth = null;
