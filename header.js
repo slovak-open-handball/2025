@@ -631,18 +631,16 @@ const handleLogout = async () => {
         const auth = getAuth();
         const user = auth.currentUser;
 
-        // 1. Zapíšeme čas odhlásenia do Firestore PRED signOut
         if (user && window.db) {
             try {
                 await updateDoc(doc(window.db, 'users', user.uid), {
                     lastLogoutAt: serverTimestamp()
                 });
             } catch (e) {
-                console.error('Nepodarilo sa zapísať lastLogoutAt:', e);
+                console.error('Zápis lastLogoutAt zlyhal:', e);
             }
         }
 
-        // 2. Teraz odhlásime z Auth
         await signOut(auth);
 
         if (unsubscribeFromNotifications) {
