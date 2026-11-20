@@ -822,6 +822,114 @@ const TransportApp = ({ userProfileData }) => {
         }
     };
 
+    const getWalkingSegmentDisplayRange = (parent, segmentIndex) => {
+        if (!parent || !Array.isArray(parent.segments)) {
+            return null;
+        }
+    
+        const segments = parent.segments;
+        const currentSegment = segments[segmentIndex];
+    
+        if (!currentSegment || currentSegment.isWalking !== true) {
+            return null;
+        }
+    
+        const parentRange = parseTransferWhenToRange(parent.when);
+    
+        let previousBusIndex = -1;
+        let previousBusEndTs = null;
+    
+        for (let i = segmentIndex - 1; i >= 0; i--) {
+            const segment = segments[i];
+    
+            if (!segment || segment.isWalking === true) {
+                continue;
+            }
+    
+            if (segment.endTs != null) {
+                previousBusIndex = i;
+                previousBusEndTs = segment.endTs;
+                break;
+            }
+    
+            if (segment.startTs != null) {
+                previousBusIndex = i;
+                previousBusEndTs = segment.startTs;
+                break;
+            }
+        }
+    
+        let nextBusIndex = segments.length;
+        let nextBusStartTs = null;
+    
+        for (let i = segmentIndex + 1; i < segments.length; i++) {
+            const segment = segments[i];
+    
+            if (!segment || segment.isWalking === true) {
+                continue;
+            }
+    
+            if (segment.startTs != null) {
+                nextBusIndex = i;
+                nextBusStartTs = segment.startTs;
+                break;
+            }
+    
+            if (segment.endTs != null) {
+                nextBusIndex = i;
+                nextBusStartTs = segment.endTs;
+                break;
+            }
+        }
+    
+        const intervalStartTs = previousBusEndTs != null
+            ? previousBusEndTs
+            : parentRange?.startTs ?? null;
+    
+        const intervalEndTs = nextBusStartTs != null
+            ? nextBusStartTs
+            : parentRange?.endTs ?? null;
+    
+        if (
+            intervalStartTs == null ||
+            intervalEndTs == null ||
+            intervalEndTs <= intervalStartTs
+        ) {
+            return null;
+        }
+    
+        const walkingIndexes = [];
+    
+        for (
+            let i = previousBusIndex + 1;
+            i < nextBusIndex;
+            i++
+        ) {
+            if (segments[i] && segments[i].isWalking === true) {
+                walkingIndexes.push(i);
+            }
+        }
+    
+        const walkingCount = walkingIndexes.length || 1;
+        const walkingPosition = Math.max(0, walkingIndexes.indexOf(segmentIndex));
+    
+        const intervalDuration = intervalEndTs - intervalStartTs;
+        const walkingPartDuration = intervalDuration / walkingCount;
+    
+        const displayStartTs =
+            intervalStartTs + walkingPosition * walkingPartDuration;
+    
+        const displayEndTs =
+            walkingPosition === walkingCount - 1
+                ? intervalEndTs
+                : displayStartTs + walkingPartDuration;
+    
+        return {
+            startTs: displayStartTs,
+            endTs: displayEndTs,
+        };
+    };
+
     const getTeamEventsForCustomTransfer = (category, teamName) => {
         if (!category || !teamName) return [];
         const cat = cleanCategory(category);
@@ -918,112 +1026,32 @@ const TransportApp = ({ userProfileData }) => {
                 let endTs = null;
                 let timeLabel = '';
                 if (isWalking) {
-                    const parentRange = (() => {
-                        const parsedFromWhen = parseWhenRangeToTs(t.when);
-                        if (parsedFromWhen && parsedFromWhen.startTs != null && parsedFromWhen.endTs != null) {
-                            if (parsedFromWhen.endTs > parsedFromWhen.startTs) {
-                                return { startTs: parsedFromWhen.startTs, endTs: parsedFromWhen.endTs };
-                            }
+                    const walkingRange = getWalkingSegmentDisplayRange(t, i);
+
+                    if (walkingRange) {
+                        startTs = walkingRange.startTs;
+                        endTs = walkingRange.endTs;
+
+                        const startTime = /(\d{2}:\d{2})$/.exec(
+                            formatTsLocal(startTs) || ''
+                        )?.[1] || '';
+
+                        const endTime = /(\d{2}:\d{2})$/.exec(
+                            formatTsLocal(endTs) || ''
+                        )?.[1] || '';
+                
+                        if (startTime && endTime) {
+                            timeLabel = `${startTime} – ${endTime}`;
+                        } else if (startTime) {
+                            timeLabel = startTime;
+                        } else if (endTime) {
+                            timeLabel = endTime;
+                        } else {
+                            timeLabel = 'PEŠI';
                         }
-                        let earliestStart = null;
-                        let latestEnd = null;
-                        parentSegments.forEach((s) => {
-                            if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                                earliestStart = s.startTs;
-                            }
-                            if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                                latestEnd = s.endTs;
-                            } else if (s.isWalking === true && s.startTs != null) {
-                                const candidateEnd = s.startTs + 60 * 1000;
-                                if (latestEnd == null || candidateEnd > latestEnd) {
-                                    latestEnd = candidateEnd;
-                                }
-                            }
-                        });
-                        if (earliestStart != null && latestEnd != null) {
-                            return { startTs: earliestStart, endTs: latestEnd };
-                        }
-                        if (parsedFromWhen && parsedFromWhen.startTs != null) {
-                            return { startTs: parsedFromWhen.startTs, endTs: parsedFromWhen.endTs };
-                        }
-                        return null;
-                    })();
-    
-                    let prevSegmentEndTs = null;
-                    for (let k = i - 1; k >= 0; k--) {
-                        const s2 = parentSegments[k];
-                        if (!s2) continue;
-                        if (s2.endTs != null) { prevSegmentEndTs = s2.endTs; break; }
-                        if (s2.startTs != null) { prevSegmentEndTs = s2.startTs; break; }
+                    } else {
+                        timeLabel = 'PEŠI';
                     }
-    
-                    let nextSegmentStartTs = null;
-                    for (let k = i + 1; k < parentSegments.length; k++) {
-                        const s2 = parentSegments[k];
-                        if (!s2) continue;
-                        if (s2.startTs != null) { nextSegmentStartTs = s2.startTs; break; }
-                        if (s2.endTs != null) { nextSegmentStartTs = s2.endTs; break; }
-                    }
-    
-                    const parentStartTs = parentRange && parentRange.startTs != null ? parentRange.startTs : null;
-                    const parentEndTs = parentRange && parentRange.endTs != null ? parentRange.endTs : null;
-    
-                    let displayStartTs = null;
-                    let displayEndTs = null;
-    
-                    if (prevSegmentEndTs != null) {
-                        displayStartTs = prevSegmentEndTs;
-                    } else if (parentStartTs != null) {
-                        displayStartTs = parentStartTs;
-                    }
-    
-                    if (nextSegmentStartTs != null) {
-                        displayEndTs = nextSegmentStartTs;
-                    } else if (parentEndTs != null && parentEndTs > (displayStartTs || 0)) {
-                        displayEndTs = parentEndTs;
-                    } else if (displayStartTs != null) {
-                        displayEndTs = displayStartTs + 60 * 1000;
-                    }
-    
-                    if (
-                        parentSegments.length === 1 &&
-                        parentStartTs != null &&
-                        parentEndTs != null
-                    ) {
-                        displayStartTs = parentStartTs;
-                        displayEndTs = parentEndTs;
-                    }
-    
-                    if (
-                        displayStartTs != null &&
-                        (displayEndTs == null || displayEndTs <= displayStartTs) &&
-                        parentEndTs != null &&
-                        parentEndTs > displayStartTs
-                    ) {
-                        displayEndTs = parentEndTs;
-                    }
-    
-                    if (
-                        displayStartTs != null &&
-                        (displayEndTs == null || displayEndTs <= displayStartTs)
-                    ) {
-                        displayEndTs = displayStartTs + 60 * 1000;
-                    }
-    
-                    startTs = displayStartTs;
-                    endTs = displayEndTs;
-    
-                    const fmtTime = (ts) => {
-                        if (ts == null) return null;
-                        const f = formatTsLocal(ts);
-                        return f ? /(\d{2}:\d{2})$/.exec(f)?.[1] || null : null;
-                    };
-                    const startTime = fmtTime(displayStartTs);
-                    const endTime = fmtTime(displayEndTs);
-                    if (startTime && endTime) timeLabel = `${startTime} – ${endTime}`;
-                    else if (startTime) timeLabel = startTime;
-                    else if (endTime) timeLabel = endTime;
-                    else timeLabel = 'PEŠI';
                 } else if (hasRealTimes) {
                     startTs = seg.startTs;
                     endTs = seg.endTs;
@@ -1207,6 +1235,7 @@ const TransportApp = ({ userProfileData }) => {
     const [deleteShortcutSaving, setDeleteShortcutSaving] = useState(false);
     const [editingTransfer, setEditingTransfer] = useState(null);
     const [editingTransferStops, setEditingTransferStops] = useState([]);
+    const [editingTransferStopTypes, setEditingTransferStopTypes] = useState([]);
     const [editingTransferSaving, setEditingTransferSaving] = useState(false);
     const [transferActionModal, setTransferActionModal] = useState(null); 
     const [showAssignBusModal, setShowAssignBusModal] = useState(false);
@@ -5469,6 +5498,7 @@ const TransportApp = ({ userProfileData }) => {
             );
             setEditingTransfer(null);
             setEditingTransferStops([]);
+            setEditingTransferStopTypes([]);
         } catch (err) {
             window.showGlobalNotification('Nepodarilo sa uložiť úpravu presunu.', 'error');
         } finally {
@@ -10169,132 +10199,22 @@ const TransportApp = ({ userProfileData }) => {
                     _hasAnyBus: false,
                 };
             }
-            const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
-            const segmentIndex = t._segmentIndex;
-            
-            const parentRange = (() => {
-                const parsedFromWhen = parseWhenRangeToTs(parent.when);
-                if (parsedFromWhen && parsedFromWhen.startTs != null && parsedFromWhen.endTs != null) {
-                    if (parsedFromWhen.endTs > parsedFromWhen.startTs) {
-                        return { startTs: parsedFromWhen.startTs, endTs: parsedFromWhen.endTs };
-                    }
-                }
-            
-                let earliestStart = null;
-                let latestEnd = null;
-                parentSegments.forEach((s) => {
-                    if (s.startTs != null && (earliestStart == null || s.startTs < earliestStart)) {
-                        earliestStart = s.startTs;
-                    }
-                    if (s.endTs != null && (latestEnd == null || s.endTs > latestEnd)) {
-                        latestEnd = s.endTs;
-                    } else if (s.isWalking === true && s.startTs != null) {
-                        const candidateEnd = s.startTs + 60 * 1000;
-                        if (latestEnd == null || candidateEnd > latestEnd) {
-                            latestEnd = candidateEnd;
-                        }
-                    }
-                });
-                if (earliestStart != null && latestEnd != null) {
-                    return { startTs: earliestStart, endTs: latestEnd };
-                }
-            
-                if (parsedFromWhen && parsedFromWhen.startTs != null) {
-                    return { startTs: parsedFromWhen.startTs, endTs: parsedFromWhen.endTs };
-                }
-            
-                return null;
-            })();
-            
-            let prevSegmentEndTs = null;
-            for (let i = segmentIndex - 1; i >= 0; i--) {
-                const seg = parentSegments[i];
-                if (!seg) continue;
-                if (seg.endTs != null) {
-                    prevSegmentEndTs = seg.endTs;
-                    break;
-                }
-                if (seg.startTs != null) {
-                    prevSegmentEndTs = seg.startTs;
-                    break;
-                }
-            }
-            
-            let nextSegmentStartTs = null;
-            for (let i = segmentIndex + 1; i < parentSegments.length; i++) {
-                const seg = parentSegments[i];
-                if (!seg) continue;
-                if (seg.startTs != null) {
-                    nextSegmentStartTs = seg.startTs;
-                    break;
-                }
-                if (seg.endTs != null) {
-                    nextSegmentStartTs = seg.endTs;
-                    break;
-                }
-            }
-            
-            const parentStartTs = parentRange && parentRange.startTs != null ? parentRange.startTs : null;
-            const parentEndTs = parentRange && parentRange.endTs != null ? parentRange.endTs : null;
-            
-            const isFirstWalkingSegment = prevSegmentEndTs == null && parentStartTs != null;
-            const isLastWalkingSegment = nextSegmentStartTs == null && parentEndTs != null;
-            
-            let displayStartTs = null;
-            let displayEndTs = null;
-            
-            if (isFirstWalkingSegment) {
-                displayStartTs = parentStartTs;
-            } else if (prevSegmentEndTs != null) {
-                displayStartTs = prevSegmentEndTs;
-            } else if (parentStartTs != null) {
-                displayStartTs = parentStartTs;
-            }
-            
-            if (nextSegmentStartTs != null) {
-                displayEndTs = nextSegmentStartTs;
-            } else if (parentEndTs != null && parentEndTs > (displayStartTs || 0)) {
-                displayEndTs = parentEndTs;
-            } else if (displayStartTs != null) {
-                const parentWhenRange = parseWhenRangeToTs(parent.when);
-                if (parentWhenRange && parentWhenRange.endTs != null && parentWhenRange.endTs > displayStartTs) {
-                    displayEndTs = parentWhenRange.endTs;
-                } else {
-                    displayEndTs = displayStartTs + 60 * 1000;
-                }
-            }
-            
-            if (
-                parentSegments.length === 1 &&
-                parentStartTs != null &&
-                parentEndTs != null
-            ) {
-                displayStartTs = parentStartTs;
-                displayEndTs = parentEndTs;
-            }
-            
+            const parentSegments = Array.isArray(parent.segments)
+                ? parent.segments
+                : [];
+
+            const walkingRange = getWalkingSegmentDisplayRange(
+                parent,
+                segmentIndex
+            );
+
+            let displayStartTs = walkingRange?.startTs ?? null;
+            let displayEndTs = walkingRange?.endTs ?? null;
+
             if (
                 displayStartTs != null &&
-                (displayEndTs == null || displayEndTs <= displayStartTs) &&
-                parentEndTs != null &&
-                parentEndTs > displayStartTs
-            ) {
-                displayEndTs = parentEndTs;
-            }
-            
-            if (
-                displayStartTs != null &&
-                (displayEndTs == null || displayEndTs <= displayStartTs)
-            ) {
-                const parentWhenRange = parseWhenRangeToTs(parent.when);
-                if (parentWhenRange && parentWhenRange.endTs != null && parentWhenRange.endTs > displayStartTs) {
-                    displayEndTs = parentWhenRange.endTs;
-                }
-            }
-            
-            if (
-                displayStartTs != null &&
-                (displayEndTs == null || displayEndTs <= displayStartTs)
+                displayEndTs != null &&
+                displayEndTs <= displayStartTs
             ) {
                 displayEndTs = displayStartTs + 60 * 1000;
             }
@@ -12730,6 +12650,7 @@ const TransportApp = ({ userProfileData }) => {
                 onClick: () => {
                     setEditingTransfer(null);
                     setEditingTransferStops([]);
+                    setEditingTransferStopTypes([]);
                 }
             },
             React.createElement(
@@ -12967,16 +12888,33 @@ const TransportApp = ({ userProfileData }) => {
                                     resolvePlaceNameById(editingTransfer.toId) || ''
                                 );
 
-                                const availableStops = stopsList
-                                    .filter((s) => String(s.type || '').trim().toLowerCase() === 'zastavka')
-                                    .filter((s) => {
-                                        const stopNameNorm = normalizePlaceName(s.name);
-                                        if (parentFromNameNorm && stopNameNorm === parentFromNameNorm) return false;
-                                        if (parentToNameNorm && stopNameNorm === parentToNameNorm) return false;
-                                        if (s.name === stopValue) return true;
-                                        return !selectedElsewhere.has(s.name);
-                                    });
+                                const selectedType = editingTransferStopTypes[idx] || 'zastavka';
 
+                                const availablePlacesForType = (allPlaces || [])
+                                    .filter((place) => String(place.type || '').trim() === selectedType)
+                                    .filter((place) => {
+                                        const placeNameNorm = normalizePlaceName(place.name);
+                                
+                                        if (parentFromNameNorm && placeNameNorm === parentFromNameNorm) {
+                                            return false;
+                                        }
+                                
+                                        if (parentToNameNorm && placeNameNorm === parentToNameNorm) {
+                                            return false;
+                                        }
+                                
+                                        if (place.name === stopValue) {
+                                            return true;
+                                        }
+                                
+                                        return !selectedElsewhere.has(place.name);
+                                    });
+                                
+                                const placeTypeOptions = Object.entries(placeTypeIcons)
+                                    .filter(([type]) =>
+                                        (allPlaces || []).some((place) => String(place.type || '').trim() === type)
+                                    );
+                                
                                 return React.createElement(
                                     'li',
                                     {
@@ -12985,10 +12923,12 @@ const TransportApp = ({ userProfileData }) => {
                                     },
                                     React.createElement(
                                         'span',
-                                        { className: 'text-xs text-gray-500 w-6 text-right' },
+                                        {
+                                            className: 'text-xs text-gray-500 w-6 text-right'
+                                        },
                                         `${idx + 1}.`
                                     ),
-                                    // NOVÉ: "+" pred selectboxom – vloží medzizastávku o riadok vyššie
+                                
                                     React.createElement(
                                         'button',
                                         {
@@ -12999,35 +12939,97 @@ const TransportApp = ({ userProfileData }) => {
                                                     copy.splice(idx, 0, '');
                                                     return copy;
                                                 });
+                                
+                                                setEditingTransferStopTypes((prev) => {
+                                                    const copy = [...prev];
+                                                    copy.splice(idx, 0, 'zastavka');
+                                                    return copy;
+                                                });
                                             },
                                             className: 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded w-7 h-7 flex items-center justify-center',
                                             title: 'Vložiť medzizastávku nad tento riadok'
                                         },
                                         React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
                                     ),
+                                
+                                    React.createElement(
+                                        'select',
+                                        {
+                                            value: selectedType,
+                                            onChange: (e) => {
+                                                const newType = e.target.value;
+                                
+                                                setEditingTransferStopTypes((prev) => {
+                                                    const copy = [...prev];
+                                                    copy[idx] = newType;
+                                                    return copy;
+                                                });
+                                
+                                                const currentPlaceStillMatches = (allPlaces || []).some(
+                                                    (place) =>
+                                                        String(place.name || '').trim() === String(stopValue || '').trim() &&
+                                                        String(place.type || '').trim() === newType
+                                                );
+                                
+                                                if (!currentPlaceStillMatches) {
+                                                    setEditingTransferStops((prev) => {
+                                                        const copy = [...prev];
+                                                        copy[idx] = '';
+                                                        return copy;
+                                                    });
+                                                }
+                                            },
+                                            className: 'w-36 px-2 py-1.5 text-sm border border-gray-300 rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                                        },
+                                        React.createElement(
+                                            'option',
+                                            { value: '' },
+                                            '— typ miesta —'
+                                        ),
+                                        placeTypeOptions.map(([type, meta]) =>
+                                            React.createElement(
+                                                'option',
+                                                {
+                                                    key: type,
+                                                    value: type
+                                                },
+                                                meta.label
+                                            )
+                                        )
+                                    ),
+                                
                                     React.createElement(
                                         'select',
                                         {
                                             value: stopValue,
                                             onChange: (e) => {
-                                                const v = e.target.value;
+                                                const value = e.target.value;
+                                
                                                 setEditingTransferStops((prev) => {
                                                     const copy = [...prev];
-                                                    copy[idx] = v;
+                                                    copy[idx] = value;
                                                     return copy;
                                                 });
                                             },
                                             className: 'flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500'
                                         },
-                                        React.createElement('option', { value: '' }, '— vyber zastávku —'),
-                                        availableStops.map((s) =>
+                                        React.createElement(
+                                            'option',
+                                            { value: '' },
+                                            '— vyber miesto —'
+                                        ),
+                                        availablePlacesForType.map((place) =>
                                             React.createElement(
                                                 'option',
-                                                { key: s.id, value: s.name },
-                                                s.name
+                                                {
+                                                    key: place.id,
+                                                    value: place.name
+                                                },
+                                                place.name
                                             )
                                         )
                                     ),
+                                
                                     React.createElement(
                                         'button',
                                         {
@@ -13038,18 +13040,31 @@ const TransportApp = ({ userProfileData }) => {
                                                     copy.splice(idx + 1, 0, '');
                                                     return copy;
                                                 });
+                                
+                                                setEditingTransferStopTypes((prev) => {
+                                                    const copy = [...prev];
+                                                    copy.splice(idx + 1, 0, 'zastavka');
+                                                    return copy;
+                                                });
                                             },
                                             className: 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded w-7 h-7 flex items-center justify-center',
                                             title: 'Vložiť medzizastávku pod tento riadok'
                                         },
                                         React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
                                     ),
+                                
                                     React.createElement(
                                         'button',
                                         {
                                             type: 'button',
                                             onClick: () => {
-                                                setEditingTransferStops((prev) => prev.filter((_, i) => i !== idx));
+                                                setEditingTransferStops((prev) =>
+                                                    prev.filter((_, i) => i !== idx)
+                                                );
+                                
+                                                setEditingTransferStopTypes((prev) =>
+                                                    prev.filter((_, i) => i !== idx)
+                                                );
                                             },
                                             className: 'text-red-600 hover:text-red-800 hover:bg-red-50 rounded w-7 h-7 flex items-center justify-center',
                                             title: 'Odstrániť medzizastávku'
@@ -13067,7 +13082,10 @@ const TransportApp = ({ userProfileData }) => {
                                 'button',
                                 {
                                     type: 'button',
-                                    onClick: () => setEditingTransferStops((prev) => [...prev, '']),
+                                    onClick: () => {
+                                        setEditingTransferStops((prev) => [...prev, '']);
+                                        setEditingTransferStopTypes((prev) => [...prev, 'zastavka']);
+                                    },
                                     className: 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded w-7 h-7 flex items-center justify-center',
                                     title: 'Pridať medzizastávku'
                                 },
@@ -13101,6 +13119,7 @@ const TransportApp = ({ userProfileData }) => {
                             onClick: () => {
                                 setEditingTransfer(null);
                                 setEditingTransferStops([]);
+                                setEditingTransferStopTypes([]);
                             },
                             disabled: editingTransferSaving,
                             className: 'px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-60'
@@ -13308,8 +13327,17 @@ const TransportApp = ({ userProfileData }) => {
                                 } else if (Array.isArray(t.intermediateStops)) {
                                     existingStops = [...t.intermediateStops];
                                 }    
+                                const existingStopTypes = existingStops.map((stopName) => {
+                                    const place = (allPlacesRef.current || []).find(
+                                        (p) => String(p.name || '').trim() === String(stopName || '').trim()
+                                    );
+                                
+                                    return place?.type || 'zastavka';
+                                });
+
                                 setEditingTransfer(transferToEdit);
                                 setEditingTransferStops(existingStops);
+                                setEditingTransferStopTypes(existingStopTypes);
                                 setTransferActionModal(null);
                             },
                             className: 'w-full text-left px-4 py-3 rounded-lg border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors flex items-center gap-3'
