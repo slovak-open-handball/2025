@@ -712,7 +712,8 @@ const handleAuthState = async () => {
     onAuthStateChanged(auth, async (user) => {
         window.isGlobalAuthReady = true;
 
-        if (user) {            
+        if (user) {
+            await recordLogin(user);
             const userDocRef = doc(db, `users/${user.uid}`);
             
             const loadUserProfileData = async (retries = 0) => {
