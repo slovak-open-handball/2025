@@ -651,7 +651,7 @@ const handleLogout = async () => {
         currentUserId = null;
         currentDisplayNotifications = false;
         
-        window.location.href = 'login.html';
+        window.location.href = 'login';
     } catch (error) {
         window.showGlobalNotification('Chyba pri odhlásení. Skúste to znova.', 'error');
     }
@@ -874,7 +874,7 @@ const initializeNavigationVisibility = () => {
 // Kontrola prístupu k aktuálnej stránke
 const checkCurrentPageAccess = () => {
     const currentPath = window.location.pathname;
-    const currentPage = currentPath.split('/').pop().replace('.html', '');
+    const currentPage = currentPath.split('/').pop().replace('', '');
     
     // Povolené stránky bez kontroly
     const allowedPages = ['', 'index', 'login', 'admin-register'];
@@ -889,7 +889,7 @@ const checkCurrentPageAccess = () => {
         const rostersConfig = pagesVisibility['rosters'];
         if (rostersConfig) {
             if (rostersConfig.visible === false) {
-                window.location.href = 'index.html';
+                window.location.href = 'index';
                 return false;
             }
             return true;
@@ -907,7 +907,7 @@ const checkCurrentPageAccess = () => {
     
     // Ak je stránka skrytá, presmerujeme na hlavnú stránku
     if (pageConfig.visible === false) {
-        window.location.href = 'index.html';
+        window.location.href = 'index';
         return false;
     }
     
@@ -959,7 +959,7 @@ const updateHeaderRegistrationText = (isRegistrationOpen) => {
     if (isRegistrationOpen) {
         registrationHeaderLink.classList.remove('hidden');
         registrationHeaderLink.textContent = 'Registrácia na turnaj';
-        registrationHeaderLink.href = 'register.html';
+        registrationHeaderLink.href = 'register';
     } else {
         registrationHeaderLink.classList.add('hidden');
     }
@@ -1005,7 +1005,7 @@ const updateHeaderLinks = (userProfileData) => {
     // AKTUALIZUJEME TEXT REGISTRÁCIE V HLAVIČKE
     updateHeaderRegistrationText(isRegistrationOpen());
 
-    if (window.location.pathname.includes('register.html') || window.location.pathname.includes('logged-in-registration.html')) {
+    if (window.location.pathname.includes('register') || window.location.pathname.includes('logged-in-registration')) {
         headerElement.style.backgroundColor = '#1D4ED8'; 
         headerElement.classList.remove('invisible'); 
         authLink.classList.remove('hidden');
@@ -1168,7 +1168,7 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
 
     if (shouldShowRegisterLink) {
         registerLink.classList.remove('hidden');
-        registerLink.href = 'register.html';
+        registerLink.href = 'register';
     } else {
         registerLink.classList.add('hidden');
     }
@@ -1378,9 +1378,9 @@ window.loadHeaderAndScripts = async () => {
     try {
         const headerPlaceholder = document.getElementById('header-placeholder');
         
-        const response = await fetch('header.html');
+        const response = await fetch('header');
         
-        if (!response.ok) throw new Error('Chyba pri načítaní header.html');
+        if (!response.ok) throw new Error('Chyba pri načítaní header');
         const headerHtml = await response.text();
         
         if (headerPlaceholder) {
