@@ -629,28 +629,39 @@ const showDatabaseNotification = (message, type = 'info') => {
 const handleLogout = async () => {
     try {
         const auth = getAuth();
+        const user = auth.currentUser;
+
+        // 1. Zapíšeme čas odhlásenia do Firestore PRED signOut
+        if (user && window.db) {
+            try {
+                await updateDoc(doc(window.db, 'users', user.uid), {
+                    lastLogoutAt: serverTimestamp()
+                });
+            } catch (e) {
+                console.error('Nepodarilo sa zapísať lastLogoutAt:', e);
+            }
+        }
+
+        // 2. Teraz odhlásime z Auth
         await signOut(auth);
-        
+
         if (unsubscribeFromNotifications) {
             unsubscribeFromNotifications();
             unsubscribeFromNotifications = null;
         }
-        
         if (unsubscribeFromUserSettings) {
             unsubscribeFromUserSettings();
             unsubscribeFromUserSettings = null;
         }
-        
         if (unsubscribeFromPagesVisibility) {
             unsubscribeFromPagesVisibility();
             unsubscribeFromPagesVisibility = null;
         }
-        
+
         shownNotificationIds.clear();
-        
         currentUserId = null;
         currentDisplayNotifications = false;
-        
+
         window.location.href = 'login';
     } catch (error) {
         window.showGlobalNotification('Chyba pri odhlásení. Skúste to znova.', 'error');
