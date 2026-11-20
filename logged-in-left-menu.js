@@ -6,7 +6,7 @@ const loadLeftMenu = async (userProfileData) => {
         const menuPlaceholder = document.getElementById('menu-placeholder');
         if (!menuPlaceholder) return;
         try {
-            const response = await fetch('logged-in-left-menu.html');
+            const response = await fetch('logged-in-left-menu');
             if (!response.ok) throw new Error(`HTTP chyba! Stav: ${response.status}`);
          
             const menuHtml = await response.text();
@@ -181,20 +181,20 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
             );
 
             const isActive = currentPath.includes(href) ||
-                (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
-                (href === 'logged-in-rosters.html' && currentPath.includes('rosters')) ||
-                (href === 'logged-in-add-categories.html' && currentPath.includes('add-categories')) ||
-                (href === 'logged-in-add-groups.html' && currentPath.includes('add-groups')) ||
-                (href === 'logged-in-teams-in-accommodation.html' && currentPath.includes('teams-in-accommodation')) ||
-                (href === 'logged-in-map.html' && currentPath.includes('map')) ||
-                (href === 'logged-in-tournament-settings.html' && currentPath.includes('logged-in-tournament-settings')) ||
-                (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
-                (href === 'logged-in-users.html' && currentPath.includes('users')) ||
-                (href === 'logged-in-notifications.html' && currentPath.includes('notifications')) ||
-                (href === 'logged-in-catering.html' && currentPath.includes('catering')) ||
-                (href === 'logged-in-export.html' && currentPath.includes('export')) ||
-                (href === 'logged-in-transport.html' && currentPath.includes('transport')) ||
-                (href === 'logged-in-teams.html' && currentPath.endsWith('logged-in-teams.html'));
+                (href === 'logged-in-my-data' && currentPath.includes('my-data')) ||
+                (href === 'logged-in-rosters' && currentPath.includes('rosters')) ||
+                (href === 'logged-in-add-categories' && currentPath.includes('add-categories')) ||
+                (href === 'logged-in-add-groups' && currentPath.includes('add-groups')) ||
+                (href === 'logged-in-teams-in-accommodation' && currentPath.includes('teams-in-accommodation')) ||
+                (href === 'logged-in-map' && currentPath.includes('map')) ||
+                (href === 'logged-in-tournament-settings' && currentPath.includes('logged-in-tournament-settings')) ||
+                (href === 'logged-in-all-registrations' && currentPath.includes('all-registrations')) ||
+                (href === 'logged-in-users' && currentPath.includes('users')) ||
+                (href === 'logged-in-notifications' && currentPath.includes('notifications')) ||
+                (href === 'logged-in-catering' && currentPath.includes('catering')) ||
+                (href === 'logged-in-export' && currentPath.includes('export')) ||
+                (href === 'logged-in-transport' && currentPath.includes('transport')) ||
+                (href === 'logged-in-teams' && currentPath.endsWith('logged-in-teams'));
 
             if (isActive) {
                 link.classList.add('bg-[#F9FAFB]', 'dark:bg-gray-800/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
@@ -234,7 +234,7 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
     };
 
     const updateMenuText = () => {
-        const myDataLinkSpan = document.querySelector('a[href="logged-in-my-data.html"] .whitespace-nowrap');
+        const myDataLinkSpan = document.querySelector('a[href="logged-in-my-data"] .whitespace-nowrap');
         if (myDataLinkSpan) {
             myDataLinkSpan.textContent = userProfileData.role === 'club' ? 'Kontaktná osoba' : 'Moje údaje';
         }
