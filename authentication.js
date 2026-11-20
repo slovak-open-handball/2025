@@ -89,58 +89,58 @@ const getAppBasePath = () => {
 const appBasePath = getAppBasePath();
 
 const publicPages = [
-    'account.html',
-    'admin-register.html',
-    'index.html',
-    'login.html',
-    'register.html',
-    'volunteer-register.html',
-    'teams-in-groups.html',
-    'matches.html', 
-    'map.html', 
-    'tables.html',
-    'teams.html',
-    'statistics.html',
-    'catering.html'
+    'account',
+    'admin-register',
+    'index',
+    'login',
+    'register',
+    'volunteer-register',
+    'teams-in-groups',
+    'matches', 
+    'map', 
+    'tables',
+    'teams',
+    'statistics',
+    'catering'
 ];
 
 const guestOnlyPages = [
-    'login.html',
-    'register.html',
-    'admin-register.html',
-    'volunteer-register.html'
+    'login',
+    'register',
+    'admin-register',
+    'volunteer-register'
 ];
 
 const roleAccess = {
     admin: [
-        'logged-in-add-categories.html',
-        'logged-in-add-groups.html',
-        'logged-in-all-registrations.html',
-        'logged-in-map.html',
-        'logged-in-matches.html',
-        'logged-in-catering.html',
-        'logged-in-my-data.html',
-        'logged-in-notifications.html',
-        'logged-in-rosters.html',
-        'logged-in-teams-in-accommodation.html',
-        'logged-in-teams-in-groups.html',
-        'logged-in-template.html',
-        'logged-in-tournament-settings.html',
-        'logged-in-users.html',
-        'logged-in-export.html',
-        'logged-in-transport.html'
+        'logged-in-add-categories',
+        'logged-in-add-groups',
+        'logged-in-all-registrations',
+        'logged-in-map',
+        'logged-in-matches',
+        'logged-in-catering',
+        'logged-in-my-data',
+        'logged-in-notifications',
+        'logged-in-rosters',
+        'logged-in-teams-in-accommodation',
+        'logged-in-teams-in-groups',
+        'logged-in-template',
+        'logged-in-tournament-settings',
+        'logged-in-users',
+        'logged-in-export',
+        'logged-in-transport'
     ],
     hall: [
-        'logged-in-my-data.html',
-        'logged-in-matches-hall.html'
+        'logged-in-my-data',
+        'logged-in-matches-hall'
     ],
     club: [
-        'logged-in-my-data.html',
-        'logged-in-rosters.html',
-        'logged-in-teams.html',
+        'logged-in-my-data',
+        'logged-in-rosters',
+        'logged-in-teams',
     ],
     volunteer: [
-        'logged-in-my-data.html'
+        'logged-in-my-data'
     ]
 };
 
@@ -368,13 +368,13 @@ const checkCurrentPageVisibility = async () => {
     const currentPath = window.location.pathname;
     const fileName = getFileNameFromPath(currentPath);
     
-    if (fileName === 'index.html') {
+    if (fileName === 'index') {
         return;
     }
     
     // Povolené stránky pre prihlásených používateľov (bez kontroly viditeľnosti)
-    // POZNÁMKA: catering.html je tu pridaný, aby sa aj pre prihlásených kontrolovala viditeľnosť
-    const allowedForLoggedIn = ['map.html', 'matches.html', 'teams-in-groups.html', 'tables.html', 'teams.html', 'statistics.html', 'catering.html'];
+    // POZNÁMKA: catering je tu pridaný, aby sa aj pre prihlásených kontrolovala viditeľnosť
+    const allowedForLoggedIn = ['map', 'matches', 'teams-in-groups', 'tables', 'teams', 'statistics', 'catering'];
     if (allowedForLoggedIn.includes(fileName)) {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
@@ -392,7 +392,7 @@ const checkCurrentPageVisibility = async () => {
         return;
     }
     
-    const pageId = fileName.replace('.html', '');
+    const pageId = fileName.replace('', '');
     
     // Pre tables použijeme viditeľnosť z matches
     let isVisible;
@@ -415,7 +415,7 @@ const checkCurrentPageVisibility = async () => {
     }
     
     if (!isVisible) {        
-        const loginUrl = `${appBasePath}/login.html`;
+        const loginUrl = `${appBasePath}/login`;
         window.location.href = loginUrl;
         return;
     }
@@ -461,7 +461,7 @@ const checkPageVisibilityForUser = async (pageName, userProfileData) => {
         return true;
     }
     
-    const pageId = pageName.replace('.html', '');
+    const pageId = pageName.replace('', '');
     
     // Pre tables použijeme viditeľnosť z matches
     let isVisible;
@@ -488,11 +488,11 @@ const checkPageVisibilityForUser = async (pageName, userProfileData) => {
 
 const isHtmlPage = () => {
     const currentPath = window.location.pathname;
-    return currentPath.includes('.html');
+    return currentPath.includes('');
 };
 
 const getFileNameFromPath = (path) => {
-    if (!path.includes('.html')) {
+    if (!path.includes('')) {
         return '';
     }
     const parts = path.split('/');
@@ -518,21 +518,21 @@ const isPageAccessibleForGuest = async () => {
     const currentPath = window.location.pathname;
     const fileName = getFileNameFromPath(currentPath);
     
-    if (fileName === 'map.html') {
+    if (fileName === 'map') {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
             return true;
         }
     }
     
-    if (fileName === 'matches.html') {
+    if (fileName === 'matches') {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
             return true;
         }
     }
     
-    if (fileName === 'teams-in-groups.html') {
+    if (fileName === 'teams-in-groups') {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
             return true;
@@ -540,7 +540,7 @@ const isPageAccessibleForGuest = async () => {
     }
     
     // Pre tables použijeme rovnakú logiku ako pre matches
-    if (fileName === 'tables.html') {
+    if (fileName === 'tables') {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
             return true;
@@ -550,8 +550,8 @@ const isPageAccessibleForGuest = async () => {
         return isVisible;
     }
     
-    // Pre catering.html - viditeľnosť sa riadi priamo dokumentom 'catering' v DB
-    if (fileName === 'catering.html') {
+    // Pre catering - viditeľnosť sa riadi priamo dokumentom 'catering' v DB
+    if (fileName === 'catering') {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
             return true;
@@ -565,11 +565,11 @@ const isPageAccessibleForGuest = async () => {
         return false;
     }
     
-    if (fileName === 'index.html') {
+    if (fileName === 'index') {
         return true;
     }
     
-    const pageId = fileName.replace('.html', '');
+    const pageId = fileName.replace('', '');
     const isVisible = await isPageVisibleInSettings(pageId);
     
     if (!isVisible) {
@@ -597,7 +597,7 @@ const isOnLoginPage = () => {
     
     const currentPath = window.location.pathname;
     const fileName = getFileNameFromPath(currentPath);
-    const result = fileName === 'login.html';
+    const result = fileName === 'login';
     return result;
 };
 
@@ -608,7 +608,7 @@ const isOnRegistrationPage = () => {
     
     const currentPath = window.location.pathname;
     const fileName = getFileNameFromPath(currentPath);
-    const registrationPages = ['register.html', 'admin-register.html', 'volunteer-register.html'];
+    const registrationPages = ['register', 'admin-register', 'volunteer-register'];
     const result = registrationPages.includes(fileName);
     return result;
 };
@@ -665,14 +665,14 @@ const checkRegistrationTimer = (userProfileData) => {
                 await signOut(auth);
                 window.globalUserProfileData = null;
                 window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                window.location.href = `${appBasePath}/login.html?status=registration_expired`;
+                window.location.href = `${appBasePath}/login?status=registration_expired`;
             } catch (error) {
-                window.location.href = `${appBasePath}/login.html`;
+                window.location.href = `${appBasePath}/login`;
             }
         }, timeUntilExpiry);
     } else {        
         if (isOnRegistrationPage()) {
-            const targetPath = `${appBasePath}/logged-in-my-data.html`;
+            const targetPath = `${appBasePath}/logged-in-my-data`;
             window.location.href = targetPath;
         }
     }
@@ -701,9 +701,9 @@ const handleAuthState = async () => {
                                 await signOut(auth);
                                 window.globalUserProfileData = null;
                                 window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));                                
-                                window.location.href = `${appBasePath}/login.html?status=profile_not_found`;
+                                window.location.href = `${appBasePath}/login?status=profile_not_found`;
                             } catch (signOutError) {
-                                window.location.href = `${appBasePath}/login.html?status=error`;
+                                window.location.href = `${appBasePath}/login?status=error`;
                             }
                             return;
                         }
@@ -729,13 +729,13 @@ const handleAuthState = async () => {
                                 signOut(auth).then(() => {
                                     window.globalUserProfileData = null;
                                     window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                                    window.location.href = `${appBasePath}/login.html?status=unapproved_admin`; 
+                                    window.location.href = `${appBasePath}/login?status=unapproved_admin`; 
                                 });
                                 return;
                             } 
                             
                             else if (userProfileData.approved === true) {
-                                const targetPathMyData = `${appBasePath}/logged-in-my-data.html`;
+                                const targetPathMyData = `${appBasePath}/logged-in-my-data`;
                                 const currentPage = getFileNameFromPath(window.location.pathname);
                                 const userRole = userProfileData.role;
                                 const isCurrentPagePublic = isPublicPage();
@@ -768,7 +768,7 @@ const handleAuthState = async () => {
                                 if (isCurrentPagePublic && publicPages.includes(currentPage)) {
                                     const isVisible = await checkPageVisibilityForUser(currentPage, userProfileData);
                                     if (!isVisible) {
-                                        window.location.href = `${appBasePath}/login.html`;
+                                        window.location.href = `${appBasePath}/login`;
                                         return;
                                     }
                                 }
@@ -810,7 +810,7 @@ const handleAuthState = async () => {
             const isAccessible = await isPageAccessibleForGuest();
                         
             if (!isAccessible) {
-                const indexUrl = `${appBasePath}/index.html`;
+                const indexUrl = `${appBasePath}/index`;
                 window.location.href = indexUrl;
                 return;
             }
