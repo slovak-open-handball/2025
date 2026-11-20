@@ -105,13 +105,19 @@ const getLoginStatus = (user) => {
   const login = toDateSafe(user?.lastLoginAt);
   const logout = toDateSafe(user?.lastLogoutAt);
 
-  // Ak nikdy nebol prihlásený -> červený
+  console.log('STATUS DEBUG', {
+    id: user?.id,
+    email: user?.email,
+    role: user?.role,
+    rawLogin: user?.lastLoginAt,
+    rawLogout: user?.lastLogoutAt,
+    loginDate: login,
+    logoutDate: logout,
+    result: !login ? false : (!logout ? true : login.getTime() > logout.getTime())
+  });
+
   if (!login) return false;
-
-  // Ak sa ešte nikdy neodhlásil a má login -> zelený
   if (!logout) return true;
-
-  // Zelený len ak je login striktne neskôr ako logout
   return login.getTime() > logout.getTime();
 };
 
