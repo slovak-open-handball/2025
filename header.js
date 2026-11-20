@@ -1033,7 +1033,7 @@ const updateHeaderLinks = (userProfileData) => {
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
     const headerElement = document.querySelector('header');
-    const navLinks = document.querySelectorAll('nav a');
+    const navLinks = document.querySelectorAll('header a, header button');
     
     if (!authLink || !profileLink || !logoutButton || !headerElement) {
         return;
@@ -1188,7 +1188,7 @@ const updateHeaderLinks = (userProfileData) => {
 };
 
 const initializeNavHoverStyles = () => {
-    const navLinks = document.querySelectorAll('nav a');
+    const navLinks = document.querySelectorAll('header a, header button');  // ← ZMENA
     const defaultHoverColor = '#e3f2fd';
     const defaultHoverTextColor = getHeaderHoverTextColorByRole(null);
     
