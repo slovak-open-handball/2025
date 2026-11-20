@@ -1,8 +1,4 @@
-// logged-in-users.js (teraz obsahuje UsersManagementApp pre správu používateľov)
-// Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
-// sú globálne definované v <head> logged-in-users.html.
-// Všetky komponenty a logika pre správu používateľov sú teraz v tomto súbore.
-// NOVINKA: Nový stĺpec "Stav" so zeleným/červeným kruhom podľa lastLoginAt vs lastLogoutAt.
+// logged-in-users.js
 
 // Imports for necessary Firebase functions
 import {
