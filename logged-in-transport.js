@@ -12984,7 +12984,11 @@ const TransportApp = ({ userProfileData }) => {
                                     'li',
                                     {
                                         key: `stop-${idx}`,
-                                        className: 'flex items-center gap-2'
+                                        className: 'grid w-full items-center gap-2',
+                                        style: {
+                                            gridTemplateColumns:
+                                                '1.5rem 1.75rem minmax(0, 1fr) minmax(0, 1.3fr) 1.75rem 1.75rem',
+                                        },
                                     },
                                     React.createElement(
                                         'span',
@@ -13044,7 +13048,7 @@ const TransportApp = ({ userProfileData }) => {
                                                     });
                                                 }
                                             },
-                                            className: 'w-36 px-2 py-1.5 text-sm border border-gray-300 rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                                            className: 'w-full min-w-0 px-2 py-1.5 text-sm border border-gray-300 rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500'
                                         },
                                         React.createElement(
                                             'option',
@@ -13076,7 +13080,7 @@ const TransportApp = ({ userProfileData }) => {
                                                     return copy;
                                                 });
                                             },
-                                            className: 'flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                                            className: 'w-full min-w-0 px-2 py-1.5 text-sm border border-gray-300 rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500'
                                         },
                                         React.createElement(
                                             'option',
