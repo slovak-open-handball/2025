@@ -653,11 +653,14 @@ function UsersManagementApp() {
   }, [db]);
 
   useEffect(() => {
+    let unsubscribeUsers = null;
+    let cancelled = false;
+  
     const fetchData = async () => {
       setLoading(true);
   
       if (!globalUserProfileData || !defaultDeadlines.dataEditDeadline || !defaultDeadlines.rosterEditDeadline) {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
         return;
       }
   
@@ -665,118 +668,133 @@ function UsersManagementApp() {
       window.isCurrentUserAdmin = isUserAdmin;
       window.currentUserId = auth.currentUser?.uid;
   
-      if (isUserAdmin) {
-        const usersCol = collection(db, 'users');
-        const adminCountRef = doc(db, 'settings', 'adminCount');
-        
-        // Nepoužívame unsubscribeAdminCount, lebo ho nepotrebujeme
-        const q = query(usersCol);
+      if (!isUserAdmin) {
+        if (!cancelled) setLoading(false);
+        return;
+      }
   
-        const unsubscribeUsers = onSnapshot(q, async (snapshot) => {
-          const usersList = await Promise.all(snapshot.docs.map(async (docSnapshot) => {
-            let userData = {
-              id: docSnapshot.id,
-              ...docSnapshot.data()
-            };
-
-            if (userData.hasOwnProperty('email')) {
-                await updateDoc(doc(db, 'users', userData.id), { email: deleteField() });
-                delete userData.email;
-              }
+      const usersCol = collection(db, 'users');
+      const adminCountRef = doc(db, 'settings', 'adminCount');
   
-            // === SPRÁVNE SPRACOVANIE DEADLINOV ===
-            if (userData.role === 'admin' || userData.role === 'hall') {
-              const updateData = {};
-              if (userData.hasOwnProperty('dataEditDeadline')) {
-                updateData.dataEditDeadline = deleteField();
-              }
-              if (userData.hasOwnProperty('rosterEditDeadline')) {
-                updateData.rosterEditDeadline = deleteField();
-              }
-              if (Object.keys(updateData).length > 0) {
-                await updateDoc(doc(db, 'users', userData.id), updateData);
-              }
-            } 
-            else if (userData.role === 'club' || userData.role === 'referee' || userData.role === 'volunteer') {
-              const updateData = {};
-              let needsUpdate = false;
+      // Nepoužívame unsubscribeAdminCount, lebo ho nepotrebujeme
+      const q = query(usersCol);
   
-              const defaultDataDeadline = defaultDeadlines.dataEditDeadline;
-              const defaultRosterDeadline = defaultDeadlines.rosterEditDeadline;
+      unsubscribeUsers = onSnapshot(q, async (snapshot) => {
+        if (cancelled) return;
   
-              // dataEditDeadline
-              if (!userData.dataEditDeadline || 
-                  (userData.dataEditDeadline?.toDate && userData.dataEditDeadline.toDate() < defaultDataDeadline)) {
-                updateData.dataEditDeadline = defaultDataDeadline;
+        const usersList = await Promise.all(snapshot.docs.map(async (docSnapshot) => {
+          let userData = {
+            id: docSnapshot.id,
+            ...docSnapshot.data()
+          };
+  
+          if (userData.hasOwnProperty('email')) {
+            await updateDoc(doc(db, 'users', userData.id), { email: deleteField() });
+            delete userData.email;
+          }
+  
+          // === SPRÁVNE SPRACOVANIE DEADLINOV ===
+          if (userData.role === 'admin' || userData.role === 'hall') {
+            const updateData = {};
+            if (userData.hasOwnProperty('dataEditDeadline')) {
+              updateData.dataEditDeadline = deleteField();
+            }
+            if (userData.hasOwnProperty('rosterEditDeadline')) {
+              updateData.rosterEditDeadline = deleteField();
+            }
+            if (Object.keys(updateData).length > 0) {
+              await updateDoc(doc(db, 'users', userData.id), updateData);
+            }
+          } 
+          else if (userData.role === 'club' || userData.role === 'referee' || userData.role === 'volunteer') {
+            const updateData = {};
+            let needsUpdate = false;
+  
+            const defaultDataDeadline = defaultDeadlines.dataEditDeadline;
+            const defaultRosterDeadline = defaultDeadlines.rosterEditDeadline;
+  
+            // dataEditDeadline
+            if (!userData.dataEditDeadline || 
+                (userData.dataEditDeadline?.toDate && userData.dataEditDeadline.toDate() < defaultDataDeadline)) {
+              updateData.dataEditDeadline = defaultDataDeadline;
+              needsUpdate = true;
+            }
+  
+            // rosterEditDeadline
+            if (userData.role === 'club') {
+              if (!userData.rosterEditDeadline || 
+                  (userData.rosterEditDeadline?.toDate && userData.rosterEditDeadline.toDate() < defaultRosterDeadline)) {
+                updateData.rosterEditDeadline = defaultRosterDeadline;
                 needsUpdate = true;
               }
-  
-              // rosterEditDeadline
-              if (userData.role === 'club') {
-                if (!userData.rosterEditDeadline || 
-                    (userData.rosterEditDeadline?.toDate && userData.rosterEditDeadline.toDate() < defaultRosterDeadline)) {
-                  updateData.rosterEditDeadline = defaultRosterDeadline;
-                  needsUpdate = true;
-                }
-              } else {
-                if (userData.hasOwnProperty('rosterEditDeadline')) {
-                  updateData.rosterEditDeadline = deleteField();
-                  needsUpdate = true;
-                }
-              }
-  
-              if (needsUpdate) {
-                await updateDoc(doc(db, 'users', userData.id), updateData);
-              }
-            }
-  
-            return userData;
-          }));
-
-          await Promise.all(usersList.map(async (u) => {
-            try {
-              const privateDoc = await getDoc(doc(db, 'usersprivate', u.id));
-              u.email = privateDoc.exists() ? (privateDoc.data().email || '') : '';
-            } catch (e) {
-              u.email = '';
-            }
-          }));
-  
-          // Nastavenie najstaršieho admina
-          const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
-          if (adminUsers.length > 0) {
-            const validAdminUsers = adminUsers.filter(u => u.registrationDate?.seconds && u.registrationDate.seconds > 0);
-            
-            if (validAdminUsers.length > 0) {
-              validAdminUsers.sort((a, b) => (a.registrationDate.seconds || 0) - (b.registrationDate.seconds || 0));
-              setOldestAdminId(validAdminUsers[0].id);
             } else {
-              setOldestAdminId(adminUsers[0].id);
+              if (userData.hasOwnProperty('rosterEditDeadline')) {
+                updateData.rosterEditDeadline = deleteField();
+                needsUpdate = true;
+              }
+            }
+  
+            if (needsUpdate) {
+              await updateDoc(doc(db, 'users', userData.id), updateData);
             }
           }
   
-          setUsers(usersList);
+          return userData;
+        }));
   
-          // Načítanie názvov hál
-          const hallIds = usersList.map(user => user.hallId).filter(id => id);
-          if (hallIds.length > 0) {
-            fetchHallNames(hallIds);
+        if (cancelled) return;
+  
+        await Promise.all(usersList.map(async (u) => {
+          try {
+            const privateDoc = await getDoc(doc(db, 'usersprivate', u.id));
+            u.email = privateDoc.exists() ? (privateDoc.data().email || '') : '';
+          } catch (e) {
+            u.email = '';
           }
+        }));
   
-          setLoading(false);
-        }, (error) => {
-          console.error("Chyba pri načítaní užívateľov:", error);
+        if (cancelled) return;
+  
+        // Nastavenie najstaršieho admina
+        const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
+        if (adminUsers.length > 0) {
+          const validAdminUsers = adminUsers.filter(u => u.registrationDate?.seconds && u.registrationDate.seconds > 0);
+  
+          if (validAdminUsers.length > 0) {
+            validAdminUsers.sort((a, b) => (a.registrationDate.seconds || 0) - (b.registrationDate.seconds || 0));
+            setOldestAdminId(validAdminUsers[0].id);
+          } else {
+            setOldestAdminId(adminUsers[0].id);
+          }
+        }
+  
+        setUsers(usersList);
+  
+        // Načítanie názvov hál
+        const hallIds = usersList.map(user => user.hallId).filter(id => id);
+        if (hallIds.length > 0) {
+          fetchHallNames(hallIds);
+        }
+  
+        setLoading(false);
+      }, (error) => {
+        console.error("Chyba pri načítaní užívateľov:", error);
+        if (!cancelled) {
           setLoading(false);
           setNotification({ message: 'Chyba pri načítaní užívateľov.', type: 'error' });
-        });
-  
-        return () => unsubscribeUsers();
-      } else {
-        setLoading(false);
-      }
+        }
+      });
     };
   
     fetchData();
+  
+    return () => {
+      cancelled = true;
+      if (unsubscribeUsers) {
+        unsubscribeUsers();
+        unsubscribeUsers = null;
+      }
+    };
   }, [globalUserProfileData, defaultDeadlines]);
 
   // Funkcia na úpravu roly
