@@ -105,19 +105,17 @@ const getLoginStatus = (user) => {
   const login = toDateSafe(user?.lastLoginAt);
   const logout = toDateSafe(user?.lastLogoutAt);
 
-  console.log('STATUS DEBUG', {
-    id: user?.id,
-    email: user?.email,
-    role: user?.role,
-    rawLogin: user?.lastLoginAt,
-    rawLogout: user?.lastLogoutAt,
-    loginDate: login,
-    logoutDate: logout,
-    result: !login ? false : (!logout ? true : login.getTime() > logout.getTime())
-  });
-
   if (!login) return false;
-  if (!logout) return true;
+
+  // Ak nemáme lastLogoutAt, považujeme používateľa za prihláseného
+  // len ak jeho lastLoginAt je v rozumnom časovom okne (napr. 24 hodín)
+  if (!logout) {
+    const now = Date.now();
+    const loginMs = login.getTime();
+    const MAX_SESSION_MS = 24 * 60 * 60 * 1000; // 24 hodín
+    return (now - loginMs) < MAX_SESSION_MS;
+  }
+
   return login.getTime() > logout.getTime();
 };
 
