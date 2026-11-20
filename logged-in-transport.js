@@ -10205,7 +10205,7 @@ const TransportApp = ({ userProfileData }) => {
 
             const walkingRange = getWalkingSegmentDisplayRange(
                 parent,
-                segmentIndex
+                t._segmentIndex
             );
 
             let displayStartTs = walkingRange?.startTs ?? null;
