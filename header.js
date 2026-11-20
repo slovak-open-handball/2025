@@ -635,13 +635,20 @@ const handleLogout = async () => {
 
         if (user && window.db) {
             try {
+                // Použijeme Timestamp.now() namiesto serverTimestamp()
+                // – zapíše sa okamžite lokálne (optimistic update),
+                // takže listener v logged-in-users.js dostane platnú hodnotu hneď.
                 await updateDoc(doc(window.db, 'users', user.uid), {
-                    lastLogoutAt: serverTimestamp()
+                    lastLogoutAt: Timestamp.now()
                 });
             } catch (e) {
                 console.error('Zápis lastLogoutAt zlyhal:', e);
             }
         }
+
+        // Krátky delay, aby sa snapshot stihol propagovať do listenerov
+        // v iných taboch / komponentoch (napr. logged-in-users.js)
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         await signOut(auth);
 
