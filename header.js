@@ -693,7 +693,26 @@ const getHeaderColorByRole = (role) => {
 }
 
 const getHeaderHoverTextColorByRole = (role) => {
-    return '#000000';
+    // Základná farba pozadia hlavičky podľa roly
+    const headerColor = getHeaderColorByRole(role);
+
+    // Prevod HEX → RGB
+    let hex = headerColor.replace('#', '');
+    if (hex.length === 3) {
+        hex = hex.split('').map(c => c + c).join('');
+    }
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+
+    // 50 % zosvetlenie = zmiešanie s bielou (255,255,255) v pomere 50:50
+    const mix = 0.5;
+    const nr = Math.round(r + (255 - r) * mix);
+    const ng = Math.round(g + (255 - g) * mix);
+    const nb = Math.round(b + (255 - b) * mix);
+
+    const toHex = (v) => v.toString(16).padStart(2, '0');
+    return `#${toHex(nr)}${toHex(ng)}${toHex(nb)}`;
 };
 
 const setupUserSettingsListener = (userId) => {
