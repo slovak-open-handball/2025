@@ -103,9 +103,9 @@ const getLoginStatus = (user) => {
 
   if (!login) return false;
 
-  // Ak nemáme lastLogoutAt, považujeme používateľa za NEPRIHLÁSENÉHO
-  // (konzervatívne – radšej červená ako falošná zelená)
-  if (!logout) return false;
+  // Ak chýba lastLogoutAt, považujeme používateľa za prihláseného
+  // (prihlásil sa, ešte sa neodhlásil)
+  if (!logout) return true;
 
   return login.getTime() > logout.getTime();
 };
