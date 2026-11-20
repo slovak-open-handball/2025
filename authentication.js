@@ -34,7 +34,9 @@ import {
     collection,
     getDocs,
     query,
-    where
+    where,
+    updateDoc,
+    serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import {
     initializeAppCheck,
@@ -161,6 +163,17 @@ const isReallyLoggedIn = () => {
     if (window.isAnonymousUser === true) return false;
     if (window.globalUserProfileData.role === 'anonymous') return false;
     return true;
+};
+
+const recordLogout = async (user) => {
+    if (!user || !db) return;
+    try {
+        await updateDoc(doc(db, 'users', user.uid), {
+            lastLogoutAt: serverTimestamp()
+        });
+    } catch (e) {
+        console.error('Nepodarilo sa zapísať lastLogoutAt:', e);
+    }
 };
 
 const isAppCheckSupported = () => {
@@ -662,6 +675,10 @@ const checkRegistrationTimer = (userProfileData) => {
     if (timeUntilExpiry > 0) {
         registrationLogoutTimeout = setTimeout(async () => {
             try {
+                // Zapíšeme lastLogoutAt ešte pred signOut
+                const currentUser = auth.currentUser;
+                await recordLogout(currentUser);
+                
                 await signOut(auth);
                 window.globalUserProfileData = null;
                 window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
@@ -698,13 +715,15 @@ const handleAuthState = async () => {
                             return loadUserProfileData(retries + 1);
                         } else {                            
                             try {
+                                await recordLogout(auth.currentUser);
                                 await signOut(auth);
                                 window.globalUserProfileData = null;
-                                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));                                
+                                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
                                 window.location.href = `${appBasePath}/login?status=profile_not_found`;
                             } catch (signOutError) {
                                 window.location.href = `${appBasePath}/login?status=error`;
                             }
+
                             return;
                         }
                     }
@@ -726,13 +745,15 @@ const handleAuthState = async () => {
                             }
                     
                             if (userProfileData.role === 'admin' && userProfileData.approved === false) {
-                                signOut(auth).then(() => {
-                                    window.globalUserProfileData = null;
-                                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                                    window.location.href = `${appBasePath}/login?status=unapproved_admin`; 
+                                recordLogout(auth.currentUser).finally(() => {
+                                    signOut(auth).then(() => {
+                                        window.globalUserProfileData = null;
+                                        window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+                                        window.location.href = `${appBasePath}/login?status=unapproved_admin`;
+                                    });
                                 });
                                 return;
-                            } 
+                            }
                             
                             else if (userProfileData.approved === true) {
                                 const targetPathMyData = `${appBasePath}/logged-in-my-data`;
