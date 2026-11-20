@@ -107,14 +107,9 @@ const getLoginStatus = (user) => {
 
   if (!login) return false;
 
-  // Ak nemáme lastLogoutAt, považujeme používateľa za prihláseného
-  // len ak jeho lastLoginAt je v rozumnom časovom okne (napr. 24 hodín)
-  if (!logout) {
-    const now = Date.now();
-    const loginMs = login.getTime();
-    const MAX_SESSION_MS = 24 * 60 * 60 * 1000; // 24 hodín
-    return (now - loginMs) < MAX_SESSION_MS;
-  }
+  // Ak nemáme lastLogoutAt, považujeme používateľa za NEPRIHLÁSENÉHO
+  // (konzervatívne – radšej červená ako falošná zelená)
+  if (!logout) return false;
 
   return login.getTime() > logout.getTime();
 };
