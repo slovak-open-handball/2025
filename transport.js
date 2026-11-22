@@ -234,7 +234,11 @@ const TransportApp = ({ userProfileData }) => {
 
   /* -------------------- Firestore subscriptions -------------------- */
   useEffect(() => {
-    if (!window.db) return;
+    if (!window.db) {
+      console.error('transport.js: window.db nie je inicializované – spinner zostane, kým sa Firestore nenainicializuje.');
+      setLoading(false);   // ✅ aspoň nezaseknutý spinner
+      return;
+    }
     const unsubs = [];
 
     // places (map + list)
@@ -315,8 +319,10 @@ const TransportApp = ({ userProfileData }) => {
         setSavedTransfers(transfers);
         travelTimesLoadedRef.current = true;
         setLoading(false);
-      }, (e) => {}));
-    } catch (e) {}
+      }, (e) => {
+        console.error('transportTravelTimes error', e);
+        setLoading(false);   // ✅ aj pri chybe vypni spinner
+      }));
 
     // transport → bus + busRow
     try {
@@ -919,5 +925,5 @@ const TransportApp = ({ userProfileData }) => {
 /* ------------------------------------------------------------------ */
 
 export default function MountCateringTransport({ userProfileData }) {
-  return (TransportApp, { userProfileData });
+  return h(TransportApp, { userProfileData });
 }
