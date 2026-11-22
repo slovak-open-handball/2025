@@ -259,6 +259,7 @@ const TransportApp = ({ userProfileData }) => {
             transfers.push({
               key,
               category: v.category || '',
+              categoryId: v.categoryId || null,
               teamUid: v.teamUid || null,
               teamIndex: v.teamIndex ?? null,
               teamName: v.teamName || null,
@@ -421,7 +422,7 @@ const TransportApp = ({ userProfileData }) => {
       }, (e) => {}));
     } catch (e) {}
 
-    // settings/categories → transportColors
+    // settings/categories → drawColors (farba pre rozlosovanie)
     try {
       const catRef = doc(window.db, 'settings', 'categories');
       unsubs.push(onSnapshot(catRef, (snap) => {
@@ -430,10 +431,10 @@ const TransportApp = ({ userProfileData }) => {
           const data = snap.data() || {};
           Object.entries(data).forEach(([catId, catData]) => {
             if (!catData) return;
-            const tc = catData.transportColor || null;
-            if (tc) {
-              if (catData.name) colorMap[String(catData.name).trim()] = tc;
-              colorMap[catId] = tc;
+            const dc = catData.drawColor || null;
+            if (dc) {
+              if (catData.name) colorMap[String(catData.name).trim()] = dc;
+              colorMap[catId] = dc;
             }
           });
         }
@@ -615,6 +616,7 @@ const TransportApp = ({ userProfileData }) => {
         typeKey,
         title: `${fromName} → ${toName}`,
         category: cleanCategory(parent.category || ''),
+        categoryId: parent.categoryId || null,
         teamName: String(parent.teamName || '').trim(),
         fromName,
         toName,
@@ -771,17 +773,30 @@ const TransportApp = ({ userProfileData }) => {
       className: `px-5 py-3 hover:bg-gray-50 transition-colors border-l-4 ${color.border}`,
     },
       React.createElement('div', { className: 'flex-1 min-w-0' },
-        // 1. riadok: kategória + tím
-        (ev.category || ev.teamName)
-          ? React.createElement('div', { className: 'flex items-center gap-2 flex-wrap mb-1' },
-              ev.category
-                ? React.createElement('span', { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded' }, ev.category)
-                : null,
-              ev.teamName
-                ? React.createElement('span', { className: 'text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded' }, ev.teamName)
-                : null
-            )
-          : null,
+        // 1. riadok: kategória + tím – farba textu podľa drawColor kategórie
+        (() => {
+          const catColor = ev.category
+            ? (transportColorsRef.current[ev.category] || transportColorsRef.current[ev.categoryId] || null)
+            : null;
+          const badgeStyle = catColor ? { color: catColor } : undefined;
+
+          return (ev.category || ev.teamName)
+            ? React.createElement('div', { className: 'flex items-center gap-2 flex-wrap mb-1' },
+                ev.category
+                  ? React.createElement('span', {
+                      className: 'text-xs bg-gray-100 px-2 py-0.5 rounded font-medium',
+                      style: badgeStyle,
+                    }, ev.category)
+                  : null,
+                ev.teamName
+                  ? React.createElement('span', {
+                      className: 'text-xs bg-blue-50 px-2 py-0.5 rounded font-medium',
+                      style: badgeStyle,
+                    }, ev.teamName)
+                  : null
+              )
+            : null;
+        })(),
         // 2. riadok: názov celkového presunu
         React.createElement('div', { className: `font-medium ${color.text}` }, ev.title),
         // 3. rozpis čiastkových segmentov
