@@ -15,7 +15,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-const { useState, useEffect, useRef, useMemo, createElement: h } = React;
+const { useState, useEffect, useRef, useMemo } = React;
 
 /* ------------------------------------------------------------------ */
 /* Pomocné funkcie                                                     */
@@ -203,7 +203,7 @@ const TransportApp = ({ userProfileData }) => {
       || (stopsList || []).find((s) => normalizePlaceName(s.name) === norm);
     if (!found) return null;
     const meta = placeTypeIcons[found.type] || { icon: 'fa-circle-dot', color: '#6b7280' };
-    return h('i', {
+    return React.createElement('i', {
       className: `fa-solid ${meta.icon}`,
       style: { color: meta.color, marginRight: '4px' },
       title: meta.label || found.type || '',
@@ -561,7 +561,6 @@ const TransportApp = ({ userProfileData }) => {
 
       if (legs.length === 0) return;
 
-      const isWalking = allWalking && !anyWalking === false; // celý peší len ak všetky walking
       const overallIsWalking = legs.every((l) => l.isWalking);
 
       // --- Celkový čas ---
@@ -606,10 +605,6 @@ const TransportApp = ({ userProfileData }) => {
       else if (hasRealTimes) typeKey = 'transfer_bus';
       else typeKey = 'transfer_unassigned';
 
-      const subtitle = overallIsWalking
-        ? 'Peší presun'
-        : (busName ? `Bus: ${busName}` : 'Bez priradeného busu');
-
       events.push({
         id: parent.key,
         dayKey,
@@ -619,7 +614,6 @@ const TransportApp = ({ userProfileData }) => {
         timeLabel,
         typeKey,
         title: `Presun: ${fromName} → ${toName}`,
-        subtitle,
         category: cleanCategory(parent.category || ''),
         teamName: String(parent.teamName || '').trim(),
         fromName,
@@ -628,7 +622,7 @@ const TransportApp = ({ userProfileData }) => {
         isWalking: overallIsWalking,
         hasRealTimes,
         placeIcon: getPlaceIconForName(fromName),
-        legs, // ⬅️ detail čiastkových segmentov
+        legs,
         extra: null,
       });
     });
@@ -655,63 +649,63 @@ const TransportApp = ({ userProfileData }) => {
 
   /* -------------------- Render: loading -------------------- */
   if (loading) {
-    return h('div', { className: 'flex justify-center pt-16' },
-      h('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+    return React.createElement('div', { className: 'flex justify-center pt-16' },
+      React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
     );
   }
 
   const dayKeys = Object.keys(eventsByDay).sort();
 
   /* -------------------- Render: hlavička -------------------- */
-  const headerSection = h('div', { className: 'mb-6' },
-    h('h1', { className: 'text-2xl font-bold text-gray-800 flex items-center gap-2' },
-      h('i', { className: 'fa-solid fa-bus text-blue-600' }),
+  const headerSection = React.createElement('div', { className: 'mb-6' },
+    React.createElement('h1', { className: 'text-2xl font-bold text-gray-800 flex items-center gap-2' },
+      React.createElement('i', { className: 'fa-solid fa-bus text-blue-600' }),
       'Presuny tímov'
     ),
-    h('p', { className: 'text-gray-600 mt-1' }, 'Prehľad presunov podľa dní a tímov.')
+    React.createElement('p', { className: 'text-gray-600 mt-1' }, 'Prehľad presunov podľa dní a tímov.')
   );
 
   /* -------------------- Render: filtre -------------------- */
-  const filtersSection = h('div', { className: 'bg-white rounded-lg shadow p-4 mb-6 border border-gray-200' },
-    h('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4' },
+  const filtersSection = React.createElement('div', { className: 'bg-white rounded-lg shadow p-4 mb-6 border border-gray-200' },
+    React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4' },
       // Deň
-      h('div', null,
-        h('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Deň'),
-        h('select', {
+      React.createElement('div', null,
+        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Deň'),
+        React.createElement('select', {
           className: 'w-full border border-gray-300 rounded px-3 py-2 text-sm',
           value: selectedDayKey,
           onChange: (e) => setSelectedDayKey(e.target.value),
         },
-          h('option', { value: '' }, 'Všetky dni'),
+          React.createElement('option', { value: '' }, 'Všetky dni'),
           ...tournamentDays.map((d) =>
-            h('option', { key: d.dayKey, value: d.dayKey }, `${d.dateLabel} (${d.dayName})`)
+            React.createElement('option', { key: d.dayKey, value: d.dayKey }, `${d.dateLabel} (${d.dayName})`)
           )
         )
       ),
       // Kategória
-      h('div', null,
-        h('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Kategória'),
-        h('select', {
+      React.createElement('div', null,
+        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Kategória'),
+        React.createElement('select', {
           className: 'w-full border border-gray-300 rounded px-3 py-2 text-sm',
           value: selectedCategory,
           onChange: (e) => setSelectedCategory(e.target.value),
         },
-          h('option', { value: '' }, 'Všetky kategórie'),
-          ...availableCategories.map((c) => h('option', { key: c, value: c }, c))
+          React.createElement('option', { value: '' }, 'Všetky kategórie'),
+          ...availableCategories.map((c) => React.createElement('option', { key: c, value: c }, c))
         )
       ),
       // Tím
-      h('div', null,
-        h('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Tím'),
-        h('select', {
+      React.createElement('div', null,
+        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Tím'),
+        React.createElement('select', {
           className: 'w-full border border-gray-300 rounded px-3 py-2 text-sm',
           value: selectedTeam,
           onChange: (e) => setSelectedTeam(e.target.value),
         },
-          h('option', { value: '' }, 'Všetky tímy'),
+          React.createElement('option', { value: '' }, 'Všetky tímy'),
           ...availableTeams.map((t) => {
             const [cat, name] = t.split('|');
-            return h('option', { key: t, value: name }, `${name} (${cat})`);
+            return React.createElement('option', { key: t, value: name }, `${name} (${cat})`);
           })
         )
       )
@@ -719,9 +713,9 @@ const TransportApp = ({ userProfileData }) => {
   );
 
   /* -------------------- Render: prázdny stav -------------------- */
-  const emptySection = h('div', { className: 'bg-white rounded-lg shadow p-12 text-center text-gray-500' },
-    h('i', { className: 'fa-solid fa-inbox text-4xl mb-3 text-gray-300' }),
-    h('p', null, 'Žiadne udalosti pre zvolené filtre.')
+  const emptySection = React.createElement('div', { className: 'bg-white rounded-lg shadow p-12 text-center text-gray-500' },
+    React.createElement('i', { className: 'fa-solid fa-inbox text-4xl mb-3 text-gray-300' }),
+    React.createElement('p', null, 'Žiadne udalosti pre zvolené filtre.')
   );
 
   /* -------------------- Render: jedna udalosť -------------------- */
@@ -730,62 +724,62 @@ const TransportApp = ({ userProfileData }) => {
 
     // Podzoznam čiastkových segmentov (legs)
     const legsBlock = (ev.legs && ev.legs.length > 0)
-      ? h('div', { className: 'mt-2 pl-2 border-l-2 border-gray-200 space-y-1' },
+      ? React.createElement('div', { className: 'mt-2 pl-2 border-l-2 border-gray-200 space-y-1' },
           ...ev.legs.map((leg, idx) => {
             const legIcon = leg.isWalking ? 'fa-person-walking text-amber-600' : 'fa-bus text-blue-600';
             const legTime = leg.timeLabel || '--:--';
 
             // Názov busu vedľa ikony (pred časom)
             const legBusLabel = (!leg.isWalking && leg.busName)
-              ? h('span', { className: 'text-xs text-blue-700 font-medium' }, leg.busName)
+              ? React.createElement('span', { className: 'text-xs text-blue-700 font-medium' }, leg.busName)
               : null;
 
-            return h('div', {
+            return React.createElement('div', {
               key: idx,
               className: 'flex items-center gap-2 text-xs text-gray-600',
             },
-              h('i', { className: `fa-solid ${legIcon}` }),
+              React.createElement('i', { className: `fa-solid ${legIcon}` }),
               legBusLabel,
-              h('span', { className: 'font-mono w-24 text-gray-700' }, legTime),
-              h('span', { className: 'text-gray-500' }, `${leg.fromName} → ${leg.toName}`)
+              React.createElement('span', { className: 'font-mono w-24 text-gray-700' }, legTime),
+              React.createElement('span', { className: 'text-gray-500' }, `${leg.fromName} → ${leg.toName}`)
             );
           })
         )
       : null;
 
-    return h('div', {
+    return React.createElement('div', {
       key: ev.id,
       className: `px-5 py-3 hover:bg-gray-50 transition-colors border-l-4 ${color.border}`,
     },
-      h('div', { className: 'flex items-start gap-4' },
+      React.createElement('div', { className: 'flex items-start gap-4' },
         // Ikona
-        h('div', { className: `flex-shrink-0 w-10 h-10 rounded-full ${color.bg} flex items-center justify-center` },
-          h('i', { className: `fa-solid ${color.icon} ${color.text}` })
+        React.createElement('div', { className: `flex-shrink-0 w-10 h-10 rounded-full ${color.bg} flex items-center justify-center` },
+          React.createElement('i', { className: `fa-solid ${color.icon} ${color.text}` })
         ),
         // Čas
-        h('div', { className: 'flex-shrink-0 w-28 text-sm font-mono text-gray-700 pt-1' },
+        React.createElement('div', { className: 'flex-shrink-0 w-28 text-sm font-mono text-gray-700 pt-1' },
           ev.timeLabel || '--:--'
         ),
         // Obsah
-        h('div', { className: 'flex-1 min-w-0' },
+        React.createElement('div', { className: 'flex-1 min-w-0' },
           // 1. riadok: kategória + tím
           (ev.category || ev.teamName)
-            ? h('div', { className: 'flex items-center gap-2 flex-wrap mb-1' },
+            ? React.createElement('div', { className: 'flex items-center gap-2 flex-wrap mb-1' },
                 ev.category
-                  ? h('span', { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded' }, ev.category)
+                  ? React.createElement('span', { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded' }, ev.category)
                   : null,
                 ev.teamName
-                  ? h('span', { className: 'text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded' }, ev.teamName)
+                  ? React.createElement('span', { className: 'text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded' }, ev.teamName)
                   : null
               )
             : null,
           // 2. riadok: názov celkového presunu
-          h('div', { className: `font-medium ${color.text}` }, ev.title),
+          React.createElement('div', { className: `font-medium ${color.text}` }, ev.title),
           // 3. rozpis čiastkových segmentov
           legsBlock
         ),
         // Typ
-        h('div', { className: 'flex-shrink-0 text-xs text-gray-400 pt-1' }, color.label)
+        React.createElement('div', { className: 'flex-shrink-0 text-xs text-gray-400 pt-1' }, color.label)
       )
     );
   };
@@ -796,22 +790,22 @@ const TransportApp = ({ userProfileData }) => {
     const dayLabel = dayMeta ? `${dayMeta.dateLabel} (${dayMeta.dayName})` : dayKey;
     const dayEvents = eventsByDay[dayKey];
 
-    return h('div', {
+    return React.createElement('div', {
       key: dayKey,
       className: 'bg-white rounded-lg shadow border border-gray-200 overflow-hidden',
     },
       // Hlavička dňa
-      h('div', { className: 'bg-gradient-to-r from-blue-600 to-blue-500 text-white px-5 py-3 flex items-center justify-between' },
-        h('h2', { className: 'text-lg font-semibold flex items-center gap-2' },
-          h('i', { className: 'fa-regular fa-calendar' }),
+      React.createElement('div', { className: 'bg-gradient-to-r from-blue-600 to-blue-500 text-white px-5 py-3 flex items-center justify-between' },
+        React.createElement('h2', { className: 'text-lg font-semibold flex items-center gap-2' },
+          React.createElement('i', { className: 'fa-regular fa-calendar' }),
           dayLabel
         ),
-        h('span', { className: 'text-sm bg-white/20 px-3 py-1 rounded-full' },
+        React.createElement('span', { className: 'text-sm bg-white/20 px-3 py-1 rounded-full' },
           `${dayEvents.length} udalostí`
         )
       ),
       // Zoznam udalostí
-      h('div', { className: 'divide-y divide-gray-100' },
+      React.createElement('div', { className: 'divide-y divide-gray-100' },
         ...dayEvents.map(renderEvent)
       )
     );
@@ -820,12 +814,12 @@ const TransportApp = ({ userProfileData }) => {
   /* -------------------- Render: timeline -------------------- */
   const timelineSection = dayKeys.length === 0
     ? emptySection
-    : h('div', { className: 'space-y-8' },
+    : React.createElement('div', { className: 'space-y-8' },
         ...dayKeys.map(renderDay)
       );
 
   /* -------------------- Render: root -------------------- */
-  return h('div', { className: 'p-4 max-w-7xl mx-auto' },
+  return React.createElement('div', { className: 'p-4 max-w-7xl mx-auto' },
     headerSection,
     filtersSection,
     timelineSection
@@ -837,7 +831,7 @@ const TransportApp = ({ userProfileData }) => {
 /* ------------------------------------------------------------------ */
 
 export default function Transport({ userProfileData }) {
-  return h(TransportApp, { userProfileData });
+  return React.createElement(TransportApp, { userProfileData });
 }
 
 /* ------------------------------------------------------------------ */
