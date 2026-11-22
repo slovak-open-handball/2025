@@ -564,7 +564,7 @@ const TransportApp = ({ userProfileData }) => {
         const d = new Date(parentWhenRange.startTs);
         dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       }
-      if (dayFilter && dayKey !== dayFilter) continue;
+      if (dayFilter && dayKey !== dayFilter) return;
 
       // --- Názvy miest pre celú trasu ---
       const fromName = resolvePlaceNameById(routeIds[0]);
