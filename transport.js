@@ -752,9 +752,8 @@ const TransportApp = ({ userProfileData }) => {
   const headerSection = React.createElement('div', { className: 'mb-6' },
     React.createElement('h1', { className: 'text-2xl font-bold text-gray-800 flex items-center gap-2' },
       React.createElement('i', { className: 'fa-solid fa-bus text-blue-600' }),
-      'Presuny tímov'
-    ),
-    React.createElement('p', { className: 'text-gray-600 mt-1' }, 'Prehľad presunov podľa dní a tímov.')
+      'Doprava'
+    )
   );
 
   /* -------------------- Render: filtre -------------------- */
