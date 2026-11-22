@@ -599,9 +599,8 @@ const TransportApp = ({ userProfileData }) => {
 
   /* -------------------- Render: loading -------------------- */
   if (loading) {
-    return h('div', { className: 'flex items-center justify-center p-12' },
-      h('i', { className: 'fa-solid fa-spinner fa-spin text-3xl text-blue-600 mr-3' }),
-      h('span', { className: 'text-lg text-gray-700' }, 'Načítavam presuny…')
+    return h('div', { className: 'flex justify-center pt-16' },
+      h('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
     );
   }
 
@@ -787,7 +786,6 @@ if (rootEl && !rootEl.dataset.reactMounted) {
     const userProfileData = window.currentUserProfile || window.userProfileData || null;
 
     // Odstránime pôvodný spinner z HTML
-    rootEl.innerHTML = '';
     rootEl.dataset.reactMounted = 'true';
 
     const root = ReactDOM.createRoot(rootEl);
