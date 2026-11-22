@@ -890,6 +890,16 @@ const TransportApp = ({ userProfileData }) => {
             const startTimeText = leg.startTime || '';
             const endTimeText = leg.endTime || '';
 
+            // Špeciálny prípad: jediný segment, peší, bez času → v stĺpcoch Čas nič
+            const isSingleWalkingNoTime =
+              ev.legs.length === 1 &&
+              leg.isWalking === true &&
+              !leg.startTime &&
+              !leg.endTime;
+
+            const displayStartTime = isSingleWalkingNoTime ? '' : (startTimeText || '--:--');
+            const displayEndTime = isSingleWalkingNoTime ? '' : (endTimeText || '--:--');
+
             const legBusLabel = React.createElement('span', {
               className: `text-xs font-medium w-20 flex-shrink-0 truncate ${leg.isWalking ? 'text-amber-700 italic' : 'text-blue-700'}`,
             }, legBusLabelText);
@@ -906,12 +916,12 @@ const TransportApp = ({ userProfileData }) => {
               ),
               // 2. stĺpec: bus / PEŠI
               legBusLabel,
-              // 3. stĺpec: Čas (Od)
-              React.createElement('span', { className: 'font-mono w-16 flex-shrink-0 text-gray-700' }, startTimeText || '--:--'),
+              // 3. stĺpec: Čas (Od) – prázdny string pre špeciálny prípad, inak --:--
+              React.createElement('span', { className: 'font-mono w-16 flex-shrink-0 text-gray-700' }, displayStartTime),
               // 4. stĺpec: Odkiaľ
               React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.fromName),
-              // 5. stĺpec: Čas (Do)
-              React.createElement('span', { className: 'font-mono w-16 flex-shrink-0 text-gray-700' }, endTimeText || '--:--'),
+              // 5. stĺpec: Čas (Do) – prázdny string pre špeciálny prípad, inak --:--
+              React.createElement('span', { className: 'font-mono w-16 flex-shrink-0 text-gray-700' }, displayEndTime),
               // 6. stĺpec: Kam
               React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.toName),
               // 7. stĺpec: Poznámka – stĺpec VŽDY existuje (má šírku), text len pre pešie segmenty
