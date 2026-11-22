@@ -763,9 +763,6 @@ const TransportApp = ({ userProfileData }) => {
         )
       : null;
 
-    // Border-l-4 len ak to NIE JE prvý event v dni
-    const borderClass = isFirst ? '' : `border-l-4 ${color.border}`;
-
     return React.createElement('div', {
       key: ev.id,
       className: 'px-5 py-3 hover:bg-gray-50 transition-colors',
