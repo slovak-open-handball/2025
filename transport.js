@@ -137,10 +137,10 @@ const placeTypeIcons = {
 /* ------------------------------------------------------------------ */
 
 const EVENT_COLORS = {
-  transfer_bus:        { bg: 'bg-blue-50',   border: 'border-blue-400',   text: 'text-blue-800',   icon: 'fa-bus',             label: 'Presun busom' },
-  transfer_walking:    { bg: 'bg-amber-50',  border: 'border-amber-400',  text: 'text-amber-800',  icon: 'fa-person-walking',  label: 'Peší presun' },
-  transfer_unassigned: { bg: 'bg-gray-50',   border: 'border-gray-300',   text: 'text-gray-700',   icon: 'fa-question-circle', label: 'Nepriradený presun' },
-  accommodation:       { bg: 'bg-purple-50', border: 'border-purple-400', text: 'text-purple-800', icon: 'fa-bed',             label: 'Ubytovanie' },
+  transfer_bus:        { bg: 'bg-blue-50',   text: 'text-blue-800',   icon: 'fa-bus',             label: 'Presun busom' },
+  transfer_walking:    { bg: 'bg-amber-50',  text: 'text-amber-800',  icon: 'fa-person-walking',  label: 'Peší presun' },
+  transfer_unassigned: { bg: 'bg-gray-50',   text: 'text-gray-700',   icon: 'fa-question-circle', label: 'Nepriradený presun' },
+  accommodation:       { bg: 'bg-purple-50', text: 'text-purple-800', icon: 'fa-bed',             label: 'Ubytovanie' },
 };
 
 /* ------------------------------------------------------------------ */
@@ -721,7 +721,7 @@ const TransportApp = ({ userProfileData }) => {
   );
 
   /* -------------------- Render: jedna udalosť -------------------- */
-  const renderEvent = (ev, isFirst) => {
+  const renderEvent = (ev) => {
     const color = EVENT_COLORS[ev.typeKey] || EVENT_COLORS.transfer_unassigned;
 
     // Podzoznam čiastkových segmentov (legs)
@@ -768,7 +768,7 @@ const TransportApp = ({ userProfileData }) => {
 
     return React.createElement('div', {
       key: ev.id,
-      className: `px-5 py-3 hover:bg-gray-50 transition-colors ${borderClass}`,
+      className: 'px-5 py-3 hover:bg-gray-50 transition-colors',
     },
       React.createElement('div', { className: 'flex-1 min-w-0' },
         (() => {
@@ -835,7 +835,7 @@ const TransportApp = ({ userProfileData }) => {
       ),
       // Zoznam udalostí – prvý bez farebného pásika
       React.createElement('div', { className: 'divide-y divide-gray-100' },
-        ...dayEvents.map((ev, idx) => renderEvent(ev, idx === 0))
+        ...dayEvents.map((ev) => renderEvent(ev))
       )
     );
   };
