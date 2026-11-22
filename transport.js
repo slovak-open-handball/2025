@@ -817,14 +817,14 @@ const TransportApp = ({ userProfileData }) => {
     // Podzoznam čiastkových segmentov (legs)
     const legsBlock = (ev.legs && ev.legs.length > 0)
       ? React.createElement('div', { className: 'mt-2 pl-2 border-l-2 border-gray-200 space-y-1' },
-          // Hlavička stĺpcov
+          // Hlavička stĺpcov – Do je pred Odkiaľ
           React.createElement('div', { className: 'flex items-center gap-2 text-[10px] uppercase tracking-wide text-gray-400 pb-1' },
             React.createElement('span', { className: 'w-4 flex-shrink-0' }, ''),
             React.createElement('span', { className: 'w-20 flex-shrink-0' }, 'Typ'),
             React.createElement('span', { className: 'w-16 flex-shrink-0' }, 'Od'),
             React.createElement('span', { className: 'w-16 flex-shrink-0' }, 'Do'),
-            React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Odkiaľ'),
-            React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Kam')
+            React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Kam'),
+            React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Odkiaľ')
           ),
           ...ev.legs.map((leg, idx) => {
             const legIcon = leg.isWalking ? 'fa-person-walking text-amber-600' : 'fa-bus text-blue-600';
@@ -854,10 +854,10 @@ const TransportApp = ({ userProfileData }) => {
               React.createElement('span', { className: 'font-mono w-16 flex-shrink-0 text-gray-700' }, startTimeText || '--:--'),
               // 4. stĺpec: Do
               React.createElement('span', { className: 'font-mono w-16 flex-shrink-0 text-gray-700' }, endTimeText || '--:--'),
-              // 5. stĺpec: Odkiaľ
-              React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.fromName),
-              // 6. stĺpec: Kam
-              React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.toName)
+              // 5. stĺpec: Kam
+              React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.toName),
+              // 6. stĺpec: Odkiaľ
+              React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.fromName)
             );
           })
         )
