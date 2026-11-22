@@ -839,32 +839,25 @@ const updateNavigationLinks = () => {
         
         let isVisible = pageConfig && pageConfig.visible === true;
         
-        // ŠPECIÁLNE PRAVIDLO: Tabuľky majú rovnakú viditeľnosť ako Zápasy
         if (pageId === 'tables') {
             const matchesConfig = pagesVisibility['matches'];
             isVisible = matchesConfig && matchesConfig.visible === true;
         }
         
-        // ŠPECIÁLNE PRAVIDLO: Tímy majú rovnakú viditeľnosť ako Skupiny (teams-in-groups)
         if (pageId === 'teams') {
             const teamsInGroupsConfig = pagesVisibility['teams-in-groups'];
             isVisible = teamsInGroupsConfig && teamsInGroupsConfig.visible === true;
         }
         
-        // ŠPECIÁLNE PRAVIDLO: Štatistiky majú rovnakú viditeľnosť ako Súpisky (rosters)
         if (pageId === 'statistics') {
             const rostersConfig = pagesVisibility['rosters'];
             isVisible = rostersConfig && rostersConfig.visible === true;
         }
         
-        // ŠPECIÁLNE PRAVIDLO: Stravovanie - viditeľnosť riadená priamo dokumentom 'catering' v DB.
-        // Ak dokument v DB neexistuje, predvolene SKRYTÉ (rovnako ako defaultVisible: false v administrácii).
         if (pageId === 'catering') {
             isVisible = pageConfig && pageConfig.visible === true;
         }
 
-        // ŠPECIÁLNE PRAVIDLO: Transport - viditeľnosť riadená priamo dokumentom 'transport' v DB.
-        // Ak dokument v DB neexistuje, predvolene SKRYTÉ (rovnako ako catering).
         if (pageId === 'transport') {
             isVisible = pageConfig && pageConfig.visible === true;
         }
