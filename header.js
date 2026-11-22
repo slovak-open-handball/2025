@@ -855,7 +855,7 @@ const updateNavigationLinks = () => {
         }
         
         if (pageId === 'catering') {
-            isVisible = pageConfig && pageConfig.visible === true: true;
+            isVisible = pageConfig && pageConfig.visible === true : true;
         }
 
         if (pageId === 'transport') {
