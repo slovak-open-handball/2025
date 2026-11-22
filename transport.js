@@ -210,6 +210,87 @@ const TransportApp = ({ userProfileData }) => {
     });
   };
 
+  /* -------------------- Výpočet zobrazenia pešieho segmentu (rovnako ako v logged-in-transport.js) -------------------- */
+  const getWalkingSegmentDisplayRange = (parent, segmentIndex) => {
+    if (!parent || !Array.isArray(parent.segments)) return null;
+
+    const segments = parent.segments;
+    const currentSegment = segments[segmentIndex];
+    if (!currentSegment || currentSegment.isWalking !== true) return null;
+
+    const parentRange = parseWhenRangeToTs(parent.when);
+
+    let previousBusIndex = -1;
+    let previousBusEndTs = null;
+    for (let i = segmentIndex - 1; i >= 0; i--) {
+      const segment = segments[i];
+      if (!segment || segment.isWalking === true) continue;
+      if (segment.endTs != null) {
+        previousBusIndex = i;
+        previousBusEndTs = segment.endTs;
+        break;
+      }
+      if (segment.startTs != null) {
+        previousBusIndex = i;
+        previousBusEndTs = segment.startTs;
+        break;
+      }
+    }
+
+    let nextBusIndex = segments.length;
+    let nextBusStartTs = null;
+    for (let i = segmentIndex + 1; i < segments.length; i++) {
+      const segment = segments[i];
+      if (!segment || segment.isWalking === true) continue;
+      if (segment.startTs != null) {
+        nextBusIndex = i;
+        nextBusStartTs = segment.startTs;
+        break;
+      }
+      if (segment.endTs != null) {
+        nextBusIndex = i;
+        nextBusStartTs = segment.endTs;
+        break;
+      }
+    }
+
+    const intervalStartTs = previousBusEndTs != null
+      ? previousBusEndTs
+      : (parentRange?.startTs ?? null);
+
+    const intervalEndTs = nextBusStartTs != null
+      ? nextBusStartTs
+      : (parentRange?.endTs ?? null);
+
+    if (
+      intervalStartTs == null ||
+      intervalEndTs == null ||
+      intervalEndTs <= intervalStartTs
+    ) {
+      return null;
+    }
+
+    const walkingIndexes = [];
+    for (let i = previousBusIndex + 1; i < nextBusIndex; i++) {
+      if (segments[i] && segments[i].isWalking === true) {
+        walkingIndexes.push(i);
+      }
+    }
+
+    const walkingCount = walkingIndexes.length || 1;
+    const walkingPosition = Math.max(0, walkingIndexes.indexOf(segmentIndex));
+
+    const intervalDuration = intervalEndTs - intervalStartTs;
+    const walkingPartDuration = intervalDuration / walkingCount;
+
+    const displayStartTs = intervalStartTs + walkingPosition * walkingPartDuration;
+    const displayEndTs = walkingPosition === walkingCount - 1
+      ? intervalEndTs
+      : displayStartTs + walkingPartDuration;
+
+    return { startTs: displayStartTs, endTs: displayEndTs };
+  };
+
   /* -------------------- Firestore subscriptions -------------------- */
   useEffect(() => {
     if (!window.db) {
@@ -518,9 +599,16 @@ const TransportApp = ({ userProfileData }) => {
         const legFromName = resolvePlaceNameById(fromId);
         const legToName = resolvePlaceNameById(toId);
 
-        let legStartTs = null, legEndTs = null, legTimeLabel = '';
+         let legStartTs = null, legEndTs = null, legTimeLabel = '';
         if (legWalking) {
-          if (seg?.startTs != null) {
+          // Rovnaká logika ako v logged-in-transport.js (getWalkingSegmentDisplayRange)
+          const walkingRange = getWalkingSegmentDisplayRange(parent, i);
+
+          if (walkingRange) {
+            legStartTs = walkingRange.startTs;
+            legEndTs = walkingRange.endTs;
+            legTimeLabel = `${formatTimeOnly(legStartTs)} – ${formatTimeOnly(legEndTs)}`;
+          } else if (seg?.startTs != null) {
             legStartTs = seg.startTs;
             legEndTs = seg.endTs != null ? seg.endTs : seg.startTs + 60 * 1000;
             legTimeLabel = `${formatTimeOnly(legStartTs)} – ${formatTimeOnly(legEndTs)}`;
@@ -741,7 +829,7 @@ const TransportApp = ({ userProfileData }) => {
             const legBusLabelText = leg.isWalking
               ? 'PEŠI'
               : (leg.busName || '');
-            const legTimeText = leg.isWalking ? '' : (leg.timeLabel || '--:--');
+            const legTimeText = leg.timeLabel || '--:--';
 
             const legBusLabel = React.createElement('span', {
               className: `text-xs font-medium w-20 flex-shrink-0 truncate ${leg.isWalking ? 'text-amber-700 italic' : 'text-blue-700'}`,
