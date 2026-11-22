@@ -773,25 +773,39 @@ const TransportApp = ({ userProfileData }) => {
       className: `px-5 py-3 hover:bg-gray-50 transition-colors border-l-4 ${color.border}`,
     },
       React.createElement('div', { className: 'flex-1 min-w-0' },
-        // 1. riadok: kategória + tím – farba textu podľa drawColor kategórie
+        // 1. riadok: kategória + tím – farba textu aj pozadia podľa drawColor kategórie
         (() => {
           const catColor = ev.category
             ? (transportColorsRef.current[ev.category] || transportColorsRef.current[ev.categoryId] || null)
             : null;
-          const badgeStyle = catColor ? { color: catColor } : undefined;
+
+          // Vytvor "bledšiu" verziu farby pre pozadie stítku
+          let badgeBg = undefined;
+          if (catColor) {
+            const isHex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(catColor.trim());
+            badgeBg = isHex ? `${catColor.trim()}20` : `color-mix(in srgb, ${catColor} 12%, white)`;
+          }
+
+          const badgeStyle = catColor
+            ? { color: catColor, backgroundColor: badgeBg }
+            : undefined;
 
           return (ev.category || ev.teamName)
             ? React.createElement('div', { className: 'flex items-center gap-2 flex-wrap mb-1' },
                 ev.category
                   ? React.createElement('span', {
-                      className: 'text-xs bg-gray-100 px-2 py-0.5 rounded font-medium',
-                      style: badgeStyle,
+                      className: 'text-xs px-2 py-0.5 rounded font-medium border',
+                      style: badgeStyle
+                        ? { ...badgeStyle, borderColor: catColor }
+                        : { backgroundColor: '#f3f4f6', color: '#4b5563', borderColor: '#e5e7eb' },
                     }, ev.category)
                   : null,
                 ev.teamName
                   ? React.createElement('span', {
-                      className: 'text-xs bg-blue-50 px-2 py-0.5 rounded font-medium',
-                      style: badgeStyle,
+                      className: 'text-xs px-2 py-0.5 rounded font-medium border',
+                      style: badgeStyle
+                        ? { ...badgeStyle, borderColor: catColor }
+                        : { backgroundColor: '#eff6ff', color: '#1d4ed8', borderColor: '#dbeafe' },
                     }, ev.teamName)
                   : null
               )
