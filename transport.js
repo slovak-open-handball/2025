@@ -876,7 +876,9 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Odkiaľ'),
             React.createElement('span', { className: 'w-16 flex-shrink-0' }, 'Čas'),
             React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Kam'),
-            React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Poznámka')
+            ev.legs.some((l) => l.isWalking)
+              ? React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Poznámka')
+              : null
           ),
           ...ev.legs.map((leg, idx) => {
             const legIcon = leg.isWalking ? 'fa-person-walking text-amber-600' : 'fa-bus text-blue-600';
