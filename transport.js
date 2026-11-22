@@ -479,7 +479,7 @@ const TransportApp = ({ userProfileData }) => {
     const catFilter = selectedCategory ? cleanCategory(selectedCategory) : null;
     const teamFilter = selectedTeam ? selectedTeam : null;
 
-    /* --- 1) Transfery – CELÝ PRESUN ako jeden riadok --- */
+    /* --- 1) Transfery – CELÝ PRESUN ako jeden riadok s rozpismi --- */
     (savedTransfers || []).forEach((parent) => {
       if (parent._parentKey && parent._parentKey !== parent.key) return;
       if (catFilter && cleanCategory(parent.category || '') !== catFilter) return;
@@ -488,7 +488,6 @@ const TransportApp = ({ userProfileData }) => {
       const stopsIds = Array.isArray(parent.intermediateStopIds) ? parent.intermediateStopIds.filter(Boolean) : [];
       const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
 
-      // Zostavíme celkovú trasu (from → medzizastávky → to), bez duplikátov
       const routeIdsRaw = [parent.fromId, ...stopsIds, parent.toId].filter(Boolean);
       const routeIds = [];
       routeIdsRaw.forEach((id) => {
@@ -498,48 +497,77 @@ const TransportApp = ({ userProfileData }) => {
 
       const parentWhenRange = parseWhenRangeToTs(parent.when);
 
-      // --- Zistíme čas celého presunu ---
-      let startTs = null, endTs = null, timeLabel = '';
-      let isWalking = false;
+      // --- Zostavíme LEGS (čiastkové segmenty medzi zastávkami) ---
+      const legs = [];
+      let startTs = null, endTs = null;
       let hasRealTimes = false;
       let busId = null;
       let busName = null;
+      let anyWalking = false;
+      let allWalking = true;
 
-      // Prejdeme všetky segmenty a zistíme:
-      // - či je celý presun peší (všetky segmenty walking)
-      // - najskorší startTs a najneskorší endTs
-      // - či má aspoň jeden segment reálne časy
-      // - busId (z prvého segmentu s busom)
-      const segmentInfos = routeIds.slice(0, -1).map((fromId, i) => {
+      for (let i = 0; i < routeIds.length - 1; i++) {
+        const fromId = routeIds[i];
         const toId = routeIds[i + 1];
+        if (fromId === toId) continue;
+
         const seg = parentSegments.find((s) => s && s.fromId === fromId && s.toId === toId) || null;
-        return { fromId, toId, seg };
-      }).filter((x) => x.fromId !== x.toId);
+        const legWalking = !!(seg && seg.isWalking === true);
+        const legHasTimes = !!(seg && seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs);
 
-      const allWalking = segmentInfos.length > 0 && segmentInfos.every(({ seg }) => seg && seg.isWalking === true);
+        const legFromName = resolvePlaceNameById(fromId);
+        const legToName = resolvePlaceNameById(toId);
 
-      segmentInfos.forEach(({ seg }) => {
-        if (!seg) return;
-        if (seg.startTs != null) {
-          if (startTs == null || seg.startTs < startTs) startTs = seg.startTs;
+        let legStartTs = null, legEndTs = null, legTimeLabel = '';
+        if (legWalking) {
+          if (seg?.startTs != null) {
+            legStartTs = seg.startTs;
+            legEndTs = seg.endTs != null ? seg.endTs : seg.startTs + 60 * 1000;
+            legTimeLabel = `${formatTimeOnly(legStartTs)} – ${formatTimeOnly(legEndTs)}`;
+          } else {
+            legTimeLabel = 'PEŠI';
+          }
+        } else if (legHasTimes) {
+          legStartTs = seg.startTs;
+          legEndTs = seg.endTs;
+          legTimeLabel = `${formatTimeOnly(legStartTs)} – ${formatTimeOnly(legEndTs)}`;
+        } else {
+          legTimeLabel = 'nepriradený';
         }
-        if (seg.endTs != null) {
-          if (endTs == null || seg.endTs > endTs) endTs = seg.endTs;
-        }
-        if (seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs) {
-          hasRealTimes = true;
-        }
-        if (!busId && seg.busId) {
-          busId = String(seg.busId);
-        }
-      });
 
-      isWalking = allWalking;
-      if (busId) {
-        busName = buses.find((b) => b.id === busId)?.name || `Bus ${busId}`;
+        const legBusId = seg?.busId ? String(seg.busId) : null;
+        const legBusName = legBusId
+          ? (buses.find((b) => b.id === legBusId)?.name || `Bus ${legBusId}`)
+          : null;
+
+        // agregácia pre celkový presun
+        if (legStartTs != null && (startTs == null || legStartTs < startTs)) startTs = legStartTs;
+        if (legEndTs != null && (endTs == null || legEndTs > endTs)) endTs = legEndTs;
+        if (legHasTimes) hasRealTimes = true;
+        if (!busId && legBusId) { busId = legBusId; busName = legBusName; }
+        if (legWalking) anyWalking = true;
+        if (!legWalking) allWalking = false;
+
+        legs.push({
+          fromName: legFromName,
+          toName: legToName,
+          isWalking: legWalking,
+          busName: legBusName,
+          timeLabel: legTimeLabel,
+          startTs: legStartTs,
+          endTs: legEndTs,
+          hasTimes: legHasTimes,
+        });
       }
 
-      if (isWalking) {
+      if (legs.length === 0) return;
+
+      const isWalking = allWalking && !anyWalking === false; // celý peší len ak všetky walking
+      const overallIsWalking = legs.every((l) => l.isWalking);
+
+      // --- Celkový čas ---
+      let timeLabel = '';
+      if (overallIsWalking) {
         if (startTs != null) {
           if (endTs == null) endTs = startTs + 60 * 1000;
           timeLabel = `${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)}`;
@@ -569,23 +597,17 @@ const TransportApp = ({ userProfileData }) => {
       // --- Názvy miest pre celú trasu ---
       const fromName = resolvePlaceNameById(routeIds[0]);
       const toName = resolvePlaceNameById(routeIds[routeIds.length - 1]);
-      const middleNames = routeIds.slice(1, -1).map((id) => resolvePlaceNameById(id));
-
-      // Title: "A → B" alebo "A → (C) → B" ak sú medzizastávky
-      const routeLabel = middleNames.length > 0
-        ? `${fromName} → (${middleNames.join(' → ')}) → ${toName}`
-        : `${fromName} → ${toName}`;
 
       const sortTs = startTs != null
         ? startTs
         : (parentWhenRange?.startTs ?? Number.POSITIVE_INFINITY);
 
       let typeKey;
-      if (isWalking) typeKey = 'transfer_walking';
+      if (overallIsWalking) typeKey = 'transfer_walking';
       else if (hasRealTimes) typeKey = 'transfer_bus';
       else typeKey = 'transfer_unassigned';
 
-      const subtitle = isWalking
+      const subtitle = overallIsWalking
         ? 'Peší presun'
         : (busName ? `Bus: ${busName}` : 'Bez priradeného busu');
 
@@ -597,16 +619,17 @@ const TransportApp = ({ userProfileData }) => {
         endTs,
         timeLabel,
         typeKey,
-        title: `Presun: ${routeLabel}`,
+        title: `Presun: ${fromName} → ${toName}`,
         subtitle,
         category: cleanCategory(parent.category || ''),
         teamName: String(parent.teamName || '').trim(),
         fromName,
         toName,
         busName,
-        isWalking,
+        isWalking: overallIsWalking,
         hasRealTimes,
         placeIcon: getPlaceIconForName(fromName),
+        legs, // ⬅️ detail čiastkových segmentov
         extra: null,
       });
     });
@@ -723,38 +746,63 @@ const TransportApp = ({ userProfileData }) => {
   /* -------------------- Render: jedna udalosť -------------------- */
   const renderEvent = (ev) => {
     const color = EVENT_COLORS[ev.typeKey] || EVENT_COLORS.transfer_unassigned;
+
+    // Podzoznam čiastkových segmentov (legs) – zobrazí sa len ak ich je viac
+    const legsBlock = (ev.legs && ev.legs.length > 0)
+      ? h('div', { className: 'mt-2 pl-2 border-l-2 border-gray-200 space-y-1' },
+          ...ev.legs.map((leg, idx) => {
+            const legIcon = leg.isWalking ? 'fa-person-walking text-amber-600' : 'fa-bus text-blue-600';
+            const legTime = leg.timeLabel || '--:--';
+            const legBus = leg.busName ? ` (${leg.busName})` : '';
+            const legMethod = leg.isWalking ? 'peši' : (leg.busName ? 'busom' : 'nepriradené');
+            return h('div', {
+              key: idx,
+              className: 'flex items-center gap-2 text-xs text-gray-600',
+            },
+              h('i', { className: `fa-solid ${legIcon}` }),
+              h('span', { className: 'font-mono w-24 text-gray-700' }, legTime),
+              h('span', { className: 'text-gray-500' }, `${leg.fromName} → ${leg.toName}`),
+              h('span', { className: 'text-gray-400 italic' }, `${legMethod}${legBus}`)
+            );
+          })
+        )
+      : null;
+
     return h('div', {
       key: ev.id,
-      className: `flex items-start gap-4 px-5 py-3 hover:bg-gray-50 transition-colors border-l-4 ${color.border}`,
+      className: `px-5 py-3 hover:bg-gray-50 transition-colors border-l-4 ${color.border}`,
     },
-      // Ikona
-      h('div', { className: `flex-shrink-0 w-10 h-10 rounded-full ${color.bg} flex items-center justify-center` },
-        h('i', { className: `fa-solid ${color.icon} ${color.text}` })
-      ),
-      // Čas
-      h('div', { className: 'flex-shrink-0 w-28 text-sm font-mono text-gray-700 pt-1' },
-        ev.timeLabel || '--:--'
-      ),
-      // Obsah
-      h('div', { className: 'flex-1 min-w-0' },
-        h('div', { className: 'flex items-center gap-2 flex-wrap' },
-          h('span', { className: `font-medium ${color.text}` }, ev.title),
-          ev.category
-            ? h('span', { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded' }, ev.category)
-            : null,
-          ev.teamName
-            ? h('span', { className: 'text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded' }, ev.teamName)
-            : null
+      h('div', { className: 'flex items-start gap-4' },
+        // Ikona
+        h('div', { className: `flex-shrink-0 w-10 h-10 rounded-full ${color.bg} flex items-center justify-center` },
+          h('i', { className: `fa-solid ${color.icon} ${color.text}` })
         ),
-        ev.subtitle
-          ? h('div', { className: 'text-sm text-gray-500 mt-0.5 flex items-center gap-1' },
-              ev.placeIcon,
-              ev.subtitle
-            )
-          : null
-      ),
-      // Typ
-      h('div', { className: 'flex-shrink-0 text-xs text-gray-400 pt-1' }, color.label)
+        // Čas
+        h('div', { className: 'flex-shrink-0 w-28 text-sm font-mono text-gray-700 pt-1' },
+          ev.timeLabel || '--:--'
+        ),
+        // Obsah
+        h('div', { className: 'flex-1 min-w-0' },
+          h('div', { className: 'flex items-center gap-2 flex-wrap' },
+            h('span', { className: `font-medium ${color.text}` }, ev.title),
+            ev.category
+              ? h('span', { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded' }, ev.category)
+              : null,
+            ev.teamName
+              ? h('span', { className: 'text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded' }, ev.teamName)
+              : null
+          ),
+          ev.subtitle
+            ? h('div', { className: 'text-sm text-gray-500 mt-0.5 flex items-center gap-1' },
+                ev.placeIcon,
+                ev.subtitle
+              )
+            : null,
+          legsBlock
+        ),
+        // Typ
+        h('div', { className: 'flex-shrink-0 text-xs text-gray-400 pt-1' }, color.label)
+      )
     );
   };
 
