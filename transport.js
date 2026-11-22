@@ -725,34 +725,42 @@ const TransportApp = ({ userProfileData }) => {
     // Podzoznam čiastkových segmentov (legs)
     const legsBlock = (ev.legs && ev.legs.length > 0)
       ? React.createElement('div', { className: 'mt-2 pl-2 border-l-2 border-gray-200 space-y-1' },
+          // Hlavička stĺpcov (voliteľné – len raz)
+          React.createElement('div', { className: 'flex items-center gap-2 text-[10px] uppercase tracking-wide text-gray-400 pb-1' },
+            React.createElement('span', { className: 'w-4 flex-shrink-0' }, ''),
+            React.createElement('span', { className: 'w-20 flex-shrink-0' }, 'Prostriedok'),
+            React.createElement('span', { className: 'w-24 flex-shrink-0' }, 'Čas'),
+            React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Odkiaľ'),
+            React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Kam')
+          ),
           ...ev.legs.map((leg, idx) => {
             const legIcon = leg.isWalking ? 'fa-person-walking text-amber-600' : 'fa-bus text-blue-600';
 
-            // Ak je segment peší, "PEŠI" patrí do stĺpca názvu busu (2. stĺpec),
-            // časový stĺpec zostane prázdny.
             const legBusLabelText = leg.isWalking
               ? 'PEŠI'
               : (leg.busName || '');
             const legTimeText = leg.isWalking ? '' : (leg.timeLabel || '--:--');
 
             const legBusLabel = React.createElement('span', {
-              className: `text-xs font-medium w-20 truncate ${leg.isWalking ? 'text-amber-700 italic' : 'text-blue-700'}`,
+              className: `text-xs font-medium w-20 flex-shrink-0 truncate ${leg.isWalking ? 'text-amber-700 italic' : 'text-blue-700'}`,
             }, legBusLabelText);
 
             return React.createElement('div', {
               key: idx,
               className: 'flex items-center gap-2 text-xs text-gray-600',
             },
-              // 1. stĺpec: ikona – pevná šírka
+              // 1. stĺpec: ikona
               React.createElement('span', { className: 'w-4 flex-shrink-0 text-center' },
                 React.createElement('i', { className: `fa-solid ${legIcon}` })
               ),
-              // 2. stĺpec: názov busu alebo "PEŠI" – pevná šírka
+              // 2. stĺpec: bus / PEŠI
               legBusLabel,
-              // 3. stĺpec: čas – pevná šírka (pri pešom prázdny)
+              // 3. stĺpec: čas
               React.createElement('span', { className: 'font-mono w-24 flex-shrink-0 text-gray-700' }, legTimeText),
-              // 4. stĺpec: trasa
-              React.createElement('span', { className: 'text-gray-500' }, `${leg.fromName} → ${leg.toName}`)
+              // 4. stĺpec: Odkiaľ
+              React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.fromName),
+              // 5. stĺpec: Kam
+              React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.toName)
             );
           })
         )
@@ -762,7 +770,6 @@ const TransportApp = ({ userProfileData }) => {
       key: ev.id,
       className: `px-5 py-3 hover:bg-gray-50 transition-colors border-l-4 ${color.border}`,
     },
-      // Obsah – už bez ikony a bez celkového času
       React.createElement('div', { className: 'flex-1 min-w-0' },
         // 1. riadok: kategória + tím
         (ev.category || ev.teamName)
