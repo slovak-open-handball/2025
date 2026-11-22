@@ -851,3 +851,31 @@ const TransportApp = ({ userProfileData }) => {
 export default function Transport({ userProfileData }) {
   return h(TransportApp, { userProfileData });
 }
+
+/* ------------------------------------------------------------------ */
+/* Auto-mount do #root (ak ešte nie je namountovaný)                  */
+/* ------------------------------------------------------------------ */
+
+const rootEl = document.getElementById('root');
+
+if (rootEl && !rootEl.dataset.reactMounted) {
+  // Počkáme, kým authentication.js nastaví window.db a prípadne userProfileData
+  const tryMount = () => {
+    if (!window.db) {
+      // Firestore ešte nie je pripravený – skús o chvíľu
+      setTimeout(tryMount, 200);
+      return;
+    }
+
+    const userProfileData = window.currentUserProfile || window.userProfileData || null;
+
+    // Odstránime pôvodný spinner z HTML
+    rootEl.innerHTML = '';
+    rootEl.dataset.reactMounted = 'true';
+
+    const root = ReactDOM.createRoot(rootEl);
+    root.render(React.createElement(Transport, { userProfileData }));
+  };
+
+  tryMount();
+}
