@@ -162,7 +162,7 @@ const EVENT_COLORS = {
 /* Hlavná komponenta                                                  */
 /* ------------------------------------------------------------------ */
 
-const CateringTransportApp = ({ userProfileData }) => {
+const TransportApp = ({ userProfileData }) => {
   /* -------------------- Refs -------------------- */
   const placesMapRef = useRef({});
   const allPlacesRef = useRef([]);
@@ -919,5 +919,5 @@ const CateringTransportApp = ({ userProfileData }) => {
 /* ------------------------------------------------------------------ */
 
 export default function MountCateringTransport({ userProfileData }) {
-  return h(CateringTransportApp, { userProfileData });
+  return (TransportApp, { userProfileData });
 }
