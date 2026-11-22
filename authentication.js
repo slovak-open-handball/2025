@@ -337,8 +337,8 @@ const setupPageVisibilityListener = () => {
         let matchesVisible = true;
         let teamsInGroupsVisible = true;
         let rostersVisible = true;
-        let cateringVisible = false;
-        let transportVisible = false;
+        let cateringVisible = true;
+        let transportVisible = true;
         
         snapshot.forEach(doc => {
             const data = doc.data();
