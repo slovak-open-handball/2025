@@ -825,9 +825,6 @@ const TransportApp = ({ userProfileData }) => {
         React.createElement('h2', { className: 'text-lg font-semibold flex items-center gap-2' },
           React.createElement('i', { className: 'fa-regular fa-calendar' }),
           dayLabel
-        ),
-        React.createElement('span', { className: 'text-sm bg-white/20 px-3 py-1 rounded-full' },
-          `${dayEvents.length} udalostí`
         )
       ),
       // Zoznam udalostí – prvý bez farebného pásika
