@@ -734,16 +734,20 @@ const TransportApp = ({ userProfileData }) => {
           ...ev.legs.map((leg, idx) => {
             const legIcon = leg.isWalking ? 'fa-person-walking text-amber-600' : 'fa-bus text-blue-600';
             const legTime = leg.timeLabel || '--:--';
-            const legBus = leg.busName ? ` (${leg.busName})` : '';
-            const legMethod = leg.isWalking ? 'peši' : (leg.busName ? 'busom' : 'nepriradené');
+
+            // Názov busu vedľa ikony (pred časom)
+            const legBusLabel = (!leg.isWalking && leg.busName)
+              ? h('span', { className: 'text-xs text-blue-700 font-medium' }, leg.busName)
+              : null;
+
             return h('div', {
               key: idx,
               className: 'flex items-center gap-2 text-xs text-gray-600',
             },
               h('i', { className: `fa-solid ${legIcon}` }),
+              legBusLabel,
               h('span', { className: 'font-mono w-24 text-gray-700' }, legTime),
-              h('span', { className: 'text-gray-500' }, `${leg.fromName} → ${leg.toName}`),
-              h('span', { className: 'text-gray-400 italic' }, `${legMethod}${legBus}`)
+              h('span', { className: 'text-gray-500' }, `${leg.fromName} → ${leg.toName}`)
             );
           })
         )
@@ -777,14 +781,7 @@ const TransportApp = ({ userProfileData }) => {
             : null,
           // 2. riadok: názov celkového presunu
           h('div', { className: `font-medium ${color.text}` }, ev.title),
-          // 3. riadok: subtitle (bus / peši / nepriradený)
-          ev.subtitle
-            ? h('div', { className: 'text-sm text-gray-500 mt-0.5 flex items-center gap-1' },
-                ev.placeIcon,
-                ev.subtitle
-              )
-            : null,
-          // 4. rozpis čiastkových segmentov
+          // 3. rozpis čiastkových segmentov
           legsBlock
         ),
         // Typ
