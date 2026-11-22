@@ -1,4 +1,4 @@
-// catering.js
+// transport.js
 // Modul zobrazuje PRESUNY tímov (transfery) v rovnakom vizuálnom štýle,
 // akým catering.js zobrazuje stravovanie.
 //
