@@ -170,7 +170,6 @@ const TransportApp = ({ userProfileData }) => {
   const [selectedDayKey, setSelectedDayKey] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedTeam, setSelectedTeam] = useState('');
-  const [showOnlyTransfers, setShowOnlyTransfers] = useState(false);
   const [availableTeams, setAvailableTeams] = useState([]);
   const [availableCategories, setAvailableCategories] = useState([]);
 
@@ -642,23 +641,17 @@ const TransportApp = ({ userProfileData }) => {
     return events;
   }, [savedTransfers, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces]);
 
-  /* --- Filtrovanie len transferov --- */
-  const visibleEvents = useMemo(() => {
-    if (!showOnlyTransfers) return timelineEvents;
-    return timelineEvents.filter((e) => e.typeKey.startsWith('transfer'));
-  }, [timelineEvents, showOnlyTransfers]);
-
   /* --- Skupiny podľa dňa --- */
   const eventsByDay = useMemo(() => {
     const map = {};
-    visibleEvents.forEach((e) => {
+    timelineEvents.forEach((e) => {
       const dk = e.dayKey || 'neznamy';
       if (!map[dk]) map[dk] = [];
       map[dk].push(e);
     });
     Object.values(map).forEach((arr) => arr.sort((a, b) => a.sortTs - b.sortTs));
     return map;
-  }, [visibleEvents]);
+  }, [timelineEvents]);
 
   /* -------------------- Render: loading -------------------- */
   if (loading) {
@@ -680,7 +673,7 @@ const TransportApp = ({ userProfileData }) => {
 
   /* -------------------- Render: filtre -------------------- */
   const filtersSection = h('div', { className: 'bg-white rounded-lg shadow p-4 mb-6 border border-gray-200' },
-    h('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-4' },
+    h('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4' },
       // Deň
       h('div', null,
         h('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Deň'),
@@ -721,18 +714,6 @@ const TransportApp = ({ userProfileData }) => {
             return h('option', { key: t, value: name }, `${name} (${cat})`);
           })
         )
-      ),
-      // Len presuny
-      h('div', { className: 'flex items-end' },
-        h('label', { className: 'flex items-center gap-2 text-sm text-gray-700' },
-          h('input', {
-            type: 'checkbox',
-            checked: showOnlyTransfers,
-            onChange: (e) => setShowOnlyTransfers(e.target.checked),
-            className: 'rounded border-gray-300',
-          }),
-          'Len presuny'
-        )
       )
     )
   );
@@ -747,7 +728,7 @@ const TransportApp = ({ userProfileData }) => {
   const renderEvent = (ev) => {
     const color = EVENT_COLORS[ev.typeKey] || EVENT_COLORS.transfer_unassigned;
 
-    // Podzoznam čiastkových segmentov (legs) – zobrazí sa len ak ich je viac
+    // Podzoznam čiastkových segmentov (legs)
     const legsBlock = (ev.legs && ev.legs.length > 0)
       ? h('div', { className: 'mt-2 pl-2 border-l-2 border-gray-200 space-y-1' },
           ...ev.legs.map((leg, idx) => {
@@ -783,21 +764,27 @@ const TransportApp = ({ userProfileData }) => {
         ),
         // Obsah
         h('div', { className: 'flex-1 min-w-0' },
-          h('div', { className: 'flex items-center gap-2 flex-wrap' },
-            h('span', { className: `font-medium ${color.text}` }, ev.title),
-            ev.category
-              ? h('span', { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded' }, ev.category)
-              : null,
-            ev.teamName
-              ? h('span', { className: 'text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded' }, ev.teamName)
-              : null
-          ),
+          // 1. riadok: kategória + tím
+          (ev.category || ev.teamName)
+            ? h('div', { className: 'flex items-center gap-2 flex-wrap mb-1' },
+                ev.category
+                  ? h('span', { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded' }, ev.category)
+                  : null,
+                ev.teamName
+                  ? h('span', { className: 'text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded' }, ev.teamName)
+                  : null
+              )
+            : null,
+          // 2. riadok: názov celkového presunu
+          h('div', { className: `font-medium ${color.text}` }, ev.title),
+          // 3. riadok: subtitle (bus / peši / nepriradený)
           ev.subtitle
             ? h('div', { className: 'text-sm text-gray-500 mt-0.5 flex items-center gap-1' },
                 ev.placeIcon,
                 ev.subtitle
               )
             : null,
+          // 4. rozpis čiastkových segmentov
           legsBlock
         ),
         // Typ
