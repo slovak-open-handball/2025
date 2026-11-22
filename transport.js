@@ -728,7 +728,7 @@ const TransportApp = ({ userProfileData }) => {
           // Hlavička stĺpcov (voliteľné – len raz)
           React.createElement('div', { className: 'flex items-center gap-2 text-[10px] uppercase tracking-wide text-gray-400 pb-1' },
             React.createElement('span', { className: 'w-4 flex-shrink-0' }, ''),
-            React.createElement('span', { className: 'w-20 flex-shrink-0' }, 'Prostriedok'),
+            React.createElement('span', { className: 'w-20 flex-shrink-0' }, 'Typ presunu'),
             React.createElement('span', { className: 'w-24 flex-shrink-0' }, 'Čas'),
             React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Odkiaľ'),
             React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Kam')
