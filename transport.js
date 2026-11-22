@@ -888,7 +888,8 @@ const TransportApp = ({ userProfileData }) => {
             // Čas (Do) – skryť text v špeciálnom prípade
             React.createElement('span', { className: 'w-16 flex-shrink-0' }, isSingleWalkingNoTime ? '' : 'Čas'),
             React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Kam'),
-            React.createElement('span', { className: 'w-1/3 min-w-0' }, hasWalkingLeg ? 'Poznámka' : '')
+            // Poznámka – skryť text v špeciálnom prípade
+            React.createElement('span', { className: 'w-1/3 min-w-0' }, (hasWalkingLeg && !isSingleWalkingNoTime) ? 'Poznámka' : '')
           ),
           ...ev.legs.map((leg, idx) => {
             const legIcon = leg.isWalking ? 'fa-person-walking text-amber-600' : 'fa-bus text-blue-600';
@@ -914,7 +915,10 @@ const TransportApp = ({ userProfileData }) => {
               className: `text-xs font-medium w-20 flex-shrink-0 truncate ${leg.isWalking ? 'text-amber-700 italic' : 'text-blue-700'}`,
             }, legBusLabelText);
 
-            const noteText = leg.isWalking ? 'Disponibilný čas na presun peši' : '';
+            // Poznámka – v špeciálnom prípade prázdna
+            const noteText = (leg.isWalking && !isSingleWalkingNoTimeRow)
+              ? 'Disponibilný čas na presun peši'
+              : '';
 
             return React.createElement('div', {
               key: idx,
