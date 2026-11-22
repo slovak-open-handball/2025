@@ -868,15 +868,25 @@ const TransportApp = ({ userProfileData }) => {
     // Podzoznam čiastkových segmentov (legs)
     const hasWalkingLeg = !!(ev.legs && ev.legs.some((l) => l.isWalking));
 
+    // Špeciálny prípad: presun má iba jeden segment, je peší a nemá nastavené časy
+    const isSingleWalkingNoTime =
+      ev.legs &&
+      ev.legs.length === 1 &&
+      ev.legs[0].isWalking === true &&
+      !ev.legs[0].startTime &&
+      !ev.legs[0].endTime;
+
     const legsBlock = (ev.legs && ev.legs.length > 0)
       ? React.createElement('div', { className: 'mt-2 pl-2 border-l-2 border-gray-200 space-y-1' },
-          // Hlavička stĺpcov – stĺpce vždy existujú, text "Poznámka" len ak je peší segment
+          // Hlavička stĺpcov – stĺpce vždy existujú, texty podmienečne
           React.createElement('div', { className: 'flex items-center gap-2 text-[10px] uppercase tracking-wide text-gray-400 pb-1' },
             React.createElement('span', { className: 'w-4 flex-shrink-0' }, ''),
             React.createElement('span', { className: 'w-20 flex-shrink-0' }, 'Typ'),
-            React.createElement('span', { className: 'w-16 flex-shrink-0' }, 'Čas'),
+            // Čas (Od) – skryť text v špeciálnom prípade
+            React.createElement('span', { className: 'w-16 flex-shrink-0' }, isSingleWalkingNoTime ? '' : 'Čas'),
             React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Odkiaľ'),
-            React.createElement('span', { className: 'w-16 flex-shrink-0' }, 'Čas'),
+            // Čas (Do) – skryť text v špeciálnom prípade
+            React.createElement('span', { className: 'w-16 flex-shrink-0' }, isSingleWalkingNoTime ? '' : 'Čas'),
             React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Kam'),
             React.createElement('span', { className: 'w-1/3 min-w-0' }, hasWalkingLeg ? 'Poznámka' : '')
           ),
@@ -891,14 +901,14 @@ const TransportApp = ({ userProfileData }) => {
             const endTimeText = leg.endTime || '';
 
             // Špeciálny prípad: jediný segment, peší, bez času → v stĺpcoch Čas nič
-            const isSingleWalkingNoTime =
+            const isSingleWalkingNoTimeRow =
               ev.legs.length === 1 &&
               leg.isWalking === true &&
               !leg.startTime &&
               !leg.endTime;
 
-            const displayStartTime = isSingleWalkingNoTime ? '' : (startTimeText || '--:--');
-            const displayEndTime = isSingleWalkingNoTime ? '' : (endTimeText || '--:--');
+            const displayStartTime = isSingleWalkingNoTimeRow ? '' : (startTimeText || '--:--');
+            const displayEndTime = isSingleWalkingNoTimeRow ? '' : (endTimeText || '--:--');
 
             const legBusLabel = React.createElement('span', {
               className: `text-xs font-medium w-20 flex-shrink-0 truncate ${leg.isWalking ? 'text-amber-700 italic' : 'text-blue-700'}`,
@@ -916,15 +926,15 @@ const TransportApp = ({ userProfileData }) => {
               ),
               // 2. stĺpec: bus / PEŠI
               legBusLabel,
-              // 3. stĺpec: Čas (Od) – prázdny string pre špeciálny prípad, inak --:--
+              // 3. stĺpec: Čas (Od)
               React.createElement('span', { className: 'font-mono w-16 flex-shrink-0 text-gray-700' }, displayStartTime),
               // 4. stĺpec: Odkiaľ
               React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.fromName),
-              // 5. stĺpec: Čas (Do) – prázdny string pre špeciálny prípad, inak --:--
+              // 5. stĺpec: Čas (Do)
               React.createElement('span', { className: 'font-mono w-16 flex-shrink-0 text-gray-700' }, displayEndTime),
               // 6. stĺpec: Kam
               React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.toName),
-              // 7. stĺpec: Poznámka – stĺpec VŽDY existuje (má šírku), text len pre pešie segmenty
+              // 7. stĺpec: Poznámka
               React.createElement('span', { className: 'text-gray-400 italic w-1/3 min-w-0 truncate' }, noteText)
             );
           })
