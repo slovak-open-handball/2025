@@ -4,7 +4,7 @@
 // Dáta čerpá z Firestore kolekcií:
 //   - settings/transportTravelTimes  (times, transfers)
 //   - transport                      (bus, busRow, teamShortcut, walkingRule)
-//   - places, users, matches
+//   - places, users
 //   - settings/categories, settings/registration,
 //     settings/superstructureGroups
 //
@@ -133,14 +133,13 @@ const placeTypeIcons = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Farby pre typy udalostí (catering odstránený)                      */
+/* Farby pre typy udalostí (catering aj zápasy odstránené)            */
 /* ------------------------------------------------------------------ */
 
 const EVENT_COLORS = {
   transfer_bus:        { bg: 'bg-blue-50',   border: 'border-blue-400',   text: 'text-blue-800',   icon: 'fa-bus',             label: 'Presun busom' },
   transfer_walking:    { bg: 'bg-amber-50',  border: 'border-amber-400',  text: 'text-amber-800',  icon: 'fa-person-walking',  label: 'Peší presun' },
   transfer_unassigned: { bg: 'bg-gray-50',   border: 'border-gray-300',   text: 'text-gray-700',   icon: 'fa-question-circle', label: 'Nepriradený presun' },
-  match:               { bg: 'bg-red-50',    border: 'border-red-400',    text: 'text-red-800',    icon: 'fa-futbol',          label: 'Zápas' },
   accommodation:       { bg: 'bg-purple-50', border: 'border-purple-400', text: 'text-purple-800', icon: 'fa-bed',             label: 'Ubytovanie' },
 };
 
@@ -153,12 +152,10 @@ const TransportApp = ({ userProfileData }) => {
   const placesMapRef = useRef({});
   const allPlacesRef = useRef([]);
   const teamsLookupRef = useRef({});
-  const matchesBufferRef = useRef([]);
   const teamsArrivalBufferRef = useRef([]);
   const savedTransfersRef = useRef([]);
   const superstructureGroupsRef = useRef({});
   const transportColorsRef = useRef({});
-  const matchesLoadedRef = useRef(false);
   const teamsLoadedRef = useRef(false);
   const travelTimesLoadedRef = useRef(false);
 
@@ -169,7 +166,6 @@ const TransportApp = ({ userProfileData }) => {
   const [buses, setBuses] = useState([]);
   const [busRows, setBusRows] = useState({});
   const [savedTransfers, setSavedTransfers] = useState([]);
-  const [matches, setMatches] = useState([]);
   const [tournamentDays, setTournamentDays] = useState([]);
   const [selectedDayKey, setSelectedDayKey] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -384,24 +380,6 @@ const TransportApp = ({ userProfileData }) => {
           });
         });
 
-        // superstructure z matches
-        (matchesBufferRef.current || []).forEach((m) => {
-          [m.home, m.away].forEach((teamName) => {
-            if (!teamName) return;
-            const cat = cleanCategory(m.category);
-            if (!teamsSet.has(`${cat}|${teamName}`)) {
-              buffer.push({
-                category: cat,
-                teamName,
-                accommodationName: '',
-                accommodationType: '(nešpecifikovaný)',
-                isRegistered: false,
-                isSuperstructure: true,
-              });
-            }
-          });
-        });
-
         teamsLookupRef.current = lookup;
         teamsArrivalBufferRef.current = buffer;
         teamsLoadedRef.current = true;
@@ -410,38 +388,6 @@ const TransportApp = ({ userProfileData }) => {
       } catch (e) {}
     };
     loadTeams();
-
-    // matches
-    try {
-      const matchesRef = collection(window.db, 'matches');
-      unsubs.push(onSnapshot(matchesRef, (snap) => {
-        const list = [];
-        snap.forEach((d) => {
-          const data = d.data() || {};
-          const category = cleanCategory(data.categoryName || data.categoryId || '(neznáma kategória)');
-          const home = data.homeTeamIdentifier || '';
-          const away = data.awayTeamIdentifier || '';
-          let scheduledTs = null;
-          if (data.scheduledTime) {
-            try {
-              scheduledTs = data.scheduledTime.toDate ? data.scheduledTime.toDate().getTime() : new Date(data.scheduledTime).getTime();
-            } catch (e) { scheduledTs = null; }
-          }
-          list.push({
-            category,
-            home,
-            away,
-            scheduledTs,
-            scheduledTime: data.scheduledTime ? formatDateTime(data.scheduledTime) : null,
-            hallId: data.hallId || null,
-            hallName: data.hallId ? (placesMapRef.current[data.hallId] || '') : null,
-          });
-        });
-        matchesBufferRef.current = list;
-        setMatches(list);
-        matchesLoadedRef.current = true;
-      }, (e) => {}));
-    } catch (e) {}
 
     // settings/registration → tournament days
     try {
@@ -625,42 +571,13 @@ const TransportApp = ({ userProfileData }) => {
       }
     });
 
-    /* --- 2) Zápasy --- */
-    (matches || []).forEach((m) => {
-      if (catFilter && cleanCategory(m.category || '') !== catFilter) return;
-      if (teamFilter && m.home !== teamFilter && m.away !== teamFilter) return;
-
-      let dayKey = null;
-      if (m.scheduledTs != null) {
-        const d = new Date(m.scheduledTs);
-        dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      }
-      if (dayFilter && dayKey !== dayFilter) return;
-
-      events.push({
-        id: `match__${m.home}__${m.away}__${m.scheduledTs}`,
-        dayKey,
-        sortTs: m.scheduledTs ?? Number.POSITIVE_INFINITY,
-        startTs: m.scheduledTs,
-        endTs: m.scheduledTs != null ? m.scheduledTs + 60 * 60 * 1000 : null,
-        timeLabel: m.scheduledTs ? formatTimeOnly(m.scheduledTs) : 'nenaplánované',
-        typeKey: 'match',
-        title: `${m.home} vs ${m.away}`,
-        subtitle: m.hallName || '',
-        category: cleanCategory(m.category || ''),
-        teamName: teamFilter || '',
-        placeIcon: getPlaceIconForName(m.hallName),
-        extra: null,
-      });
-    });
-
     events.sort((a, b) => {
       if (a.sortTs !== b.sortTs) return a.sortTs - b.sortTs;
       return String(a.title).localeCompare(String(b.title), 'sk');
     });
 
     return events;
-  }, [savedTransfers, matches, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces]);
+  }, [savedTransfers, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces]);
 
   /* --- Filtrovanie len transferov --- */
   const visibleEvents = useMemo(() => {
@@ -696,7 +613,7 @@ const TransportApp = ({ userProfileData }) => {
       h('i', { className: 'fa-solid fa-bus text-blue-600' }),
       'Presuny tímov'
     ),
-    h('p', { className: 'text-gray-600 mt-1' }, 'Prehľad presunov a zápasov podľa dní a tímov.')
+    h('p', { className: 'text-gray-600 mt-1' }, 'Prehľad presunov podľa dní a tímov.')
   );
 
   /* -------------------- Render: filtre -------------------- */
