@@ -840,7 +840,7 @@ const TransportApp = ({ userProfileData }) => {
               className: `text-xs font-medium w-20 flex-shrink-0 truncate ${leg.isWalking ? 'text-amber-700 italic' : 'text-blue-700'}`,
             }, legBusLabelText);
 
-            const noteText = leg.isWalking ? 'Čas na presun peši' : '';
+            const noteText = leg.isWalking ? 'Disponibilný čas na presun peši' : '';
 
             return React.createElement('div', {
               key: idx,
