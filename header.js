@@ -862,6 +862,12 @@ const updateNavigationLinks = () => {
         if (pageId === 'catering') {
             isVisible = pageConfig && pageConfig.visible === true;
         }
+
+        // ŠPECIÁLNE PRAVIDLO: Transport - viditeľnosť riadená priamo dokumentom 'transport' v DB.
+        // Ak dokument v DB neexistuje, predvolene SKRYTÉ (rovnako ako catering).
+        if (pageId === 'transport') {
+            isVisible = pageConfig && pageConfig.visible === true;
+        }
         
         if (isVisible) {
             link.classList.remove('hidden');
@@ -937,6 +943,38 @@ const checkCurrentPageAccess = () => {
         }
         // Ak rosters nie je v databáze, predpokladáme že je viditeľný
         return true;
+    }
+
+    // ŠPECIÁLNE PRAVIDLO: Transport - viditeľnosť riadená priamo dokumentom 'transport' v DB.
+    // Ak dokument v DB neexistuje, predvolene SKRYTÉ (rovnako ako catering).
+    if (currentPage === 'transport') {
+        const transportConfig = pagesVisibility['transport'];
+        if (transportConfig) {
+            if (transportConfig.visible === false) {
+                window.location.href = 'index';
+                return false;
+            }
+            return true;
+        }
+        // Ak transport nie je v databáze → predvolene skryté
+        window.location.href = 'index';
+        return false;
+    }
+
+    // ŠPECIÁLNE PRAVIDLO: Catering - viditeľnosť riadená priamo dokumentom 'catering' v DB.
+    // Ak dokument v DB neexistuje, predvolene SKRYTÉ.
+    if (currentPage === 'catering') {
+        const cateringConfig = pagesVisibility['catering'];
+        if (cateringConfig) {
+            if (cateringConfig.visible === false) {
+                window.location.href = 'index';
+                return false;
+            }
+            return true;
+        }
+        // Ak catering nie je v databáze → predvolene skryté
+        window.location.href = 'index';
+        return false;
     }
     
     const pageConfig = pagesVisibility[pageId];
