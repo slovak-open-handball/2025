@@ -721,7 +721,7 @@ const TransportApp = ({ userProfileData }) => {
   );
 
   /* -------------------- Render: jedna udalosť -------------------- */
-  const renderEvent = (ev) => {
+  const renderEvent = (ev, isFirst) => {
     const color = EVENT_COLORS[ev.typeKey] || EVENT_COLORS.transfer_unassigned;
 
     // Podzoznam čiastkových segmentov (legs)
@@ -751,35 +751,31 @@ const TransportApp = ({ userProfileData }) => {
               key: idx,
               className: 'flex items-center gap-2 text-xs text-gray-600',
             },
-              // 1. stĺpec: ikona
               React.createElement('span', { className: 'w-4 flex-shrink-0 text-center' },
                 React.createElement('i', { className: `fa-solid ${legIcon}` })
               ),
-              // 2. stĺpec: bus / PEŠI
               legBusLabel,
-              // 3. stĺpec: čas
               React.createElement('span', { className: 'font-mono w-24 flex-shrink-0 text-gray-700' }, legTimeText),
-              // 4. stĺpec: Odkiaľ
               React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.fromName),
-              // 5. stĺpec: Kam
               React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.toName)
             );
           })
         )
       : null;
 
+    // Border-l-4 len ak to NIE JE prvý event v dni
+    const borderClass = isFirst ? '' : `border-l-4 ${color.border}`;
+
     return React.createElement('div', {
       key: ev.id,
-      className: `px-5 py-3 hover:bg-gray-50 transition-colors border-l-4 ${color.border}`,
+      className: `px-5 py-3 hover:bg-gray-50 transition-colors ${borderClass}`,
     },
       React.createElement('div', { className: 'flex-1 min-w-0' },
-        // 1. riadok: kategória + tím – farba textu aj pozadia podľa drawColor kategórie
         (() => {
           const catColor = ev.category
             ? (transportColorsRef.current[ev.category] || transportColorsRef.current[ev.categoryId] || null)
             : null;
 
-          // Vytvor "bledšiu" verziu farby pre pozadie stítku
           let badgeBg = undefined;
           if (catColor) {
             const isHex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(catColor.trim());
@@ -811,9 +807,7 @@ const TransportApp = ({ userProfileData }) => {
               )
             : null;
         })(),
-        // 2. riadok: názov celkového presunu
         React.createElement('div', { className: `font-medium ${color.text}` }, ev.title),
-        // 3. rozpis čiastkových segmentov
         legsBlock
       )
     );
@@ -839,9 +833,9 @@ const TransportApp = ({ userProfileData }) => {
           `${dayEvents.length} udalostí`
         )
       ),
-      // Zoznam udalostí
+      // Zoznam udalostí – prvý bez farebného pásika
       React.createElement('div', { className: 'divide-y divide-gray-100' },
-        ...dayEvents.map(renderEvent)
+        ...dayEvents.map((ev, idx) => renderEvent(ev, idx === 0))
       )
     );
   };
