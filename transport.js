@@ -762,39 +762,27 @@ const TransportApp = ({ userProfileData }) => {
       key: ev.id,
       className: `px-5 py-3 hover:bg-gray-50 transition-colors border-l-4 ${color.border}`,
     },
-      React.createElement('div', { className: 'flex items-start gap-4' },
-        // Ikona
-        React.createElement('div', { className: `flex-shrink-0 w-10 h-10 rounded-full ${color.bg} flex items-center justify-center` },
-          React.createElement('i', { className: `fa-solid ${color.icon} ${color.text}` })
-        ),
-        // Čas
-        React.createElement('div', { className: 'flex-shrink-0 w-28 text-sm font-mono text-gray-700 pt-1' },
-          ev.timeLabel || '--:--'
-        ),
-        // Obsah
-        React.createElement('div', { className: 'flex-1 min-w-0' },
-          // 1. riadok: kategória + tím
-          (ev.category || ev.teamName)
-            ? React.createElement('div', { className: 'flex items-center gap-2 flex-wrap mb-1' },
-                ev.category
-                  ? React.createElement('span', { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded' }, ev.category)
-                  : null,
-                ev.teamName
-                  ? React.createElement('span', { className: 'text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded' }, ev.teamName)
-                  : null
-              )
-            : null,
-          // 2. riadok: názov celkového presunu
-          React.createElement('div', { className: `font-medium ${color.text}` }, ev.title),
-          // 3. rozpis čiastkových segmentov
-          legsBlock
-        ),
-        // Typ
-        React.createElement('div', { className: 'flex-shrink-0 text-xs text-gray-400 pt-1' }, color.label)
+      // Obsah – už bez ikony a bez celkového času
+      React.createElement('div', { className: 'flex-1 min-w-0' },
+        // 1. riadok: kategória + tím
+        (ev.category || ev.teamName)
+          ? React.createElement('div', { className: 'flex items-center gap-2 flex-wrap mb-1' },
+              ev.category
+                ? React.createElement('span', { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded' }, ev.category)
+                : null,
+              ev.teamName
+                ? React.createElement('span', { className: 'text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded' }, ev.teamName)
+                : null
+            )
+          : null,
+        // 2. riadok: názov celkového presunu
+        React.createElement('div', { className: `font-medium ${color.text}` }, ev.title),
+        // 3. rozpis čiastkových segmentov
+        legsBlock
       )
     );
   };
-
+  
   /* -------------------- Render: jeden deň -------------------- */
   const renderDay = (dayKey) => {
     const dayMeta = tournamentDays.find((d) => d.dayKey === dayKey);
