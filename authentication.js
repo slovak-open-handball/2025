@@ -105,7 +105,8 @@ const publicPages = [
     'tables',
     'teams',
     'statistics',
-    'catering'
+    'catering',
+    'transport'
 ];
 
 const guestOnlyPages = [
