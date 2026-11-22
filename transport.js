@@ -729,18 +729,24 @@ const TransportApp = ({ userProfileData }) => {
             const legIcon = leg.isWalking ? 'fa-person-walking text-amber-600' : 'fa-bus text-blue-600';
             const legTime = leg.timeLabel || '--:--';
 
-            // Názov busu vedľa ikony (pred časom)
-            const legBusLabel = (!leg.isWalking && leg.busName)
-              ? React.createElement('span', { className: 'text-xs text-blue-700 font-medium' }, leg.busName)
-              : null;
+            // Názov busu vedľa ikony (pred časom) – pevná šírka, aby bola trasa vždy zarovnaná
+            const legBusLabel = React.createElement('span', {
+              className: 'text-xs text-blue-700 font-medium w-20 truncate',
+            }, (!leg.isWalking && leg.busName) ? leg.busName : '');
 
             return React.createElement('div', {
               key: idx,
               className: 'flex items-center gap-2 text-xs text-gray-600',
             },
-              React.createElement('i', { className: `fa-solid ${legIcon}` }),
+              // 1. stĺpec: ikona – pevná šírka
+              React.createElement('span', { className: 'w-4 flex-shrink-0 text-center' },
+                React.createElement('i', { className: `fa-solid ${legIcon}` })
+              ),
+              // 2. stĺpec: názov busu – pevná šírka (aj keď prázdny)
               legBusLabel,
-              React.createElement('span', { className: 'font-mono w-24 text-gray-700' }, legTime),
+              // 3. stĺpec: čas – pevná šírka
+              React.createElement('span', { className: 'font-mono w-24 flex-shrink-0 text-gray-700' }, legTime),
+              // 4. stĺpec: trasa
               React.createElement('span', { className: 'text-gray-500' }, `${leg.fromName} → ${leg.toName}`)
             );
           })
