@@ -866,9 +866,11 @@ const TransportApp = ({ userProfileData }) => {
     const color = EVENT_COLORS[ev.typeKey] || EVENT_COLORS.transfer_unassigned;
 
     // Podzoznam čiastkových segmentov (legs)
+    const hasWalkingLeg = !!(ev.legs && ev.legs.some((l) => l.isWalking));
+
     const legsBlock = (ev.legs && ev.legs.length > 0)
       ? React.createElement('div', { className: 'mt-2 pl-2 border-l-2 border-gray-200 space-y-1' },
-          // Hlavička stĺpcov – Typ | Od | Odkiaľ | Do | Kam | Poznámka
+          // Hlavička stĺpcov – Typ | Čas | Odkiaľ | Čas | Kam | (Poznámka len ak je peší segment)
           React.createElement('div', { className: 'flex items-center gap-2 text-[10px] uppercase tracking-wide text-gray-400 pb-1' },
             React.createElement('span', { className: 'w-4 flex-shrink-0' }, ''),
             React.createElement('span', { className: 'w-20 flex-shrink-0' }, 'Typ'),
@@ -876,7 +878,7 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Odkiaľ'),
             React.createElement('span', { className: 'w-16 flex-shrink-0' }, 'Čas'),
             React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Kam'),
-            ev.legs.some((l) => l.isWalking)
+            hasWalkingLeg
               ? React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Poznámka')
               : null
           ),
@@ -906,16 +908,18 @@ const TransportApp = ({ userProfileData }) => {
               ),
               // 2. stĺpec: bus / PEŠI
               legBusLabel,
-              // 3. stĺpec: Od
+              // 3. stĺpec: Čas (Od)
               React.createElement('span', { className: 'font-mono w-16 flex-shrink-0 text-gray-700' }, startTimeText || '--:--'),
               // 4. stĺpec: Odkiaľ
               React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.fromName),
-              // 5. stĺpec: Do
+              // 5. stĺpec: Čas (Do)
               React.createElement('span', { className: 'font-mono w-16 flex-shrink-0 text-gray-700' }, endTimeText || '--:--'),
               // 6. stĺpec: Kam
               React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.toName),
-              // 7. stĺpec: Poznámka
-              React.createElement('span', { className: 'text-gray-400 italic w-1/3 min-w-0 truncate' }, noteText)
+              // 7. stĺpec: Poznámka – LEN ak má presun peší segment
+              hasWalkingLeg
+                ? React.createElement('span', { className: 'text-gray-400 italic w-1/3 min-w-0 truncate' }, noteText)
+                : null
             );
           })
         )
