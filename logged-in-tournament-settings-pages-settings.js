@@ -17,6 +17,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
     { id: 'teams-in-groups', label: 'Rozlosovanie tímov do skupín', defaultVisible: false },
     { id: 'matches', label: 'Zápasy', defaultVisible: false },
     { id: 'catering', label: 'Stravovanie', defaultVisible: false },
+    { id: 'transport', label: 'Doprava', defaultVisible: false },
     { id: 'rosters', label: 'Súpisky', defaultVisible: false },
   ];
 
