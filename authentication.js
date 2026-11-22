@@ -489,7 +489,7 @@ const isPageVisibleInSettings = async (pageId) => {
     
     // catering a transport majú vlastnú viditeľnosť (predvolene false)
     if (pageId === 'catering' || pageId === 'transport') {
-        return settings[pageId] !== undefined ? settings[pageId] : false;
+        return settings[pageId] !== undefined ? settings[pageId] : true;
     }
     
     if (settings[pageId] === undefined) {
