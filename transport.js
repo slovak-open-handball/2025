@@ -865,6 +865,8 @@ const TransportApp = ({ userProfileData }) => {
               React.createElement('span', { className: 'text-gray-400 italic w-1/3 min-w-0 truncate' }, noteText)
             );
           })
+        )
+      : null;
 
     return React.createElement('div', {
       key: ev.id,
