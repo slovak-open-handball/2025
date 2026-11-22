@@ -47,5 +47,45 @@
     <script type="module" src="catering.js"></script>
     <script type="module" src="func-load-groups.js"></script>
     <script type="module" src="func-tables.js"></script>
+
+        <script type="module">
+        import CateringApp from './catering.js';
+
+        const mountTransport = () => {
+            const rootEl = document.getElementById('root');
+            if (!rootEl) {
+                // #root ešte nie je v DOM – skús neskôr
+                setTimeout(mountTransport, 100);
+                return;
+            }
+
+            // Ak už je namountovaný, nerob nič
+            if (rootEl.dataset.mounted === 'true') return;
+            rootEl.dataset.mounted = 'true';
+
+            // Odstráň spinner
+            rootEl.innerHTML = '';
+
+            const root = ReactDOM.createRoot(rootEl);
+            root.render(
+                React.createElement(MountCateringTransport, {
+                    userProfileData: window.globalUserProfileData || null
+                })
+            );
+        };
+
+        // Skús mount hneď, alebo počkaj na inicializáciu Firebase
+        if (window.db) {
+            mountTransport();
+        } else {
+            window.addEventListener('dbInitialized', mountTransport, { once: true });
+            // Fallback – ak dbInitialized nepríde, skús po 1s
+            setTimeout(() => {
+                if (!document.getElementById('root')?.dataset.mounted) {
+                    mountTransport();
+                }
+            }, 1000);
+        }
+    </script>
 </body>
 </html>
