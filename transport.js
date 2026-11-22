@@ -1,12 +1,11 @@
 // transport.js
-// Modul zobrazuje PRESUNY tímov (transfery) v rovnakom vizuálnom štýle,
-// akým catering.js zobrazuje stravovanie.
+// Modul zobrazuje PRESUNY tímov (transfery) v rovnakom vizuálnom štýle.
 //
-// Dáta čerpá z rovnakých Firestore kolekcií ako logged-in-transport.js:
+// Dáta čerpá z Firestore kolekcií:
 //   - settings/transportTravelTimes  (times, transfers)
 //   - transport                      (bus, busRow, teamShortcut, walkingRule)
-//   - places, users, matches, catering
-//   - settings/categories, settings/registration, settings/catering,
+//   - places, users, matches
+//   - settings/categories, settings/registration,
 //     settings/superstructureGroups
 //
 // Renderovanie je plne cez React.createElement (žiadne JSX).
@@ -19,7 +18,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 const { useState, useEffect, useRef, useMemo, createElement: h } = React;
 
 /* ------------------------------------------------------------------ */
-/* Pomocné funkcie (rovnaké ako v logged-in-transport.js)             */
+/* Pomocné funkcie                                                     */
 /* ------------------------------------------------------------------ */
 
 window.showGlobalNotification = (message, type = 'success') => {
@@ -93,18 +92,6 @@ const normalizePlaceName = (name) => {
     .trim();
 };
 
-const dayKeyAndSlotToTimestamp = (dayKey, slotFrom) => {
-  if (!dayKey) return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
-  if (!m) return null;
-  let hh = 0, mi = 0;
-  if (slotFrom && /^\d{1,2}:\d{2}$/.test(slotFrom)) {
-    const [a, b] = slotFrom.split(':').map(Number);
-    hh = a; mi = b;
-  }
-  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), hh, mi, 0, 0).getTime();
-};
-
 const parseWhenRangeToTs = (when) => {
   if (!when) return null;
   const s = String(when);
@@ -146,14 +133,13 @@ const placeTypeIcons = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Farby pre typy udalostí                                            */
+/* Farby pre typy udalostí (catering odstránený)                      */
 /* ------------------------------------------------------------------ */
 
 const EVENT_COLORS = {
   transfer_bus:        { bg: 'bg-blue-50',   border: 'border-blue-400',   text: 'text-blue-800',   icon: 'fa-bus',             label: 'Presun busom' },
   transfer_walking:    { bg: 'bg-amber-50',  border: 'border-amber-400',  text: 'text-amber-800',  icon: 'fa-person-walking',  label: 'Peší presun' },
   transfer_unassigned: { bg: 'bg-gray-50',   border: 'border-gray-300',   text: 'text-gray-700',   icon: 'fa-question-circle', label: 'Nepriradený presun' },
-  catering:            { bg: 'bg-green-50',  border: 'border-green-400',  text: 'text-green-800',  icon: 'fa-utensils',        label: 'Stravovanie' },
   match:               { bg: 'bg-red-50',    border: 'border-red-400',    text: 'text-red-800',    icon: 'fa-futbol',          label: 'Zápas' },
   accommodation:       { bg: 'bg-purple-50', border: 'border-purple-400', text: 'text-purple-800', icon: 'fa-bed',             label: 'Ubytovanie' },
 };
@@ -168,13 +154,11 @@ const TransportApp = ({ userProfileData }) => {
   const allPlacesRef = useRef([]);
   const teamsLookupRef = useRef({});
   const matchesBufferRef = useRef([]);
-  const cateringBufferRef = useRef([]);
   const teamsArrivalBufferRef = useRef([]);
   const savedTransfersRef = useRef([]);
   const superstructureGroupsRef = useRef({});
   const transportColorsRef = useRef({});
   const matchesLoadedRef = useRef(false);
-  const cateringLoadedRef = useRef(false);
   const teamsLoadedRef = useRef(false);
   const travelTimesLoadedRef = useRef(false);
 
@@ -185,7 +169,6 @@ const TransportApp = ({ userProfileData }) => {
   const [buses, setBuses] = useState([]);
   const [busRows, setBusRows] = useState({});
   const [savedTransfers, setSavedTransfers] = useState([]);
-  const [cateringRecords, setCateringRecords] = useState([]);
   const [matches, setMatches] = useState([]);
   const [tournamentDays, setTournamentDays] = useState([]);
   const [selectedDayKey, setSelectedDayKey] = useState('');
@@ -235,8 +218,8 @@ const TransportApp = ({ userProfileData }) => {
   /* -------------------- Firestore subscriptions -------------------- */
   useEffect(() => {
     if (!window.db) {
-      console.error('transport.js: window.db nie je inicializované – spinner zostane, kým sa Firestore nenainicializuje.');
-      setLoading(false);   // ✅ aspoň nezaseknutý spinner
+      console.error('transport.js: window.db nie je inicializované.');
+      setLoading(false);
       return;
     }
     const unsubs = [];
@@ -321,8 +304,9 @@ const TransportApp = ({ userProfileData }) => {
         setLoading(false);
       }, (e) => {
         console.error('transportTravelTimes error', e);
-        setLoading(false);   // ✅ aj pri chybe vypni spinner
+        setLoading(false);
       }));
+    } catch (e) {}
 
     // transport → bus + busRow
     try {
@@ -456,39 +440,6 @@ const TransportApp = ({ userProfileData }) => {
         matchesBufferRef.current = list;
         setMatches(list);
         matchesLoadedRef.current = true;
-      }, (e) => {}));
-    } catch (e) {}
-
-    // catering
-    try {
-      const cateringRef = collection(window.db, 'catering');
-      unsubs.push(onSnapshot(cateringRef, (snap) => {
-        const list = [];
-        snap.forEach((d) => {
-          const data = d.data() || {};
-          const category = cleanCategory(data.category || data.categoryName || '(bez kategórie)');
-          const teamName = data.isSuperstructure === true
-            ? String(data.teamName || '').trim()
-            : (() => {
-                const lookup = teamsLookupRef.current || {};
-                const cat = cleanCategory(data.category || '');
-                const key = `${data.teamUid}|${cat}|${data.teamIndex}`;
-                return (lookup[key]?.teamName) || data.teamName || '---';
-              })();
-          const ts = dayKeyAndSlotToTimestamp(data.dayKey, data.slotFrom);
-          list.push({
-            category, teamName, ts,
-            dayKey: data.dayKey || null,
-            slotFrom: data.slotFrom || null,
-            slotTo: data.slotTo || null,
-            mealType: data.mealType || null,
-            placeName: data.placeName || data.placeId || '(bez miesta)',
-            isSuperstructure: data.isSuperstructure === true,
-          });
-        });
-        cateringBufferRef.current = list;
-        setCateringRecords(list);
-        cateringLoadedRef.current = true;
       }, (e) => {}));
     } catch (e) {}
 
@@ -674,33 +625,7 @@ const TransportApp = ({ userProfileData }) => {
       }
     });
 
-    /* --- 2) Stravovanie --- */
-    (cateringRecords || []).forEach((c) => {
-      if (catFilter && cleanCategory(c.category || '') !== catFilter) return;
-      if (teamFilter && String(c.teamName || '').trim() !== teamFilter) return;
-      if (dayFilter && c.dayKey !== dayFilter) return;
-
-      const mealLabel = c.mealType === 'lunch' ? 'Obed' : c.mealType === 'dinner' ? 'Večera' : (c.mealType || 'Stravovanie');
-      const timeRange = c.slotFrom ? (c.slotTo ? `${c.slotFrom} – ${c.slotTo}` : c.slotFrom) : '--:--';
-
-      events.push({
-        id: `catering__${c.category}__${c.teamName}__${c.dayKey}__${c.slotFrom}`,
-        dayKey: c.dayKey,
-        sortTs: c.ts ?? Number.POSITIVE_INFINITY,
-        startTs: c.ts,
-        endTs: c.slotTo ? dayKeyAndSlotToTimestamp(c.dayKey, c.slotTo) : c.ts,
-        timeLabel: timeRange,
-        typeKey: 'catering',
-        title: `${mealLabel} → ${c.placeName}`,
-        subtitle: c.placeName,
-        category: cleanCategory(c.category || ''),
-        teamName: String(c.teamName || '').trim(),
-        placeIcon: getPlaceIconForName(c.placeName),
-        extra: null,
-      });
-    });
-
-    /* --- 3) Zápasy --- */
+    /* --- 2) Zápasy --- */
     (matches || []).forEach((m) => {
       if (catFilter && cleanCategory(m.category || '') !== catFilter) return;
       if (teamFilter && m.home !== teamFilter && m.away !== teamFilter) return;
@@ -735,7 +660,7 @@ const TransportApp = ({ userProfileData }) => {
     });
 
     return events;
-  }, [savedTransfers, cateringRecords, matches, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces]);
+  }, [savedTransfers, matches, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces]);
 
   /* --- Filtrovanie len transferov --- */
   const visibleEvents = useMemo(() => {
@@ -769,10 +694,9 @@ const TransportApp = ({ userProfileData }) => {
   const headerSection = h('div', { className: 'mb-6' },
     h('h1', { className: 'text-2xl font-bold text-gray-800 flex items-center gap-2' },
       h('i', { className: 'fa-solid fa-bus text-blue-600' }),
-      'Presuny tímov',
-      h('span', { className: 'text-sm font-normal text-gray-500 ml-2' }, '(timeline v štýle stravovania)')
+      'Presuny tímov'
     ),
-    h('p', { className: 'text-gray-600 mt-1' }, 'Prehľad presunov, stravovania a zápasov podľa dní a tímov.')
+    h('p', { className: 'text-gray-600 mt-1' }, 'Prehľad presunov a zápasov podľa dní a tímov.')
   );
 
   /* -------------------- Render: filtre -------------------- */
@@ -924,6 +848,6 @@ const TransportApp = ({ userProfileData }) => {
 /* Export / mount                                                     */
 /* ------------------------------------------------------------------ */
 
-export default function MountCateringTransport({ userProfileData }) {
+export default function Transport({ userProfileData }) {
   return h(TransportApp, { userProfileData });
 }
