@@ -291,6 +291,41 @@ const TransportApp = ({ userProfileData }) => {
     return { startTs: displayStartTs, endTs: displayEndTs };
   };
 
+  /* -------------------- Rozdelenie celkového času medzi segmenty bez vlastných časov -------------------- */
+  const getUnassignedSegmentDisplayRange = (parent, segmentIndex, routeIds, parentSegments) => {
+    if (!parent) return null;
+    const parentRange = parseWhenRangeToTs(parent.when);
+    if (!parentRange || parentRange.startTs == null || parentRange.endTs == null) return null;
+    if (parentRange.endTs <= parentRange.startTs) return null;
+
+    // Zistíme, ktoré segmenty (indexy v routeIds) nemajú vlastné časy a nie sú pešie
+    const unassignedIndexes = [];
+    for (let i = 0; i < routeIds.length - 1; i++) {
+      const fromId = routeIds[i];
+      const toId = routeIds[i + 1];
+      if (fromId === toId) continue;
+      const seg = parentSegments.find((s) => s && s.fromId === fromId && s.toId === toId) || null;
+      const isWalking = !!(seg && seg.isWalking === true);
+      const hasTimes = !!(seg && seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs);
+      if (!isWalking && !hasTimes) {
+        unassignedIndexes.push(i);
+      }
+    }
+
+    if (unassignedIndexes.length === 0) return null;
+    const position = unassignedIndexes.indexOf(segmentIndex);
+    if (position === -1) return null;
+
+    const count = unassignedIndexes.length;
+    const intervalDuration = parentRange.endTs - parentRange.startTs;
+    const partDuration = intervalDuration / count;
+
+    const displayStartTs = parentRange.startTs + position * partDuration;
+    const displayEndTs = displayStartTs + partDuration;
+
+    return { startTs: displayStartTs, endTs: displayEndTs };
+  };
+
   /* -------------------- Firestore subscriptions -------------------- */
   useEffect(() => {
     if (!window.db) {
@@ -599,7 +634,7 @@ const TransportApp = ({ userProfileData }) => {
         const legFromName = resolvePlaceNameById(fromId);
         const legToName = resolvePlaceNameById(toId);
 
-         let legStartTs = null, legEndTs = null, legTimeLabel = '';
+        let legStartTs = null, legEndTs = null, legTimeLabel = '';
         if (legWalking) {
           // Rovnaká logika ako v logged-in-transport.js (getWalkingSegmentDisplayRange)
           const walkingRange = getWalkingSegmentDisplayRange(parent, i);
@@ -620,7 +655,15 @@ const TransportApp = ({ userProfileData }) => {
           legEndTs = seg.endTs;
           legTimeLabel = `${formatTimeOnly(legStartTs)} – ${formatTimeOnly(legEndTs)}`;
         } else {
-          legTimeLabel = 'nepriradený';
+          // Segment bez vlastných časov – rozdeľ celkový čas presunu medzi takéto segmenty
+          const unassignedRange = getUnassignedSegmentDisplayRange(parent, i, routeIds, parentSegments);
+          if (unassignedRange) {
+            legStartTs = unassignedRange.startTs;
+            legEndTs = unassignedRange.endTs;
+            legTimeLabel = `${formatTimeOnly(legStartTs)} – ${formatTimeOnly(legEndTs)}`;
+          } else {
+            legTimeLabel = 'nepriradený';
+          }
         }
 
         const legBusId = seg?.busId ? String(seg.busId) : null;
