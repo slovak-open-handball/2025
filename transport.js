@@ -836,14 +836,14 @@ const TransportApp = ({ userProfileData }) => {
             const startTimeText = leg.startTime || '';
             const endTimeText = leg.endTime || '';
 
-            // Ak je segment peší, pridaj za "PEŠI" kruh s otáznikom a tooltipom
+            // Ak je segment peší, pridaj za "PEŠI" biely kruh s otáznikom, sivým rámikom a tooltipom
             const legBusLabel = leg.isWalking
               ? React.createElement('span', {
                   className: 'text-xs font-medium w-20 flex-shrink-0 truncate text-amber-700 italic',
                 },
                   'PEŠI',
                   React.createElement('sup', {
-                    className: 'ml-0.5 inline-flex items-center justify-center w-3 h-3 rounded-full bg-amber-200 text-amber-800 text-[8px] font-bold cursor-help',
+                    className: 'ml-0.5 inline-flex items-center justify-center w-3 h-3 rounded-full bg-white border border-gray-400 text-gray-500 text-[8px] font-bold cursor-help',
                     title: 'Dostupný čas na presun',
                   }, '?')
                 )
