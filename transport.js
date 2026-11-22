@@ -479,7 +479,7 @@ const TransportApp = ({ userProfileData }) => {
     const catFilter = selectedCategory ? cleanCategory(selectedCategory) : null;
     const teamFilter = selectedTeam ? selectedTeam : null;
 
-    /* --- 1) Transfery (parent + segmenty) --- */
+    /* --- 1) Transfery – CELÝ PRESUN ako jeden riadok --- */
     (savedTransfers || []).forEach((parent) => {
       if (parent._parentKey && parent._parentKey !== parent.key) return;
       if (catFilter && cleanCategory(parent.category || '') !== catFilter) return;
@@ -487,6 +487,8 @@ const TransportApp = ({ userProfileData }) => {
 
       const stopsIds = Array.isArray(parent.intermediateStopIds) ? parent.intermediateStopIds.filter(Boolean) : [];
       const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
+
+      // Zostavíme celkovú trasu (from → medzizastávky → to), bez duplikátov
       const routeIdsRaw = [parent.fromId, ...stopsIds, parent.toId].filter(Boolean);
       const routeIds = [];
       routeIdsRaw.forEach((id) => {
@@ -496,79 +498,117 @@ const TransportApp = ({ userProfileData }) => {
 
       const parentWhenRange = parseWhenRangeToTs(parent.when);
 
-      for (let i = 0; i < routeIds.length - 1; i++) {
-        const fromId = routeIds[i];
+      // --- Zistíme čas celého presunu ---
+      let startTs = null, endTs = null, timeLabel = '';
+      let isWalking = false;
+      let hasRealTimes = false;
+      let busId = null;
+      let busName = null;
+
+      // Prejdeme všetky segmenty a zistíme:
+      // - či je celý presun peší (všetky segmenty walking)
+      // - najskorší startTs a najneskorší endTs
+      // - či má aspoň jeden segment reálne časy
+      // - busId (z prvého segmentu s busom)
+      const segmentInfos = routeIds.slice(0, -1).map((fromId, i) => {
         const toId = routeIds[i + 1];
-        if (fromId === toId) continue;
-
         const seg = parentSegments.find((s) => s && s.fromId === fromId && s.toId === toId) || null;
-        const isWalking = !!(seg && seg.isWalking === true);
-        const hasRealTimes = !!(seg && seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs);
-        const busId = seg?.busId ? String(seg.busId) : null;
-        const busName = busId ? (buses.find((b) => b.id === busId)?.name || `Bus ${busId}`) : null;
+        return { fromId, toId, seg };
+      }).filter((x) => x.fromId !== x.toId);
 
-        let startTs = null, endTs = null, timeLabel = '';
-        if (isWalking) {
-          if (seg.startTs != null) {
-            startTs = seg.startTs;
-            endTs = seg.endTs != null ? seg.endTs : seg.startTs + 60 * 1000;
-            timeLabel = `${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)}`;
-          } else {
-            timeLabel = 'PEŠI';
-          }
-        } else if (hasRealTimes) {
-          startTs = seg.startTs;
-          endTs = seg.endTs;
+      const allWalking = segmentInfos.length > 0 && segmentInfos.every(({ seg }) => seg && seg.isWalking === true);
+
+      segmentInfos.forEach(({ seg }) => {
+        if (!seg) return;
+        if (seg.startTs != null) {
+          if (startTs == null || seg.startTs < startTs) startTs = seg.startTs;
+        }
+        if (seg.endTs != null) {
+          if (endTs == null || seg.endTs > endTs) endTs = seg.endTs;
+        }
+        if (seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs) {
+          hasRealTimes = true;
+        }
+        if (!busId && seg.busId) {
+          busId = String(seg.busId);
+        }
+      });
+
+      isWalking = allWalking;
+      if (busId) {
+        busName = buses.find((b) => b.id === busId)?.name || `Bus ${busId}`;
+      }
+
+      if (isWalking) {
+        if (startTs != null) {
+          if (endTs == null) endTs = startTs + 60 * 1000;
           timeLabel = `${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)}`;
         } else {
-          timeLabel = 'nepriradený';
+          timeLabel = 'PEŠI';
         }
-
-        // deň
-        let dayKey = parent.dayKey || null;
-        if (!dayKey && startTs != null) {
-          const d = new Date(startTs);
-          dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        }
-        if (!dayKey && parentWhenRange) {
-          const d = new Date(parentWhenRange.startTs);
-          dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        }
-        if (dayFilter && dayKey !== dayFilter) continue;
-
-        const fromName = resolvePlaceNameById(fromId);
-        const toName = resolvePlaceNameById(toId);
-
-        const sortTs = startTs != null
-          ? startTs
-          : (parentWhenRange?.startTs ?? Number.POSITIVE_INFINITY);
-
-        let typeKey;
-        if (isWalking) typeKey = 'transfer_walking';
-        else if (hasRealTimes) typeKey = 'transfer_bus';
-        else typeKey = 'transfer_unassigned';
-
-        events.push({
-          id: `${parent.key}__${i}`,
-          dayKey,
-          sortTs,
-          startTs,
-          endTs,
-          timeLabel,
-          typeKey,
-          title: `Presun: ${fromName} → ${toName}`,
-          subtitle: busName ? `Bus: ${busName}` : (isWalking ? 'Peší presun' : 'Bez priradeného busu'),
-          category: cleanCategory(parent.category || ''),
-          teamName: String(parent.teamName || '').trim(),
-          fromName,
-          toName,
-          busName,
-          isWalking,
-          hasRealTimes,
-          placeIcon: getPlaceIconForName(fromName),
-          extra: null,
-        });
+      } else if (hasRealTimes && startTs != null) {
+        timeLabel = endTs != null
+          ? `${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)}`
+          : formatTimeOnly(startTs);
+      } else {
+        timeLabel = 'nepriradený';
       }
+
+      // --- Deň ---
+      let dayKey = parent.dayKey || null;
+      if (!dayKey && startTs != null) {
+        const d = new Date(startTs);
+        dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
+      if (!dayKey && parentWhenRange) {
+        const d = new Date(parentWhenRange.startTs);
+        dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
+      if (dayFilter && dayKey !== dayFilter) continue;
+
+      // --- Názvy miest pre celú trasu ---
+      const fromName = resolvePlaceNameById(routeIds[0]);
+      const toName = resolvePlaceNameById(routeIds[routeIds.length - 1]);
+      const middleNames = routeIds.slice(1, -1).map((id) => resolvePlaceNameById(id));
+
+      // Title: "A → B" alebo "A → (C) → B" ak sú medzizastávky
+      const routeLabel = middleNames.length > 0
+        ? `${fromName} → (${middleNames.join(' → ')}) → ${toName}`
+        : `${fromName} → ${toName}`;
+
+      const sortTs = startTs != null
+        ? startTs
+        : (parentWhenRange?.startTs ?? Number.POSITIVE_INFINITY);
+
+      let typeKey;
+      if (isWalking) typeKey = 'transfer_walking';
+      else if (hasRealTimes) typeKey = 'transfer_bus';
+      else typeKey = 'transfer_unassigned';
+
+      const subtitle = isWalking
+        ? 'Peší presun'
+        : (busName ? `Bus: ${busName}` : 'Bez priradeného busu');
+
+      events.push({
+        id: parent.key,
+        dayKey,
+        sortTs,
+        startTs,
+        endTs,
+        timeLabel,
+        typeKey,
+        title: `Presun: ${routeLabel}`,
+        subtitle,
+        category: cleanCategory(parent.category || ''),
+        teamName: String(parent.teamName || '').trim(),
+        fromName,
+        toName,
+        busName,
+        isWalking,
+        hasRealTimes,
+        placeIcon: getPlaceIconForName(fromName),
+        extra: null,
+      });
     });
 
     events.sort((a, b) => {
