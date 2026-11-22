@@ -855,11 +855,11 @@ const updateNavigationLinks = () => {
         }
         
         if (pageId === 'catering') {
-            isVisible = pageConfig && pageConfig.visible === true : true;
+            isVisible = pageConfig && pageConfig.visible === true;
         }
 
         if (pageId === 'transport') {
-            isVisible = pageConfig && pageConfig.visible === true : true;
+            isVisible = pageConfig && pageConfig.visible === true;
         }
         
         if (isVisible) {
