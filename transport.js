@@ -317,6 +317,15 @@ const TransportApp = ({ userProfileData }) => {
     if (position === -1) return null;
 
     const count = unassignedIndexes.length;
+
+    // Ak je len JEDEN segment bez vlastných časov a je to zároveň celý presun
+    // (t. j. žiadne medzizastávky), zobraz CELÝ parent interval.
+    const isOnlySegment = (routeIds.length - 1) === 1;
+    if (count === 1 && isOnlySegment) {
+      return { startTs: parentRange.startTs, endTs: parentRange.endTs };
+    }
+
+    // Inak rozdeľ interval rovnomerne medzi segmenty bez vlastných časov
     const intervalDuration = parentRange.endTs - parentRange.startTs;
     const partDuration = intervalDuration / count;
 
