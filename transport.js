@@ -821,9 +821,9 @@ const TransportApp = ({ userProfileData }) => {
           React.createElement('div', { className: 'flex items-center gap-2 text-[10px] uppercase tracking-wide text-gray-400 pb-1' },
             React.createElement('span', { className: 'w-4 flex-shrink-0' }, ''),
             React.createElement('span', { className: 'w-20 flex-shrink-0' }, 'Typ'),
-            React.createElement('span', { className: 'w-16 flex-shrink-0' }, 'Od'),
+            React.createElement('span', { className: 'w-16 flex-shrink-0' }, 'Čas'),
             React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Odkiaľ'),
-            React.createElement('span', { className: 'w-16 flex-shrink-0' }, 'Do'),
+            React.createElement('span', { className: 'w-16 flex-shrink-0' }, 'Čas'),
             React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Kam'),
             React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Poznámka')
           ),
