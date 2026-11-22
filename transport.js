@@ -876,8 +876,8 @@ const TransportApp = ({ userProfileData }) => {
               ? 'PEŠI'
               : (leg.busName || '');
 
-            const startTimeText = leg.startTime || ev.timeLabel || '';
-            const endTimeText = leg.endTime || ev.timeLabel || '';
+            const startTimeText = leg.startTime || '';
+            const endTimeText = leg.endTime || '';
 
             const legBusLabel = React.createElement('span', {
               className: `text-xs font-medium w-20 flex-shrink-0 truncate ${leg.isWalking ? 'text-amber-700 italic' : 'text-blue-700'}`,
