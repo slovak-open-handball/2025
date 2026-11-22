@@ -254,8 +254,8 @@ const loadPageVisibilitySettings = async () => {
         let matchesVisible = true; // predvolene viditeľné
         let teamsInGroupsVisible = true; // predvolene viditeľné
         let rostersVisible = true; // predvolene viditeľné
-        let cateringVisible = false; // predvolene skryté
-        let transportVisible = false; // predvolene skryté (rovnako ako catering)
+        let cateringVisible = true; // predvolene skryté
+        let transportVisible = true; // predvolene skryté (rovnako ako catering)
         
         pagesSnapshot.forEach(doc => {
             const data = doc.data();
