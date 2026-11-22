@@ -727,12 +727,17 @@ const TransportApp = ({ userProfileData }) => {
       ? React.createElement('div', { className: 'mt-2 pl-2 border-l-2 border-gray-200 space-y-1' },
           ...ev.legs.map((leg, idx) => {
             const legIcon = leg.isWalking ? 'fa-person-walking text-amber-600' : 'fa-bus text-blue-600';
-            const legTime = leg.timeLabel || '--:--';
 
-            // Názov busu vedľa ikony (pred časom) – pevná šírka, aby bola trasa vždy zarovnaná
+            // Ak je segment peší, "PEŠI" patrí do stĺpca názvu busu (2. stĺpec),
+            // časový stĺpec zostane prázdny.
+            const legBusLabelText = leg.isWalking
+              ? 'PEŠI'
+              : (leg.busName || '');
+            const legTimeText = leg.isWalking ? '' : (leg.timeLabel || '--:--');
+
             const legBusLabel = React.createElement('span', {
-              className: 'text-xs text-blue-700 font-medium w-20 truncate',
-            }, (!leg.isWalking && leg.busName) ? leg.busName : '');
+              className: `text-xs font-medium w-20 truncate ${leg.isWalking ? 'text-amber-700 italic' : 'text-blue-700'}`,
+            }, legBusLabelText);
 
             return React.createElement('div', {
               key: idx,
@@ -742,10 +747,10 @@ const TransportApp = ({ userProfileData }) => {
               React.createElement('span', { className: 'w-4 flex-shrink-0 text-center' },
                 React.createElement('i', { className: `fa-solid ${legIcon}` })
               ),
-              // 2. stĺpec: názov busu – pevná šírka (aj keď prázdny)
+              // 2. stĺpec: názov busu alebo "PEŠI" – pevná šírka
               legBusLabel,
-              // 3. stĺpec: čas – pevná šírka
-              React.createElement('span', { className: 'font-mono w-24 flex-shrink-0 text-gray-700' }, legTime),
+              // 3. stĺpec: čas – pevná šírka (pri pešom prázdny)
+              React.createElement('span', { className: 'font-mono w-24 flex-shrink-0 text-gray-700' }, legTimeText),
               // 4. stĺpec: trasa
               React.createElement('span', { className: 'text-gray-500' }, `${leg.fromName} → ${leg.toName}`)
             );
