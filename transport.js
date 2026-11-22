@@ -1,0 +1,923 @@
+// catering.js
+// Modul zobrazuje PRESUNY tímov (transfery) v rovnakom vizuálnom štýle,
+// akým catering.js zobrazuje stravovanie.
+//
+// Dáta čerpá z rovnakých Firestore kolekcií ako logged-in-transport.js:
+//   - settings/transportTravelTimes  (times, transfers)
+//   - transport                      (bus, busRow, teamShortcut, walkingRule)
+//   - places, users, matches, catering
+//   - settings/categories, settings/registration, settings/catering,
+//     settings/superstructureGroups
+//
+// Renderovanie je plne cez React.createElement (žiadne JSX).
+
+import {
+  doc, getDoc, getDocs, onSnapshot, collection, Timestamp,
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+const { useState, useEffect, useRef, useMemo, createElement: h } = React;
+
+/* ------------------------------------------------------------------ */
+/* Pomocné funkcie (rovnaké ako v logged-in-transport.js)             */
+/* ------------------------------------------------------------------ */
+
+window.showGlobalNotification = (message, type = 'success') => {
+  let el = document.getElementById('global-notification');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'global-notification';
+    el.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] opacity-0 transition-opacity duration-300';
+    document.body.appendChild(el);
+  }
+  const base = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
+  const map = {
+    success: 'bg-green-500 text-white',
+    error: 'bg-red-500 text-white',
+    info: 'bg-blue-500 text-white',
+  };
+  el.className = `${base} ${map[type] || 'bg-gray-700 text-white'} opacity-0 scale-95`;
+  el.textContent = message;
+  setTimeout(() => { el.className = `${base} ${map[type] || 'bg-gray-700 text-white'} opacity-100 scale-100`; }, 10);
+  setTimeout(() => { el.className = `${base} ${map[type] || 'bg-gray-700 text-white'} opacity-0 scale-95`; }, 5000);
+};
+
+const formatDateDDMMYYYY = (ts) => {
+  if (!ts) return null;
+  let d;
+  if (typeof ts.toDate === 'function') d = ts.toDate();
+  else if (ts instanceof Date) d = ts;
+  else d = new Date(ts);
+  if (isNaN(d.getTime())) return null;
+  return `${String(d.getDate()).padStart(2, '0')}. ${String(d.getMonth() + 1).padStart(2, '0')}. ${d.getFullYear()}`;
+};
+
+const formatDateTime = (ts) => {
+  if (!ts) return null;
+  let d;
+  if (typeof ts.toDate === 'function') d = ts.toDate();
+  else if (ts instanceof Date) d = ts;
+  else d = new Date(ts);
+  if (isNaN(d.getTime())) return null;
+  return `${String(d.getDate()).padStart(2, '0')}. ${String(d.getMonth() + 1).padStart(2, '0')}. ${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
+const formatTsLocal = (ts) => {
+  if (ts == null || !isFinite(ts)) return null;
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return null;
+  return `${String(d.getDate()).padStart(2, '0')}. ${String(d.getMonth() + 1).padStart(2, '0')}. ${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
+const formatTimeOnly = (ts) => {
+  if (ts == null || !isFinite(ts)) return '';
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
+const cleanCategory = (cat) => String(cat || '')
+  .replace(/\u00A0/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const normalizePlaceName = (name) => {
+  if (!name) return '';
+  return String(name).trim()
+    .replace(/^zastávka\s+/i, '')
+    .replace(/^zastavka\s+/i, '')
+    .replace(/^ubytovanie\s+/i, '')
+    .replace(/^ubytovňa\s+/i, '')
+    .replace(/^ubytovna\s+/i, '')
+    .replace(/^miesto\s+zrazu\s+/i, '')
+    .replace(/^miesta\s+zrazu\s+/i, '')
+    .trim();
+};
+
+const dayKeyAndSlotToTimestamp = (dayKey, slotFrom) => {
+  if (!dayKey) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+  if (!m) return null;
+  let hh = 0, mi = 0;
+  if (slotFrom && /^\d{1,2}:\d{2}$/.test(slotFrom)) {
+    const [a, b] = slotFrom.split(':').map(Number);
+    hh = a; mi = b;
+  }
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), hh, mi, 0, 0).getTime();
+};
+
+const parseWhenRangeToTs = (when) => {
+  if (!when) return null;
+  const s = String(when);
+  const regex = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/g;
+  const found = [];
+  let m;
+  while ((m = regex.exec(s)) !== null) {
+    const ts = new Date(
+      Number(m[3]),
+      Number(m[2]) - 1,
+      Number(m[1]),
+      m[4] != null ? Number(m[4]) : 0,
+      m[5] != null ? Number(m[5]) : 0,
+      0, 0
+    ).getTime();
+    if (isFinite(ts)) found.push(ts);
+  }
+  if (!found.length) return null;
+  return { startTs: found[0], endTs: found.length > 1 ? found[1] : found[0] };
+};
+
+const getGroupCharFromTeamName = (teamName) => {
+  if (!teamName) return null;
+  const m = /\d([A-ZÁ-Ž])\s*$/.exec(String(teamName).trim());
+  return m ? m[1].toUpperCase() : null;
+};
+
+const buildRowId = (busId, dayKey, order) => `${busId}__${dayKey}__${order}`;
+
+/* ------------------------------------------------------------------ */
+/* Ikonky pre typy miest                                              */
+/* ------------------------------------------------------------------ */
+
+const placeTypeIcons = {
+  sportova_hala: { icon: 'fa-futbol', color: '#dc2626', label: 'Športová hala' },
+  stravovanie:   { icon: 'fa-utensils', color: '#16a34a', label: 'Stravovanie' },
+  ubytovanie:    { icon: 'fa-bed', color: '#6b7280', label: 'Ubytovanie' },
+  zastavka:      { icon: 'fa-bus', color: '#2563eb', label: 'Zastávka' },
+};
+
+/* ------------------------------------------------------------------ */
+/* Farby pre typy udalostí                                            */
+/* ------------------------------------------------------------------ */
+
+const EVENT_COLORS = {
+  transfer_bus:        { bg: 'bg-blue-50',   border: 'border-blue-400',   text: 'text-blue-800',   icon: 'fa-bus',             label: 'Presun busom' },
+  transfer_walking:    { bg: 'bg-amber-50',  border: 'border-amber-400',  text: 'text-amber-800',  icon: 'fa-person-walking',  label: 'Peší presun' },
+  transfer_unassigned: { bg: 'bg-gray-50',   border: 'border-gray-300',   text: 'text-gray-700',   icon: 'fa-question-circle', label: 'Nepriradený presun' },
+  catering:            { bg: 'bg-green-50',  border: 'border-green-400',  text: 'text-green-800',  icon: 'fa-utensils',        label: 'Stravovanie' },
+  match:               { bg: 'bg-red-50',    border: 'border-red-400',    text: 'text-red-800',    icon: 'fa-futbol',          label: 'Zápas' },
+  accommodation:       { bg: 'bg-purple-50', border: 'border-purple-400', text: 'text-purple-800', icon: 'fa-bed',             label: 'Ubytovanie' },
+};
+
+/* ------------------------------------------------------------------ */
+/* Hlavná komponenta                                                  */
+/* ------------------------------------------------------------------ */
+
+const CateringTransportApp = ({ userProfileData }) => {
+  /* -------------------- Refs -------------------- */
+  const placesMapRef = useRef({});
+  const allPlacesRef = useRef([]);
+  const teamsLookupRef = useRef({});
+  const matchesBufferRef = useRef([]);
+  const cateringBufferRef = useRef([]);
+  const teamsArrivalBufferRef = useRef([]);
+  const savedTransfersRef = useRef([]);
+  const superstructureGroupsRef = useRef({});
+  const transportColorsRef = useRef({});
+  const matchesLoadedRef = useRef(false);
+  const cateringLoadedRef = useRef(false);
+  const teamsLoadedRef = useRef(false);
+  const travelTimesLoadedRef = useRef(false);
+
+  /* -------------------- State -------------------- */
+  const [loading, setLoading] = useState(true);
+  const [allPlaces, setAllPlaces] = useState([]);
+  const [stopsList, setStopsList] = useState([]);
+  const [buses, setBuses] = useState([]);
+  const [busRows, setBusRows] = useState({});
+  const [savedTransfers, setSavedTransfers] = useState([]);
+  const [cateringRecords, setCateringRecords] = useState([]);
+  const [matches, setMatches] = useState([]);
+  const [tournamentDays, setTournamentDays] = useState([]);
+  const [selectedDayKey, setSelectedDayKey] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedTeam, setSelectedTeam] = useState('');
+  const [showOnlyTransfers, setShowOnlyTransfers] = useState(false);
+  const [availableTeams, setAvailableTeams] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState([]);
+
+  /* -------------------- Pomocné resolve funkcie -------------------- */
+  const resolvePlaceNameById = (placeId) => {
+    if (!placeId) return '';
+    const id = String(placeId);
+    const fromMap = placesMapRef.current[id];
+    if (fromMap) return fromMap;
+    const fromAll = (allPlacesRef.current || []).find((p) => p.id === id);
+    if (fromAll) return fromAll.name;
+    const fromStops = (stopsList || []).find((s) => s.id === id);
+    if (fromStops) return fromStops.name;
+    return id;
+  };
+
+  const resolvePlaceIdByName = (placeName) => {
+    if (!placeName) return null;
+    const raw = String(placeName).trim();
+    const direct = (allPlacesRef.current || []).find((p) => p.id === raw);
+    if (direct) return direct.id;
+    const norm = normalizePlaceName(raw);
+    const found = (allPlacesRef.current || []).find((p) => normalizePlaceName(p.name) === norm);
+    return found ? found.id : null;
+  };
+
+  const getPlaceIconForName = (placeName) => {
+    if (!placeName) return null;
+    const norm = normalizePlaceName(placeName);
+    const found = (allPlacesRef.current || []).find((p) => normalizePlaceName(p.name) === norm)
+      || (stopsList || []).find((s) => normalizePlaceName(s.name) === norm);
+    if (!found) return null;
+    const meta = placeTypeIcons[found.type] || { icon: 'fa-circle-dot', color: '#6b7280' };
+    return h('i', {
+      className: `fa-solid ${meta.icon}`,
+      style: { color: meta.color, marginRight: '4px' },
+      title: meta.label || found.type || '',
+    });
+  };
+
+  /* -------------------- Firestore subscriptions -------------------- */
+  useEffect(() => {
+    if (!window.db) return;
+    const unsubs = [];
+
+    // places (map + list)
+    try {
+      const placesRef = collection(window.db, 'places');
+      unsubs.push(onSnapshot(placesRef, (snap) => {
+        const map = {};
+        const list = [];
+        snap.forEach((d) => {
+          const data = d.data() || {};
+          map[d.id] = data.name || '(bez názvu)';
+          list.push({
+            id: d.id,
+            name: data.name || '(bez názvu)',
+            type: data.type || '(neznámy typ)',
+            capacity: data.capacity ?? null,
+            accommodationType: data.accommodationType || null,
+            lat: data.location?.latitude ?? data.lat ?? null,
+            lng: data.location?.longitude ?? data.lng ?? null,
+          });
+        });
+        list.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
+        placesMapRef.current = map;
+        allPlacesRef.current = list;
+        setAllPlaces(list);
+        setStopsList(list.filter((p) => p.type === 'zastavka'));
+      }, (e) => {}));
+    } catch (e) {}
+
+    // settings/transportTravelTimes → times + transfers
+    try {
+      const ttRef = doc(window.db, 'settings', 'transportTravelTimes');
+      unsubs.push(onSnapshot(ttRef, (snap) => {
+        const transfers = [];
+        if (snap.exists()) {
+          const data = snap.data() || {};
+          const rawTransfers = data.transfers || {};
+          Object.entries(rawTransfers).forEach(([key, v]) => {
+            if (!v) return;
+            transfers.push({
+              key,
+              category: v.category || '',
+              teamUid: v.teamUid || null,
+              teamIndex: v.teamIndex ?? null,
+              teamName: v.teamName || null,
+              when: v.when || '',
+              fromId: v.fromId || resolvePlaceIdByName(v.fromLocation),
+              toId: v.toId || resolvePlaceIdByName(v.toLocation),
+              fromLocation: resolvePlaceNameById(v.fromId) || v.fromLocation || '',
+              toLocation: resolvePlaceNameById(v.toId) || v.toLocation || '',
+              text: v.text || '',
+              dayKey: v.dayKey || null,
+              isWalking: v.isWalking === true,
+              intermediateStopIds: Array.isArray(v.intermediateStopIds)
+                ? v.intermediateStopIds
+                : (Array.isArray(v.intermediateStops)
+                    ? v.intermediateStops.map(resolvePlaceIdByName).filter(Boolean)
+                    : []),
+              intermediateStops: Array.isArray(v.intermediateStopIds)
+                ? v.intermediateStopIds.map(resolvePlaceNameById)
+                : (Array.isArray(v.intermediateStops) ? v.intermediateStops : []),
+              segments: (v.segments || []).map((s) => ({
+                ...s,
+                fromId: s.fromId || resolvePlaceIdByName(s.from),
+                toId: s.toId || resolvePlaceIdByName(s.to),
+              })),
+            });
+          });
+          transfers.sort((a, b) => {
+            const c = String(a.category || '').localeCompare(String(b.category || ''), 'sk');
+            if (c !== 0) return c;
+            const t = String(a.teamName || '').localeCompare(String(b.teamName || ''), 'sk');
+            if (t !== 0) return t;
+            return String(a.when || '').localeCompare(String(b.when || ''), 'sk');
+          });
+        }
+        savedTransfersRef.current = transfers;
+        setSavedTransfers(transfers);
+        travelTimesLoadedRef.current = true;
+        setLoading(false);
+      }, (e) => {}));
+    } catch (e) {}
+
+    // transport → bus + busRow
+    try {
+      const transportRef = collection(window.db, 'transport');
+      unsubs.push(onSnapshot(transportRef, (snap) => {
+        const busesList = [];
+        const rowsGrouped = {};
+        snap.forEach((d) => {
+          const data = d.data() || {};
+          if (data.type === 'bus') {
+            const num = Number(data.number);
+            busesList.push({
+              id: d.id,
+              name: data.name || (isFinite(num) ? `Bus ${num}` : 'Bus'),
+              number: isFinite(num) ? num : 0,
+            });
+            return;
+          }
+          if (data.type === 'busRow') {
+            if (!data.busId || !data.dayKey) return;
+            const key = `${data.busId}|${data.dayKey}`;
+            if (!rowsGrouped[key]) rowsGrouped[key] = [];
+            const order = Number(data.order) || 0;
+            rowsGrouped[key].push({
+              id: d.id,
+              order,
+              rowId: data.rowId || buildRowId(data.busId, data.dayKey, order),
+              timeFrom: data.timeFrom || '',
+              timeTo: data.timeTo || '',
+              placeFromId: data.placeFromId || null,
+              placeToId: data.placeToId || null,
+              placeFrom: data.placeFromId ? resolvePlaceNameById(data.placeFromId) : '',
+              placeTo: data.placeToId ? resolvePlaceNameById(data.placeToId) : '',
+            });
+          }
+        });
+        busesList.sort((a, b) => a.number - b.number);
+        Object.values(rowsGrouped).forEach((arr) => arr.sort((a, b) => a.order - b.order));
+        setBuses(busesList);
+        setBusRows(rowsGrouped);
+      }, (e) => {}));
+    } catch (e) {}
+
+    // users → teams lookup + arrival buffer + kategórie
+    const loadTeams = async () => {
+      try {
+        const usersSnap = await getDocs(collection(window.db, 'users'));
+        const lookup = {};
+        const buffer = [];
+        const cats = new Set();
+        const teamsSet = new Set();
+
+        usersSnap.forEach((userDoc) => {
+          const ud = userDoc.data() || {};
+          const teams = ud.teams;
+          if (!teams || typeof teams !== 'object') return;
+          Object.entries(teams).forEach(([category, arr]) => {
+            if (!Array.isArray(arr)) return;
+            const cat = cleanCategory(category);
+            cats.add(cat);
+            arr.forEach((team, idx) => {
+              if (!team || !team.teamName) return;
+              const tn = String(team.teamName).trim();
+              teamsSet.add(`${cat}|${tn}`);
+              lookup[`${userDoc.id}|${cat}|${idx}`] = { teamName: tn, category: cat, teamIndex: idx, userId: userDoc.id };
+              buffer.push({
+                category: cat,
+                teamName: tn,
+                accommodationName: team.accommodation?.name || '',
+                accommodationType: team.accommodation?.type || '(nešpecifikovaný)',
+                isRegistered: true,
+                isSuperstructure: false,
+              });
+            });
+          });
+        });
+
+        // superstructure z matches
+        (matchesBufferRef.current || []).forEach((m) => {
+          [m.home, m.away].forEach((teamName) => {
+            if (!teamName) return;
+            const cat = cleanCategory(m.category);
+            if (!teamsSet.has(`${cat}|${teamName}`)) {
+              buffer.push({
+                category: cat,
+                teamName,
+                accommodationName: '',
+                accommodationType: '(nešpecifikovaný)',
+                isRegistered: false,
+                isSuperstructure: true,
+              });
+            }
+          });
+        });
+
+        teamsLookupRef.current = lookup;
+        teamsArrivalBufferRef.current = buffer;
+        teamsLoadedRef.current = true;
+        setAvailableCategories([...cats].sort((a, b) => a.localeCompare(b, 'sk')));
+        setAvailableTeams([...teamsSet].sort((a, b) => a.localeCompare(b, 'sk')));
+      } catch (e) {}
+    };
+    loadTeams();
+
+    // matches
+    try {
+      const matchesRef = collection(window.db, 'matches');
+      unsubs.push(onSnapshot(matchesRef, (snap) => {
+        const list = [];
+        snap.forEach((d) => {
+          const data = d.data() || {};
+          const category = cleanCategory(data.categoryName || data.categoryId || '(neznáma kategória)');
+          const home = data.homeTeamIdentifier || '';
+          const away = data.awayTeamIdentifier || '';
+          let scheduledTs = null;
+          if (data.scheduledTime) {
+            try {
+              scheduledTs = data.scheduledTime.toDate ? data.scheduledTime.toDate().getTime() : new Date(data.scheduledTime).getTime();
+            } catch (e) { scheduledTs = null; }
+          }
+          list.push({
+            category,
+            home,
+            away,
+            scheduledTs,
+            scheduledTime: data.scheduledTime ? formatDateTime(data.scheduledTime) : null,
+            hallId: data.hallId || null,
+            hallName: data.hallId ? (placesMapRef.current[data.hallId] || '') : null,
+          });
+        });
+        matchesBufferRef.current = list;
+        setMatches(list);
+        matchesLoadedRef.current = true;
+      }, (e) => {}));
+    } catch (e) {}
+
+    // catering
+    try {
+      const cateringRef = collection(window.db, 'catering');
+      unsubs.push(onSnapshot(cateringRef, (snap) => {
+        const list = [];
+        snap.forEach((d) => {
+          const data = d.data() || {};
+          const category = cleanCategory(data.category || data.categoryName || '(bez kategórie)');
+          const teamName = data.isSuperstructure === true
+            ? String(data.teamName || '').trim()
+            : (() => {
+                const lookup = teamsLookupRef.current || {};
+                const cat = cleanCategory(data.category || '');
+                const key = `${data.teamUid}|${cat}|${data.teamIndex}`;
+                return (lookup[key]?.teamName) || data.teamName || '---';
+              })();
+          const ts = dayKeyAndSlotToTimestamp(data.dayKey, data.slotFrom);
+          list.push({
+            category, teamName, ts,
+            dayKey: data.dayKey || null,
+            slotFrom: data.slotFrom || null,
+            slotTo: data.slotTo || null,
+            mealType: data.mealType || null,
+            placeName: data.placeName || data.placeId || '(bez miesta)',
+            isSuperstructure: data.isSuperstructure === true,
+          });
+        });
+        cateringBufferRef.current = list;
+        setCateringRecords(list);
+        cateringLoadedRef.current = true;
+      }, (e) => {}));
+    } catch (e) {}
+
+    // settings/registration → tournament days
+    try {
+      const regRef = doc(window.db, 'settings', 'registration');
+      unsubs.push(onSnapshot(regRef, (snap) => {
+        if (!snap.exists()) { setTournamentDays([]); return; }
+        const data = snap.data() || {};
+        const toDate = (ts) => {
+          if (!ts) return null;
+          if (typeof ts.toDate === 'function') return ts.toDate();
+          if (ts instanceof Date) return ts;
+          const d = new Date(ts);
+          return isNaN(d.getTime()) ? null : d;
+        };
+        const start = toDate(data.tournamentStart);
+        const end = toDate(data.tournamentEnd);
+        if (!start || !end) { setTournamentDays([]); return; }
+        const days = [];
+        const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+        while (cursor <= endDay) {
+          const d = new Date(cursor);
+          const dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          days.push({
+            dayKey,
+            dateLabel: formatDateDDMMYYYY(d),
+            dayName: d.toLocaleDateString('sk-SK', { weekday: 'long' }),
+          });
+          cursor.setDate(cursor.getDate() + 1);
+        }
+        setTournamentDays(days);
+      }, (e) => {}));
+    } catch (e) {}
+
+    // settings/categories → transportColors
+    try {
+      const catRef = doc(window.db, 'settings', 'categories');
+      unsubs.push(onSnapshot(catRef, (snap) => {
+        const colorMap = {};
+        if (snap.exists()) {
+          const data = snap.data() || {};
+          Object.entries(data).forEach(([catId, catData]) => {
+            if (!catData) return;
+            const tc = catData.transportColor || null;
+            if (tc) {
+              if (catData.name) colorMap[String(catData.name).trim()] = tc;
+              colorMap[catId] = tc;
+            }
+          });
+        }
+        transportColorsRef.current = colorMap;
+      }, (e) => {}));
+    } catch (e) {}
+
+    // settings/superstructureGroups
+    try {
+      const ssgRef = doc(window.db, 'settings', 'superstructureGroups');
+      unsubs.push(onSnapshot(ssgRef, (snap) => {
+        const map = {};
+        if (snap.exists()) {
+          const data = snap.data() || {};
+          Object.entries(data).forEach(([catName, arr]) => {
+            if (!Array.isArray(arr)) return;
+            arr.forEach((team) => {
+              if (!team?.teamName || !team?.groupName) return;
+              const cat = cleanCategory(catName);
+              const grp = String(team.groupName).trim();
+              const key = `${cat}|${grp}`;
+              if (!map[key]) map[key] = new Set();
+              map[key].add(String(team.teamName).trim());
+            });
+          });
+        }
+        superstructureGroupsRef.current = Object.fromEntries(
+          Object.entries(map).map(([k, v]) => [k, [...v]])
+        );
+      }, (e) => {}));
+    } catch (e) {}
+
+    return () => unsubs.forEach((u) => u && u());
+  }, []);
+
+  /* -------------------- Zostavenie timeline eventov -------------------- */
+  const timelineEvents = useMemo(() => {
+    if (!travelTimesLoadedRef.current) return [];
+    const events = [];
+
+    const dayFilter = selectedDayKey || null;
+    const catFilter = selectedCategory ? cleanCategory(selectedCategory) : null;
+    const teamFilter = selectedTeam ? selectedTeam : null;
+
+    /* --- 1) Transfery (parent + segmenty) --- */
+    (savedTransfers || []).forEach((parent) => {
+      if (parent._parentKey && parent._parentKey !== parent.key) return;
+      if (catFilter && cleanCategory(parent.category || '') !== catFilter) return;
+      if (teamFilter && String(parent.teamName || '').trim() !== teamFilter) return;
+
+      const stopsIds = Array.isArray(parent.intermediateStopIds) ? parent.intermediateStopIds.filter(Boolean) : [];
+      const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
+      const routeIdsRaw = [parent.fromId, ...stopsIds, parent.toId].filter(Boolean);
+      const routeIds = [];
+      routeIdsRaw.forEach((id) => {
+        if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
+      });
+      if (routeIds.length < 2) return;
+
+      const parentWhenRange = parseWhenRangeToTs(parent.when);
+
+      for (let i = 0; i < routeIds.length - 1; i++) {
+        const fromId = routeIds[i];
+        const toId = routeIds[i + 1];
+        if (fromId === toId) continue;
+
+        const seg = parentSegments.find((s) => s && s.fromId === fromId && s.toId === toId) || null;
+        const isWalking = !!(seg && seg.isWalking === true);
+        const hasRealTimes = !!(seg && seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs);
+        const busId = seg?.busId ? String(seg.busId) : null;
+        const busName = busId ? (buses.find((b) => b.id === busId)?.name || `Bus ${busId}`) : null;
+
+        let startTs = null, endTs = null, timeLabel = '';
+        if (isWalking) {
+          if (seg.startTs != null) {
+            startTs = seg.startTs;
+            endTs = seg.endTs != null ? seg.endTs : seg.startTs + 60 * 1000;
+            timeLabel = `${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)}`;
+          } else {
+            timeLabel = 'PEŠI';
+          }
+        } else if (hasRealTimes) {
+          startTs = seg.startTs;
+          endTs = seg.endTs;
+          timeLabel = `${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)}`;
+        } else {
+          timeLabel = 'nepriradený';
+        }
+
+        // deň
+        let dayKey = parent.dayKey || null;
+        if (!dayKey && startTs != null) {
+          const d = new Date(startTs);
+          dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        if (!dayKey && parentWhenRange) {
+          const d = new Date(parentWhenRange.startTs);
+          dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        if (dayFilter && dayKey !== dayFilter) continue;
+
+        const fromName = resolvePlaceNameById(fromId);
+        const toName = resolvePlaceNameById(toId);
+
+        const sortTs = startTs != null
+          ? startTs
+          : (parentWhenRange?.startTs ?? Number.POSITIVE_INFINITY);
+
+        let typeKey;
+        if (isWalking) typeKey = 'transfer_walking';
+        else if (hasRealTimes) typeKey = 'transfer_bus';
+        else typeKey = 'transfer_unassigned';
+
+        events.push({
+          id: `${parent.key}__${i}`,
+          dayKey,
+          sortTs,
+          startTs,
+          endTs,
+          timeLabel,
+          typeKey,
+          title: `Presun: ${fromName} → ${toName}`,
+          subtitle: busName ? `Bus: ${busName}` : (isWalking ? 'Peší presun' : 'Bez priradeného busu'),
+          category: cleanCategory(parent.category || ''),
+          teamName: String(parent.teamName || '').trim(),
+          fromName,
+          toName,
+          busName,
+          isWalking,
+          hasRealTimes,
+          placeIcon: getPlaceIconForName(fromName),
+          extra: null,
+        });
+      }
+    });
+
+    /* --- 2) Stravovanie --- */
+    (cateringRecords || []).forEach((c) => {
+      if (catFilter && cleanCategory(c.category || '') !== catFilter) return;
+      if (teamFilter && String(c.teamName || '').trim() !== teamFilter) return;
+      if (dayFilter && c.dayKey !== dayFilter) return;
+
+      const mealLabel = c.mealType === 'lunch' ? 'Obed' : c.mealType === 'dinner' ? 'Večera' : (c.mealType || 'Stravovanie');
+      const timeRange = c.slotFrom ? (c.slotTo ? `${c.slotFrom} – ${c.slotTo}` : c.slotFrom) : '--:--';
+
+      events.push({
+        id: `catering__${c.category}__${c.teamName}__${c.dayKey}__${c.slotFrom}`,
+        dayKey: c.dayKey,
+        sortTs: c.ts ?? Number.POSITIVE_INFINITY,
+        startTs: c.ts,
+        endTs: c.slotTo ? dayKeyAndSlotToTimestamp(c.dayKey, c.slotTo) : c.ts,
+        timeLabel: timeRange,
+        typeKey: 'catering',
+        title: `${mealLabel} → ${c.placeName}`,
+        subtitle: c.placeName,
+        category: cleanCategory(c.category || ''),
+        teamName: String(c.teamName || '').trim(),
+        placeIcon: getPlaceIconForName(c.placeName),
+        extra: null,
+      });
+    });
+
+    /* --- 3) Zápasy --- */
+    (matches || []).forEach((m) => {
+      if (catFilter && cleanCategory(m.category || '') !== catFilter) return;
+      if (teamFilter && m.home !== teamFilter && m.away !== teamFilter) return;
+
+      let dayKey = null;
+      if (m.scheduledTs != null) {
+        const d = new Date(m.scheduledTs);
+        dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
+      if (dayFilter && dayKey !== dayFilter) return;
+
+      events.push({
+        id: `match__${m.home}__${m.away}__${m.scheduledTs}`,
+        dayKey,
+        sortTs: m.scheduledTs ?? Number.POSITIVE_INFINITY,
+        startTs: m.scheduledTs,
+        endTs: m.scheduledTs != null ? m.scheduledTs + 60 * 60 * 1000 : null,
+        timeLabel: m.scheduledTs ? formatTimeOnly(m.scheduledTs) : 'nenaplánované',
+        typeKey: 'match',
+        title: `${m.home} vs ${m.away}`,
+        subtitle: m.hallName || '',
+        category: cleanCategory(m.category || ''),
+        teamName: teamFilter || '',
+        placeIcon: getPlaceIconForName(m.hallName),
+        extra: null,
+      });
+    });
+
+    events.sort((a, b) => {
+      if (a.sortTs !== b.sortTs) return a.sortTs - b.sortTs;
+      return String(a.title).localeCompare(String(b.title), 'sk');
+    });
+
+    return events;
+  }, [savedTransfers, cateringRecords, matches, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces]);
+
+  /* --- Filtrovanie len transferov --- */
+  const visibleEvents = useMemo(() => {
+    if (!showOnlyTransfers) return timelineEvents;
+    return timelineEvents.filter((e) => e.typeKey.startsWith('transfer'));
+  }, [timelineEvents, showOnlyTransfers]);
+
+  /* --- Skupiny podľa dňa --- */
+  const eventsByDay = useMemo(() => {
+    const map = {};
+    visibleEvents.forEach((e) => {
+      const dk = e.dayKey || 'neznamy';
+      if (!map[dk]) map[dk] = [];
+      map[dk].push(e);
+    });
+    Object.values(map).forEach((arr) => arr.sort((a, b) => a.sortTs - b.sortTs));
+    return map;
+  }, [visibleEvents]);
+
+  /* -------------------- Render: loading -------------------- */
+  if (loading) {
+    return h('div', { className: 'flex items-center justify-center p-12' },
+      h('i', { className: 'fa-solid fa-spinner fa-spin text-3xl text-blue-600 mr-3' }),
+      h('span', { className: 'text-lg text-gray-700' }, 'Načítavam presuny…')
+    );
+  }
+
+  const dayKeys = Object.keys(eventsByDay).sort();
+
+  /* -------------------- Render: hlavička -------------------- */
+  const headerSection = h('div', { className: 'mb-6' },
+    h('h1', { className: 'text-2xl font-bold text-gray-800 flex items-center gap-2' },
+      h('i', { className: 'fa-solid fa-bus text-blue-600' }),
+      'Presuny tímov',
+      h('span', { className: 'text-sm font-normal text-gray-500 ml-2' }, '(timeline v štýle stravovania)')
+    ),
+    h('p', { className: 'text-gray-600 mt-1' }, 'Prehľad presunov, stravovania a zápasov podľa dní a tímov.')
+  );
+
+  /* -------------------- Render: filtre -------------------- */
+  const filtersSection = h('div', { className: 'bg-white rounded-lg shadow p-4 mb-6 border border-gray-200' },
+    h('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-4' },
+      // Deň
+      h('div', null,
+        h('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Deň'),
+        h('select', {
+          className: 'w-full border border-gray-300 rounded px-3 py-2 text-sm',
+          value: selectedDayKey,
+          onChange: (e) => setSelectedDayKey(e.target.value),
+        },
+          h('option', { value: '' }, 'Všetky dni'),
+          ...tournamentDays.map((d) =>
+            h('option', { key: d.dayKey, value: d.dayKey }, `${d.dateLabel} (${d.dayName})`)
+          )
+        )
+      ),
+      // Kategória
+      h('div', null,
+        h('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Kategória'),
+        h('select', {
+          className: 'w-full border border-gray-300 rounded px-3 py-2 text-sm',
+          value: selectedCategory,
+          onChange: (e) => setSelectedCategory(e.target.value),
+        },
+          h('option', { value: '' }, 'Všetky kategórie'),
+          ...availableCategories.map((c) => h('option', { key: c, value: c }, c))
+        )
+      ),
+      // Tím
+      h('div', null,
+        h('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Tím'),
+        h('select', {
+          className: 'w-full border border-gray-300 rounded px-3 py-2 text-sm',
+          value: selectedTeam,
+          onChange: (e) => setSelectedTeam(e.target.value),
+        },
+          h('option', { value: '' }, 'Všetky tímy'),
+          ...availableTeams.map((t) => {
+            const [cat, name] = t.split('|');
+            return h('option', { key: t, value: name }, `${name} (${cat})`);
+          })
+        )
+      ),
+      // Len presuny
+      h('div', { className: 'flex items-end' },
+        h('label', { className: 'flex items-center gap-2 text-sm text-gray-700' },
+          h('input', {
+            type: 'checkbox',
+            checked: showOnlyTransfers,
+            onChange: (e) => setShowOnlyTransfers(e.target.checked),
+            className: 'rounded border-gray-300',
+          }),
+          'Len presuny'
+        )
+      )
+    )
+  );
+
+  /* -------------------- Render: prázdny stav -------------------- */
+  const emptySection = h('div', { className: 'bg-white rounded-lg shadow p-12 text-center text-gray-500' },
+    h('i', { className: 'fa-solid fa-inbox text-4xl mb-3 text-gray-300' }),
+    h('p', null, 'Žiadne udalosti pre zvolené filtre.')
+  );
+
+  /* -------------------- Render: jedna udalosť -------------------- */
+  const renderEvent = (ev) => {
+    const color = EVENT_COLORS[ev.typeKey] || EVENT_COLORS.transfer_unassigned;
+    return h('div', {
+      key: ev.id,
+      className: `flex items-start gap-4 px-5 py-3 hover:bg-gray-50 transition-colors border-l-4 ${color.border}`,
+    },
+      // Ikona
+      h('div', { className: `flex-shrink-0 w-10 h-10 rounded-full ${color.bg} flex items-center justify-center` },
+        h('i', { className: `fa-solid ${color.icon} ${color.text}` })
+      ),
+      // Čas
+      h('div', { className: 'flex-shrink-0 w-28 text-sm font-mono text-gray-700 pt-1' },
+        ev.timeLabel || '--:--'
+      ),
+      // Obsah
+      h('div', { className: 'flex-1 min-w-0' },
+        h('div', { className: 'flex items-center gap-2 flex-wrap' },
+          h('span', { className: `font-medium ${color.text}` }, ev.title),
+          ev.category
+            ? h('span', { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded' }, ev.category)
+            : null,
+          ev.teamName
+            ? h('span', { className: 'text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded' }, ev.teamName)
+            : null
+        ),
+        ev.subtitle
+          ? h('div', { className: 'text-sm text-gray-500 mt-0.5 flex items-center gap-1' },
+              ev.placeIcon,
+              ev.subtitle
+            )
+          : null
+      ),
+      // Typ
+      h('div', { className: 'flex-shrink-0 text-xs text-gray-400 pt-1' }, color.label)
+    );
+  };
+
+  /* -------------------- Render: jeden deň -------------------- */
+  const renderDay = (dayKey) => {
+    const dayMeta = tournamentDays.find((d) => d.dayKey === dayKey);
+    const dayLabel = dayMeta ? `${dayMeta.dateLabel} (${dayMeta.dayName})` : dayKey;
+    const dayEvents = eventsByDay[dayKey];
+
+    return h('div', {
+      key: dayKey,
+      className: 'bg-white rounded-lg shadow border border-gray-200 overflow-hidden',
+    },
+      // Hlavička dňa
+      h('div', { className: 'bg-gradient-to-r from-blue-600 to-blue-500 text-white px-5 py-3 flex items-center justify-between' },
+        h('h2', { className: 'text-lg font-semibold flex items-center gap-2' },
+          h('i', { className: 'fa-regular fa-calendar' }),
+          dayLabel
+        ),
+        h('span', { className: 'text-sm bg-white/20 px-3 py-1 rounded-full' },
+          `${dayEvents.length} udalostí`
+        )
+      ),
+      // Zoznam udalostí
+      h('div', { className: 'divide-y divide-gray-100' },
+        ...dayEvents.map(renderEvent)
+      )
+    );
+  };
+
+  /* -------------------- Render: timeline -------------------- */
+  const timelineSection = dayKeys.length === 0
+    ? emptySection
+    : h('div', { className: 'space-y-8' },
+        ...dayKeys.map(renderDay)
+      );
+
+  /* -------------------- Render: root -------------------- */
+  return h('div', { className: 'p-4 max-w-7xl mx-auto' },
+    headerSection,
+    filtersSection,
+    timelineSection
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/* Export / mount                                                     */
+/* ------------------------------------------------------------------ */
+
+export default function MountCateringTransport({ userProfileData }) {
+  return h(CateringTransportApp, { userProfileData });
+}
