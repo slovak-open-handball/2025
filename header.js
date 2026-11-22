@@ -950,7 +950,7 @@ const checkCurrentPageAccess = () => {
             return true;
         }
         // Ak transport nie je v databáze → predvolene skryté
-        window.location.href = 'index';
+//        window.location.href = 'index';
         return false;
     }
 
@@ -966,7 +966,7 @@ const checkCurrentPageAccess = () => {
             return true;
         }
         // Ak catering nie je v databáze → predvolene skryté
-        window.location.href = 'index';
+//        window.location.href = 'index';
         return false;
     }
     
