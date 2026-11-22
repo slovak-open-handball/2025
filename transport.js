@@ -613,7 +613,7 @@ const TransportApp = ({ userProfileData }) => {
         endTs,
         timeLabel,
         typeKey,
-        title: `Presun: ${fromName} → ${toName}`,
+        title: `${fromName} → ${toName}`,
         category: cleanCategory(parent.category || ''),
         teamName: String(parent.teamName || '').trim(),
         fromName,
