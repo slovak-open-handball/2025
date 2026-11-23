@@ -208,7 +208,7 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName, silent = fals
     const uniqueId = `pdf-${hash}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     iframe.name = uniqueId;
     
-    iframe.src = `logged-in-export.html?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}&instanceId=${encodeURIComponent(uniqueId)}#${hash}`;
+    iframe.src = `logged-in-export?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}&instanceId=${encodeURIComponent(uniqueId)}#${hash}`;
 
     iframe.onload = () => {
         setTimeout(() => {
@@ -241,7 +241,7 @@ const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
     iframe.style.zIndex = '-1';
 
     iframe.name = `matches-pdf-iframe-${Date.now()}`;
-    iframe.src = `logged-in-export.html?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}#${hash}`;
+    iframe.src = `logged-in-export?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}#${hash}`;
 
     iframe.onload = () => {
         setTimeout(() => {
@@ -276,7 +276,7 @@ const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
         return;
     }
 
-    const html2canvasFn = window.html2canvas;
+    const html2canvasFn = window2canvas;
     const jsPDFClass = window.jspdf?.jsPDF;
 
     if (typeof html2canvasFn === 'undefined' || !jsPDFClass) {
@@ -404,7 +404,7 @@ const exportMatchesToPdf = async (title, matchesByDay, formatDateHeaderFn, forma
         return;
     }
 
-    const html2canvasFn = window.html2canvas;
+    const html2canvasFn = window2canvas;
     const jsPDFClass = window.jspdf?.jsPDF;
 
     if (typeof html2canvasFn === 'undefined' || !jsPDFClass) {
@@ -904,7 +904,7 @@ const ExportApp = ({ userProfileData }) => {
                 } catch (e) { }
             
                 if (showPreview) {
-                    window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
+                    window.open(`logged-in-export?download=1#${hash}`, '_blank');
                 } else {
                     downloadMatchesPdfViaHiddenIframe(hash, `${categoryName} - Playoff a zápasy o umiestnenie`);
                 }
@@ -942,7 +942,7 @@ const ExportApp = ({ userProfileData }) => {
                 } catch (e) { }
             
                 if (showPreview) {
-                    window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
+                    window.open(`logged-in-export?download=1#${hash}`, '_blank');
                 } else {
                     downloadPdfViaHiddenIframe(hash, categoryName, selectedGroupName);
                 }
@@ -997,14 +997,14 @@ const ExportApp = ({ userProfileData }) => {
             } catch (e) { }
         
             if (showPreview) {
-                window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
+                window.open(`logged-in-export?download=1#${hash}`, '_blank');
             } else {
                 downloadMatchesPdfViaHiddenIframe(hash, hallName);
             }
             return;
         }
 
-        window.open(`logged-in-export.html?download=1#${selectedOption}`, '_blank');
+        window.open(`logged-in-export?download=1#${selectedOption}`, '_blank');
     };
     
     const handleExportPdf = () => {
@@ -2473,7 +2473,7 @@ const handleDataUpdateAndRender = (event) => {
     const rootElement = document.getElementById('root');
 
     const hasHashInUrl = window.location.hash && window.location.hash.length > 1;
-    const isExportPage = window.location.pathname.endsWith('logged-in-export.html');
+    const isExportPage = window.location.pathname.endsWith('logged-in-export');
     const shouldRenderExportWithoutUser = isExportPage && hasHashInUrl;
 
     if (userProfileData || shouldRenderExportWithoutUser) {
