@@ -158,6 +158,8 @@ const TransportApp = ({ userProfileData }) => {
   const transportColorsRef = useRef({});
   const teamsLoadedRef = useRef(false);
   const travelTimesLoadedRef = useRef(false);
+  const completedTeamsRef = useRef(new Set());
+  const matchesLoadedRef = useRef(false);
 
   /* -------------------- State -------------------- */
   const [loading, setLoading] = useState(true);
@@ -172,6 +174,7 @@ const TransportApp = ({ userProfileData }) => {
   const [selectedTeam, setSelectedTeam] = useState('');
   const [availableTeams, setAvailableTeams] = useState([]);
   const [availableCategories, setAvailableCategories] = useState([]);
+  const [matchesVersion, setMatchesVersion] = useState(0);
 
   /* -------------------- Pomocné resolve funkcie -------------------- */
   const resolvePlaceNameById = (placeId) => {
@@ -592,8 +595,54 @@ const TransportApp = ({ userProfileData }) => {
       }, (e) => {}));
     } catch (e) {}
 
+    // matches → sledovanie completed zápasov pre rozlíšenie nerozriešených názvov tímov
+    try {
+      const matchesRef = collection(window.db, 'matches');
+      unsubs.push(onSnapshot(matchesRef, (snap) => {
+        const completedTeams = new Set();
+        snap.forEach((d) => {
+          const data = d.data() || {};
+          if (data.status !== 'completed') return;
+
+          const candidates = [
+            data.homeTeamIdentifier,
+            data.awayTeamIdentifier,
+            data.homeTeamName,
+            data.awayTeamName,
+            data.homeTeam,
+            data.awayTeam,
+          ].filter(Boolean).map((v) => String(v).trim());
+
+          candidates.forEach((name) => {
+            completedTeams.add(name);
+            completedTeams.add(name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+          });
+        });
+        completedTeamsRef.current = completedTeams;
+        matchesLoadedRef.current = true;
+        setMatchesVersion((v) => v + 1);
+      }, (e) => {
+        console.error('matches snapshot error', e);
+        matchesLoadedRef.current = true;
+      }));
+    } catch (e) {}
+
     return () => unsubs.forEach((u) => u && u());
   }, []);
+
+  const isTeamNameResolved = (teamName, categoryName) => {
+    if (!teamName) return false;
+    const tn = String(teamName).trim();
+    const cat = categoryName ? cleanCategory(categoryName) : '';
+
+    if (!cat || !tn.includes(cat)) return true;
+
+    const set = completedTeamsRef.current;
+    if (!set || set.size === 0) return false;
+
+    const normalized = tn.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return set.has(tn) || set.has(normalized);
+  };
 
   /* -------------------- Zostavenie timeline eventov -------------------- */
   const timelineEvents = useMemo(() => {
@@ -609,6 +658,10 @@ const TransportApp = ({ userProfileData }) => {
       if (parent._parentKey && parent._parentKey !== parent.key) return;
       if (catFilter && cleanCategory(parent.category || '') !== catFilter) return;
       if (teamFilter && String(parent.teamName || '').trim() !== teamFilter) return;
+
+      // Skryť presuny s nerozriešeným názvom tímu (obsahuje názov kategórie
+      // a tím ešte nemá žiadny completed zápas)
+      if (!isTeamNameResolved(parent.teamName, parent.category)) return;
 
       const stopsIds = Array.isArray(parent.intermediateStopIds) ? parent.intermediateStopIds.filter(Boolean) : [];
       const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
@@ -777,7 +830,7 @@ const TransportApp = ({ userProfileData }) => {
     });
 
     return events;
-  }, [savedTransfers, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces]);
+  }, [savedTransfers, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces, matchesVersion]);
 
   /* --- Skupiny podľa dňa --- */
   const eventsByDay = useMemo(() => {
