@@ -276,7 +276,7 @@ const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
         return;
     }
 
-    const html2canvasFn = window2canvas;
+    const html2canvasFn = window.html2canvas
     const jsPDFClass = window.jspdf?.jsPDF;
 
     if (typeof html2canvasFn === 'undefined' || !jsPDFClass) {
