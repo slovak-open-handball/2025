@@ -178,9 +178,6 @@ const TransportApp = ({ userProfileData }) => {
   const matchStatusesRef = useRef({});
   const trackerResolvedNamesRef = useRef({});
   const [trackerResolvedNames, setTrackerResolvedNames] = useState({});
-  const matchStatusesRef = useRef({});
-  const resolvedTeamNamesRef = useRef({});
-  const [resolvedTeamNames, setResolvedTeamNames] = useState({});
 
   /* -------------------- Pomocné resolve funkcie -------------------- */
   const resolvePlaceNameById = (placeId) => {
