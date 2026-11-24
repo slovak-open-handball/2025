@@ -700,6 +700,18 @@ const TransportApp = ({ userProfileData }) => {
     }
   };
 
+  useEffect(() => {
+    if (!savedTransfers || savedTransfers.length === 0) return;
+
+    resolveTransfersViaMatchTracker(savedTransfers);
+
+    const retryTimer = setTimeout(() => {
+      resolveTransfersViaMatchTracker(savedTransfersRef.current);
+    }, 800);
+
+    return () => clearTimeout(retryTimer);
+  }, [savedTransfers]);
+
   const isTeamNameResolved = (teamName, categoryName) => {
     if (!teamName) return false;
     const tn = String(teamName).trim();
@@ -719,37 +731,6 @@ const TransportApp = ({ userProfileData }) => {
       String(mapped).trim() !== 'null' &&
       String(mapped).trim() !== tn
     );
-  };
-
-  useEffect(() => {
-    if (!savedTransfers || savedTransfers.length === 0) return;
-
-    resolveTransfersViaMatchTracker(savedTransfers);
-
-    const retryTimer = setTimeout(() => {
-      resolveTransfersViaMatchTracker(savedTransfersRef.current);
-    }, 800);
-
-    return () => clearTimeout(retryTimer);
-  }, [savedTransfers]);
-
-  const isTeamNameResolved = (teamName, categoryName) => {
-    if (!teamName) return false;
-    const tn = String(teamName).trim();
-    const cat = categoryName ? cleanCategory(categoryName) : '';
-
-    if (!cat || !tn.includes(cat)) return true;
-
-    const mapped = resolvedTeamNamesRef.current[tn] || resolvedTeamNames[tn];
-    if (mapped !== undefined && mapped !== null && mapped !== '' && mapped !== tn) {
-      return true;
-    }
-
-    const set = completedTeamsRef.current;
-    if (!set || set.size === 0) return false;
-
-    const normalized = tn.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    return set.has(tn) || set.has(normalized);
   };
 
   /* -------------------- Zostavenie timeline eventov -------------------- */
