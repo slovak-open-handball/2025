@@ -175,6 +175,9 @@ const TransportApp = ({ userProfileData }) => {
   const [availableTeams, setAvailableTeams] = useState([]);
   const [availableCategories, setAvailableCategories] = useState([]);
   const [matchesVersion, setMatchesVersion] = useState(0);
+  const matchStatusesRef = useRef({});
+  const resolvedTeamNamesRef = useRef({});
+  const [resolvedTeamNames, setResolvedTeamNames] = useState({});
 
   /* -------------------- Pomocné resolve funkcie -------------------- */
   const resolvePlaceNameById = (placeId) => {
@@ -426,6 +429,7 @@ const TransportApp = ({ userProfileData }) => {
         setSavedTransfers(transfers);
         travelTimesLoadedRef.current = true;
         setLoading(false);
+        resolveTransfersViaMatchTracker(transfers);
       }, (e) => {
         console.error('transportTravelTimes error', e);
         setLoading(false);
@@ -595,11 +599,24 @@ const TransportApp = ({ userProfileData }) => {
       }, (e) => {}));
     } catch (e) {}
 
-    // matches → sledovanie completed zápasov pre rozlíšenie nerozriešených názvov tímov
+    // matches → sledovanie completed zápasov + volanie matchTracker.getTeamNameByDisplayId
     try {
       const matchesRef = collection(window.db, 'matches');
       unsubs.push(onSnapshot(matchesRef, (snap) => {
         const completedTeams = new Set();
+        let anyMatchCompletedNow = false;
+
+        snap.docChanges().forEach((change) => {
+          const data = change.doc.data() || {};
+          const prevStatus = matchStatusesRef.current[change.doc.id];
+          const currStatus = data.status || 'scheduled';
+          matchStatusesRef.current[change.doc.id] = currStatus;
+
+          if (currStatus === 'completed' && prevStatus !== 'completed') {
+            anyMatchCompletedNow = true;
+          }
+        });
+
         snap.forEach((d) => {
           const data = d.data() || {};
           if (data.status !== 'completed') return;
@@ -618,9 +635,15 @@ const TransportApp = ({ userProfileData }) => {
             completedTeams.add(name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
           });
         });
+
         completedTeamsRef.current = completedTeams;
         matchesLoadedRef.current = true;
         setMatchesVersion((v) => v + 1);
+
+        resolveTransfersViaMatchTracker(savedTransfersRef.current);
+        if (anyMatchCompletedNow) {
+          resolveTransfersViaMatchTracker(savedTransfersRef.current);
+        }
       }, (e) => {
         console.error('matches snapshot error', e);
         matchesLoadedRef.current = true;
@@ -630,12 +653,75 @@ const TransportApp = ({ userProfileData }) => {
     return () => unsubs.forEach((u) => u && u());
   }, []);
 
+  useEffect(() => {
+    if (!savedTransfers || savedTransfers.length === 0) return;
+
+    resolveTransfersViaMatchTracker(savedTransfers);
+
+    const retryTimer = setTimeout(() => {
+      resolveTransfersViaMatchTracker(savedTransfersRef.current);
+    }, 800);
+
+    return () => clearTimeout(retryTimer);
+  }, [savedTransfers]);
+
+  const resolveTransfersViaMatchTracker = async (transfersList) => {
+    const fn = window.matchTracker?.getTeamNameByDisplayId;
+    if (typeof fn !== 'function') return;
+
+    const sourceList = Array.isArray(transfersList) ? transfersList : savedTransfersRef.current;
+    if (!Array.isArray(sourceList) || sourceList.length === 0) return;
+
+    const updates = {};
+    let hasChanges = false;
+
+    for (const tr of sourceList) {
+      const rawTeamName = tr?.teamName != null ? String(tr.teamName).trim() : '';
+      const rawCategory = tr?.category != null ? cleanCategory(tr.category) : '';
+
+      if (!rawTeamName || !rawCategory) continue;
+      if (!rawTeamName.includes(rawCategory)) continue;
+
+      try {
+        const resolved = await fn.call(window.matchTracker, rawTeamName);
+        if (
+          resolved !== undefined &&
+          resolved !== null &&
+          resolved !== '' &&
+          String(resolved).trim() !== '' &&
+          String(resolved).trim() !== 'null' &&
+          String(resolved).trim() !== rawTeamName
+        ) {
+          const cleanResolved = String(resolved).trim();
+          if (resolvedTeamNamesRef.current[rawTeamName] !== cleanResolved) {
+            updates[rawTeamName] = cleanResolved;
+            hasChanges = true;
+          }
+        }
+      } catch (e) {
+        // ignorovať chybu pri jednotlivých názvoch
+      }
+    }
+
+    if (hasChanges) {
+      const nextMap = { ...resolvedTeamNamesRef.current, ...updates };
+      resolvedTeamNamesRef.current = nextMap;
+      setResolvedTeamNames(nextMap);
+      setMatchesVersion((v) => v + 1);
+    }
+  };
+
   const isTeamNameResolved = (teamName, categoryName) => {
     if (!teamName) return false;
     const tn = String(teamName).trim();
     const cat = categoryName ? cleanCategory(categoryName) : '';
 
     if (!cat || !tn.includes(cat)) return true;
+
+    const mapped = resolvedTeamNamesRef.current[tn] || resolvedTeamNames[tn];
+    if (mapped !== undefined && mapped !== null && mapped !== '' && mapped !== tn) {
+      return true;
+    }
 
     const set = completedTeamsRef.current;
     if (!set || set.size === 0) return false;
@@ -830,7 +916,7 @@ const TransportApp = ({ userProfileData }) => {
     });
 
     return events;
-  }, [savedTransfers, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces, matchesVersion]);
+  }, [savedTransfers, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces, matchesVersion, resolvedTeamNames]);
 
   /* --- Skupiny podľa dňa --- */
   const eventsByDay = useMemo(() => {
