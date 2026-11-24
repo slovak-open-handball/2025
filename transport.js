@@ -176,6 +176,9 @@ const TransportApp = ({ userProfileData }) => {
   const [availableCategories, setAvailableCategories] = useState([]);
   const [matchesVersion, setMatchesVersion] = useState(0);
   const matchStatusesRef = useRef({});
+  const trackerResolvedNamesRef = useRef({});
+  const [trackerResolvedNames, setTrackerResolvedNames] = useState({});
+  const matchStatusesRef = useRef({});
   const resolvedTeamNamesRef = useRef({});
   const [resolvedTeamNames, setResolvedTeamNames] = useState({});
 
@@ -600,6 +603,7 @@ const TransportApp = ({ userProfileData }) => {
     } catch (e) {}
 
     // matches → sledovanie completed zápasov + volanie matchTracker.getTeamNameByDisplayId
+    // matches → sledovanie completed zápasov + volanie matchTracker.getTeamNameByDisplayId
     try {
       const matchesRef = collection(window.db, 'matches');
       unsubs.push(onSnapshot(matchesRef, (snap) => {
@@ -653,18 +657,6 @@ const TransportApp = ({ userProfileData }) => {
     return () => unsubs.forEach((u) => u && u());
   }, []);
 
-  useEffect(() => {
-    if (!savedTransfers || savedTransfers.length === 0) return;
-
-    resolveTransfersViaMatchTracker(savedTransfers);
-
-    const retryTimer = setTimeout(() => {
-      resolveTransfersViaMatchTracker(savedTransfersRef.current);
-    }, 800);
-
-    return () => clearTimeout(retryTimer);
-  }, [savedTransfers]);
-
   const resolveTransfersViaMatchTracker = async (transfersList) => {
     const fn = window.matchTracker?.getTeamNameByDisplayId;
     if (typeof fn !== 'function') return;
@@ -683,18 +675,18 @@ const TransportApp = ({ userProfileData }) => {
       if (!rawTeamName.includes(rawCategory)) continue;
 
       try {
-        const resolved = await fn.call(window.matchTracker, rawTeamName);
+        const result = await fn.call(window.matchTracker, rawTeamName);
         if (
-          resolved !== undefined &&
-          resolved !== null &&
-          resolved !== '' &&
-          String(resolved).trim() !== '' &&
-          String(resolved).trim() !== 'null' &&
-          String(resolved).trim() !== rawTeamName
+          result !== undefined &&
+          result !== null &&
+          result !== '' &&
+          String(result).trim() !== '' &&
+          String(result).trim() !== 'null' &&
+          String(result).trim() !== rawTeamName
         ) {
-          const cleanResolved = String(resolved).trim();
-          if (resolvedTeamNamesRef.current[rawTeamName] !== cleanResolved) {
-            updates[rawTeamName] = cleanResolved;
+          const cleanResult = String(result).trim();
+          if (trackerResolvedNamesRef.current[rawTeamName] !== cleanResult) {
+            updates[rawTeamName] = cleanResult;
             hasChanges = true;
           }
         }
@@ -704,12 +696,45 @@ const TransportApp = ({ userProfileData }) => {
     }
 
     if (hasChanges) {
-      const nextMap = { ...resolvedTeamNamesRef.current, ...updates };
-      resolvedTeamNamesRef.current = nextMap;
-      setResolvedTeamNames(nextMap);
+      const nextMap = { ...trackerResolvedNamesRef.current, ...updates };
+      trackerResolvedNamesRef.current = nextMap;
+      setTrackerResolvedNames(nextMap);
       setMatchesVersion((v) => v + 1);
     }
   };
+
+  const isTeamNameResolved = (teamName, categoryName) => {
+    if (!teamName) return false;
+    const tn = String(teamName).trim();
+    const cat = categoryName ? cleanCategory(categoryName) : '';
+
+    // Ak názov tímu neobsahuje názov kategórie, nevyžaduje mapovanie cez matchTracker
+    if (!cat || !tn.includes(cat)) return true;
+
+    // Ak názov tímu obsahuje názov kategórie, riadok sa zobrazí až keď je k dispozícii
+    // platný výsledok z window.matchTracker.getTeamNameByDisplayId (iný ako vstup, nie "" alebo null)
+    const mapped = trackerResolvedNamesRef.current[tn] ?? trackerResolvedNames[tn];
+    return (
+      mapped !== undefined &&
+      mapped !== null &&
+      mapped !== '' &&
+      String(mapped).trim() !== '' &&
+      String(mapped).trim() !== 'null' &&
+      String(mapped).trim() !== tn
+    );
+  };
+
+  useEffect(() => {
+    if (!savedTransfers || savedTransfers.length === 0) return;
+
+    resolveTransfersViaMatchTracker(savedTransfers);
+
+    const retryTimer = setTimeout(() => {
+      resolveTransfersViaMatchTracker(savedTransfersRef.current);
+    }, 800);
+
+    return () => clearTimeout(retryTimer);
+  }, [savedTransfers]);
 
   const isTeamNameResolved = (teamName, categoryName) => {
     if (!teamName) return false;
@@ -916,7 +941,7 @@ const TransportApp = ({ userProfileData }) => {
     });
 
     return events;
-  }, [savedTransfers, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces, matchesVersion, resolvedTeamNames]);
+  }, [savedTransfers, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces, matchesVersion, trackerResolvedNames]);
 
   /* --- Skupiny podľa dňa --- */
   const eventsByDay = useMemo(() => {
