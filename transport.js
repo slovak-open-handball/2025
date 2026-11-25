@@ -433,10 +433,10 @@ const useCateringConsoleLog = (
       return Math.ceil(total / list.length);
     };
 
-    const logCatering = () => {
+    const logCatering = async () => {
       if (cancelled) return;
 
-      const mappedCatering = cateringDocs.map((a) => {
+      const mappedCatering = await Promise.all(cateringDocs.map(async (a) => {
         const cat = cleanCategory(a.categoryName || a.category || a.clickedTeamCategory || '');
         const dayKey = a.dayKey || null;
         const mealType = a.mealType || '';
@@ -475,8 +475,28 @@ const useCateringConsoleLog = (
         }
 
         const trimmedRawTeam = String(rawTeamName || '').trim();
-        const resolvedTeamName =
+
+        // 1) najprv skúsime rýchlu cache z trackerResolvedNames (rovnaké ako v timeline)
+        let resolvedTeamName =
           (trimmedRawTeam && trackerResolvedNamesRef.current?.[trimmedRawTeam]) || trimmedRawTeam || '-';
+
+        // 2) ak cache nemá výsledok, použijeme ROVNAKÉ mapovanie ako v tabuľke zápasov
+        //    (teamManager.getTeamNameByDisplayIdSync + matchTracker.getTeamNameByDisplayId)
+        if (trimmedRawTeam && (!trackerResolvedNamesRef.current?.[trimmedRawTeam])) {
+          try {
+            const viaDisplay = await resolveTeamNameForDisplay(trimmedRawTeam, cat);
+            if (
+              viaDisplay &&
+              String(viaDisplay).trim() !== '' &&
+              String(viaDisplay).trim() !== 'null' &&
+              String(viaDisplay).trim() !== trimmedRawTeam
+            ) {
+              resolvedTeamName = String(viaDisplay).trim();
+            }
+          } catch (e) {
+            // ak zlyhá, necháme pôvodnú hodnotu
+          }
+        }
 
         return {
           id: a.id,
@@ -489,7 +509,7 @@ const useCateringConsoleLog = (
           miesto: placeName,
           počet: headcount,
         };
-      });
+      }));
 
       mappedCatering.sort((x, y) => {
         const dCmp = String(x.dátum).localeCompare(String(y.dátum), 'sk');
@@ -513,7 +533,7 @@ const useCateringConsoleLog = (
 
     const unsubCatering = onSnapshot(collection(db, 'catering'), (snap) => {
       cateringDocs = snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
-      logCatering();
+      logCatering().catch((e) => console.error('useCateringConsoleLog: logCatering error', e));
     }, () => {});
 
     const unsubPlaces = onSnapshot(collection(db, 'places'), (snap) => {
@@ -525,7 +545,7 @@ const useCateringConsoleLog = (
         }
       });
       placesMap = nextMap;
-      logCatering();
+      logCatering().catch((e) => console.error('useCateringConsoleLog: logCatering error', e));
     }, () => {});
 
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
@@ -564,7 +584,7 @@ const useCateringConsoleLog = (
 
       usersByKey = nextByKey;
       usersByCategory = nextByCat;
-      logCatering();
+      logCatering().catch((e) => console.error('useCateringConsoleLog: logCatering error', e));
     }, () => {});
 
     return () => {
@@ -573,7 +593,7 @@ const useCateringConsoleLog = (
       unsubPlaces();
       unsubUsers();
     };
-  }, [db, trackerResolvedNames, resolvePlaceNameById]);
+  }, [db]);
 };
 
 /* ------------------------------------------------------------------ */
