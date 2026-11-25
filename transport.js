@@ -915,9 +915,13 @@ const TransportApp = ({ userProfileData }) => {
 
               const homeMapped = await resolveTeamNameForDisplay(homeRaw, categoryName);
               const awayMapped = await resolveTeamNameForDisplay(awayRaw, categoryName);
+              const formattedScheduled = m.scheduledTime
+                ? (formatDateTime(m.scheduledTime) || String(m.scheduledTime))
+                : '-';
 
               mappedMatches.push({
                 id: m.id,
+                dátum_a_čas: formattedScheduled,
                 status: m.status,
                 kategória: m.categoryName || m.categoryId || '-',
                 skupina: m.groupName || '-',
