@@ -307,27 +307,9 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
         // niekam presúva po skončení poslednej udalosti). Ak posledná udalosť dňa
         // je zároveň poslednou udalosťou pobytu (napr. večera na ubytovaní a tím
         // nemá kam ísť), end-of-day walking je zbytočný.
+        // ⬅️ ZMENA: NEKONTROLUJEME, či existuje budúca udalosť na cieľovom mieste.
+        // Všetky pešie presuny bez časov dostanú časový interval, aby sa zobrazili.
         if (endWalkIdx !== -1) {
-          const { to: wTo } = getEventPlaces(sorted[endWalkIdx]);
-          const targetPlace = normPlace(wTo);
-          // Zistíme, či existuje ešte neskoršia udalosť (v iný deň alebo ten istý)
-          // na mieste `targetPlace` — ak áno, presun má zmysel (tím sa tam presúva
-          // kvôli ďalšej udalosti). Ak nie, presun je zbytočný.
-          const hasFutureEventAtTarget = sorted.some((cand, k) => {
-            if (k === endWalkIdx) return false;
-            if (isWalkingTransferWithoutTime(cand)) return false;
-            const candRange = getEventStartEndTs(cand);
-            if (!candRange || candRange.startTs == null) return false;
-            if (candRange.startTs <= lastItem.range.endTs) return false;
-            const candPlaces = getEventPlaces(cand);
-            return normPlace(candPlaces.from || candPlaces.to) === targetPlace;
-          });
-      
-          if (!hasFutureEventAtTarget) {
-            // Presun po poslednej udalosti nemá kam viesť → zahodíme ho
-            return; // tento deň preskočíme pre end-of-day walking
-          }
-      
           const startTs = lastItem.range.endTs;
           const dObj = new Date(startTs);
           const endOfDayTs = new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 23, 59, 0, 0).getTime();
@@ -386,18 +368,14 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
         if (usedWalkingIndexes.has(k)) return false;
         if (!isWalkingTransferWithoutTime(cand)) return false;
         const candDayKey = getEffectiveDayKey(cand);
-        if (gapDayKey && candDayKey && candDayKey !== gapDayKey) return false;
+        // ⬅️ ZMENA: NEKONTROLUJEME deň — presun môže preklenúť polnoc
+        // if (gapDayKey && candDayKey && candDayKey !== gapDayKey) return false;
         const { from: wFrom, to: wTo } = getEventPlaces(cand);
         const nFrom = normPlace(wFrom);
         const nTo = normPlace(wTo);
-        // ─── NOVÉ: ak transfer nemení miesto (from === to), nemá zmysel mu
-        // priraďovať časy z medzery medzi dvomi kotvami — je to zbytočný presun ───
         if (!nFrom || !nTo || nFrom === nTo) return false;
-        if (nFrom !== firstPlace) return false;
-        if (secondIsMismatchedTransfer) {
-          return Boolean(nTo) && nTo !== firstPlace;
-        }
-        return nTo === secondPlace;
+        // ⬅️ ZMENA: NEKONTROLUJEME zhodu miesta s kotvami — stačí, že transfer existuje
+        return true;
       });
 
       if (walkIdx !== -1) {
@@ -859,9 +837,22 @@ const tryPrintPerTeamTimeline = () => {
       });
     };
     
-    const enrichedList = applyImpliedWalkingTimesFromEvents(
-      enrichTransfersWithImpliedWalking(list)
-    );
+    // ⬅️ ZMENA: reálne transfery z DB necháme tak ako sú (majú časy aj miesta),
+    // applyImpliedWalkingTimesFromEvents aplikujeme len na tie, ktoré naozaj nemajú časy.
+    const listWithRealTransfers = list.map((ev) => {
+      if (ev.kind !== 'transfer') return ev;
+      const hasRealTimes =
+        (Array.isArray(ev.legs) && ev.legs.some((l) => l.startTs != null && l.endTs != null)) ||
+        (ev.ts != null && isFinite(ev.ts));
+      if (!hasRealTimes) return ev; // necháme applyImpliedWalkingTimesFromEvents doplniť
+      return ev;
+    });
+
+    // ⬅️ ZMENA: enrichTransfersWithImpliedWalking už NEVOLÁME — spôsoboval,
+    // že sa reálne transfery zahadzovali podľa zhody miesta medzi kotvami.
+    // Namiesto toho všetky reálne transfery pridáme priamo do zoznamu
+    // a applyImpliedWalkingTimesFromEvents sa postará len o pešie presuny bez časov.
+    const enrichedList = applyImpliedWalkingTimesFromEvents(listWithRealTransfers);
     // ─── koniec doplnenia ───
     
     // kľúč výstupu = "TÍM (KATEGÓRIA)"
@@ -2097,9 +2088,7 @@ const TransportApp = ({ userProfileData }) => {
         travelTimesLoadedRef.current = true;
         setLoading(false);
 
-        // ─── NOVÉ: naplniť buffer pre per-tím timeline reálnymi transfermi z DB ───
         const transfersForBuffer = transfers.map((t) => {
-          // Vytvoríme legs z from/to + intermediate stops (ak sú)
           const legStops = [
             { id: t.fromId, name: t.fromLocation },
             ...(Array.isArray(t.intermediateStopIds)
@@ -2110,19 +2099,41 @@ const TransportApp = ({ userProfileData }) => {
               : []),
             { id: t.toId, name: t.toLocation },
           ].filter((s) => s.name);
-
+        
+          const whenRange = parseWhenRangeToTs(t.when);
+        
           const legs = [];
           for (let i = 0; i < legStops.length - 1; i++) {
             const fromStop = legStops[i];
             const toStop = legStops[i + 1];
             if (!fromStop.name || !toStop.name) continue;
-            // Použijeme časy zo segments, ak sú; inak dopočítame z when
             const seg = (t.segments || []).find(
               (s) => s && s.fromId === fromStop.id && s.toId === toStop.id
             ) || null;
             const isWalking = t.isWalking === true || !!(seg && seg.isWalking === true);
-            const startTs = seg?.startTs != null && isFinite(seg.startTs) ? seg.startTs : null;
-            const endTs = seg?.endTs != null && isFinite(seg.endTs) ? seg.endTs : null;
+        
+            // ⬅️ ZMENA: časy z `segments` (ak sú timestampy) ALEBO z `segments` stringu ("10:50 – 10:57")
+            let startTs = seg?.startTs != null && isFinite(seg.startTs) ? seg.startTs : null;
+            let endTs = seg?.endTs != null && isFinite(seg.endTs) ? seg.endTs : null;
+        
+            // ⬅️ ZMENA: ak segment nemá timestampy, skúsime parsovať stringové časy
+            if ((startTs == null || endTs == null) && seg) {
+              const segText = String(seg.text || seg.label || '').match(
+                /(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/
+              );
+              if (segText && whenRange?.startTs != null) {
+                const base = new Date(whenRange.startTs);
+                startTs = startTs ?? new Date(
+                  base.getFullYear(), base.getMonth(), base.getDate(),
+                  Number(segText[1]), Number(segText[2]), 0, 0
+                ).getTime();
+                endTs = endTs ?? new Date(
+                  base.getFullYear(), base.getMonth(), base.getDate(),
+                  Number(segText[3]), Number(segText[4]), 0, 0
+                ).getTime();
+              }
+            }
+        
             legs.push({
               fromName: fromStop.name,
               toName: toStop.name,
@@ -2132,32 +2143,34 @@ const TransportApp = ({ userProfileData }) => {
               endTs,
             });
           }
-
-          // Ak legs nemajú časy, skúsime ich doplniť z `when` (start/end)
-          const whenRange = parseWhenRangeToTs(t.when);
+        
+          // ⬅️ ZMENA: doplniť chýbajúce okraje z `when` (aj keď už niektoré legy majú časy)
           if (whenRange) {
-            const hasAnyTime = legs.some((l) => l.startTs != null && l.endTs != null);
-            if (!hasAnyTime) {
-              if (legs.length > 0) {
-                legs[0].startTs = whenRange.startTs;
-                legs[legs.length - 1].endTs = whenRange.endTs;
-              }
-            } else {
-              // doplníme chýbajúce okraje
+            if (legs.length > 0) {
               if (legs[0].startTs == null) legs[0].startTs = whenRange.startTs;
               if (legs[legs.length - 1].endTs == null) legs[legs.length - 1].endTs = whenRange.endTs;
+              // ak legy nemajú vôbec časy, rozdeľme interval rovnomerne (aby mali aspoň niečo)
+              const anyTime = legs.some((l) => l.startTs != null && l.endTs != null);
+              if (!anyTime) {
+                const total = whenRange.endTs - whenRange.startTs;
+                const step = total / legs.length;
+                legs.forEach((l, i) => {
+                  l.startTs = whenRange.startTs + i * step;
+                  l.endTs = whenRange.startTs + (i + 1) * step;
+                });
+              }
             }
           }
-
+        
           const startTs =
-            legs.find((l) => l.startTs != null)?.startTs ??
+            legs.find((l) => l.startTs != null && isFinite(l.startTs))?.startTs ??
             whenRange?.startTs ??
             Number.POSITIVE_INFINITY;
           const endTs =
-            [...legs].reverse().find((l) => l.endTs != null)?.endTs ??
+            [...legs].reverse().find((l) => l.endTs != null && isFinite(l.endTs))?.endTs ??
             whenRange?.endTs ??
             startTs;
-
+        
           const dayKeyFromTs =
             startTs !== Number.POSITIVE_INFINITY && isFinite(startTs)
               ? (() => {
@@ -2165,7 +2178,7 @@ const TransportApp = ({ userProfileData }) => {
                   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                 })()
               : null;
-
+        
           const legLabels = legs.map((l) => {
             const timeLabel =
               l.startTs != null && l.endTs != null
@@ -2177,10 +2190,10 @@ const TransportApp = ({ userProfileData }) => {
             const legTypeLabel = l.isWalking ? 'PEŠI' : (l.busName || 'PRESUN');
             return `🚌 ${legTypeLabel} ${dateLabel ? dateLabel + ' ' : ''}${timeLabel} | ${l.fromName} → ${l.toName} | ${t.category || '-'}`;
           });
-
+        
           const fromName = legs[0]?.fromName || t.fromLocation || null;
           const toName = legs[legs.length - 1]?.toName || t.toLocation || null;
-
+        
           return {
             kind: 'transfer',
             key: t.key,
