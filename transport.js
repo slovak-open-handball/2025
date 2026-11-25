@@ -1702,7 +1702,6 @@ const TransportApp = ({ userProfileData }) => {
         // Pre sortTs použijeme startTs (dopočítaný), inak parent.when
         const ts = startTs != null ? startTs : (parentRange?.startTs ?? Number.POSITIVE_INFINITY);
 
-        // Pre každý leg pripravíme label s dopočítaným časom (rovnako ako v UI)
         const legLabels = legs.map((l) => {
           const legTimeLabel = l.startTs != null
             ? (l.endTs != null
@@ -1714,7 +1713,21 @@ const TransportApp = ({ userProfileData }) => {
             ? 'PEŠI'
             : (l.busName || 'PRESUN');
 
-          return `🚌 ${legTypeLabel} ${whenLabel} ${legTimeLabel} | ${l.fromName} → ${l.toName} | ${parentCategory || '-'}`;
+          // Dátum legu – z jeho vlastného startTs, inak z parent dňa
+          let legDateLabel = '';
+          if (l.startTs != null) {
+            legDateLabel = formatDateDDMMYYYY(l.startTs) || '';
+          } else if (dayKey) {
+            // dayKey je "YYYY-MM-DD", prevedieme na "DD. MM. YYYY"
+            const parts = String(dayKey).split('-');
+            if (parts.length === 3) {
+              legDateLabel = `${parts[2]}. ${parts[1]}. ${parts[0]}`;
+            }
+          } else if (parentRange?.startTs) {
+            legDateLabel = formatDateDDMMYYYY(parentRange.startTs) || '';
+          }
+        
+          return `🚌 ${legTypeLabel} ${legDateLabel ? legDateLabel + ' ' : ''}${legTimeLabel} | ${l.fromName} → ${l.toName} | ${parentCategory || '-'}`;
         });
 
         const segmentsLabel = legs
