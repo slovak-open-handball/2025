@@ -82,7 +82,21 @@ const tryPrintPerTeamTimeline = () => {
     });
     // kľúč výstupu = "TÍM (KATEGÓRIA)"
     const displayKey = cat ? `${team} (${cat})` : team;
-    output[displayKey] = list.map((ev) => ev.label);
+
+    // Pre každú udalosť: ak má legLabels (transfer), rozbalíme na samostatné riadky
+    const rows = [];
+    for (const ev of list) {
+      if (ev.kind === 'transfer' && Array.isArray(ev.legLabels) && ev.legLabels.length > 0) {
+        // každý leg = samostatný riadok
+        for (const legLine of ev.legLabels) {
+          rows.push(legLine);
+        }
+      } else {
+        // zápas / stravovanie = jeden riadok
+        rows.push(ev.label);
+      }
+    }
+    output[displayKey] = rows;
   }
 
   const sig = JSON.stringify(output);
@@ -1685,14 +1699,29 @@ const TransportApp = ({ userProfileData }) => {
           whenLabel = '-';
         }
 
+        // Pre sortTs použijeme startTs (dopočítaný), inak parent.when
+        const ts = startTs != null ? startTs : (parentRange?.startTs ?? Number.POSITIVE_INFINITY);
+
+        // Pre každý leg pripravíme label s dopočítaným časom (rovnako ako v UI)
+        const legLabels = legs.map((l) => {
+          const legTimeLabel = l.startTs != null
+            ? (l.endTs != null
+                ? `${formatTimeOnly(l.startTs)} – ${formatTimeOnly(l.endTs)}`
+                : formatTimeOnly(l.startTs))
+            : (l.isWalking ? 'PEŠI' : 'nepriradený');
+
+          const legTypeLabel = l.isWalking
+            ? 'PEŠI'
+            : (l.busName || 'PRESUN');
+
+          return `🚌 ${legTypeLabel} ${whenLabel} ${legTimeLabel} | ${l.fromName} → ${l.toName} | ${parentCategory || '-'}`;
+        });
+
         const segmentsLabel = legs
           .map((l) => `${l.fromName} → ${l.toName}`)
           .join(' | ');
 
         const busLabel = busName ? ` | ${busName}` : '';
-
-        // Pre sortTs použijeme startTs (dopočítaný), inak parent.when
-        const ts = startTs != null ? startTs : (parentRange?.startTs ?? Number.POSITIVE_INFINITY);
 
         transfersEventsForBuffer.push({
           kind: 'transfer',
@@ -1701,7 +1730,23 @@ const TransportApp = ({ userProfileData }) => {
           ts,
           dayKey,
           sortKey: `${dayKey || ''}|${whenLabel}|${segmentsLabel}`,
+          // `label` je fallback pre prípad, že by sa `legLabels` nepoužili
           label: `🚌 ${typeLabel} ${whenLabel} | ${segmentsLabel}${busLabel} | ${parentCategory || '-'}`,
+          // Nové: pole legov s dopočítanými časmi (každý leg = jeden riadok)
+          legLabels,
+          legs: legs.map((l) => ({
+            fromName: l.fromName,
+            toName: l.toName,
+            isWalking: l.isWalking,
+            busName: l.busName,
+            startTs: l.startTs,
+            endTs: l.endTs,
+            timeLabel: l.startTs != null
+              ? (l.endTs != null
+                  ? `${formatTimeOnly(l.startTs)} – ${formatTimeOnly(l.endTs)}`
+                  : formatTimeOnly(l.startTs))
+              : (l.isWalking ? 'PEŠI' : 'nepriradený'),
+          })),
         });
       }
 
