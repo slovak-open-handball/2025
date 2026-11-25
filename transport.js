@@ -466,6 +466,21 @@ const tryPrintPerTeamTimeline = () => {
 
   // Zoradenie udalostí v rámci tímu chronologicky
   const output = {};
+  
+  console.log('🔍 Všetky transfery v buffery pre tím ŠŠK:', 
+    __transportPerTeamBuffer.transfers.filter(t => 
+      String(t.teamName||'').includes('ŠŠK') || String(t.teamName||'').includes('Prešov')
+    ).map(t => ({
+      key: t.key, teamName: t.teamName, category: t.category, 
+      dayKey: t.dayKey, ts: t.ts, 
+      from: t.legs?.[0]?.fromName, to: t.legs?.[t.legs.length-1]?.toName
+    }))
+  );
+
+  console.log('🔍 byTeam keys obsahujúce ŠŠK:', 
+    [...byTeam.keys()].filter(k => k.includes('ŠŠK') || k.includes('Prešov'))
+  );
+  
   for (const key of teamsSorted) {
     const [cat, team] = key.split('|');
     const KIND_PRIORITY = { match: 0, transfer: 1, catering: 2 };
