@@ -37,22 +37,31 @@ const tryPrintPerTeamTimeline = () => {
     ...__transportPerTeamBuffer.catering,
   ];
 
-  // Zoskupenie podľa tímu
+  // Zoskupenie podľa KATEGÓRIA + TÍM (aby sa tímy s rovnakým menom v rôznych kategóriách nemiešali)
   const byTeam = new Map();
   for (const ev of all) {
     const team = String(ev.teamName || '').trim();
     if (!team) continue;
-    if (!byTeam.has(team)) byTeam.set(team, []);
-    byTeam.get(team).push(ev);
+    const cat = String(ev.category || '').trim();
+    const key = `${cat}|${team}`;  // kľúč = kategória + názov tímu
+    if (!byTeam.has(key)) byTeam.set(key, []);
+    byTeam.get(key).push(ev);
   }
 
-  // Zoradenie tímov podľa názvu
-  const teamsSorted = [...byTeam.keys()].sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
+  // Zoradenie tímov: najprv podľa kategórie, potom podľa názvu tímu
+  const teamsSorted = [...byTeam.keys()].sort((a, b) => {
+    const [catA, teamA] = a.split('|');
+    const [catB, teamB] = b.split('|');
+    const c = String(catA).localeCompare(String(catB), 'sk', { sensitivity: 'base' });
+    if (c !== 0) return c;
+    return String(teamA).localeCompare(String(teamB), 'sk', { sensitivity: 'base' });
+  });
 
   // Zoradenie udalostí v rámci tímu chronologicky
   const output = {};
-  for (const team of teamsSorted) {
-    const list = byTeam.get(team).slice().sort((a, b) => {
+  for (const key of teamsSorted) {
+    const [cat, team] = key.split('|');
+    const list = byTeam.get(key).slice().sort((a, b) => {
       if (a.ts !== b.ts) return a.ts - b.ts;
       // pri rovnakom čase: zápas pred stravovaním
       const aIsMatch = a.kind === 'match' ? 0 : 1;
@@ -60,7 +69,9 @@ const tryPrintPerTeamTimeline = () => {
       if (aIsMatch !== bIsMatch) return aIsMatch - bIsMatch;
       return String(a.sortKey || '').localeCompare(String(b.sortKey || ''), 'sk');
     });
-    output[team] = list.map((ev) => ev.label);
+    // kľúč výstupu = "TÍM (KATEGÓRIA)"
+    const displayKey = cat ? `${team} (${cat})` : team;
+    output[displayKey] = list.map((ev) => ev.label);
   }
 
   const sig = JSON.stringify(output);
