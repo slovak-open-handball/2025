@@ -858,6 +858,16 @@ const tryPrintPerTeamTimeline = () => {
     // kľúč výstupu = "TÍM (KATEGÓRIA)"
     const displayKey = cat ? `${team} (${cat})` : team;
 
+    if (team === 'ŠŠK pri SLŠ Prešov' && cat === 'U12 D') {
+      console.log('🔍 enrichedList pre tím:', enrichedList.map(e => ({
+        kind: e.kind,
+        ts: e.ts,
+        dayKey: e.dayKey,
+        label: e.label,
+        legs: (e.legs||[]).map(l => ({from: l.fromName, to: l.toName, isWalking: l.isWalking, startTs: l.startTs, endTs: l.endTs})),
+      })));
+    }
+
     // Pre každú udalosť: ak má legLabels (transfer), rozbalíme na samostatné riadky.
     // ─── NOVÉ: pre transfery doplníme do riadku aj dátum, ak tam ešte nie je ───
     const rows = [];
