@@ -220,20 +220,40 @@ const resolveTeamNameForDisplay = async (identifier, categoryName) => {
 };
 
 /* ------------------------------------------------------------------ */
-/* Čakanie na pripravenosť mapovania (teamManager + matchTracker)      */
-/* ------------------------------------------------------------------ */
-
-/* ------------------------------------------------------------------ */
 /* Čakanie na pripravenosť mapovania – event-based (okamžitá reakcia)  */
 /* ------------------------------------------------------------------ */
 
-// Skontroluje, či mapovanie už je pripravené (viacero možných signálov)
+const MAPPING_READY_EVENTS = [
+  'teamNameMappingReady',
+  'teamNamesReplaced',
+  'mappingReady',
+];
+
+// Skontroluje, či mapovanie už je pripravené (podľa func-tables.js a doplnkových príznakov)
 const isMappingReady = () => {
   if (window.mappingReady === true) return true;
   if (window.isMappingReady === true) return true;
   if (window.teamNameMappingReady === true) return true;
   if (window.mappingCompleted === true) return true;
   if (window.teamManagerReady === true) return true;
+
+  try {
+    if (window.teamNameReplacer && typeof window.teamNameReplacer.isMappingReady === 'function') {
+      if (window.teamNameReplacer.isMappingReady() === true) return true;
+    }
+  } catch (e) {}
+
+  try {
+    if (window.teamNameReplacer && typeof window.teamNameReplacer.hasReplacedAnyTeams === 'function') {
+      if (window.teamNameReplacer.hasReplacedAnyTeams() === true) return true;
+    }
+  } catch (e) {}
+
+  try {
+    if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
+      return true;
+    }
+  } catch (e) {}
 
   try {
     if (window.teamManager && typeof window.teamManager.isReady === 'function') {
@@ -244,33 +264,67 @@ const isMappingReady = () => {
   return false;
 };
 
-const waitForMappingReady = (eventTimeoutMs = 2000, pollMs = 50) => {
+const waitForMappingReady = (eventTimeoutMs = 2000, pollMs = 50, maxWaitMs = 0) => {
   return new Promise((resolve) => {
-    if (isMappingReady()) { resolve(true); return; }
+    if (isMappingReady()) {
+      resolve(true);
+      return;
+    }
 
     let done = false;
     let pollTimer = null;
+    let fallbackStartTimer = null;
+    let maxWaitTimer = null;
+
+    const cleanup = () => {
+      MAPPING_READY_EVENTS.forEach((evName) => {
+        window.removeEventListener(evName, onReadyEvent);
+      });
+      if (pollTimer) clearInterval(pollTimer);
+      if (fallbackStartTimer) clearTimeout(fallbackStartTimer);
+      if (maxWaitTimer) clearTimeout(maxWaitTimer);
+    };
 
     const finish = (val) => {
       if (done) return;
       done = true;
-      window.removeEventListener('mappingReady', onReady);
-      if (pollTimer) clearInterval(pollTimer);
+      cleanup();
       resolve(val);
     };
 
-    const onReady = () => finish(true);
-    window.addEventListener('mappingReady', onReady);
+    const onReadyEvent = (event) => {
+      const detail = event?.detail;
+      if (detail && detail.ready === false) return;
+      finish(true);
+    };
 
-    // Fallback polling po eventTimeoutMs, ak event neprišiel
-    setTimeout(() => {
+    MAPPING_READY_EVENTS.forEach((evName) => {
+      window.addEventListener(evName, onReadyEvent);
+    });
+
+    // Opätovná kontrola hneď po zaregistrovaní poslúchačov (ochrana proti race condition)
+    if (isMappingReady()) {
+      finish(true);
+      return;
+    }
+
+    // Fallback polling po eventTimeoutMs, ak udalosť neprišla alebo bola odoslaná pred prihlásením
+    fallbackStartTimer = setTimeout(() => {
       if (done) return;
+      if (isMappingReady()) {
+        finish(true);
+        return;
+      }
       pollTimer = setInterval(() => {
         if (isMappingReady()) finish(true);
       }, pollMs);
     }, eventTimeoutMs);
 
-    // Žiadny celkový timeout – čaká, kým sa mapping naozaj nestane ready
+    if (maxWaitMs > 0) {
+      maxWaitTimer = setTimeout(() => {
+        finish(isMappingReady());
+      }, maxWaitMs);
+    }
   });
 };
 
@@ -502,6 +556,19 @@ const TransportApp = ({ userProfileData }) => {
       return;
     }
     const unsubs = [];
+
+    // Reakcia na window správu o dokončení mapovania
+    const handleMappingCompleted = (event) => {
+      const detail = event?.detail;
+      if (detail && detail.ready === false) return;
+      resolveTransfersViaMatchTracker(savedTransfersRef.current);
+      setMatchesVersion((v) => v + 1);
+    };
+
+    MAPPING_READY_EVENTS.forEach((evName) => {
+      window.addEventListener(evName, handleMappingCompleted);
+      unsubs.push(() => window.removeEventListener(evName, handleMappingCompleted));
+    });
 
     // places (map + list)
     try {
@@ -759,18 +826,18 @@ const TransportApp = ({ userProfileData }) => {
         const completedTeams = new Set();
         let anyMatchCompletedNow = false;
         let anyChangeDetected = false;
-    
+
         // 1) Detekcia zmien v statusoch (completed)
         snap.docChanges().forEach((change) => {
           const data = change.doc.data() || {};
           const prevStatus = matchStatusesRef.current[change.doc.id];
           const currStatus = data.status || 'scheduled';
           matchStatusesRef.current[change.doc.id] = currStatus;
-    
+
           if (change.type !== 'removed') {
             anyChangeDetected = true;
           }
-    
+
           if (currStatus === 'completed' && prevStatus !== 'completed') {
             anyMatchCompletedNow = true;
             console.log(`✅ Zápas UKONČENÝ: ${change.doc.id}`, {
@@ -784,7 +851,7 @@ const TransportApp = ({ userProfileData }) => {
             });
           }
         });
-    
+
         // 2) Zozbieranie VŠETKÝCH zápasov (nielen completed)
         const allMatches = [];
         snap.forEach((d) => {
@@ -807,7 +874,7 @@ const TransportApp = ({ userProfileData }) => {
             awayScore: data.awayScore ?? null,
             scheduledTime: data.scheduledTime || data.matchDate || null,
           });
-    
+
           // Zber completed tímov (pre existujúcu logiku skrývania nerozriešených presunov)
           if (data.status === 'completed') {
             const candidates = [
@@ -818,36 +885,34 @@ const TransportApp = ({ userProfileData }) => {
               data.homeTeam,
               data.awayTeam,
             ].filter(Boolean).map((v) => String(v).trim());
-    
+
             candidates.forEach((name) => {
               completedTeams.add(name);
               completedTeams.add(name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
             });
           }
         });
-    
-        // 3) Namapuj názvy tímov a vypíš VŠETKY zápasy do konzoly
+
+        // 3) Počkaj na window správu o dokončení mapovania a potom namapuj názvy tímov
         if (anyChangeDetected || matchesLoadedRef.current === false) {
           (async () => {
-            // 🔥 KĽÚČOVÉ: počkaj, kým mapovací kód nastaví príznak pripravenosti
-            const ready = await waitForMappingReady(15000);
+            const ready = await waitForMappingReady(2000, 50);
             if (!ready) {
-              console.warn('[transport.js] Mapovanie nie je pripravené, výpis zápasov preskočený (skúsim pri ďalšej zmene).');
               return;
             }
-        
+
             const mappedMatches = [];
             for (const m of allMatches) {
               const categoryName = m.categoryName
                 || (m.categoryId && window.categoriesData ? window.categoriesData[m.categoryId] : null)
                 || null;
-        
+
               const homeRaw = m.homeTeamName || m.homeTeamIdentifier || m.homeTeam || '?';
               const awayRaw = m.awayTeamName || m.awayTeamIdentifier || m.awayTeam || '?';
-        
+
               const homeMapped = await resolveTeamNameForDisplay(homeRaw, categoryName);
               const awayMapped = await resolveTeamNameForDisplay(awayRaw, categoryName);
-        
+
               mappedMatches.push({
                 id: m.id,
                 status: m.status,
@@ -859,7 +924,7 @@ const TransportApp = ({ userProfileData }) => {
                 skóre: (m.homeScore ?? '-') + ':' + (m.awayScore ?? '-'),
               });
             }
-        
+
             console.log(`📋 TRANSPORT.JS – načítaných ${mappedMatches.length} zápasov z kolekcie 'matches':`);
             if (console.table) {
               console.table(mappedMatches);
@@ -868,11 +933,11 @@ const TransportApp = ({ userProfileData }) => {
             }
           })();
         }
-    
+
         completedTeamsRef.current = completedTeams;
         matchesLoadedRef.current = true;
         setMatchesVersion((v) => v + 1);
-    
+
         // 4) Pri akejkoľvek zmene zápasov skús znova namapovať názvy tímov v presunoch
         if (anyChangeDetected || anyMatchCompletedNow) {
           resolveTransfersViaMatchTracker(savedTransfersRef.current);
@@ -894,6 +959,11 @@ const TransportApp = ({ userProfileData }) => {
 
     const sourceList = Array.isArray(transfersList) ? transfersList : savedTransfersRef.current;
     if (!Array.isArray(sourceList) || sourceList.length === 0) return;
+
+    // Ak mapovanie ešte nie je dokončené, počkáme na window udalosť dokončenia mapovania
+    if (!isMappingReady()) {
+      await waitForMappingReady(2000, 50);
+    }
 
     const updates = {};
     let hasChanges = false;
@@ -1367,7 +1437,7 @@ const TransportApp = ({ userProfileData }) => {
       )
     );
   };
-  
+
   /* -------------------- Render: jeden deň -------------------- */
   const renderDay = (dayKey) => {
     const dayMeta = tournamentDays.find((d) => d.dayKey === dayKey);
