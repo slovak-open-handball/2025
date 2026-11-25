@@ -181,6 +181,11 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
       dayKey: dayKeyStr || ev.dayKey || null,
       timeLabel: timeRangeStr,
       hasRealTimes: true,
+      isWalking: true,
+      busName: null,
+      title: `${walkFrom} → ${walkTo}`,
+      fromName: walkFrom,
+      toName: walkTo,
       legs: updatedLegs,
       legLabels: updatedLegLabels,
       label: `🚌 PRESUN PEŠI ${dateStr ? `${dateStr} ` : ''}${timeRangeStr} | ${walkFrom} → ${walkTo} | ${catStr}`,
@@ -197,10 +202,9 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
   });
 
   const usedWalkingIndexes = new Set();
-  const assignments = new Map(); // idx -> { startTs, endTs, dayKey }
+  const excludedTransferIndexes = new Set();
+  const assignments = new Map();
 
-  // Pre každú medzeru medzi dvomi udalosťami s rôznym miestom v ten istý deň
-  // vyhľadáme zhodný peší presun bez času (rovnaký deň, rovnaké from a to).
   for (let i = 0; i < sorted.length; i++) {
     const first = sorted[i];
     if (isWalkingTransferWithoutTime(first)) continue;
@@ -218,10 +222,16 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
       if (!(secondRange.startTs > firstRange.endTs)) continue;
 
       const secondPlaces = getEventPlaces(second);
+      const secondFrom = normPlace(secondPlaces.from);
       const secondPlace = normPlace(secondPlaces.from || secondPlaces.to);
       if (!secondPlace || firstPlace === secondPlace) continue;
 
       const gapDayKey = getEffectiveDayKey(first) || getEffectiveDayKey(second) || getDayKeyFromTs(firstRange.endTs);
+
+      // Ak je nasledujúca udalosť presun (napr. busom), ktorý začína na inom mieste než tím skončil (firstPlace),
+      // skúsime nájsť dostupný presun PEŠI bez času z firstPlace
+      const secondIsMismatchedTransfer =
+        second.kind === 'transfer' && secondFrom && secondFrom !== firstPlace;
 
       const walkIdx = sorted.findIndex((cand, k) => {
         if (usedWalkingIndexes.has(k)) return false;
@@ -229,11 +239,20 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
         const candDayKey = getEffectiveDayKey(cand);
         if (gapDayKey && candDayKey && candDayKey !== gapDayKey) return false;
         const { from: wFrom, to: wTo } = getEventPlaces(cand);
-        return normPlace(wFrom) === firstPlace && normPlace(wTo) === secondPlace;
+        const nFrom = normPlace(wFrom);
+        const nTo = normPlace(wTo);
+        if (nFrom !== firstPlace) return false;
+        if (secondIsMismatchedTransfer) {
+          return Boolean(nTo) && nTo !== firstPlace;
+        }
+        return nTo === secondPlace;
       });
 
       if (walkIdx !== -1) {
         usedWalkingIndexes.add(walkIdx);
+        if (secondIsMismatchedTransfer) {
+          excludedTransferIndexes.add(j);
+        }
         assignments.set(walkIdx, {
           startTs: firstRange.endTs,
           endTs: secondRange.startTs,
@@ -244,61 +263,8 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
     }
   }
 
-  // Fallback pre prípadné zostávajúce pešie presuny bez času
-  const timedEvents = sorted
-    .filter((_, idx) => !usedWalkingIndexes.has(idx) && !isWalkingTransferWithoutTime(sorted[idx]))
-    .map((ev) => ({
-      range: getEventStartEndTs(ev),
-      places: getEventPlaces(ev),
-      dayKey: getEffectiveDayKey(ev),
-    }))
-    .filter((item) => item.range && item.range.startTs != null && item.range.endTs != null)
-    .sort((a, b) => a.range.startTs - b.range.startTs || a.range.endTs - b.range.endTs);
-
-  for (let k = 0; k < sorted.length; k++) {
-    if (usedWalkingIndexes.has(k)) continue;
-    const ev = sorted[k];
-    if (!isWalkingTransferWithoutTime(ev)) continue;
-
-    const { from: walkFrom, to: walkTo } = getEventPlaces(ev);
-    const normFrom = normPlace(walkFrom);
-    const normTo = normPlace(walkTo);
-    if (!normFrom || !normTo || normFrom === normTo) continue;
-
-    const targetDayKey = getEffectiveDayKey(ev);
-
-    let prevEndTs = null;
-    for (let i = timedEvents.length - 1; i >= 0; i--) {
-      const cand = timedEvents[i];
-      if (targetDayKey && cand.dayKey && cand.dayKey !== targetDayKey) continue;
-      const matchesStart = normPlace(cand.places.to) === normFrom || normPlace(cand.places.from) === normFrom;
-      if (matchesStart && cand.range.endTs != null) {
-        prevEndTs = cand.range.endTs;
-        break;
-      }
-    }
-
-    let nextStartTs = null;
-    for (let j = 0; j < timedEvents.length; j++) {
-      const cand = timedEvents[j];
-      if (targetDayKey && cand.dayKey && cand.dayKey !== targetDayKey) continue;
-      const matchesEnd = normPlace(cand.places.from) === normTo || normPlace(cand.places.to) === normTo;
-      if (matchesEnd && cand.range.startTs != null && (prevEndTs == null || cand.range.startTs > prevEndTs)) {
-        nextStartTs = cand.range.startTs;
-        break;
-      }
-    }
-
-    if (prevEndTs != null && nextStartTs != null && nextStartTs > prevEndTs) {
-      assignments.set(k, {
-        startTs: prevEndTs,
-        endTs: nextStartTs,
-        dayKey: targetDayKey || getDayKeyFromTs(prevEndTs),
-      });
-    }
-  }
-
   return sorted
+    .filter((_, idx) => !excludedTransferIndexes.has(idx))
     .map((ev, idx) => {
       const assigned = assignments.get(idx);
       if (!assigned) return ev;
