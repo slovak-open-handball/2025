@@ -2227,32 +2227,36 @@ const TransportApp = ({ userProfileData }) => {
 
       for (const [key, events] of grouped.entries()) {
         const [cat, team, dk] = key.split('|');
-
+      
         const firstEvent = pickFirstEventOfDayForTeam(cat, team, dk);
         const firstEventPlace = firstEvent ? getPlaceNameFromEventLabel(firstEvent) : null;
-
+      
         const accomKey = `${cat}|${team}`;
         const accommodationName =
           __transportPerTeamBuffer.accommodationByKey.get(accomKey) || null;
         const hasAccommodation =
           accommodationName && accommodationName !== 'bez ubytovania';
       
-        // ─── NOVÉ: ak tím nemá ubytovanie a spĺňa pravidlo "zostáva na mieste", skryjeme VŠETKY presuny ───
-        if (
-          !hasAccommodation &&
-          firstEvent &&
-          firstEventPlace &&
-          shouldHideAllTransfersForTeam(
-            cat,
-            team,
-            dk,
-            firstEvent,
-            firstEventPlace,
-            accommodationName,
-            events
-          )
-        ) {
-          continue; // ← preskočíme všetky presuny tohto tímu v tento deň
+        // ─── NOVÉ: pre tím bez ubytovania zisti, či zachovať iba prvý presun ───
+        const visibility = evaluateTransfersVisibilityForTeam(
+          cat,
+          team,
+          dk,
+          firstEvent,
+          firstEventPlace,
+          accommodationName,
+          events
+        );
+      
+        if (visibility.hideAll) {
+          // Skryjeme všetko
+          continue;
+        }
+      
+        if (visibility.keepFirstTransfer && visibility.firstTransferRef) {
+          // Zachováme IBA prvý presun a skryjeme ostatné
+          transfersEventsForBuffer.push(visibility.firstTransferRef);
+          continue;
         }
         // ─── koniec nového pravidla ───
       
@@ -2260,21 +2264,21 @@ const TransportApp = ({ userProfileData }) => {
           transfersEventsForBuffer.push(...events);
           continue;
         }
-
+      
         const firstEventTs = firstEvent?.ts ?? Number.POSITIVE_INFINITY;
-
+      
         const beforeFirst = [];
         const afterFirst = [];
         for (const ev of events) {
           if (ev.ts < firstEventTs) beforeFirst.push(ev);
           else afterFirst.push(ev);
         }
-
+      
         if (beforeFirst.length <= 1) {
           transfersEventsForBuffer.push(...events);
           continue;
         }
-
+      
         const matching = beforeFirst.filter((ev) =>
           isTransferRelevantForFirstEvent(
             ev.legs,
@@ -2282,7 +2286,7 @@ const TransportApp = ({ userProfileData }) => {
             firstEventPlace
           )
         );
-
+      
         if (matching.length > 0) {
           matching.sort((a, b) => a.ts - b.ts);
           transfersEventsForBuffer.push(matching[0], ...afterFirst);
@@ -2325,85 +2329,98 @@ const TransportApp = ({ userProfileData }) => {
   };
 
   /* ------------------------------------------------------------------ */
-/* Detekcia: tím bez ubytovania, ktorý začína busom na miesto prvej    */
-/* udalosti a po prvej udalosti má najbližšiu udalosť na tom istom     */
-/* mieste → všetky presuny medzi nimi sú zbytočné a nemajú sa         */
-/* zobrazovať.                                                        */
-/* ------------------------------------------------------------------ */
-const shouldHideAllTransfersForTeam = (
-  category,
-  teamName,
-  dayKey,
-  firstEvent,
-  firstEventPlace,
-  accommodationName,
-  transfersForDay
-) => {
-  if (!firstEvent || !firstEventPlace) return false;
-  if (accommodationName && accommodationName !== 'bez ubytovania') return false;
-
-  // 1) Prvý presun dňa musí byť BUS (nie peší) a musí začínať na mieste zrazu
-  //    a končiť na mieste prvej udalosti.
-  if (!transfersForDay || transfersForDay.length === 0) return false;
-
-  const sortedTransfers = transfersForDay.slice().sort((a, b) => a.ts - b.ts);
-  const firstTransfer = sortedTransfers[0];
-  const firstTransferLegs = firstTransfer?.legs || [];
-  if (firstTransferLegs.length === 0) return false;
-
-  const firstLeg = firstTransferLegs[0];
-  const lastLeg = firstTransferLegs[firstTransferLegs.length - 1];
-
-  // Prvý leg musí byť BUS (nie peší)
-  if (firstLeg.isWalking === true) return false;
-
-  // Musí končiť na mieste prvej udalosti
-  if (normalizePlaceName(lastLeg.toName) !== normalizePlaceName(firstEventPlace)) {
-    return false;
-  }
-
-  // 2) Po prvej udalosti musí byť najbližšia udalosť (zápas/stravovanie)
-  //    na rovnakom mieste (rovnaké ako firstEventPlace).
-  const allEventsAfterFirst = [
-    ...__transportPerTeamBuffer.matches,
-    ...__transportPerTeamBuffer.catering,
-  ].filter((ev) => {
-    const evCat = cleanCategory(ev.category || '');
-    const evTeam = String(ev.teamName || '').trim();
-    const evDayKey = (() => {
-      if (ev.ts == null || !isFinite(ev.ts)) return null;
-      const d = new Date(ev.ts);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  /* Detekcia: tím bez ubytovania, ktorý začína busom na miesto prvej    */
+  /* udalosti a po prvej udalosti má najbližšiu udalosť na tom istom     */
+  /* mieste → všetky presuny medzi nimi sú zbytočné a nemajú sa         */
+  /* zobrazovať.                                                        */
+  /* ------------------------------------------------------------------ */
+  const evaluateTransfersVisibilityForTeam = (
+    category,
+    teamName,
+    dayKey,
+    firstEvent,
+    firstEventPlace,
+    accommodationName,
+    transfersForDay
+  ) => {
+    // Predvolene: zobraziť všetko
+    const defaultResult = {
+      hideAll: false,        // ak true → skryjeme VŠETKY presuny
+      keepFirstTransfer: false, // ak true → zachováme iba PRVÝ presun (z miesta zrazu)
+      firstTransferKey: null,   // kľúč (alebo referencia) prvého presunu, ktorý sa má zachovať
+    };
+  
+    if (!firstEvent || !firstEventPlace) return defaultResult;
+    if (accommodationName && accommodationName !== 'bez ubytovania') return defaultResult;
+  
+    if (!transfersForDay || transfersForDay.length === 0) return defaultResult;
+  
+    const sortedTransfers = transfersForDay.slice().sort((a, b) => a.ts - b.ts);
+    const firstTransfer = sortedTransfers[0];
+    const firstTransferLegs = firstTransfer?.legs || [];
+    if (firstTransferLegs.length === 0) return defaultResult;
+  
+    const firstLeg = firstTransferLegs[0];
+    const lastLeg = firstTransferLegs[firstTransferLegs.length - 1];
+  
+    // Prvý presun musí byť BUS (nie peší) a musí končiť na mieste prvej udalosti
+    if (firstLeg.isWalking === true) return defaultResult;
+    if (normalizePlaceName(lastLeg.toName) !== normalizePlaceName(firstEventPlace)) {
+      return defaultResult;
+    }
+  
+    // Po prvej udalosti musí byť najbližšia udalosť (zápas/stravovanie)
+    // na rovnakom mieste (rovnaké ako firstEventPlace).
+    const allEventsAfterFirst = [
+      ...__transportPerTeamBuffer.matches,
+      ...__transportPerTeamBuffer.catering,
+    ].filter((ev) => {
+      const evCat = cleanCategory(ev.category || '');
+      const evTeam = String(ev.teamName || '').trim();
+      const evDayKey = (() => {
+        if (ev.ts == null || !isFinite(ev.ts)) return null;
+        const d = new Date(ev.ts);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      })();
+      return (
+        evCat === cleanCategory(category || '') &&
+        evTeam === String(teamName || '').trim() &&
+        evDayKey === dayKey &&
+        ev.ts != null &&
+        isFinite(ev.ts) &&
+        ev.ts > firstEvent.ts
+      );
+    });
+  
+    if (allEventsAfterFirst.length === 0) return defaultResult;
+  
+    allEventsAfterFirst.sort((a, b) => a.ts - b.ts);
+    const nextEvent = allEventsAfterFirst[0];
+    const nextEventPlace = (() => {
+      if (nextEvent.kind === 'match') {
+        const parts = String(nextEvent.label || '').split('|').map((s) => s.trim());
+        return parts[1] || null;
+      }
+      if (nextEvent.kind === 'catering') {
+        const parts = String(nextEvent.label || '').split('|').map((s) => s.trim());
+        return parts[2] || null;
+      }
+      return null;
     })();
-    return (
-      evCat === cleanCategory(category || '') &&
-      evTeam === String(teamName || '').trim() &&
-      evDayKey === dayKey &&
-      ev.ts != null &&
-      isFinite(ev.ts) &&
-      ev.ts > firstEvent.ts
-    );
-  });
-
-  if (allEventsAfterFirst.length === 0) return false;
-
-  allEventsAfterFirst.sort((a, b) => a.ts - b.ts);
-  const nextEvent = allEventsAfterFirst[0];
-  const nextEventPlace = (() => {
-    if (nextEvent.kind === 'match') {
-      const parts = String(nextEvent.label || '').split('|').map((s) => s.trim());
-      return parts[1] || null;
+  
+    if (!nextEventPlace) return defaultResult;
+    if (normalizePlaceName(nextEventPlace) !== normalizePlaceName(firstEventPlace)) {
+      return defaultResult;
     }
-    if (nextEvent.kind === 'catering') {
-      const parts = String(nextEvent.label || '').split('|').map((s) => s.trim());
-      return parts[2] || null;
-    }
-    return null;
-  })();
-
-  if (!nextEventPlace) return false;
-  return normalizePlaceName(nextEventPlace) === normalizePlaceName(firstEventPlace);
-};
+  
+    // Všetky podmienky splnené → zachováme IBA prvý presun a skryjeme ostatné
+    return {
+      hideAll: false,
+      keepFirstTransfer: true,
+      firstTransferKey: firstTransfer?.sortKey || firstTransfer?.id || firstTransfer?.key || null,
+      firstTransferRef: firstTransfer,
+    };
+  };
 
   /* ------------------------------------------------------------------ */
   /* Filter presunov pre UI (rovnaká logika ako v tryPrintPerTeamTimeline) */
@@ -2832,7 +2849,7 @@ const shouldHideAllTransfersForTeam = (
     const filteredUiEvents = [];
     for (const [key, events] of groupedUi.entries()) {
       const [cat, team, dk] = key.split('|');
-
+    
       const firstEvent = pickFirstEventOfDayForTeamUi(cat, team, dk);
       const firstEventPlace = firstEvent ? getPlaceNameFromEventLabelUi(firstEvent) : null;
     
@@ -2841,45 +2858,79 @@ const shouldHideAllTransfersForTeam = (
         __transportPerTeamBuffer.accommodationByKey.get(accomKey) || null;
       const hasAccommodation =
         accommodationName && accommodationName !== 'bez ubytovania';
-
+    
       // ─── NOVÉ: rovnaké pravidlo ako v bufferi ───
-      if (
-        !hasAccommodation &&
-        firstEvent &&
-        firstEventPlace &&
-        shouldHideAllTransfersForTeam(
-          cat,
-          team,
-          dk,
-          firstEvent,
-          firstEventPlace,
-          accommodationName,
-          events
-        )
-      ) {
-        continue; // ← preskočíme všetky presuny tohto tímu v tento deň
+      const visibilityUi = evaluateTransfersVisibilityForTeam(
+        cat,
+        team,
+        dk,
+        firstEvent,
+        firstEventPlace,
+        accommodationName,
+        events
+      );
+    
+      if (visibilityUi.hideAll) {
+        continue;
+      }
+    
+      if (visibilityUi.keepFirstTransfer && visibilityUi.firstTransferRef) {
+        // Nájdeme prvý presun v `events` (UI-tvar) – porovnáme podľa `id` alebo `sortKey`
+        const firstTransferRef = visibilityUi.firstTransferRef;
+        const firstTransferId = firstTransferRef?.id;
+        const firstTransferSortKey = firstTransferRef?.sortKey;
+        const firstTransferTs = firstTransferRef?.ts;
+        const firstTransferFrom = firstTransferRef?.legs?.[0]?.fromName;
+        const firstTransferTo = firstTransferRef?.legs?.[firstTransferRef.legs.length - 1]?.toName;
+    
+        const matchedFirst = events.find((ev) => {
+          // 1) Presná zhoda podľa id
+          if (firstTransferId && ev.id === firstTransferId) return true;
+          // 2) Zhoda podľa sortKey
+          if (firstTransferSortKey && ev.sortKey === firstTransferSortKey) return true;
+          // 3) Fallback: zhoda podľa ts + from + to
+          if (
+            firstTransferTs != null &&
+            ev.sortTs === firstTransferTs &&
+            normalizePlaceName(ev.fromName) === normalizePlaceName(firstTransferFrom) &&
+            normalizePlaceName(ev.toName) === normalizePlaceName(firstTransferTo)
+          ) {
+            return true;
+          }
+          return false;
+        });
+    
+        if (matchedFirst) {
+          filteredUiEvents.push(matchedFirst);
+        } else {
+          // Ak sme prvý nenašli (napr. kvôli transformácii v kroku 3), 
+          // fallback: zoberieme prvý event v `events` (zoradený podľa sortTs)
+          const sortedUi = events.slice().sort((a, b) => a.sortTs - b.sortTs);
+          if (sortedUi.length > 0) filteredUiEvents.push(sortedUi[0]);
+        }
+        continue;
       }
       // ─── koniec nového pravidla ───
-
+    
       if (!firstEvent && !hasAccommodation) {
         filteredUiEvents.push(...events);
         continue;
       }
-  
+    
       const firstEventTs = firstEvent?.ts ?? Number.POSITIVE_INFINITY;
-  
+    
       const beforeFirst = [];
       const afterFirst = [];
       for (const ev of events) {
         if (ev.sortTs < firstEventTs) beforeFirst.push(ev);
         else afterFirst.push(ev);
       }
-  
+    
       if (beforeFirst.length <= 1) {
         filteredUiEvents.push(...events);
         continue;
       }
-  
+    
       const matching = beforeFirst.filter((ev) =>
         isTransferRelevantForFirstEventUi(
           ev.legs,
@@ -2887,7 +2938,7 @@ const shouldHideAllTransfersForTeam = (
           firstEventPlace
         )
       );
-  
+    
       if (matching.length > 0) {
         matching.sort((a, b) => a.sortTs - b.sortTs);
         filteredUiEvents.push(matching[0], ...afterFirst);
