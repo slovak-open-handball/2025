@@ -3300,7 +3300,30 @@ const TransportApp = ({ userProfileData }) => {
 
       console.groupCollapsed(`👥 ${team}${cat ? ` (${cat})` : ''} — ${list.length} udalostí — 🏠 ${accommodationName}`);
 
+      const getEventDayKeyForLog = (ev) => {
+        if (ev?.dayKey) return String(ev.dayKey);
+        if (ev?.ts != null && isFinite(ev.ts)) {
+          const d = new Date(ev.ts);
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(ev?.label || ''));
+        if (m) {
+          return `${m[3]}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`;
+        }
+        return '';
+      };
+
+      let prevDayKey = '';
+
       list.forEach((ev, i) => {
+        const currDayKey = getEventDayKeyForLog(ev);
+        if (prevDayKey && currDayKey && currDayKey !== prevDayKey) {
+          console.log('────────────────────────────────────────────────────────────');
+        }
+        if (currDayKey) {
+          prevDayKey = currDayKey;
+        }
+
         if (ev.kind === 'match' || ev.kind === 'catering') {
           console.log(`${i + 1}. ${ev.label}`);
         } else if (ev.kind === 'transfer') {
