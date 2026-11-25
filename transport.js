@@ -85,16 +85,13 @@ const tryPrintPerTeamTimeline = () => {
     const enrichTransfersWithImpliedWalking = (events) => {
       if (!Array.isArray(events) || events.length < 2) return events;
     
-      // Pomocná funkcia: vytiahne miesto z eventu (match/catering/transfer)
       const getEventPlace = (ev) => {
         if (!ev) return null;
         if (ev.kind === 'match') {
-          // label: ⚽ ZÁPAS <when> | <place> | ...
           const parts = String(ev.label || '').split('|').map((s) => s.trim());
           return parts[1] || null;
         }
         if (ev.kind === 'catering') {
-          // label: 🍽️ STRAVOVANIE <dátum> <čas> | <jedlo> | <miesto> | ...
           const parts = String(ev.label || '').split('|').map((s) => s.trim());
           return parts[2] || null;
         }
@@ -106,17 +103,14 @@ const tryPrintPerTeamTimeline = () => {
         return null;
       };
     
-      // Pomocná funkcia: vytiahne začiatočné miesto transferu
       const getTransferFrom = (ev) => {
         const legs = ev?.legs || [];
         if (legs.length === 0) return null;
         return legs[0].fromName || null;
       };
     
-      // Normalizácia názvu miesta
       const norm = (s) => normalizePlaceName(String(s || ''));
     
-      // Zistí, či transfer pokrýva prechod fromPlace -> toPlace
       const transferCovers = (transferEv, fromPlace, toPlace) => {
         const legs = transferEv?.legs || [];
         if (legs.length === 0) return false;
@@ -126,19 +120,16 @@ const tryPrintPerTeamTimeline = () => {
             && norm(last.toName) === norm(toPlace);
       };
     
-      // Zistí, či transfer má reálne časy
       const transferHasTimes = (transferEv) => {
         const legs = transferEv?.legs || [];
         if (legs.length === 0) return false;
         return legs.some((l) => l.startTs != null && l.endTs != null);
       };
     
-      // Nájde začiatočný a koncový timestamp eventu (match/catering)
       const getEventTimeRange = (ev) => {
         if (!ev || ev.ts == null || !isFinite(ev.ts)) return null;
         let startTs = ev.ts;
         let endTs = ev.ts;
-        // Pre catering skúsime získať endTs z labelu (slotTo)
         if (ev.kind === 'catering') {
           const m = /(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/.exec(String(ev.label || ''));
           if (m) {
@@ -156,7 +147,6 @@ const tryPrintPerTeamTimeline = () => {
         return { startTs, endTs };
       };
     
-      // Zoradíme chronologicky (match/catering podľa ts; transfery bez časov na koniec)
       const sorted = events.slice().sort((a, b) => {
         const aTs = a.ts != null && isFinite(a.ts) ? a.ts : Number.POSITIVE_INFINITY;
         const bTs = b.ts != null && isFinite(b.ts) ? b.ts : Number.POSITIVE_INFINITY;
@@ -168,13 +158,11 @@ const tryPrintPerTeamTimeline = () => {
         return String(a.sortKey || '').localeCompare(String(b.sortKey || ''), 'sk');
       });
     
-      // Prejdeme zoznam a doplníme chýbajúce transfery
       const result = [];
       for (let i = 0; i < sorted.length; i++) {
         const ev = sorted[i];
         result.push(ev);
     
-        // Pozrieme sa na nasledujúcu udalosť, ktorá nie je transfer
         let nextIdx = i + 1;
         while (nextIdx < sorted.length && sorted[nextIdx].kind === 'transfer') {
           nextIdx++;
@@ -185,14 +173,12 @@ const tryPrintPerTeamTimeline = () => {
         const prevPlace = getEventPlace(ev);
         const nextPlace = getEventPlace(next);
         if (!prevPlace || !nextPlace) continue;
-        if (norm(prevPlace) === norm(nextPlace)) continue; // žiadna zmena miesta
+        if (norm(prevPlace) === norm(nextPlace)) continue;
     
-        // Je medzi nimi nejaký transfer?
         const between = sorted.slice(i + 1, nextIdx);
         const transferBetween = between.find((t) => t.kind === 'transfer');
     
         if (transferBetween) {
-          // Existuje transfer, ale nemá časy → doplníme mu časy
           if (!transferHasTimes(transferBetween)) {
             const prevRange = getEventTimeRange(ev);
             const nextRange = getEventTimeRange(next);
@@ -200,7 +186,6 @@ const tryPrintPerTeamTimeline = () => {
               const startTs = prevRange.endTs;
               const endTs = nextRange.startTs;
               if (endTs > startTs) {
-                // Vytvoríme nový transfer s doplnenými časmi
                 const fakeLegs = transferBetween.legs.map((l) => ({
                   ...l,
                   startTs: l.startTs != null ? l.startTs : startTs,
@@ -214,7 +199,6 @@ const tryPrintPerTeamTimeline = () => {
                   const dateLabel = formatDateDDMMYYYY(l.startTs) || '';
                   return `🚌 ${legTypeLabel} ${dateLabel ? dateLabel + ' ' : ''}${legTimeLabel} | ${l.fromName} → ${l.toName} | ${ev.category || '-'}`;
                 });
-                // Nahradíme pôvodný transfer v result
                 const oldIdx = result.indexOf(transferBetween);
                 if (oldIdx >= 0) {
                   result[oldIdx] = {
@@ -230,7 +214,6 @@ const tryPrintPerTeamTimeline = () => {
           continue;
         }
     
-        // Žiadny transfer medzi nimi → vložíme syntetický peší presun
         const prevRange = getEventTimeRange(ev);
         const nextRange = getEventTimeRange(next);
         if (!prevRange || !nextRange) continue;
@@ -262,18 +245,13 @@ const tryPrintPerTeamTimeline = () => {
         });
       }
     
-      // ─── NOVÉ: doplnenie chýbajúceho presunu medzi POSLEDNOU udalosťou a NASLEDUJÚCIM transferom ───
-      // Prípad: udalosť (match/catering) končí na mieste A, nasledujúci transfer (bus) začína z miesta B,
-      // kde A ≠ B. V takom prípade vložíme syntetický peší presun A → B.
       const resultWithTail = [];
       for (let i = 0; i < result.length; i++) {
         const ev = result[i];
         resultWithTail.push(ev);
     
-        // Ak aktuálna udalosť nie je match/catering, preskočíme
         if (ev.kind !== 'match' && ev.kind !== 'catering') continue;
     
-        // Nájdeme nasledujúci transfer (preskočíme prípadné ďalšie match/catering? Nie – berieme hneď nasledujúci transfer)
         let nextTransferIdx = i + 1;
         while (nextTransferIdx < result.length && result[nextTransferIdx].kind !== 'transfer') {
           nextTransferIdx++;
@@ -284,13 +262,11 @@ const tryPrintPerTeamTimeline = () => {
         const evPlace = getEventPlace(ev);
         const transferFrom = getTransferFrom(nextTransfer);
         if (!evPlace || !transferFrom) continue;
-        if (norm(evPlace) === norm(transferFrom)) continue; // rovnaké miesto → netreba
+        if (norm(evPlace) === norm(transferFrom)) continue;
     
-        // Časy: koniec udalosti → začiatok transferu
         const evRange = getEventTimeRange(ev);
         if (!evRange) continue;
     
-        // Začiatok transferu: prvý leg s reálnym startTs
         const transferLegs = nextTransfer.legs || [];
         if (transferLegs.length === 0) continue;
         let transferStartTs = null;
@@ -331,35 +307,8 @@ const tryPrintPerTeamTimeline = () => {
         });
       }
     
-      // ─── NOVÉ: odstránenie duplicitných transferov bez časov ───
-      // Ak existuje transfer s reálnymi časmi pre rovnakú dvojicu miest (v akomkoľvek smere),
-      // odstránime všetky transfery bez časov pre tú istú dvojicu miest v tom istom dni.
-      const hasTimesKey = (ev) => {
-        const legs = ev?.legs || [];
-        if (legs.length === 0) return null;
-        const hasTimes = legs.some((l) => l.startTs != null && l.endTs != null && l.endTs > l.startTs);
-        if (!hasTimes) return null;
-        const first = legs[0];
-        const last = legs[legs.length - 1];
-        // Kľúč je neusporiadaný pár (A|B = B|A), aby sme pokryli oba smery
-        const a = norm(first.fromName);
-        const b = norm(last.toName);
-        const pair = [a, b].sort().join('||');
-        return `${ev.dayKey || ''}||${pair}`;
-      };
-    
-      const timedPairs = new Set();
-      for (const ev of resultWithTail) {
-        if (ev.kind !== 'transfer') continue;
-        const k = hasTimesKey(ev);
-        if (k) timedPairs.add(k);
-      }
-    
-      // ─── NOVÉ: odstránenie VŠETKÝCH transferov bez časov ───
-      // Po doplnení časov (z okolitých udalostí alebo syntetických) sú vo výpise
-      // ponechané iba transfery, ktoré majú reálne časy. Všetko bez časov sa zahodí.
       const filtered = resultWithTail.filter((ev) => {
-        if (ev.kind !== 'transfer') return true; // match/catering vždy nechaj
+        if (ev.kind !== 'transfer') return true;
         const legs = ev.legs || [];
         if (legs.length === 0) return false;
         const hasTimes = legs.some(
@@ -369,7 +318,6 @@ const tryPrintPerTeamTimeline = () => {
       });
     
       return filtered;
-      // ─── koniec čistenia ───
     };
 
     const enrichedList = enrichTransfersWithImpliedWalking(list);
@@ -2277,111 +2225,129 @@ const TransportApp = ({ userProfileData }) => {
   /* -------------------- Zostavenie timeline eventov -------------------- */
   const timelineEvents = useMemo(() => {
     if (!travelTimesLoadedRef.current) return [];
-    const rawEvents = [];
-
+  
     const dayFilter = selectedDayKey || null;
     const catFilter = selectedCategory ? cleanCategory(selectedCategory) : null;
     const teamFilter = selectedTeam ? selectedTeam : null;
-
+  
+    // ─── 1) Zozbierame VŠETKY eventy tímu v buffer-tvare ───
+    const allEventsForEnrichment = [];
+  
+    // 1a) Match eventy z bufferu
+    for (const m of (__transportPerTeamBuffer.matches || [])) {
+      if (catFilter && cleanCategory(m.category || '') !== catFilter) continue;
+      if (teamFilter && String(m.teamName || '').trim() !== teamFilter) continue;
+      if (dayFilter) {
+        const d = m.ts != null && isFinite(m.ts) ? new Date(m.ts) : null;
+        const k = d
+          ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+          : null;
+        if (k !== dayFilter) continue;
+      }
+      allEventsForEnrichment.push(m);
+    }
+  
+    // 1b) Catering eventy z bufferu
+    for (const c of (__transportPerTeamBuffer.catering || [])) {
+      if (catFilter && cleanCategory(c.category || '') !== catFilter) continue;
+      if (teamFilter && String(c.teamName || '').trim() !== teamFilter) continue;
+      if (dayFilter) {
+        const d = c.ts != null && isFinite(c.ts) ? new Date(c.ts) : null;
+        const k = d
+          ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+          : null;
+        if (k !== dayFilter) continue;
+      }
+      allEventsForEnrichment.push(c);
+    }
+  
+    // 1c) Transfery zo savedTransfers – prevedieme ich na buffer-tvar
     (savedTransfers || []).forEach((parent) => {
       if (parent._parentKey && parent._parentKey !== parent.key) return;
       if (catFilter && cleanCategory(parent.category || '') !== catFilter) return;
       if (teamFilter && String(parent.teamName || '').trim() !== teamFilter) return;
-
       if (!isTeamNameResolved(parent.teamName, parent.category)) return;
-
-      const stopsIds = Array.isArray(parent.intermediateStopIds) ? parent.intermediateStopIds.filter(Boolean) : [];
+  
+      const stopsIds = Array.isArray(parent.intermediateStopIds)
+        ? parent.intermediateStopIds.filter(Boolean)
+        : [];
       const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
-
+  
       const routeIdsRaw = [parent.fromId, ...stopsIds, parent.toId].filter(Boolean);
       const routeIds = [];
       routeIdsRaw.forEach((id) => {
         if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
       });
       if (routeIds.length < 2) return;
-
+  
       const parentWhenRange = parseWhenRangeToTs(parent.when);
-
+  
       const legs = [];
       let startTs = null, endTs = null;
       let hasRealTimes = false;
-      let busId = null;
       let busName = null;
       let anyWalking = false;
       let allWalking = true;
-
+  
       for (let i = 0; i < routeIds.length - 1; i++) {
         const fromId = routeIds[i];
         const toId = routeIds[i + 1];
         if (fromId === toId) continue;
-
+  
         const seg = parentSegments.find((s) => s && s.fromId === fromId && s.toId === toId) || null;
         const legWalking = !!(seg && seg.isWalking === true);
         const legHasTimes = !!(seg && seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs);
-
+  
         const legFromName = resolvePlaceNameById(fromId);
         const legToName = resolvePlaceNameById(toId);
-
-        let legStartTs = null, legEndTs = null, legTimeLabel = '';
+  
+        let legStartTs = null, legEndTs = null;
         if (legWalking) {
           const walkingRange = getWalkingSegmentDisplayRange(parent, i);
-
           if (walkingRange) {
             legStartTs = walkingRange.startTs;
             legEndTs = walkingRange.endTs;
-            legTimeLabel = `${formatTimeOnly(legStartTs)} – ${formatTimeOnly(legEndTs)}`;
           } else if (seg?.startTs != null) {
             legStartTs = seg.startTs;
             legEndTs = seg.endTs != null ? seg.endTs : seg.startTs + 60 * 1000;
-            legTimeLabel = `${formatTimeOnly(legStartTs)} – ${formatTimeOnly(legEndTs)}`;
-          } else {
-            legTimeLabel = 'PEŠI';
           }
         } else if (legHasTimes) {
           legStartTs = seg.startTs;
           legEndTs = seg.endTs;
-          legTimeLabel = `${formatTimeOnly(legStartTs)} – ${formatTimeOnly(legEndTs)}`;
         } else {
           const unassignedRange = getUnassignedSegmentDisplayRange(parent, i, routeIds, parentSegments);
           if (unassignedRange) {
             legStartTs = unassignedRange.startTs;
             legEndTs = unassignedRange.endTs;
-            legTimeLabel = `${formatTimeOnly(legStartTs)} – ${formatTimeOnly(legEndTs)}`;
-          } else {
-            legTimeLabel = 'nepriradený';
           }
         }
-
+  
         const legBusId = seg?.busId ? String(seg.busId) : null;
         const legBusName = legBusId
           ? (buses.find((b) => b.id === legBusId)?.name || `Bus ${legBusId}`)
           : null;
-
+  
         if (legStartTs != null && (startTs == null || legStartTs < startTs)) startTs = legStartTs;
         if (legEndTs != null && (endTs == null || legEndTs > endTs)) endTs = legEndTs;
         if (legHasTimes) hasRealTimes = true;
-        if (!busId && legBusId) { busId = legBusId; busName = legBusName; }
+        if (!busName && legBusName) busName = legBusName;
         if (legWalking) anyWalking = true;
         if (!legWalking) allWalking = false;
-
+  
         legs.push({
           fromName: legFromName,
           toName: legToName,
           isWalking: legWalking,
           busName: legBusName,
-          timeLabel: legTimeLabel,
-          startTime: legStartTs != null ? formatTimeOnly(legStartTs) : '',
-          endTime: legEndTs != null ? formatTimeOnly(legEndTs) : '',
           startTs: legStartTs,
           endTs: legEndTs,
-          hasTimes: legHasTimes,
         });
       }
-
+  
       if (legs.length === 0) return;
-
+  
       const overallIsWalking = legs.every((l) => l.isWalking);
-
+  
       let timeLabel = '';
       if (overallIsWalking) {
         if (startTs != null) {
@@ -2397,7 +2363,7 @@ const TransportApp = ({ userProfileData }) => {
       } else {
         timeLabel = 'nepriradený';
       }
-
+  
       let dayKey = parent.dayKey || null;
       if (!dayKey && startTs != null) {
         const d = new Date(startTs);
@@ -2408,21 +2374,153 @@ const TransportApp = ({ userProfileData }) => {
         dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       }
       if (dayFilter && dayKey !== dayFilter) return;
-
+  
       const fromName = resolvePlaceNameById(routeIds[0]);
       const toName = resolvePlaceNameById(routeIds[routeIds.length - 1]);
-
+  
       const sortTs = startTs != null
         ? startTs
         : (parentWhenRange?.startTs ?? Number.POSITIVE_INFINITY);
-
+  
+      const cat = cleanCategory(parent.category || '');
+  
+      // Buffer-tvar transferu (rovnaký ako v tryPrintPerTeamTimeline)
+      const legLabels = legs.map((l) => {
+        const legTimeLabel = l.startTs != null
+          ? (l.endTs != null
+              ? `${formatTimeOnly(l.startTs)} – ${formatTimeOnly(l.endTs)}`
+              : formatTimeOnly(l.startTs))
+          : (l.isWalking ? 'PEŠI' : 'nepriradený');
+        const legTypeLabel = l.isWalking ? 'PEŠI' : (l.busName || 'PRESUN');
+        let legDateLabel = '';
+        if (l.startTs != null) {
+          legDateLabel = formatDateDDMMYYYY(l.startTs) || '';
+        } else if (dayKey) {
+          const parts = String(dayKey).split('-');
+          if (parts.length === 3) legDateLabel = `${parts[2]}. ${parts[1]}. ${parts[0]}`;
+        }
+        return `🚌 ${legTypeLabel} ${legDateLabel ? legDateLabel + ' ' : ''}${legTimeLabel} | ${l.fromName} → ${l.toName} | ${cat || '-'}`;
+      });
+  
+      const segmentsLabel = legs.map((l) => `${l.fromName} → ${l.toName}`).join(' | ');
+      const busLabel = busName ? ` | ${busName}` : '';
+      const typeLabel = overallIsWalking
+        ? 'PRESUN PEŠI'
+        : hasRealTimes ? 'PRESUN BUSOM' : 'PRESUN (nepriradený)';
+  
+      let whenLabel = '';
+      if (startTs != null) {
+        const startDateLabel = formatDateDDMMYYYY(startTs) || '';
+        const startTimeLabel = formatTimeOnly(startTs);
+        const endTimeLabel = endTs != null ? formatTimeOnly(endTs) : '';
+        whenLabel = endTimeLabel
+          ? `${startDateLabel} ${startTimeLabel} – ${endTimeLabel}`
+          : `${startDateLabel} ${startTimeLabel}`.trim();
+      } else if (parent.when) {
+        whenLabel = String(parent.when);
+      } else {
+        whenLabel = '-';
+      }
+  
+      allEventsForEnrichment.push({
+        kind: 'transfer',
+        teamName: String(parent.teamName || '').trim(),
+        category: cat,
+        ts: sortTs,
+        dayKey,
+        sortKey: `${dayKey || ''}|${whenLabel}|${segmentsLabel}`,
+        label: `🚌 ${typeLabel} ${whenLabel} | ${segmentsLabel}${busLabel} | ${cat || '-'}`,
+        legLabels,
+        legs: legs.map((l) => ({
+          fromName: l.fromName,
+          toName: l.toName,
+          isWalking: l.isWalking,
+          busName: l.busName,
+          startTs: l.startTs,
+          endTs: l.endTs,
+        })),
+        _parentKey: parent.key,
+      });
+    });
+  
+    // ─── 2) Enrichment – doplní chýbajúce pešie presuny a časy ───
+    const enriched = enrichTransfersWithImpliedWalking(allEventsForEnrichment);
+  
+    // ─── 3) Ponecháme iba transfery a prevedieme na UI-tvar ───
+    const uiEvents = [];
+    for (const ev of enriched) {
+      if (ev.kind !== 'transfer') continue;
+  
+      const legs = ev.legs || [];
+      if (legs.length === 0) continue;
+  
+      // Zistíme, či má reálne časy
+      const hasRealTimes = legs.some(
+        (l) => l.startTs != null && l.endTs != null && l.endTs > l.startTs
+      );
+      const overallIsWalking = legs.every((l) => l.isWalking === true);
+  
+      let startTs = null, endTs = null;
+      for (const l of legs) {
+        if (l.startTs != null && (startTs == null || l.startTs < startTs)) startTs = l.startTs;
+        if (l.endTs != null && (endTs == null || l.endTs > endTs)) endTs = l.endTs;
+      }
+  
+      let timeLabel = '';
+      if (overallIsWalking) {
+        if (startTs != null) {
+          if (endTs == null) endTs = startTs + 60 * 1000;
+          timeLabel = `${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)}`;
+        } else {
+          timeLabel = 'PEŠI';
+        }
+      } else if (hasRealTimes && startTs != null) {
+        timeLabel = endTs != null
+          ? `${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)}`
+          : formatTimeOnly(startTs);
+      } else {
+        timeLabel = 'nepriradený';
+      }
+  
+      const fromName = legs[0].fromName;
+      const toName = legs[legs.length - 1].toName;
+  
+      const busName = legs.find((l) => l.busName)?.busName || null;
+  
       let typeKey;
       if (overallIsWalking) typeKey = 'transfer_walking';
       else if (hasRealTimes) typeKey = 'transfer_bus';
       else typeKey = 'transfer_unassigned';
-
-      rawEvents.push({
-        id: parent.key,
+  
+      // dayKey z ev alebo z startTs
+      let dayKey = ev.dayKey || null;
+      if (!dayKey && startTs != null) {
+        const d = new Date(startTs);
+        dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
+  
+      const sortTs = startTs != null
+        ? startTs
+        : (ev.ts != null && isFinite(ev.ts) ? ev.ts : Number.POSITIVE_INFINITY);
+  
+      // UI legs s timeLabel/startTime/endTime pre render
+      const uiLegs = legs.map((l) => ({
+        fromName: l.fromName,
+        toName: l.toName,
+        isWalking: l.isWalking === true,
+        busName: l.busName || null,
+        timeLabel: (l.startTs != null && l.endTs != null)
+          ? `${formatTimeOnly(l.startTs)} – ${formatTimeOnly(l.endTs)}`
+          : (l.isWalking ? 'PEŠI' : 'nepriradený'),
+        startTime: l.startTs != null ? formatTimeOnly(l.startTs) : '',
+        endTime: l.endTs != null ? formatTimeOnly(l.endTs) : '',
+        startTs: l.startTs,
+        endTs: l.endTs,
+        hasTimes: l.startTs != null && l.endTs != null && l.endTs > l.startTs,
+      }));
+  
+      uiEvents.push({
+        id: ev._parentKey || `${ev.sortKey || ''}|${startTs}`,
         dayKey,
         sortTs,
         startTs,
@@ -2430,62 +2528,61 @@ const TransportApp = ({ userProfileData }) => {
         timeLabel,
         typeKey,
         title: `${fromName} → ${toName}`,
-        category: cleanCategory(parent.category || ''),
-        categoryId: parent.categoryId || null,
-        teamName: String(parent.teamName || '').trim(),
+        category: cleanCategory(ev.category || ''),
+        categoryId: null,
+        teamName: String(ev.teamName || '').trim(),
         fromName,
         toName,
         busName,
         isWalking: overallIsWalking,
         hasRealTimes,
         placeIcon: getPlaceIconForName(fromName),
-        legs,
+        legs: uiLegs,
         extra: null,
+        _synthetic: ev._synthetic === true,
       });
-    });
-
-    // ─── ROVNAKÁ LOGIKA FILTROVANIA AKO V tryPrintPerTeamTimeline ───
-    // Ak je tím ubytovaný a v deň má viac presunov pred prvou udalosťou (zápas/stravovanie),
-    // zobrazí sa iba logický presun z ubytovania na miesto prvej udalosti.
+    }
+  
+    // ─── 4) Filter podľa ubytovania a prvej udalosti dňa (rovnaké ako predtým) ───
     const groupedUi = new Map();
-    for (const ev of rawEvents) {
+    for (const ev of uiEvents) {
       const key = `${cleanCategory(ev.category)}|${String(ev.teamName).trim()}|${ev.dayKey || ''}`;
       if (!groupedUi.has(key)) groupedUi.set(key, []);
       groupedUi.get(key).push(ev);
     }
-
+  
     const filteredUiEvents = [];
     for (const [key, events] of groupedUi.entries()) {
       const [cat, team, dk] = key.split('|');
-
+  
       const firstEvent = pickFirstEventOfDayForTeamUi(cat, team, dk);
       const firstEventPlace = firstEvent ? getPlaceNameFromEventLabelUi(firstEvent) : null;
-
+  
       const accomKey = `${cat}|${team}`;
       const accommodationName =
         __transportPerTeamBuffer.accommodationByKey.get(accomKey) || null;
       const hasAccommodation =
         accommodationName && accommodationName !== 'bez ubytovania';
-
+  
       if (!firstEvent && !hasAccommodation) {
         filteredUiEvents.push(...events);
         continue;
       }
-
+  
       const firstEventTs = firstEvent?.ts ?? Number.POSITIVE_INFINITY;
-
+  
       const beforeFirst = [];
       const afterFirst = [];
       for (const ev of events) {
         if (ev.sortTs < firstEventTs) beforeFirst.push(ev);
         else afterFirst.push(ev);
       }
-
+  
       if (beforeFirst.length <= 1) {
         filteredUiEvents.push(...events);
         continue;
       }
-
+  
       const matching = beforeFirst.filter((ev) =>
         isTransferRelevantForFirstEventUi(
           ev.legs,
@@ -2493,7 +2590,7 @@ const TransportApp = ({ userProfileData }) => {
           firstEventPlace
         )
       );
-
+  
       if (matching.length > 0) {
         matching.sort((a, b) => a.sortTs - b.sortTs);
         filteredUiEvents.push(matching[0], ...afterFirst);
@@ -2501,13 +2598,12 @@ const TransportApp = ({ userProfileData }) => {
         filteredUiEvents.push(...events);
       }
     }
-    // ─── koniec filtra ───
-
+  
     filteredUiEvents.sort((a, b) => {
       if (a.sortTs !== b.sortTs) return a.sortTs - b.sortTs;
       return String(a.title).localeCompare(String(b.title), 'sk');
     });
-
+  
     return filteredUiEvents;
   }, [savedTransfers, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces, matchesVersion, trackerResolvedNames]);
 
