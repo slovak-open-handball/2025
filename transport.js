@@ -854,9 +854,14 @@ const TransportApp = ({ userProfileData }) => {
           }
         });
 
+        // 2) Zozbieranie VŠETKÝCH zápasov (nielen completed)
         const allMatches = [];
         snap.forEach((d) => {
           const data = d.data() || {};
+          const placeName = data.hallId
+            ? (resolvePlaceNameById(data.hallId) || data.hallName || data.placeName || '-')
+            : (data.hallName || data.placeName || '-');
+
           allMatches.push({
             id: d.id,
             status: data.status || 'scheduled',
@@ -865,6 +870,8 @@ const TransportApp = ({ userProfileData }) => {
             groupName: data.groupName || null,
             matchType: data.matchType || null,
             isPlacementMatch: data.isPlacementMatch === true,
+            hallId: data.hallId || null,
+            placeName,
             homeTeamIdentifier: data.homeTeamIdentifier || null,
             awayTeamIdentifier: data.awayTeamIdentifier || null,
             homeTeamName: data.homeTeamName || null,
@@ -875,7 +882,7 @@ const TransportApp = ({ userProfileData }) => {
             awayScore: data.awayScore ?? null,
             scheduledTime: data.scheduledTime || data.matchDate || null,
           });
-
+          
           if (data.status === 'completed') {
             const candidates = [
               data.homeTeamIdentifier,
@@ -915,6 +922,7 @@ const TransportApp = ({ userProfileData }) => {
                 kategória: m.categoryName || m.categoryId || '-',
                 skupina: m.groupName || '-',
                 typ: m.matchType || '-',
+                miesto: m.hallId ? (resolvePlaceNameById(m.hallId) || m.placeName) : m.placeName,
                 domáci: homeMapped,
                 hostia: awayMapped,
                 skóre: (m.homeScore ?? '-') + ':' + (m.awayScore ?? '-'),
