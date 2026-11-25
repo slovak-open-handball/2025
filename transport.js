@@ -2219,10 +2219,65 @@ const TransportApp = ({ userProfileData }) => {
     );
   };
 
+  /* ------------------------------------------------------------------ */
+  /* Filter presunov pre UI (rovnaká logika ako v tryPrintPerTeamTimeline) */
+  /* ------------------------------------------------------------------ */
+  const pickFirstEventOfDayForTeamUi = (category, teamName, dayKey) => {
+    const cat = cleanCategory(category || '');
+    const team = String(teamName || '').trim();
+    if (!cat || !team || !dayKey) return null;
+
+    const candidates = [
+      ...__transportPerTeamBuffer.matches,
+      ...__transportPerTeamBuffer.catering,
+    ].filter(
+      (ev) =>
+        String(ev.teamName || '').trim() === team &&
+        cleanCategory(ev.category || '') === cat &&
+        ev.ts != null &&
+        isFinite(ev.ts) &&
+        (() => {
+          const d = new Date(ev.ts);
+          const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          return k === dayKey;
+        })()
+    );
+
+    if (candidates.length === 0) return null;
+    candidates.sort((a, b) => a.ts - b.ts);
+    return candidates[0];
+  };
+
+  const getPlaceNameFromEventLabelUi = (ev) => {
+    if (!ev || !ev.label) return null;
+    const parts = String(ev.label).split('|').map((s) => s.trim());
+    if (ev.kind === 'match') return parts[1] || null;
+    if (ev.kind === 'catering') return parts[2] || null;
+    return null;
+  };
+
+  const isTransferRelevantForFirstEventUi = (transferLegs, accommodationName, firstEventPlaceName) => {
+    if (!Array.isArray(transferLegs) || transferLegs.length === 0) return false;
+
+    const firstFrom = transferLegs[0]?.fromName;
+    const lastTo = transferLegs[transferLegs.length - 1]?.toName;
+    if (!firstFrom || !lastTo) return false;
+
+    const startOk = accommodationName
+      ? normalizePlaceName(firstFrom) === normalizePlaceName(accommodationName)
+      : true;
+
+    const endOk = firstEventPlaceName
+      ? normalizePlaceName(lastTo) === normalizePlaceName(firstEventPlaceName)
+      : true;
+
+    return startOk && endOk;
+  };
+
   /* -------------------- Zostavenie timeline eventov -------------------- */
   const timelineEvents = useMemo(() => {
     if (!travelTimesLoadedRef.current) return [];
-    const events = [];
+    const rawEvents = [];
 
     const dayFilter = selectedDayKey || null;
     const catFilter = selectedCategory ? cleanCategory(selectedCategory) : null;
@@ -2366,7 +2421,7 @@ const TransportApp = ({ userProfileData }) => {
       else if (hasRealTimes) typeKey = 'transfer_bus';
       else typeKey = 'transfer_unassigned';
 
-      events.push({
+      rawEvents.push({
         id: parent.key,
         dayKey,
         sortTs,
@@ -2389,12 +2444,71 @@ const TransportApp = ({ userProfileData }) => {
       });
     });
 
-    events.sort((a, b) => {
+    // ─── ROVNAKÁ LOGIKA FILTROVANIA AKO V tryPrintPerTeamTimeline ───
+    // Ak je tím ubytovaný a v deň má viac presunov pred prvou udalosťou (zápas/stravovanie),
+    // zobrazí sa iba logický presun z ubytovania na miesto prvej udalosti.
+    const groupedUi = new Map();
+    for (const ev of rawEvents) {
+      const key = `${cleanCategory(ev.category)}|${String(ev.teamName).trim()}|${ev.dayKey || ''}`;
+      if (!groupedUi.has(key)) groupedUi.set(key, []);
+      groupedUi.get(key).push(ev);
+    }
+
+    const filteredUiEvents = [];
+    for (const [key, events] of groupedUi.entries()) {
+      const [cat, team, dk] = key.split('|');
+
+      const firstEvent = pickFirstEventOfDayForTeamUi(cat, team, dk);
+      const firstEventPlace = firstEvent ? getPlaceNameFromEventLabelUi(firstEvent) : null;
+
+      const accomKey = `${cat}|${team}`;
+      const accommodationName =
+        __transportPerTeamBuffer.accommodationByKey.get(accomKey) || null;
+      const hasAccommodation =
+        accommodationName && accommodationName !== 'bez ubytovania';
+
+      if (!firstEvent && !hasAccommodation) {
+        filteredUiEvents.push(...events);
+        continue;
+      }
+
+      const firstEventTs = firstEvent?.ts ?? Number.POSITIVE_INFINITY;
+
+      const beforeFirst = [];
+      const afterFirst = [];
+      for (const ev of events) {
+        if (ev.sortTs < firstEventTs) beforeFirst.push(ev);
+        else afterFirst.push(ev);
+      }
+
+      if (beforeFirst.length <= 1) {
+        filteredUiEvents.push(...events);
+        continue;
+      }
+
+      const matching = beforeFirst.filter((ev) =>
+        isTransferRelevantForFirstEventUi(
+          ev.legs,
+          hasAccommodation ? accommodationName : null,
+          firstEventPlace
+        )
+      );
+
+      if (matching.length > 0) {
+        matching.sort((a, b) => a.sortTs - b.sortTs);
+        filteredUiEvents.push(matching[0], ...afterFirst);
+      } else {
+        filteredUiEvents.push(...events);
+      }
+    }
+    // ─── koniec filtra ───
+
+    filteredUiEvents.sort((a, b) => {
       if (a.sortTs !== b.sortTs) return a.sortTs - b.sortTs;
       return String(a.title).localeCompare(String(b.title), 'sk');
     });
 
-    return events;
+    return filteredUiEvents;
   }, [savedTransfers, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces, matchesVersion, trackerResolvedNames]);
 
   /* --- Skupiny podľa dňa --- */
