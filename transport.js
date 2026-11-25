@@ -150,10 +150,10 @@ const detectGroupCodeType = (teamName, categoryName) => {
 
 // Kompletná kaskáda:
 //   1) teamManager.getTeamNameByDisplayIdSync(vstup)
-//   2) ak výsledok obsahuje názov kategórie (alebo sa zmenil oproti vstupu)
-//      → matchTracker.getTeamNameByDisplayId(výsledok z kroku 1)
-//   3) ak matchTracker zlyhá, vráť výsledok z kroku 1
-//   4) inak vráť pôvodný vstup
+//   2) ak výsledok obsahuje kategóriu ALEBO sa zmenil oproti vstupu ALEBO
+//      stále vyzerá ako group kód → matchTracker.getTeamNameByDisplayId(výsledok)
+//   3) ak matchTracker vráti niečo iné, vráť to
+//   4) inak vráť výsledok z teamManager (alebo pôvodný vstup)
 const resolveTeamNameForDisplay = async (identifier, categoryName) => {
   if (!identifier) return identifier;
 
@@ -168,8 +168,7 @@ const resolveTeamNameForDisplay = async (identifier, categoryName) => {
       if (
         syncRes &&
         String(syncRes).trim() !== '' &&
-        String(syncRes).trim() !== 'null' &&
-        String(syncRes).trim() !== original
+        String(syncRes).trim() !== 'null'
       ) {
         intermediate = String(syncRes).trim();
       }
@@ -177,20 +176,23 @@ const resolveTeamNameForDisplay = async (identifier, categoryName) => {
   } catch (e) {}
 
   // KROK 2 – rozhodni, či volať matchTracker
-  //   - ak intermediate stále obsahuje kategóriu → áno
-  //   - ak intermediate sa zmenil oproti original → áno (chceme finálny názov)
-  //   - ak intermediate je stále group kód (letter-digit / digit-letter) → áno
   let shouldCallMatchTracker = false;
 
+  // 2a) teamManager niečo zmenil → chceme finálny názov
   if (intermediate !== original) {
-    // teamManager niečo zmenil – skús to dotiahnuť cez matchTracker
     shouldCallMatchTracker = true;
-  } else if (cat && intermediate.includes(cat)) {
-    // obsahuje kategóriu – treba mapovať
+  }
+
+  // 2b) intermediate stále obsahuje kategóriu → treba mapovať
+  if (!shouldCallMatchTracker && cat && intermediate.includes(cat)) {
     shouldCallMatchTracker = true;
-  } else {
-    // skontroluj tvar group kódu
-    const withoutCat = cat ? intermediate.split(cat).join('').replace(/\s+/g, '').trim() : intermediate.replace(/\s+/g, '').trim();
+  }
+
+  // 2c) intermediate (po odfiltrovaní kategórie) vyzerá ako group kód
+  if (!shouldCallMatchTracker) {
+    const withoutCat = cat
+      ? intermediate.split(cat).join('').replace(/\s+/g, '').trim()
+      : intermediate.replace(/\s+/g, '').trim();
     if (isLetterDigitCode(withoutCat) || isDigitLetterCode(withoutCat)) {
       shouldCallMatchTracker = true;
     }
