@@ -18,6 +18,64 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 const { useState, useEffect, useRef, useMemo } = React;
 
 /* ------------------------------------------------------------------ */
+/* Buffer pre per-tím timeline (zápasy + stravovanie)                 */
+/* ------------------------------------------------------------------ */
+
+const __transportPerTeamBuffer = {
+  matches: [],          // [{ teamName, ts, sortKey, label, ... }]
+  catering: [],         // [{ teamName, ts, sortKey, label, ... }]
+  matchesReady: false,
+  cateringReady: false,
+  lastPrintedSignature: '',
+};
+
+const tryPrintPerTeamTimeline = () => {
+  if (!__transportPerTeamBuffer.matchesReady || !__transportPerTeamBuffer.cateringReady) return;
+
+  const all = [
+    ...__transportPerTeamBuffer.matches,
+    ...__transportPerTeamBuffer.catering,
+  ];
+
+  // Zoskupenie podľa tímu
+  const byTeam = new Map();
+  for (const ev of all) {
+    const team = String(ev.teamName || '').trim();
+    if (!team) continue;
+    if (!byTeam.has(team)) byTeam.set(team, []);
+    byTeam.get(team).push(ev);
+  }
+
+  // Zoradenie tímov podľa názvu
+  const teamsSorted = [...byTeam.keys()].sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
+
+  // Zoradenie udalostí v rámci tímu chronologicky
+  const output = {};
+  for (const team of teamsSorted) {
+    const list = byTeam.get(team).slice().sort((a, b) => {
+      if (a.ts !== b.ts) return a.ts - b.ts;
+      // pri rovnakom čase: zápas pred stravovaním
+      const aIsMatch = a.kind === 'match' ? 0 : 1;
+      const bIsMatch = b.kind === 'match' ? 0 : 1;
+      if (aIsMatch !== bIsMatch) return aIsMatch - bIsMatch;
+      return String(a.sortKey || '').localeCompare(String(b.sortKey || ''), 'sk');
+    });
+    output[team] = list.map((ev) => ev.label);
+  }
+
+  const sig = JSON.stringify(output);
+  if (sig === __transportPerTeamBuffer.lastPrintedSignature) return;
+  __transportPerTeamBuffer.lastPrintedSignature = sig;
+
+  console.log('📅 TRANSPORT.JS – CHRONOLOGICKÝ PREHĽAD UDALOSTÍ PRE KAŽDÝ TÍM (zápasy + stravovanie):');
+  Object.entries(output).forEach(([team, items]) => {
+    console.groupCollapsed(`👥 ${team} (${items.length})`);
+    items.forEach((line, i) => console.log(`${i + 1}. ${line}`));
+    console.groupEnd();
+  });
+};
+
+/* ------------------------------------------------------------------ */
 /* Okamžitý záchyt udalostí mapovania (aj pred mountom komponenty)    */
 /* ------------------------------------------------------------------ */
 
@@ -543,6 +601,42 @@ const useCateringConsoleLog = (
       } else {
         console.log(mappedCatering);
       }
+
+      // Naplnenie bufferu pre per-tím timeline (stravovanie)
+      const cateringEventsForBuffer = [];
+      for (const row of mappedCatering) {
+        const teamName = String(row.tím || '').trim();
+        if (!teamName || teamName === '-') continue;
+
+        // Získame timestamp zo dňa + času (slotFrom)
+        // row.čas je formát "17:00 – 17:30", row.dátum je "25. 12. 2026"
+        const ts = (() => {
+          const dateMatch = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(row.dátum || ''));
+          const timeMatch = /(\d{1,2}):(\d{2})/.exec(String(row.čas || ''));
+          if (!dateMatch || !timeMatch) return Number.POSITIVE_INFINITY;
+          const d = new Date(
+            Number(dateMatch[3]),
+            Number(dateMatch[2]) - 1,
+            Number(dateMatch[1]),
+            Number(timeMatch[1]),
+            Number(timeMatch[2]),
+            0, 0
+          );
+          return isNaN(d.getTime()) ? Number.POSITIVE_INFINITY : d.getTime();
+        })();
+
+        cateringEventsForBuffer.push({
+          kind: 'catering',
+          teamName,
+          ts,
+          sortKey: `${row.dátum}|${row.čas}|${row.jedlo}|${row.miesto}`,
+          label: `🍽️ STRAVOVANIE ${row.dátum} ${row.čas} | ${row.jedlo} | ${row.miesto} | ${row.kategória}${row.typ && row.typ !== 'tím' ? ` | ${row.typ}` : ''}`,
+        });
+      }
+
+      __transportPerTeamBuffer.catering = cateringEventsForBuffer;
+      __transportPerTeamBuffer.cateringReady = true;
+      tryPrintPerTeamTimeline();
     };
 
     const unsubCatering = onSnapshot(collection(db, 'catering'), (snap) => {
@@ -1199,6 +1293,62 @@ const TransportApp = ({ userProfileData }) => {
             } else {
               console.log(mappedMatches);
             }
+
+            // Naplnenie bufferu pre per-tím timeline (zápasy)
+            const matchEventsForBuffer = [];
+            for (const m of allMatches) {
+              const categoryName = m.categoryName
+                || (m.categoryId && window.categoriesData ? window.categoriesData[m.categoryId] : null)
+                || null;
+
+              const homeRaw = m.homeTeamName || m.homeTeamIdentifier || m.homeTeam || '?';
+              const awayRaw = m.awayTeamName || m.awayTeamIdentifier || m.awayTeam || '?';
+
+              const homeMapped = await resolveTeamNameForDisplay(homeRaw, categoryName);
+              const awayMapped = await resolveTeamNameForDisplay(awayRaw, categoryName);
+
+              const ts = m.scheduledTime
+                ? (() => {
+                    const d = typeof m.scheduledTime.toDate === 'function'
+                      ? m.scheduledTime.toDate()
+                      : (m.scheduledTime instanceof Date ? m.scheduledTime : new Date(m.scheduledTime));
+                    return isNaN(d.getTime()) ? Number.POSITIVE_INFINITY : d.getTime();
+                  })()
+                : Number.POSITIVE_INFINITY;
+
+              const whenLabel = m.scheduledTime
+                ? (formatDateTime(m.scheduledTime) || String(m.scheduledTime))
+                : '-';
+
+              const placeLabel = m.hallId
+                ? (resolvePlaceNameById(m.hallId) || m.placeName || '-')
+                : (m.placeName || '-');
+
+              // pre domáci tím
+              if (homeMapped && homeMapped !== '?') {
+                matchEventsForBuffer.push({
+                  kind: 'match',
+                  teamName: String(homeMapped).trim(),
+                  ts,
+                  sortKey: `${whenLabel}|vs ${awayMapped}|${m.id}`,
+                  label: `⚽ ZÁPAS ${whenLabel} | ${placeLabel} | ${homeMapped} vs ${awayMapped} | ${m.categoryName || m.categoryId || '-'}${m.groupName ? ` | ${m.groupName}` : ''} | ${m.status === 'completed' ? `výsledok ${(m.homeScore ?? '-')}:${(m.awayScore ?? '-')}` : 'naplánovaný'}`,
+                });
+              }
+              // pre hostí
+              if (awayMapped && awayMapped !== '?') {
+                matchEventsForBuffer.push({
+                  kind: 'match',
+                  teamName: String(awayMapped).trim(),
+                  ts,
+                  sortKey: `${whenLabel}|vs ${homeMapped}|${m.id}`,
+                  label: `⚽ ZÁPAS ${whenLabel} | ${placeLabel} | ${awayMapped} vs ${homeMapped} | ${m.categoryName || m.categoryId || '-'}${m.groupName ? ` | ${m.groupName}` : ''} | ${m.status === 'completed' ? `výsledok ${(m.awayScore ?? '-')}:${(m.homeScore ?? '-')}` : 'naplánovaný'}`,
+                });
+              }
+            }
+
+            __transportPerTeamBuffer.matches = matchEventsForBuffer;
+            __transportPerTeamBuffer.matchesReady = true;
+            tryPrintPerTeamTimeline();
           })();
         }
 
