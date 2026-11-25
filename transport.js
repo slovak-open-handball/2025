@@ -747,59 +747,8 @@ const tryPrintPerTeamTimeline = () => {
           _synthetic: true,
         });
       }
-    
-      // ─── KROK 4: Pridaj zostávajúce nepoužité transfery ───
-      const lastAnchor = anchors[anchors.length - 1];
-      const lastAnchorRange = lastAnchor ? getEventTimeRange(lastAnchor) : null;
-      const lastAnchorPlace = lastAnchor ? getEventPlace(lastAnchor) : null;
 
-      for (const t of transfers) {
-        if (usedTransfers.has(t)) continue;
-        if (!transferHasTimes(t)) continue;
-
-        const { startTs, endTs } = getTransferTimeRange(t);
-        if (startTs == null) continue;
-
-        const tFromPlace = getTransferFrom(t);
-        const tToPlace = getEventPlace(t);
-        const nFrom = norm(tFromPlace);
-        const nTo = norm(tToPlace);
-
-        if (!nFrom || !nTo || nFrom === nTo) continue;
-
-        // Nájdi najbližšiu kotvu pred a po transfere
-        let prevAnchor = null;
-        let nextAnchor = null;
-        for (const a of anchors) {
-          const aRange = getEventTimeRange(a);
-          if (!aRange) continue;
-          if (aRange.endTs != null && aRange.endTs <= startTs) {
-            if (!prevAnchor || aRange.endTs > (getEventTimeRange(prevAnchor)?.endTs ?? -Infinity)) {
-              prevAnchor = a;
-            }
-          }
-          if (aRange.startTs != null && aRange.startTs >= endTs) {
-            if (!nextAnchor || aRange.startTs < (getEventTimeRange(nextAnchor)?.startTs ?? Infinity)) {
-              nextAnchor = a;
-            }
-          }
-        }
-        const prevPlace = prevAnchor ? norm(getEventPlace(prevAnchor)) : null;
-        const nextPlace = nextAnchor ? norm(getEventPlace(nextAnchor)) : null;
-
-        if (prevPlace && nextPlace && prevPlace === nextPlace && nFrom === prevPlace && nTo === prevPlace) {
-          continue;
-        }
-        if (prevPlace && nFrom !== prevPlace) continue;
-
-        if (lastAnchorRange && lastAnchorRange.endTs != null && startTs >= lastAnchorRange.endTs) {
-          const lastAnchorNorm = norm(lastAnchorPlace);
-          if (nTo !== lastAnchorNorm) continue;
-        }
-
-        result.push(t);
-      }
-
+      
       // ─── KROK 3b (PRESUNUTÝ): Doplniť syntetické pešie presuny medzi kotvou a nasledujúcim transferom ───
       // Teraz result obsahuje kotvy, syntetické presuny medzi kotvami AJ reálne transfery.
       // Prejdeme ho a tam, kde kotva (match/catering) končí na mieste A a nasledujúci
@@ -874,6 +823,58 @@ const tryPrintPerTeamTimeline = () => {
           legs: [syntheticLeg],
           _synthetic: true,
         });
+      }
+    
+      // ─── KROK 4: Pridaj zostávajúce nepoužité transfery ───
+      const lastAnchor = anchors[anchors.length - 1];
+      const lastAnchorRange = lastAnchor ? getEventTimeRange(lastAnchor) : null;
+      const lastAnchorPlace = lastAnchor ? getEventPlace(lastAnchor) : null;
+
+      for (const t of transfers) {
+        if (usedTransfers.has(t)) continue;
+        if (!transferHasTimes(t)) continue;
+
+        const { startTs, endTs } = getTransferTimeRange(t);
+        if (startTs == null) continue;
+
+        const tFromPlace = getTransferFrom(t);
+        const tToPlace = getEventPlace(t);
+        const nFrom = norm(tFromPlace);
+        const nTo = norm(tToPlace);
+
+        if (!nFrom || !nTo || nFrom === nTo) continue;
+
+        // Nájdi najbližšiu kotvu pred a po transfere
+        let prevAnchor = null;
+        let nextAnchor = null;
+        for (const a of anchors) {
+          const aRange = getEventTimeRange(a);
+          if (!aRange) continue;
+          if (aRange.endTs != null && aRange.endTs <= startTs) {
+            if (!prevAnchor || aRange.endTs > (getEventTimeRange(prevAnchor)?.endTs ?? -Infinity)) {
+              prevAnchor = a;
+            }
+          }
+          if (aRange.startTs != null && aRange.startTs >= endTs) {
+            if (!nextAnchor || aRange.startTs < (getEventTimeRange(nextAnchor)?.startTs ?? Infinity)) {
+              nextAnchor = a;
+            }
+          }
+        }
+        const prevPlace = prevAnchor ? norm(getEventPlace(prevAnchor)) : null;
+        const nextPlace = nextAnchor ? norm(getEventPlace(nextAnchor)) : null;
+
+        if (prevPlace && nextPlace && prevPlace === nextPlace && nFrom === prevPlace && nTo === prevPlace) {
+          continue;
+        }
+        if (prevPlace && nFrom !== prevPlace) continue;
+
+        if (lastAnchorRange && lastAnchorRange.endTs != null && startTs >= lastAnchorRange.endTs) {
+          const lastAnchorNorm = norm(lastAnchorPlace);
+          if (nTo !== lastAnchorNorm) continue;
+        }
+
+        result.push(t);
       }
 
       // ─── KROK 5: Záverečné zoradenie ───
