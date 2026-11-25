@@ -2241,7 +2241,6 @@ const TransportApp = ({ userProfileData }) => {
             if (dateMatch) {
               legDateLabel = `${String(dateMatch[1]).padStart(2, '0')}. ${String(dateMatch[2]).padStart(2, '0')}. ${dateMatch[3]}`;
             }
-          }teLabel = formatDateDDMMYYYY(parentRange.startTs) || '';
           }
 
           // ─── NOVÉ: pre peší presun bez časov nezobrazovať "PEŠI" dvakrát ───
