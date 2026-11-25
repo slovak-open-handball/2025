@@ -84,7 +84,7 @@ const tryPrintPerTeamTimeline = () => {
     // ─── NOVÉ: doplnenie chýbajúcich presunov medzi udalosťami s rôznym miestom ───
     const enrichTransfersWithImpliedWalking = (events) => {
       if (!Array.isArray(events) || events.length < 2) return events;
-
+    
       // Pomocná funkcia: vytiahne miesto z eventu (match/catering/transfer)
       const getEventPlace = (ev) => {
         if (!ev) return null;
@@ -105,17 +105,17 @@ const tryPrintPerTeamTimeline = () => {
         }
         return null;
       };
-
+    
       // Pomocná funkcia: vytiahne začiatočné miesto transferu
       const getTransferFrom = (ev) => {
         const legs = ev?.legs || [];
         if (legs.length === 0) return null;
         return legs[0].fromName || null;
       };
-
+    
       // Normalizácia názvu miesta
       const norm = (s) => normalizePlaceName(String(s || ''));
-
+    
       // Zistí, či transfer pokrýva prechod fromPlace -> toPlace
       const transferCovers = (transferEv, fromPlace, toPlace) => {
         const legs = transferEv?.legs || [];
@@ -125,14 +125,14 @@ const tryPrintPerTeamTimeline = () => {
         return norm(first.fromName) === norm(fromPlace)
             && norm(last.toName) === norm(toPlace);
       };
-
+    
       // Zistí, či transfer má reálne časy
       const transferHasTimes = (transferEv) => {
         const legs = transferEv?.legs || [];
         if (legs.length === 0) return false;
         return legs.some((l) => l.startTs != null && l.endTs != null);
       };
-
+    
       // Nájde začiatočný a koncový timestamp eventu (match/catering)
       const getEventTimeRange = (ev) => {
         if (!ev || ev.ts == null || !isFinite(ev.ts)) return null;
@@ -155,7 +155,7 @@ const tryPrintPerTeamTimeline = () => {
         }
         return { startTs, endTs };
       };
-
+    
       // Zoradíme chronologicky (match/catering podľa ts; transfery bez časov na koniec)
       const sorted = events.slice().sort((a, b) => {
         const aTs = a.ts != null && isFinite(a.ts) ? a.ts : Number.POSITIVE_INFINITY;
@@ -167,13 +167,13 @@ const tryPrintPerTeamTimeline = () => {
         if (aP !== bP) return aP - bP;
         return String(a.sortKey || '').localeCompare(String(b.sortKey || ''), 'sk');
       });
-
+    
       // Prejdeme zoznam a doplníme chýbajúce transfery
       const result = [];
       for (let i = 0; i < sorted.length; i++) {
         const ev = sorted[i];
         result.push(ev);
-
+    
         // Pozrieme sa na nasledujúcu udalosť, ktorá nie je transfer
         let nextIdx = i + 1;
         while (nextIdx < sorted.length && sorted[nextIdx].kind === 'transfer') {
@@ -181,16 +181,16 @@ const tryPrintPerTeamTimeline = () => {
         }
         const next = sorted[nextIdx];
         if (!next) continue;
-
+    
         const prevPlace = getEventPlace(ev);
         const nextPlace = getEventPlace(next);
         if (!prevPlace || !nextPlace) continue;
         if (norm(prevPlace) === norm(nextPlace)) continue; // žiadna zmena miesta
-
+    
         // Je medzi nimi nejaký transfer?
         const between = sorted.slice(i + 1, nextIdx);
         const transferBetween = between.find((t) => t.kind === 'transfer');
-
+    
         if (transferBetween) {
           // Existuje transfer, ale nemá časy → doplníme mu časy
           if (!transferHasTimes(transferBetween)) {
@@ -229,7 +229,7 @@ const tryPrintPerTeamTimeline = () => {
           }
           continue;
         }
-
+    
         // Žiadny transfer medzi nimi → vložíme syntetický peší presun
         const prevRange = getEventTimeRange(ev);
         const nextRange = getEventTimeRange(next);
@@ -237,7 +237,7 @@ const tryPrintPerTeamTimeline = () => {
         const startTs = prevRange.endTs;
         const endTs = nextRange.startTs;
         if (!(endTs > startTs)) continue;
-
+    
         const cat = String(ev.category || next.category || '').trim();
         const syntheticLeg = {
           fromName: prevPlace,
@@ -261,7 +261,76 @@ const tryPrintPerTeamTimeline = () => {
           _synthetic: true,
         });
       }
-
+    
+      // ─── NOVÉ: doplnenie chýbajúceho presunu medzi POSLEDNOU udalosťou a NASLEDUJÚCIM transferom ───
+      // Prípad: udalosť (match/catering) končí na mieste A, nasledujúci transfer (bus) začína z miesta B,
+      // kde A ≠ B. V takom prípade vložíme syntetický peší presun A → B.
+      const resultWithTail = [];
+      for (let i = 0; i < result.length; i++) {
+        const ev = result[i];
+        resultWithTail.push(ev);
+    
+        // Ak aktuálna udalosť nie je match/catering, preskočíme
+        if (ev.kind !== 'match' && ev.kind !== 'catering') continue;
+    
+        // Nájdeme nasledujúci transfer (preskočíme prípadné ďalšie match/catering? Nie – berieme hneď nasledujúci transfer)
+        let nextTransferIdx = i + 1;
+        while (nextTransferIdx < result.length && result[nextTransferIdx].kind !== 'transfer') {
+          nextTransferIdx++;
+        }
+        const nextTransfer = result[nextTransferIdx];
+        if (!nextTransfer) continue;
+    
+        const evPlace = getEventPlace(ev);
+        const transferFrom = getTransferFrom(nextTransfer);
+        if (!evPlace || !transferFrom) continue;
+        if (norm(evPlace) === norm(transferFrom)) continue; // rovnaké miesto → netreba
+    
+        // Časy: koniec udalosti → začiatok transferu
+        const evRange = getEventTimeRange(ev);
+        if (!evRange) continue;
+    
+        // Začiatok transferu: prvý leg s reálnym startTs
+        const transferLegs = nextTransfer.legs || [];
+        if (transferLegs.length === 0) continue;
+        let transferStartTs = null;
+        for (const l of transferLegs) {
+          if (l.startTs != null && isFinite(l.startTs)) {
+            transferStartTs = l.startTs;
+            break;
+          }
+        }
+        if (transferStartTs == null) continue;
+    
+        const startTs = evRange.endTs;
+        const endTs = transferStartTs;
+        if (!(endTs > startTs)) continue;
+    
+        const cat = String(ev.category || nextTransfer.category || '').trim();
+        const syntheticLeg = {
+          fromName: evPlace,
+          toName: transferFrom,
+          isWalking: true,
+          busName: null,
+          startTs,
+          endTs,
+        };
+        const syntheticLabel = `🚌 PEŠI ${formatDateDDMMYYYY(startTs) || ''} ${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)} | ${evPlace} → ${transferFrom} | ${cat || '-'}`;
+    
+        resultWithTail.push({
+          kind: 'transfer',
+          teamName: ev.teamName,
+          category: cat,
+          ts: startTs,
+          dayKey: ev.dayKey,
+          sortKey: `synthetic-tail|${startTs}`,
+          label: syntheticLabel,
+          legLabels: [syntheticLabel],
+          legs: [syntheticLeg],
+          _synthetic: true,
+        });
+      }
+    
       // ─── NOVÉ: odstránenie duplicitných transferov bez časov ───
       // Ak existuje transfer s reálnymi časmi pre rovnakú dvojicu miest (v akomkoľvek smere),
       // odstránime všetky transfery bez časov pre tú istú dvojicu miest v tom istom dni.
@@ -278,18 +347,18 @@ const tryPrintPerTeamTimeline = () => {
         const pair = [a, b].sort().join('||');
         return `${ev.dayKey || ''}||${pair}`;
       };
-
+    
       const timedPairs = new Set();
-      for (const ev of result) {
+      for (const ev of resultWithTail) {
         if (ev.kind !== 'transfer') continue;
         const k = hasTimesKey(ev);
         if (k) timedPairs.add(k);
       }
-
+    
       // ─── NOVÉ: odstránenie VŠETKÝCH transferov bez časov ───
       // Po doplnení časov (z okolitých udalostí alebo syntetických) sú vo výpise
       // ponechané iba transfery, ktoré majú reálne časy. Všetko bez časov sa zahodí.
-      const filtered = result.filter((ev) => {
+      const filtered = resultWithTail.filter((ev) => {
         if (ev.kind !== 'transfer') return true; // match/catering vždy nechaj
         const legs = ev.legs || [];
         if (legs.length === 0) return false;
@@ -298,7 +367,7 @@ const tryPrintPerTeamTimeline = () => {
         );
         return hasTimes;
       });
-
+    
       return filtered;
       // ─── koniec čistenia ───
     };
