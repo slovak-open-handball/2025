@@ -1840,6 +1840,8 @@ const TransportApp = ({ userProfileData }) => {
 
       if (cancelled) return;
 
+      const transfersEventsForBuffer = [];
+
       // ─── NOVÉ: filter podľa ubytovania a prvej udalosti dňa ───
       const grouped = new Map();
       for (const ev of rawEvents) {
