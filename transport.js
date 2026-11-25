@@ -724,32 +724,67 @@ const tryPrintPerTeamTimeline = () => {
       const lastAnchor = anchors[anchors.length - 1];
       const lastAnchorRange = lastAnchor ? getEventTimeRange(lastAnchor) : null;
       const lastAnchorPlace = lastAnchor ? getEventPlace(lastAnchor) : null;
-      
-      // ─── NOVÉ: ubytovanie pre daný tím (pre rozlíšenie presunov na/ubytovania) ───
+
+      // Ubytovanie pre daný tím
       const teamCategory = String(events[0]?.category || '').trim();
       const teamName = String(events[0]?.teamName || '').trim();
       const accomKeyForTeam = `${cleanCategory(teamCategory)}|${teamName}`;
       const teamAccommodation =
         __transportPerTeamBuffer.accommodationByKey.get(accomKeyForTeam) || '';
-      
+
       for (const t of transfers) {
         if (usedTransfers.has(t)) continue;
+
+        // ─── DOPLNIŤ ČASY Z `when`, ak transfer nemá žiadne časy ───
         if (!transferHasTimes(t)) {
           const r = t.when ? parseWhenRangeToTs(t.when) : null;
           if (!r) continue;
-          // ... (pôvodné doplnenie čias z when) ...
+
+          const tLegs = t.legs || [];
+          if (tLegs.length > 0) {
+            if (tLegs[0].startTs == null) tLegs[0].startTs = r.startTs;
+            if (tLegs[tLegs.length - 1].endTs == null) tLegs[tLegs.length - 1].endTs = r.endTs;
+          } else {
+            const fromN = t.fromLocation || t.fromName || null;
+            const toN = t.toLocation || t.toName || null;
+            if (!fromN || !toN) continue;
+            t.legs = [{
+              fromName: fromN,
+              toName: toN,
+              isWalking: t.isWalking === true,
+              busName: t.text || null,
+              startTs: r.startTs,
+              endTs: r.endTs,
+            }];
+          }
+          if (t.ts == null) t.ts = r.startTs;
+          if (t.endTs == null) t.endTs = r.endTs;
+
+          // Prepočítať legLabels, aby zodpovedali doplneným časom
+          t.legLabels = (t.legs || []).map((l) => {
+            const timeLabel =
+              l.startTs != null && l.endTs != null
+                ? `${formatTimeOnly(l.startTs)} – ${formatTimeOnly(l.endTs)}`
+                : l.isWalking
+                  ? 'PEŠI'
+                  : 'nepriradený';
+            const dateLabel = formatDateDDMMYYYY(l.startTs) || '';
+            const legTypeLabel = l.isWalking ? 'PEŠI' : (l.busName || 'PRESUN');
+            return `🚌 ${legTypeLabel} ${dateLabel ? dateLabel + ' ' : ''}${timeLabel} | ${l.fromName} → ${l.toName} | ${t.category || '-'}`;
+          });
         }
-      
+
         const { startTs, endTs } = getTransferTimeRange(t);
         if (startTs == null) continue;
-      
+
         const tFromPlace = getTransferFrom(t);
         const tToPlace = getEventPlace(t);
         const nFrom = norm(tFromPlace);
         const nTo = norm(tToPlace);
-      
+
         if (!nFrom || !nTo || nFrom === nTo) continue;
-      
+
+        // Nájdi najbližšiu kotvu pred a po transfere
         let prevAnchor = null;
         let nextAnchor = null;
         for (const a of anchors) {
@@ -768,18 +803,19 @@ const tryPrintPerTeamTimeline = () => {
         }
         const prevPlace = prevAnchor ? norm(getEventPlace(prevAnchor)) : null;
         const nextPlace = nextAnchor ? norm(getEventPlace(nextAnchor)) : null;
-      
+
+        // Zbytočný presun z A do A
         if (prevPlace && nextPlace && prevPlace === nextPlace && nFrom === prevPlace && nTo === prevPlace) {
           continue;
         }
-      
+
         // ─── NOVÉ: prijmeme transfer, ak aspoň jedným koncom sedí na prev/next kotvu,
-        // alebo ak ide o presun na/ubytovania.
+        // alebo ak ide o presun na/ubytovania tímu ───
         const isAccommodationTransfer =
           teamAccommodation &&
           teamAccommodation !== 'bez ubytovania' &&
           (norm(teamAccommodation) === nTo || norm(teamAccommodation) === nFrom);
-      
+
         if (
           prevPlace && nextPlace &&
           nFrom !== prevPlace && nTo !== nextPlace &&
@@ -787,14 +823,15 @@ const tryPrintPerTeamTimeline = () => {
         ) {
           continue;
         }
-      
+
+        // Transfer po poslednej kotve, ktorý končí tam, kde už tím bol → zbytočný
         if (lastAnchorRange && lastAnchorRange.endTs != null && startTs >= lastAnchorRange.endTs) {
           const lastAnchorNorm = norm(lastAnchorPlace);
           if (lastAnchorNorm && nTo === lastAnchorNorm && nFrom === lastAnchorNorm) {
             continue;
           }
         }
-      
+
         result.push(t);
         usedTransfers.add(t);
       }
