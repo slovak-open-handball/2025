@@ -2018,21 +2018,17 @@ const TransportApp = ({ userProfileData }) => {
           ? arrivalDt.getTime()
           : null;
 
-        window.__transportPerTeamBuffer.firstTournamentDayKey = start && !isNaN(start.getTime())
-          ? `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`
-          : null;
-        
-        const startDt = toDate(data.tournamentStart);
-        firstTournamentDayKeyRef.current = startDt && !isNaN(startDt.getTime())
-          ? `${startDt.getFullYear()}-${String(startDt.getMonth() + 1).padStart(2, '0')}-${String(startDt.getDate()).padStart(2, '0')}`
-          : null;
-        
+        // OPRAVA: najprv definovať start, až potom ho použiť
         const start = toDate(data.tournamentStart);
         const end = toDate(data.tournamentEnd);
-
-        firstTournamentDayKeyRef.current = start && !isNaN(start.getTime())
+    
+        const startDayKey = start && !isNaN(start.getTime())
           ? `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`
           : null;
+    
+        window.__transportPerTeamBuffer.firstTournamentDayKey = startDayKey;
+        firstTournamentDayKeyRef.current = startDayKey;
+    
         if (!start || !end) { setTournamentDays([]); return; }
         const days = [];
         const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
