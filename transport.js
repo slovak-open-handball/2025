@@ -2174,6 +2174,21 @@ const TransportApp = ({ userProfileData }) => {
           dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
 
+        // ─── NOVÉ: pre peší presun BEZ časov zistiť dátum aspoň z parent.when ───
+        // Ak je celý presun peší a nemá startTs, ale parent.when obsahuje dátum,
+        // použijeme tento dátum (aspoň pre zobrazenie v labeli a pre dayKey).
+        let fallbackDayLabel = '';
+        if (startTs == null && parent.when) {
+          // Skúsime z parent.when vytiahnuť dátum (aj bez času)
+          const dateMatch = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(parent.when));
+          if (dateMatch) {
+            fallbackDayLabel = `${String(dateMatch[1]).padStart(2, '0')}. ${String(dateMatch[2]).padStart(2, '0')}. ${dateMatch[3]}`;
+            if (!dayKey) {
+              dayKey = `${dateMatch[3]}-${String(dateMatch[2]).padStart(2, '0')}-${String(dateMatch[1]).padStart(2, '0')}`;
+            }
+          }
+        }
+
         // whenLabel – ak sú reálne časy, použiť dopočítaný timeLabel s dátumom;
         // inak parent.when alebo "-"
         let whenLabel = '';
@@ -2186,6 +2201,8 @@ const TransportApp = ({ userProfileData }) => {
             : `${startDateLabel} ${startTimeLabel}`.trim();
         } else if (parent.when) {
           whenLabel = String(parent.when);
+        } else if (fallbackDayLabel) {
+          whenLabel = fallbackDayLabel;
         } else {
           whenLabel = '-';
         }
