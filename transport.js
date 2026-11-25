@@ -447,10 +447,12 @@ const tryPrintPerTeamTimeline = () => {
   // Zoskupenie podľa KATEGÓRIA + TÍM (aby sa tímy s rovnakým menom v rôznych kategóriách nemiešali)
   const byTeam = new Map();
   for (const ev of all) {
-    const team = String(ev.teamName || '').trim();
-    if (!team) continue;
-    const cat = String(ev.category || '').trim();
-    const key = `${cat}|${team}`;  // kľúč = kategória + názov tímu
+    const rawTeam = String(ev.teamName || '').trim();
+    if (!rawTeam) continue;
+    // ⬅️ NOVÉ: použi mapovaný názov, ak existuje (rovnako ako v MAPPED výpise)
+    const team = trackerResolvedNamesRef.current?.[rawTeam] || rawTeam;
+    const cat = cleanCategory(ev.category || '');  // ⬅️ cleanCategory namiesto trim
+    const key = `${cat}|${team}`;
     if (!byTeam.has(key)) byTeam.set(key, []);
     byTeam.get(key).push(ev);
   }
@@ -3655,9 +3657,11 @@ const TransportApp = ({ userProfileData }) => {
     // 3) Zoskupenie podľa KATEGÓRIA|TÍM
     const byTeam = new Map();
     for (const ev of all) {
-      const team = String(ev.teamName || '').trim();
-      if (!team) continue;
-      const cat = String(ev.category || '').trim();
+      const rawTeam = String(ev.teamName || '').trim();
+      if (!rawTeam) continue;
+      // ⬅️ NOVÉ: použi mapovaný názov, ak existuje (rovnako ako v MAPPED výpise)
+      const team = trackerResolvedNamesRef.current?.[rawTeam] || rawTeam;
+      const cat = cleanCategory(ev.category || '');  // ⬅️ cleanCategory namiesto trim
       const key = `${cat}|${team}`;
       if (!byTeam.has(key)) byTeam.set(key, []);
       byTeam.get(key).push(ev);
