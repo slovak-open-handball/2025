@@ -2534,32 +2534,166 @@ const TransportApp = ({ userProfileData }) => {
   }, [savedTransfers, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces, matchesVersion, trackerResolvedNames]);
 
   useEffect(() => {
-    if (!timelineEvents || timelineEvents.length === 0) return;
-    const sig = JSON.stringify(timelineEvents.map(e => ({
-      id: e.id, day: e.dayKey, title: e.title, legs: e.legs,
-      category: e.category, team: e.teamName, timeLabel: e.timeLabel,
-    })));
-    if (sig === window.__lastUiConsoleSig) return;
-    window.__lastUiConsoleSig = sig;
+    const hasAny =
+      (timelineEvents && timelineEvents.length > 0) ||
+      (__transportPerTeamBuffer.matches && __transportPerTeamBuffer.matches.length > 0) ||
+      (__transportPerTeamBuffer.catering && __transportPerTeamBuffer.catering.length > 0);
+    if (!hasAny) return;
 
-    console.log('📅 UI TIMELINE (rovnaké ako v tabuľke):');
+    // 1) Transfery z UI (už prefiltrované podľa zvolených filtrov)
+    const transferEvents = (timelineEvents || []).map((ev) => ({
+      kind: 'transfer',
+      teamName: String(ev.teamName || '').trim(),
+      category: String(ev.category || '').trim(),
+      dayKey: ev.dayKey || null,
+      ts: ev.sortTs != null && isFinite(ev.sortTs) ? ev.sortTs : Number.POSITIVE_INFINITY,
+      sortKey: `${ev.dayKey || ''}|${ev.timeLabel || ''}|${ev.title || ''}`,
+      label: `${ev.timeLabel || ''} | ${ev.title || ''} | ${ev.busName || ''}`.trim(),
+      legs: ev.legs || [],
+      _fromUi: true,
+    }));
+
+    // 2) Zápasy a stravovanie z globálneho buffra
+    //    Aby rešpektovali filtre (deň / kategória / tím), aplikujeme ich tu.
+    const dayFilter = selectedDayKey || null;
+    const catFilter = selectedCategory ? cleanCategory(selectedCategory) : null;
+
+    let teamFilterName = null;
+    let teamFilterCategory = null;
+    if (selectedTeam) {
+      const sepIdx = selectedTeam.indexOf('|');
+      if (sepIdx >= 0) {
+        teamFilterCategory = cleanCategory(selectedTeam.slice(0, sepIdx));
+        teamFilterName = selectedTeam.slice(sepIdx + 1).trim();
+      } else {
+        teamFilterName = selectedTeam.trim();
+      }
+    }
+
+    const matchesFilter = (ev) => {
+      if (catFilter && cleanCategory(ev.category || '') !== catFilter) return false;
+      if (teamFilterName && String(ev.teamName || '').trim() !== teamFilterName) return false;
+      if (teamFilterCategory && cleanCategory(ev.category || '') !== teamFilterCategory) return false;
+      if (dayFilter) {
+        if (ev.ts == null || !isFinite(ev.ts)) return false;
+        const d = new Date(ev.ts);
+        const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (k !== dayFilter) return false;
+      }
+      return true;
+    };
+
+    const matchEvents = (__transportPerTeamBuffer.matches || [])
+      .filter(matchesFilter)
+      .map((ev) => ({ ...ev, _fromBuffer: true }));
+
+    const cateringEvents = (__transportPerTeamBuffer.catering || [])
+      .filter(matchesFilter)
+      .map((ev) => ({ ...ev, _fromBuffer: true }));
+
+    const all = [...matchEvents, ...cateringEvents, ...transferEvents];
+
+    // 3) Zoskupenie podľa KATEGÓRIA|TÍM
     const byTeam = new Map();
-    for (const ev of timelineEvents) {
-      const key = `${ev.category}|${ev.teamName}`;
+    for (const ev of all) {
+      const team = String(ev.teamName || '').trim();
+      if (!team) continue;
+      const cat = String(ev.category || '').trim();
+      const key = `${cat}|${team}`;
       if (!byTeam.has(key)) byTeam.set(key, []);
       byTeam.get(key).push(ev);
     }
-    for (const [key, list] of byTeam) {
-      console.groupCollapsed(`👥 ${key} (${list.length})`);
+
+    // 4) Zoradenie tímov
+    const teamsSorted = [...byTeam.keys()].sort((a, b) => {
+      const [catA, teamA] = a.split('|');
+      const [catB, teamB] = b.split('|');
+      const c = String(catA).localeCompare(String(catB), 'sk', { sensitivity: 'base' });
+      if (c !== 0) return c;
+      return String(teamA).localeCompare(String(teamB), 'sk', { sensitivity: 'base' });
+    });
+
+    // 5) Zoradenie udalostí v rámci tímu
+    const KIND_PRIORITY = { match: 0, transfer: 1, catering: 2 };
+    const output = {};
+    for (const key of teamsSorted) {
+      const list = byTeam.get(key).slice().sort((a, b) => {
+        const aTs = a.ts != null && isFinite(a.ts) ? a.ts : Number.POSITIVE_INFINITY;
+        const bTs = b.ts != null && isFinite(b.ts) ? b.ts : Number.POSITIVE_INFINITY;
+        if (aTs !== bTs) return aTs - bTs;
+        const aP = KIND_PRIORITY[a.kind] ?? 9;
+        const bP = KIND_PRIORITY[b.kind] ?? 9;
+        if (aP !== bP) return aP - bP;
+        return String(a.sortKey || '').localeCompare(String(b.sortKey || ''), 'sk');
+      });
+      output[key] = list;
+    }
+
+    // 6) Signatúra (aby sa výpis zbytočne neopakoval)
+    const sig = JSON.stringify(
+      Object.fromEntries(
+        Object.entries(output).map(([k, list]) => [
+          k,
+          list.map((ev) => ({
+            k: ev.kind,
+            ts: ev.ts,
+            label: ev.label,
+            legs: ev.legs ? ev.legs.map((l) => [l.fromName, l.toName, l.startTime, l.endTime]) : null,
+          })),
+        ])
+      )
+    );
+    if (sig === window.__lastUiConsoleSig) return;
+    window.__lastUiConsoleSig = sig;
+
+    // 7) Výpis
+    const filterLabel =
+      `deň=${selectedDayKey || 'všetky'} | kategória=${selectedCategory || 'všetky'} | tím=${selectedTeam ? selectedTeam.split('|').slice(-1)[0] : 'všetky'}`;
+    console.log(`📅 UI TIMELINE — zápasy + stravovanie + transfery (${filterLabel}):`);
+
+    for (const key of teamsSorted) {
+      const list = output[key];
+      if (!list || list.length === 0) continue;
+      const [cat, team] = key.split('|');
+      const accomKey = `${cat}|${team}`;
+      const accommodationName =
+        __transportPerTeamBuffer.accommodationByKey.get(accomKey) || 'bez ubytovania';
+
+      console.groupCollapsed(`👥 ${team}${cat ? ` (${cat})` : ''} — ${list.length} udalostí — 🏠 ${accommodationName}`);
+
       list.forEach((ev, i) => {
-        console.log(`${i + 1}. ${ev.timeLabel} | ${ev.title} | ${ev.category}`);
-        for (const leg of ev.legs) {
-          console.log(`   ${leg.isWalking ? '🚶' : '🚌'} ${leg.startTime}–${leg.endTime} ${leg.fromName} → ${leg.toName} ${leg.busName || ''}`);
+        if (ev.kind === 'match' || ev.kind === 'catering') {
+          console.log(`${i + 1}. ${ev.label}`);
+        } else if (ev.kind === 'transfer') {
+          // Pre transfer: hlavička + rozbalenie legs
+          const head = ev.timeLabel
+            ? `${i + 1}. 🚌 ${ev.timeLabel} | ${ev.title}${ev.busName ? ` | ${ev.busName}` : ''}`
+            : `${i + 1}. ${ev.label}`;
+          console.log(head);
+          for (const leg of ev.legs || []) {
+            const icon = leg.isWalking ? '🚶' : '🚌';
+            const busTxt = leg.isWalking ? 'PEŠI' : (leg.busName || 'PRESUN');
+            const t1 = leg.startTime || '--:--';
+            const t2 = leg.endTime || '--:--';
+            console.log(`     ${icon} ${busTxt} ${t1}–${t2} | ${leg.fromName} → ${leg.toName}`);
+          }
         }
       });
+
       console.groupEnd();
     }
-  }, [timelineEvents]);
+  }, [
+    timelineEvents,
+    selectedDayKey,
+    selectedCategory,
+    selectedTeam,
+    matchesVersion,
+    trackerResolvedNames,
+    // signatúra buffrov sa mení pri každom naplnení — aby sa výpis obnovil
+    __transportPerTeamBuffer.matches.length,
+    __transportPerTeamBuffer.catering.length,
+    __transportPerTeamBuffer.accommodationByKey.size,
+  ]);
 
   /* --- Skupiny podľa dňa --- */
   const eventsByDay = useMemo(() => {
