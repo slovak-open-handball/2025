@@ -448,12 +448,12 @@ const enrichTransfersWithImpliedWalking = (events) => {
     const prevRange = getEventTimeRange(ev);
     const nextRange = getEventTimeRange(next);
     if (!prevRange || !nextRange) continue;
-    const startTs = prevRange.endTs;
+    let startTs = prevRange.endTs;
     const endTs = nextRange.startTs;
     if (!(endTs > startTs)) continue;
 
     // ─── NOVÉ: ak je `ev` posledná udalosť dňa a je na mieste ubytovania,
-    //     negenerujeme peší presun (tím zostane na ubytovaní) ───
+    //     presun začína od 00:00 nasledujúceho dňa (tím zostane na ubytovaní) ───
     const isNextInDifferentDay = (() => {
       const dStart = new Date(startTs);
       const dEnd = new Date(endTs);
@@ -463,7 +463,7 @@ const enrichTransfersWithImpliedWalking = (events) => {
         dStart.getDate() !== dEnd.getDate()
       );
     })();
-    
+
     if (isNextInDifferentDay) {
       const evTeamName = String(ev.teamName || '').trim();
       const evCategory = String(ev.category || '').trim();
@@ -472,13 +472,22 @@ const enrichTransfersWithImpliedWalking = (events) => {
         __transportPerTeamBuffer.accommodationByKey.get(accomKey) || null;
       const hasAccommodation =
         accommodationName && accommodationName !== 'bez ubytovania';
-    
+
       if (
         hasAccommodation &&
         normalizePlaceName(prevPlace) === normalizePlaceName(accommodationName)
       ) {
-        // `ev` je na mieste ubytovania a `next` je v inom dni → negenerujeme presun
-        continue;
+        // `ev` je na mieste ubytovania a `next` je v inom dni
+        // → presun začína od 00:00 nasledujúceho dňa
+        const dEnd = new Date(endTs);
+        startTs = new Date(
+          dEnd.getFullYear(),
+          dEnd.getMonth(),
+          dEnd.getDate(),
+          0, 0, 0, 0
+        ).getTime();
+
+        if (!(endTs > startTs)) continue;
       }
     }
     // ─── koniec novej kontroly ───
@@ -565,12 +574,12 @@ const enrichTransfersWithImpliedWalking = (events) => {
     }
     if (transferStartTs == null) continue;
 
-    const startTs = evRange.endTs;
+    let startTs = evRange.endTs;
     const endTs = transferStartTs;
     if (!(endTs > startTs)) continue;
 
     // ─── NOVÉ: ak je `ev` posledná udalosť dňa a je na mieste ubytovania,
-    //     negenerujeme peší presun ───
+    //     presun začína od 00:00 nasledujúceho dňa ───
     const isNextTransferInDifferentDay = (() => {
       const dStart = new Date(startTs);
       const dEnd = new Date(endTs);
@@ -589,13 +598,22 @@ const enrichTransfersWithImpliedWalking = (events) => {
         __transportPerTeamBuffer.accommodationByKey.get(accomKey) || null;
       const hasAccommodation =
         accommodationName && accommodationName !== 'bez ubytovania';
-    
+
       if (
         hasAccommodation &&
         normalizePlaceName(evPlace) === normalizePlaceName(accommodationName)
       ) {
-        // `ev` je na mieste ubytovania a `nextTransfer` je v inom dni → negenerujeme presun
-        continue;
+        // `ev` je na mieste ubytovania a `nextTransfer` je v inom dni
+        // → presun začína od 00:00 nasledujúceho dňa
+        const dEnd = new Date(endTs);
+        startTs = new Date(
+          dEnd.getFullYear(),
+          dEnd.getMonth(),
+          dEnd.getDate(),
+          0, 0, 0, 0
+        ).getTime();
+
+        if (!(endTs > startTs)) continue;
       }
     }
     // ─── koniec novej kontroly ───
