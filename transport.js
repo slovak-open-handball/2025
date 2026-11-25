@@ -2004,10 +2004,6 @@ const TransportApp = ({ userProfileData }) => {
         
         const start = toDate(data.tournamentStart);
         const end = toDate(data.tournamentEnd);
-        const arrivalDt = toDate(data.arrivalDate);
-        arrivalTimestampRef.current = arrivalDt && !isNaN(arrivalDt.getTime())
-          ? arrivalDt.getTime()
-          : null;
 
         firstTournamentDayKeyRef.current = start && !isNaN(start.getTime())
           ? `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`
