@@ -138,16 +138,16 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
   };
 
   const isFirstTournamentDay = (dk) => {
-    const firstDay = __transportArrivalState.firstTournamentDayKey;
+    const firstDay = __transportPerTeamBuffer?.firstTournamentDayKey;
     if (firstDay && dk) return dk === firstDay;
-    if (__transportArrivalState.arrivalTimestamp && dk) {
-      return dk === getDayKeyFromTs(__transportArrivalState.arrivalTimestamp);
+    if (__transportPerTeamBuffer?.arrivalTimestamp && dk) {
+      return dk === getDayKeyFromTs(__transportPerTeamBuffer.arrivalTimestamp);
     }
     return false;
   };
 
   const getArrivalStartTsForDay = (dk, fallbackEndTs) => {
-    const arrTs = __transportArrivalState.arrivalTimestamp;
+    const arrTs = __transportPerTeamBuffer?.arrivalTimestamp;
     if (!arrTs || !isFinite(arrTs) || !isFirstTournamentDay(dk)) return null;
     const arrDate = new Date(arrTs);
     const baseDate = fallbackEndTs ? new Date(fallbackEndTs) : arrDate;
@@ -1993,11 +1993,11 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         const arrivalDt = toDate(data.arrivalDate);
-        __transportArrivalState.arrivalTimestamp = arrivalDt && !isNaN(arrivalDt.getTime())
+        __transportPerTeamBuffer.arrivalTimestamp = arrivalDt && !isNaN(arrivalDt.getTime())
           ? arrivalDt.getTime()
           : null;
 
-        __transportArrivalState.firstTournamentDayKey = start && !isNaN(start.getTime())
+        __transportPerTeamBuffer.firstTournamentDayKey = start && !isNaN(start.getTime())
           ? `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`
           : null;
         
