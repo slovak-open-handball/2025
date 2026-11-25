@@ -18,6 +18,30 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 const { useState, useEffect, useRef, useMemo } = React;
 
 /* ------------------------------------------------------------------ */
+/* Okamžitý záchyt udalostí mapovania (aj pred mountom komponenty)    */
+/* ------------------------------------------------------------------ */
+
+const MAPPING_READY_EVENTS = [
+  'teamNameMappingReady',
+  'teamNamesReplaced',
+  'mappingReady',
+];
+
+if (!window.__transportEarlyMappingHookInstalled) {
+  window.__transportEarlyMappingHookInstalled = true;
+  window.__transportMappingSeen = Boolean(window.__transportMappingSeen);
+
+  MAPPING_READY_EVENTS.forEach((evName) => {
+    window.addEventListener(evName, (event) => {
+      const detail = event?.detail;
+      if (detail && detail.ready === false) return;
+      window.__transportMappingSeen = true;
+      window.dispatchEvent(new CustomEvent('transport:mappingReadyInternal', { detail }));
+    });
+  });
+}
+
+/* ------------------------------------------------------------------ */
 /* Pomocné funkcie                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -125,15 +149,9 @@ const buildRowId = (busId, dayKey, order) => `${busId}__${dayKey}__${order}`;
 /* Resolve názvu tímu cez teamManager + matchTracker                   */
 /* ------------------------------------------------------------------ */
 
-// "I1", "B4", "E5" – písmeno+číslo
 const isLetterDigitCode = (s) => /^[A-ZÁ-Ž]\d+$/.test(String(s || '').trim());
-
-// "1I", "4B" – číslo+písmeno
 const isDigitLetterCode = (s) => /^\d+[A-ZÁ-Ž]$/.test(String(s || '').trim());
 
-// Vráti true, ak názov tímu obsahuje kategóriu a po jej odfiltrovaní
-// zostane tvar "písmeno+číslo" (typ = 'letter-digit') alebo
-// "číslo+písmeno" (typ = 'digit-letter'). Inak vráti null.
 const detectGroupCodeType = (teamName, categoryName) => {
   if (!teamName || !categoryName) return null;
   const tn = String(teamName).trim();
@@ -148,19 +166,12 @@ const detectGroupCodeType = (teamName, categoryName) => {
   return null;
 };
 
-// Kompletná kaskáda:
-//   1) teamManager.getTeamNameByDisplayIdSync(vstup)
-//   2) ak výsledok obsahuje kategóriu ALEBO sa zmenil oproti vstupu ALEBO
-//      stále vyzerá ako group kód → matchTracker.getTeamNameByDisplayId(výsledok)
-//   3) ak matchTracker vráti niečo iné, vráť to
-//   4) inak vráť výsledok z teamManager (alebo pôvodný vstup)
 const resolveTeamNameForDisplay = async (identifier, categoryName) => {
   if (!identifier) return identifier;
 
   const original = String(identifier).trim();
   const cat = categoryName ? String(categoryName).trim() : '';
 
-  // KROK 1 – teamManager sync (volaj vždy, ak existuje)
   let intermediate = original;
   try {
     if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
@@ -175,20 +186,16 @@ const resolveTeamNameForDisplay = async (identifier, categoryName) => {
     }
   } catch (e) {}
 
-  // KROK 2 – rozhodni, či volať matchTracker
   let shouldCallMatchTracker = false;
 
-  // 2a) teamManager niečo zmenil → chceme finálny názov
   if (intermediate !== original) {
     shouldCallMatchTracker = true;
   }
 
-  // 2b) intermediate stále obsahuje kategóriu → treba mapovať
   if (!shouldCallMatchTracker && cat && intermediate.includes(cat)) {
     shouldCallMatchTracker = true;
   }
 
-  // 2c) intermediate (po odfiltrovaní kategórie) vyzerá ako group kód
   if (!shouldCallMatchTracker) {
     const withoutCat = cat
       ? intermediate.split(cat).join('').replace(/\s+/g, '').trim()
@@ -198,7 +205,6 @@ const resolveTeamNameForDisplay = async (identifier, categoryName) => {
     }
   }
 
-  // KROK 2 – matchTracker async
   if (shouldCallMatchTracker) {
     try {
       if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
@@ -215,22 +221,15 @@ const resolveTeamNameForDisplay = async (identifier, categoryName) => {
     } catch (e) {}
   }
 
-  // KROK 3 – vráť intermediate (teamManager výsledok alebo pôvodný)
   return intermediate;
 };
 
 /* ------------------------------------------------------------------ */
-/* Čakanie na pripravenosť mapovania – event-based (okamžitá reakcia)  */
+/* Čakanie na pripravenosť mapovania – s podporou skorých udalostí   */
 /* ------------------------------------------------------------------ */
 
-const MAPPING_READY_EVENTS = [
-  'teamNameMappingReady',
-  'teamNamesReplaced',
-  'mappingReady',
-];
-
-// Skontroluje, či mapovanie už je pripravené (podľa func-tables.js a doplnkových príznakov)
 const isMappingReady = () => {
+  if (window.__transportMappingSeen === true) return true;
   if (window.mappingReady === true) return true;
   if (window.isMappingReady === true) return true;
   if (window.teamNameMappingReady === true) return true;
@@ -256,6 +255,12 @@ const isMappingReady = () => {
   } catch (e) {}
 
   try {
+    if (window.matchTracker && typeof window.matchTracker.isDataReady === 'function') {
+      if (window.matchTracker.isDataReady() === true) return true;
+    }
+  } catch (e) {}
+
+  try {
     if (window.teamManager && typeof window.teamManager.isReady === 'function') {
       if (window.teamManager.isReady()) return true;
     }
@@ -264,7 +269,7 @@ const isMappingReady = () => {
   return false;
 };
 
-const waitForMappingReady = (eventTimeoutMs = 2000, pollMs = 50, maxWaitMs = 0) => {
+const waitForMappingReady = (eventTimeoutMs = 1500, pollMs = 50, maxWaitMs = 4000) => {
   return new Promise((resolve) => {
     if (isMappingReady()) {
       resolve(true);
@@ -280,6 +285,7 @@ const waitForMappingReady = (eventTimeoutMs = 2000, pollMs = 50, maxWaitMs = 0) 
       MAPPING_READY_EVENTS.forEach((evName) => {
         window.removeEventListener(evName, onReadyEvent);
       });
+      window.removeEventListener('transport:mappingReadyInternal', onReadyEvent);
       if (pollTimer) clearInterval(pollTimer);
       if (fallbackStartTimer) clearTimeout(fallbackStartTimer);
       if (maxWaitTimer) clearTimeout(maxWaitTimer);
@@ -295,20 +301,21 @@ const waitForMappingReady = (eventTimeoutMs = 2000, pollMs = 50, maxWaitMs = 0) 
     const onReadyEvent = (event) => {
       const detail = event?.detail;
       if (detail && detail.ready === false) return;
+      window.__transportMappingSeen = true;
       finish(true);
     };
 
     MAPPING_READY_EVENTS.forEach((evName) => {
       window.addEventListener(evName, onReadyEvent);
     });
+    window.addEventListener('transport:mappingReadyInternal', onReadyEvent);
 
-    // Opätovná kontrola hneď po zaregistrovaní poslúchačov (ochrana proti race condition)
+    // Opätovná kontrola hneď po zaregistrovaní poslúchačov
     if (isMappingReady()) {
       finish(true);
       return;
     }
 
-    // Fallback polling po eventTimeoutMs, ak udalosť neprišla alebo bola odoslaná pred prihlásením
     fallbackStartTimer = setTimeout(() => {
       if (done) return;
       if (isMappingReady()) {
@@ -322,7 +329,7 @@ const waitForMappingReady = (eventTimeoutMs = 2000, pollMs = 50, maxWaitMs = 0) 
 
     if (maxWaitMs > 0) {
       maxWaitTimer = setTimeout(() => {
-        finish(isMappingReady());
+        finish(true);
       }, maxWaitMs);
     }
   });
@@ -423,7 +430,7 @@ const TransportApp = ({ userProfileData }) => {
     });
   };
 
-  /* -------------------- Výpočet zobrazenia pešieho segmentu (rovnako ako v logged-in-transport.js) -------------------- */
+  /* -------------------- Výpočet zobrazenia pešieho segmentu -------------------- */
   const getWalkingSegmentDisplayRange = (parent, segmentIndex) => {
     if (!parent || !Array.isArray(parent.segments)) return null;
 
@@ -511,7 +518,6 @@ const TransportApp = ({ userProfileData }) => {
     if (!parentRange || parentRange.startTs == null || parentRange.endTs == null) return null;
     if (parentRange.endTs <= parentRange.startTs) return null;
 
-    // Zistíme, ktoré segmenty (indexy v routeIds) nemajú vlastné časy a nie sú pešie
     const unassignedIndexes = [];
     for (let i = 0; i < routeIds.length - 1; i++) {
       const fromId = routeIds[i];
@@ -530,15 +536,11 @@ const TransportApp = ({ userProfileData }) => {
     if (position === -1) return null;
 
     const count = unassignedIndexes.length;
-
-    // Ak je len JEDEN segment bez vlastných časov a je to zároveň celý presun
-    // (t. j. žiadne medzizastávky), zobraz CELÝ parent interval.
     const isOnlySegment = (routeIds.length - 1) === 1;
     if (count === 1 && isOnlySegment) {
       return { startTs: parentRange.startTs, endTs: parentRange.endTs };
     }
 
-    // Inak rozdeľ interval rovnomerne medzi segmenty bez vlastných časov
     const intervalDuration = parentRange.endTs - parentRange.startTs;
     const partDuration = intervalDuration / count;
 
@@ -557,10 +559,11 @@ const TransportApp = ({ userProfileData }) => {
     }
     const unsubs = [];
 
-    // Reakcia na window správu o dokončení mapovania
+    // Reakcia na window správu o dokončení mapovania (vrátane už zachytených skorých udalostí)
     const handleMappingCompleted = (event) => {
       const detail = event?.detail;
       if (detail && detail.ready === false) return;
+      window.__transportMappingSeen = true;
       resolveTransfersViaMatchTracker(savedTransfersRef.current);
       setMatchesVersion((v) => v + 1);
     };
@@ -569,6 +572,14 @@ const TransportApp = ({ userProfileData }) => {
       window.addEventListener(evName, handleMappingCompleted);
       unsubs.push(() => window.removeEventListener(evName, handleMappingCompleted));
     });
+    window.addEventListener('transport:mappingReadyInternal', handleMappingCompleted);
+    unsubs.push(() => window.removeEventListener('transport:mappingReadyInternal', handleMappingCompleted));
+
+    // Ak už mapovanie zbehlo pred pripojením effect-u, spracuj ho okamžite
+    if (isMappingReady()) {
+      resolveTransfersViaMatchTracker(savedTransfersRef.current);
+      setMatchesVersion((v) => v + 1);
+    }
 
     // places (map + list)
     try {
@@ -652,6 +663,7 @@ const TransportApp = ({ userProfileData }) => {
         resolveTransfersViaMatchTracker(transfers);
       }, (e) => {
         console.error('transportTravelTimes error', e);
+        travelTimesLoadedRef.current = true;
         setLoading(false);
       }));
     } catch (e) {}
@@ -774,7 +786,7 @@ const TransportApp = ({ userProfileData }) => {
       }, (e) => {}));
     } catch (e) {}
 
-    // settings/categories → drawColors (farba pre rozlosovanie)
+    // settings/categories → drawColors
     try {
       const catRef = doc(window.db, 'settings', 'categories');
       unsubs.push(onSnapshot(catRef, (snap) => {
@@ -827,7 +839,6 @@ const TransportApp = ({ userProfileData }) => {
         let anyMatchCompletedNow = false;
         let anyChangeDetected = false;
 
-        // 1) Detekcia zmien v statusoch (completed)
         snap.docChanges().forEach((change) => {
           const data = change.doc.data() || {};
           const prevStatus = matchStatusesRef.current[change.doc.id];
@@ -840,19 +851,9 @@ const TransportApp = ({ userProfileData }) => {
 
           if (currStatus === 'completed' && prevStatus !== 'completed') {
             anyMatchCompletedNow = true;
-            console.log(`✅ Zápas UKONČENÝ: ${change.doc.id}`, {
-              homeTeam: data.homeTeamName || data.homeTeamIdentifier || data.homeTeam || '?',
-              awayTeam: data.awayTeamName || data.awayTeamIdentifier || data.awayTeam || '?',
-              homeScore: data.homeScore,
-              awayScore: data.awayScore,
-              categoryId: data.categoryId,
-              categoryName: data.categoryName,
-              status: currStatus,
-            });
           }
         });
 
-        // 2) Zozbieranie VŠETKÝCH zápasov (nielen completed)
         const allMatches = [];
         snap.forEach((d) => {
           const data = d.data() || {};
@@ -875,7 +876,6 @@ const TransportApp = ({ userProfileData }) => {
             scheduledTime: data.scheduledTime || data.matchDate || null,
           });
 
-          // Zber completed tímov (pre existujúcu logiku skrývania nerozriešených presunov)
           if (data.status === 'completed') {
             const candidates = [
               data.homeTeamIdentifier,
@@ -893,13 +893,9 @@ const TransportApp = ({ userProfileData }) => {
           }
         });
 
-        // 3) Počkaj na window správu o dokončení mapovania a potom namapuj názvy tímov
         if (anyChangeDetected || matchesLoadedRef.current === false) {
           (async () => {
-            const ready = await waitForMappingReady(2000, 50);
-            if (!ready) {
-              return;
-            }
+            await waitForMappingReady(1500, 50, 4000);
 
             const mappedMatches = [];
             for (const m of allMatches) {
@@ -938,7 +934,6 @@ const TransportApp = ({ userProfileData }) => {
         matchesLoadedRef.current = true;
         setMatchesVersion((v) => v + 1);
 
-        // 4) Pri akejkoľvek zmene zápasov skús znova namapovať názvy tímov v presunoch
         if (anyChangeDetected || anyMatchCompletedNow) {
           resolveTransfersViaMatchTracker(savedTransfersRef.current);
         }
@@ -960,9 +955,8 @@ const TransportApp = ({ userProfileData }) => {
     const sourceList = Array.isArray(transfersList) ? transfersList : savedTransfersRef.current;
     if (!Array.isArray(sourceList) || sourceList.length === 0) return;
 
-    // Ak mapovanie ešte nie je dokončené, počkáme na window udalosť dokončenia mapovania
     if (!isMappingReady()) {
-      await waitForMappingReady(2000, 50);
+      await waitForMappingReady(1500, 50, 4000);
     }
 
     const updates = {};
@@ -1021,11 +1015,8 @@ const TransportApp = ({ userProfileData }) => {
     const tn = String(teamName).trim();
     const cat = categoryName ? cleanCategory(categoryName) : '';
 
-    // Ak názov tímu neobsahuje názov kategórie, nevyžaduje mapovanie cez matchTracker
     if (!cat || !tn.includes(cat)) return true;
 
-    // Ak názov tímu obsahuje názov kategórie, riadok sa zobrazí až keď je k dispozícii
-    // platný výsledok z window.matchTracker.getTeamNameByDisplayId (iný ako vstup, nie "" alebo null)
     const mapped = trackerResolvedNamesRef.current[tn] ?? trackerResolvedNames[tn];
     return (
       mapped !== undefined &&
@@ -1046,14 +1037,11 @@ const TransportApp = ({ userProfileData }) => {
     const catFilter = selectedCategory ? cleanCategory(selectedCategory) : null;
     const teamFilter = selectedTeam ? selectedTeam : null;
 
-    /* --- 1) Transfery – CELÝ PRESUN ako jeden riadok s rozpismi --- */
     (savedTransfers || []).forEach((parent) => {
       if (parent._parentKey && parent._parentKey !== parent.key) return;
       if (catFilter && cleanCategory(parent.category || '') !== catFilter) return;
       if (teamFilter && String(parent.teamName || '').trim() !== teamFilter) return;
 
-      // Skryť presuny s nerozriešeným názvom tímu (obsahuje názov kategórie
-      // a tím ešte nemá žiadny completed zápas)
       if (!isTeamNameResolved(parent.teamName, parent.category)) return;
 
       const stopsIds = Array.isArray(parent.intermediateStopIds) ? parent.intermediateStopIds.filter(Boolean) : [];
@@ -1068,7 +1056,6 @@ const TransportApp = ({ userProfileData }) => {
 
       const parentWhenRange = parseWhenRangeToTs(parent.when);
 
-      // --- Zostavíme LEGS (čiastkové segmenty medzi zastávkami) ---
       const legs = [];
       let startTs = null, endTs = null;
       let hasRealTimes = false;
@@ -1091,7 +1078,6 @@ const TransportApp = ({ userProfileData }) => {
 
         let legStartTs = null, legEndTs = null, legTimeLabel = '';
         if (legWalking) {
-          // Rovnaká logika ako v logged-in-transport.js (getWalkingSegmentDisplayRange)
           const walkingRange = getWalkingSegmentDisplayRange(parent, i);
 
           if (walkingRange) {
@@ -1110,7 +1096,6 @@ const TransportApp = ({ userProfileData }) => {
           legEndTs = seg.endTs;
           legTimeLabel = `${formatTimeOnly(legStartTs)} – ${formatTimeOnly(legEndTs)}`;
         } else {
-          // Segment bez vlastných časov – rozdeľ celkový čas presunu medzi takéto segmenty
           const unassignedRange = getUnassignedSegmentDisplayRange(parent, i, routeIds, parentSegments);
           if (unassignedRange) {
             legStartTs = unassignedRange.startTs;
@@ -1126,7 +1111,6 @@ const TransportApp = ({ userProfileData }) => {
           ? (buses.find((b) => b.id === legBusId)?.name || `Bus ${legBusId}`)
           : null;
 
-        // agregácia pre celkový presun
         if (legStartTs != null && (startTs == null || legStartTs < startTs)) startTs = legStartTs;
         if (legEndTs != null && (endTs == null || legEndTs > endTs)) endTs = legEndTs;
         if (legHasTimes) hasRealTimes = true;
@@ -1152,7 +1136,6 @@ const TransportApp = ({ userProfileData }) => {
 
       const overallIsWalking = legs.every((l) => l.isWalking);
 
-      // --- Celkový čas ---
       let timeLabel = '';
       if (overallIsWalking) {
         if (startTs != null) {
@@ -1169,7 +1152,6 @@ const TransportApp = ({ userProfileData }) => {
         timeLabel = 'nepriradený';
       }
 
-      // --- Deň ---
       let dayKey = parent.dayKey || null;
       if (!dayKey && startTs != null) {
         const d = new Date(startTs);
@@ -1181,7 +1163,6 @@ const TransportApp = ({ userProfileData }) => {
       }
       if (dayFilter && dayKey !== dayFilter) return;
 
-      // --- Názvy miest pre celú trasu ---
       const fromName = resolvePlaceNameById(routeIds[0]);
       const toName = resolvePlaceNameById(routeIds[routeIds.length - 1]);
 
@@ -1257,7 +1238,6 @@ const TransportApp = ({ userProfileData }) => {
   /* -------------------- Render: filtre -------------------- */
   const filtersSection = React.createElement('div', { className: 'bg-white rounded-lg shadow p-4 mb-6 border border-gray-200' },
     React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4' },
-      // Deň
       React.createElement('div', null,
         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Deň'),
         React.createElement('select', {
@@ -1271,7 +1251,6 @@ const TransportApp = ({ userProfileData }) => {
           )
         )
       ),
-      // Kategória
       React.createElement('div', null,
         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Kategória'),
         React.createElement('select', {
@@ -1283,7 +1262,6 @@ const TransportApp = ({ userProfileData }) => {
           ...availableCategories.map((c) => React.createElement('option', { key: c, value: c }, c))
         )
       ),
-      // Tím
       React.createElement('div', null,
         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Tím'),
         React.createElement('select', {
@@ -1311,10 +1289,8 @@ const TransportApp = ({ userProfileData }) => {
   const renderEvent = (ev) => {
     const color = EVENT_COLORS[ev.typeKey] || EVENT_COLORS.transfer_unassigned;
 
-    // Podzoznam čiastkových segmentov (legs)
     const hasWalkingLeg = !!(ev.legs && ev.legs.some((l) => l.isWalking));
 
-    // Špeciálny prípad: presun má iba jeden segment, je peší a nemá nastavené časy
     const isSingleWalkingNoTime =
       ev.legs &&
       ev.legs.length === 1 &&
@@ -1324,17 +1300,13 @@ const TransportApp = ({ userProfileData }) => {
 
     const legsBlock = (ev.legs && ev.legs.length > 0)
       ? React.createElement('div', { className: 'mt-2 pl-2 border-l-2 border-gray-200 space-y-1' },
-          // Hlavička stĺpcov – stĺpce vždy existujú, texty podmienečne
           React.createElement('div', { className: 'flex items-center gap-2 text-[10px] uppercase tracking-wide text-gray-400 pb-1' },
             React.createElement('span', { className: 'w-4 flex-shrink-0' }, ''),
             React.createElement('span', { className: 'w-20 flex-shrink-0' }, 'Typ'),
-            // Čas (Od) – skryť text v špeciálnom prípade
             React.createElement('span', { className: 'w-16 flex-shrink-0' }, isSingleWalkingNoTime ? '' : 'Čas'),
             React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Odkiaľ'),
-            // Čas (Do) – skryť text v špeciálnom prípade
             React.createElement('span', { className: 'w-16 flex-shrink-0' }, isSingleWalkingNoTime ? '' : 'Čas'),
             React.createElement('span', { className: 'w-1/3 min-w-0' }, 'Kam'),
-            // Poznámka – skryť text v špeciálnom prípade
             React.createElement('span', { className: 'w-1/3 min-w-0' }, (hasWalkingLeg && !isSingleWalkingNoTime) ? 'Poznámka' : '')
           ),
           ...ev.legs.map((leg, idx) => {
@@ -1347,7 +1319,6 @@ const TransportApp = ({ userProfileData }) => {
             const startTimeText = leg.startTime || '';
             const endTimeText = leg.endTime || '';
 
-            // Špeciálny prípad: jediný segment, peší, bez času → v stĺpcoch Čas nič
             const isSingleWalkingNoTimeRow =
               ev.legs.length === 1 &&
               leg.isWalking === true &&
@@ -1361,7 +1332,6 @@ const TransportApp = ({ userProfileData }) => {
               className: `text-xs font-medium w-20 flex-shrink-0 truncate ${leg.isWalking ? 'text-amber-700 italic' : 'text-blue-700'}`,
             }, legBusLabelText);
 
-            // Poznámka – v špeciálnom prípade prázdna
             const noteText = (leg.isWalking && !isSingleWalkingNoTimeRow)
               ? 'Disponibilný čas na presun peši'
               : '';
@@ -1370,21 +1340,14 @@ const TransportApp = ({ userProfileData }) => {
               key: idx,
               className: 'flex items-center gap-2 text-xs text-gray-600',
             },
-              // 1. stĺpec: ikona
               React.createElement('span', { className: 'w-4 flex-shrink-0 text-center' },
                 React.createElement('i', { className: `fa-solid ${legIcon}` })
               ),
-              // 2. stĺpec: bus / PEŠI
               legBusLabel,
-              // 3. stĺpec: Čas (Od)
               React.createElement('span', { className: 'font-mono w-16 flex-shrink-0 text-gray-700' }, displayStartTime),
-              // 4. stĺpec: Odkiaľ
               React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.fromName),
-              // 5. stĺpec: Čas (Do)
               React.createElement('span', { className: 'font-mono w-16 flex-shrink-0 text-gray-700' }, displayEndTime),
-              // 6. stĺpec: Kam
               React.createElement('span', { className: 'text-gray-500 w-1/3 min-w-0 truncate' }, leg.toName),
-              // 7. stĺpec: Poznámka
               React.createElement('span', { className: 'text-gray-400 italic w-1/3 min-w-0 truncate' }, noteText)
             );
           })
@@ -1448,14 +1411,12 @@ const TransportApp = ({ userProfileData }) => {
       key: dayKey,
       className: 'bg-white rounded-lg shadow border border-gray-200 overflow-hidden',
     },
-      // Hlavička dňa
       React.createElement('div', { className: 'bg-gradient-to-r from-blue-600 to-blue-500 text-white px-5 py-3 flex items-center justify-between' },
         React.createElement('h2', { className: 'text-lg font-semibold flex items-center gap-2' },
           React.createElement('i', { className: 'fa-regular fa-calendar' }),
           dayLabel
         )
       ),
-      // Zoznam udalostí – prvý bez farebného pásika
       React.createElement('div', { className: 'divide-y divide-gray-100' },
         ...dayEvents.map((ev) => renderEvent(ev))
       )
@@ -1492,17 +1453,14 @@ export default function Transport({ userProfileData }) {
 const rootEl = document.getElementById('root');
 
 if (rootEl && !rootEl.dataset.reactMounted) {
-  // Počkáme, kým authentication.js nastaví window.db a prípadne userProfileData
   const tryMount = () => {
     if (!window.db) {
-      // Firestore ešte nie je pripravený – skús o chvíľu
       setTimeout(tryMount, 200);
       return;
     }
 
     const userProfileData = window.currentUserProfile || window.userProfileData || null;
 
-    // Odstránime pôvodný spinner z HTML
     rootEl.dataset.reactMounted = 'true';
 
     const root = ReactDOM.createRoot(rootEl);
