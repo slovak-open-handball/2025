@@ -228,8 +228,6 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
 
       const gapDayKey = getEffectiveDayKey(first) || getEffectiveDayKey(second) || getDayKeyFromTs(firstRange.endTs);
 
-      // Ak je nasledujúca udalosť presun (napr. busom), ktorý začína na inom mieste než tím skončil (firstPlace),
-      // skúsime nájsť dostupný presun PEŠI bez času z firstPlace
       const secondIsMismatchedTransfer =
         second.kind === 'transfer' && secondFrom && secondFrom !== firstPlace;
 
@@ -264,9 +262,10 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
   }
 
   return sorted
-    .filter((_, idx) => !excludedTransferIndexes.has(idx))
-    .map((ev, idx) => {
-      const assigned = assignments.get(idx);
+    .map((ev, origIdx) => ({ ev, origIdx }))
+    .filter(({ origIdx }) => !excludedTransferIndexes.has(origIdx))
+    .map(({ ev, origIdx }) => {
+      const assigned = assignments.get(origIdx);
       if (!assigned) return ev;
       return buildUpdatedWalkingTransfer(ev, assigned.startTs, assigned.endTs, assigned.dayKey);
     })
