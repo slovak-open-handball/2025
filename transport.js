@@ -138,6 +138,12 @@ const tryPrintPerTeamTimeline = () => {
         if (!ev || ev.ts == null || !isFinite(ev.ts)) return null;
         let startTs = ev.ts;
         let endTs = ev.ts;
+
+        // NOVÉ: ak má event dopočítaný endTs (napr. zápas z trvania kategórie), použi ho
+        if (ev.endTs != null && isFinite(ev.endTs) && ev.endTs > startTs) {
+          endTs = ev.endTs;
+        }
+
         // Pre catering skúsime získať endTs z labelu (slotTo)
         if (ev.kind === 'catering') {
           const m = /(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/.exec(String(ev.label || ''));
@@ -542,6 +548,21 @@ const getGroupCharFromTeamName = (teamName) => {
 };
 
 const buildRowId = (busId, dayKey, order) => `${busId}__${dayKey}__${order}`;
+
+const computeMatchDurationMs = (cat) => {
+  if (!cat) return null;
+  const periods = Number(cat.periods ?? 2);
+  const periodDuration = Number(cat.periodDuration ?? 20);
+  const breakDuration = Number(cat.breakDuration ?? 2);
+  const matchBreak = Number(cat.matchBreak ?? 5);
+
+  const playingTime = periods * periodDuration;
+  const breaksBetweenPeriods = (periods - 1) * breakDuration;
+  const totalMinutes = playingTime + breaksBetweenPeriods + matchBreak;
+
+  if (!isFinite(totalMinutes) || totalMinutes <= 0) return null;
+  return totalMinutes * 60 * 1000;
+};
 
 /* ------------------------------------------------------------------ */
 /* Resolve názvu tímu cez teamManager + matchTracker                   */
@@ -1072,6 +1093,8 @@ const TransportApp = ({ userProfileData }) => {
   const travelTimesLoadedRef = useRef(false);
   const completedTeamsRef = useRef(new Set());
   const matchesLoadedRef = useRef(false);
+  const categoryMatchDurationsRef = useRef({}); 
+  const categoryMatchDurationsByNameRef = useRef({});
 
   /* -------------------- State -------------------- */
   const [loading, setLoading] = useState(true);
@@ -1102,6 +1125,30 @@ const TransportApp = ({ userProfileData }) => {
     const fromStops = (stopsList || []).find((s) => s.id === id);
     if (fromStops) return fromStops.name;
     return id;
+  };
+
+  const getMatchDurationMsForMatch = (m) => {
+    // 1) podľa categoryId
+    if (m?.categoryId) {
+      const byId = categoryMatchDurationsRef.current[m.categoryId];
+      if (byId != null) return byId;
+    }
+    // 2) podľa categoryName
+    const catName = String(m?.categoryName || '').trim();
+    if (catName) {
+      const byName = categoryMatchDurationsByNameRef.current[catName];
+      if (byName != null) return byName;
+    }
+    // 3) fallback – skús window.categoriesData
+    try {
+      const catId = m?.categoryId;
+      const catData = catId && window.categoriesData ? window.categoriesData[catId] : null;
+      if (catData) {
+        const ms = computeMatchDurationMs(catData);
+        if (ms != null) return ms;
+      }
+    } catch (e) {}
+    return null;
   };
 
   useCateringConsoleLog(window.db, {
@@ -1539,23 +1586,38 @@ const TransportApp = ({ userProfileData }) => {
       }, (e) => {}));
     } catch (e) {}
 
-    // settings/categories → drawColors
+    // settings/categories → drawColors + durations
     try {
       const catRef = doc(window.db, 'settings', 'categories');
       unsubs.push(onSnapshot(catRef, (snap) => {
         const colorMap = {};
+        const durById = {};
+        const durByName = {};
         if (snap.exists()) {
           const data = snap.data() || {};
           Object.entries(data).forEach(([catId, catData]) => {
             if (!catData) return;
+
+            // farby (pôvodná logika)
             const dc = catData.drawColor || null;
             if (dc) {
               if (catData.name) colorMap[String(catData.name).trim()] = dc;
               colorMap[catId] = dc;
             }
+
+            // ─── NOVÉ: trvanie zápasu pre kategóriu ───
+            const durationMs = computeMatchDurationMs(catData);
+            if (durationMs != null) {
+              durById[catId] = durationMs;
+              if (catData.name) {
+                durByName[String(catData.name).trim()] = durationMs;
+              }
+            }
           });
         }
         transportColorsRef.current = colorMap;
+        categoryMatchDurationsRef.current = durById;
+        categoryMatchDurationsByNameRef.current = durByName;
       }, (e) => {}));
     } catch (e) {}
 
@@ -1725,6 +1787,33 @@ const TransportApp = ({ userProfileData }) => {
 
               const matchCategory = String(m.categoryName || m.categoryId || '').trim();
 
+              // ─── NOVÉ: dopočítanie konca zápasu z trvania kategórie ───
+              const durationMs = getMatchDurationMsForMatch(m);
+              const startTsForMatch =
+                m.scheduledTime
+                  ? (() => {
+                      const d = typeof m.scheduledTime.toDate === 'function'
+                        ? m.scheduledTime.toDate()
+                        : (m.scheduledTime instanceof Date ? m.scheduledTime : new Date(m.scheduledTime));
+                      return isNaN(d.getTime()) ? null : d.getTime();
+                    })()
+                  : null;
+              const endTsForMatch =
+                startTsForMatch != null && durationMs != null
+                  ? startTsForMatch + durationMs
+                  : null;
+
+              const whenLabelWithEnd = (() => {
+                if (startTsForMatch == null) return whenLabel;
+                const startDate = formatDateDDMMYYYY(startTsForMatch) || '';
+                const startTime = formatTimeOnly(startTsForMatch);
+                if (endTsForMatch != null) {
+                  const endTime = formatTimeOnly(endTsForMatch);
+                  return `${startDate} ${startTime} – ${endTime}`.trim();
+                }
+                return `${startDate} ${startTime}`.trim();
+              })();
+              
               // pre domáci tím
               if (homeMapped && homeMapped !== '?') {
                 matchEventsForBuffer.push({
@@ -1732,8 +1821,9 @@ const TransportApp = ({ userProfileData }) => {
                   teamName: String(homeMapped).trim(),
                   category: matchCategory,
                   ts,
+                  endTs: endTsForMatch,
                   sortKey: `${whenLabel}|vs ${awayMapped}|${m.id}`,
-                  label: `⚽ ZÁPAS ${whenLabel} | ${placeLabel} | ${homeMapped} vs ${awayMapped} | ${m.categoryName || m.categoryId || '-'}${m.groupName ? ` | ${m.groupName}` : ''} | ${m.status === 'completed' ? `výsledok ${(m.homeScore ?? '-')}:${(m.awayScore ?? '-')}` : 'naplánovaný'}`,
+                  label: `⚽ ZÁPAS ${whenLabelWithEnd} | ${placeLabel} | ${homeMapped} vs ${awayMapped} | ${m.categoryName || m.categoryId || '-'}${m.groupName ? ` | ${m.groupName}` : ''} | ${m.status === 'completed' ? `výsledok ${(m.homeScore ?? '-')}:${(m.awayScore ?? '-')}` : 'naplánovaný'}`,
                 });
               }
               // pre hostí
@@ -1743,8 +1833,9 @@ const TransportApp = ({ userProfileData }) => {
                   teamName: String(awayMapped).trim(),
                   category: matchCategory,
                   ts,
+                  endTs: endTsForMatch,
                   sortKey: `${whenLabel}|vs ${homeMapped}|${m.id}`,
-                  label: `⚽ ZÁPAS ${whenLabel} | ${placeLabel} | ${awayMapped} vs ${homeMapped} | ${m.categoryName || m.categoryId || '-'}${m.groupName ? ` | ${m.groupName}` : ''} | ${m.status === 'completed' ? `výsledok ${(m.awayScore ?? '-')}:${(m.homeScore ?? '-')}` : 'naplánovaný'}`,
+                  label: `⚽ ZÁPAS ${whenLabelWithEnd} | ${placeLabel} | ${awayMapped} vs ${homeMapped} | ${m.categoryName || m.categoryId || '-'}${m.groupName ? ` | ${m.groupName}` : ''} | ${m.status === 'completed' ? `výsledok ${(m.awayScore ?? '-')}:${(m.homeScore ?? '-')}` : 'naplánovaný'}`,
                 });
               }
             }
