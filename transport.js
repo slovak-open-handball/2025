@@ -860,6 +860,19 @@ const tryPrintPerTeamTimeline = () => {
         return (KIND_PRIORITY[a.kind] ?? 9) - (KIND_PRIORITY[b.kind] ?? 9);
       });
     };
+
+    if (team === 'ŠŠK pri SLŠ Prešov' && cat === 'U12 D') {
+      console.log('🔍 DEBUG list (pred applyImpliedWalking):', list.map(e => ({
+        kind: e.kind,
+        ts: e.ts,
+        dayKey: e.dayKey,
+        teamName: e.teamName,
+        category: e.category,
+        from: e.legs?.[0]?.fromName,
+        to: e.legs?.[e.legs.length-1]?.toName,
+        hasRealTimes: (Array.isArray(e.legs) && e.legs.some(l => l.startTs != null && l.endTs != null)) || (e.ts != null && isFinite(e.ts)),
+      })));
+    }
     
     // ⬅️ ZMENA: reálne transfery z DB necháme tak ako sú (majú časy aj miesta),
     // applyImpliedWalkingTimesFromEvents aplikujeme len na tie, ktoré naozaj nemajú časy.
