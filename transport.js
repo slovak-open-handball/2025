@@ -2252,6 +2252,22 @@ const TransportApp = ({ userProfileData }) => {
         // Pre sortTs použijeme startTs (dopočítaný), inak parent.when
         const ts = startTs != null ? startTs : (parentRange?.startTs ?? Number.POSITIVE_INFINITY);
 
+        // ─── NOVÉ: robustný fallback pre dátum z parent.when (aj pre peší presun bez časov) ───
+        let robustFallbackDayLabel = '';
+        if (parent.when) {
+          const dateMatch = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(parent.when));
+          if (dateMatch) {
+            robustFallbackDayLabel = `${String(dateMatch[1]).padStart(2, '0')}. ${String(dateMatch[2]).padStart(2, '0')}. ${dateMatch[3]}`;
+          }
+        }
+        // Ak dayKey chýba, ale parent.when obsahuje dátum, dopočítame ho
+        if (!dayKey && robustFallbackDayLabel) {
+          const dm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(parent.when));
+          if (dm) {
+            dayKey = `${dm[3]}-${String(dm[2]).padStart(2, '0')}-${String(dm[1]).padStart(2, '0')}`;
+          }
+        }
+        
         const legLabels = legs.map((l) => {
           const legTimeLabel = l.startTs != null
             ? (l.endTs != null
@@ -2262,7 +2278,7 @@ const TransportApp = ({ userProfileData }) => {
           const legTypeLabel = l.isWalking
             ? 'PEŠI'
             : (l.busName || 'PRESUN');
-
+        
           // Dátum legu – z jeho vlastného startTs, inak z parent dňa
           let legDateLabel = '';
           if (l.startTs != null) {
@@ -2274,23 +2290,22 @@ const TransportApp = ({ userProfileData }) => {
             }
           } else if (parentRange?.startTs) {
             legDateLabel = formatDateDDMMYYYY(parentRange.startTs) || '';
-          } else if (fallbackDayLabel) {
-            // NOVÉ: fallback z parent.when (peší presun bez časov)
-            legDateLabel = fallbackDayLabel;
-          } else if (parent.when) {
-            // NOVÉ: posledný fallback – skúsime vytiahnuť dátum priamo z parent.when
-            const dateMatch = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(parent.when));
-            if (dateMatch) {
-              legDateLabel = `${String(dateMatch[1]).padStart(2, '0')}. ${String(dateMatch[2]).padStart(2, '0')}. ${dateMatch[3]}`;
-            }
+          } else if (robustFallbackDayLabel) {
+            // ─── NOVÉ: robustný fallback z parent.when ───
+            legDateLabel = robustFallbackDayLabel;
           }
 
           // ─── NOVÉ: pre peší presun bez časov nezobrazovať "PEŠI" dvakrát ───
           const timeAndType = (l.isWalking && l.startTs == null && !legTimeLabel.includes('–'))
             ? 'PEŠI'
             : `${legTimeLabel}`;
-
-          return `🚌 ${legTypeLabel} ${legDateLabel ? legDateLabel + ' ' : ''}${timeAndType} | ${l.fromName} → ${l.toName} | ${parentCategory || '-'}`;
+        
+          // ─── NOVÉ: ak je PEŠI bez časov, nepridávame typ dvakrát ───
+          const typePart = (l.isWalking && l.startTs == null && !legTimeLabel.includes('–'))
+            ? ''
+            : `${legTypeLabel} `;
+        
+          return `🚌 ${typePart}${legDateLabel ? legDateLabel + ' ' : ''}${timeAndType} | ${l.fromName} → ${l.toName} | ${parentCategory || '-'}`;
         });
 
         const segmentsLabel = legs
