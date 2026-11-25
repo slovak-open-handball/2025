@@ -31,6 +31,8 @@ const __transportPerTeamBuffer = {
   lastPrintedSignature: '',
   accommodationByKey: new Map(),
   accommodationReady: false,
+  matchDurationByCategory: new Map(),
+  matchDurationReady: false,
 };
 
 const tryPrintPerTeamTimeline = () => {
@@ -361,6 +363,29 @@ const enrichTransfersWithImpliedWalking = (events) => {
     if (!ev || ev.ts == null || !isFinite(ev.ts)) return null;
     let startTs = ev.ts;
     let endTs = ev.ts;
+
+    // ─── NOVÉ: pre zápas použiť trvanie podľa kategórie ───
+    if (ev.kind === 'match') {
+      const category = cleanCategory(ev.category || '');
+      const durationMin =
+        __transportPerTeamBuffer.matchDurationByCategory.get(category) ??
+        null;
+  
+      if (durationMin != null && isFinite(durationMin) && durationMin > 0) {
+        // `ev.ts` je čas začiatku zápasu (podľa scheduledTime)
+        // Koniec = začiatok + trvanie (v minútach) + prípadná prestávka
+        // Ak máte v trvaní už aj prestávku, netreba nič pridávať.
+        // Ak nie, môžete pripočítať napr. 5 minút na prestávku:
+        const MATCH_BREAK_MIN = 0; // zmente na 5, ak treba pripočítať prestávku
+        endTs = startTs + (durationMin + MATCH_BREAK_MIN) * 60 * 1000;
+      } else {
+        // Fallback: ak trvanie nie je známe, použiť predvolené 50 minút
+        const DEFAULT_MATCH_DURATION_MIN = 50;
+        endTs = startTs + DEFAULT_MATCH_DURATION_MIN * 60 * 1000;
+      }
+    }
+  
+    // ─── Existujúca logika pre catering ───
     if (ev.kind === 'catering') {
       const m = /(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/.exec(String(ev.label || ''));
       if (m) {
@@ -375,6 +400,7 @@ const enrichTransfersWithImpliedWalking = (events) => {
         ).getTime();
       }
     }
+
     return { startTs, endTs };
   };
 
@@ -1668,23 +1694,35 @@ const TransportApp = ({ userProfileData }) => {
       }, (e) => {}));
     } catch (e) {}
 
-    // settings/categories → drawColors
+    // settings/categories → matchDuration (trvanie zápasu podľa kategórie)
     try {
       const catRef = doc(window.db, 'settings', 'categories');
       unsubs.push(onSnapshot(catRef, (snap) => {
-        const colorMap = {};
+        const durationMap = new Map();
         if (snap.exists()) {
           const data = snap.data() || {};
           Object.entries(data).forEach(([catId, catData]) => {
             if (!catData) return;
-            const dc = catData.drawColor || null;
-            if (dc) {
-              if (catData.name) colorMap[String(catData.name).trim()] = dc;
-              colorMap[catId] = dc;
+            // Možné polia: matchDuration, duration, matchLength, gameDuration...
+            const rawDuration =
+              catData.matchDuration ??
+              catData.duration ??
+              catData.matchLength ??
+              catData.gameDuration ??
+              null;
+            const durationMin = Number(rawDuration);
+            if (isFinite(durationMin) && durationMin > 0) {
+              if (catData.name) {
+                durationMap.set(cleanCategory(catData.name), durationMin);
+              }
+              durationMap.set(catId, durationMin);
             }
           });
         }
-        transportColorsRef.current = colorMap;
+        __transportPerTeamBuffer.matchDurationByCategory = durationMap;
+        __transportPerTeamBuffer.matchDurationReady = true;
+        __transportPerTeamBuffer.lastPrintedSignature = '';
+        tryPrintPerTeamTimeline();
       }, (e) => {}));
     } catch (e) {}
 
