@@ -33,6 +33,8 @@ const __transportPerTeamBuffer = {
   accommodationReady: false,
 };
 
+window.__transportPerTeamBuffer = __transportPerTeamBuffer;
+
 // ─── Doplnenie chýbajúcich časov pre presun PEŠI medzi dvomi rôznymi miestami ───
 const applyImpliedWalkingTimesFromEvents = (events) => {
   if (!Array.isArray(events) || events.length < 2) return events;
