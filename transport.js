@@ -267,7 +267,11 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
           const candDk = getEffectiveDayKey(cand);
           if (candDk && candDk !== dk) return false;
           const { from: wFrom, to: wTo } = getEventPlaces(cand);
-          return Boolean(normPlace(wFrom)) && normPlace(wTo) === firstPlace;
+          const nFrom = normPlace(wFrom);
+          const nTo = normPlace(wTo);
+          // ─── NOVÉ: ak nemení miesto, nemá zmysel ───
+          if (!nFrom || !nTo || nFrom === nTo) return false;
+          return Boolean(nFrom) && nTo === firstPlace;
         });
 
         if (startWalkIdx !== -1) {
@@ -291,7 +295,11 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
           const candDk = getEffectiveDayKey(cand);
           if (candDk && candDk !== dk) return false;
           const { from: wFrom, to: wTo } = getEventPlaces(cand);
-          return normPlace(wFrom) === lastPlace && Boolean(normPlace(wTo));
+          const nFrom = normPlace(wFrom);
+          const nTo = normPlace(wTo);
+          // ─── NOVÉ: ak nemení miesto, nemá zmysel ───
+          if (!nFrom || !nTo || nFrom === nTo) return false;
+          return nFrom === lastPlace && Boolean(nTo);
         });
       
         // ─── NOVÉ: end-of-day walking pridáme LEN ak nie je v ten deň už žiadna
@@ -382,6 +390,9 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
         const { from: wFrom, to: wTo } = getEventPlaces(cand);
         const nFrom = normPlace(wFrom);
         const nTo = normPlace(wTo);
+        // ─── NOVÉ: ak transfer nemení miesto (from === to), nemá zmysel mu
+        // priraďovať časy z medzery medzi dvomi kotvami — je to zbytočný presun ───
+        if (!nFrom || !nTo || nFrom === nTo) return false;
         if (nFrom !== firstPlace) return false;
         if (secondIsMismatchedTransfer) {
           return Boolean(nTo) && nTo !== firstPlace;
@@ -725,38 +736,81 @@ const tryPrintPerTeamTimeline = () => {
       }
     
       // ─── KROK 4: Pridaj zostávajúce nepoužité transfery, ktoré časovo zapadajú ───
-      // (napr. transfery pred prvou kotvou alebo po poslednej — tiež môžu byť užitočné)
-      // Ale: ak transfer začína až po poslednej kotve dňa a končí na mieste, kde tím
-      // už nebol alebo ide o koniec dňa, môže byť zbytočný → zahodíme ho.
-      // Pre jednoduchosť: ponecháme len transfery, ktoré majú reálne časy a neboli použité,
-      // ALE iba ak nie sú po poslednej kotve dňa (t.j. ich startTs > posledná kotva endTs).
       const lastAnchor = anchors[anchors.length - 1];
       const lastAnchorRange = lastAnchor ? getEventTimeRange(lastAnchor) : null;
       const lastAnchorPlace = lastAnchor ? getEventPlace(lastAnchor) : null;
-    
+      
       for (const t of transfers) {
         if (usedTransfers.has(t)) continue;
-        if (!transferHasTimes(t)) continue; // bez časov zahodíme
-    
+        if (!transferHasTimes(t)) continue;
+      
         const { startTs, endTs } = getTransferTimeRange(t);
         if (startTs == null) continue;
-    
-        // Ak transfer začína po poslednej kotve dňa → zbytočný (tím už nič nemá)
+      
+        const tFromPlace = getTransferFrom(t);
+        const tToPlace = getEventPlace(t);
+        const nFrom = norm(tFromPlace);
+        const nTo = norm(tToPlace);
+      
+        // ─── NOVÉ: ak transfer nemení miesto (from === to), je zbytočný ───
+        if (!nFrom || !nTo || nFrom === nTo) {
+          continue;
+        }
+      
+        // ─── NOVÉ: ak transfer začína aj končí na tom istom mieste ako
+        // najbližšia kotva (pred aj po), je zbytočný ───
+        // Nájdi najbližšiu kotvu pred a po transfere
+        let prevAnchor = null;
+        let nextAnchor = null;
+        for (const a of anchors) {
+          const aRange = getEventTimeRange(a);
+          if (!aRange) continue;
+          if (aRange.endTs != null && aRange.endTs <= startTs) {
+            if (!prevAnchor || aRange.endTs > (getEventTimeRange(prevAnchor)?.endTs ?? -Infinity)) {
+              prevAnchor = a;
+            }
+          }
+          if (aRange.startTs != null && aRange.startTs >= endTs) {
+            if (!nextAnchor || aRange.startTs < (getEventTimeRange(nextAnchor)?.startTs ?? Infinity)) {
+              nextAnchor = a;
+            }
+          }
+        }
+        const prevPlace = prevAnchor ? norm(getEventPlace(prevAnchor)) : null;
+        const nextPlace = nextAnchor ? norm(getEventPlace(nextAnchor)) : null;
+      
+        // Ak prev aj next kotva sú na rovnakom mieste ako from/to transferu → zbytočný
+        if (prevPlace && nextPlace && prevPlace === nextPlace && nFrom === prevPlace && nTo === prevPlace) {
+          continue;
+        }
+      
+        // ─── NOVÉ: ak prev kotva aj next kotva sú na mieste, ktoré transfer
+        // vôbec nespája (t.j. transfer ide niekam inam), zahodíme ho ───
+        if (prevPlace && nextPlace && nFrom === prevPlace && nTo === nextPlace) {
+          // Transfer spája presne miesta predchádzajúcej a nasledujúcej kotvy
+          // → je to legitímny presun medzi nimi, ponecháme
+          result.push(t);
+          continue;
+        }
+        if (prevPlace && nFrom === prevPlace && nextPlace && nTo !== nextPlace) {
+          // Transfer začína na mieste prev kotvy, ale končí inde ako next kotva
+          // → zbytočný (tím sa potom musí vrátiť inam)
+          continue;
+        }
+        if (prevPlace && nFrom !== prevPlace) {
+          // Transfer nezačína na mieste prev kotvy → zbytočný
+          continue;
+        }
+      
+        // Ak transfer začína po poslednej kotve dňa a nevedie na miesto poslednej kotvy → zbytočný
         if (lastAnchorRange && lastAnchorRange.endTs != null && startTs >= lastAnchorRange.endTs) {
-          // Ale ak transfer vedie na miesto poslednej kotvy (tím sa vracia na ubytovanie),
-          // môže byť užitočný — ponecháme ho.
-          const fromPlace = getTransferFrom(t);
-          const toPlace = getEventPlace(t);
           const lastAnchorNorm = norm(lastAnchorPlace);
-          const toNorm = norm(toPlace);
-          if (toNorm !== lastAnchorNorm) {
-            // Transfer ide inam ako posledná kotva → zbytočný, zahodíme
+          if (nTo !== lastAnchorNorm) {
             continue;
           }
         }
-    
+      
         // Transfer je pred prvou kotvou alebo medzi kotvami, ale nebol priradený
-        // (napr. preto, že miesta nesedeli) → ponecháme ho (môže ísť o presun z ubytovania)
         result.push(t);
       }
     
