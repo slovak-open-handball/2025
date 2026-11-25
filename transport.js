@@ -2876,17 +2876,25 @@ const TransportApp = ({ userProfileData }) => {
         if (ev.kind === 'match' || ev.kind === 'catering') {
           console.log(`${i + 1}. ${ev.label}`);
         } else if (ev.kind === 'transfer') {
-          // Pre transfer: hlavička + rozbalenie legs
+          const dayDateLabel = (() => {
+            if (!ev.dayKey) return '';
+            const parts = String(ev.dayKey).split('-');
+            if (parts.length !== 3) return String(ev.dayKey);
+            return `${parts[2]}. ${parts[1]}. ${parts[0]}`;
+          })();
+
           const head = ev.timeLabel
-            ? `${i + 1}. 🚌 ${ev.timeLabel} | ${ev.title}${ev.busName ? ` | ${ev.busName}` : ''}`
+            ? `${i + 1}. 🚌 ${dayDateLabel ? `${dayDateLabel} | ` : ''}${ev.timeLabel} | ${ev.title}${ev.busName ? ` | ${ev.busName}` : ''}`
             : `${i + 1}. ${ev.label}`;
           console.log(head);
+
           for (const leg of ev.legs || []) {
             const icon = leg.isWalking ? '🚶' : '🚌';
             const busTxt = leg.isWalking ? 'PEŠI' : (leg.busName || 'PRESUN');
             const t1 = leg.startTime || '--:--';
             const t2 = leg.endTime || '--:--';
-            console.log(`     ${icon} ${busTxt} ${t1}–${t2} | ${leg.fromName} → ${leg.toName}`);
+            const datePart = dayDateLabel ? `${dayDateLabel} ` : '';
+            console.log(`     ${icon} ${busTxt} ${datePart}${t1}–${t2} | ${leg.fromName} → ${leg.toName}`);
           }
         }
       });
