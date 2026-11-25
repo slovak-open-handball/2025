@@ -22,23 +22,28 @@ const { useState, useEffect, useRef, useMemo } = React;
 /* ------------------------------------------------------------------ */
 
 const __transportPerTeamBuffer = {
-  matches: [],          // [{ teamName, ts, sortKey, label, ... }]
-  catering: [],         // [{ teamName, ts, sortKey, label, ... }]
+  matches: [],
+  catering: [],
+  transfers: [],
   matchesReady: false,
   cateringReady: false,
+  transfersReady: false,
   lastPrintedSignature: '',
-  // Mapa (kategória|tím) -> názov ubytovne (alebo 'bez ubytovania')
   accommodationByKey: new Map(),
   accommodationReady: false,
 };
 
-
 const tryPrintPerTeamTimeline = () => {
-  if (!__transportPerTeamBuffer.matchesReady || !__transportPerTeamBuffer.cateringReady) return;
+  if (
+    !__transportPerTeamBuffer.matchesReady ||
+    !__transportPerTeamBuffer.cateringReady ||
+    !__transportPerTeamBuffer.transfersReady
+  ) return;
 
   const all = [
     ...__transportPerTeamBuffer.matches,
     ...__transportPerTeamBuffer.catering,
+    ...__transportPerTeamBuffer.transfers,
   ];
 
   // Zoskupenie podľa KATEGÓRIA + TÍM (aby sa tímy s rovnakým menom v rôznych kategóriách nemiešali)
@@ -65,12 +70,14 @@ const tryPrintPerTeamTimeline = () => {
   const output = {};
   for (const key of teamsSorted) {
     const [cat, team] = key.split('|');
+    const KIND_PRIORITY = { match: 0, transfer: 1, catering: 2 };
+
     const list = byTeam.get(key).slice().sort((a, b) => {
       if (a.ts !== b.ts) return a.ts - b.ts;
-      // pri rovnakom čase: zápas pred stravovaním
-      const aIsMatch = a.kind === 'match' ? 0 : 1;
-      const bIsMatch = b.kind === 'match' ? 0 : 1;
-      if (aIsMatch !== bIsMatch) return aIsMatch - bIsMatch;
+      // pri rovnakom čase: zápas → transfer → stravovanie
+      const aP = KIND_PRIORITY[a.kind] ?? 9;
+      const bP = KIND_PRIORITY[b.kind] ?? 9;
+      if (aP !== bP) return aP - bP;
       return String(a.sortKey || '').localeCompare(String(b.sortKey || ''), 'sk');
     });
     // kľúč výstupu = "TÍM (KATEGÓRIA)"
@@ -1502,6 +1509,153 @@ const TransportApp = ({ userProfileData }) => {
 
     return () => clearTimeout(retryTimer);
   }, [savedTransfers]);
+
+  // Naplnenie bufferu pre per-tím timeline (transfery)
+  useEffect(() => {
+    if (!savedTransfers || savedTransfers.length === 0) {
+      __transportPerTeamBuffer.transfers = [];
+      __transportPerTeamBuffer.transfersReady = true;
+      tryPrintPerTeamTimeline();
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      // Počkáme na mapovanie (rovnako ako pri zápasoch a stravovaní)
+      if (!isMappingReady()) {
+        await waitForMappingReady(1500, 50, 4000);
+      }
+      if (cancelled) return;
+
+      const transfersEventsForBuffer = [];
+
+      for (const parent of savedTransfers) {
+        if (parent._parentKey && parent._parentKey !== parent.key) continue;
+
+        const parentCategory = cleanCategory(parent.category || '');
+        const rawTeamName = String(parent.teamName || '').trim();
+        if (!rawTeamName) continue;
+
+        // Mapovanie názvu tímu rovnako ako pri zápasoch
+        let mappedTeamName = rawTeamName;
+        try {
+          const viaDisplay = await resolveTeamNameForDisplay(rawTeamName, parentCategory);
+          if (viaDisplay && String(viaDisplay).trim() !== '' && String(viaDisplay).trim() !== 'null') {
+            mappedTeamName = String(viaDisplay).trim();
+          } else if (trackerResolvedNamesRef.current?.[rawTeamName]) {
+            mappedTeamName = trackerResolvedNamesRef.current[rawTeamName];
+          }
+        } catch (e) {
+          if (trackerResolvedNamesRef.current?.[rawTeamName]) {
+            mappedTeamName = trackerResolvedNamesRef.current[rawTeamName];
+          }
+        }
+
+        // Vypočítame čas (startTs z parent.when, prípadne zo segmentov)
+        const parentRange = parseWhenRangeToTs(parent.when);
+        let ts = parentRange?.startTs != null ? parentRange.startTs : Number.POSITIVE_INFINITY;
+
+        // Ak má parent segmenty s reálnymi časmi, použijeme najskorší
+        if (Array.isArray(parent.segments) && parent.segments.length > 0) {
+          let minSegTs = null;
+          for (const seg of parent.segments) {
+            if (seg && seg.startTs != null && (minSegTs == null || seg.startTs < minSegTs)) {
+              minSegTs = seg.startTs;
+            }
+          }
+          if (minSegTs != null && (ts === Number.POSITIVE_INFINITY || minSegTs < ts)) {
+            ts = minSegTs;
+          }
+        }
+
+        // Zostavíme trasu z fromId + intermediateStopIds + toId
+        const stopsIds = Array.isArray(parent.intermediateStopIds)
+          ? parent.intermediateStopIds.filter(Boolean)
+          : [];
+        const routeIdsRaw = [parent.fromId, ...stopsIds, parent.toId].filter(Boolean);
+        const routeIds = [];
+        routeIdsRaw.forEach((id) => {
+          if (routeIds.length === 0 || routeIds[routeIds.length - 1] !== id) routeIds.push(id);
+        });
+        if (routeIds.length < 2) continue;
+
+        // Zistíme typ presunu (bus / walking / nepriradený)
+        const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
+        let hasAnyRealTime = false;
+        let allWalking = true;
+        let anyWalking = false;
+        let busName = null;
+
+        for (let i = 0; i < routeIds.length - 1; i++) {
+          const fromId = routeIds[i];
+          const toId = routeIds[i + 1];
+          if (fromId === toId) continue;
+          const seg = parentSegments.find((s) => s && s.fromId === fromId && s.toId === toId) || null;
+          const legWalking = !!(seg && seg.isWalking === true);
+          const legHasTimes = !!(seg && seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs);
+          if (legHasTimes) hasAnyRealTime = true;
+          if (legWalking) anyWalking = true;
+          if (!legWalking) allWalking = false;
+          if (!busName && seg?.busId) {
+            const b = buses.find((x) => x.id === String(seg.busId));
+            busName = b?.name || `Bus ${seg.busId}`;
+          }
+        }
+
+        let typeLabel = 'PRESUN';
+        if (allWalking) typeLabel = 'PRESUN PEŠI';
+        else if (hasAnyRealTime) typeLabel = 'PRESUN BUSOM';
+        else typeLabel = 'PRESUN (nepriradený)';
+
+        // Zostavíme label
+        const fromName = resolvePlaceNameById(routeIds[0]);
+        const toName = resolvePlaceNameById(routeIds[routeIds.length - 1]);
+        const whenLabel = parent.when
+          ? String(parent.when)
+          : (ts !== Number.POSITIVE_INFINITY
+              ? (formatDateTime(ts) || '-')
+              : '-');
+
+        const segmentsLabel = routeIds
+          .map((id) => resolvePlaceNameById(id))
+          .join(' → ');
+
+        const busLabel = busName ? ` | ${busName}` : '';
+
+        // Získanie dayKey (pre konzistenciu)
+        let dayKey = parent.dayKey || null;
+        if (!dayKey && ts !== Number.POSITIVE_INFINITY) {
+          const d = new Date(ts);
+          dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        if (!dayKey && parentRange?.startTs) {
+          const d = new Date(parentRange.startTs);
+          dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        transfersEventsForBuffer.push({
+          kind: 'transfer',
+          teamName: mappedTeamName,
+          category: parentCategory,
+          ts,
+          dayKey,
+          sortKey: `${dayKey || ''}|${whenLabel}|${segmentsLabel}`,
+          label: `🚌 ${typeLabel} ${whenLabel} | ${segmentsLabel}${busLabel} | ${parentCategory || '-'}`,
+        });
+      }
+
+      if (cancelled) return;
+
+      __transportPerTeamBuffer.transfers = transfersEventsForBuffer;
+      __transportPerTeamBuffer.transfersReady = true;
+      __transportPerTeamBuffer.lastPrintedSignature = ''; // reset, aby sa prekreslil výpis
+      tryPrintPerTeamTimeline();
+    })();
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedTransfers, trackerResolvedNames, buses, allPlaces]);
 
   const isTeamNameResolved = (teamName, categoryName) => {
     if (!teamName) return false;
