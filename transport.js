@@ -599,57 +599,114 @@ const TransportApp = ({ userProfileData }) => {
       }, (e) => {}));
     } catch (e) {}
 
-    // matches → sledovanie completed zápasov + volanie matchTracker.getTeamNameByDisplayId
-    // matches → sledovanie completed zápasov + volanie matchTracker.getTeamNameByDisplayId
+    // matches → sledovanie VŠETKÝCH zápasov + completed stavov + matchTracker mapovanie
     try {
       const matchesRef = collection(window.db, 'matches');
       unsubs.push(onSnapshot(matchesRef, (snap) => {
         const completedTeams = new Set();
         let anyMatchCompletedNow = false;
-
+        let anyChangeDetected = false;
+    
+        // 1) Detekcia zmien v statusoch (completed)
         snap.docChanges().forEach((change) => {
           const data = change.doc.data() || {};
           const prevStatus = matchStatusesRef.current[change.doc.id];
           const currStatus = data.status || 'scheduled';
           matchStatusesRef.current[change.doc.id] = currStatus;
-
+    
+          if (change.type !== 'removed') {
+            anyChangeDetected = true;
+          }
+    
           if (currStatus === 'completed' && prevStatus !== 'completed') {
             anyMatchCompletedNow = true;
+            console.log(`✅ Zápas UKONČENÝ: ${change.doc.id}`, {
+              homeTeam: data.homeTeamName || data.homeTeamIdentifier || data.homeTeam || '?',
+              awayTeam: data.awayTeamName || data.awayTeamIdentifier || data.awayTeam || '?',
+              homeScore: data.homeScore,
+              awayScore: data.awayScore,
+              categoryId: data.categoryId,
+              categoryName: data.categoryName,
+              status: currStatus,
+            });
           }
         });
-
+    
+        // 2) Zozbieranie VŠETKÝCH zápasov (nielen completed)
+        const allMatches = [];
         snap.forEach((d) => {
           const data = d.data() || {};
-          if (data.status !== 'completed') return;
-
-          const candidates = [
-            data.homeTeamIdentifier,
-            data.awayTeamIdentifier,
-            data.homeTeamName,
-            data.awayTeamName,
-            data.homeTeam,
-            data.awayTeam,
-          ].filter(Boolean).map((v) => String(v).trim());
-
-          candidates.forEach((name) => {
-            completedTeams.add(name);
-            completedTeams.add(name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+          allMatches.push({
+            id: d.id,
+            status: data.status || 'scheduled',
+            categoryId: data.categoryId || null,
+            categoryName: data.categoryName || null,
+            groupName: data.groupName || null,
+            matchType: data.matchType || null,
+            isPlacementMatch: data.isPlacementMatch === true,
+            homeTeamIdentifier: data.homeTeamIdentifier || null,
+            awayTeamIdentifier: data.awayTeamIdentifier || null,
+            homeTeamName: data.homeTeamName || null,
+            awayTeamName: data.awayTeamName || null,
+            homeTeam: data.homeTeam || null,
+            awayTeam: data.awayTeam || null,
+            homeScore: data.homeScore ?? null,
+            awayScore: data.awayScore ?? null,
+            scheduledTime: data.scheduledTime || data.matchDate || null,
           });
+    
+          // Zber completed tímov (pre existujúcu logiku skrývania nerozriešených presunov)
+          if (data.status === 'completed') {
+            const candidates = [
+              data.homeTeamIdentifier,
+              data.awayTeamIdentifier,
+              data.homeTeamName,
+              data.awayTeamName,
+              data.homeTeam,
+              data.awayTeam,
+            ].filter(Boolean).map((v) => String(v).trim());
+    
+            candidates.forEach((name) => {
+              completedTeams.add(name);
+              completedTeams.add(name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+            });
+          }
         });
-
+    
+        // 3) Výpis VŠETKÝCH zápasov do konzoly (prehľadná tabuľka)
+        if (anyChangeDetected || matchesLoadedRef.current === false) {
+          console.log(`📋 TRANSPORT.JS – načítaných ${allMatches.length} zápasov z kolekcie 'matches':`);
+          if (console.table) {
+            console.table(allMatches.map((m) => ({
+              id: m.id,
+              status: m.status,
+              kategória: m.categoryName || m.categoryId || '-',
+              skupina: m.groupName || '-',
+              typ: m.matchType || '-',
+              domáci: m.homeTeamName || m.homeTeamIdentifier || m.homeTeam || '?',
+              hostia: m.awayTeamName || m.awayTeamIdentifier || m.awayTeam || '?',
+              skóre: (m.homeScore ?? '-') + ':' + (m.awayScore ?? '-'),
+            })));
+          } else {
+            console.log(allMatches);
+          }
+        }
+    
         completedTeamsRef.current = completedTeams;
         matchesLoadedRef.current = true;
         setMatchesVersion((v) => v + 1);
-
-        resolveTransfersViaMatchTracker(savedTransfersRef.current);
-        if (anyMatchCompletedNow) {
+    
+        // 4) Pri akejkoľvek zmene zápasov skús znova namapovať názvy tímov v presunoch
+        if (anyChangeDetected || anyMatchCompletedNow) {
           resolveTransfersViaMatchTracker(savedTransfersRef.current);
         }
       }, (e) => {
-        console.error('matches snapshot error', e);
+        console.error('transport.js: matches snapshot error', e);
         matchesLoadedRef.current = true;
       }));
-    } catch (e) {}
+    } catch (e) {
+      console.error('transport.js: nepodarilo sa prihlásiť na matches', e);
+    }
 
     return () => unsubs.forEach((u) => u && u());
   }, []);
