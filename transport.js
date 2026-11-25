@@ -2533,6 +2533,34 @@ const TransportApp = ({ userProfileData }) => {
     return filteredUiEvents;
   }, [savedTransfers, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces, matchesVersion, trackerResolvedNames]);
 
+  useEffect(() => {
+    if (!timelineEvents || timelineEvents.length === 0) return;
+    const sig = JSON.stringify(timelineEvents.map(e => ({
+      id: e.id, day: e.dayKey, title: e.title, legs: e.legs,
+      category: e.category, team: e.teamName, timeLabel: e.timeLabel,
+    })));
+    if (sig === __lastUiConsoleSig) return;
+    __lastUiConsoleSig = sig;
+
+    console.log('📅 UI TIMELINE (rovnaké ako v tabuľke):');
+    const byTeam = new Map();
+    for (const ev of timelineEvents) {
+      const key = `${ev.category}|${ev.teamName}`;
+      if (!byTeam.has(key)) byTeam.set(key, []);
+      byTeam.get(key).push(ev);
+    }
+    for (const [key, list] of byTeam) {
+      console.groupCollapsed(`👥 ${key} (${list.length})`);
+      list.forEach((ev, i) => {
+        console.log(`${i + 1}. ${ev.timeLabel} | ${ev.title} | ${ev.category}`);
+        for (const leg of ev.legs) {
+          console.log(`   ${leg.isWalking ? '🚶' : '🚌'} ${leg.startTime}–${leg.endTime} ${leg.fromName} → ${leg.toName} ${leg.busName || ''}`);
+        }
+      });
+      console.groupEnd();
+    }
+  }, [timelineEvents]);
+
   /* --- Skupiny podľa dňa --- */
   const eventsByDay = useMemo(() => {
     const map = {};
