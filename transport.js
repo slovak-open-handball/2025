@@ -286,22 +286,17 @@ const tryPrintPerTeamTimeline = () => {
         if (k) timedPairs.add(k);
       }
 
+      // ─── NOVÉ: odstránenie VŠETKÝCH transferov bez časov ───
+      // Po doplnení časov (z okolitých udalostí alebo syntetických) sú vo výpise
+      // ponechané iba transfery, ktoré majú reálne časy. Všetko bez časov sa zahodí.
       const filtered = result.filter((ev) => {
-        if (ev.kind !== 'transfer') return true;
+        if (ev.kind !== 'transfer') return true; // match/catering vždy nechaj
         const legs = ev.legs || [];
-        if (legs.length === 0) return true;
-        const hasTimes = legs.some((l) => l.startTs != null && l.endTs != null && l.endTs > l.startTs);
-        if (hasTimes) return true; // necháme transfery s časmi
-
-        // Transfer bez časov – skontrolujeme, či existuje timed transfer pre rovnakú dvojicu miest v tom istom dni
-        const first = legs[0];
-        const last = legs[legs.length - 1];
-        const a = norm(first.fromName);
-        const b = norm(last.toName);
-        const pair = [a, b].sort().join('||');
-        const key = `${ev.dayKey || ''}||${pair}`;
-        if (timedPairs.has(key)) return false; // zahoď duplicitný bez časov
-        return true;
+        if (legs.length === 0) return false;
+        const hasTimes = legs.some(
+          (l) => l.startTs != null && l.endTs != null && l.endTs > l.startTs
+        );
+        return hasTimes;
       });
 
       return filtered;
