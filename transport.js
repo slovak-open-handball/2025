@@ -423,6 +423,19 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
       if (!assigned) return ev;
       return buildUpdatedWalkingTransfer(ev, assigned.startTs, assigned.endTs, assigned.dayKey);
     })
+    // ─── NOVÉ: zahodiť akýkoľvek transfer, ktorý nemení miesto ───
+    .filter((ev) => {
+      if (!ev || ev.kind !== 'transfer') return true;
+      const legs = ev.legs || [];
+      if (legs.length === 0) {
+        const p = getEventPlaces(ev);
+        return normPlace(p.from) !== normPlace(p.to) || !p.from || !p.to;
+      }
+      const firstFrom = normPlace(legs[0]?.fromName);
+      const lastTo = normPlace(legs[legs.length - 1]?.toName);
+      if (!firstFrom || !lastTo) return true;
+      return firstFrom !== lastTo;
+    })
     .sort((a, b) => {
       const aTs = a.ts != null && isFinite(a.ts) ? a.ts : Number.POSITIVE_INFINITY;
       const bTs = b.ts != null && isFinite(b.ts) ? b.ts : Number.POSITIVE_INFINITY;
