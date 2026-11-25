@@ -367,6 +367,19 @@ const useCateringConsoleLog = (
 ) => {
   const loggedSignatureRef = useRef('');
 
+  // Ref na najnovšie hodnoty, aby log vždy používal aktuálne dáta
+  // bez toho, aby sa effect re-subscriboval pri každej zmene.
+  const trackerResolvedNamesRef = useRef(trackerResolvedNames);
+  const resolvePlaceNameByIdRef = useRef(resolvePlaceNameById);
+
+  useEffect(() => {
+    trackerResolvedNamesRef.current = trackerResolvedNames;
+  }, [trackerResolvedNames]);
+
+  useEffect(() => {
+    resolvePlaceNameByIdRef.current = resolvePlaceNameById;
+  });
+
   useEffect(() => {
     if (!db) return;
 
@@ -433,7 +446,7 @@ const useCateringConsoleLog = (
           (mealType || '-');
 
         const placeName = a.placeId
-          ? (resolvePlaceNameById?.(a.placeId) || placesMap.get(a.placeId) || a.placeName || '-')
+          ? (resolvePlaceNameByIdRef.current?.(a.placeId) || placesMap.get(a.placeId) || a.placeName || '-')
           : (a.placeName || '-');
 
         const timeRange = a.slotFrom && a.slotTo
@@ -463,7 +476,7 @@ const useCateringConsoleLog = (
 
         const trimmedRawTeam = String(rawTeamName || '').trim();
         const resolvedTeamName =
-          (trimmedRawTeam && trackerResolvedNames?.[trimmedRawTeam]) || trimmedRawTeam || '-';
+          (trimmedRawTeam && trackerResolvedNamesRef.current?.[trimmedRawTeam]) || trimmedRawTeam || '-';
 
         return {
           id: a.id,
