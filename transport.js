@@ -400,6 +400,19 @@ const tryPrintPerTeamTimeline = () => {
         if (!transferDayLabel && ev.ts != null && isFinite(ev.ts)) {
           transferDayLabel = formatDateDDMMYYYY(ev.ts) || '';
         }
+        // ─── NOVÉ: fallback z legs (každý leg má startTs/endTs, ak má reálne časy) ───
+        if (!transferDayLabel && Array.isArray(ev.legs)) {
+          for (const leg of ev.legs) {
+            if (leg.startTs != null && isFinite(leg.startTs)) {
+              transferDayLabel = formatDateDDMMYYYY(leg.startTs) || '';
+              if (transferDayLabel) break;
+            }
+            if (leg.endTs != null && isFinite(leg.endTs)) {
+              transferDayLabel = formatDateDDMMYYYY(leg.endTs) || '';
+              if (transferDayLabel) break;
+            }
+          }
+        }
 
         for (const legLine of ev.legLabels) {
           // Ak legLine už obsahuje dátum (napr. "🚌 Bus 2 25. 12. 2026 11:15 – 11:30 | ..."),
@@ -416,7 +429,6 @@ const tryPrintPerTeamTimeline = () => {
         }
       } else {
         // ─── NOVÉ: pre eventy bez legLabels (napr. peší presun bez časov)
-        // skúsime doplniť dátum z ev.dayKey / ev.ts, ak ešte nie je v labeli
         let evDayLabel = '';
         if (ev.dayKey) {
           const parts = String(ev.dayKey).split('-');
@@ -426,6 +438,19 @@ const tryPrintPerTeamTimeline = () => {
         }
         if (!evDayLabel && ev.ts != null && isFinite(ev.ts)) {
           evDayLabel = formatDateDDMMYYYY(ev.ts) || '';
+        }
+        // ─── NOVÉ: fallback z legs ───
+        if (!evDayLabel && Array.isArray(ev.legs)) {
+          for (const leg of ev.legs) {
+            if (leg.startTs != null && isFinite(leg.startTs)) {
+              evDayLabel = formatDateDDMMYYYY(leg.startTs) || '';
+              if (evDayLabel) break;
+            }
+            if (leg.endTs != null && isFinite(leg.endTs)) {
+              evDayLabel = formatDateDDMMYYYY(leg.endTs) || '';
+              if (evDayLabel) break;
+            }
+          }
         }
         const hasDateInLabel = /\d{1,2}\.\s*\d{1,2}\.\s*\d{4}/.test(String(ev.label || ''));
         if (evDayLabel && !hasDateInLabel) {
