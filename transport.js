@@ -214,6 +214,23 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
     const firstPlace = normPlace(firstPlaces.to || firstPlaces.from);
     if (!firstPlace) continue;
 
+    // Ak je ďalšia udalosť na tom istom mieste (firstPlace), presun až po nej rieši ďalšia iterácia
+    let hasLaterEventOnSamePlace = false;
+    for (let k = i + 1; k < sorted.length; k++) {
+      const later = sorted[k];
+      if (isWalkingTransferWithoutTime(later)) continue;
+      const laterRange = getEventStartEndTs(later);
+      if (!laterRange || laterRange.startTs == null) continue;
+      const laterPlaces = getEventPlaces(later);
+      const laterPlace = normPlace(laterPlaces.from || laterPlaces.to);
+      if (laterPlace === firstPlace && laterRange.endTs > firstRange.endTs) {
+        hasLaterEventOnSamePlace = true;
+        break;
+      }
+      if (laterPlace && laterPlace !== firstPlace) break;
+    }
+    if (hasLaterEventOnSamePlace) continue;
+
     for (let j = i + 1; j < sorted.length; j++) {
       const second = sorted[j];
       if (isWalkingTransferWithoutTime(second)) continue;
