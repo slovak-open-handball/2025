@@ -2148,17 +2148,17 @@ const TransportApp = ({ userProfileData }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedTransfers, trackerResolvedNames, buses, allPlaces]);
 
-  const isTeamNameResolved = (teamName, categoryName) => {
+  const isTeamNameResolved = (teamName, categoryName, teamFilter, teamCatFilter) => {
     if (!teamName) return false;
     const tn = String(teamName).trim();
     const cat = categoryName ? cleanCategory(categoryName) : '';
-
+  
     // Ak je nastavený filter tímu a názov mu priamo zodpovedá, berieme ako resolved
     if (teamFilter && tn === teamFilter) return true;
     if (teamCatFilter && cat !== teamCatFilter) return true; // iná kategória — nezaujíma nás
-  
-    if (!cat || !tn.includes(cat)) return true;
 
+    if (!cat || !tn.includes(cat)) return true;
+  
     const mapped = trackerResolvedNamesRef.current[tn] ?? trackerResolvedNames[tn];
     return (
       mapped !== undefined &&
@@ -2283,7 +2283,7 @@ const TransportApp = ({ userProfileData }) => {
       if (parent._parentKey && parent._parentKey !== parent.key) return;
       if (catFilter && cleanCategory(parent.category || '') !== catFilter) return;
       if (!eventMatchesTeamFilter(parent.teamName, parent.category)) return;
-      if (!isTeamNameResolved(parent.teamName, parent.category)) return;
+      if (!isTeamNameResolved(parent.teamName, parent.category, teamFilter, teamCatFilter)) return;
   
       const stopsIds = Array.isArray(parent.intermediateStopIds)
         ? parent.intermediateStopIds.filter(Boolean)
