@@ -2233,11 +2233,23 @@ const TransportApp = ({ userProfileData }) => {
     // ─── 1) Zozbierame VŠETKY eventy tímu v buffer-tvare ───
     const allEventsForEnrichment = [];
   
+    // Pomocná funkcia na kontrolu, či event patrí filtrovanému tímu
+    // (zohľadní mapovanie názvov cez trackerResolvedNames)
+    const eventMatchesTeamFilter = (teamName, category) => {
+      if (!teamFilter && !teamCatFilter) return true;
+      if (teamCatFilter && cleanCategory(category || '') !== teamCatFilter) return false;
+      if (!teamFilter) return true;
+      const tn = String(teamName || '').trim();
+      if (tn === teamFilter) return true;
+      const mappedEv = trackerResolvedNamesRef.current[tn] || trackerResolvedNames[tn];
+      if (mappedEv && String(mappedEv).trim() === teamFilter) return true;
+      return false;
+    };
+
     // 1a) Match eventy z bufferu
     for (const m of (__transportPerTeamBuffer.matches || [])) {
       if (catFilter && cleanCategory(m.category || '') !== catFilter) continue;
-      if (teamFilter && String(m.teamName || '').trim() !== teamFilter) continue;
-      if (teamCatFilter && cleanCategory(m.category || '') !== teamCatFilter) continue;
+      if (!eventMatchesTeamFilter(m.teamName, m.category)) continue;
       if (dayFilter) {
         const d = m.ts != null && isFinite(m.ts) ? new Date(m.ts) : null;
         const k = d
@@ -2251,8 +2263,7 @@ const TransportApp = ({ userProfileData }) => {
     // 1b) Catering eventy z bufferu
     for (const c of (__transportPerTeamBuffer.catering || [])) {
       if (catFilter && cleanCategory(c.category || '') !== catFilter) continue;
-      if (teamFilter && String(c.teamName || '').trim() !== teamFilter) continue;
-      if (teamCatFilter && cleanCategory(c.category || '') !== teamCatFilter) continue;
+      if (!eventMatchesTeamFilter(c.teamName, c.category)) continue;
       if (dayFilter) {
         const d = c.ts != null && isFinite(c.ts) ? new Date(c.ts) : null;
         const k = d
@@ -2267,8 +2278,7 @@ const TransportApp = ({ userProfileData }) => {
     (savedTransfers || []).forEach((parent) => {
       if (parent._parentKey && parent._parentKey !== parent.key) return;
       if (catFilter && cleanCategory(parent.category || '') !== catFilter) return;
-      if (teamFilter && String(parent.teamName || '').trim() !== teamFilter) return;
-      if (teamCatFilter && cleanCategory(parent.category || '') !== teamCatFilter) return;
+      if (!eventMatchesTeamFilter(parent.teamName, parent.category)) return;
       if (!isTeamNameResolved(parent.teamName, parent.category)) return;
   
       const stopsIds = Array.isArray(parent.intermediateStopIds)
@@ -2612,8 +2622,6 @@ const TransportApp = ({ userProfileData }) => {
       if (evTn === teamFilter) return true;
       const mappedEv = trackerResolvedNamesRef.current[evTn] || trackerResolvedNames[evTn];
       if (mappedEv && String(mappedEv).trim() === teamFilter) return true;
-      const mappedSel = trackerResolvedNamesRef.current[teamFilter] || trackerResolvedNames[teamFilter];
-      if (mappedSel && String(mappedSel).trim() === evTn) return true;
       return false;
     };
     
