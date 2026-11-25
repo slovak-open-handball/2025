@@ -415,7 +415,24 @@ const tryPrintPerTeamTimeline = () => {
           }
         }
       } else {
-        rows.push(ev.label);
+        // ─── NOVÉ: pre eventy bez legLabels (napr. peší presun bez časov)
+        // skúsime doplniť dátum z ev.dayKey / ev.ts, ak ešte nie je v labeli
+        let evDayLabel = '';
+        if (ev.dayKey) {
+          const parts = String(ev.dayKey).split('-');
+          if (parts.length === 3) {
+            evDayLabel = `${parts[2]}. ${parts[1]}. ${parts[0]}`;
+          }
+        }
+        if (!evDayLabel && ev.ts != null && isFinite(ev.ts)) {
+          evDayLabel = formatDateDDMMYYYY(ev.ts) || '';
+        }
+        const hasDateInLabel = /\d{1,2}\.\s*\d{1,2}\.\s*\d{4}/.test(String(ev.label || ''));
+        if (evDayLabel && !hasDateInLabel) {
+          rows.push(`📅 ${evDayLabel} | ${ev.label}`);
+        } else {
+          rows.push(ev.label);
+        }
       }
     }
     output[displayKey] = rows;
