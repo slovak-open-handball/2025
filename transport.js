@@ -1993,11 +1993,11 @@ const TransportApp = ({ userProfileData }) => {
         };
 
         const arrivalDt = toDate(data.arrivalDate);
-        __transportPerTeamBuffer.arrivalTimestamp = arrivalDt && !isNaN(arrivalDt.getTime())
+        window.__transportPerTeamBuffer.arrivalTimestamp = arrivalDt && !isNaN(arrivalDt.getTime())
           ? arrivalDt.getTime()
           : null;
 
-        __transportPerTeamBuffer.firstTournamentDayKey = start && !isNaN(start.getTime())
+        window.__transportPerTeamBuffer.firstTournamentDayKey = start && !isNaN(start.getTime())
           ? `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`
           : null;
         
