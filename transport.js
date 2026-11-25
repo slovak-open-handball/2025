@@ -500,6 +500,7 @@ const enrichTransfersWithImpliedWalking = (events) => {
         _synthetic: true,
       });
     }
+  }
 
   const resultWithTail = [];
   for (let i = 0; i < result.length; i++) {
