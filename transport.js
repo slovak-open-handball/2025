@@ -2743,10 +2743,10 @@ const TransportApp = ({ userProfileData }) => {
           className: 'w-full border border-gray-300 rounded px-3 py-2 text-sm',
           value: selectedCategory,
           onChange: (e) => {
-              setSelectedCategory(e.target.value);
-              setSelectedTeam('');
-              setSelectedTeamCategory('');
-            },
+            setSelectedCategory(e.target.value);
+            setSelectedTeam('');
+            setSelectedTeamCategory('');
+          },
         },
           React.createElement('option', { value: '' }, 'Všetky kategórie'),
           ...availableCategories.map((c) => React.createElement('option', { key: c, value: c }, c))
@@ -2757,7 +2757,7 @@ const TransportApp = ({ userProfileData }) => {
         React.createElement('select', {
           className: 'w-full border border-gray-300 rounded px-3 py-2 text-sm',
           value: selectedTeam ? `${selectedTeamCategory}|${selectedTeam}` : '',
-          onChange: async (e) => {
+          onChange: (e) => {
             const v = e.target.value;
             if (!v) {
               setSelectedTeam('');
@@ -2770,20 +2770,22 @@ const TransportApp = ({ userProfileData }) => {
             setSelectedTeam(rawTeamName);
 
             // Predbežné namapovanie, aby filter fungoval hneď
-            try {
-              const mapped = await resolveTeamNameForDisplay(rawTeamName, cat);
-              if (
-                mapped &&
-                String(mapped).trim() !== '' &&
-                String(mapped).trim() !== 'null' &&
-                String(mapped).trim() !== rawTeamName
-              ) {
-                const nextMap = { ...trackerResolvedNamesRef.current, [rawTeamName]: String(mapped).trim() };
-                trackerResolvedNamesRef.current = nextMap;
-                setTrackerResolvedNames(nextMap);
-              }
-            } catch (err) {}
+            resolveTeamNameForDisplay(rawTeamName, cat)
+              .then((mapped) => {
+                if (
+                  mapped &&
+                  String(mapped).trim() !== '' &&
+                  String(mapped).trim() !== 'null' &&
+                  String(mapped).trim() !== rawTeamName
+                ) {
+                  const nextMap = { ...trackerResolvedNamesRef.current, [rawTeamName]: String(mapped).trim() };
+                  trackerResolvedNamesRef.current = nextMap;
+                  setTrackerResolvedNames(nextMap);
+                }
+              })
+              .catch(() => {});
           },
+        },
           React.createElement('option', { value: '' }, 'Všetky tímy'),
           ...availableTeams.map((t) => {
             const [cat, name] = t.split('|');
