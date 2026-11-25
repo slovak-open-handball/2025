@@ -2539,8 +2539,8 @@ const TransportApp = ({ userProfileData }) => {
       id: e.id, day: e.dayKey, title: e.title, legs: e.legs,
       category: e.category, team: e.teamName, timeLabel: e.timeLabel,
     })));
-    if (sig === __lastUiConsoleSig) return;
-    __lastUiConsoleSig = sig;
+    if (sig === window.__lastUiConsoleSig) return;
+    window.__lastUiConsoleSig = sig;
 
     console.log('📅 UI TIMELINE (rovnaké ako v tabuľke):');
     const byTeam = new Map();
