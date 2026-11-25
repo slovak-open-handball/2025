@@ -452,6 +452,37 @@ const enrichTransfersWithImpliedWalking = (events) => {
     const endTs = nextRange.startTs;
     if (!(endTs > startTs)) continue;
 
+    // ─── NOVÉ: ak je `ev` posledná udalosť dňa a je na mieste ubytovania,
+    //     negenerujeme peší presun (tím zostane na ubytovaní) ───
+    const isNextInDifferentDay = (() => {
+      const dStart = new Date(startTs);
+      const dEnd = new Date(endTs);
+      return (
+        dStart.getFullYear() !== dEnd.getFullYear() ||
+        dStart.getMonth() !== dEnd.getMonth() ||
+        dStart.getDate() !== dEnd.getDate()
+      );
+    })();
+    
+    if (isNextInDifferentDay) {
+      const evTeamName = String(ev.teamName || '').trim();
+      const evCategory = String(ev.category || '').trim();
+      const accomKey = `${evCategory}|${evTeamName}`;
+      const accommodationName =
+        __transportPerTeamBuffer.accommodationByKey.get(accomKey) || null;
+      const hasAccommodation =
+        accommodationName && accommodationName !== 'bez ubytovania';
+    
+      if (
+        hasAccommodation &&
+        normalizePlaceName(prevPlace) === normalizePlaceName(accommodationName)
+      ) {
+        // `ev` je na mieste ubytovania a `next` je v inom dni → negenerujeme presun
+        continue;
+      }
+    }
+    // ─── koniec novej kontroly ───
+
     const cat = String(ev.category || next.category || '').trim();
     const syntheticLeg = {
       fromName: prevPlace,
@@ -538,6 +569,37 @@ const enrichTransfersWithImpliedWalking = (events) => {
     const endTs = transferStartTs;
     if (!(endTs > startTs)) continue;
 
+    // ─── NOVÉ: ak je `ev` posledná udalosť dňa a je na mieste ubytovania,
+    //     negenerujeme peší presun ───
+    const isNextTransferInDifferentDay = (() => {
+      const dStart = new Date(startTs);
+      const dEnd = new Date(endTs);
+      return (
+        dStart.getFullYear() !== dEnd.getFullYear() ||
+        dStart.getMonth() !== dEnd.getMonth() ||
+        dStart.getDate() !== dEnd.getDate()
+      );
+    })();
+
+    if (isNextTransferInDifferentDay) {
+      const evTeamName = String(ev.teamName || '').trim();
+      const evCategory = String(ev.category || '').trim();
+      const accomKey = `${evCategory}|${evTeamName}`;
+      const accommodationName =
+        __transportPerTeamBuffer.accommodationByKey.get(accomKey) || null;
+      const hasAccommodation =
+        accommodationName && accommodationName !== 'bez ubytovania';
+    
+      if (
+        hasAccommodation &&
+        normalizePlaceName(evPlace) === normalizePlaceName(accommodationName)
+      ) {
+        // `ev` je na mieste ubytovania a `nextTransfer` je v inom dni → negenerujeme presun
+        continue;
+      }
+    }
+    // ─── koniec novej kontroly ───
+    
     const cat = String(ev.category || nextTransfer.category || '').trim();
     const syntheticLeg = {
       fromName: evPlace,
