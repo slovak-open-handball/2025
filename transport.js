@@ -1030,6 +1030,7 @@ const TransportApp = ({ userProfileData }) => {
   const [selectedDayKey, setSelectedDayKey] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedTeam, setSelectedTeam] = useState('');
+  const [selectedTeamCategory, setSelectedTeamCategory] = useState('');
   const [availableTeams, setAvailableTeams] = useState([]);
   const [availableCategories, setAvailableCategories] = useState([]);
   const [matchesVersion, setMatchesVersion] = useState(0);
@@ -2227,6 +2228,7 @@ const TransportApp = ({ userProfileData }) => {
     const dayFilter = selectedDayKey || null;
     const catFilter = selectedCategory ? cleanCategory(selectedCategory) : null;
     const teamFilter = selectedTeam ? selectedTeam : null;
+    const teamCatFilter = selectedTeamCategory ? cleanCategory(selectedTeamCategory) : null;
   
     // ─── 1) Zozbierame VŠETKY eventy tímu v buffer-tvare ───
     const allEventsForEnrichment = [];
@@ -2235,6 +2237,7 @@ const TransportApp = ({ userProfileData }) => {
     for (const m of (__transportPerTeamBuffer.matches || [])) {
       if (catFilter && cleanCategory(m.category || '') !== catFilter) continue;
       if (teamFilter && String(m.teamName || '').trim() !== teamFilter) continue;
+      if (teamCatFilter && cleanCategory(m.category || '') !== teamCatFilter) continue;
       if (dayFilter) {
         const d = m.ts != null && isFinite(m.ts) ? new Date(m.ts) : null;
         const k = d
@@ -2249,6 +2252,7 @@ const TransportApp = ({ userProfileData }) => {
     for (const c of (__transportPerTeamBuffer.catering || [])) {
       if (catFilter && cleanCategory(c.category || '') !== catFilter) continue;
       if (teamFilter && String(c.teamName || '').trim() !== teamFilter) continue;
+      if (teamCatFilter && cleanCategory(c.category || '') !== teamCatFilter) continue;
       if (dayFilter) {
         const d = c.ts != null && isFinite(c.ts) ? new Date(c.ts) : null;
         const k = d
@@ -2264,6 +2268,7 @@ const TransportApp = ({ userProfileData }) => {
       if (parent._parentKey && parent._parentKey !== parent.key) return;
       if (catFilter && cleanCategory(parent.category || '') !== catFilter) return;
       if (teamFilter && String(parent.teamName || '').trim() !== teamFilter) return;
+      if (teamCatFilter && cleanCategory(parent.category || '') !== teamCatFilter) return;
       if (!isTeamNameResolved(parent.teamName, parent.category)) return;
   
       const stopsIds = Array.isArray(parent.intermediateStopIds)
@@ -2603,7 +2608,7 @@ const TransportApp = ({ userProfileData }) => {
     });
   
     return filteredUiEvents;
-  }, [savedTransfers, buses, selectedDayKey, selectedCategory, selectedTeam, allPlaces, matchesVersion, trackerResolvedNames]);
+  }, [savedTransfers, buses, selectedDayKey, selectedCategory, selectedTeam, selectedTeamCategory, allPlaces, matchesVersion, trackerResolvedNames]);
 
   /* --- Skupiny podľa dňa --- */
   const eventsByDay = useMemo(() => {
@@ -2655,7 +2660,11 @@ const TransportApp = ({ userProfileData }) => {
         React.createElement('select', {
           className: 'w-full border border-gray-300 rounded px-3 py-2 text-sm',
           value: selectedCategory,
-          onChange: (e) => setSelectedCategory(e.target.value),
+          onChange: (e) => {
+              setSelectedCategory(e.target.value);
+              setSelectedTeam('');
+              setSelectedTeamCategory('');
+            },
         },
           React.createElement('option', { value: '' }, 'Všetky kategórie'),
           ...availableCategories.map((c) => React.createElement('option', { key: c, value: c }, c))
@@ -2665,13 +2674,23 @@ const TransportApp = ({ userProfileData }) => {
         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Tím'),
         React.createElement('select', {
           className: 'w-full border border-gray-300 rounded px-3 py-2 text-sm',
-          value: selectedTeam,
-          onChange: (e) => setSelectedTeam(e.target.value),
+          value: selectedTeam ? `${selectedTeamCategory}|${selectedTeam}` : '',
+          onChange: (e) => {
+            const v = e.target.value;
+            if (!v) {
+              setSelectedTeam('');
+              setSelectedTeamCategory('');
+              return;
+            }
+            const [cat, ...rest] = v.split('|');
+            setSelectedTeamCategory(cat);
+            setSelectedTeam(rest.join('|'));
+          },
         },
           React.createElement('option', { value: '' }, 'Všetky tímy'),
           ...availableTeams.map((t) => {
             const [cat, name] = t.split('|');
-            return React.createElement('option', { key: t, value: name }, `${name} (${cat})`);
+            return React.createElement('option', { key: t, value: t }, `${name} (${cat})`);
           })
         )
       )
