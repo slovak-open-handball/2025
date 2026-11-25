@@ -829,21 +829,22 @@ const tryPrintPerTeamTimeline = () => {
       const lastAnchor = anchors[anchors.length - 1];
       const lastAnchorRange = lastAnchor ? getEventTimeRange(lastAnchor) : null;
       const lastAnchorPlace = lastAnchor ? getEventPlace(lastAnchor) : null;
-
+      
       for (const t of transfers) {
         if (usedTransfers.has(t)) continue;
         if (!transferHasTimes(t)) continue;
-
+      
         const { startTs, endTs } = getTransferTimeRange(t);
         if (startTs == null) continue;
-
+      
         const tFromPlace = getTransferFrom(t);
         const tToPlace = getEventPlace(t);
         const nFrom = norm(tFromPlace);
         const nTo = norm(tToPlace);
-
+      
+        // Transfer, ktorý nemení miesto, je zbytočný
         if (!nFrom || !nTo || nFrom === nTo) continue;
-
+      
         // Nájdi najbližšiu kotvu pred a po transfere
         let prevAnchor = null;
         let nextAnchor = null;
@@ -863,18 +864,37 @@ const tryPrintPerTeamTimeline = () => {
         }
         const prevPlace = prevAnchor ? norm(getEventPlace(prevAnchor)) : null;
         const nextPlace = nextAnchor ? norm(getEventPlace(nextAnchor)) : null;
-
+      
+        // ─── NOVÉ: ak transfer vedie z miesta A na miesto A (cez medzizastávky), je zbytočný ───
         if (prevPlace && nextPlace && prevPlace === nextPlace && nFrom === prevPlace && nTo === prevPlace) {
           continue;
         }
-        if (prevPlace && nFrom !== prevPlace) continue;
-
+      
+        // ─── NOVÉ: ak prevPlace existuje a transfer začína inde, ale transfer má reálne časy
+        // a je to jediný spôsob, ako sa tím dostal z prevPlace na nextPlace, prijmeme ho aj tak
+        // (napr. Rosinská → Železničná stanica po poslednom zápase na Rosinskej).
+        // Zahodíme ho len ak zjavne nesedí: prevPlace existuje a nFrom sa líši od prevPlace
+        // A ZÁROVEŇ nextPlace existuje a nTo sa líši od nextPlace (teda transfer vôbec nezapadá).
+        if (prevPlace && nextPlace && nFrom !== prevPlace && nTo !== nextPlace) {
+          continue;
+        }
+      
+        // ─── NOVÉ: odstránený nesprávny filter, ktorý zahadzoval transfery po poslednej kotve,
+        // ak nTo !== lastAnchorNorm. Transfer po poslednej kotve môže viesť na vlakovú stanicu
+        // alebo ubytovanie – to je legitímny presun, ktorý treba zobraziť.
+        // Namiesto toho len overíme, že transfer nekončí tam, kde už tím bol naposledy
+        // (čo by bol zbytočný presun). Ak končí inde, je to legitímny presun.
         if (lastAnchorRange && lastAnchorRange.endTs != null && startTs >= lastAnchorRange.endTs) {
           const lastAnchorNorm = norm(lastAnchorPlace);
-          if (nTo !== lastAnchorNorm) continue;
+          // Ak transfer končí presne tam, kde bola posledná kotva, je to zbytočný presun
+          if (lastAnchorNorm && nTo === lastAnchorNorm && nFrom === lastAnchorNorm) {
+            continue;
+          }
+          // Inak ho prijmeme – tím sa presúva na nové miesto (vlak, ubytovanie, ...)
         }
-
+      
         result.push(t);
+        usedTransfers.add(t); // ─── NOVÉ: označíme ako použitý, aby sa nepridal duplicitne
       }
 
       // ─── KROK 5: Záverečné zoradenie ───
