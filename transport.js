@@ -80,19 +80,205 @@ const tryPrintPerTeamTimeline = () => {
       if (aP !== bP) return aP - bP;
       return String(a.sortKey || '').localeCompare(String(b.sortKey || ''), 'sk');
     });
+
+    // ─── NOVÉ: doplnenie chýbajúcich presunov medzi udalosťami s rôznym miestom ───
+    const enrichTransfersWithImpliedWalking = (events) => {
+      if (!Array.isArray(events) || events.length < 2) return events;
+
+      // Pomocná funkcia: vytiahne miesto z eventu (match/catering/transfer)
+      const getEventPlace = (ev) => {
+        if (!ev) return null;
+        if (ev.kind === 'match') {
+          // label: ⚽ ZÁPAS <when> | <place> | ...
+          const parts = String(ev.label || '').split('|').map((s) => s.trim());
+          return parts[1] || null;
+        }
+        if (ev.kind === 'catering') {
+          // label: 🍽️ STRAVOVANIE <dátum> <čas> | <jedlo> | <miesto> | ...
+          const parts = String(ev.label || '').split('|').map((s) => s.trim());
+          return parts[2] || null;
+        }
+        if (ev.kind === 'transfer') {
+          const legs = ev.legs || [];
+          if (legs.length === 0) return null;
+          return legs[legs.length - 1].toName || null;
+        }
+        return null;
+      };
+
+      // Pomocná funkcia: vytiahne začiatočné miesto transferu
+      const getTransferFrom = (ev) => {
+        const legs = ev?.legs || [];
+        if (legs.length === 0) return null;
+        return legs[0].fromName || null;
+      };
+
+      // Normalizácia názvu miesta
+      const norm = (s) => normalizePlaceName(String(s || ''));
+
+      // Zistí, či transfer pokrýva prechod fromPlace -> toPlace
+      const transferCovers = (transferEv, fromPlace, toPlace) => {
+        const legs = transferEv?.legs || [];
+        if (legs.length === 0) return false;
+        const first = legs[0];
+        const last = legs[legs.length - 1];
+        return norm(first.fromName) === norm(fromPlace)
+            && norm(last.toName) === norm(toPlace);
+      };
+
+      // Zistí, či transfer má reálne časy
+      const transferHasTimes = (transferEv) => {
+        const legs = transferEv?.legs || [];
+        if (legs.length === 0) return false;
+        return legs.some((l) => l.startTs != null && l.endTs != null);
+      };
+
+      // Nájde začiatočný a koncový timestamp eventu (match/catering)
+      const getEventTimeRange = (ev) => {
+        if (!ev || ev.ts == null || !isFinite(ev.ts)) return null;
+        let startTs = ev.ts;
+        let endTs = ev.ts;
+        // Pre catering skúsime získať endTs z labelu (slotTo)
+        if (ev.kind === 'catering') {
+          const m = /(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/.exec(String(ev.label || ''));
+          if (m) {
+            const d = new Date(startTs);
+            startTs = new Date(
+              d.getFullYear(), d.getMonth(), d.getDate(),
+              Number(m[1]), Number(m[2]), 0, 0
+            ).getTime();
+            endTs = new Date(
+              d.getFullYear(), d.getMonth(), d.getDate(),
+              Number(m[3]), Number(m[4]), 0, 0
+            ).getTime();
+          }
+        }
+        return { startTs, endTs };
+      };
+
+      // Zoradíme chronologicky (match/catering podľa ts; transfery bez časov na koniec)
+      const sorted = events.slice().sort((a, b) => {
+        const aTs = a.ts != null && isFinite(a.ts) ? a.ts : Number.POSITIVE_INFINITY;
+        const bTs = b.ts != null && isFinite(b.ts) ? b.ts : Number.POSITIVE_INFINITY;
+        if (aTs !== bTs) return aTs - bTs;
+        const KIND_PRIORITY = { match: 0, transfer: 1, catering: 2 };
+        const aP = KIND_PRIORITY[a.kind] ?? 9;
+        const bP = KIND_PRIORITY[b.kind] ?? 9;
+        if (aP !== bP) return aP - bP;
+        return String(a.sortKey || '').localeCompare(String(b.sortKey || ''), 'sk');
+      });
+
+      // Prejdeme zoznam a doplníme chýbajúce transfery
+      const result = [];
+      for (let i = 0; i < sorted.length; i++) {
+        const ev = sorted[i];
+        result.push(ev);
+
+        // Pozrieme sa na nasledujúcu udalosť, ktorá nie je transfer
+        let nextIdx = i + 1;
+        while (nextIdx < sorted.length && sorted[nextIdx].kind === 'transfer') {
+          nextIdx++;
+        }
+        const next = sorted[nextIdx];
+        if (!next) continue;
+
+        const prevPlace = getEventPlace(ev);
+        const nextPlace = getEventPlace(next);
+        if (!prevPlace || !nextPlace) continue;
+        if (norm(prevPlace) === norm(nextPlace)) continue; // žiadna zmena miesta
+
+        // Je medzi nimi nejaký transfer?
+        const between = sorted.slice(i + 1, nextIdx);
+        const transferBetween = between.find((t) => t.kind === 'transfer');
+
+        if (transferBetween) {
+          // Existuje transfer, ale nemá časy → doplníme mu časy
+          if (!transferHasTimes(transferBetween)) {
+            const prevRange = getEventTimeRange(ev);
+            const nextRange = getEventTimeRange(next);
+            if (prevRange && nextRange) {
+              const startTs = prevRange.endTs;
+              const endTs = nextRange.startTs;
+              if (endTs > startTs) {
+                // Vytvoríme nový transfer s doplnenými časmi
+                const fakeLegs = transferBetween.legs.map((l) => ({
+                  ...l,
+                  startTs: l.startTs != null ? l.startTs : startTs,
+                  endTs: l.endTs != null ? l.endTs : endTs,
+                }));
+                const fakeLegLabels = fakeLegs.map((l) => {
+                  const legTimeLabel = (l.startTs != null && l.endTs != null)
+                    ? `${formatTimeOnly(l.startTs)} – ${formatTimeOnly(l.endTs)}`
+                    : (l.isWalking ? 'PEŠI' : 'nepriradený');
+                  const legTypeLabel = l.isWalking ? 'PEŠI' : (l.busName || 'PRESUN');
+                  const dateLabel = formatDateDDMMYYYY(l.startTs) || '';
+                  return `🚌 ${legTypeLabel} ${dateLabel ? dateLabel + ' ' : ''}${legTimeLabel} | ${l.fromName} → ${l.toName} | ${ev.category || '-'}`;
+                });
+                // Nahradíme pôvodný transfer v result
+                const oldIdx = result.indexOf(transferBetween);
+                if (oldIdx >= 0) {
+                  result[oldIdx] = {
+                    ...transferBetween,
+                    ts: startTs,
+                    legs: fakeLegs,
+                    legLabels: fakeLegLabels,
+                  };
+                }
+              }
+            }
+          }
+          continue;
+        }
+
+        // Žiadny transfer medzi nimi → vložíme syntetický peší presun
+        const prevRange = getEventTimeRange(ev);
+        const nextRange = getEventTimeRange(next);
+        if (!prevRange || !nextRange) continue;
+        const startTs = prevRange.endTs;
+        const endTs = nextRange.startTs;
+        if (!(endTs > startTs)) continue;
+
+        const cat = String(ev.category || next.category || '').trim();
+        const syntheticLeg = {
+          fromName: prevPlace,
+          toName: nextPlace,
+          isWalking: true,
+          busName: null,
+          startTs,
+          endTs,
+        };
+        const syntheticLabel = `🚌 PEŠI ${formatDateDDMMYYYY(startTs) || ''} ${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)} | ${prevPlace} → ${nextPlace} | ${cat || '-'}`;
+        result.push({
+          kind: 'transfer',
+          teamName: ev.teamName,
+          category: cat,
+          ts: startTs,
+          dayKey: ev.dayKey,
+          sortKey: `synthetic|${startTs}`,
+          label: syntheticLabel,
+          legLabels: [syntheticLabel],
+          legs: [syntheticLeg],
+          _synthetic: true,
+        });
+      }
+
+      return result;
+    };
+
+    const enrichedList = enrichTransfersWithImpliedWalking(list);
+    // ─── koniec doplnenia ───
+    
     // kľúč výstupu = "TÍM (KATEGÓRIA)"
     const displayKey = cat ? `${team} (${cat})` : team;
 
     // Pre každú udalosť: ak má legLabels (transfer), rozbalíme na samostatné riadky
     const rows = [];
-    for (const ev of list) {
+    for (const ev of enrichedList) {   // ← zmena z list na enrichedList
       if (ev.kind === 'transfer' && Array.isArray(ev.legLabels) && ev.legLabels.length > 0) {
-        // každý leg = samostatný riadok
         for (const legLine of ev.legLabels) {
           rows.push(legLine);
         }
       } else {
-        // zápas / stravovanie = jeden riadok
         rows.push(ev.label);
       }
     }
