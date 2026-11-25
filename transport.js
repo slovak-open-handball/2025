@@ -403,32 +403,17 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
   }
 
   return sorted
-    .map((ev, origIdx) => ({ ev, origIdx }))
-    .filter(({ origIdx }) => !excludedTransferIndexes.has(origIdx))
-    .map(({ ev, origIdx }) => {
-      const assigned = assignments.get(origIdx);
-      if (!assigned) return ev;
-      return buildUpdatedWalkingTransfer(ev, assigned.startTs, assigned.endTs, assigned.dayKey);
-    })
-    // ─── NOVÉ: zahodiť akýkoľvek transfer, ktorý nemení miesto ───
-    .filter((ev) => {
-      if (!ev || ev.kind !== 'transfer') return true;
-      const legs = ev.legs || [];
-      if (legs.length === 0) {
-        const p = getEventPlaces(ev);
-        return normPlace(p.from) !== normPlace(p.to) || !p.from || !p.to;
-      }
-      const firstFrom = normPlace(legs[0]?.fromName);
-      const lastTo = normPlace(legs[legs.length - 1]?.toName);
-      if (!firstFrom || !lastTo) return true;
-      return firstFrom !== lastTo;
-    })
-    .sort((a, b) => {
-      const aTs = a.ts != null && isFinite(a.ts) ? a.ts : Number.POSITIVE_INFINITY;
-      const bTs = b.ts != null && isFinite(b.ts) ? b.ts : Number.POSITIVE_INFINITY;
-      if (aTs !== bTs) return aTs - bTs;
-      return (KIND_PRIORITY[a.kind] ?? 9) - (KIND_PRIORITY[b.kind] ?? 9);
-    });
+  .map((ev, origIdx) => {
+    const assigned = assignments.get(origIdx);
+    if (!assigned) return ev;
+    return buildUpdatedWalkingTransfer(ev, assigned.startTs, assigned.endTs, assigned.dayKey);
+  })
+  .sort((a, b) => {
+    const aTs = a.ts != null && isFinite(a.ts) ? a.ts : Number.POSITIVE_INFINITY;
+    const bTs = b.ts != null && isFinite(b.ts) ? b.ts : Number.POSITIVE_INFINITY;
+    if (aTs !== bTs) return aTs - bTs;
+    return (KIND_PRIORITY[a.kind] ?? 9) - (KIND_PRIORITY[b.kind] ?? 9);
+  });
 };
 
 const tryPrintPerTeamTimeline = () => {
