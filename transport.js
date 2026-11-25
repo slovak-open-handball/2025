@@ -1552,22 +1552,8 @@ const TransportApp = ({ userProfileData }) => {
           }
         }
 
-        // Vypočítame čas (startTs z parent.when, prípadne zo segmentov)
+        const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
         const parentRange = parseWhenRangeToTs(parent.when);
-        let ts = parentRange?.startTs != null ? parentRange.startTs : Number.POSITIVE_INFINITY;
-
-        // Ak má parent segmenty s reálnymi časmi, použijeme najskorší
-        if (Array.isArray(parent.segments) && parent.segments.length > 0) {
-          let minSegTs = null;
-          for (const seg of parent.segments) {
-            if (seg && seg.startTs != null && (minSegTs == null || seg.startTs < minSegTs)) {
-              minSegTs = seg.startTs;
-            }
-          }
-          if (minSegTs != null && (ts === Number.POSITIVE_INFINITY || minSegTs < ts)) {
-            ts = minSegTs;
-          }
-        }
 
         // Zostavíme trasu z fromId + intermediateStopIds + toId
         const stopsIds = Array.isArray(parent.intermediateStopIds)
@@ -1580,59 +1566,133 @@ const TransportApp = ({ userProfileData }) => {
         });
         if (routeIds.length < 2) continue;
 
-        // Zistíme typ presunu (bus / walking / nepriradený)
-        const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
-        let hasAnyRealTime = false;
-        let allWalking = true;
+        // Pre každý leg vypočítame čas ROVNAKO ako v UI (timelineEvents)
+        const legs = [];
+        let startTs = null;
+        let endTs = null;
+        let hasRealTimes = false;
         let anyWalking = false;
+        let allWalking = true;
         let busName = null;
 
         for (let i = 0; i < routeIds.length - 1; i++) {
           const fromId = routeIds[i];
           const toId = routeIds[i + 1];
           if (fromId === toId) continue;
+
           const seg = parentSegments.find((s) => s && s.fromId === fromId && s.toId === toId) || null;
           const legWalking = !!(seg && seg.isWalking === true);
           const legHasTimes = !!(seg && seg.startTs != null && seg.endTs != null && seg.endTs > seg.startTs);
-          if (legHasTimes) hasAnyRealTime = true;
+
+          let legStartTs = null;
+          let legEndTs = null;
+
+          if (legWalking) {
+            // ROVNAKÁ logika ako v UI: dopočítať peší segment z okolitých bus segmentov
+            const walkingRange = getWalkingSegmentDisplayRange(parent, i);
+            if (walkingRange) {
+              legStartTs = walkingRange.startTs;
+              legEndTs = walkingRange.endTs;
+            } else if (seg?.startTs != null) {
+              legStartTs = seg.startTs;
+              legEndTs = seg.endTs != null ? seg.endTs : seg.startTs + 60 * 1000;
+            }
+          } else if (legHasTimes) {
+            legStartTs = seg.startTs;
+            legEndTs = seg.endTs;
+          } else {
+            // ROVNAKÁ logika ako v UI: dopočítať nepriradený segment z parent.when
+            const unassignedRange = getUnassignedSegmentDisplayRange(parent, i, routeIds, parentSegments);
+            if (unassignedRange) {
+              legStartTs = unassignedRange.startTs;
+              legEndTs = unassignedRange.endTs;
+            }
+          }
+
+          if (legStartTs != null && (startTs == null || legStartTs < startTs)) startTs = legStartTs;
+          if (legEndTs != null && (endTs == null || legEndTs > endTs)) endTs = legEndTs;
+          if (legHasTimes) hasRealTimes = true;
           if (legWalking) anyWalking = true;
           if (!legWalking) allWalking = false;
+
           if (!busName && seg?.busId) {
             const b = buses.find((x) => x.id === String(seg.busId));
             busName = b?.name || `Bus ${seg.busId}`;
           }
+
+          legs.push({
+            fromName: resolvePlaceNameById(fromId),
+            toName: resolvePlaceNameById(toId),
+            isWalking: legWalking,
+            busName: seg?.busId ? (buses.find((x) => x.id === String(seg.busId))?.name || `Bus ${seg.busId}`) : null,
+            startTs: legStartTs,
+            endTs: legEndTs,
+            hasTimes: legHasTimes,
+          });
         }
 
+        if (legs.length === 0) continue;
+
+        const overallIsWalking = legs.every((l) => l.isWalking);
+
+        // Zostavíme timeLabel ROVNAKO ako v UI
+        let timeLabel = '';
+        if (overallIsWalking) {
+          if (startTs != null) {
+            if (endTs == null) endTs = startTs + 60 * 1000;
+            timeLabel = `${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)}`;
+          } else {
+            timeLabel = 'PEŠI';
+          }
+        } else if (startTs != null) {
+          timeLabel = endTs != null
+            ? `${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)}`
+            : formatTimeOnly(startTs);
+        } else {
+          timeLabel = 'nepriradený';
+        }
+
+        // Určenie typu presunu
         let typeLabel = 'PRESUN';
-        if (allWalking) typeLabel = 'PRESUN PEŠI';
-        else if (hasAnyRealTime) typeLabel = 'PRESUN BUSOM';
+        if (overallIsWalking) typeLabel = 'PRESUN PEŠI';
+        else if (hasRealTimes) typeLabel = 'PRESUN BUSOM';
         else typeLabel = 'PRESUN (nepriradený)';
 
-        // Zostavíme label
-        const fromName = resolvePlaceNameById(routeIds[0]);
-        const toName = resolvePlaceNameById(routeIds[routeIds.length - 1]);
-        const whenLabel = parent.when
-          ? String(parent.when)
-          : (ts !== Number.POSITIVE_INFINITY
-              ? (formatDateTime(ts) || '-')
-              : '-');
-
-        const segmentsLabel = routeIds
-          .map((id) => resolvePlaceNameById(id))
-          .join(' → ');
-
-        const busLabel = busName ? ` | ${busName}` : '';
-
-        // Získanie dayKey (pre konzistenciu)
+        // Dátum (pre label aj dayKey) – z parent.when alebo z dopočítaného startTs
         let dayKey = parent.dayKey || null;
-        if (!dayKey && ts !== Number.POSITIVE_INFINITY) {
-          const d = new Date(ts);
+        if (!dayKey && startTs != null) {
+          const d = new Date(startTs);
           dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
         if (!dayKey && parentRange?.startTs) {
           const d = new Date(parentRange.startTs);
           dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
+
+        // whenLabel – ak sú reálne časy, použiť dopočítaný timeLabel s dátumom;
+        // inak parent.when alebo "-"
+        let whenLabel = '';
+        if (startTs != null) {
+          const startDateLabel = formatDateDDMMYYYY(startTs) || '';
+          const startTimeLabel = formatTimeOnly(startTs);
+          const endTimeLabel = endTs != null ? formatTimeOnly(endTs) : '';
+          whenLabel = endTimeLabel
+            ? `${startDateLabel} ${startTimeLabel} – ${endTimeLabel}`
+            : `${startDateLabel} ${startTimeLabel}`.trim();
+        } else if (parent.when) {
+          whenLabel = String(parent.when);
+        } else {
+          whenLabel = '-';
+        }
+
+        const segmentsLabel = legs
+          .map((l) => `${l.fromName} → ${l.toName}`)
+          .join(' | ');
+
+        const busLabel = busName ? ` | ${busName}` : '';
+
+        // Pre sortTs použijeme startTs (dopočítaný), inak parent.when
+        const ts = startTs != null ? startTs : (parentRange?.startTs ?? Number.POSITIVE_INFINITY);
 
         transfersEventsForBuffer.push({
           kind: 'transfer',
