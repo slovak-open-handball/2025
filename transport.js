@@ -138,7 +138,7 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
   };
 
   const isFirstTournamentDay = (dk) => {
-    const firstDay = __transportPerTeamBuffer?.firstTournamentDayKey;
+    const firstDay = window.__transportPerTeamBuffer?.firstTournamentDayKey;
     if (firstDay && dk) return dk === firstDay;
     if (__transportPerTeamBuffer?.arrivalTimestamp && dk) {
       return dk === getDayKeyFromTs(__transportPerTeamBuffer.arrivalTimestamp);
@@ -147,7 +147,7 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
   };
 
   const getArrivalStartTsForDay = (dk, fallbackEndTs) => {
-    const arrTs = __transportPerTeamBuffer?.arrivalTimestamp;
+    const arrTs = window.__transportPerTeamBuffer?.arrivalTimestamp;
     if (!arrTs || !isFinite(arrTs) || !isFirstTournamentDay(dk)) return null;
     const arrDate = new Date(arrTs);
     const baseDate = fallbackEndTs ? new Date(fallbackEndTs) : arrDate;
