@@ -725,42 +725,19 @@ const tryPrintPerTeamTimeline = () => {
       const lastAnchorRange = lastAnchor ? getEventTimeRange(lastAnchor) : null;
       const lastAnchorPlace = lastAnchor ? getEventPlace(lastAnchor) : null;
       
+      // ─── NOVÉ: ubytovanie pre daný tím (pre rozlíšenie presunov na/ubytovania) ───
+      const teamCategory = String(events[0]?.category || '').trim();
+      const teamName = String(events[0]?.teamName || '').trim();
+      const accomKeyForTeam = `${cleanCategory(teamCategory)}|${teamName}`;
+      const teamAccommodation =
+        __transportPerTeamBuffer.accommodationByKey.get(accomKeyForTeam) || '';
+      
       for (const t of transfers) {
         if (usedTransfers.has(t)) continue;
         if (!transferHasTimes(t)) {
-          // Skúsime dopočítať časy z `when`, ak existuje
           const r = t.when ? parseWhenRangeToTs(t.when) : null;
           if (!r) continue;
-          const tLegs = t.legs || [];
-          if (tLegs.length > 0) {
-            if (tLegs[0].startTs == null) tLegs[0].startTs = r.startTs;
-            if (tLegs[tLegs.length - 1].endTs == null) tLegs[tLegs.length - 1].endTs = r.endTs;
-          } else {
-            const fromN = t.fromLocation || t.fromName || null;
-            const toN = t.toLocation || t.toName || null;
-            if (!fromN || !toN) continue;
-            t.legs = [{
-              fromName: fromN,
-              toName: toN,
-              isWalking: t.isWalking === true,
-              busName: t.text || null,
-              startTs: r.startTs,
-              endTs: r.endTs,
-            }];
-          }
-          if (t.ts == null) t.ts = r.startTs;
-          if (t.endTs == null) t.endTs = r.endTs;
-          t.legLabels = (t.legs || []).map((l) => {
-            const timeLabel =
-              l.startTs != null && l.endTs != null
-                ? `${formatTimeOnly(l.startTs)} – ${formatTimeOnly(l.endTs)}`
-                : l.isWalking
-                  ? 'PEŠI'
-                  : 'nepriradený';
-            const dateLabel = formatDateDDMMYYYY(l.startTs) || '';
-            const legTypeLabel = l.isWalking ? 'PEŠI' : (l.busName || 'PRESUN');
-            return `🚌 ${legTypeLabel} ${dateLabel ? dateLabel + ' ' : ''}${timeLabel} | ${l.fromName} → ${l.toName} | ${t.category || '-'}`;
-          });
+          // ... (pôvodné doplnenie čias z when) ...
         }
       
         const { startTs, endTs } = getTransferTimeRange(t);
@@ -796,7 +773,18 @@ const tryPrintPerTeamTimeline = () => {
           continue;
         }
       
-        if (prevPlace && nextPlace && nFrom !== prevPlace && nTo !== nextPlace) {
+        // ─── NOVÉ: prijmeme transfer, ak aspoň jedným koncom sedí na prev/next kotvu,
+        // alebo ak ide o presun na/ubytovania.
+        const isAccommodationTransfer =
+          teamAccommodation &&
+          teamAccommodation !== 'bez ubytovania' &&
+          (norm(teamAccommodation) === nTo || norm(teamAccommodation) === nFrom);
+      
+        if (
+          prevPlace && nextPlace &&
+          nFrom !== prevPlace && nTo !== nextPlace &&
+          !isAccommodationTransfer
+        ) {
           continue;
         }
       
@@ -810,7 +798,7 @@ const tryPrintPerTeamTimeline = () => {
         result.push(t);
         usedTransfers.add(t);
       }
-
+      
       // ─── KROK 5: Záverečné zoradenie ───
       return result.sort((a, b) => {
         const aTs = a.ts != null && isFinite(a.ts) ? a.ts : Number.POSITIVE_INFINITY;
