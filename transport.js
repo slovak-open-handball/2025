@@ -393,6 +393,15 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
     }
   }
 
+  if (sampleEv.teamName === 'ŠŠK pri SLŠ Prešov') {
+    console.log('🚫 excludedTransferIndexes:', [...excludedTransferIndexes]);
+    console.log('📋 sorted (label + kind + dayKey + ts):', sorted.map((e, i) => ({
+      i, kind: e.kind, dayKey: e.dayKey, ts: e.ts,
+      from: e.legs?.[0]?.fromName, to: e.legs?.[e.legs.length-1]?.toName,
+      label: e.label?.slice(0, 80),
+    })));
+  }
+
   return sorted
     .map((ev, origIdx) => ({ ev, origIdx }))
     .filter(({ origIdx }) => !excludedTransferIndexes.has(origIdx))
