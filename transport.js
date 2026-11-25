@@ -2246,7 +2246,7 @@ const TransportApp = ({ userProfileData }) => {
           return {
             kind: 'transfer',
             key: t.key,
-            teamName: t.teamName || null,
+            teamName: mappedTeamName || null,
             teamUid: t.teamUid || null,
             teamIndex: t.teamIndex ?? null,
             category: t.category || '',
@@ -2810,6 +2810,22 @@ const TransportApp = ({ userProfileData }) => {
 
     return () => clearTimeout(retryTimer);
   }, [savedTransfers]);
+
+  useEffect(() => {
+    if (Object.keys(trackerResolvedNamesRef.current).length === 0) return;
+    if (!__transportPerTeamBuffer.transfers || __transportPerTeamBuffer.transfers.length === 0) return;
+  
+    __transportPerTeamBuffer.transfers = __transportPerTeamBuffer.transfers.map((t) => {
+      if (t.kind !== 'transfer') return t;
+      const rawTeamName = String(t.teamName || '').trim();
+      const mappedTeamName = trackerResolvedNamesRef.current?.[rawTeamName];
+      if (!mappedTeamName || mappedTeamName === rawTeamName) return t;
+      return { ...t, teamName: mappedTeamName };
+    });
+
+    __transportPerTeamBuffer.lastPrintedSignature = '';
+    tryPrintPerTeamTimeline();
+  }, [trackerResolvedNames]);
 
   /* ------------------------------------------------------------------ */
   /* Filter presunov: ak je tím ubytovaný, v deň s viacerými presunmi    */
