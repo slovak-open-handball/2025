@@ -1453,7 +1453,15 @@ const TransportApp = ({ userProfileData }) => {
         teamsArrivalBufferRef.current = buffer;
         teamsLoadedRef.current = true;
         setAvailableCategories([...cats].sort((a, b) => a.localeCompare(b, 'sk')));
-        setAvailableTeams([...teamsSet].sort((a, b) => a.localeCompare(b, 'sk')));
+        setAvailableTeams(
+          [...teamsSet].sort((a, b) => {
+            const [catA, nameA] = a.split('|');
+            const [catB, nameB] = b.split('|');
+            const c = catA.localeCompare(catB, 'sk', { sensitivity: 'base' });
+            if (c !== 0) return c;
+            return nameA.localeCompare(nameB, 'sk', { sensitivity: 'base' });
+          })
+        );
       } catch (e) {}
     };
     loadTeams();
@@ -2281,12 +2289,26 @@ const TransportApp = ({ userProfileData }) => {
 
     const dayFilter = selectedDayKey || null;
     const catFilter = selectedCategory ? cleanCategory(selectedCategory) : null;
-    const teamFilter = selectedTeam ? selectedTeam : null;
+
+    // selectedTeam teraz obsahuje "Kategória|Názov tímu" (alebo prázdny string)
+    let teamFilterName = null;
+    let teamFilterCategory = null;
+    if (selectedTeam) {
+      const sepIdx = selectedTeam.indexOf('|');
+      if (sepIdx >= 0) {
+        teamFilterCategory = cleanCategory(selectedTeam.slice(0, sepIdx));
+        teamFilterName = selectedTeam.slice(sepIdx + 1).trim();
+      } else {
+        // fallback – keby náhodou prišla len samotná hodnota
+        teamFilterName = selectedTeam.trim();
+      }
+    }
 
     (savedTransfers || []).forEach((parent) => {
       if (parent._parentKey && parent._parentKey !== parent.key) return;
       if (catFilter && cleanCategory(parent.category || '') !== catFilter) return;
-      if (teamFilter && String(parent.teamName || '').trim() !== teamFilter) return;
+      if (teamFilterName && String(parent.teamName || '').trim() !== teamFilterName) return;
+      if (teamFilterCategory && cleanCategory(parent.category || '') !== teamFilterCategory) return;
 
       if (!isTeamNameResolved(parent.teamName, parent.category)) return;
 
@@ -2577,7 +2599,7 @@ const TransportApp = ({ userProfileData }) => {
           React.createElement('option', { value: '' }, 'Všetky tímy'),
           ...availableTeams.map((t) => {
             const [cat, name] = t.split('|');
-            return React.createElement('option', { key: t, value: name }, `${name} (${cat})`);
+            return React.createElement('option', { key: t, value: t }, `${name} (${cat})`);
           })
         )
       )
