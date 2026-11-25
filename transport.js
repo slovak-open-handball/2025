@@ -220,6 +220,89 @@ const resolveTeamNameForDisplay = async (identifier, categoryName) => {
 };
 
 /* ------------------------------------------------------------------ */
+/* Čakanie na pripravenosť mapovania (teamManager + matchTracker)      */
+/* ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ */
+/* Čakanie na pripravenosť mapovania – event-based (okamžitá reakcia)  */
+/* ------------------------------------------------------------------ */
+
+// Skontroluje, či mapovanie už je pripravené (viacero možných signálov)
+const isMappingReady = () => {
+  if (window.mappingReady === true) return true;
+  if (window.isMappingReady === true) return true;
+  if (window.teamNameMappingReady === true) return true;
+  if (window.mappingCompleted === true) return true;
+  if (window.teamManagerReady === true) return true;
+
+  try {
+    if (window.teamManager && typeof window.teamManager.isReady === 'function') {
+      if (window.teamManager.isReady()) return true;
+    }
+  } catch (e) {}
+
+  return false;
+};
+
+// Počká na event 'mappingReady' – okamžitá reakcia, žiadny polling.
+// Ak je už ready, vráti sa hneď. Ak nie, čaká na event (bez timeoutu).
+// Voliteľne možno zadať timeoutMs = null (žiadny timeout) alebo číslo.
+const waitForMappingReady = (timeoutMs = null) => {
+  return new Promise((resolve) => {
+    if (isMappingReady()) {
+      resolve(true);
+      return;
+    }
+
+    let done = false;
+
+    const onReady = () => {
+      if (done) return;
+      done = true;
+      window.removeEventListener('mappingReady', onReady);
+      resolve(true);
+    };
+
+    window.addEventListener('mappingReady', onReady);
+
+    // Voliteľný timeout – ak chceš čakať donekonečna, nechaj null
+    if (timeoutMs != null) {
+      setTimeout(() => {
+        if (done) return;
+        done = true;
+        window.removeEventListener('mappingReady', onReady);
+        // Fallback – ešte raz skontroluj flag (mohol sa nastaviť bez eventu)
+        resolve(isMappingReady());
+      }, timeoutMs);
+    }
+  });
+};
+
+// Počká, kým je mapovanie pripravené (max timeoutMs).
+// Vráti Promise<boolean> – true ak ready, false ak timeout.
+const waitForMappingReady = (timeoutMs = 15000, pollMs = 200) => {
+  return new Promise((resolve) => {
+    if (isMappingReady()) {
+      resolve(true);
+      return;
+    }
+    const start = Date.now();
+    const timer = setInterval(() => {
+      if (isMappingReady()) {
+        clearInterval(timer);
+        resolve(true);
+        return;
+      }
+      if (Date.now() - start > timeoutMs) {
+        clearInterval(timer);
+        console.warn('[transport.js] waitForMappingReady: timeout – mapovanie nebolo pripravené včas');
+        resolve(false);
+      }
+    }, pollMs);
+  });
+};
+
+/* ------------------------------------------------------------------ */
 /* Ikonky pre typy miest                                              */
 /* ------------------------------------------------------------------ */
 
@@ -774,18 +857,25 @@ const TransportApp = ({ userProfileData }) => {
         // 3) Namapuj názvy tímov a vypíš VŠETKY zápasy do konzoly
         if (anyChangeDetected || matchesLoadedRef.current === false) {
           (async () => {
+            // 🔥 KĽÚČOVÉ: počkaj, kým mapovací kód nastaví príznak pripravenosti
+            const ready = await waitForMappingReady(15000);
+            if (!ready) {
+              console.warn('[transport.js] Mapovanie nie je pripravené, výpis zápasov preskočený (skúsim pri ďalšej zmene).');
+              return;
+            }
+        
             const mappedMatches = [];
             for (const m of allMatches) {
               const categoryName = m.categoryName
                 || (m.categoryId && window.categoriesData ? window.categoriesData[m.categoryId] : null)
                 || null;
-
+        
               const homeRaw = m.homeTeamName || m.homeTeamIdentifier || m.homeTeam || '?';
               const awayRaw = m.awayTeamName || m.awayTeamIdentifier || m.awayTeam || '?';
-
+        
               const homeMapped = await resolveTeamNameForDisplay(homeRaw, categoryName);
               const awayMapped = await resolveTeamNameForDisplay(awayRaw, categoryName);
-
+        
               mappedMatches.push({
                 id: m.id,
                 status: m.status,
@@ -797,7 +887,7 @@ const TransportApp = ({ userProfileData }) => {
                 skóre: (m.homeScore ?? '-') + ':' + (m.awayScore ?? '-'),
               });
             }
-
+        
             console.log(`📋 TRANSPORT.JS – načítaných ${mappedMatches.length} zápasov z kolekcie 'matches':`);
             if (console.table) {
               console.table(mappedMatches);
