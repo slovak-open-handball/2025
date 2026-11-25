@@ -2246,7 +2246,7 @@ const TransportApp = ({ userProfileData }) => {
           return {
             kind: 'transfer',
             key: t.key,
-            teamName: mappedTeamName || null,
+            teamName: t.teamName || null,
             teamUid: t.teamUid || null,
             teamIndex: t.teamIndex ?? null,
             category: t.category || '',
