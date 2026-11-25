@@ -149,85 +149,72 @@ const detectGroupCodeType = (teamName, categoryName) => {
 };
 
 // Kompletná kaskáda:
-//   - "písmeno+číslo" → primárne teamManager.getTeamNameByDisplayIdSync(vstup)
-//                       ak teamManager nič nezmení → fallback matchTracker.getTeamNameByDisplayId(vstup)
-//   - "číslo+písmeno" → primárne matchTracker.getTeamNameByDisplayId(vstup)
-//   - oba prípady len ak názov tímu obsahuje názov kategórie
-//   - inak vráť pôvodný názov
+//   1) teamManager.getTeamNameByDisplayIdSync(vstup)
+//   2) ak výsledok obsahuje názov kategórie (alebo sa zmenil oproti vstupu)
+//      → matchTracker.getTeamNameByDisplayId(výsledok z kroku 1)
+//   3) ak matchTracker zlyhá, vráť výsledok z kroku 1
+//   4) inak vráť pôvodný vstup
 const resolveTeamNameForDisplay = async (identifier, categoryName) => {
   if (!identifier) return identifier;
 
   const original = String(identifier).trim();
   const cat = categoryName ? String(categoryName).trim() : '';
 
-  const codeType = detectGroupCodeType(original, cat);
-  if (!codeType) return original;
+  // KROK 1 – teamManager sync (volaj vždy, ak existuje)
+  let intermediate = original;
+  try {
+    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+      const syncRes = window.teamManager.getTeamNameByDisplayIdSync(original);
+      if (
+        syncRes &&
+        String(syncRes).trim() !== '' &&
+        String(syncRes).trim() !== 'null' &&
+        String(syncRes).trim() !== original
+      ) {
+        intermediate = String(syncRes).trim();
+      }
+    }
+  } catch (e) {}
 
-  // Pomocná: skús matchTracker (async)
-  const tryMatchTracker = async (input) => {
+  // KROK 2 – rozhodni, či volať matchTracker
+  //   - ak intermediate stále obsahuje kategóriu → áno
+  //   - ak intermediate sa zmenil oproti original → áno (chceme finálny názov)
+  //   - ak intermediate je stále group kód (letter-digit / digit-letter) → áno
+  let shouldCallMatchTracker = false;
+
+  if (intermediate !== original) {
+    // teamManager niečo zmenil – skús to dotiahnuť cez matchTracker
+    shouldCallMatchTracker = true;
+  } else if (cat && intermediate.includes(cat)) {
+    // obsahuje kategóriu – treba mapovať
+    shouldCallMatchTracker = true;
+  } else {
+    // skontroluj tvar group kódu
+    const withoutCat = cat ? intermediate.split(cat).join('').replace(/\s+/g, '').trim() : intermediate.replace(/\s+/g, '').trim();
+    if (isLetterDigitCode(withoutCat) || isDigitLetterCode(withoutCat)) {
+      shouldCallMatchTracker = true;
+    }
+  }
+
+  // KROK 2 – matchTracker async
+  if (shouldCallMatchTracker) {
     try {
       if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-        const res = await window.matchTracker.getTeamNameByDisplayId(input);
+        const asyncRes = await window.matchTracker.getTeamNameByDisplayId(intermediate);
         if (
-          res &&
-          String(res).trim() !== '' &&
-          String(res).trim() !== 'null' &&
-          String(res).trim() !== input
+          asyncRes &&
+          String(asyncRes).trim() !== '' &&
+          String(asyncRes).trim() !== 'null' &&
+          String(asyncRes).trim() !== intermediate
         ) {
-          return String(res).trim();
+          return String(asyncRes).trim();
         }
       }
     } catch (e) {}
-    return null;
-  };
-
-  // "písmeno+číslo" → teamManager sync, fallback matchTracker
-  if (codeType === 'letter-digit') {
-    try {
-      if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-        const res = window.teamManager.getTeamNameByDisplayIdSync(original);
-        if (
-          res &&
-          String(res).trim() !== '' &&
-          String(res).trim() !== 'null' &&
-          String(res).trim() !== original
-        ) {
-          return String(res).trim();
-        }
-      }
-    } catch (e) {}
-
-    // Fallback – teamManager nič nezmenil, skús matchTracker
-    const fallback = await tryMatchTracker(original);
-    if (fallback) return fallback;
-
-    return original;
   }
 
-  // "číslo+písmeno" → matchTracker, fallback teamManager sync
-  if (codeType === 'digit-letter') {
-    const res = await tryMatchTracker(original);
-    if (res) return res;
-
-    // Fallback – matchTracker nič, skús teamManager
-    try {
-      if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-        const syncRes = window.teamManager.getTeamNameByDisplayIdSync(original);
-        if (
-          syncRes &&
-          String(syncRes).trim() !== '' &&
-          String(syncRes).trim() !== 'null' &&
-          String(syncRes).trim() !== original
-        ) {
-          return String(syncRes).trim();
-        }
-      }
-    } catch (e) {}
-
-    return original;
-  }
-
-  return original;
+  // KROK 3 – vráť intermediate (teamManager výsledok alebo pôvodný)
+  return intermediate;
 };
 
 /* ------------------------------------------------------------------ */
