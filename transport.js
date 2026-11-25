@@ -27,7 +27,11 @@ const __transportPerTeamBuffer = {
   matchesReady: false,
   cateringReady: false,
   lastPrintedSignature: '',
+  // Mapa (kategória|tím) -> názov ubytovne (alebo 'bez ubytovania')
+  accommodationByKey: new Map(),
+  accommodationReady: false,
 };
+
 
 const tryPrintPerTeamTimeline = () => {
   if (!__transportPerTeamBuffer.matchesReady || !__transportPerTeamBuffer.cateringReady) return;
@@ -78,9 +82,20 @@ const tryPrintPerTeamTimeline = () => {
   if (sig === __transportPerTeamBuffer.lastPrintedSignature) return;
   __transportPerTeamBuffer.lastPrintedSignature = sig;
 
-  console.log('📅 TRANSPORT.JS – CHRONOLOGICKÝ PREHĽAD UDALOSTÍ PRE KAŽDÝ TÍM (zápasy + stravovanie):');
-  Object.entries(output).forEach(([team, items]) => {
-    console.groupCollapsed(`👥 ${team} (${items.length})`);
+  console.log('📅 TRANSPORT.JS – CHRONOLOGICKÝ PREHĽAD UDALOSTÍ PRE KAŽDÝ TÍM (zápasy + stravovanie + ubytovanie):');
+  Object.entries(output).forEach(([displayKey, items]) => {
+    // Zistíme kategóriu + názov tímu z displayKey ("TÍM (KATEGÓRIA)" alebo len "TÍM")
+    let teamName = displayKey;
+    let category = '';
+    const m = /^(.*)\s+\(([^()]+)\)$/.exec(displayKey);
+    if (m) {
+      teamName = m[1].trim();
+      category = m[2].trim();
+    }
+    const accomKey = `${category}|${teamName}`;
+    const accommodationName = __transportPerTeamBuffer.accommodationByKey.get(accomKey) || 'bez ubytovania';
+
+    console.groupCollapsed(`👥 ${displayKey} (${items.length}) – 🏠 ${accommodationName}`);
     items.forEach((line, i) => console.log(`${i + 1}. ${line}`));
     console.groupEnd();
   });
@@ -1118,6 +1133,46 @@ const TransportApp = ({ userProfileData }) => {
       } catch (e) {}
     };
     loadTeams();
+
+    // users → mapa (kategória|tím) -> názov ubytovne (alebo 'bez ubytovania')
+    try {
+      const usersRef = collection(window.db, 'users');
+      unsubs.push(onSnapshot(usersRef, (snap) => {
+        const nextMap = new Map();
+        snap.forEach((userDoc) => {
+          const userTeams = userDoc.data()?.teams;
+          if (!userTeams || typeof userTeams !== 'object') return;
+
+          Object.entries(userTeams).forEach(([categoryName, teamArray]) => {
+            if (!Array.isArray(teamArray)) return;
+            const cat = cleanCategory(categoryName);
+
+            teamArray.forEach((team) => {
+              if (!team?.teamName) return;
+              const teamName = String(team.teamName).trim();
+              const accomType = String(team.accommodation?.type || '').trim();
+              const accomName = String(team.accommodation?.name || '').trim();
+
+              const hasAccommodation = accomType !== '' && accomType.toLowerCase() !== 'bez ubytovania';
+              const displayAccommodation = (hasAccommodation && accomName)
+                ? accomName
+                : 'bez ubytovania';
+
+              nextMap.set(`${cat}|${teamName}`, displayAccommodation);
+            });
+          });
+        });
+
+        __transportPerTeamBuffer.accommodationByKey = nextMap;
+        __transportPerTeamBuffer.accommodationReady = true;
+
+        // Reset signatúry, aby sa výpis prekreslil aj keď sa zmenilo len ubytovanie
+        __transportPerTeamBuffer.lastPrintedSignature = '';
+
+        // Ak už máme zápasy aj stravovanie, prekreslíme výpis s ubytovaním
+        tryPrintPerTeamTimeline();
+      }, () => {}));
+    } catch (e) {}
 
     // settings/registration → tournament days
     try {
