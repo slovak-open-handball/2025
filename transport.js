@@ -436,6 +436,14 @@ const useCateringConsoleLog = (
     const logCatering = async () => {
       if (cancelled) return;
 
+      // Rovnako ako pri zápasoch: počkáme, kým je mapovanie pripravené,
+      // aby matchTracker.getTeamNameByDisplayId mal naplnené mapovanie
+      // (inak by sa superstructure tímy ako "U12 D 1E" nezmapovali správne).
+      if (!isMappingReady()) {
+        await waitForMappingReady(1500, 50, 4000);
+      }
+      if (cancelled) return;
+
       const mappedCatering = await Promise.all(cateringDocs.map(async (a) => {
         const cat = cleanCategory(a.categoryName || a.category || a.clickedTeamCategory || '');
         const dayKey = a.dayKey || null;
