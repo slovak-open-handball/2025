@@ -476,28 +476,34 @@ const useCateringConsoleLog = (
 
         const trimmedRawTeam = String(rawTeamName || '').trim();
 
-        // 1) najprv skúsime rýchlu cache z trackerResolvedNames (rovnaké ako v timeline)
-        let resolvedTeamName =
-          (trimmedRawTeam && trackerResolvedNamesRef.current?.[trimmedRawTeam]) || trimmedRawTeam || '-';
-
-        // 2) ak cache nemá výsledok, použijeme ROVNAKÉ mapovanie ako v tabuľke zápasov
-        //    (teamManager.getTeamNameByDisplayIdSync + matchTracker.getTeamNameByDisplayId)
-        if (trimmedRawTeam && (!trackerResolvedNamesRef.current?.[trimmedRawTeam])) {
+        // ROVNAKÉ mapovanie ako v tabuľke zápasov:
+        // resolveTeamNameForDisplay(identifier, categoryName)
+        // - najprv teamManager.getTeamNameByDisplayIdSync
+        // - potom matchTracker.getTeamNameByDisplayId
+        // Voláme ho VŽDY, keď názov tímu obsahuje kategóriu (rovnako ako pri zápasoch),
+        // aby sa aj superstructure tímy (napr. "U12 D 1E") namapovali rovnako.
+        let resolvedTeamName = trimmedRawTeam || '-';
+        if (trimmedRawTeam) {
           try {
             const viaDisplay = await resolveTeamNameForDisplay(trimmedRawTeam, cat);
             if (
               viaDisplay &&
               String(viaDisplay).trim() !== '' &&
-              String(viaDisplay).trim() !== 'null' &&
-              String(viaDisplay).trim() !== trimmedRawTeam
+              String(viaDisplay).trim() !== 'null'
             ) {
               resolvedTeamName = String(viaDisplay).trim();
+            } else if (trackerResolvedNamesRef.current?.[trimmedRawTeam]) {
+              // fallback na cache, ak resolver nič nevrátil
+              resolvedTeamName = trackerResolvedNamesRef.current[trimmedRawTeam];
             }
           } catch (e) {
-            // ak zlyhá, necháme pôvodnú hodnotu
+            // ak resolver zlyhá, skúsime cache
+            if (trackerResolvedNamesRef.current?.[trimmedRawTeam]) {
+              resolvedTeamName = trackerResolvedNamesRef.current[trimmedRawTeam];
+            }
           }
         }
-
+        
         return {
           id: a.id,
           dátum: a.dayLabel || dayKey || '-',
