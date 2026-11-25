@@ -2243,10 +2243,18 @@ const TransportApp = ({ userProfileData }) => {
       if (!teamFilter && !teamCatFilter) return true;
       if (teamCatFilter && cleanCategory(category || '') !== teamCatFilter) return false;
       if (!teamFilter) return true;
+  
       const tn = String(teamName || '').trim();
       if (tn === teamFilter) return true;
+  
+      // raw → mapped
       const mappedEv = trackerResolvedNamesRef.current[tn] || trackerResolvedNames[tn];
       if (mappedEv && String(mappedEv).trim() === teamFilter) return true;
+      
+      // teamFilter je raw, tn je namapovaný → skontroluj, či tn je namapovaním teamFilter
+      const mappedFilter = trackerResolvedNamesRef.current[teamFilter] || trackerResolvedNames[teamFilter];
+      if (mappedFilter && String(mappedFilter).trim() === tn) return true;
+  
       return false;
     };
 
@@ -2634,10 +2642,16 @@ const TransportApp = ({ userProfileData }) => {
       if (!teamFilter && !teamCatFilter) return true;
       if (teamCatFilter && cleanCategory(ev.category || '') !== teamCatFilter) return false;
       if (!teamFilter) return true;
+  
       const evTn = String(ev.teamName || '').trim();
       if (evTn === teamFilter) return true;
+  
       const mappedEv = trackerResolvedNamesRef.current[evTn] || trackerResolvedNames[evTn];
       if (mappedEv && String(mappedEv).trim() === teamFilter) return true;
+  
+      const mappedFilter = trackerResolvedNamesRef.current[teamFilter] || trackerResolvedNames[teamFilter];
+      if (mappedFilter && String(mappedFilter).trim() === evTn) return true;
+  
       return false;
     };
     
@@ -2718,17 +2732,32 @@ const TransportApp = ({ userProfileData }) => {
         React.createElement('select', {
           className: 'w-full border border-gray-300 rounded px-3 py-2 text-sm',
           value: selectedTeam ? `${selectedTeamCategory}|${selectedTeam}` : '',
-          onChange: (e) => {
-            const v = e.target.value;
-            if (!v) {
-              setSelectedTeam('');
-              setSelectedTeamCategory('');
-              return;
+          onChange: async (e) => {
+          const v = e.target.value;
+          if (!v) {
+            setSelectedTeam('');
+            setSelectedTeamCategory('');
+            return;
+          }
+          const [cat, ...rest] = v.split('|');
+          const rawTeamName = rest.join('|');
+          setSelectedTeamCategory(cat);
+          setSelectedTeam(rawTeamName);
+
+          // Predbežné namapovanie, aby filter fungoval hneď
+          try {
+            const mapped = await resolveTeamNameForDisplay(rawTeamName, cat);
+            if (
+              mapped &&
+              String(mapped).trim() !== '' &&
+              String(mapped).trim() !== 'null' &&
+              String(mapped).trim() !== rawTeamName
+            ) {
+              const nextMap = { ...trackerResolvedNamesRef.current, [rawTeamName]: String(mapped).trim() };
+              trackerResolvedNamesRef.current = nextMap;
+              setTrackerResolvedNames(nextMap);
             }
-            const [cat, ...rest] = v.split('|');
-            setSelectedTeamCategory(cat);
-            setSelectedTeam(rest.join('|'));
-          },
+          } catch (err) {}
         },
           React.createElement('option', { value: '' }, 'Všetky tímy'),
           ...availableTeams.map((t) => {
