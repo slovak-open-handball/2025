@@ -1890,7 +1890,10 @@ const TransportApp = ({ userProfileData }) => {
         if (parent._parentKey && parent._parentKey !== parent.key) continue;
 
         const parentCategory = cleanCategory(parent.category || '');
-        const rawTeamName = String(parent.teamName || '').trim();
+        const mappedTeamName =
+            trackerResolvedNamesRef.current[rawTeamName] ||
+            trackerResolvedNames[rawTeamName] ||
+            rawTeamName;
         if (!rawTeamName) continue;
 
         // Mapovanie názvu tímu rovnako ako pri zápasoch
@@ -2474,7 +2477,7 @@ const TransportApp = ({ userProfileData }) => {
   
       allEventsForEnrichment.push({
         kind: 'transfer',
-        teamName: String(parent.teamName || '').trim(),
+        teamName: mappedTeamName,
         category: cat,
         ts: sortTs,
         dayKey,
