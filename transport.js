@@ -1888,12 +1888,9 @@ const TransportApp = ({ userProfileData }) => {
 
       for (const parent of savedTransfers) {
         if (parent._parentKey && parent._parentKey !== parent.key) continue;
-
+      
         const parentCategory = cleanCategory(parent.category || '');
-        const mappedTeamName =
-            trackerResolvedNamesRef.current[rawTeamName] ||
-            trackerResolvedNames[rawTeamName] ||
-            rawTeamName;
+        const rawTeamName = String(parent.teamName || '').trim();
         if (!rawTeamName) continue;
 
         // Mapovanie názvu tímu rovnako ako pri zápasoch
