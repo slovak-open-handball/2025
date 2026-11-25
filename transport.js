@@ -122,73 +122,83 @@ const getGroupCharFromTeamName = (teamName) => {
 const buildRowId = (busId, dayKey, order) => `${busId}__${dayKey}__${order}`;
 
 /* ------------------------------------------------------------------ */
-/* Resolve názvu tímu cez teamManager + matchTracker (rovnako ako      */
-/* v logged-in-matches-hall.js)                                        */
+/* Resolve názvu tímu cez teamManager + matchTracker                   */
 /* ------------------------------------------------------------------ */
 
-// Detekcia tvaru "písmeno + číslo" alebo "číslo + písmeno" (napr. "I1", "1I", "B4")
-const looksLikeGroupCode = (name) => {
-  if (!name) return false;
-  const s = String(name).trim();
-  // písmeno+číslo (I1, B4, E5, C3) alebo číslo+písmeno (1I, 4B)
-  return /^[A-ZÁ-Ž]\d+$/.test(s) || /^\d+[A-ZÁ-Ž]$/.test(s);
+// "I1", "B4", "E5" – písmeno+číslo
+const isLetterDigitCode = (s) => /^[A-ZÁ-Ž]\d+$/.test(String(s || '').trim());
+
+// "1I", "4B" – číslo+písmeno
+const isDigitLetterCode = (s) => /^\d+[A-ZÁ-Ž]$/.test(String(s || '').trim());
+
+// Vráti true, ak názov tímu obsahuje kategóriu a po jej odfiltrovaní
+// zostane tvar "písmeno+číslo" (typ = 'letter-digit') alebo
+// "číslo+písmeno" (typ = 'digit-letter'). Inak vráti null.
+const detectGroupCodeType = (teamName, categoryName) => {
+  if (!teamName || !categoryName) return null;
+  const tn = String(teamName).trim();
+  const cat = String(categoryName).trim();
+  if (!cat || !tn.includes(cat)) return null;
+
+  const withoutCategory = tn.split(cat).join('').replace(/\s+/g, '').trim();
+  if (!withoutCategory) return null;
+
+  if (isLetterDigitCode(withoutCategory)) return 'letter-digit';
+  if (isDigitLetterCode(withoutCategory)) return 'digit-letter';
+  return null;
 };
 
-// Kompletná kaskáda – presne podľa požiadavky
+// Kompletná kaskáda podľa pravidiel:
+//   - "písmeno+číslo" → teamManager.getTeamNameByDisplayIdSync(vstup)
+//   - "číslo+písmeno" → matchTracker.getTeamNameByDisplayId(vstup)
+//   - oba prípady len ak názov tímu obsahuje názov kategórie
+//   - inak vráť pôvodný názov
 const resolveTeamNameForDisplay = async (identifier, categoryName) => {
   if (!identifier) return identifier;
 
   const original = String(identifier).trim();
-  let intermediate = original;
-
-  // KROK 1 – teamManager sync
-  try {
-    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-      const syncResult = window.teamManager.getTeamNameByDisplayIdSync(original);
-      if (syncResult && syncResult !== original) {
-        intermediate = syncResult;
-      }
-    }
-  } catch (e) {}
-
-  // KROK 2 – rozhodnutie, či volať matchTracker
-  let shouldCallMatchTracker = false;
   const cat = categoryName ? String(categoryName).trim() : '';
 
-  // Skontroluj, či intermediate (alebo original) obsahuje kategóriu
-  // a po odfiltrovaní kategórie zostane tvar "písmeno+číslo" / "číslo+písmeno"
-  const checkValue = intermediate || original;
-  if (cat && checkValue.includes(cat)) {
-    const withoutCategory = checkValue.split(cat).join('').trim();
-    if (looksLikeGroupCode(withoutCategory)) {
-      shouldCallMatchTracker = true;
-    }
-  } else if (!cat) {
-    // bez kategórie – skús priamo, ak má tvar group kódu
-    if (looksLikeGroupCode(checkValue)) {
-      shouldCallMatchTracker = true;
-    }
-  }
+  const codeType = detectGroupCodeType(original, cat);
+  if (!codeType) return original;
 
-  // KROK 2 – matchTracker async
-  if (shouldCallMatchTracker) {
+  // "písmeno+číslo" → teamManager.getTeamNameByDisplayIdSync
+  if (codeType === 'letter-digit') {
     try {
-      if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-        const asyncResult = await window.matchTracker.getTeamNameByDisplayId(checkValue);
+      if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+        const res = window.teamManager.getTeamNameByDisplayIdSync(original);
         if (
-          asyncResult &&
-          asyncResult !== checkValue &&
-          String(asyncResult).trim() !== '' &&
-          String(asyncResult).trim() !== 'null'
+          res &&
+          String(res).trim() !== '' &&
+          String(res).trim() !== 'null' &&
+          String(res).trim() !== original
         ) {
-          return asyncResult;
+          return String(res).trim();
         }
       }
     } catch (e) {}
+    return original;
   }
 
-  // KROK 3 – vráť intermediate (teamManager výsledok alebo pôvodný identifier)
-  return intermediate;
+  // "číslo+písmeno" → matchTracker.getTeamNameByDisplayId
+  if (codeType === 'digit-letter') {
+    try {
+      if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+        const res = await window.matchTracker.getTeamNameByDisplayId(original);
+        if (
+          res &&
+          String(res).trim() !== '' &&
+          String(res).trim() !== 'null' &&
+          String(res).trim() !== original
+        ) {
+          return String(res).trim();
+        }
+      }
+    } catch (e) {}
+    return original;
+  }
+
+  return original;
 };
 
 /* ------------------------------------------------------------------ */
