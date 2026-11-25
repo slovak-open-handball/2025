@@ -2153,6 +2153,10 @@ const TransportApp = ({ userProfileData }) => {
     const tn = String(teamName).trim();
     const cat = categoryName ? cleanCategory(categoryName) : '';
 
+    // Ak je nastavený filter tímu a názov mu priamo zodpovedá, berieme ako resolved
+    if (teamFilter && tn === teamFilter) return true;
+    if (teamCatFilter && cat !== teamCatFilter) return true; // iná kategória — nezaujíma nás
+  
     if (!cat || !tn.includes(cat)) return true;
 
     const mapped = trackerResolvedNamesRef.current[tn] ?? trackerResolvedNames[tn];
@@ -2457,7 +2461,19 @@ const TransportApp = ({ userProfileData }) => {
     });
   
     // ─── 2) Enrichment – doplní chýbajúce pešie presuny a časy ───
-    const enriched = enrichTransfersWithImpliedWalking(allEventsForEnrichment);
+    // Zoskupíme podľa tímu, aby sa syntetické transfery negenerovali medzi tímami
+    const eventsByTeamKey = new Map();
+    for (const ev of allEventsForEnrichment) {
+      const key = `${cleanCategory(ev.category || '')}|${String(ev.teamName || '').trim()}`;
+      if (!eventsByTeamKey.has(key)) eventsByTeamKey.set(key, []);
+      eventsByTeamKey.get(key).push(ev);
+    }
+
+    const enriched = [];
+    for (const [, teamEvents] of eventsByTeamKey.entries()) {
+      const enrichedTeam = enrichTransfersWithImpliedWalking(teamEvents);
+      enriched.push(...enrichedTeam);
+    }
   
     // ─── 3) Ponecháme iba transfery a prevedieme na UI-tvar ───
     const uiEvents = [];
