@@ -201,9 +201,76 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
     return (KIND_PRIORITY[a.kind] ?? 9) - (KIND_PRIORITY[b.kind] ?? 9);
   });
 
+  const sampleEv = sorted[0] || {};
+  const accomKey = `${cleanCategory(sampleEv.category || '')}|${String(sampleEv.teamName || '').trim()}`;
+  const accommodationName = __transportPerTeamBuffer.accommodationByKey.get(accomKey) || 'bez ubytovania';
+  const isWithoutAccommodation = !accommodationName || accommodationName === 'bez ubytovania';
+
   const usedWalkingIndexes = new Set();
   const excludedTransferIndexes = new Set();
   const assignments = new Map();
+
+  // Pre tímy bez ubytovania: presun na miesto prvej udalosti dňa a po poslednej udalosti dňa
+  if (isWithoutAccommodation) {
+    const timedByDay = new Map();
+    sorted.forEach((ev, idx) => {
+      if (isWalkingTransferWithoutTime(ev)) return;
+      const range = getEventStartEndTs(ev);
+      if (!range || range.startTs == null || range.endTs == null) return;
+      const dk = getEffectiveDayKey(ev) || getDayKeyFromTs(range.startTs);
+      if (!dk) return;
+      if (!timedByDay.has(dk)) timedByDay.set(dk, []);
+      timedByDay.get(dk).push({ ev, idx, range, places: getEventPlaces(ev) });
+    });
+
+    timedByDay.forEach((dayTimed, dk) => {
+      dayTimed.sort((a, b) => a.range.startTs - b.range.startTs || a.range.endTs - b.range.endTs);
+      const firstItem = dayTimed[0];
+      const lastItem = dayTimed[dayTimed.length - 1];
+
+      if (firstItem) {
+        const firstPlace = normPlace(firstItem.places.from || firstItem.places.to);
+        const startWalkIdx = sorted.findIndex((cand, k) => {
+          if (usedWalkingIndexes.has(k) || !isWalkingTransferWithoutTime(cand)) return false;
+          const candDk = getEffectiveDayKey(cand);
+          if (candDk && candDk !== dk) return false;
+          const { from: wFrom, to: wTo } = getEventPlaces(cand);
+          return Boolean(normPlace(wFrom)) && normPlace(wTo) === firstPlace;
+        });
+
+        if (startWalkIdx !== -1) {
+          const endTs = firstItem.range.startTs;
+          const dObj = new Date(endTs);
+          const startTs = new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 0, 0, 0, 0).getTime();
+          if (endTs > startTs) {
+            usedWalkingIndexes.add(startWalkIdx);
+            assignments.set(startWalkIdx, { startTs, endTs, dayKey: dk });
+          }
+        }
+      }
+
+      if (lastItem) {
+        const lastPlace = normPlace(lastItem.places.to || lastItem.places.from);
+        const endWalkIdx = sorted.findIndex((cand, k) => {
+          if (usedWalkingIndexes.has(k) || !isWalkingTransferWithoutTime(cand)) return false;
+          const candDk = getEffectiveDayKey(cand);
+          if (candDk && candDk !== dk) return false;
+          const { from: wFrom, to: wTo } = getEventPlaces(cand);
+          return normPlace(wFrom) === lastPlace && Boolean(normPlace(wTo));
+        });
+
+        if (endWalkIdx !== -1) {
+          const startTs = lastItem.range.endTs;
+          const dObj = new Date(startTs);
+          const endOfDayTs = new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 23, 59, 0, 0).getTime();
+          if (endOfDayTs > startTs) {
+            usedWalkingIndexes.add(endWalkIdx);
+            assignments.set(endWalkIdx, { startTs, endTs: endOfDayTs, dayKey: dk });
+          }
+        }
+      }
+    });
+  }
 
   for (let i = 0; i < sorted.length; i++) {
     const first = sorted[i];
@@ -214,7 +281,6 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
     const firstPlace = normPlace(firstPlaces.to || firstPlaces.from);
     if (!firstPlace) continue;
 
-    // Ak je ďalšia udalosť na tom istom mieste (firstPlace), presun až po nej rieši ďalšia iterácia
     let hasLaterEventOnSamePlace = false;
     for (let k = i + 1; k < sorted.length; k++) {
       const later = sorted[k];
