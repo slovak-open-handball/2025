@@ -293,8 +293,33 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
           const { from: wFrom, to: wTo } = getEventPlaces(cand);
           return normPlace(wFrom) === lastPlace && Boolean(normPlace(wTo));
         });
-
+      
+        // ─── NOVÉ: end-of-day walking pridáme LEN ak nie je v ten deň už žiadna
+        // neskoršia udalosť na mieste, kam by mal presun viesť (t.j. tím sa naozaj
+        // niekam presúva po skončení poslednej udalosti). Ak posledná udalosť dňa
+        // je zároveň poslednou udalosťou pobytu (napr. večera na ubytovaní a tím
+        // nemá kam ísť), end-of-day walking je zbytočný.
         if (endWalkIdx !== -1) {
+          const { to: wTo } = getEventPlaces(sorted[endWalkIdx]);
+          const targetPlace = normPlace(wTo);
+          // Zistíme, či existuje ešte neskoršia udalosť (v iný deň alebo ten istý)
+          // na mieste `targetPlace` — ak áno, presun má zmysel (tím sa tam presúva
+          // kvôli ďalšej udalosti). Ak nie, presun je zbytočný.
+          const hasFutureEventAtTarget = sorted.some((cand, k) => {
+            if (k === endWalkIdx) return false;
+            if (isWalkingTransferWithoutTime(cand)) return false;
+            const candRange = getEventStartEndTs(cand);
+            if (!candRange || candRange.startTs == null) return false;
+            if (candRange.startTs <= lastItem.range.endTs) return false;
+            const candPlaces = getEventPlaces(cand);
+            return normPlace(candPlaces.from || candPlaces.to) === targetPlace;
+          });
+      
+          if (!hasFutureEventAtTarget) {
+            // Presun po poslednej udalosti nemá kam viesť → zahodíme ho
+            return; // tento deň preskočíme pre end-of-day walking
+          }
+      
           const startTs = lastItem.range.endTs;
           const dObj = new Date(startTs);
           const endOfDayTs = new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 23, 59, 0, 0).getTime();
