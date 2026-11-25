@@ -2320,6 +2320,12 @@ const TransportApp = ({ userProfileData }) => {
       if (catFilter && cleanCategory(parent.category || '') !== catFilter) return;
       if (!eventMatchesTeamFilter(parent.teamName, parent.category)) return;
       if (!isTeamNameResolved(parent.teamName, parent.category, teamFilter, teamCatFilter)) return;
+
+      const rawTeamNameForTransfer = String(parent.teamName || '').trim();
+      const mappedTeamNameForTransfer =
+        trackerResolvedNamesRef.current[rawTeamNameForTransfer] ||
+        trackerResolvedNames[rawTeamNameForTransfer] ||
+        rawTeamNameForTransfer;
   
       const stopsIds = Array.isArray(parent.intermediateStopIds)
         ? parent.intermediateStopIds.filter(Boolean)
@@ -2477,7 +2483,7 @@ const TransportApp = ({ userProfileData }) => {
   
       allEventsForEnrichment.push({
         kind: 'transfer',
-        teamName: mappedTeamName,
+        teamName: mappedTeamNameForTransfer,
         category: cat,
         ts: sortTs,
         dayKey,
