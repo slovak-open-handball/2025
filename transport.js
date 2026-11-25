@@ -139,9 +139,14 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
 
   const isFirstTournamentDay = (dk) => {
     const firstDay = window.__transportPerTeamBuffer?.firstTournamentDayKey;
+    const arrivalTs = window.__transportPerTeamBuffer?.arrivalTimestamp;
+
+    // Ak je známy prvý deň turnaja, porovnávame s ním
     if (firstDay && dk) return dk === firstDay;
-    if (__transportPerTeamBuffer?.arrivalTimestamp && dk) {
-      return dk === getDayKeyFromTs(__transportPerTeamBuffer.arrivalTimestamp);
+  
+    // Fallback: ak nie je firstDay, ale je arrivalTimestamp, berieme deň príchodu
+    if (arrivalTs && dk) {
+      return dk === getDayKeyFromTs(arrivalTs);
     }
     return false;
   };
@@ -2012,12 +2017,12 @@ const TransportApp = ({ userProfileData }) => {
           const d = new Date(ts);
           return isNaN(d.getTime()) ? null : d;
         };
-
+    
         const arrivalDt = toDate(data.arrivalDate);
         window.__transportPerTeamBuffer.arrivalTimestamp = arrivalDt && !isNaN(arrivalDt.getTime())
           ? arrivalDt.getTime()
           : null;
-
+    
         // OPRAVA: najprv definovať start, až potom ho použiť
         const start = toDate(data.tournamentStart);
         const end = toDate(data.tournamentEnd);
@@ -2028,6 +2033,11 @@ const TransportApp = ({ userProfileData }) => {
     
         window.__transportPerTeamBuffer.firstTournamentDayKey = startDayKey;
         firstTournamentDayKeyRef.current = startDayKey;
+    
+        // ─── NOVÉ: prekresliť per-tím timeline, keď sa zmenil arrival / prvý deň ───
+        __transportPerTeamBuffer.lastPrintedSignature = '';
+        tryPrintPerTeamTimeline();
+        // ────────────────────────────────────────────────────────────────────────
     
         if (!start || !end) { setTournamentDays([]); return; }
         const days = [];
