@@ -137,6 +137,31 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
     return '';
   };
 
+  const isFirstTournamentDay = (dk) => {
+    const firstDay = firstTournamentDayKeyRef.current;
+    if (firstDay && dk) return dk === firstDay;
+    if (arrivalTimestampRef.current && dk) {
+      return dk === getDayKeyFromTs(arrivalTimestampRef.current);
+    }
+    return false;
+  };
+
+  const getArrivalStartTsForDay = (dk, fallbackEndTs) => {
+    const arrTs = arrivalTimestampRef.current;
+    if (!arrTs || !isFinite(arrTs) || !isFirstTournamentDay(dk)) return null;
+    const arrDate = new Date(arrTs);
+    const baseDate = fallbackEndTs ? new Date(fallbackEndTs) : arrDate;
+    return new Date(
+      baseDate.getFullYear(),
+      baseDate.getMonth(),
+      baseDate.getDate(),
+      arrDate.getHours(),
+      arrDate.getMinutes(),
+      0,
+      0
+    ).getTime();
+  };
+
   const buildUpdatedWalkingTransfer = (ev, startTs, endTs, dayKeyStr) => {
     const { from: walkFrom, to: walkTo } = getEventPlaces(ev);
     const startTimeStr = formatTimeOnly(startTs);
@@ -240,8 +265,11 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
 
         if (startWalkIdx !== -1) {
           const endTs = firstItem.range.startTs;
+          const arrivalStartTs = getArrivalStartTsForDay(dk, endTs);
           const dObj = new Date(endTs);
-          const startTs = new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 0, 0, 0, 0).getTime();
+          const startTs = arrivalStartTs != null && arrivalStartTs < endTs
+            ? arrivalStartTs
+            : new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 0, 0, 0, 0).getTime();
           if (endTs > startTs) {
             usedWalkingIndexes.add(startWalkIdx);
             assignments.set(startWalkIdx, { startTs, endTs, dayKey: dk });
@@ -1508,6 +1536,9 @@ const TransportApp = ({ userProfileData }) => {
   const trackerResolvedNamesRef = useRef({});
   const [trackerResolvedNames, setTrackerResolvedNames] = useState({});
 
+  const arrivalTimestampRef = useRef(null);
+  const firstTournamentDayKeyRef = useRef(null);
+
   /* -------------------- Pomocné resolve funkcie -------------------- */
   const resolvePlaceNameById = (placeId) => {
     if (!placeId) return '';
@@ -1960,8 +1991,27 @@ const TransportApp = ({ userProfileData }) => {
           const d = new Date(ts);
           return isNaN(d.getTime()) ? null : d;
         };
+
+        const arrivalDt = toDate(data.arrivalDate);
+        arrivalTimestampRef.current = arrivalDt && !isNaN(arrivalDt.getTime())
+          ? arrivalDt.getTime()
+          : null;
+        
+        const startDt = toDate(data.tournamentStart);
+        firstTournamentDayKeyRef.current = startDt && !isNaN(startDt.getTime())
+          ? `${startDt.getFullYear()}-${String(startDt.getMonth() + 1).padStart(2, '0')}-${String(startDt.getDate()).padStart(2, '0')}`
+          : null;
+        
         const start = toDate(data.tournamentStart);
         const end = toDate(data.tournamentEnd);
+        const arrivalDt = toDate(data.arrivalDate);
+        arrivalTimestampRef.current = arrivalDt && !isNaN(arrivalDt.getTime())
+          ? arrivalDt.getTime()
+          : null;
+
+        firstTournamentDayKeyRef.current = start && !isNaN(start.getTime())
+          ? `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`
+          : null;
         if (!start || !end) { setTournamentDays([]); return; }
         const days = [];
         const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
