@@ -702,7 +702,32 @@ const enrichTransfersWithImpliedWalking = (events) => {
     return hasTimes;
   });
 
-  return filtered;
+  // ─── NOVÉ: deduplikácia transferov s rovnakým fromName → toName a časom ───
+  const deduped = [];
+  const seenKeys = new Set();
+  for (const ev of filtered) {
+    if (ev.kind !== 'transfer') {
+      deduped.push(ev);
+      continue;
+    }
+    const legs = ev.legs || [];
+    const firstFrom = legs[0]?.fromName || '';
+    const lastTo = legs[legs.length - 1]?.toName || '';
+    const startTs = legs[0]?.startTs ?? null;
+    const endTs = legs[legs.length - 1]?.endTs ?? null;
+
+    // Kľúč: from + to + startTs + endTs + teamName + category
+    const key = `${ev.teamName}|${ev.category}|${normalizePlaceName(firstFrom)}|${normalizePlaceName(lastTo)}|${startTs}|${endTs}`;
+
+    if (seenKeys.has(key)) {
+      // Duplikát – preskočíme
+      continue;
+    }
+    seenKeys.add(key);
+    deduped.push(ev);
+  }
+
+  return deduped;
 };
 
 /* ------------------------------------------------------------------ */
