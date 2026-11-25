@@ -2138,6 +2138,10 @@ const TransportApp = ({ userProfileData }) => {
         setLoading(false);
 
         const transfersForBuffer = transfers.map((t) => {
+          // ⬅️ NOVÉ: definuj mappedTeamName
+          const rawTeamName = String(t.teamName || '').trim();
+          const mappedTeamName = trackerResolvedNamesRef.current?.[rawTeamName] || rawTeamName;
+  
           const legStops = [
             { id: t.fromId, name: t.fromLocation },
             ...(Array.isArray(t.intermediateStopIds)
