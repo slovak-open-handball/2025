@@ -262,7 +262,50 @@ const tryPrintPerTeamTimeline = () => {
         });
       }
 
-      return result;
+      // ─── NOVÉ: odstránenie duplicitných transferov bez časov ───
+      // Ak existuje transfer s reálnymi časmi pre rovnakú dvojicu miest (v akomkoľvek smere),
+      // odstránime všetky transfery bez časov pre tú istú dvojicu miest v tom istom dni.
+      const hasTimesKey = (ev) => {
+        const legs = ev?.legs || [];
+        if (legs.length === 0) return null;
+        const hasTimes = legs.some((l) => l.startTs != null && l.endTs != null && l.endTs > l.startTs);
+        if (!hasTimes) return null;
+        const first = legs[0];
+        const last = legs[legs.length - 1];
+        // Kľúč je neusporiadaný pár (A|B = B|A), aby sme pokryli oba smery
+        const a = norm(first.fromName);
+        const b = norm(last.toName);
+        const pair = [a, b].sort().join('||');
+        return `${ev.dayKey || ''}||${pair}`;
+      };
+
+      const timedPairs = new Set();
+      for (const ev of result) {
+        if (ev.kind !== 'transfer') continue;
+        const k = hasTimesKey(ev);
+        if (k) timedPairs.add(k);
+      }
+
+      const filtered = result.filter((ev) => {
+        if (ev.kind !== 'transfer') return true;
+        const legs = ev.legs || [];
+        if (legs.length === 0) return true;
+        const hasTimes = legs.some((l) => l.startTs != null && l.endTs != null && l.endTs > l.startTs);
+        if (hasTimes) return true; // necháme transfery s časmi
+
+        // Transfer bez časov – skontrolujeme, či existuje timed transfer pre rovnakú dvojicu miest v tom istom dni
+        const first = legs[0];
+        const last = legs[legs.length - 1];
+        const a = norm(first.fromName);
+        const b = norm(last.toName);
+        const pair = [a, b].sort().join('||');
+        const key = `${ev.dayKey || ''}||${pair}`;
+        if (timedPairs.has(key)) return false; // zahoď duplicitný bez časov
+        return true;
+      });
+
+      return filtered;
+      // ─── koniec čistenia ───
     };
 
     const enrichedList = enrichTransfersWithImpliedWalking(list);
