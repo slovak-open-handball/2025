@@ -547,6 +547,16 @@ const useCateringConsoleLog = (
       if (!isMappingReady()) {
         await waitForMappingReady(1500, 50, 4000);
       }
+      if (!__transportPerTeamBuffer.matchesReady || !__transportPerTeamBuffer.cateringReady) {
+        await new Promise((res) => {
+          const t = setInterval(() => {
+            if (__transportPerTeamBuffer.matchesReady && __transportPerTeamBuffer.cateringReady) {
+              clearInterval(t); res();
+            }
+          }, 100);
+          setTimeout(() => { clearInterval(t); res(); }, 4000);
+        });
+      }
       if (cancelled) return;
 
       const mappedCatering = await Promise.all(cateringDocs.map(async (a) => {
