@@ -2210,11 +2210,129 @@ const TransportApp = ({ userProfileData }) => {
         setSavedTransfers(transfers);
         travelTimesLoadedRef.current = true;
         setLoading(false);
+
+        // ─── NOVÉ: naplniť buffer pre per-tím timeline reálnymi transfermi z DB ───
+        const transfersForBuffer = transfers.map((t) => {
+          // Vytvoríme legs z from/to + intermediate stops (ak sú)
+          const legStops = [
+            { id: t.fromId, name: t.fromLocation },
+            ...(Array.isArray(t.intermediateStopIds)
+              ? t.intermediateStopIds.map((id, i) => ({
+                  id,
+                  name: (t.intermediateStops && t.intermediateStops[i]) || resolvePlaceNameById(id),
+                }))
+              : []),
+            { id: t.toId, name: t.toLocation },
+          ].filter((s) => s.name);
+
+          const legs = [];
+          for (let i = 0; i < legStops.length - 1; i++) {
+            const fromStop = legStops[i];
+            const toStop = legStops[i + 1];
+            if (!fromStop.name || !toStop.name) continue;
+            // Použijeme časy zo segments, ak sú; inak dopočítame z when
+            const seg = (t.segments || []).find(
+              (s) => s && s.fromId === fromStop.id && s.toId === toStop.id
+            ) || null;
+            const isWalking = t.isWalking === true || !!(seg && seg.isWalking === true);
+            const startTs = seg?.startTs != null && isFinite(seg.startTs) ? seg.startTs : null;
+            const endTs = seg?.endTs != null && isFinite(seg.endTs) ? seg.endTs : null;
+            legs.push({
+              fromName: fromStop.name,
+              toName: toStop.name,
+              isWalking,
+              busName: t.text || null,
+              startTs,
+              endTs,
+            });
+          }
+
+          // Ak legs nemajú časy, skúsime ich doplniť z `when` (start/end)
+          const whenRange = parseWhenRangeToTs(t.when);
+          if (whenRange) {
+            const hasAnyTime = legs.some((l) => l.startTs != null && l.endTs != null);
+            if (!hasAnyTime) {
+              if (legs.length > 0) {
+                legs[0].startTs = whenRange.startTs;
+                legs[legs.length - 1].endTs = whenRange.endTs;
+              }
+            } else {
+              // doplníme chýbajúce okraje
+              if (legs[0].startTs == null) legs[0].startTs = whenRange.startTs;
+              if (legs[legs.length - 1].endTs == null) legs[legs.length - 1].endTs = whenRange.endTs;
+            }
+          }
+
+          const startTs =
+            legs.find((l) => l.startTs != null)?.startTs ??
+            whenRange?.startTs ??
+            Number.POSITIVE_INFINITY;
+          const endTs =
+            [...legs].reverse().find((l) => l.endTs != null)?.endTs ??
+            whenRange?.endTs ??
+            startTs;
+
+          const dayKeyFromTs =
+            startTs !== Number.POSITIVE_INFINITY && isFinite(startTs)
+              ? (() => {
+                  const d = new Date(startTs);
+                  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                })()
+              : null;
+
+          const legLabels = legs.map((l) => {
+            const timeLabel =
+              l.startTs != null && l.endTs != null
+                ? `${formatTimeOnly(l.startTs)} – ${formatTimeOnly(l.endTs)}`
+                : l.isWalking
+                  ? 'PEŠI'
+                  : 'nepriradený';
+            const dateLabel = formatDateDDMMYYYY(l.startTs) || '';
+            const legTypeLabel = l.isWalking ? 'PEŠI' : (l.busName || 'PRESUN');
+            return `🚌 ${legTypeLabel} ${dateLabel ? dateLabel + ' ' : ''}${timeLabel} | ${l.fromName} → ${l.toName} | ${t.category || '-'}`;
+          });
+
+          const fromName = legs[0]?.fromName || t.fromLocation || null;
+          const toName = legs[legs.length - 1]?.toName || t.toLocation || null;
+
+          return {
+            kind: 'transfer',
+            key: t.key,
+            teamName: t.teamName || null,
+            teamUid: t.teamUid || null,
+            teamIndex: t.teamIndex ?? null,
+            category: t.category || '',
+            dayKey: t.dayKey || dayKeyFromTs,
+            ts: startTs,
+            endTs,
+            isWalking: t.isWalking === true,
+            busName: t.text || null,
+            fromName,
+            toName,
+            title: fromName && toName ? `${fromName} → ${toName}` : (t.text || ''),
+            legs,
+            legLabels,
+            label: `🚌 PRESUN ${formatDateDDMMYYYY(startTs) || ''} ${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)} | ${fromName || '?'} → ${toName || '?'} | ${t.category || '-'}`,
+            sortKey: `${t.dayKey || dayKeyFromTs || ''}|${startTs}|${t.key || ''}`,
+          };
+        });
+
+        __transportPerTeamBuffer.transfers = transfersForBuffer;
+        __transportPerTeamBuffer.transfersReady = true;
+        // Reset signatúry, aby sa výpis prekreslil s reálnymi transfermi
+        __transportPerTeamBuffer.lastPrintedSignature = '';
+
+        tryPrintPerTeamTimeline();
         resolveTransfersViaMatchTracker(transfers);
       }, (e) => {
         console.error('transportTravelTimes error', e);
         travelTimesLoadedRef.current = true;
         setLoading(false);
+        // Aj pri chybe nastavíme transfersReady, aby sa per-tím timeline
+        // aspoň raz skúsil vykresliť (napr. so syntetickými presunmi).
+        __transportPerTeamBuffer.transfers = __transportPerTeamBuffer.transfers || [];
+        __transportPerTeamBuffer.transfersReady = true;
+        tryPrintPerTeamTimeline();
       }));
     } catch (e) {}
 
