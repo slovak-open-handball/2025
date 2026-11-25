@@ -630,6 +630,212 @@ const useCateringOverview = (
 };
 
 /* ------------------------------------------------------------------ */
+/* Výpis stravovania iba do konzoly (na základe logged-in-catering.js) */
+/* ------------------------------------------------------------------ */
+
+const useCateringConsoleLog = (
+  db,
+  { trackerResolvedNames, resolvePlaceNameById }
+) => {
+  const loggedSignatureRef = useRef('');
+
+  useEffect(() => {
+    if (!db) return;
+
+    let cancelled = false;
+    let cateringDocs = [];
+    let placesMap = new Map();
+    let usersByKey = new Map();
+    let usersByCategory = new Map();
+
+    const memberHasMeal = (member, dayKey, mealType, teamPackageDetails) => {
+      const memberMealSetting = member?.packageDetails?.meals?.[dayKey]?.[mealType];
+      if (memberMealSetting !== undefined) {
+        return memberMealSetting === 1 || memberMealSetting === true;
+      }
+      const teamMealSetting = teamPackageDetails?.meals?.[dayKey]?.[mealType];
+      if (teamMealSetting !== undefined) {
+        return teamMealSetting === 1 || teamMealSetting === true;
+      }
+      return true;
+    };
+
+    const countMembersWithMeal = (teamData, dayKey, mealType) => {
+      if (!teamData) return 0;
+      const teamPackageDetails = teamData.packageDetails || null;
+      const countArr = (arr) =>
+        Array.isArray(arr)
+          ? arr.filter((m) => memberHasMeal(m, dayKey, mealType, teamPackageDetails)).length
+          : 0;
+
+      return (
+        countArr(teamData.playerDetails) +
+        countArr(teamData.menTeamMemberDetails) +
+        countArr(teamData.womenTeamMemberDetails) +
+        countArr(teamData.driverDetailsMale) +
+        countArr(teamData.driverDetailsFemale)
+      );
+    };
+
+    const getSuperstructureAvg = (category, dayKey, mealType) => {
+      const cat = cleanCategory(category);
+      const list = usersByCategory.get(cat) || [];
+      if (list.length === 0) return null;
+
+      const total = list.reduce((acc, t) => {
+        const cnt = dayKey && mealType
+          ? countMembersWithMeal(t.rawTeamData, dayKey, mealType)
+          : t.fallbackTotal;
+        return acc + cnt;
+      }, 0);
+
+      return Math.ceil(total / list.length);
+    };
+
+    const logCatering = () => {
+      if (cancelled) return;
+
+      const mappedCatering = cateringDocs.map((a) => {
+        const cat = cleanCategory(a.categoryName || a.category || a.clickedTeamCategory || '');
+        const dayKey = a.dayKey || null;
+        const mealType = a.mealType || '';
+        const mealLabel =
+          mealType === 'lunch' ? 'Obed' :
+          mealType === 'dinner' ? 'Večera' :
+          (mealType || '-');
+
+        const placeName = a.placeId
+          ? (resolvePlaceNameById?.(a.placeId) || placesMap.get(a.placeId) || a.placeName || '-')
+          : (a.placeName || '-');
+
+        const timeRange = a.slotFrom && a.slotTo
+          ? `${a.slotFrom} – ${a.slotTo}`
+          : (a.slotFrom || '-');
+
+        let rawTeamName = a.teamName || '';
+        let headcount = '-';
+
+        if (a.isSuperstructure === true) {
+          rawTeamName = a.teamName || cat || '-';
+          const avg = getSuperstructureAvg(cat, dayKey, mealType);
+          if (avg != null) headcount = avg;
+        } else {
+          const team =
+            usersByKey.get(`${a.teamUid}|${a.teamIndex}|${cat}`) ||
+            Array.from(usersByKey.values()).find(
+              (t) => String(t.uid) === String(a.teamUid) && Number(t.teamIndex) === Number(a.teamIndex)
+            );
+          if (team) {
+            rawTeamName = team.teamName;
+            headcount = dayKey && mealType
+              ? countMembersWithMeal(team.rawTeamData, dayKey, mealType)
+              : team.fallbackTotal;
+          }
+        }
+
+        const trimmedRawTeam = String(rawTeamName || '').trim();
+        const resolvedTeamName =
+          (trimmedRawTeam && trackerResolvedNames?.[trimmedRawTeam]) || trimmedRawTeam || '-';
+
+        return {
+          id: a.id,
+          dátum: a.dayLabel || dayKey || '-',
+          jedlo: mealLabel,
+          čas: timeRange,
+          kategória: cat || '-',
+          tím: resolvedTeamName,
+          typ: a.isSuperstructure ? (a.isPriority ? 'superstructure (priorita)' : 'superstructure') : 'tím',
+          miesto: placeName,
+          počet: headcount,
+        };
+      });
+
+      mappedCatering.sort((x, y) => {
+        const dCmp = String(x.dátum).localeCompare(String(y.dátum), 'sk');
+        if (dCmp !== 0) return dCmp;
+        const tCmp = String(x.čas).localeCompare(String(y.čas), 'sk');
+        if (tCmp !== 0) return tCmp;
+        return String(x.tím).localeCompare(String(y.tím), 'sk', { sensitivity: 'base' });
+      });
+
+      const sig = JSON.stringify(mappedCatering);
+      if (sig === loggedSignatureRef.current) return;
+      loggedSignatureRef.current = sig;
+
+      console.log(`🍽️ TRANSPORT.JS – načítaných ${mappedCatering.length} záznamov stravovania z kolekcie 'catering':`);
+      if (console.table) {
+        console.table(mappedCatering);
+      } else {
+        console.log(mappedCatering);
+      }
+    };
+
+    const unsubCatering = onSnapshot(collection(db, 'catering'), (snap) => {
+      cateringDocs = snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+      logCatering();
+    }, () => {});
+
+    const unsubPlaces = onSnapshot(collection(db, 'places'), (snap) => {
+      const nextMap = new Map();
+      snap.forEach((d) => {
+        const data = d.data() || {};
+        if (data.type === 'stravovanie') {
+          nextMap.set(d.id, data.name || '(bez názvu)');
+        }
+      });
+      placesMap = nextMap;
+      logCatering();
+    }, () => {});
+
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+      const nextByKey = new Map();
+      const nextByCat = new Map();
+
+      snap.forEach((userDoc) => {
+        const userTeams = userDoc.data()?.teams;
+        if (!userTeams || typeof userTeams !== 'object') return;
+
+        Object.entries(userTeams).forEach(([categoryName, teamArray]) => {
+          if (!Array.isArray(teamArray)) return;
+          const cat = cleanCategory(categoryName);
+
+          teamArray.forEach((team, teamIndex) => {
+            if (!team?.teamName) return;
+            const entry = {
+              uid: userDoc.id,
+              teamIndex,
+              teamName: String(team.teamName).trim(),
+              category: cat,
+              rawTeamData: team,
+              fallbackTotal:
+                (Array.isArray(team.playerDetails) ? team.playerDetails.length : 0) +
+                (Array.isArray(team.menTeamMemberDetails) ? team.menTeamMemberDetails.length : 0) +
+                (Array.isArray(team.womenTeamMemberDetails) ? team.womenTeamMemberDetails.length : 0) +
+                (Array.isArray(team.driverDetailsMale) ? team.driverDetailsMale.length : 0) +
+                (Array.isArray(team.driverDetailsFemale) ? team.driverDetailsFemale.length : 0),
+            };
+            nextByKey.set(`${userDoc.id}|${teamIndex}|${cat}`, entry);
+            if (!nextByCat.has(cat)) nextByCat.set(cat, []);
+            nextByCat.get(cat).push(entry);
+          });
+        });
+      });
+
+      usersByKey = nextByKey;
+      usersByCategory = nextByCat;
+      logCatering();
+    }, () => {});
+
+    return () => {
+      cancelled = true;
+      unsubCatering();
+      unsubPlaces();
+      unsubUsers();
+    };
+  }, [db, trackerResolvedNames, resolvePlaceNameById]);
+};
+
+/* ------------------------------------------------------------------ */
 /* Hlavná komponenta                                                  */
 /* ------------------------------------------------------------------ */
 
@@ -677,6 +883,11 @@ const TransportApp = ({ userProfileData }) => {
     if (fromStops) return fromStops.name;
     return id;
   };
+
+  useCateringConsoleLog(window.db, {
+    trackerResolvedNames,
+    resolvePlaceNameById,
+  });
 
   const cateringEvents = useCateringOverview(window.db, {
     selectedDayKey,
