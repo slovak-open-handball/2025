@@ -81,247 +81,7 @@ const tryPrintPerTeamTimeline = () => {
       return String(a.sortKey || '').localeCompare(String(b.sortKey || ''), 'sk');
     });
 
-    // ─── NOVÉ: doplnenie chýbajúcich presunov medzi udalosťami s rôznym miestom ───
-    const enrichTransfersWithImpliedWalking = (events) => {
-      if (!Array.isArray(events) || events.length < 2) return events;
-    
-      const getEventPlace = (ev) => {
-        if (!ev) return null;
-        if (ev.kind === 'match') {
-          const parts = String(ev.label || '').split('|').map((s) => s.trim());
-          return parts[1] || null;
-        }
-        if (ev.kind === 'catering') {
-          const parts = String(ev.label || '').split('|').map((s) => s.trim());
-          return parts[2] || null;
-        }
-        if (ev.kind === 'transfer') {
-          const legs = ev.legs || [];
-          if (legs.length === 0) return null;
-          return legs[legs.length - 1].toName || null;
-        }
-        return null;
-      };
-    
-      const getTransferFrom = (ev) => {
-        const legs = ev?.legs || [];
-        if (legs.length === 0) return null;
-        return legs[0].fromName || null;
-      };
-    
-      const norm = (s) => normalizePlaceName(String(s || ''));
-    
-      const transferCovers = (transferEv, fromPlace, toPlace) => {
-        const legs = transferEv?.legs || [];
-        if (legs.length === 0) return false;
-        const first = legs[0];
-        const last = legs[legs.length - 1];
-        return norm(first.fromName) === norm(fromPlace)
-            && norm(last.toName) === norm(toPlace);
-      };
-    
-      const transferHasTimes = (transferEv) => {
-        const legs = transferEv?.legs || [];
-        if (legs.length === 0) return false;
-        return legs.some((l) => l.startTs != null && l.endTs != null);
-      };
-    
-      const getEventTimeRange = (ev) => {
-        if (!ev || ev.ts == null || !isFinite(ev.ts)) return null;
-        let startTs = ev.ts;
-        let endTs = ev.ts;
-        if (ev.kind === 'catering') {
-          const m = /(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/.exec(String(ev.label || ''));
-          if (m) {
-            const d = new Date(startTs);
-            startTs = new Date(
-              d.getFullYear(), d.getMonth(), d.getDate(),
-              Number(m[1]), Number(m[2]), 0, 0
-            ).getTime();
-            endTs = new Date(
-              d.getFullYear(), d.getMonth(), d.getDate(),
-              Number(m[3]), Number(m[4]), 0, 0
-            ).getTime();
-          }
-        }
-        return { startTs, endTs };
-      };
-    
-      const sorted = events.slice().sort((a, b) => {
-        const aTs = a.ts != null && isFinite(a.ts) ? a.ts : Number.POSITIVE_INFINITY;
-        const bTs = b.ts != null && isFinite(b.ts) ? b.ts : Number.POSITIVE_INFINITY;
-        if (aTs !== bTs) return aTs - bTs;
-        const KIND_PRIORITY = { match: 0, transfer: 1, catering: 2 };
-        const aP = KIND_PRIORITY[a.kind] ?? 9;
-        const bP = KIND_PRIORITY[b.kind] ?? 9;
-        if (aP !== bP) return aP - bP;
-        return String(a.sortKey || '').localeCompare(String(b.sortKey || ''), 'sk');
-      });
-    
-      const result = [];
-      for (let i = 0; i < sorted.length; i++) {
-        const ev = sorted[i];
-        result.push(ev);
-    
-        let nextIdx = i + 1;
-        while (nextIdx < sorted.length && sorted[nextIdx].kind === 'transfer') {
-          nextIdx++;
-        }
-        const next = sorted[nextIdx];
-        if (!next) continue;
-    
-        const prevPlace = getEventPlace(ev);
-        const nextPlace = getEventPlace(next);
-        if (!prevPlace || !nextPlace) continue;
-        if (norm(prevPlace) === norm(nextPlace)) continue;
-    
-        const between = sorted.slice(i + 1, nextIdx);
-        const transferBetween = between.find((t) => t.kind === 'transfer');
-    
-        if (transferBetween) {
-          if (!transferHasTimes(transferBetween)) {
-            const prevRange = getEventTimeRange(ev);
-            const nextRange = getEventTimeRange(next);
-            if (prevRange && nextRange) {
-              const startTs = prevRange.endTs;
-              const endTs = nextRange.startTs;
-              if (endTs > startTs) {
-                const fakeLegs = transferBetween.legs.map((l) => ({
-                  ...l,
-                  startTs: l.startTs != null ? l.startTs : startTs,
-                  endTs: l.endTs != null ? l.endTs : endTs,
-                }));
-                const fakeLegLabels = fakeLegs.map((l) => {
-                  const legTimeLabel = (l.startTs != null && l.endTs != null)
-                    ? `${formatTimeOnly(l.startTs)} – ${formatTimeOnly(l.endTs)}`
-                    : (l.isWalking ? 'PEŠI' : 'nepriradený');
-                  const legTypeLabel = l.isWalking ? 'PEŠI' : (l.busName || 'PRESUN');
-                  const dateLabel = formatDateDDMMYYYY(l.startTs) || '';
-                  return `🚌 ${legTypeLabel} ${dateLabel ? dateLabel + ' ' : ''}${legTimeLabel} | ${l.fromName} → ${l.toName} | ${ev.category || '-'}`;
-                });
-                const oldIdx = result.indexOf(transferBetween);
-                if (oldIdx >= 0) {
-                  result[oldIdx] = {
-                    ...transferBetween,
-                    ts: startTs,
-                    legs: fakeLegs,
-                    legLabels: fakeLegLabels,
-                  };
-                }
-              }
-            }
-          }
-          continue;
-        }
-    
-        const prevRange = getEventTimeRange(ev);
-        const nextRange = getEventTimeRange(next);
-        if (!prevRange || !nextRange) continue;
-        const startTs = prevRange.endTs;
-        const endTs = nextRange.startTs;
-        if (!(endTs > startTs)) continue;
-    
-        const cat = String(ev.category || next.category || '').trim();
-        const syntheticLeg = {
-          fromName: prevPlace,
-          toName: nextPlace,
-          isWalking: true,
-          busName: null,
-          startTs,
-          endTs,
-        };
-        const syntheticLabel = `🚌 PEŠI ${formatDateDDMMYYYY(startTs) || ''} ${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)} | ${prevPlace} → ${nextPlace} | ${cat || '-'}`;
-        result.push({
-          kind: 'transfer',
-          teamName: ev.teamName,
-          category: cat,
-          ts: startTs,
-          dayKey: ev.dayKey,
-          sortKey: `synthetic|${startTs}`,
-          label: syntheticLabel,
-          legLabels: [syntheticLabel],
-          legs: [syntheticLeg],
-          _synthetic: true,
-        });
-      }
-    
-      const resultWithTail = [];
-      for (let i = 0; i < result.length; i++) {
-        const ev = result[i];
-        resultWithTail.push(ev);
-    
-        if (ev.kind !== 'match' && ev.kind !== 'catering') continue;
-    
-        let nextTransferIdx = i + 1;
-        while (nextTransferIdx < result.length && result[nextTransferIdx].kind !== 'transfer') {
-          nextTransferIdx++;
-        }
-        const nextTransfer = result[nextTransferIdx];
-        if (!nextTransfer) continue;
-    
-        const evPlace = getEventPlace(ev);
-        const transferFrom = getTransferFrom(nextTransfer);
-        if (!evPlace || !transferFrom) continue;
-        if (norm(evPlace) === norm(transferFrom)) continue;
-    
-        const evRange = getEventTimeRange(ev);
-        if (!evRange) continue;
-    
-        const transferLegs = nextTransfer.legs || [];
-        if (transferLegs.length === 0) continue;
-        let transferStartTs = null;
-        for (const l of transferLegs) {
-          if (l.startTs != null && isFinite(l.startTs)) {
-            transferStartTs = l.startTs;
-            break;
-          }
-        }
-        if (transferStartTs == null) continue;
-    
-        const startTs = evRange.endTs;
-        const endTs = transferStartTs;
-        if (!(endTs > startTs)) continue;
-    
-        const cat = String(ev.category || nextTransfer.category || '').trim();
-        const syntheticLeg = {
-          fromName: evPlace,
-          toName: transferFrom,
-          isWalking: true,
-          busName: null,
-          startTs,
-          endTs,
-        };
-        const syntheticLabel = `🚌 PEŠI ${formatDateDDMMYYYY(startTs) || ''} ${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)} | ${evPlace} → ${transferFrom} | ${cat || '-'}`;
-    
-        resultWithTail.push({
-          kind: 'transfer',
-          teamName: ev.teamName,
-          category: cat,
-          ts: startTs,
-          dayKey: ev.dayKey,
-          sortKey: `synthetic-tail|${startTs}`,
-          label: syntheticLabel,
-          legLabels: [syntheticLabel],
-          legs: [syntheticLeg],
-          _synthetic: true,
-        });
-      }
-    
-      const filtered = resultWithTail.filter((ev) => {
-        if (ev.kind !== 'transfer') return true;
-        const legs = ev.legs || [];
-        if (legs.length === 0) return false;
-        const hasTimes = legs.some(
-          (l) => l.startTs != null && l.endTs != null && l.endTs > l.startTs
-        );
-        return hasTimes;
-      });
-    
-      return filtered;
-    };
-
     const enrichedList = enrichTransfersWithImpliedWalking(list);
-    // ─── koniec doplnenia ───
     
     // kľúč výstupu = "TÍM (KATEGÓRIA)"
     const displayKey = cat ? `${team} (${cat})` : team;
@@ -490,6 +250,244 @@ const getGroupCharFromTeamName = (teamName) => {
 };
 
 const buildRowId = (busId, dayKey, order) => `${busId}__${dayKey}__${order}`;
+
+const enrichTransfersWithImpliedWalking = (events) => {
+  if (!Array.isArray(events) || events.length < 2) return events;
+
+  const getEventPlace = (ev) => {
+    if (!ev) return null;
+    if (ev.kind === 'match') {
+      const parts = String(ev.label || '').split('|').map((s) => s.trim());
+      return parts[1] || null;
+    }
+    if (ev.kind === 'catering') {
+      const parts = String(ev.label || '').split('|').map((s) => s.trim());
+      return parts[2] || null;
+    }
+    if (ev.kind === 'transfer') {
+      const legs = ev.legs || [];
+      if (legs.length === 0) return null;
+      return legs[legs.length - 1].toName || null;
+    }
+    return null;
+  };
+
+  const getTransferFrom = (ev) => {
+    const legs = ev?.legs || [];
+    if (legs.length === 0) return null;
+    return legs[0].fromName || null;
+  };
+
+  const norm = (s) => normalizePlaceName(String(s || ''));
+
+  const transferCovers = (transferEv, fromPlace, toPlace) => {
+    const legs = transferEv?.legs || [];
+    if (legs.length === 0) return false;
+    const first = legs[0];
+    const last = legs[legs.length - 1];
+    return norm(first.fromName) === norm(fromPlace)
+        && norm(last.toName) === norm(toPlace);
+  };
+
+  const transferHasTimes = (transferEv) => {
+    const legs = transferEv?.legs || [];
+    if (legs.length === 0) return false;
+    return legs.some((l) => l.startTs != null && l.endTs != null);
+  };
+
+  const getEventTimeRange = (ev) => {
+    if (!ev || ev.ts == null || !isFinite(ev.ts)) return null;
+    let startTs = ev.ts;
+    let endTs = ev.ts;
+    if (ev.kind === 'catering') {
+      const m = /(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/.exec(String(ev.label || ''));
+      if (m) {
+        const d = new Date(startTs);
+        startTs = new Date(
+          d.getFullYear(), d.getMonth(), d.getDate(),
+          Number(m[1]), Number(m[2]), 0, 0
+        ).getTime();
+        endTs = new Date(
+          d.getFullYear(), d.getMonth(), d.getDate(),
+          Number(m[3]), Number(m[4]), 0, 0
+        ).getTime();
+      }
+    }
+    return { startTs, endTs };
+  };
+
+  const sorted = events.slice().sort((a, b) => {
+    const aTs = a.ts != null && isFinite(a.ts) ? a.ts : Number.POSITIVE_INFINITY;
+    const bTs = b.ts != null && isFinite(b.ts) ? b.ts : Number.POSITIVE_INFINITY;
+    if (aTs !== bTs) return aTs - bTs;
+    const KIND_PRIORITY = { match: 0, transfer: 1, catering: 2 };
+    const aP = KIND_PRIORITY[a.kind] ?? 9;
+    const bP = KIND_PRIORITY[b.kind] ?? 9;
+    if (aP !== bP) return aP - bP;
+    return String(a.sortKey || '').localeCompare(String(b.sortKey || ''), 'sk');
+  });
+
+  const result = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const ev = sorted[i];
+    result.push(ev);
+
+    let nextIdx = i + 1;
+    while (nextIdx < sorted.length && sorted[nextIdx].kind === 'transfer') {
+      nextIdx++;
+    }
+    const next = sorted[nextIdx];
+    if (!next) continue;
+
+    const prevPlace = getEventPlace(ev);
+    const nextPlace = getEventPlace(next);
+    if (!prevPlace || !nextPlace) continue;
+    if (norm(prevPlace) === norm(nextPlace)) continue;
+
+    const between = sorted.slice(i + 1, nextIdx);
+    const transferBetween = between.find((t) => t.kind === 'transfer');
+
+    if (transferBetween) {
+      if (!transferHasTimes(transferBetween)) {
+        const prevRange = getEventTimeRange(ev);
+        const nextRange = getEventTimeRange(next);
+        if (prevRange && nextRange) {
+          const startTs = prevRange.endTs;
+          const endTs = nextRange.startTs;
+          if (endTs > startTs) {
+            const fakeLegs = transferBetween.legs.map((l) => ({
+              ...l,
+              startTs: l.startTs != null ? l.startTs : startTs,
+              endTs: l.endTs != null ? l.endTs : endTs,
+            }));
+            const fakeLegLabels = fakeLegs.map((l) => {
+              const legTimeLabel = (l.startTs != null && l.endTs != null)
+                ? `${formatTimeOnly(l.startTs)} – ${formatTimeOnly(l.endTs)}`
+                : (l.isWalking ? 'PEŠI' : 'nepriradený');
+              const legTypeLabel = l.isWalking ? 'PEŠI' : (l.busName || 'PRESUN');
+              const dateLabel = formatDateDDMMYYYY(l.startTs) || '';
+              return `🚌 ${legTypeLabel} ${dateLabel ? dateLabel + ' ' : ''}${legTimeLabel} | ${l.fromName} → ${l.toName} | ${ev.category || '-'}`;
+            });
+            const oldIdx = result.indexOf(transferBetween);
+            if (oldIdx >= 0) {
+              result[oldIdx] = {
+                ...transferBetween,
+                ts: startTs,
+                legs: fakeLegs,
+                legLabels: fakeLegLabels,
+              };
+            }
+          }
+        }
+      }
+      continue;
+    }
+
+    const prevRange = getEventTimeRange(ev);
+    const nextRange = getEventTimeRange(next);
+    if (!prevRange || !nextRange) continue;
+    const startTs = prevRange.endTs;
+    const endTs = nextRange.startTs;
+    if (!(endTs > startTs)) continue;
+
+    const cat = String(ev.category || next.category || '').trim();
+    const syntheticLeg = {
+      fromName: prevPlace,
+      toName: nextPlace,
+      isWalking: true,
+      busName: null,
+      startTs,
+      endTs,
+    };
+    const syntheticLabel = `🚌 PEŠI ${formatDateDDMMYYYY(startTs) || ''} ${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)} | ${prevPlace} → ${nextPlace} | ${cat || '-'}`;
+    result.push({
+      kind: 'transfer',
+      teamName: ev.teamName,
+      category: cat,
+      ts: startTs,
+      dayKey: ev.dayKey,
+      sortKey: `synthetic|${startTs}`,
+      label: syntheticLabel,
+      legLabels: [syntheticLabel],
+      legs: [syntheticLeg],
+      _synthetic: true,
+    });
+  }
+
+  const resultWithTail = [];
+  for (let i = 0; i < result.length; i++) {
+    const ev = result[i];
+    resultWithTail.push(ev);
+
+    if (ev.kind !== 'match' && ev.kind !== 'catering') continue;
+
+    let nextTransferIdx = i + 1;
+    while (nextTransferIdx < result.length && result[nextTransferIdx].kind !== 'transfer') {
+      nextTransferIdx++;
+    }
+    const nextTransfer = result[nextTransferIdx];
+    if (!nextTransfer) continue;
+
+    const evPlace = getEventPlace(ev);
+    const transferFrom = getTransferFrom(nextTransfer);
+    if (!evPlace || !transferFrom) continue;
+    if (norm(evPlace) === norm(transferFrom)) continue;
+
+    const evRange = getEventTimeRange(ev);
+    if (!evRange) continue;
+
+    const transferLegs = nextTransfer.legs || [];
+    if (transferLegs.length === 0) continue;
+    let transferStartTs = null;
+    for (const l of transferLegs) {
+      if (l.startTs != null && isFinite(l.startTs)) {
+        transferStartTs = l.startTs;
+        break;
+      }
+    }
+    if (transferStartTs == null) continue;
+
+    const startTs = evRange.endTs;
+    const endTs = transferStartTs;
+    if (!(endTs > startTs)) continue;
+
+    const cat = String(ev.category || nextTransfer.category || '').trim();
+    const syntheticLeg = {
+      fromName: evPlace,
+      toName: transferFrom,
+      isWalking: true,
+      busName: null,
+      startTs,
+      endTs,
+    };
+    const syntheticLabel = `🚌 PEŠI ${formatDateDDMMYYYY(startTs) || ''} ${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)} | ${evPlace} → ${transferFrom} | ${cat || '-'}`;
+
+    resultWithTail.push({
+      kind: 'transfer',
+      teamName: ev.teamName,
+      category: cat,
+      ts: startTs,
+      dayKey: ev.dayKey,
+      sortKey: `synthetic-tail|${startTs}`,
+      label: syntheticLabel,
+      legLabels: [syntheticLabel],
+      legs: [syntheticLeg],
+      _synthetic: true,
+    });
+  }
+
+  const filtered = resultWithTail.filter((ev) => {
+    if (ev.kind !== 'transfer') return true;
+    const legs = ev.legs || [];
+    if (legs.length === 0) return false;
+    const hasTimes = legs.some(
+      (l) => l.startTs != null && l.endTs != null && l.endTs > l.startTs
+    );
+    return hasTimes;
+  });
+
+  return filtered;
+};
 
 /* ------------------------------------------------------------------ */
 /* Resolve názvu tímu cez teamManager + matchTracker                   */
