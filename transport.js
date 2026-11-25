@@ -2232,6 +2232,16 @@ const TransportApp = ({ userProfileData }) => {
             }
           } else if (parentRange?.startTs) {
             legDateLabel = formatDateDDMMYYYY(parentRange.startTs) || '';
+          } else if (fallbackDayLabel) {
+            // NOVÉ: fallback z parent.when (peší presun bez časov)
+            legDateLabel = fallbackDayLabel;
+          } else if (parent.when) {
+            // NOVÉ: posledný fallback – skúsime vytiahnuť dátum priamo z parent.when
+            const dateMatch = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(parent.when));
+            if (dateMatch) {
+              legDateLabel = `${String(dateMatch[1]).padStart(2, '0')}. ${String(dateMatch[2]).padStart(2, '0')}. ${dateMatch[3]}`;
+            }
+          }teLabel = formatDateDDMMYYYY(parentRange.startTs) || '';
           }
 
           // ─── NOVÉ: pre peší presun bez časov nezobrazovať "PEŠI" dvakrát ───
