@@ -826,21 +826,21 @@ const tryPrintPerTeamTimeline = () => {
       const lastAnchor = anchors[anchors.length - 1];
       const lastAnchorRange = lastAnchor ? getEventTimeRange(lastAnchor) : null;
       const lastAnchorPlace = lastAnchor ? getEventPlace(lastAnchor) : null;
-      
+
       for (const t of transfers) {
         if (usedTransfers.has(t)) continue;
         if (!transferHasTimes(t)) continue;
-      
+
         const { startTs, endTs } = getTransferTimeRange(t);
         if (startTs == null) continue;
-      
+
         const tFromPlace = getTransferFrom(t);
         const tToPlace = getEventPlace(t);
         const nFrom = norm(tFromPlace);
         const nTo = norm(tToPlace);
-      
+
         if (!nFrom || !nTo || nFrom === nTo) continue;
-      
+
         // Nájdi najbližšiu kotvu pred a po transfere
         let prevAnchor = null;
         let nextAnchor = null;
@@ -860,20 +860,96 @@ const tryPrintPerTeamTimeline = () => {
         }
         const prevPlace = prevAnchor ? norm(getEventPlace(prevAnchor)) : null;
         const nextPlace = nextAnchor ? norm(getEventPlace(nextAnchor)) : null;
-      
+
         if (prevPlace && nextPlace && prevPlace === nextPlace && nFrom === prevPlace && nTo === prevPlace) {
           continue;
         }
         if (prevPlace && nFrom !== prevPlace) continue;
-      
+
         if (lastAnchorRange && lastAnchorRange.endTs != null && startTs >= lastAnchorRange.endTs) {
           const lastAnchorNorm = norm(lastAnchorPlace);
           if (nTo !== lastAnchorNorm) continue;
         }
-      
-        resultWithGaps.push(t);
+
+        result.push(t);
       }
-      
+
+      // ─── KROK 3b (PRESUNUTÝ): Doplniť syntetické pešie presuny medzi kotvou a nasledujúcim transferom ───
+      // Teraz result obsahuje kotvy, syntetické presuny medzi kotvami AJ reálne transfery.
+      // Prejdeme ho a tam, kde kotva (match/catering) končí na mieste A a nasledujúci
+      // transfer začína na mieste B ≠ A, vložíme syntetický peší presun A → B.
+      const resultWithGaps = [];
+      for (let i = 0; i < result.length; i++) {
+        const ev = result[i];
+        resultWithGaps.push(ev);
+
+        // Ak aktuálna udalosť nie je kotva, preskočíme
+        if (ev.kind !== 'match' && ev.kind !== 'catering') continue;
+
+        // Nájdeme nasledujúci transfer v result
+        let nextTransferIdx = i + 1;
+        while (nextTransferIdx < result.length && result[nextTransferIdx].kind !== 'transfer') {
+          nextTransferIdx++;
+        }
+        const nextTransfer = result[nextTransferIdx];
+        if (!nextTransfer) continue;
+
+        // Ak medzi aktuálnou kotvou a transferom je ešte iná kotva, preskočíme
+        const between = result.slice(i + 1, nextTransferIdx);
+        const hasAnchorBetween = between.some((b) => b.kind === 'match' || b.kind === 'catering');
+        if (hasAnchorBetween) continue;
+
+        // Ak už medzi nimi je syntetický presun (z KROKU 3), netreba ďalší
+        const hasSyntheticBetween = between.some((b) => b._synthetic === true);
+        if (hasSyntheticBetween) continue;
+
+        const evPlace = getEventPlace(ev);
+        const transferFrom = getTransferFrom(nextTransfer);
+        if (!evPlace || !transferFrom) continue;
+        if (norm(evPlace) === norm(transferFrom)) continue;
+
+        const evRange = getEventTimeRange(ev);
+        if (!evRange) continue;
+
+        const transferLegs = nextTransfer.legs || [];
+        if (transferLegs.length === 0) continue;
+        let transferStartTs = null;
+        for (const l of transferLegs) {
+          if (l.startTs != null && isFinite(l.startTs)) {
+            transferStartTs = l.startTs;
+            break;
+          }
+        }
+        if (transferStartTs == null) continue;
+
+        const startTs = evRange.endTs;
+        const endTs = transferStartTs;
+        if (!(endTs > startTs)) continue;
+
+        const cat = String(ev.category || nextTransfer.category || '').trim();
+        const syntheticLeg = {
+          fromName: evPlace,
+          toName: transferFrom,
+          isWalking: true,
+          busName: null,
+          startTs,
+          endTs,
+        };
+        const syntheticLabel = `🚌 PEŠI ${formatDateDDMMYYYY(startTs) || ''} ${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)} | ${evPlace} → ${transferFrom} | ${cat || '-'}`;
+        resultWithGaps.push({
+          kind: 'transfer',
+          teamName: ev.teamName,
+          category: cat,
+          ts: startTs,
+          dayKey: ev.dayKey,
+          sortKey: `synthetic-to-transfer|${startTs}`,
+          label: syntheticLabel,
+          legLabels: [syntheticLabel],
+          legs: [syntheticLeg],
+          _synthetic: true,
+        });
+      }
+
       // ─── KROK 5: Záverečné zoradenie ───
       return resultWithGaps.sort((a, b) => {
         const aTs = a.ts != null && isFinite(a.ts) ? a.ts : Number.POSITIVE_INFINITY;
@@ -881,7 +957,8 @@ const tryPrintPerTeamTimeline = () => {
         if (aTs !== bTs) return aTs - bTs;
         return (KIND_PRIORITY[a.kind] ?? 9) - (KIND_PRIORITY[b.kind] ?? 9);
       });
-
+    }
+    
     const enrichedList = applyImpliedWalkingTimesFromEvents(
       enrichTransfersWithImpliedWalking(list)
     );
