@@ -817,7 +817,28 @@ const tryPrintPerTeamTimeline = () => {
         }
       }
     }
-    output[displayKey] = rows;
+    
+    // ─── Oddeľovacia čiara medzi rôznymi dňami v chronologickom výpise tímu ───
+    const extractRowDayKey = (rowStr) => {
+      const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(rowStr || ''));
+      if (!m) return '';
+      return `${m[3]}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`;
+    };
+
+    const separatedRows = [];
+    let prevRowDayKey = '';
+    for (const row of rows) {
+      const rowDayKey = extractRowDayKey(row);
+      if (prevRowDayKey && rowDayKey && rowDayKey !== prevRowDayKey) {
+        separatedRows.push('────────────────────────────────────────────────────────────');
+      }
+      if (rowDayKey) {
+        prevRowDayKey = rowDayKey;
+      }
+      separatedRows.push(row);
+    }
+
+    output[displayKey] = separatedRows;
   }
 
   const sig = JSON.stringify(output);
