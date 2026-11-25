@@ -1619,7 +1619,7 @@ const TransportApp = ({ userProfileData }) => {
       }
       if (cancelled) return;
 
-      const transfersEventsForBuffer = [];
+      const rawEvents = [];
 
       for (const parent of savedTransfers) {
         if (parent._parentKey && parent._parentKey !== parent.key) continue;
