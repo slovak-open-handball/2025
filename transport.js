@@ -1102,6 +1102,140 @@ const tryPrintPerTeamTimeline = () => {
     items.forEach((line, i) => console.log(`${i + 1}. ${line}`));
     console.groupEnd();
   });
+
+  /* ------------------------------------------------------------------ */
+  /* NOVÉ: Výpis VŠETKÝCH presunov (transferov) pre každý tím v kategórii */
+  /* – aj bez mapovania názvu tímu, aj s mapovaním názvu tímu            */
+  /* ------------------------------------------------------------------ */
+  const allTransfers = __transportPerTeamBuffer.transfers || [];
+
+  // Pomocná: vytiahne "surový" identifikátor tímu z transferu (bez mapovania)
+  const getRawTransferTeamKey = (t) => {
+    const teamName = String(t.teamName || '').trim();
+    const cat = String(t.category || '').trim();
+    const uid = t.teamUid != null ? String(t.teamUid) : '';
+    const idx = t.teamIndex != null ? String(t.teamIndex) : '';
+    // Preferujeme teamUid|teamIndex|cat, ak sú dostupné; inak teamName|cat
+    if (uid || idx) return `${cat}|${uid}|${idx}|${teamName}`;
+    return `${cat}|${teamName}`;
+  };
+
+  // Pomocná: vytiahne "mapovaný" identifikátor tímu z transferu (cez resolveTeamNameForDisplay)
+  const resolveMappedTeamKey = async (t) => {
+    const rawName = String(t.teamName || '').trim();
+    const cat = String(t.category || '').trim();
+    if (!rawName) return `${cat}|`;
+    try {
+      const mapped = await resolveTeamNameForDisplay(rawName, cat);
+      const mappedStr = String(mapped || '').trim();
+      if (mappedStr && mappedStr !== 'null') return `${cat}|${mappedStr}`;
+    } catch (e) {}
+    return `${cat}|${rawName}`;
+  };
+
+  // Zoskupenie transferov podľa surového kľúča (bez mapovania)
+  const transfersByRawKey = new Map();
+  // Zoskupenie transferov podľa mapovaného kľúča (s mapovaním)
+  const transfersByMappedKey = new Map();
+
+  (async () => {
+    // Pre mapovaný výpis potrebujeme async resolve
+    for (const t of allTransfers) {
+      const rawKey = getRawTransferTeamKey(t);
+      if (!transfersByRawKey.has(rawKey)) transfersByRawKey.set(rawKey, []);
+      transfersByRawKey.get(rawKey).push(t);
+
+      const mappedKey = await resolveMappedTeamKey(t);
+      if (!transfersByMappedKey.has(mappedKey)) transfersByMappedKey.set(mappedKey, []);
+      transfersByMappedKey.get(mappedKey).push(t);
+    }
+
+    const sortTransfers = (arr) => arr.slice().sort((a, b) => {
+      const aTs = a.ts != null && isFinite(a.ts) ? a.ts : Number.POSITIVE_INFINITY;
+      const bTs = b.ts != null && isFinite(b.ts) ? b.ts : Number.POSITIVE_INFINITY;
+      if (aTs !== bTs) return aTs - bTs;
+      return String(a.sortKey || '').localeCompare(String(b.sortKey || ''), 'sk');
+    });
+
+    const formatTransferLine = (t) => {
+      // Preferujeme legLabels (rozbalené na riadky), inak label
+      if (Array.isArray(t.legLabels) && t.legLabels.length > 0) {
+        return t.legLabels.join('\n      ');
+      }
+      return t.label || '(bez popisu)';
+    };
+
+    console.log('══════════════════════════════════════════════════════════════');
+    console.log('🚌 TRANSPORT.JS – VÝPIS VŠETKÝCH PRESUNOV PRE KAŽDÝ TÍM V KATEGÓRII');
+    console.log('   (bez mapovania názvu tímu)');
+    console.log('══════════════════════════════════════════════════════════════');
+
+    const rawKeysSorted = [...transfersByRawKey.keys()].sort((a, b) => {
+      return String(a).localeCompare(String(b), 'sk', { sensitivity: 'base' });
+    });
+
+    for (const rawKey of rawKeysSorted) {
+      const list = sortTransfers(transfersByRawKey.get(rawKey));
+      if (list.length === 0) continue;
+
+      // Rozparsujeme rawKey na kategóriu + tím (pre label)
+      const parts = rawKey.split('|');
+      const cat = parts[0] || '';
+      const uid = parts[1] || '';
+      const idx = parts[2] || '';
+      const teamName = parts.slice(3).join('|') || '';
+
+      const rawLabel = [
+        teamName ? `tím="${teamName}"` : 'tím=?',
+        cat ? `kategória="${cat}"` : 'kategória=?',
+        uid ? `uid=${uid}` : null,
+        idx ? `index=${idx}` : null,
+      ].filter(Boolean).join(' ');
+
+      console.groupCollapsed(`🚌 [RAW] ${rawLabel} — ${list.length} presunov`);
+      list.forEach((t, i) => {
+        const line = formatTransferLine(t);
+        console.log(`${i + 1}. ${line}`);
+      });
+      console.groupEnd();
+    }
+
+    console.log('══════════════════════════════════════════════════════════════');
+    console.log('🚌 TRANSPORT.JS – VÝPIS VŠETKÝCH PRESUNOV PRE KAŽDÝ TÍM V KATEGÓRII');
+    console.log('   (s mapovaním názvu tímu)');
+    console.log('══════════════════════════════════════════════════════════════');
+
+    const mappedKeysSorted = [...transfersByMappedKey.keys()].sort((a, b) => {
+      return String(a).localeCompare(String(b), 'sk', { sensitivity: 'base' });
+    });
+
+    for (const mappedKey of mappedKeysSorted) {
+      const list = sortTransfers(transfersByMappedKey.get(mappedKey));
+      if (list.length === 0) continue;
+
+      const parts = mappedKey.split('|');
+      const cat = parts[0] || '';
+      const mappedTeam = parts.slice(1).join('|') || '';
+
+      const mappedLabel = [
+        mappedTeam ? `tím="${mappedTeam}"` : 'tím=?',
+        cat ? `kategória="${cat}"` : 'kategória=?',
+      ].filter(Boolean).join(' ');
+
+      // Zistíme ubytovanie pre mapovaný tím (ak existuje)
+      const accomKey = `${cat}|${mappedTeam}`;
+      const accomName = __transportPerTeamBuffer.accommodationByKey.get(accomKey) || 'bez ubytovania';
+
+      console.groupCollapsed(`🚌 [MAPPED] ${mappedLabel} — ${list.length} presunov – 🏠 ${accomName}`);
+      list.forEach((t, i) => {
+        const line = formatTransferLine(t);
+        console.log(`${i + 1}. ${line}`);
+      });
+      console.groupEnd();
+    }
+  })().catch((e) => {
+    console.error('transport.js: výpis presunov pre tím zlyhal', e);
+  });
 };
 
 /* ------------------------------------------------------------------ */
