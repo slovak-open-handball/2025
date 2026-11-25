@@ -1848,8 +1848,6 @@ const TransportApp = ({ userProfileData }) => {
         grouped.get(key).push(ev);
       }
 
-      const transfersEventsForBuffer = [];
-
       for (const [key, events] of grouped.entries()) {
         const [cat, team, dk] = key.split('|');
 
