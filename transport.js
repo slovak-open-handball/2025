@@ -122,6 +122,107 @@ const getGroupCharFromTeamName = (teamName) => {
 const buildRowId = (busId, dayKey, order) => `${busId}__${dayKey}__${order}`;
 
 /* ------------------------------------------------------------------ */
+/* Resolve názvu tímu cez teamManager + matchTracker (rovnako ako      */
+/* v logged-in-matches-hall.js)                                        */
+/* ------------------------------------------------------------------ */
+
+// Detekcia tvaru "číslo + písmeno" bez medzery (napr. "I1", "B4", "E5")
+const looksLikeGroupCode = (name) => {
+  if (!name) return false;
+  return /\d[A-ZÁ-Ž]\s*$/.test(String(name).trim()) ||
+         /^[A-ZÁ-Ž]\d+$/.test(String(name).trim()) ||
+         /\s\d+[A-ZÁ-Ž]$/.test(String(name).trim());
+};
+
+// Krok 1: synchronné mapovanie cez teamManager
+const resolveViaTeamManagerSync = (identifier) => {
+  if (!identifier) return identifier;
+  try {
+    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+      const syncResult = window.teamManager.getTeamNameByDisplayIdSync(identifier);
+      if (syncResult && syncResult !== identifier) return syncResult;
+    }
+  } catch (e) {}
+  return identifier;
+};
+
+// Krok 2: asynchrónne mapovanie cez matchTracker
+const resolveViaMatchTracker = async (identifier) => {
+  if (!identifier) return identifier;
+  try {
+    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+      const asyncResult = await window.matchTracker.getTeamNameByDisplayId(identifier);
+      if (
+        asyncResult &&
+        asyncResult !== identifier &&
+        String(asyncResult).trim() !== '' &&
+        String(asyncResult).trim() !== 'null'
+      ) {
+        return asyncResult;
+      }
+    }
+  } catch (e) {}
+  return identifier;
+};
+
+// Kompletná kaskáda – presne podľa požiadavky:
+// 1) teamManager.getTeamNameByDisplayIdSync(identifier)
+// 2) ak výsledok obsahuje kategóriu a po odfiltrovaní kategórie je tvar "číslo+písmeno"
+//    → matchTracker.getTeamNameByDisplayId(výsledok)
+// 3) inak vráť výsledok z kroku 1 (alebo pôvodný identifier)
+const resolveTeamNameForDisplay = async (identifier, categoryName) => {
+  if (!identifier) return identifier;
+
+  const original = String(identifier).trim();
+  let intermediate = original;
+
+  // KROK 1 – teamManager sync
+  const syncResult = resolveViaTeamManagerSync(original);
+  if (syncResult && syncResult !== original) {
+    intermediate = syncResult;
+  }
+
+  // KROK 2 – rozhodnutie, či volať matchTracker
+  let shouldCallMatchTracker = false;
+
+  if (intermediate !== original) {
+    // teamManager niečo vrátil – skontroluj, či obsahuje kategóriu a tvar "číslo+písmeno"
+    const cat = categoryName ? String(categoryName).trim() : '';
+    if (!cat || intermediate.includes(cat)) {
+      // odfiltruj kategóriu a skontroluj tvar
+      let withoutCategory = intermediate;
+      if (cat) {
+        withoutCategory = intermediate.split(cat).join('').trim();
+      }
+      if (looksLikeGroupCode(withoutCategory)) {
+        shouldCallMatchTracker = true;
+      }
+    }
+  } else {
+    // teamManager nič nezmenil – skús matchTracker, ak pôvodný identifikátor
+    // obsahuje kategóriu a tvar "číslo+písmeno" (napr. "U12 D I1")
+    const cat = categoryName ? String(categoryName).trim() : '';
+    if (cat && original.includes(cat)) {
+      const withoutCategory = original.split(cat).join('').trim();
+      if (looksLikeGroupCode(withoutCategory)) {
+        shouldCallMatchTracker = true;
+      }
+    }
+  }
+
+  // KROK 2 – matchTracker async
+  if (shouldCallMatchTracker) {
+    const finalResult = await resolveViaMatchTracker(intermediate);
+    if (finalResult && finalResult !== intermediate) {
+      return finalResult;
+    }
+  }
+
+  // KROK 3 – vráť intermediate (teamManager výsledok alebo pôvodný identifier)
+  return intermediate;
+};
+
+/* ------------------------------------------------------------------ */
 /* Ikonky pre typy miest                                              */
 /* ------------------------------------------------------------------ */
 
@@ -673,23 +774,40 @@ const TransportApp = ({ userProfileData }) => {
           }
         });
     
-        // 3) Výpis VŠETKÝCH zápasov do konzoly (prehľadná tabuľka)
+        // 3) Namapuj názvy tímov a vypíš VŠETKY zápasy do konzoly
         if (anyChangeDetected || matchesLoadedRef.current === false) {
-          console.log(`📋 TRANSPORT.JS – načítaných ${allMatches.length} zápasov z kolekcie 'matches':`);
-          if (console.table) {
-            console.table(allMatches.map((m) => ({
-              id: m.id,
-              status: m.status,
-              kategória: m.categoryName || m.categoryId || '-',
-              skupina: m.groupName || '-',
-              typ: m.matchType || '-',
-              domáci: m.homeTeamName || m.homeTeamIdentifier || m.homeTeam || '?',
-              hostia: m.awayTeamName || m.awayTeamIdentifier || m.awayTeam || '?',
-              skóre: (m.homeScore ?? '-') + ':' + (m.awayScore ?? '-'),
-            })));
-          } else {
-            console.log(allMatches);
-          }
+          (async () => {
+            const mappedMatches = [];
+            for (const m of allMatches) {
+              const categoryName = m.categoryName
+                || (m.categoryId && window.categoriesData ? window.categoriesData[m.categoryId] : null)
+                || null;
+
+              const homeRaw = m.homeTeamName || m.homeTeamIdentifier || m.homeTeam || '?';
+              const awayRaw = m.awayTeamName || m.awayTeamIdentifier || m.awayTeam || '?';
+
+              const homeMapped = await resolveTeamNameForDisplay(homeRaw, categoryName);
+              const awayMapped = await resolveTeamNameForDisplay(awayRaw, categoryName);
+
+              mappedMatches.push({
+                id: m.id,
+                status: m.status,
+                kategória: m.categoryName || m.categoryId || '-',
+                skupina: m.groupName || '-',
+                typ: m.matchType || '-',
+                domáci: homeMapped,
+                hostia: awayMapped,
+                skóre: (m.homeScore ?? '-') + ':' + (m.awayScore ?? '-'),
+              });
+            }
+
+            console.log(`📋 TRANSPORT.JS – načítaných ${mappedMatches.length} zápasov z kolekcie 'matches':`);
+            if (console.table) {
+              console.table(mappedMatches);
+            } else {
+              console.log(mappedMatches);
+            }
+          })();
         }
     
         completedTeamsRef.current = completedTeams;
