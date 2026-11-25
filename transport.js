@@ -1524,6 +1524,73 @@ const TransportApp = ({ userProfileData }) => {
     return () => clearTimeout(retryTimer);
   }, [savedTransfers]);
 
+  /* ------------------------------------------------------------------ */
+  /* Filter presunov: ak je tím ubytovaný, v deň s viacerými presunmi    */
+  /* pred prvou udalosťou (zápas/stravovanie) zobraz iba logický presun  */
+  /* (začína na ubytovaní, končí na mieste prvej udalosti).              */
+  /* Ak tím nie je ubytovaný, ber miesto zrazu z parent (už je v dátach).*/
+  /* ------------------------------------------------------------------ */
+  
+  const pickFirstEventOfDayForTeam = (category, teamName, dayKey) => {
+    const cat = cleanCategory(category || '');
+    const team = String(teamName || '').trim();
+    if (!cat || !team || !dayKey) return null;
+  
+    const candidates = [
+      ...__transportPerTeamBuffer.matches,
+      ...__transportPerTeamBuffer.catering,
+    ].filter(
+      (ev) =>
+        String(ev.teamName || '').trim() === team &&
+        cleanCategory(ev.category || '') === cat &&
+        ev.ts != null &&
+        isFinite(ev.ts) &&
+        // dayKey z ts
+        (() => {
+          const d = new Date(ev.ts);
+          const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          return k === dayKey;
+        })()
+    );
+  
+    if (candidates.length === 0) return null;
+    candidates.sort((a, b) => a.ts - b.ts);
+    return candidates[0];
+  };
+  
+  const getPlaceNameFromEventLabel = (ev) => {
+    // label formát:
+    //   ⚽ ZÁPAS <when> | <place> | ...
+    //   🍽️ STRAVOVANIE <dátum> <čas> | <jedlo> | <miesto> | ...
+    if (!ev || !ev.label) return null;
+    const parts = String(ev.label).split('|').map((s) => s.trim());
+    if (ev.kind === 'match') {
+      return parts[1] || null; // place je druhý segment
+    }
+    if (ev.kind === 'catering') {
+      return parts[2] || null; // miesto je tretí segment
+    }
+    return null;
+  };
+  
+  const isTransferRelevantForFirstEvent = (transferLegs, accommodationName, firstEventPlaceName) => {
+    if (!Array.isArray(transferLegs) || transferLegs.length === 0) return false;
+  
+    const firstFrom = transferLegs[0]?.fromName;
+    const lastTo = transferLegs[transferLegs.length - 1]?.toName;
+    if (!firstFrom || !lastTo) return false;
+  
+    const startOk = accommodationName
+      ? normalizePlaceName(firstFrom) === normalizePlaceName(accommodationName)
+      : true; // bez ubytovania → necháme (miesto zrazu je už z parent)
+  
+    const endOk = firstEventPlaceName
+      ? normalizePlaceName(lastTo) === normalizePlaceName(firstEventPlaceName)
+      : true;
+  
+    return startOk && endOk;
+  };
+
   // Naplnenie bufferu pre per-tím timeline (transfery)
   useEffect(() => {
     if (!savedTransfers || savedTransfers.length === 0) {
@@ -1736,16 +1803,14 @@ const TransportApp = ({ userProfileData }) => {
 
         const busLabel = busName ? ` | ${busName}` : '';
 
-        transfersEventsForBuffer.push({
+        rawEvents.push({
           kind: 'transfer',
           teamName: mappedTeamName,
           category: parentCategory,
           ts,
           dayKey,
           sortKey: `${dayKey || ''}|${whenLabel}|${segmentsLabel}`,
-          // `label` je fallback pre prípad, že by sa `legLabels` nepoužili
           label: `🚌 ${typeLabel} ${whenLabel} | ${segmentsLabel}${busLabel} | ${parentCategory || '-'}`,
-          // Nové: pole legov s dopočítanými časmi (každý leg = jeden riadok)
           legLabels,
           legs: legs.map((l) => ({
             fromName: l.fromName,
@@ -1765,9 +1830,67 @@ const TransportApp = ({ userProfileData }) => {
 
       if (cancelled) return;
 
+      // ─── NOVÉ: filter podľa ubytovania a prvej udalosti dňa ───
+      const grouped = new Map();
+      for (const ev of rawEvents) {
+        const key = `${cleanCategory(ev.category)}|${String(ev.teamName).trim()}|${ev.dayKey || ''}`;
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(ev);
+      }
+
+      const transfersEventsForBuffer = [];
+
+      for (const [key, events] of grouped.entries()) {
+        const [cat, team, dk] = key.split('|');
+
+        const firstEvent = pickFirstEventOfDayForTeam(cat, team, dk);
+        const firstEventPlace = firstEvent ? getPlaceNameFromEventLabel(firstEvent) : null;
+
+        const accomKey = `${cat}|${team}`;
+        const accommodationName =
+          __transportPerTeamBuffer.accommodationByKey.get(accomKey) || null;
+        const hasAccommodation =
+          accommodationName && accommodationName !== 'bez ubytovania';
+
+        if (!firstEvent && !hasAccommodation) {
+          transfersEventsForBuffer.push(...events);
+          continue;
+        }
+
+        const firstEventTs = firstEvent?.ts ?? Number.POSITIVE_INFINITY;
+
+        const beforeFirst = [];
+        const afterFirst = [];
+        for (const ev of events) {
+          if (ev.ts < firstEventTs) beforeFirst.push(ev);
+          else afterFirst.push(ev);
+        }
+
+        if (beforeFirst.length <= 1) {
+          transfersEventsForBuffer.push(...events);
+          continue;
+        }
+
+        const matching = beforeFirst.filter((ev) =>
+          isTransferRelevantForFirstEvent(
+            ev.legs,
+            hasAccommodation ? accommodationName : null,
+            firstEventPlace
+          )
+        );
+
+        if (matching.length > 0) {
+          matching.sort((a, b) => a.ts - b.ts);
+          transfersEventsForBuffer.push(matching[0], ...afterFirst);
+        } else {
+          transfersEventsForBuffer.push(...events);
+        }
+      }
+      // ─── koniec filtra ───
+
       __transportPerTeamBuffer.transfers = transfersEventsForBuffer;
       __transportPerTeamBuffer.transfersReady = true;
-      __transportPerTeamBuffer.lastPrintedSignature = ''; // reset, aby sa prekreslil výpis
+      __transportPerTeamBuffer.lastPrintedSignature = '';
       tryPrintPerTeamTimeline();
     })();
 
