@@ -725,17 +725,33 @@ const tryPrintPerTeamTimeline = () => {
       const lastAnchorRange = lastAnchor ? getEventTimeRange(lastAnchor) : null;
       const lastAnchorPlace = lastAnchor ? getEventPlace(lastAnchor) : null;
 
-      // Ubytovanie pre daný tím
+      // ─── Ubytovanie pre daný tím – skúsime VIACERO kľúčov ───
       const teamCategory = String(events[0]?.category || '').trim();
       const teamName = String(events[0]?.teamName || '').trim();
+
+      // 1) namapovaný názov tímu
       const accomKeyForTeam = `${cleanCategory(teamCategory)}|${teamName}`;
-      const teamAccommodation =
+      let teamAccommodation =
         __transportPerTeamBuffer.accommodationByKey.get(accomKeyForTeam) || '';
+
+      // 2) fallback: surové názvy z transferov (tie sú v accommodationByKey pod surovým kľúčom)
+      if (!teamAccommodation) {
+        for (const t of transfers) {
+          const rawName = String(t.teamName || '').trim();
+          if (!rawName) continue;
+          const rawKey = `${cleanCategory(t.category || teamCategory)}|${rawName}`;
+          const accom = __transportPerTeamBuffer.accommodationByKey.get(rawKey);
+          if (accom && accom !== 'bez ubytovania') {
+            teamAccommodation = accom;
+            break;
+          }
+        }
+      }
 
       for (const t of transfers) {
         if (usedTransfers.has(t)) continue;
 
-        // ─── DOPLNIŤ ČASY Z `when`, ak transfer nemá žiadne časy ───
+        // DOPLNIŤ ČASY Z `when`, ak transfer nemá žiadne časy
         if (!transferHasTimes(t)) {
           const r = t.when ? parseWhenRangeToTs(t.when) : null;
           if (!r) continue;
@@ -760,7 +776,6 @@ const tryPrintPerTeamTimeline = () => {
           if (t.ts == null) t.ts = r.startTs;
           if (t.endTs == null) t.endTs = r.endTs;
 
-          // Prepočítať legLabels, aby zodpovedali doplneným časom
           t.legLabels = (t.legs || []).map((l) => {
             const timeLabel =
               l.startTs != null && l.endTs != null
@@ -809,8 +824,7 @@ const tryPrintPerTeamTimeline = () => {
           continue;
         }
 
-        // ─── NOVÉ: prijmeme transfer, ak aspoň jedným koncom sedí na prev/next kotvu,
-        // alebo ak ide o presun na/ubytovania tímu ───
+        // Ubytovanie tímu – prijmeme transfer, ak ide na/ubytovania tímu
         const isAccommodationTransfer =
           teamAccommodation &&
           teamAccommodation !== 'bez ubytovania' &&
