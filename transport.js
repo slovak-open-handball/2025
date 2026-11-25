@@ -244,61 +244,33 @@ const isMappingReady = () => {
   return false;
 };
 
-// Počká na event 'mappingReady' – okamžitá reakcia, žiadny polling.
-// Ak je už ready, vráti sa hneď. Ak nie, čaká na event (bez timeoutu).
-// Voliteľne možno zadať timeoutMs = null (žiadny timeout) alebo číslo.
-const waitForMappingReady = (timeoutMs = null) => {
+const waitForMappingReady = (eventTimeoutMs = 2000, pollMs = 50) => {
   return new Promise((resolve) => {
-    if (isMappingReady()) {
-      resolve(true);
-      return;
-    }
+    if (isMappingReady()) { resolve(true); return; }
 
     let done = false;
+    let pollTimer = null;
 
-    const onReady = () => {
+    const finish = (val) => {
       if (done) return;
       done = true;
       window.removeEventListener('mappingReady', onReady);
-      resolve(true);
+      if (pollTimer) clearInterval(pollTimer);
+      resolve(val);
     };
 
+    const onReady = () => finish(true);
     window.addEventListener('mappingReady', onReady);
 
-    // Voliteľný timeout – ak chceš čakať donekonečna, nechaj null
-    if (timeoutMs != null) {
-      setTimeout(() => {
-        if (done) return;
-        done = true;
-        window.removeEventListener('mappingReady', onReady);
-        // Fallback – ešte raz skontroluj flag (mohol sa nastaviť bez eventu)
-        resolve(isMappingReady());
-      }, timeoutMs);
-    }
-  });
-};
+    // Fallback polling po eventTimeoutMs, ak event neprišiel
+    setTimeout(() => {
+      if (done) return;
+      pollTimer = setInterval(() => {
+        if (isMappingReady()) finish(true);
+      }, pollMs);
+    }, eventTimeoutMs);
 
-// Počká, kým je mapovanie pripravené (max timeoutMs).
-// Vráti Promise<boolean> – true ak ready, false ak timeout.
-const waitForMappingReady = (timeoutMs = 15000, pollMs = 200) => {
-  return new Promise((resolve) => {
-    if (isMappingReady()) {
-      resolve(true);
-      return;
-    }
-    const start = Date.now();
-    const timer = setInterval(() => {
-      if (isMappingReady()) {
-        clearInterval(timer);
-        resolve(true);
-        return;
-      }
-      if (Date.now() - start > timeoutMs) {
-        clearInterval(timer);
-        console.warn('[transport.js] waitForMappingReady: timeout – mapovanie nebolo pripravené včas');
-        resolve(false);
-      }
-    }, pollMs);
+    // Žiadny celkový timeout – čaká, kým sa mapping naozaj nestane ready
   });
 };
 
