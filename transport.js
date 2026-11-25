@@ -639,6 +639,7 @@ const useCateringConsoleLog = (
         cateringEventsForBuffer.push({
           kind: 'catering',
           teamName,
+          category: String(row.kategória || '').trim(),
           ts,
           sortKey: `${row.dátum}|${row.čas}|${row.jedlo}|${row.miesto}`,
           label: `🍽️ STRAVOVANIE ${row.dátum} ${row.čas} | ${row.jedlo} | ${row.miesto} | ${row.kategória}${row.typ && row.typ !== 'tím' ? ` | ${row.typ}` : ''}`,
@@ -1335,11 +1336,14 @@ const TransportApp = ({ userProfileData }) => {
                 ? (resolvePlaceNameById(m.hallId) || m.placeName || '-')
                 : (m.placeName || '-');
 
+              const matchCategory = String(m.categoryName || m.categoryId || '').trim();
+
               // pre domáci tím
               if (homeMapped && homeMapped !== '?') {
                 matchEventsForBuffer.push({
                   kind: 'match',
                   teamName: String(homeMapped).trim(),
+                  category: matchCategory,
                   ts,
                   sortKey: `${whenLabel}|vs ${awayMapped}|${m.id}`,
                   label: `⚽ ZÁPAS ${whenLabel} | ${placeLabel} | ${homeMapped} vs ${awayMapped} | ${m.categoryName || m.categoryId || '-'}${m.groupName ? ` | ${m.groupName}` : ''} | ${m.status === 'completed' ? `výsledok ${(m.homeScore ?? '-')}:${(m.awayScore ?? '-')}` : 'naplánovaný'}`,
@@ -1350,6 +1354,7 @@ const TransportApp = ({ userProfileData }) => {
                 matchEventsForBuffer.push({
                   kind: 'match',
                   teamName: String(awayMapped).trim(),
+                  category: matchCategory,
                   ts,
                   sortKey: `${whenLabel}|vs ${homeMapped}|${m.id}`,
                   label: `⚽ ZÁPAS ${whenLabel} | ${placeLabel} | ${awayMapped} vs ${homeMapped} | ${m.categoryName || m.categoryId || '-'}${m.groupName ? ` | ${m.groupName}` : ''} | ${m.status === 'completed' ? `výsledok ${(m.awayScore ?? '-')}:${(m.homeScore ?? '-')}` : 'naplánovaný'}`,
