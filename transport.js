@@ -2020,12 +2020,16 @@ const TransportApp = ({ userProfileData }) => {
           return isNaN(d.getTime()) ? null : d;
         };
     
+        // OPRAVA: bezpečný prístup k window bufferu
+        if (!window.__transportPerTeamBuffer) {
+          window.__transportPerTeamBuffer = __transportPerTeamBuffer;
+        }
+    
         const arrivalDt = toDate(data.arrivalDate);
         window.__transportPerTeamBuffer.arrivalTimestamp = arrivalDt && !isNaN(arrivalDt.getTime())
           ? arrivalDt.getTime()
           : null;
     
-        // OPRAVA: najprv definovať start, až potom ho použiť
         const start = toDate(data.tournamentStart);
         const end = toDate(data.tournamentEnd);
     
@@ -2036,10 +2040,9 @@ const TransportApp = ({ userProfileData }) => {
         window.__transportPerTeamBuffer.firstTournamentDayKey = startDayKey;
         firstTournamentDayKeyRef.current = startDayKey;
     
-        // ─── NOVÉ: prekresliť per-tím timeline, keď sa zmenil arrival / prvý deň ───
+        // Prekresliť per-tím timeline, keď sa zmenil arrival / prvý deň
         __transportPerTeamBuffer.lastPrintedSignature = '';
         tryPrintPerTeamTimeline();
-        // ────────────────────────────────────────────────────────────────────────
     
         if (!start || !end) { setTournamentDays([]); return; }
         const days = [];
