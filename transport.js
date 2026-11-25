@@ -1865,8 +1865,7 @@ const TransportApp = ({ userProfileData }) => {
   }, []);
 
   const resolveTransfersViaMatchTracker = async (transfersList) => {
-    const fn = window.matchTracker?.getTeamNameByDisplayId;
-    if (typeof fn !== 'function') return;
+    if (typeof resolveTeamNameForDisplay !== 'function') return;
 
     const sourceList = Array.isArray(transfersList) ? transfersList : savedTransfersRef.current;
     if (!Array.isArray(sourceList) || sourceList.length === 0) return;
@@ -1882,15 +1881,14 @@ const TransportApp = ({ userProfileData }) => {
       const rawTeamName = tr?.teamName != null ? String(tr.teamName).trim() : '';
       const rawCategory = tr?.category != null ? cleanCategory(tr.category) : '';
 
-      if (!rawTeamName || !rawCategory) continue;
-      if (!rawTeamName.includes(rawCategory)) continue;
+      if (!rawTeamName) continue;
 
       try {
-        const result = await fn.call(window.matchTracker, rawTeamName);
+        // Rovnaké mapovanie ako pri zápasoch: resolveTeamNameForDisplay
+        const result = await resolveTeamNameForDisplay(rawTeamName, rawCategory);
         if (
           result !== undefined &&
           result !== null &&
-          result !== '' &&
           String(result).trim() !== '' &&
           String(result).trim() !== 'null' &&
           String(result).trim() !== rawTeamName
@@ -2020,21 +2018,22 @@ const TransportApp = ({ userProfileData }) => {
         const rawTeamName = String(parent.teamName || '').trim();
         if (!rawTeamName) continue;
 
-        // Mapovanie názvu tímu rovnako ako pri zápasoch
+        // Mapovanie názvu tímu rovnako ako pri zápasoch.
+        // Priorita: cache z resolveTransfersViaMatchTracker (rovnaká ako timelineEvents),
+        // fallback: resolveTeamNameForDisplay.
         let mappedTeamName = rawTeamName;
-        try {
-          const viaDisplay = await resolveTeamNameForDisplay(rawTeamName, parentCategory);
-          if (viaDisplay && String(viaDisplay).trim() !== '' && String(viaDisplay).trim() !== 'null') {
-            mappedTeamName = String(viaDisplay).trim();
-          } else if (trackerResolvedNamesRef.current?.[rawTeamName]) {
-            mappedTeamName = trackerResolvedNamesRef.current[rawTeamName];
-          }
-        } catch (e) {
-          if (trackerResolvedNamesRef.current?.[rawTeamName]) {
-            mappedTeamName = trackerResolvedNamesRef.current[rawTeamName];
-          }
+        const cachedMapped = trackerResolvedNamesRef.current?.[rawTeamName];
+        if (cachedMapped) {
+          mappedTeamName = cachedMapped;
+        } else {
+          try {
+            const viaDisplay = await resolveTeamNameForDisplay(rawTeamName, parentCategory);
+            if (viaDisplay && String(viaDisplay).trim() !== '' && String(viaDisplay).trim() !== 'null') {
+              mappedTeamName = String(viaDisplay).trim();
+            }
+          } catch (e) {}
         }
-
+        
         const parentSegments = Array.isArray(parent.segments) ? parent.segments : [];
         const parentRange = parseWhenRangeToTs(parent.when);
 
@@ -2305,17 +2304,22 @@ const TransportApp = ({ userProfileData }) => {
     const tn = String(teamName).trim();
     const cat = categoryName ? cleanCategory(categoryName) : '';
 
-    if (!cat || !tn.includes(cat)) return true;
-
+    // Ak už máme namapovaný názov v cache, je vyriešený
     const mapped = trackerResolvedNamesRef.current[tn] ?? trackerResolvedNames[tn];
-    return (
+    if (
       mapped !== undefined &&
       mapped !== null &&
-      mapped !== '' &&
       String(mapped).trim() !== '' &&
       String(mapped).trim() !== 'null' &&
       String(mapped).trim() !== tn
-    );
+    ) {
+      return true;
+    }
+
+    // Ak názov neobsahuje kategóriu, netreba mapovať
+    if (!cat || !tn.includes(cat)) return true;
+
+    return false;
   };
 
   /* ------------------------------------------------------------------ */
@@ -2397,8 +2401,14 @@ const TransportApp = ({ userProfileData }) => {
 
     (savedTransfers || []).forEach((parent) => {
       if (parent._parentKey && parent._parentKey !== parent.key) return;
+      // ─── NOVÉ: namapovaný názov tímu (rovnako ako v zápasoch) ───
+      const rawTeamNameForFilter = String(parent.teamName || '').trim();
+      const mappedTeamNameForFilter =
+        trackerResolvedNamesRef.current[rawTeamNameForFilter] ??
+        trackerResolvedNames[rawTeamNameForFilter] ??
+        rawTeamNameForFilter;
       if (catFilter && cleanCategory(parent.category || '') !== catFilter) return;
-      if (teamFilterName && String(parent.teamName || '').trim() !== teamFilterName) return;
+      if (teamFilterName && mappedTeamNameForFilter !== teamFilterName) return;
       if (teamFilterCategory && cleanCategory(parent.category || '') !== teamFilterCategory) return;
 
       if (!isTeamNameResolved(parent.teamName, parent.category)) return;
@@ -2545,7 +2555,7 @@ const TransportApp = ({ userProfileData }) => {
         title: `${fromName} → ${toName}`,
         category: cleanCategory(parent.category || ''),
         categoryId: parent.categoryId || null,
-        teamName: String(parent.teamName || '').trim(),
+        teamName: mappedTeamNameForFilter,
         fromName,
         toName,
         busName,
