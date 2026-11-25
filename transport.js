@@ -2226,7 +2226,6 @@ const TransportApp = ({ userProfileData }) => {
           if (l.startTs != null) {
             legDateLabel = formatDateDDMMYYYY(l.startTs) || '';
           } else if (dayKey) {
-            // dayKey je "YYYY-MM-DD", prevedieme na "DD. MM. YYYY"
             const parts = String(dayKey).split('-');
             if (parts.length === 3) {
               legDateLabel = `${parts[2]}. ${parts[1]}. ${parts[0]}`;
@@ -2234,8 +2233,13 @@ const TransportApp = ({ userProfileData }) => {
           } else if (parentRange?.startTs) {
             legDateLabel = formatDateDDMMYYYY(parentRange.startTs) || '';
           }
-        
-          return `🚌 ${legTypeLabel} ${legDateLabel ? legDateLabel + ' ' : ''}${legTimeLabel} | ${l.fromName} → ${l.toName} | ${parentCategory || '-'}`;
+
+          // ─── NOVÉ: pre peší presun bez časov nezobrazovať "PEŠI" dvakrát ───
+          const timeAndType = (l.isWalking && l.startTs == null && !legTimeLabel.includes('–'))
+            ? 'PEŠI'
+            : `${legTimeLabel}`;
+
+          return `🚌 ${legTypeLabel} ${legDateLabel ? legDateLabel + ' ' : ''}${timeAndType} | ${l.fromName} → ${l.toName} | ${parentCategory || '-'}`;
         });
 
         const segmentsLabel = legs
