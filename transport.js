@@ -1187,55 +1187,33 @@ const resolveTeamNameForDisplay = async (identifier, categoryName) => {
   const original = String(identifier).trim();
   const cat = categoryName ? String(categoryName).trim() : '';
 
+  // 1) teamManager sync
   let intermediate = original;
   try {
     if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
       const syncRes = window.teamManager.getTeamNameByDisplayIdSync(original);
-      if (
-        syncRes &&
-        String(syncRes).trim() !== '' &&
-        String(syncRes).trim() !== 'null'
-      ) {
+      if (syncRes && String(syncRes).trim() !== '' && String(syncRes).trim() !== 'null') {
         intermediate = String(syncRes).trim();
       }
     }
   } catch (e) {}
 
-  let shouldCallMatchTracker = false;
-
-  if (intermediate !== original) {
-    shouldCallMatchTracker = true;
-  }
-
-  if (!shouldCallMatchTracker && cat && intermediate.includes(cat)) {
-    shouldCallMatchTracker = true;
-  }
-
-  if (!shouldCallMatchTracker) {
-    const withoutCat = cat
-      ? intermediate.split(cat).join('').replace(/\s+/g, '').trim()
-      : intermediate.replace(/\s+/g, '').trim();
-    if (isLetterDigitCode(withoutCat) || isDigitLetterCode(withoutCat)) {
-      shouldCallMatchTracker = true;
-    }
-  }
-
-  if (shouldCallMatchTracker) {
-    try {
-      if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-        const asyncRes = await window.matchTracker.getTeamNameByDisplayId(intermediate);
-        if (
-          asyncRes &&
-          String(asyncRes).trim() !== '' &&
-          String(asyncRes).trim() !== 'null' &&
-          String(asyncRes).trim() !== intermediate
-        ) {
-          return String(asyncRes).trim();
-        }
+  // 2) VŽDY skús matchTracker (nielen keď shouldCallMatchTracker)
+  try {
+    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+      const asyncRes = await window.matchTracker.getTeamNameByDisplayId(intermediate);
+      if (
+        asyncRes &&
+        String(asyncRes).trim() !== '' &&
+        String(asyncRes).trim() !== 'null' &&
+        String(asyncRes).trim() !== intermediate
+      ) {
+        return String(asyncRes).trim();
       }
-    } catch (e) {}
-  }
+    }
+  } catch (e) {}
 
+  // 3) fallback na intermediate
   return intermediate;
 };
 
