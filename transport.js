@@ -251,6 +251,68 @@ const getGroupCharFromTeamName = (teamName) => {
 
 const buildRowId = (busId, dayKey, order) => `${busId}__${dayKey}__${order}`;
 
+const splitLegAcrossMidnight = (leg) => {
+  if (!leg) return [leg];
+
+  const { startTs, endTs, fromName, toName } = leg;
+
+  // Ak chýbajú časy, alebo sú v ten istý deň, alebo názvy sú rovnaké → nevracať
+  if (startTs == null || endTs == null || endTs <= startTs) return [leg];
+  if (normalizePlaceName(fromName) === normalizePlaceName(toName)) return [leg];
+
+  const startDate = new Date(startTs);
+  const endDate = new Date(endTs);
+
+  // Rovnaký deň → netreba deliť
+  if (
+    startDate.getFullYear() === endDate.getFullYear() &&
+    startDate.getMonth() === endDate.getMonth() &&
+    startDate.getDate() === endDate.getDate()
+  ) {
+    return [leg];
+  }
+
+  // Rozdelíme na časti po dňoch
+  const parts = [];
+  let cursor = new Date(startTs);
+
+  while (cursor.getTime() < endTs) {
+    const dayStart = new Date(
+      cursor.getFullYear(),
+      cursor.getMonth(),
+      cursor.getDate(),
+      0, 0, 0, 0
+    );
+    const dayEnd = new Date(
+      cursor.getFullYear(),
+      cursor.getMonth(),
+      cursor.getDate(),
+      23, 59, 59, 999
+    );
+
+    const partStart = Math.max(cursor.getTime(), dayStart.getTime());
+    const partEnd = Math.min(endTs, dayEnd.getTime());
+
+    if (partEnd > partStart) {
+      parts.push({
+        ...leg,
+        startTs: partStart,
+        endTs: partEnd,
+      });
+    }
+
+    // Posun na ďalší deň o 00:00
+    cursor = new Date(
+      cursor.getFullYear(),
+      cursor.getMonth(),
+      cursor.getDate() + 1,
+      0, 0, 0, 0
+    );
+  }
+
+  return parts.length > 0 ? parts : [leg];
+};
+
 const enrichTransfersWithImpliedWalking = (events) => {
   if (!Array.isArray(events) || events.length < 2) return events;
 
@@ -399,20 +461,45 @@ const enrichTransfersWithImpliedWalking = (events) => {
       startTs,
       endTs,
     };
-    const syntheticLabel = `🚌 PEŠI ${formatDateDDMMYYYY(startTs) || ''} ${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)} | ${prevPlace} → ${nextPlace} | ${cat || '-'}`;
-    result.push({
-      kind: 'transfer',
-      teamName: ev.teamName,
-      category: cat,
-      ts: startTs,
-      dayKey: ev.dayKey,
-      sortKey: `synthetic|${startTs}`,
-      label: syntheticLabel,
-      legLabels: [syntheticLabel],
-      legs: [syntheticLeg],
-      _synthetic: true,
-    });
-  }
+
+    // Ak presun prechádza cez polnoc a názvy sú rôzne → rozdelíme na viac legov
+    const splitLegs = splitLegAcrossMidnight(syntheticLeg);
+    
+    if (splitLegs.length > 1) {
+      // Viac legov (cez polnoc) → každý leg ako samostatný transfer
+      for (const partLeg of splitLegs) {
+        const partLabel = `🚌 PEŠI ${formatDateDDMMYYYY(partLeg.startTs) || ''} ${formatTimeOnly(partLeg.startTs)} – ${formatTimeOnly(partLeg.endTs)} | ${partLeg.fromName} → ${partLeg.toName} | ${cat || '-'}`;
+        result.push({
+          kind: 'transfer',
+          teamName: ev.teamName,
+          category: cat,
+          ts: partLeg.startTs,
+          dayKey: (() => {
+            const d = new Date(partLeg.startTs);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          })(),
+          sortKey: `synthetic|${partLeg.startTs}`,
+          label: partLabel,
+          legLabels: [partLabel],
+          legs: [partLeg],
+          _synthetic: true,
+        });
+      }
+    } else {
+      const syntheticLabel = `🚌 PEŠI ${formatDateDDMMYYYY(startTs) || ''} ${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)} | ${prevPlace} → ${nextPlace} | ${cat || '-'}`;
+      result.push({
+        kind: 'transfer',
+        teamName: ev.teamName,
+        category: cat,
+        ts: startTs,
+        dayKey: ev.dayKey,
+        sortKey: `synthetic|${startTs}`,
+        label: syntheticLabel,
+        legLabels: [syntheticLabel],
+        legs: [syntheticLeg],
+        _synthetic: true,
+      });
+    }
 
   const resultWithTail = [];
   for (let i = 0; i < result.length; i++) {
@@ -460,33 +547,55 @@ const enrichTransfersWithImpliedWalking = (events) => {
       startTs,
       endTs,
     };
-    const syntheticLabel = `🚌 PEŠI ${formatDateDDMMYYYY(startTs) || ''} ${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)} | ${evPlace} → ${transferFrom} | ${cat || '-'}`;
 
-    resultWithTail.push({
-      kind: 'transfer',
-      teamName: ev.teamName,
-      category: cat,
-      ts: startTs,
-      dayKey: ev.dayKey,
-      sortKey: `synthetic-tail|${startTs}`,
-      label: syntheticLabel,
-      legLabels: [syntheticLabel],
-      legs: [syntheticLeg],
-      _synthetic: true,
+    const splitLegsTail = splitLegAcrossMidnight(syntheticLeg);
+    
+    if (splitLegsTail.length > 1) {
+      for (const partLeg of splitLegsTail) {
+        const partLabel = `🚌 PEŠI ${formatDateDDMMYYYY(partLeg.startTs) || ''} ${formatTimeOnly(partLeg.startTs)} – ${formatTimeOnly(partLeg.endTs)} | ${partLeg.fromName} → ${partLeg.toName} | ${cat || '-'}`;
+        resultWithTail.push({
+          kind: 'transfer',
+          teamName: ev.teamName,
+          category: cat,
+          ts: partLeg.startTs,
+          dayKey: (() => {
+            const d = new Date(partLeg.startTs);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          })(),
+          sortKey: `synthetic-tail|${partLeg.startTs}`,
+          label: partLabel,
+          legLabels: [partLabel],
+          legs: [partLeg],
+          _synthetic: true,
+        });
+      }
+    } else {
+      const syntheticLabel = `🚌 PEŠI ${formatDateDDMMYYYY(startTs) || ''} ${formatTimeOnly(startTs)} – ${formatTimeOnly(endTs)} | ${evPlace} → ${transferFrom} | ${cat || '-'}`;
+      resultWithTail.push({
+        kind: 'transfer',
+        teamName: ev.teamName,
+        category: cat,
+        ts: startTs,
+        dayKey: ev.dayKey,
+        sortKey: `synthetic-tail|${startTs}`,
+        label: syntheticLabel,
+        legLabels: [syntheticLabel],
+        legs: [syntheticLeg],
+        _synthetic: true,
+      });
+    }
+
+    const filtered = resultWithTail.filter((ev) => {
+      if (ev.kind !== 'transfer') return true;
+      const legs = ev.legs || [];
+      if (legs.length === 0) return false;
+      const hasTimes = legs.some(
+        (l) => l.startTs != null && l.endTs != null && l.endTs > l.startTs
+      );
+      return hasTimes;
     });
-  }
 
-  const filtered = resultWithTail.filter((ev) => {
-    if (ev.kind !== 'transfer') return true;
-    const legs = ev.legs || [];
-    if (legs.length === 0) return false;
-    const hasTimes = legs.some(
-      (l) => l.startTs != null && l.endTs != null && l.endTs > l.startTs
-    );
-    return hasTimes;
-  });
-
-  return filtered;
+    return filtered;
 };
 
 /* ------------------------------------------------------------------ */
@@ -2673,16 +2782,30 @@ const TransportApp = ({ userProfileData }) => {
       if (!teamFilter && !teamCatFilter) return true;
       if (teamCatFilter && cleanCategory(ev.category || '') !== teamCatFilter) return false;
       if (!teamFilter) return true;
-  
+
       const evTn = String(ev.teamName || '').trim();
       if (evTn === teamFilter) return true;
-  
+
       const mappedEv = trackerResolvedNamesRef.current[evTn] || trackerResolvedNames[evTn];
       if (mappedEv && String(mappedEv).trim() === teamFilter) return true;
-  
+
       const mappedFilter = trackerResolvedNamesRef.current[teamFilter] || trackerResolvedNames[teamFilter];
       if (mappedFilter && String(mappedFilter).trim() === evTn) return true;
-  
+    
+      // DEBUG – vypíšeme len keď je nastavený filter tímu a event je vyhodený
+      if (teamFilter) {
+        console.log('🚫 [TRANSPORT] FILTER DROP:', {
+          eventTeamName: evTn,
+          eventCategory: ev.category,
+          eventTitle: ev.title,
+          teamFilter,
+          teamCatFilter,
+          mappedEv,
+          mappedFilter,
+          trackerKeys: Object.keys(trackerResolvedNamesRef.current),
+        });
+      }
+    
       return false;
     };
     
