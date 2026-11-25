@@ -230,6 +230,110 @@ const tryPrintPerTeamTimeline = () => {
           continue;
         }
 
+        // ─── NOVÉ: ak existuje transfer s časmi, ale miesta nesedia, doplň peší presun ───
+        // Prípad: udalosť končí na mieste A, transfer (bus) začína na mieste B → A ≠ B
+        // Vložíme peší presun A → B s časmi [koniec udalosti, začiatok transferu].
+        // Rovnako pre koniec transferu vs. začiatok nasledujúcej udalosti.
+        const transferBetweenWithTimes = between.find(
+          (t) => t.kind === 'transfer' && transferHasTimes(t)
+        );
+
+        if (transferBetweenWithTimes) {
+          const prevRange = getEventTimeRange(ev);
+          const nextRange = getEventTimeRange(next);
+
+          if (prevRange && nextRange) {
+            const tLegs = transferBetweenWithTimes.legs || [];
+            const tFirstFrom = tLegs[0]?.fromName;
+            const tLastTo = tLegs[tLegs.length - 1]?.toName;
+            const tTimedLegs = tLegs.filter((l) => l.startTs != null && l.endTs != null);
+            const tStartTs = tTimedLegs.length > 0
+              ? Math.min(...tTimedLegs.map((l) => l.startTs))
+              : null;
+            const tEndTs = tTimedLegs.length > 0
+              ? Math.max(...tTimedLegs.map((l) => l.endTs))
+              : null;
+
+            // 1) Pred transferom: prevPlace ≠ tFirstFrom
+            if (
+              tStartTs != null &&
+              tFirstFrom &&
+              norm(prevPlace) !== norm(tFirstFrom) &&
+              tStartTs > prevRange.endTs
+            ) {
+              const walkStartTs = prevRange.endTs;
+              const walkEndTs = tStartTs;
+              if (walkEndTs > walkStartTs) {
+                const cat = String(ev.category || transferBetweenWithTimes.category || '').trim();
+                const walkLeg = {
+                  fromName: prevPlace,
+                  toName: tFirstFrom,
+                  isWalking: true,
+                  busName: null,
+                  startTs: walkStartTs,
+                  endTs: walkEndTs,
+                };
+                const walkLabel = `🚌 PEŠI ${formatDateDDMMYYYY(walkStartTs) || ''} ${formatTimeOnly(walkStartTs)} – ${formatTimeOnly(walkEndTs)} | ${prevPlace} → ${tFirstFrom} | ${cat || '-'}`;
+                const walkEv = {
+                  kind: 'transfer',
+                  teamName: ev.teamName,
+                  category: cat,
+                  ts: walkStartTs,
+                  dayKey: ev.dayKey,
+                  sortKey: `synthetic|${walkStartTs}`,
+                  label: walkLabel,
+                  legLabels: [walkLabel],
+                  legs: [walkLeg],
+                  _synthetic: true,
+                };
+                const idx = result.indexOf(transferBetweenWithTimes);
+                if (idx >= 0) result.splice(idx, 0, walkEv);
+                else result.push(walkEv);
+              }
+            }
+
+            // 2) Za transferom: tLastTo ≠ nextPlace
+            if (
+              tEndTs != null &&
+              tLastTo &&
+              norm(tLastTo) !== norm(nextPlace) &&
+              nextRange.startTs > tEndTs
+            ) {
+              const walkStartTs = tEndTs;
+              const walkEndTs = nextRange.startTs;
+              if (walkEndTs > walkStartTs) {
+                const cat = String(transferBetweenWithTimes.category || next.category || '').trim();
+                const walkLeg = {
+                  fromName: tLastTo,
+                  toName: nextPlace,
+                  isWalking: true,
+                  busName: null,
+                  startTs: walkStartTs,
+                  endTs: walkEndTs,
+                };
+                const walkLabel = `🚌 PEŠI ${formatDateDDMMYYYY(walkStartTs) || ''} ${formatTimeOnly(walkStartTs)} – ${formatTimeOnly(walkEndTs)} | ${tLastTo} → ${nextPlace} | ${cat || '-'}`;
+                const walkEv = {
+                  kind: 'transfer',
+                  teamName: transferBetweenWithTimes.teamName,
+                  category: cat,
+                  ts: walkStartTs,
+                  dayKey: transferBetweenWithTimes.dayKey,
+                  sortKey: `synthetic|${walkStartTs}`,
+                  label: walkLabel,
+                  legLabels: [walkLabel],
+                  legs: [walkLeg],
+                  _synthetic: true,
+                };
+                const idx = result.indexOf(transferBetweenWithTimes);
+                if (idx >= 0) result.splice(idx + 1, 0, walkEv);
+                else result.push(walkEv);
+              }
+            }
+          }
+          continue;
+        }
+        // ─── koniec nového bloku ───
+
         // Žiadny transfer medzi nimi → vložíme syntetický peší presun
         const prevRange = getEventTimeRange(ev);
         const nextRange = getEventTimeRange(next);
