@@ -450,7 +450,7 @@ const tryPrintPerTeamTimeline = () => {
     const rawTeam = String(ev.teamName || '').trim();
     if (!rawTeam) continue;
     // ⬅️ NOVÉ: použi mapovaný názov, ak existuje (rovnako ako v MAPPED výpise)
-    const team = trackerResolvedNamesRef.current?.[rawTeam] || rawTeam;
+    const team = __transportPerTeamBuffer.resolvedNames?.[rawTeam] || rawTeam;
     const cat = cleanCategory(ev.category || '');  // ⬅️ cleanCategory namiesto trim
     const key = `${cat}|${team}`;
     if (!byTeam.has(key)) byTeam.set(key, []);
@@ -1837,6 +1837,11 @@ const TransportApp = ({ userProfileData }) => {
 
   const arrivalTimestampRef = useRef(null);
   const firstTournamentDayKeyRef = useRef(null);
+
+  useEffect(() => {
+      trackerResolvedNamesRef.current = trackerResolvedNames;
+      __transportPerTeamBuffer.resolvedNames = trackerResolvedNames;
+  }, [trackerResolvedNames]);
 
   /* -------------------- Pomocné resolve funkcie -------------------- */
   const resolvePlaceNameById = (placeId) => {
@@ -3680,7 +3685,7 @@ const TransportApp = ({ userProfileData }) => {
       const rawTeam = String(ev.teamName || '').trim();
       if (!rawTeam) continue;
       // ⬅️ NOVÉ: použi mapovaný názov, ak existuje (rovnako ako v MAPPED výpise)
-      const team = trackerResolvedNamesRef.current?.[rawTeam] || rawTeam;
+      const team = __transportPerTeamBuffer.resolvedNames?.[rawTeam] || rawTeam;
       const cat = cleanCategory(ev.category || '');  // ⬅️ cleanCategory namiesto trim
       const key = `${cat}|${team}`;
       if (!byTeam.has(key)) byTeam.set(key, []);
