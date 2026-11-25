@@ -464,9 +464,8 @@ const enrichTransfersWithImpliedWalking = (events) => {
 
     // Ak presun prechádza cez polnoc a názvy sú rôzne → rozdelíme na viac legov
     const splitLegs = splitLegAcrossMidnight(syntheticLeg);
-    
+
     if (splitLegs.length > 1) {
-      // Viac legov (cez polnoc) → každý leg ako samostatný transfer
       for (const partLeg of splitLegs) {
         const partLabel = `🚌 PEŠI ${formatDateDDMMYYYY(partLeg.startTs) || ''} ${formatTimeOnly(partLeg.startTs)} – ${formatTimeOnly(partLeg.endTs)} | ${partLeg.fromName} → ${partLeg.toName} | ${cat || '-'}`;
         result.push({
@@ -550,7 +549,7 @@ const enrichTransfersWithImpliedWalking = (events) => {
     };
 
     const splitLegsTail = splitLegAcrossMidnight(syntheticLeg);
-    
+
     if (splitLegsTail.length > 1) {
       for (const partLeg of splitLegsTail) {
         const partLabel = `🚌 PEŠI ${formatDateDDMMYYYY(partLeg.startTs) || ''} ${formatTimeOnly(partLeg.startTs)} – ${formatTimeOnly(partLeg.endTs)} | ${partLeg.fromName} → ${partLeg.toName} | ${cat || '-'}`;
@@ -585,18 +584,19 @@ const enrichTransfersWithImpliedWalking = (events) => {
         _synthetic: true,
       });
     }
+  }
 
-    const filtered = resultWithTail.filter((ev) => {
-      if (ev.kind !== 'transfer') return true;
-      const legs = ev.legs || [];
-      if (legs.length === 0) return false;
-      const hasTimes = legs.some(
-        (l) => l.startTs != null && l.endTs != null && l.endTs > l.startTs
-      );
-      return hasTimes;
-    });
+  const filtered = resultWithTail.filter((ev) => {
+    if (ev.kind !== 'transfer') return true;
+    const legs = ev.legs || [];
+    if (legs.length === 0) return false;
+    const hasTimes = legs.some(
+      (l) => l.startTs != null && l.endTs != null && l.endTs > l.startTs
+    );
+    return hasTimes;
+  });
 
-    return filtered;
+  return filtered;
 };
 
 /* ------------------------------------------------------------------ */
