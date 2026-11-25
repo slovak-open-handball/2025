@@ -419,6 +419,83 @@ const tryPrintPerTeamTimeline = () => {
     items.forEach((line, i) => console.log(`${i + 1}. ${line}`));
     console.groupEnd();
   });
+
+  // ─── NOVÉ: výpis po dňoch (rovnako ako boxy dní v UI) ───
+  // Každý tím má zoznam eventov (matches + catering + transfers). Zoskupíme ich podľa dňa.
+  const eventsByDayAndTeam = new Map();
+  for (const key of teamsSorted) {
+    const [cat, team] = key.split('|');
+    const list = byTeam.get(key) || [];
+    for (const ev of list) {
+      // Určíme dayKey eventu: primárne ev.dayKey, inak z ev.ts
+      let dk = ev.dayKey || null;
+      if (!dk && ev.ts != null && isFinite(ev.ts)) {
+        const d = new Date(ev.ts);
+        dk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
+      if (!dk) dk = 'neznamy';
+
+      if (!eventsByDayAndTeam.has(dk)) eventsByDayAndTeam.set(dk, new Map());
+      const byTeamInDay = eventsByDayAndTeam.get(dk);
+      if (!byTeamInDay.has(key)) byTeamInDay.set(key, []);
+      byTeamInDay.get(key).push(ev);
+    }
+  }
+
+  const sortedDayKeys = [...eventsByDayAndTeam.keys()].sort();
+
+  for (const dk of sortedDayKeys) {
+    // Hlavička dňa
+    const dayLabel = (() => {
+      if (dk === 'neznamy') return 'neznámy deň';
+      const parts = String(dk).split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}. ${parts[1]}. ${parts[0]}`;
+      }
+      return dk;
+    })();
+
+    console.group(`📅 ${dayLabel}`);
+
+    const byTeamInDay = eventsByDayAndTeam.get(dk);
+    const teamKeysInDay = [...byTeamInDay.keys()].sort((a, b) => {
+      const [catA, teamA] = a.split('|');
+      const [catB, teamB] = b.split('|');
+      const c = String(catA).localeCompare(String(catB), 'sk', { sensitivity: 'base' });
+      if (c !== 0) return c;
+      return String(teamA).localeCompare(String(teamB), 'sk', { sensitivity: 'base' });
+    });
+
+    for (const key of teamKeysInDay) {
+      const [cat, team] = key.split('|');
+      const accomKey = `${cat}|${team}`;
+      const accommodationName = __transportPerTeamBuffer.accommodationByKey.get(accomKey) || 'bez ubytovania';
+
+      // Zoradíme eventy v rámci tímu a dňa
+      const KIND_PRIORITY = { match: 0, transfer: 1, catering: 2 };
+      const list = byTeamInDay.get(key).slice().sort((a, b) => {
+        const aTs = a.ts != null && isFinite(a.ts) ? a.ts : Number.POSITIVE_INFINITY;
+        const bTs = b.ts != null && isFinite(b.ts) ? b.ts : Number.POSITIVE_INFINITY;
+        if (aTs !== bTs) return aTs - bTs;
+        const aP = KIND_PRIORITY[a.kind] ?? 9;
+        const bP = KIND_PRIORITY[b.kind] ?? 9;
+        if (aP !== bP) return aP - bP;
+        return String(a.sortKey || '').localeCompare(String(b.sortKey || ''), 'sk');
+      });
+
+      console.groupCollapsed(`👥 ${team}${cat ? ` (${cat})` : ''} – 🏠 ${accommodationName}`);
+      list.forEach((ev, i) => {
+        if (ev.kind === 'transfer' && Array.isArray(ev.legLabels) && ev.legLabels.length > 0) {
+          ev.legLabels.forEach((legLine) => console.log(`${i + 1}. ${legLine}`));
+        } else {
+          console.log(`${i + 1}. ${ev.label}`);
+        }
+      });
+      console.groupEnd();
+    }
+
+    console.groupEnd();
+  }
 };
 
 /* ------------------------------------------------------------------ */
