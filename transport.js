@@ -1774,6 +1774,31 @@ const TransportApp = ({ userProfileData }) => {
     return () => clearTimeout(retryTimer);
   }, [savedTransfers]);
 
+  useEffect(() => {
+    if (!selectedTeam || !selectedTeamCategory) return;
+    if (trackerResolvedNamesRef.current[selectedTeam]) return;  // už namapované
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const mapped = await resolveTeamNameForDisplay(selectedTeam, selectedTeamCategory);
+        if (cancelled) return;
+        if (
+          mapped &&
+          String(mapped).trim() !== '' &&
+          String(mapped).trim() !== 'null' &&
+          String(mapped).trim() !== selectedTeam
+        ) {
+          const nextMap = { ...trackerResolvedNamesRef.current, [selectedTeam]: String(mapped).trim() };
+          trackerResolvedNamesRef.current = nextMap;
+          setTrackerResolvedNames(nextMap);
+        }
+      } catch (e) {}
+    })();
+
+    return () => { cancelled = true; };
+  }, [selectedTeam, selectedTeamCategory]);
+
   /* ------------------------------------------------------------------ */
   /* Filter presunov: ak je tím ubytovaný, v deň s viacerými presunmi    */
   /* pred prvou udalosťou (zápas/stravovanie) zobraz iba logický presun  */
