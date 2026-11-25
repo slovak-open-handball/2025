@@ -126,50 +126,15 @@ const buildRowId = (busId, dayKey, order) => `${busId}__${dayKey}__${order}`;
 /* v logged-in-matches-hall.js)                                        */
 /* ------------------------------------------------------------------ */
 
-// Detekcia tvaru "číslo + písmeno" bez medzery (napr. "I1", "B4", "E5")
+// Detekcia tvaru "písmeno + číslo" alebo "číslo + písmeno" (napr. "I1", "1I", "B4")
 const looksLikeGroupCode = (name) => {
   if (!name) return false;
-  return /\d[A-ZÁ-Ž]\s*$/.test(String(name).trim()) ||
-         /^[A-ZÁ-Ž]\d+$/.test(String(name).trim()) ||
-         /\s\d+[A-ZÁ-Ž]$/.test(String(name).trim());
+  const s = String(name).trim();
+  // písmeno+číslo (I1, B4, E5, C3) alebo číslo+písmeno (1I, 4B)
+  return /^[A-ZÁ-Ž]\d+$/.test(s) || /^\d+[A-ZÁ-Ž]$/.test(s);
 };
 
-// Krok 1: synchronné mapovanie cez teamManager
-const resolveViaTeamManagerSync = (identifier) => {
-  if (!identifier) return identifier;
-  try {
-    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-      const syncResult = window.teamManager.getTeamNameByDisplayIdSync(identifier);
-      if (syncResult && syncResult !== identifier) return syncResult;
-    }
-  } catch (e) {}
-  return identifier;
-};
-
-// Krok 2: asynchrónne mapovanie cez matchTracker
-const resolveViaMatchTracker = async (identifier) => {
-  if (!identifier) return identifier;
-  try {
-    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-      const asyncResult = await window.matchTracker.getTeamNameByDisplayId(identifier);
-      if (
-        asyncResult &&
-        asyncResult !== identifier &&
-        String(asyncResult).trim() !== '' &&
-        String(asyncResult).trim() !== 'null'
-      ) {
-        return asyncResult;
-      }
-    }
-  } catch (e) {}
-  return identifier;
-};
-
-// Kompletná kaskáda – presne podľa požiadavky:
-// 1) teamManager.getTeamNameByDisplayIdSync(identifier)
-// 2) ak výsledok obsahuje kategóriu a po odfiltrovaní kategórie je tvar "číslo+písmeno"
-//    → matchTracker.getTeamNameByDisplayId(výsledok)
-// 3) inak vráť výsledok z kroku 1 (alebo pôvodný identifier)
+// Kompletná kaskáda – presne podľa požiadavky
 const resolveTeamNameForDisplay = async (identifier, categoryName) => {
   if (!identifier) return identifier;
 
@@ -177,45 +142,49 @@ const resolveTeamNameForDisplay = async (identifier, categoryName) => {
   let intermediate = original;
 
   // KROK 1 – teamManager sync
-  const syncResult = resolveViaTeamManagerSync(original);
-  if (syncResult && syncResult !== original) {
-    intermediate = syncResult;
-  }
+  try {
+    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+      const syncResult = window.teamManager.getTeamNameByDisplayIdSync(original);
+      if (syncResult && syncResult !== original) {
+        intermediate = syncResult;
+      }
+    }
+  } catch (e) {}
 
   // KROK 2 – rozhodnutie, či volať matchTracker
   let shouldCallMatchTracker = false;
+  const cat = categoryName ? String(categoryName).trim() : '';
 
-  if (intermediate !== original) {
-    // teamManager niečo vrátil – skontroluj, či obsahuje kategóriu a tvar "číslo+písmeno"
-    const cat = categoryName ? String(categoryName).trim() : '';
-    if (!cat || intermediate.includes(cat)) {
-      // odfiltruj kategóriu a skontroluj tvar
-      let withoutCategory = intermediate;
-      if (cat) {
-        withoutCategory = intermediate.split(cat).join('').trim();
-      }
-      if (looksLikeGroupCode(withoutCategory)) {
-        shouldCallMatchTracker = true;
-      }
+  // Skontroluj, či intermediate (alebo original) obsahuje kategóriu
+  // a po odfiltrovaní kategórie zostane tvar "písmeno+číslo" / "číslo+písmeno"
+  const checkValue = intermediate || original;
+  if (cat && checkValue.includes(cat)) {
+    const withoutCategory = checkValue.split(cat).join('').trim();
+    if (looksLikeGroupCode(withoutCategory)) {
+      shouldCallMatchTracker = true;
     }
-  } else {
-    // teamManager nič nezmenil – skús matchTracker, ak pôvodný identifikátor
-    // obsahuje kategóriu a tvar "číslo+písmeno" (napr. "U12 D I1")
-    const cat = categoryName ? String(categoryName).trim() : '';
-    if (cat && original.includes(cat)) {
-      const withoutCategory = original.split(cat).join('').trim();
-      if (looksLikeGroupCode(withoutCategory)) {
-        shouldCallMatchTracker = true;
-      }
+  } else if (!cat) {
+    // bez kategórie – skús priamo, ak má tvar group kódu
+    if (looksLikeGroupCode(checkValue)) {
+      shouldCallMatchTracker = true;
     }
   }
 
   // KROK 2 – matchTracker async
   if (shouldCallMatchTracker) {
-    const finalResult = await resolveViaMatchTracker(intermediate);
-    if (finalResult && finalResult !== intermediate) {
-      return finalResult;
-    }
+    try {
+      if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+        const asyncResult = await window.matchTracker.getTeamNameByDisplayId(checkValue);
+        if (
+          asyncResult &&
+          asyncResult !== checkValue &&
+          String(asyncResult).trim() !== '' &&
+          String(asyncResult).trim() !== 'null'
+        ) {
+          return asyncResult;
+        }
+      }
+    } catch (e) {}
   }
 
   // KROK 3 – vráť intermediate (teamManager výsledok alebo pôvodný identifier)
