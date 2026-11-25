@@ -2602,10 +2602,29 @@ const TransportApp = ({ userProfileData }) => {
       }
     }
   
-    filteredUiEvents.sort((a, b) => {
+    // Finálna poistka – odfiltruj eventy, ktoré nezodpovedajú filtru tímu
+    // (robustné voči mapovaniu názvov)
+    const teamMatchesFilter = (ev) => {
+      if (!teamFilter && !teamCatFilter) return true;
+      if (teamCatFilter && cleanCategory(ev.category || '') !== teamCatFilter) return false;
+      if (!teamFilter) return true;
+      const evTn = String(ev.teamName || '').trim();
+      if (evTn === teamFilter) return true;
+      const mappedEv = trackerResolvedNamesRef.current[evTn] || trackerResolvedNames[evTn];
+      if (mappedEv && String(mappedEv).trim() === teamFilter) return true;
+      const mappedSel = trackerResolvedNamesRef.current[teamFilter] || trackerResolvedNames[teamFilter];
+      if (mappedSel && String(mappedSel).trim() === evTn) return true;
+      return false;
+    };
+    
+    const finalEvents = filteredUiEvents.filter(teamMatchesFilter);
+    
+    finalEvents.sort((a, b) => {
       if (a.sortTs !== b.sortTs) return a.sortTs - b.sortTs;
       return String(a.title).localeCompare(String(b.title), 'sk');
     });
+    
+    return finalEvents;
   
     return filteredUiEvents;
   }, [savedTransfers, buses, selectedDayKey, selectedCategory, selectedTeam, selectedTeamCategory, allPlaces, matchesVersion, trackerResolvedNames]);
