@@ -2939,67 +2939,6 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
-    useEffect(() => {
-        const categoryFromUrl = getCategoryFromUrl();
-        const hasCategoryInUrl = !!categoryFromUrl;
-        
-        if (selectedTeamDetails && selectedTeamDetails.occurrences && selectedTeamDetails.occurrences.length > 0 && hasCategoryInUrl) {
-            let selectedOcc = null;
-            
-            if (selectedTeamDetails.category && selectedTeamDetails.teamName) {
-                selectedOcc = selectedTeamDetails.occurrences.find(
-                    occ => occ.category === selectedTeamDetails.category && 
-                           occ.teamName === selectedTeamDetails.teamName
-                );
-            }
-            
-            if (!selectedOcc) {
-                const { teamName: teamNameFromUrl } = parseUrlHash();
-                if (categoryFromUrl && teamNameFromUrl) {
-                    selectedOcc = selectedTeamDetails.occurrences.find(
-                        occ => occ.category === categoryFromUrl && 
-                               occ.teamName === teamNameFromUrl
-                    );
-                }
-            }
-            
-            if (!selectedOcc && categoryFromUrl) {
-                selectedOcc = selectedTeamDetails.occurrences.find(
-                    occ => occ.category === categoryFromUrl
-                );
-            }
-            
-            if (!selectedOcc && selectedTeamDetails.occurrences.length > 0) {
-                selectedOcc = selectedTeamDetails.occurrences[0];
-                setSelectedTeamDetails(prev => ({
-                    ...prev,
-                    teamName: selectedOcc.teamName,
-                    category: selectedOcc.category
-                }));
-            }
-            
-            if (selectedOcc) {
-                let categoryName = selectedOcc.category;
-                if (categoryIdToNameMap[categoryName]) {
-                    categoryName = categoryIdToNameMap[categoryName];
-                }
-                loadTeamRoster(selectedOcc.teamName, categoryName);
-            }
-        } else {
-            if (rosterUnsubscribe) {
-                try {
-                    rosterUnsubscribe();
-                } catch (e) {}
-                setRosterUnsubscribe(null);
-            }
-            setTeamRoster([]);
-            setIsLoadingRoster(false);
-            setRosterTeamName('');
-            setRosterCategoryName('');
-            setMembersStats({});
-        }
-    }, [selectedTeamDetails, categoryIdToNameMap]);
-
   useEffect(() => {
         const categoryFromUrl = getCategoryFromUrl();
         const hasCategoryInUrl = !!categoryFromUrl;
