@@ -7483,7 +7483,7 @@ const TransportApp = ({ userProfileData }) => {
             React.createElement(
                 'p',
                 { className: 'text-xs text-gray-500 mb-3 italic' },
-                'Hodnota predstavuje počet minút jazdy z riadkovej zastávky (z) do stĺpcovej zastávky (do). Prázdne pole = nezadané. Kliknutím na názov zastávky v hlavičke ju označíte ako nástupnú/výstupnú.'
+                'Hodnota predstavuje počet minút jazdy z riadkovej zastávky (z) do stĺpcovej zastávky (do). Prázdne pole = nezadané. Kliknutím na názov zastávky v hlavičke ju označíte ako nástupnú/výstupnú alebo ako miesto zrazu.'
             ),
             React.createElement(
                 'table',
