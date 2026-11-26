@@ -2343,25 +2343,6 @@ const TeamsOverviewApp = (props) => {
     const [teamEventsFilter, setTeamEventsFilter] = useState(null);
     const [isLoadingEvents, setIsLoadingEvents] = useState(false);
 
-    useEffect(() => {
-        if (!isLoadingEvents) return;
-    
-        const categoryFromUrl = getCategoryFromUrl();
-        const hasCategoryInUrl = !!categoryFromUrl;
-        const isAnyButtonSelected = hasCategoryInUrl && 
-                                    selectedTeamDetails &&
-                                    selectedTeamDetails.category !== null &&
-                                    selectedTeamDetails.category !== undefined;
-    
-        // Ak TeamEventsList nemá byť vykreslený, vypneme loading
-        if (!isAnyButtonSelected || !(isCateringVisible || isMatchesVisible)) {
-            const timer = setTimeout(() => {
-                setIsLoadingEvents(false);
-            }, 300); // krátky delay, aby sa stihol vykresliť TeamEventsList, ak sa má
-            return () => clearTimeout(timer);
-        }
-    }, [isLoadingEvents, selectedTeamDetails, isCateringVisible, isMatchesVisible]);
-
     // 🔥 NOVÉ: Stav pre priamu navigáciu z URL na detail tímu
     const [isUrlDetailLoading, setIsUrlDetailLoading] = useState(() => {
         // Ak URL obsahuje category aj team, budeme priamo zobrazovať detail
@@ -2441,6 +2422,25 @@ const TeamsOverviewApp = (props) => {
             if (unsubscribe) unsubscribe();
         };
     }, []);
+
+    useEffect(() => {
+        if (!isLoadingEvents) return;
+
+        const categoryFromUrl = getCategoryFromUrl();
+        const hasCategoryInUrl = !!categoryFromUrl;
+        const isAnyButtonSelected = hasCategoryInUrl && 
+                                    selectedTeamDetails &&
+                                    selectedTeamDetails.category !== null &&
+                                    selectedTeamDetails.category !== undefined;
+
+        // Ak TeamEventsList nemá byť vykreslený, vypneme loading
+        if (!isAnyButtonSelected || !(isCateringVisible || isMatchesVisible)) {
+            const timer = setTimeout(() => {
+                setIsLoadingEvents(false);
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [isLoadingEvents, selectedTeamDetails, isCateringVisible, isMatchesVisible]);
 
     // 🔥 NOVÉ: Sleduj zmeny v kolekcii 'matches' a pri dokončení zápasu vynúť refresh
     useEffect(() => {
