@@ -3473,6 +3473,7 @@ const TeamsOverviewApp = (props) => {
         setRosterTeamName('');
         setRosterCategoryName('');
         setMembersStats({});
+        setIsLoadingEvents(false);
         
         if (categoryNameFromUrl) {
             const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryNameFromUrl);
