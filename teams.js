@@ -3411,7 +3411,7 @@ const TeamsOverviewApp = (props) => {
         const normalizedTeamName = teamName.replace(/\s+/g, ' ').trim();
         const currentCategoryName = selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null;
         const baseTeamName = removeSuffix(normalizedTeamName);
-    
+        
         const teamOccurrences = allTeams
             .filter(team => {
                 const cleanName = removeSuffix(team.teamName);
@@ -3425,31 +3425,40 @@ const TeamsOverviewApp = (props) => {
                 groupName: team.groupName,
                 order: team.order
             }));
-
+    
         if (teamOccurrences.length > 0) {
             setTeamEventsFilter(null);
             setTeamRoster([]);
             setMembersStats({});
             setIsLoadingRoster(true);
             setIsLoadingEvents(true);
-      
+          
             setSelectedTeamDetails({
                 teamName: normalizedTeamName,
                 category: currentCategoryName,
                 occurrences: teamOccurrences
             });
             updateUrlHash(normalizedTeamName, currentCategoryName);
-        
+            
             // 🔥 FALLBACK: Ak sa TeamEventsList nevykreslí (napr. chýba kategória),
-            // po 10s vypneme loading, aby nezostal spinner.
-            setTimeout(() => {
+            // po 8s vypneme loading, aby nezostal spinner.
+            if (window.__eventsLoadingTimeout) {
+                clearTimeout(window.__eventsLoadingTimeout);
+            }
+            window.__eventsLoadingTimeout = setTimeout(() => {
                 setIsLoadingEvents(false);
-            }, 10000);
+                window.__eventsLoadingTimeout = null;
+            }, 8000);
         }
     };
 
     const closeTeamDetails = () => {
         const { categoryName: categoryNameFromUrl } = parseUrlHash();
+
+        if (window.__eventsLoadingTimeout) {
+            clearTimeout(window.__eventsLoadingTimeout);
+            window.__eventsLoadingTimeout = null;
+        }
         
         if (rosterUnsubscribe) {
             try {
@@ -3521,25 +3530,29 @@ const TeamsOverviewApp = (props) => {
         setMembersStats({});
         setIsLoadingRoster(true);
         setIsLoadingEvents(true);
-
+    
         setSelectedTeamDetails({
             teamName: normalizedTeamName,
             category: normalizedCategory,
             occurrences: allOccurrences
         });
-
+    
         let categoryName = occ.category;
         if (categoryIdToNameMap[categoryName]) {
             categoryName = categoryIdToNameMap[categoryName];
         }
         loadTeamRoster(occ.teamName, categoryName);
         
-        // 🔥 FALLBACK
-        setTimeout(() => {
+        // 🔥 FALLBACK: Ak sa TeamEventsList nevykreslí, po 8s vypneme loading.
+        if (window.__eventsLoadingTimeout) {
+            clearTimeout(window.__eventsLoadingTimeout);
+        }
+        window.__eventsLoadingTimeout = setTimeout(() => {
             setIsLoadingEvents(false);
-        }, 10000);
+            window.__eventsLoadingTimeout = null;
+        }, 8000);
     };
-    
+        
     const renderTeamRoster = () => {
         const categoryFromUrl = getCategoryFromUrl();
         const hasCategoryInUrl = !!categoryFromUrl;
