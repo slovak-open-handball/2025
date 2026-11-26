@@ -3714,7 +3714,7 @@ const TeamsOverviewApp = (props) => {
                 )
             )
         );
-    };
+    }
 
     const renderTeamDetails = () => {
         if (!selectedTeamDetails) return null;
