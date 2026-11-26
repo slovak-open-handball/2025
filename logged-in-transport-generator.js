@@ -2193,9 +2193,8 @@ class TransportGenerator {
                                 
                                     // ─────────────────────────────────────────────────────────────
                                     // NOVÉ: Zozbieraj jedinečné ubytovne VŠETKÝCH tímov v zdrojovej skupine user tímu.
-                                    // Ak tím nemá ubytovanie, považuje sa za miesto zrazu "Internátna".
                                     // ─────────────────────────────────────────────────────────────
-                                    const meetingPointName = meetingPointStop ? meetingPointStop.name : 'Internátna';
+                                    const meetingPointName = meetingPointStop;
                                     const uniqueAccommodationsInSourceGroup = new Map(); // normalizedName -> { location, label }
                                     (this.ctx.teamsArrivalBufferRef?.current || []).forEach((t) => {
                                         if (cleanCategory(t.category) !== cleanCategory(category)) return;
