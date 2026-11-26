@@ -3705,7 +3705,12 @@ const TeamsOverviewApp = (props) => {
     const hasUrlDetail = !!(teamNameFromUrl || categoryNameFromUrl);
     const isWaitingForUrlDetail = hasUrlDetail && !selectedTeamDetails && (allTeams.length === 0 || Object.keys(categoryIdToNameMap).length === 0);
 
-    if (isWaitingForUrlDetail) {
+    // 🔥 ROZŠÍRENÁ PODMIENKA: Loading zobrazíme aj vtedy, ak:
+    // 1) čakáme na URL detail (pôvodná podmienka), ALEBO
+    // 2) máme vybraný tím (selectedTeamDetails) a ešte sa načítavajú udalosti tímu (isLoadingEvents)
+    const shouldShowLoading = isWaitingForUrlDetail || (hasUrlDetail && selectedTeamDetails && isLoadingEvents);
+
+    if (shouldShowLoading) {
         return React.createElement(
             'div',
             { className: 'flex items-center justify-center min-h-screen' },
@@ -3715,7 +3720,7 @@ const TeamsOverviewApp = (props) => {
                 React.createElement('div', { 
                     className: 'animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto' 
                 }),
-                React.createElement('p', { className: 'text-sm mt-3' }, 'Načítavam detail tímu...')
+                React.createElement('p', { className: 'text-sm mt-3' }, 'Načítavam...')
             )
         );
     }
