@@ -2187,15 +2187,39 @@ class TransportGenerator {
                                     // ─────────────────────────────────────────────────────────────
                                     const meetingPointName = meetingPointStop ? meetingPointStop.name : 'Internátna';
                                     const uniqueAccommodationsInSourceGroup = new Map();
+
+                                    // Pomocná funkcia – patrí tím do zdrojovej skupiny?
+                                    const teamBelongsToSourceGroup = (t) => {
+                                        if (!t || !t.teamName) return false;
+                                        if (cleanCategory(t.category) !== cleanCategory(category)) return false;
+                                        if (isSpiderTeamName(t.teamName)) return false;
+
+                                        const tn = String(t.teamName).trim();
+
+                                        // 1. Presná zhoda groupName
+                                        if (t.groupName && userTeamSourceGroupName) {
+                                            const gName = String(t.groupName).trim();
+                                            if (gName === String(userTeamSourceGroupName).trim()) return true;
+                                            // 2. Zhoda podľa posledného písmena groupName
+                                            const gChar = getGroupLastChar(gName);
+                                            if (gChar && gChar === userTeamGroupChar) return true;
+                                        }
+
+                                        // 3. User tím / SS tím podľa písmena názvu = userTeamGroupChar
+                                        const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                                        const nameChar = nameCharMatch ? nameCharMatch[1].toUpperCase() : null;
+                                        if (nameChar && nameChar === userTeamGroupChar) return true;
+
+                                        return false;
+                                    };
+
                                     (this.ctx.teamsArrivalBufferRef?.current || []).forEach((t) => {
-                                        if (cleanCategory(t.category) !== cleanCategory(category)) return;
-                                        if (!t.teamName) return;
-                                        const otherGroupName = t.groupName ? String(t.groupName).trim() : null;
-                                        if (!otherGroupName || !userTeamSourceGroupName) return;
-                                        if (otherGroupName !== String(userTeamSourceGroupName).trim()) return;
+                                        if (!teamBelongsToSourceGroup(t)) return;
+
                                         const accName = t.accommodationName && String(t.accommodationName).trim() !== ''
                                             ? String(t.accommodationName).trim()
                                             : null;
+
                                         if (accName) {
                                             const key = normalizePlaceName(accName);
                                             if (!key) return;
@@ -2206,6 +2230,7 @@ class TransportGenerator {
                                                 });
                                             }
                                         } else {
+                                            // Tím nemá ubytovanie → považuje sa za miesto zrazu
                                             const key = normalizePlaceName(meetingPointName);
                                             if (!key) return;
                                             if (!uniqueAccommodationsInSourceGroup.has(key)) {
