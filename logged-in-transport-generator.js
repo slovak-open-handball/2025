@@ -2150,16 +2150,23 @@ class TransportGenerator {
                                 // Pôvodná logika generovania presunov (upravená)
                                 superstructureFirstPlacesByDay.forEach((placesMap, dayKey) => {
                                     if (userTeamDays.has(dayKey)) return;
-                                
+
                                     // ─────────────────────────────────────────────────────────────
                                     // NOVÉ: Ak user tím nemá v tento deň ŽIADNU udalosť,
-                                    // negeneruj ranný presun z ubytovne ani z miesta zrazu.
+                                    // negeneruj ranný presun z ubytovne ani z miesta zrazu
+                                    // – a to ani pre user tím, ani pre superstructure tímy.
                                     // ─────────────────────────────────────────────────────────────
                                     const userTeamHasAnyEventOnDay = events.some((ev) => {
                                         const evDay = extractDayKeyFromWhen(ev.when);
                                         return evDay === dayKey;
                                     });
                                     if (!userTeamHasAnyEventOnDay) return;
+                                
+                                    const userTeamHasEventOnDay = events.some((ev) => {
+                                        const evDay = extractDayKeyFromWhen(ev.when);
+                                        return evDay === dayKey && ev.location;
+                                    });
+                                    if (userTeamHasEventOnDay) return;
                                 
                                     const userTeamHasEventOnDay = events.some((ev) => {
                                         const evDay = extractDayKeyFromWhen(ev.when);
