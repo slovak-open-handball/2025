@@ -10654,7 +10654,6 @@ const TransportApp = ({ userProfileData }) => {
                                     'div',
                                     { className: 'flex items-center justify-between mb-4 pb-3 border-b border-gray-200' },
                                     React.createElement('h3', { className: 'text-xl font-semibold text-gray-700' }, 'Trvania jazdy medzi zastávkami'),
-                                    React.createElement('span', { className: 'text-sm text-gray-500' }, `Zastávok: ${stopsList.length}`)
                                 ),
                                 renderTravelTimes()
                             )
