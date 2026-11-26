@@ -3,15 +3,8 @@
 // Načíta všetky tímy z kolekcie 'users' a vypíše ich do konzoly
 // ako klikateľné odkazy: teams#category=<KATEGÓRIA>&team=<TÍM>
 // + Nastaví každý výskyt názvu tímu na stránke ako klikateľný odkaz
-//   s korektnou kategóriou podľa kontextu:
-//     - teams.js: nadpis kategórie v boxe
-//     - matches.js: riadok tabuľky zápasov (kategória v inom stĺpci)
-//     - matches.js detail: gradient box + boxy súpisiek
-//     - tables.js: skupinová tabuľka (kategória v hlavičke skupiny)
-//     - tables.js: riadok zápasu (kategória z hlavičky skupiny / URL / filtra)
-//     - tables.js: playoff boxy (kategória z URL / aktívneho tlačidla filtra)
+//   s korektnou kategóriou podľa kontextu (teams.js, matches.js, tables.js)
 //   Vzhľad zostáva PÔVODNÝ (žiadna modrá, žiadne podčiarknutie)
-// Čaká na inicializáciu window.db (z authentication.js)
 // ============================================================
 
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -21,40 +14,24 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/f
 // ------------------------------------------------------------
 const waitForDb = (timeoutMs = 15000, intervalMs = 200) => {
     return new Promise((resolve, reject) => {
-        if (window.db) {
-            resolve(window.db);
-            return;
-        }
-
+        if (window.db) { resolve(window.db); return; }
         const startTime = Date.now();
-
         const onDbInitialized = () => {
-            if (window.db) {
-                cleanup();
-                resolve(window.db);
-            }
+            if (window.db) { cleanup(); resolve(window.db); }
         };
-
         const cleanup = () => {
             window.removeEventListener("dbInitialized", onDbInitialized);
             clearInterval(intervalId);
             clearTimeout(timeoutId);
         };
-
         window.addEventListener("dbInitialized", onDbInitialized);
-
         const intervalId = setInterval(() => {
-            if (window.db) {
-                cleanup();
-                resolve(window.db);
-                return;
-            }
+            if (window.db) { cleanup(); resolve(window.db); return; }
             if (Date.now() - startTime > timeoutMs) {
                 cleanup();
                 reject(new Error("Timeout: window.db nebola inicializovaná do " + timeoutMs + " ms."));
             }
         }, intervalMs);
-
         const timeoutId = setTimeout(() => {
             cleanup();
             reject(new Error("Timeout: window.db nebola inicializovaná do " + timeoutMs + " ms."));
@@ -90,6 +67,8 @@ const buildTeamUrl = (categoryName, teamName) => {
 let allTeamsFlat = [];
 let teamNameToCategoriesMap = new Map();
 let knownCategoryNames = [];
+// Mapa: akýkoľvek variant názvu (pôvodný aj namapovaný) -> kategórie
+let variantNameToCategoriesMap = new Map();
 
 // ------------------------------------------------------------
 // Rozpoznanie kategórie v texte
@@ -98,9 +77,7 @@ const textContainsKnownCategory = (text) => {
     if (!text) return null;
     const trimmed = String(text).trim();
     if (!trimmed) return null;
-
     if (knownCategoryNames.includes(trimmed)) return trimmed;
-
     const sorted = [...knownCategoryNames].sort((a, b) => b.length - a.length);
     for (const cat of sorted) {
         if (trimmed.includes(cat)) return cat;
@@ -109,8 +86,61 @@ const textContainsKnownCategory = (text) => {
 };
 
 // ------------------------------------------------------------
-// 1) Kontext z nadpisu (h1–h4) v predkoch – pre teams.js,
-//    skupinové tabuľky (h3 v hlavičke skupiny) a pod.
+// Detekcia kategórie z window.matchesData podľa názvu tímu
+// (matches.js má často namapované názvy, ktoré nie sú v users)
+// ------------------------------------------------------------
+const findCategoryFromMatchesData = (teamNameText, contextElement) => {
+    if (!teamNameText) return null;
+    try {
+        const matchesData = window.matchesData || window.allMatches || [];
+        if (!Array.isArray(matchesData) || matchesData.length === 0) return null;
+
+        // Skús nájsť element s atribútom data-match-id alebo closest tr s id
+        let matchId = null;
+        let current = contextElement;
+        while (current && current !== document.body) {
+            if (current.dataset && current.dataset.matchId) {
+                matchId = current.dataset.matchId;
+                break;
+            }
+            current = current.parentNode;
+        }
+
+        // 1) Ak máme matchId, nájdi zápas a v ňom kategóriu
+        if (matchId) {
+            const found = matchesData.find(m => m.id === matchId);
+            if (found) {
+                const cat = found.categoryName ||
+                    (found.categoryId && window.categoriesData ? window.categoriesData[found.categoryId] : null);
+                if (cat) {
+                    const verified = textContainsKnownCategory(cat);
+                    if (verified) return verified;
+                    return cat;
+                }
+            }
+        }
+
+        // 2) Inak skús nájsť zápas, v ktorom sa tím vyskytuje
+        const trimmed = String(teamNameText).trim();
+        for (const m of matchesData) {
+            const home = m.homeTeamName || m.homeTeamIdentifier || '';
+            const away = m.awayTeamName || m.awayTeamIdentifier || '';
+            if (home === trimmed || away === trimmed) {
+                const cat = m.categoryName ||
+                    (m.categoryId && window.categoriesData ? window.categoriesData[m.categoryId] : null);
+                if (cat) {
+                    const verified = textContainsKnownCategory(cat);
+                    if (verified) return verified;
+                    return cat;
+                }
+            }
+        }
+    } catch (e) {}
+    return null;
+};
+
+// ------------------------------------------------------------
+// 1) Kontext z nadpisu (h1–h4) v predkoch
 // ------------------------------------------------------------
 const findCategoryFromHeadings = (element, rootElement) => {
     let current = element;
@@ -133,10 +163,7 @@ const findCategoryFromHeadings = (element, rootElement) => {
 };
 
 // ------------------------------------------------------------
-// 2) Kontext z riadku tabuľky <tr> – pre matches.js zoznam zápasov
-// Hľadá v bunkách <td>/<th> toho istého riadku text, ktorý
-// zodpovedá niektorej kategórii. (V tables.js kategória v riadku
-// nie je, takže to vráti null a pokračuje sa ďalej.)
+// 2) Kontext z riadku tabuľky <tr>
 // ------------------------------------------------------------
 const findCategoryFromTableRow = (element, rootElement) => {
     let current = element;
@@ -155,31 +182,20 @@ const findCategoryFromTableRow = (element, rootElement) => {
 };
 
 // ------------------------------------------------------------
-// 3) Kontext z hlavičky skupinovej tabuľky v tables.js
-// Hľadá element s triedou 'px-6 py-4 border-b' (hlavička skupiny)
-// v najbližšom boxe 'rounded-xl shadow-lg' a v ňom h3 s názvom
-// kategórie v tvare "KATEGÓRIA - SKUPINA".
+// 3) Kontext z hlavičky skupinovej tabuľky (tables.js)
 // ------------------------------------------------------------
 const findCategoryFromGroupTableHeader = (element, rootElement) => {
     let current = element;
     while (current && current !== rootElement) {
         const cls = current.className || "";
-        if (
-            typeof cls === "string" &&
-            /rounded-(xl|lg)/.test(cls) &&
-            /(shadow|border)/.test(cls)
-        ) {
-            // Hlavička skupiny má 'px-6 py-4 border-b' + farebné pozadie
+        if (typeof cls === "string" && /rounded-(xl|lg)/.test(cls) && /(shadow|border)/.test(cls)) {
             const header = current.querySelector(".px-6.py-4.border-b");
             if (header) {
                 const h3 = header.querySelector("h3");
                 if (h3) {
                     const text = (h3.textContent || "").trim();
-                    // Formát: "KATEGÓRIA - SKUPINA" → skúsime celý text aj
-                    // jednotlivé časti
                     const direct = textContainsKnownCategory(text);
                     if (direct) return direct;
-                    // Skús rozdeliť podľa " - "
                     const parts = text.split(/\s+-\s+/);
                     for (const part of parts) {
                         const found = textContainsKnownCategory(part);
@@ -187,7 +203,6 @@ const findCategoryFromGroupTableHeader = (element, rootElement) => {
                     }
                 }
             }
-            // Skús aj akýkoľvek nadpis v boxe
             const heading = current.querySelector("h1, h2, h3, h4");
             if (heading) {
                 const text = (heading.textContent || "").trim();
@@ -208,28 +223,25 @@ const findCategoryFromGroupTableHeader = (element, rootElement) => {
 
 // ------------------------------------------------------------
 // 4) Kontext z URL hash filtra (tables.js)
-// Hash formát: #category=<slug>&group=<slug>&view=<slug>
 // ------------------------------------------------------------
 const decodeFromURL = (text) => {
     if (!text) return '';
-    try {
-        return decodeURIComponent(text).replace(/-/g, ' ');
-    } catch (e) {
-        return text.replace(/-/g, ' ');
-    }
+    try { return decodeURIComponent(text).replace(/-/g, ' '); }
+    catch (e) { return text.replace(/-/g, ' '); }
 };
 
 const findCategoryFromUrlHash = () => {
     try {
         const hash = window.location.hash;
         if (!hash || hash === '#') return null;
+        // matches.js používa #match/..., tables.js #category=...
+        if (hash.startsWith('#match/')) return null;
         const params = new URLSearchParams(hash.substring(1));
         const category = params.get('category');
         if (category) {
             const decoded = decodeFromURL(category);
             const found = textContainsKnownCategory(decoded);
             if (found) return found;
-            // Skús aj priamo (bez dekódovania)
             const found2 = textContainsKnownCategory(category);
             if (found2) return found2;
             return decoded;
@@ -240,26 +252,16 @@ const findCategoryFromUrlHash = () => {
 
 // ------------------------------------------------------------
 // 5) Kontext z aktívneho tlačidla filtra kategórií (tables.js)
-// Aktívne tlačidlo má triedy 'text-white shadow-md' a inline
-// backgroundColor. Nájde ho v najbližšom spoločnom rodičovi
-// (kontajner filtrov 'mb-6 space-y-3').
 // ------------------------------------------------------------
 const findCategoryFromActiveFilterButton = () => {
     try {
-        // Nájdi kontajner filtrov
         const filterContainer = document.querySelector('.mb-6.space-y-3');
         if (!filterContainer) return null;
-        // Nájdi aktívne tlačidlo (text-white + shadow-md)
         const buttons = filterContainer.querySelectorAll('button');
         for (const btn of buttons) {
             const cls = btn.className || '';
-            if (
-                typeof cls === 'string' &&
-                cls.includes('text-white') &&
-                cls.includes('shadow-md')
-            ) {
+            if (typeof cls === 'string' && cls.includes('text-white') && cls.includes('shadow-md')) {
                 const text = (btn.textContent || '').trim();
-                // Preskoč tlačidlo "Playoff" a "Všetky kategórie"
                 if (text === 'Všetky kategórie' || text.includes('Playoff')) continue;
                 const found = textContainsKnownCategory(text);
                 if (found) return found;
@@ -271,12 +273,34 @@ const findCategoryFromActiveFilterButton = () => {
 
 // ------------------------------------------------------------
 // 6) Kontext z gradient boxu – detail zápasu (matches.js)
+// Hľadá kategóriu v NADRADENOM boxe s hlavičkou .bg-gray-50
+// (v matches.js je kategória v badge v hlavičke boxu, nie
+//  v gradient boxe samotnom).
 // ------------------------------------------------------------
 const findCategoryFromGradientBox = (element, rootElement) => {
     let current = element;
     while (current && current !== rootElement) {
         const cls = current.className || "";
         if (typeof cls === "string" && /bg-gradient-to-r/.test(cls)) {
+            // Hľadaj kategóriu v NADRADENOM boxe (rodič gradient boxu)
+            let parent = current.parentNode;
+            let safety = 0;
+            while (parent && parent !== rootElement && safety < 5) {
+                const parentCls = parent.className || "";
+                if (typeof parentCls === "string" && /rounded-(xl|lg)/.test(parentCls)) {
+                    // Hľadaj badge s kategóriou v hlavičke
+                    const header = parent.querySelector(".bg-gray-50");
+                    if (header) {
+                        const found = textContainsKnownCategory(header.textContent);
+                        if (found) return found;
+                    }
+                    const found = textContainsKnownCategory(parent.textContent);
+                    if (found) return found;
+                }
+                parent = parent.parentNode;
+                safety++;
+            }
+            // Fallback: priamo v gradient boxe
             const found = textContainsKnownCategory(current.textContent);
             if (found) return found;
         }
@@ -292,21 +316,20 @@ const findCategoryFromBox = (element, rootElement) => {
     let current = element;
     while (current && current !== rootElement) {
         const cls = current.className || "";
-        if (
-            typeof cls === "string" &&
-            /rounded-(xl|lg)/.test(cls) &&
-            /(shadow|border)/.test(cls)
-        ) {
+        if (typeof cls === "string" && /rounded-(xl|lg)/.test(cls) && /(shadow|border)/.test(cls)) {
+            // 1) Hlavička .bg-gray-50
             const header = current.querySelector(".bg-gray-50");
             if (header) {
                 const found = textContainsKnownCategory(header.textContent);
                 if (found) return found;
             }
+            // 2) Akýkoľvek nadpis
             const heading = current.querySelector("h1, h2, h3, h4");
             if (heading) {
                 const found = textContainsKnownCategory(heading.textContent);
                 if (found) return found;
             }
+            // 3) Celý text boxu
             const found = textContainsKnownCategory(current.textContent);
             if (found) return found;
             return null;
@@ -318,16 +341,8 @@ const findCategoryFromBox = (element, rootElement) => {
 
 // ------------------------------------------------------------
 // Zlúčená funkcia: nájde kontextovú kategóriu pre element
-// Poradie stratégií podľa špecifickosti:
-//   1. Nadpisy (teams.js, hlavičky skupín)
-//   2. Riadok tabuľky (matches.js zoznam zápasov)
-//   3. Hlavička skupinovej tabuľky (tables.js)
-//   4. URL hash filter (tables.js)
-//   5. Aktívne tlačidlo filtra (tables.js – playoff boxy)
-//   6. Gradient box (matches.js detail)
-//   7. Box (rounded + shadow) – fallback
 // ------------------------------------------------------------
-const findCategoryContextForElement = (element, rootElement) => {
+const findCategoryContextForElement = (element, rootElement, teamNameText) => {
     if (!element) return null;
 
     let cat = findCategoryFromHeadings(element, rootElement);
@@ -351,22 +366,33 @@ const findCategoryContextForElement = (element, rootElement) => {
     cat = findCategoryFromBox(element, rootElement);
     if (cat) return cat;
 
+    // 🔥 NOVÉ: fallback cez window.matchesData (matches.js)
+    cat = findCategoryFromMatchesData(teamNameText, element);
+    if (cat) return cat;
+
     return null;
 };
 
 // ------------------------------------------------------------
 // URL pre tím podľa kontextu
+// Používa variantNameToCategoriesMap – obsahuje aj namapované názvy
 // ------------------------------------------------------------
 const getTeamUrlForContext = (teamName, contextCategory) => {
     if (contextCategory) {
-        const categoriesForTeam = teamNameToCategoriesMap.get(teamName);
-        if (categoriesForTeam && categoriesForTeam.has(contextCategory)) {
+        const cats = variantNameToCategoriesMap.get(teamName);
+        if (cats && cats.has(contextCategory)) {
             return buildTeamUrl(contextCategory, teamName);
         }
     }
-    const categoriesForTeam = teamNameToCategoriesMap.get(teamName);
-    if (categoriesForTeam && categoriesForTeam.size > 0) {
-        const firstCat = categoriesForTeam.values().next().value;
+    const cats = variantNameToCategoriesMap.get(teamName);
+    if (cats && cats.size > 0) {
+        const firstCat = cats.values().next().value;
+        return buildTeamUrl(firstCat, teamName);
+    }
+    // Skús aj pôvodnú mapu
+    const originalCats = teamNameToCategoriesMap.get(teamName);
+    if (originalCats && originalCats.size > 0) {
+        const firstCat = originalCats.values().next().value;
         return buildTeamUrl(firstCat, teamName);
     }
     return buildTeamUrl("", teamName);
@@ -378,12 +404,14 @@ const getTeamUrlForContext = (teamName, contextCategory) => {
 const makeTeamNamesClickable = () => {
     if (!allTeamsFlat.length) return;
 
-    const teamsSorted = [...allTeamsFlat].sort(
-        (a, b) => b.teamName.length - a.teamName.length
-    );
+    // Zoznam všetkých variantov názvov (pôvodné + namapované)
+    const allVariants = new Set();
+    allTeamsFlat.forEach(t => allVariants.add(t.teamName));
+    variantNameToCategoriesMap.forEach((cats, name) => allVariants.add(name));
 
-    const escapedNames = teamsSorted.map(t =>
-        t.teamName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    const variantsSorted = [...allVariants].sort((a, b) => b.length - a.length);
+    const escapedNames = variantsSorted.map(t =>
+        t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
     );
     if (escapedNames.length === 0) return;
 
@@ -399,6 +427,7 @@ const makeTeamNamesClickable = () => {
                 if (!node.nodeValue || !node.nodeValue.trim()) {
                     return NodeFilter.FILTER_REJECT;
                 }
+                // Preskoč texty, ktoré už sú v <a> alebo v nebezpečných tagoch
                 let parent = node.parentNode;
                 while (parent && parent !== rootElement) {
                     const tag = parent.nodeName?.toUpperCase();
@@ -406,9 +435,6 @@ const makeTeamNamesClickable = () => {
                         return NodeFilter.FILTER_REJECT;
                     }
                     parent = parent.parentNode;
-                }
-                if (node.parentNode && node.parentNode.dataset && node.parentNode.dataset.teamLinkified === "1") {
-                    return NodeFilter.FILTER_REJECT;
                 }
                 return NodeFilter.FILTER_ACCEPT;
             }
@@ -422,13 +448,10 @@ const makeTeamNamesClickable = () => {
 
     textNodes.forEach((textNode) => {
         const text = textNode.nodeValue;
-        if (!teamNameRegex.test(text)) {
-            teamNameRegex.lastIndex = 0;
-            return;
-        }
+        if (!text) return;
         teamNameRegex.lastIndex = 0;
-
-        const contextCategory = findCategoryContextForElement(textNode.parentNode, rootElement);
+        if (!teamNameRegex.test(text)) return;
+        teamNameRegex.lastIndex = 0;
 
         const parts = [];
         let lastIndex = 0;
@@ -442,6 +465,12 @@ const makeTeamNamesClickable = () => {
                 parts.push({ type: "text", value: text.slice(lastIndex, matchIndex) });
             }
 
+            // Kontextová kategória sa počíta pre každý nájdený tím samostatne
+            const contextCategory = findCategoryContextForElement(
+                textNode.parentNode,
+                rootElement,
+                matchedName
+            );
             const url = getTeamUrlForContext(matchedName, contextCategory);
             parts.push({ type: "link", value: matchedName, url });
 
@@ -452,7 +481,7 @@ const makeTeamNamesClickable = () => {
             parts.push({ type: "text", value: text.slice(lastIndex) });
         }
 
-        if (parts.length <= 1) return;
+        if (parts.length === 0) return;
 
         const fragment = document.createDocumentFragment();
         parts.forEach(part => {
@@ -464,6 +493,8 @@ const makeTeamNamesClickable = () => {
                 a.style.textDecoration = "none";
                 a.style.font = "inherit";
                 a.style.cursor = "pointer";
+                // 🔥 Označíme LEN <a>, nie rodiča – inak by sme zablokovali
+                // ďalšie textové uzly v tom istom rodičovi (napr. druhý tím v <td>)
                 a.dataset.teamLinkified = "1";
                 fragment.appendChild(a);
             } else {
@@ -473,10 +504,77 @@ const makeTeamNamesClickable = () => {
 
         const parent = textNode.parentNode;
         if (parent) {
-            parent.dataset.teamLinkified = "1";
             parent.replaceChild(fragment, textNode);
         }
     });
+};
+
+// ------------------------------------------------------------
+// Pomocná funkcia: vytvorí varianty názvov cez matchTracker/teamManager
+// (matches.js zobrazuje namapované názvy, ktoré nie sú v users)
+// ------------------------------------------------------------
+const buildVariantNameMap = async () => {
+    variantNameToCategoriesMap = new Map();
+
+    // Najprv naplníme pôvodné názvy
+    teamNameToCategoriesMap.forEach((cats, name) => {
+        if (!variantNameToCategoriesMap.has(name)) {
+            variantNameToCategoriesMap.set(name, new Set());
+        }
+        cats.forEach(c => variantNameToCategoriesMap.get(name).add(c));
+    });
+
+    // Skúsime namapovať každý názov cez matchTracker
+    const tryMap = async (name, categoryName) => {
+        try {
+            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                const mapped = await window.matchTracker.getTeamNameByDisplayId(name);
+                if (mapped && mapped !== name && mapped !== 'null' && mapped !== 'undefined') {
+                    if (!variantNameToCategoriesMap.has(mapped)) {
+                        variantNameToCategoriesMap.set(mapped, new Set());
+                    }
+                    variantNameToCategoriesMap.get(mapped).add(categoryName);
+                }
+            }
+        } catch (e) {}
+        try {
+            if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                const mapped = window.teamManager.getTeamNameByDisplayIdSync(name);
+                if (mapped && mapped !== name) {
+                    if (!variantNameToCategoriesMap.has(mapped)) {
+                        variantNameToCategoriesMap.set(mapped, new Set());
+                    }
+                    variantNameToCategoriesMap.get(mapped).add(categoryName);
+                }
+            }
+        } catch (e) {}
+    };
+
+    const promises = [];
+    teamNameToCategoriesMap.forEach((cats, name) => {
+        cats.forEach(cat => {
+            promises.push(tryMap(name, cat));
+        });
+    });
+    await Promise.all(promises);
+
+    // Skúsime aj opačný smer – ak matchTracker obsahuje mapovanie
+    // pre názov, ktorý je v DOM, ale nie je v users
+    // (napr. matches.js zobrazuje "HC Pezinok", ale v users je "U12 CH HC Pezinok")
+    try {
+        if (window.teamNames && typeof window.teamNames === 'object') {
+            Object.entries(window.teamNames).forEach(([key, val]) => {
+                if (!val || typeof val !== 'string') return;
+                const cats = teamNameToCategoriesMap.get(key) || teamNameToCategoriesMap.get(val);
+                if (cats) {
+                    if (!variantNameToCategoriesMap.has(val)) {
+                        variantNameToCategoriesMap.set(val, new Set());
+                    }
+                    cats.forEach(c => variantNameToCategoriesMap.get(val).add(c));
+                }
+            });
+        }
+    } catch (e) {}
 };
 
 // ------------------------------------------------------------
@@ -492,7 +590,6 @@ export const loadAllTeamsFromUsers = async () => {
         db = await waitForDb();
     } catch (err) {
         console.error("❌ " + err.message);
-        console.error("   Uisti sa, že authentication.js bol načítaný pred func-redirection.js.");
         return null;
     }
 
@@ -517,21 +614,13 @@ export const loadAllTeamsFromUsers = async () => {
             const uid = userDoc.id;
             const email = userData.email || "(bez e-mailu)";
             const teams = userData.teams;
-
             if (!teams || typeof teams !== "object") return;
-
             totalUsers++;
-
             Object.entries(teams).forEach(([categoryName, teamArray]) => {
                 if (!Array.isArray(teamArray)) return;
-
-                if (!teamsByCategory[categoryName]) {
-                    teamsByCategory[categoryName] = [];
-                }
-
+                if (!teamsByCategory[categoryName]) teamsByCategory[categoryName] = [];
                 teamArray.forEach((team) => {
                     if (!team || !team.teamName) return;
-
                     teamsByCategory[categoryName].push({
                         teamName: team.teamName,
                         uid: uid,
@@ -540,7 +629,6 @@ export const loadAllTeamsFromUsers = async () => {
                         order: team.order ?? null,
                         teamId: team.id || null,
                     });
-
                     totalTeams++;
                 });
             });
@@ -557,38 +645,25 @@ export const loadAllTeamsFromUsers = async () => {
 
         sortedCategories.forEach((categoryName) => {
             const teams = teamsByCategory[categoryName];
-
             console.log("");
             console.log(`📁 KATEGÓRIA: ${categoryName} (${teams.length} tímov)`);
             console.log("------------------------------------------------------------");
-
             const sortedTeams = [...teams].sort((a, b) => {
                 const ga = a.groupName || "zzz";
                 const gb = b.groupName || "zzz";
                 if (ga !== gb) return ga.localeCompare(gb, "sk");
-
                 const oa = a.order ?? Infinity;
                 const ob = b.order ?? Infinity;
                 if (oa !== ob) return oa - ob;
-
                 return a.teamName.localeCompare(b.teamName, "sk");
             });
-
             sortedTeams.forEach((team, index) => {
                 const group = team.groupName ? `[${team.groupName}]` : "[bez skupiny]";
                 const order = team.order != null ? `${team.order}.` : "–";
                 const url = buildTeamUrl(categoryName, team.teamName);
-
-                console.log(
-                    `   ${String(index + 1).padStart(3, " ")}. ${group} ${order} ${team.teamName}\n       🔗 ${url}`
-                );
+                console.log(`   ${String(index + 1).padStart(3, " ")}. ${group} ${order} ${team.teamName}\n       🔗 ${url}`);
             });
         });
-
-        console.log("");
-        console.log("============================================================");
-        console.log("📋 PLOCHÝ ZOZNAM VŠETKÝCH TÍMOV S ODKAZMI");
-        console.log("============================================================");
 
         const flatList = [];
         sortedCategories.forEach((categoryName) => {
@@ -603,30 +678,7 @@ export const loadAllTeamsFromUsers = async () => {
             });
         });
 
-        console.table(flatList);
-
-        console.log("");
-        console.log("============================================================");
-        console.log("🔗 HTML ZOZNAM KLIKATEĽNÝCH ODKAZOV (skopíruj do stránky)");
-        console.log("============================================================");
-
-        let htmlOutput = "";
-        sortedCategories.forEach((categoryName) => {
-            htmlOutput += `\n<h3>${categoryName}</h3>\n<ul>\n`;
-            const sortedTeams = [...teamsByCategory[categoryName]].sort((a, b) =>
-                a.teamName.localeCompare(b.teamName, "sk")
-            );
-            sortedTeams.forEach((team) => {
-                const url = buildTeamUrl(categoryName, team.teamName);
-                htmlOutput += `  <li><a href="${url}">${team.teamName}</a></li>\n`;
-            });
-            htmlOutput += `</ul>\n`;
-        });
-        console.log(htmlOutput);
-
-        // ------------------------------------------------------------
-        // Príprava máp pre linkifikáciu
-        // ------------------------------------------------------------
+        // Príprava máp
         allTeamsFlat = [];
         teamNameToCategoriesMap = new Map();
         knownCategoryNames = [...sortedCategories];
@@ -638,7 +690,6 @@ export const loadAllTeamsFromUsers = async () => {
                     categoryName: categoryName,
                     url: buildTeamUrl(categoryName, team.teamName),
                 });
-
                 if (!teamNameToCategoriesMap.has(team.teamName)) {
                     teamNameToCategoriesMap.set(team.teamName, new Set());
                 }
@@ -646,21 +697,20 @@ export const loadAllTeamsFromUsers = async () => {
             });
         });
 
-        // ------------------------------------------------------------
-        // Linkifikácia DOM
-        // ------------------------------------------------------------
+        // Vytvor variantnú mapu (namapované názvy)
+        await buildVariantNameMap();
+
+        // Linkifikácia
         const runLinkification = () => {
-            try {
-                makeTeamNamesClickable();
-            } catch (e) {
-                console.warn("⚠️ Linkifikácia DOM zlyhala:", e);
-            }
+            try { makeTeamNamesClickable(); }
+            catch (e) { console.warn("⚠️ Linkifikácia DOM zlyhala:", e); }
         };
 
         runLinkification();
         setTimeout(runLinkification, 500);
         setTimeout(runLinkification, 1500);
         setTimeout(runLinkification, 3000);
+        setTimeout(runLinkification, 5000);
 
         if (window.MutationObserver) {
             const observer = new MutationObserver(() => {
@@ -676,18 +726,13 @@ export const loadAllTeamsFromUsers = async () => {
             window.__teamLinkifyObserver = observer;
         }
 
-        // Sledujeme aj zmeny hash (prepínanie filtra v tables.js)
+        // Sledujeme zmeny hash (prepínanie filtra v tables.js, detail zápasu v matches.js)
         window.addEventListener('hashchange', () => {
             clearTimeout(window.__teamLinkifyHashTimer);
-            window.__teamLinkifyHashTimer = setTimeout(runLinkification, 200);
+            window.__teamLinkifyHashTimer = setTimeout(runLinkification, 300);
         });
 
-        return {
-            teamsByCategory,
-            flatList,
-            totalTeams,
-            totalUsers,
-        };
+        return { teamsByCategory, flatList, totalTeams, totalUsers };
     } catch (error) {
         console.error("❌ Chyba pri načítavaní tímov:", error);
         return null;
@@ -702,6 +747,7 @@ if (typeof window !== "undefined") {
     window.buildTeamUrl = buildTeamUrl;
     window.slugify = slugify;
     window.makeTeamNamesClickable = makeTeamNamesClickable;
+    window.buildVariantNameMap = buildVariantNameMap;
 
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", () => {
