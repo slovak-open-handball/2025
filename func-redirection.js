@@ -3,7 +3,8 @@
 // Načíta všetky tímy z kolekcie 'users' a vypíše ich do konzoly
 // ako klikateľné odkazy: teams#category=<KATEGÓRIA>&team=<TÍM>
 // + Nastaví každý výskyt názvu tímu na stránke ako klikateľný odkaz
-//   (vzhľad zostáva pôvodný – žiadna modrá, žiadne podčiarknutie)
+//   s korektnou kategóriou podľa kontextu (nadpisu kategórie)
+//   Vzhľad zostáva PÔVODNÝ (žiadna modrá, žiadne podčiarknutie)
 // Čaká na inicializáciu window.db (z authentication.js)
 // ============================================================
 
@@ -57,21 +58,19 @@ const waitForDb = (timeoutMs = 15000, intervalMs = 200) => {
 
 // ------------------------------------------------------------
 // Pomocná funkcia: slugify pre URL
-// "U12 CH" -> "U12-CH", "HC Pezinok" -> "HC-Pezinok"
 // ------------------------------------------------------------
 const slugify = (text) => {
     if (!text) return "";
     return String(text)
         .trim()
-        .replace(/\s+/g, "-")        // medzery → pomlčky
-        .replace(/[^\w\-áäčďéíĺľňóôŕšťúůýžÁÄČĎÉÍĹĽŇÓÔŔŠŤÚŮÝŽ]/g, "") // odstráni nebezpečné znaky
-        .replace(/-+/g, "-")          // viac pomlčiek → jedna
-        .replace(/^-+|-+$/g, "");     // orež pomlčky na začiatku/konci
+        .replace(/\s+/g, "-")
+        .replace(/[^\w\-áäčďéíĺľňóôŕšťúůýžÁÄČĎÉĹĽŇÓÔŔŠŤÚŮÝŽ]/g, "")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "");
 };
 
 // ------------------------------------------------------------
 // Vytvorenie URL odkazu pre tím
-// Príklad: teams#category=U12-CH&team=HC-Pezinok
 // ------------------------------------------------------------
 const buildTeamUrl = (categoryName, teamName) => {
     const categorySlug = slugify(categoryName);
@@ -80,25 +79,100 @@ const buildTeamUrl = (categoryName, teamName) => {
 };
 
 // ------------------------------------------------------------
-// Globálny zoznam tímov (naplní sa po načítaní)
-// Štruktúra: [{ teamName, categoryName, url }, ...]
+// Globálne dáta
 // ------------------------------------------------------------
+// Plochý zoznam všetkých tímov: [{ teamName, categoryName, url }, ...]
 let allTeamsFlat = [];
+
+// Mapa: názov tímu -> množina kategórií, v ktorých sa vyskytuje
+let teamNameToCategoriesMap = new Map();
+
+// Zoznam všetkých známych názvov kategórií (pre rozpoznanie nadpisu)
+let knownCategoryNames = [];
+
+// ------------------------------------------------------------
+// Zistí, pod akou kategóriou sa daný element nachádza.
+// Prejde rodičov smerom nahor a hľadá najbližší nadpis (h1–h4)
+// alebo element, ktorého text presne zodpovedá niektorej kategórii.
+// ------------------------------------------------------------
+const findCategoryContextForElement = (element, rootElement) => {
+    let current = element;
+    while (current && current !== rootElement) {
+        // 1) Skús nájsť nadpis (h1–h4) v rámci tohto elementu alebo jeho potomkoch
+        if (current.querySelector) {
+            const heading = current.querySelector("h1, h2, h3, h4");
+            if (heading) {
+                const headingText = (heading.textContent || "").trim();
+                // Presná zhoda s niektorou kategóriou
+                if (headingText && knownCategoryNames.includes(headingText)) {
+                    return headingText;
+                }
+                // Skúsime aj či nadpis obsahuje názov kategórie (napr. "Kategória: U12 CH")
+                for (const catName of knownCategoryNames) {
+                    if (headingText.includes(catName)) {
+                        return catName;
+                    }
+                }
+            }
+        }
+
+        // 2) Skús priamy text aktuálneho elementu (napr. <h3>U12 CH</h3>)
+        if (current.childNodes && current.childNodes.length > 0) {
+            // overíme, či element sám nie je nadpis s textom kategórie
+            const tag = current.nodeName?.toUpperCase();
+            if (tag === "H1" || tag === "H2" || tag === "H3" || tag === "H4") {
+                const text = (current.textContent || "").trim();
+                if (knownCategoryNames.includes(text)) {
+                    return text;
+                }
+                for (const catName of knownCategoryNames) {
+                    if (text.includes(catName)) {
+                        return catName;
+                    }
+                }
+            }
+        }
+
+        current = current.parentNode;
+    }
+    return null;
+};
+
+// ------------------------------------------------------------
+// Pre daný tím a kontextovú kategóriu vráti URL.
+// Ak tím v danej kategórii neexistuje, vráti fallback URL
+// (prvú kategóriu, v ktorej sa tím nachádza).
+// ------------------------------------------------------------
+const getTeamUrlForContext = (teamName, contextCategory) => {
+    // Ak máme kontextovú kategóriu a tím v nej existuje, použijeme ju
+    if (contextCategory) {
+        const categoriesForTeam = teamNameToCategoriesMap.get(teamName);
+        if (categoriesForTeam && categoriesForTeam.has(contextCategory)) {
+            return buildTeamUrl(contextCategory, teamName);
+        }
+    }
+    // Fallback: prvá kategória, v ktorej sa tím nachádza
+    const categoriesForTeam = teamNameToCategoriesMap.get(teamName);
+    if (categoriesForTeam && categoriesForTeam.size > 0) {
+        const firstCat = categoriesForTeam.values().next().value;
+        return buildTeamUrl(firstCat, teamName);
+    }
+    // Posledný fallback – prázdna kategória (nemalo by nastať)
+    return buildTeamUrl("", teamName);
+};
 
 // ------------------------------------------------------------
 // Nastaví všetky výskyty názvov tímov v DOM ako klikateľné odkazy
-// Vzhľad zostáva PÔVODNÝ (žiadna modrá, žiadne podčiarknutie)
+// s korektnou kategóriou podľa kontextu
 // ------------------------------------------------------------
 const makeTeamNamesClickable = () => {
     if (!allTeamsFlat.length) return;
 
-    // Zoradíme tímy od najdlhšieho názvu po najkratší,
-    // aby sme predišli čiastočnému nahradeniu (napr. "U12" v "U12 CH")
+    // Zoradíme tímy od najdlhšieho názvu po najkratší
     const teamsSorted = [...allTeamsFlat].sort(
         (a, b) => b.teamName.length - a.teamName.length
     );
 
-    // Vytvoríme regex pre všetky názvy tímov naraz
     const escapedNames = teamsSorted.map(t =>
         t.teamName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
     );
@@ -106,15 +180,6 @@ const makeTeamNamesClickable = () => {
 
     const teamNameRegex = new RegExp(`(${escapedNames.join("|")})`, "g");
 
-    // Mapa: názov tímu -> URL
-    const teamUrlMap = new Map();
-    teamsSorted.forEach(t => {
-        if (!teamUrlMap.has(t.teamName)) {
-            teamUrlMap.set(t.teamName, t.url);
-        }
-    });
-
-    // Prechádzame textové uzly v #root (alebo v celom body)
     const rootElement = document.getElementById("root") || document.body;
 
     const walker = document.createTreeWalker(
@@ -125,7 +190,6 @@ const makeTeamNamesClickable = () => {
                 if (!node.nodeValue || !node.nodeValue.trim()) {
                     return NodeFilter.FILTER_REJECT;
                 }
-                // Preskočíme texty, ktoré už sú v <a>, <script>, <style>, <textarea>, <input>
                 let parent = node.parentNode;
                 while (parent && parent !== rootElement) {
                     const tag = parent.nodeName?.toUpperCase();
@@ -134,7 +198,6 @@ const makeTeamNamesClickable = () => {
                     }
                     parent = parent.parentNode;
                 }
-                // Preskočíme už spracované uzly
                 if (node.parentNode && node.parentNode.dataset && node.parentNode.dataset.teamLinkified === "1") {
                     return NodeFilter.FILTER_REJECT;
                 }
@@ -156,7 +219,9 @@ const makeTeamNamesClickable = () => {
         }
         teamNameRegex.lastIndex = 0;
 
-        // Rozdelíme text podľa názvov tímov
+        // 🔥 ZISTÍME KONTEXTOVÚ KATEGÓRIU pre tento textový uzol
+        const contextCategory = findCategoryContextForElement(textNode.parentNode, rootElement);
+
         const parts = [];
         let lastIndex = 0;
         let match;
@@ -169,12 +234,9 @@ const makeTeamNamesClickable = () => {
                 parts.push({ type: "text", value: text.slice(lastIndex, matchIndex) });
             }
 
-            const url = teamUrlMap.get(matchedName);
-            if (url) {
-                parts.push({ type: "link", value: matchedName, url });
-            } else {
-                parts.push({ type: "text", value: matchedName });
-            }
+            // 🔥 URL podľa kontextu (kategória nadpisu)
+            const url = getTeamUrlForContext(matchedName, contextCategory);
+            parts.push({ type: "link", value: matchedName, url });
 
             lastIndex = matchIndex + matchedName.length;
         }
@@ -185,23 +247,16 @@ const makeTeamNamesClickable = () => {
 
         if (parts.length <= 1) return;
 
-        // Nahradíme textový uzol fragmentom s odkazmi
         const fragment = document.createDocumentFragment();
         parts.forEach(part => {
             if (part.type === "link") {
                 const a = document.createElement("a");
                 a.href = part.url;
                 a.textContent = part.value;
-
-                // 🔥 ZACHOVANIE PÔVODNÉHO VZHĽADU:
-                // - farba sa dedí z rodiča (žiadna modrá)
-                // - žiadne podčiarknutie
-                // - žiadna zmena fontu ani kurzora
                 a.style.color = "inherit";
                 a.style.textDecoration = "none";
                 a.style.font = "inherit";
                 a.style.cursor = "pointer";
-
                 a.dataset.teamLinkified = "1";
                 fragment.appendChild(a);
             } else {
@@ -211,7 +266,6 @@ const makeTeamNamesClickable = () => {
 
         const parent = textNode.parentNode;
         if (parent) {
-            // Označíme rodiča, aby sme ho už znovu nespracovávali
             parent.dataset.teamLinkified = "1";
             parent.replaceChild(fragment, textNode);
         }
@@ -219,8 +273,7 @@ const makeTeamNamesClickable = () => {
 };
 
 // ------------------------------------------------------------
-// Hlavná funkcia – načíta tímy, vypíše ich do konzoly
-// a nastaví klikateľné odkazy na stránke
+// Hlavná funkcia
 // ------------------------------------------------------------
 export const loadAllTeamsFromUsers = async () => {
     console.log("============================================================");
@@ -345,29 +398,13 @@ export const loadAllTeamsFromUsers = async () => {
 
         console.table(flatList);
 
-        console.log("");
-        console.log("============================================================");
-        console.log("🔗 HTML ZOZNAM KLIKATEĽNÝCH ODKAZOV (skopíruj do stránky)");
-        console.log("============================================================");
-
-        let htmlOutput = "";
-        sortedCategories.forEach((categoryName) => {
-            htmlOutput += `\n<h3>${categoryName}</h3>\n<ul>\n`;
-            const sortedTeams = [...teamsByCategory[categoryName]].sort((a, b) =>
-                a.teamName.localeCompare(b.teamName, "sk")
-            );
-            sortedTeams.forEach((team) => {
-                const url = buildTeamUrl(categoryName, team.teamName);
-                htmlOutput += `  <li><a href="${url}">${team.teamName}</a></li>\n`;
-            });
-            htmlOutput += `</ul>\n`;
-        });
-        console.log(htmlOutput);
-
         // ------------------------------------------------------------
-        // Uložíme si plochý zoznam pre linkifikáciu DOM
+        // Príprava máp pre linkifikáciu
         // ------------------------------------------------------------
         allTeamsFlat = [];
+        teamNameToCategoriesMap = new Map();
+        knownCategoryNames = [...sortedCategories];
+
         sortedCategories.forEach((categoryName) => {
             teamsByCategory[categoryName].forEach((team) => {
                 allTeamsFlat.push({
@@ -375,11 +412,16 @@ export const loadAllTeamsFromUsers = async () => {
                     categoryName: categoryName,
                     url: buildTeamUrl(categoryName, team.teamName),
                 });
+
+                if (!teamNameToCategoriesMap.has(team.teamName)) {
+                    teamNameToCategoriesMap.set(team.teamName, new Set());
+                }
+                teamNameToCategoriesMap.get(team.teamName).add(categoryName);
             });
         });
 
         // ------------------------------------------------------------
-        // Spustíme linkifikáciu DOM
+        // Linkifikácia DOM
         // ------------------------------------------------------------
         const runLinkification = () => {
             try {
@@ -394,7 +436,6 @@ export const loadAllTeamsFromUsers = async () => {
         setTimeout(runLinkification, 1500);
         setTimeout(runLinkification, 3000);
 
-        // Sledujeme zmeny v DOM (React prekresľuje) – linkifikácia sa spustí pri zmene
         if (window.MutationObserver) {
             const observer = new MutationObserver(() => {
                 clearTimeout(window.__teamLinkifyTimer);
@@ -422,7 +463,7 @@ export const loadAllTeamsFromUsers = async () => {
 };
 
 // ------------------------------------------------------------
-// Automatické spustenie pri načítaní modulu
+// Automatické spustenie
 // ------------------------------------------------------------
 if (typeof window !== "undefined") {
     window.loadAllTeamsFromUsers = loadAllTeamsFromUsers;
