@@ -3708,7 +3708,9 @@ const TeamsOverviewApp = (props) => {
     // 🔥 ROZŠÍRENÁ PODMIENKA: Loading zobrazíme aj vtedy, ak:
     // 1) čakáme na URL detail (pôvodná podmienka), ALEBO
     // 2) máme vybraný tím (selectedTeamDetails) a ešte sa načítavajú udalosti tímu (isLoadingEvents)
-    const shouldShowLoading = isWaitingForUrlDetail || (hasUrlDetail && selectedTeamDetails && isLoadingEvents);
+    const shouldShowLoading = 
+        isWaitingForUrlDetail || 
+        (hasUrlDetail && selectedTeamDetails && (isLoadingEvents || isLoadingRoster));
 
     if (shouldShowLoading) {
         return React.createElement(
