@@ -2988,10 +2988,18 @@ const TeamsOverviewApp = (props) => {
                     categoryName = categoryIdToNameMap[categoryName];
                 }
 
-                setIsLoadingEvents(true);                
+                setIsLoadingEvents(true);
+                
+                if (window.__eventsLoadingTimeout) {
+                    clearTimeout(window.__eventsLoadingTimeout);
+                }
+                window.__eventsLoadingTimeout = setTimeout(() => {
+                    setIsLoadingEvents(false);
+                    window.__eventsLoadingTimeout = null;
+                }, 2000);
+                
                 loadTeamRoster(selectedOcc.teamName, categoryName);
                 
-                // 🔥 NOVÉ: Detail tímu je nastavený, môžeme vypnúť URL loading
                 setIsUrlDetailLoading(false);
             }
         } else {
