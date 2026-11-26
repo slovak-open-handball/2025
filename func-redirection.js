@@ -44,12 +44,25 @@ const waitForDb = (timeoutMs = 15000, intervalMs = 200) => {
 // ------------------------------------------------------------
 const slugify = (text) => {
     if (!text) return "";
-    return String(text)
-        .trim()
+
+    // 1) Nahradíme " - " (medzera-pomlčka-medzera) za dočasný marker.
+    //    Tento marker prežije ostatné nahradenia a na konci ho
+    //    preložíme na "---".
+    const DASH_MARKER = "___DASH_SEP___";
+    let s = String(text).trim().replace(/\s+-\s+/g, DASH_MARKER);
+
+    // 2) Štandardné spracovanie: medzery → pomlčky, odstránenie
+    //    nebezpečných znakov, zlúčenie viacerých pomlčiek.
+    s = s
         .replace(/\s+/g, "-")
         .replace(/[^\w\-áäčďéíĺľňóôŕšťúůýžÁÄČĎÉĹĽŇÓÔŔŠŤÚŮÝŽ]/g, "")
         .replace(/-+/g, "-")
         .replace(/^-+|-+$/g, "");
+
+    // 3) Marker preložíme na "---"
+    s = s.split(DASH_MARKER).join("---");
+
+    return s;
 };
 
 // ------------------------------------------------------------
