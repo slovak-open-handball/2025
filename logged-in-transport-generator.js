@@ -1428,6 +1428,132 @@ class TransportGenerator {
 
                     const enriched = [];
 
+                    // ─────────────────────────────────────────────────────────────
+                    // NOVÉ: Pre SS tím – vygeneruj ranné presuny z ubytovní zdrojovej skupiny
+                    // na miesto prvej udalosti tohto SS tímu (len ak user tím v ten deň nemá udalosť)
+                    // ─────────────────────────────────────────────────────────────
+                    if (isSuperstructureTeam) {
+                        const ssGroupChar = (() => {
+                            const tn = String(teamName).trim();
+                            const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                            if (nameCharMatch) return nameCharMatch[1].toUpperCase();
+                            return getGroupLastChar(teamGroupName);
+                        })();
+                    
+                        if (ssGroupChar) {
+                            // Nájdi user tímy, ktorých skupina je zdrojom pre tento SS tím
+                            const sourceUserTeams = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
+                                if (cleanCategory(t.category) !== cleanCategory(category)) return false;
+                                if (!t.teamName) return false;
+                                if (t.isRegistered !== true) return false;
+                                if (t.isSuperstructure === true) return false;
+                                const gChar = getGroupLastChar(t.groupName);
+                                return gChar === ssGroupChar;
+                            });
+                    
+                            if (sourceUserTeams.length > 0) {
+                                // Zozbieraj jedinečné ubytovne zdrojových user tímov (+ miesto zrazu, ak nemajú ubytovanie)
+                                const meetingPointName = meetingPointStop ? meetingPointStop.name : 'Internátna';
+                                const uniqueAccommodations = new Map();
+                                sourceUserTeams.forEach((t) => {
+                                    const accName = t.accommodationName && String(t.accommodationName).trim() !== ''
+                                        ? String(t.accommodationName).trim()
+                                        : null;
+                                    if (accName) {
+                                        const key = normalizePlaceName(accName);
+                                        if (!key) return;
+                                        if (!uniqueAccommodations.has(key)) {
+                                            uniqueAccommodations.set(key, { location: accName, label: `ubytovanie ${accName}` });
+                                        }
+                                    } else {
+                                        const key = normalizePlaceName(meetingPointName);
+                                        if (!key) return;
+                                        if (!uniqueAccommodations.has(key)) {
+                                            uniqueAccommodations.set(key, { location: meetingPointName, label: `miesto zrazu ${meetingPointName}` });
+                                        }
+                                    }
+                                });
+                    
+                                // Pre každý deň, kedy má tento SS tím prvú udalosť s miestom,
+                                // a user tím v ten deň nemá udalosť, vygeneruj presuny
+                                const ssEventsByDay = new Map();
+                                events.forEach((ev) => {
+                                    const dk = extractDayKeyFromWhen(ev.when);
+                                    if (!dk) return;
+                                    if (!ev.location) return;
+                                    if (!ssEventsByDay.has(dk)) ssEventsByDay.set(dk, []);
+                                    ssEventsByDay.get(dk).push(ev);
+                                });
+                    
+                                ssEventsByDay.forEach((dayEvents, dayKey) => {
+                                    // Skontroluj, či aspoň jeden zdrojový user tím má v ten deň udalosť
+                                    const anyUserHasEventOnDay = sourceUserTeams.some((t) => {
+                                        const hasMatch = (this.ctx.matchesBufferRef?.current || []).some((m) => {
+                                            if (cleanCategory(m.category) !== cleanCategory(category)) return false;
+                                            if (m.home !== t.teamName && m.away !== t.teamName) return false;
+                                            let dk = null;
+                                            if (m.scheduledTime) {
+                                                const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
+                                                if (mm) dk = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
+                                            }
+                                            if (!dk && m.scheduledTs != null) {
+                                                const dt = new Date(m.scheduledTs);
+                                                dk = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                                            }
+                                            return dk === dayKey;
+                                        });
+                                        if (hasMatch) return true;
+                                        return (this.ctx.cateringBufferRef?.current || []).some((c) => {
+                                            if (cleanCategory(c.category) !== cleanCategory(category)) return false;
+                                            if (c.teamName !== t.teamName) return false;
+                                            return c.dayKey === dayKey;
+                                        });
+                                    });
+                    
+                                    // Ak user tím má v ten deň udalosť → presuny pre SS tím sa negenerujú
+                                    if (anyUserHasEventOnDay) return;
+                    
+                                    dayEvents.sort((a, b) => {
+                                        const ta = a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY);
+                                        const tb = b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY);
+                                        if (ta !== tb) return ta - tb;
+                                        return String(a.text).localeCompare(String(b.text), 'sk');
+                                    });
+                    
+                                    const firstEvent = dayEvents[0];
+                                    if (!firstEvent || !firstEvent.location) return;
+                    
+                                    const destination = firstEvent.location;
+                                    const arrivalTs = firstEvent.startTs != null ? firstEvent.startTs : (firstEvent.ts != null && isFinite(firstEvent.ts) ? firstEvent.ts : null);
+                                    const arrivalStr = formatFullFromTs(arrivalTs) || firstEvent.when || '—';
+                                    const departureTs = timestampOnDay(arrivalTs, 0, 0);
+                                    const departureStr = formatFullFromTs(departureTs) || '00:00';
+                    
+                                    if (departureTs != null && arrivalTs != null && departureTs >= arrivalTs) return;
+                    
+                                    uniqueAccommodations.forEach((info) => {
+                                        if (!info.location) return;
+                                        if (this.isSamePlaceForTransfer(info.location, destination)) return;
+                    
+                                        let whenStr;
+                                        if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                        else if (arrivalStr) whenStr = arrivalStr;
+                                        else whenStr = firstEvent.when || '—';
+                    
+                                        enriched.push({
+                                            ts: (arrivalTs != null ? arrivalTs : firstEvent.ts) - 1,
+                                            when: whenStr,
+                                            type: 'transfer',
+                                            text: `Presun z ${info.label} do ${destination}`,
+                                            location: null,
+                                            isTransfer: true,
+                                        });
+                                    });
+                                });
+                            }
+                        }
+                    }
+
                     const ssInfo = superstructureInfoByTeam[category] && superstructureInfoByTeam[category][teamName];
 
                     const teamGroupName = (() => {
@@ -1647,245 +1773,6 @@ class TransportGenerator {
                                     }
                                 }
                             }
-                        }
-                    }
-
-                    if (isSuperstructureTeam) {
-                        const ssTeamKeyPre = `${cleanCategory(category)}|${teamName}`;
-                        const groupCharPre = ssGroupCharByTeam[ssTeamKeyPre];
-
-                        if (groupCharPre && ssPlayDatesByTeam[ssTeamKeyPre]) {
-                            const groupPlayDays = [...ssPlayDatesByTeam[ssTeamKeyPre]].sort();
-
-                            groupPlayDays.forEach((groupPlayDay) => {
-                                const anyUserTeamHasEventOnDay = (this.ctx.teamsArrivalBufferRef?.current || []).some((t) => {
-                                    if (cleanCategory(t.category) !== cleanCategory(category)) return false;
-                                    if (t.isRegistered !== true) return false;
-                                    if (t.isSuperstructure === true) return false;
-                                
-                                    const hasMatch = (this.ctx.matchesBufferRef?.current || []).some((m) => {
-                                        if (cleanCategory(m.category) !== cleanCategory(category)) return false;
-                                        if (m.home !== t.teamName && m.away !== t.teamName) return false;
-                                        let dayKey = null;
-                                        if (m.scheduledTime) {
-                                            const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
-                                            if (mm) dayKey = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
-                                        }
-                                        if (!dayKey && m.scheduledTs != null) {
-                                            const dt = new Date(m.scheduledTs);
-                                            dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-                                        }
-                                        return dayKey === groupPlayDay;
-                                    });
-                                    if (hasMatch) return true;
-                                
-                                    return (this.ctx.cateringBufferRef?.current || []).some((c) => {
-                                        if (cleanCategory(c.category) !== cleanCategory(category)) return false;
-                                        if (c.teamName !== t.teamName) return false;
-                                        return c.dayKey === groupPlayDay;
-                                    });
-                                });
-
-                                if (!anyUserTeamHasEventOnDay) {
-                                    // V tento deň nehrá žiadny user tím – pre superstructure tím negenerujeme
-                                    // presuny z ubytovne ani z miesta zrazu na miesto prvej udalosti.
-                                    return;
-                                }
-                                
-                                const teamHasEventOnDay = (() => {
-                                    const fromEvents = events.some((ev) => extractDayKeyFromWhen(ev.when) === groupPlayDay);
-                                    if (fromEvents) return true;
-                                    const fromMatches = (this.ctx.matchesBufferRef?.current || []).some((m) => {
-                                        if (cleanCategory(m.category) !== cleanCategory(category)) return false;
-                                        if (m.home !== teamName && m.away !== teamName) return false;
-                                        let dk = null;
-                                        if (m.scheduledTime) {
-                                            const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
-                                            if (mm) dk = `${mm[3]}-${String(mm[2]).padStart(2, '0')}-${String(mm[1]).padStart(2, '0')}`;
-                                        }
-                                        if (!dk && m.scheduledTs != null) {
-                                            const dt = new Date(m.scheduledTs);
-                                            dk = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-                                        }
-                                        return dk === groupPlayDay;
-                                    });
-                                    if (fromMatches) return true;
-                                    const fromCatering = (this.ctx.cateringBufferRef?.current || []).some((c) => {
-                                        if (cleanCategory(c.category) !== cleanCategory(category)) return false;
-                                        if (c.teamName !== teamName) return false;
-                                        return c.dayKey === groupPlayDay;
-                                    });
-                                    return fromCatering;
-                                })();
-
-                                if (teamHasEventOnDay) return;
-
-                                const firstTeamEventDay = (() => {
-                                    let first = null;
-                                    events.forEach((ev) => {
-                                        const d = extractDayKeyFromWhen(ev.when);
-                                        if (d && (first == null || d < first)) first = d;
-                                    });
-                                    return first;
-                                })();
-
-                                if (firstTeamEventDay != null && groupPlayDay < firstTeamEventDay) {
-                                    return;
-                                }
-
-                                let destEvent = null;
-                                const sortedTeamEvents = [...events].sort((a, b) => {
-                                    if (a.ts !== b.ts) return a.ts - b.ts;
-                                    return String(a.text).localeCompare(String(b.text), 'sk');
-                                });
-                                for (const ev of sortedTeamEvents) {
-                                    const evDay = extractDayKeyFromWhen(ev.when);
-                                    if (evDay && evDay > groupPlayDay) {
-                                        destEvent = ev;
-                                        break;
-                                    }
-                                }
-                                if (!destEvent || !destEvent.location) return;
-
-                                const destination = destEvent.location;
-
-                                const teamBelongsToCharPre = (tn) => {
-                                    if (!tn) return false;
-                                    if (String(tn).startsWith('(row team:')) return false;
-                                    const nameMatch = /\d([A-ZÁ-Ž])\s*$/.exec(String(tn).trim());
-                                    if (nameMatch && nameMatch[1].toUpperCase() === groupCharPre) {
-                                        return true;
-                                    }
-                                    const teamInfo = (this.ctx.teamsArrivalBufferRef?.current || []).find(
-                                        (t) => cleanCategory(t.category) === cleanCategory(category) && t.teamName === tn
-                                    );
-                                    if (teamInfo && teamInfo.groupName) {
-                                        return groupBelongsToChar(teamInfo.groupName, groupCharPre);
-                                    }
-                                    return false;
-                                };
-
-                                const isRealRegisteredTeamPre = (tn) => {
-                                    if (!tn) return false;
-                                    const info = (this.ctx.teamsArrivalBufferRef?.current || []).find(
-                                        (t) => cleanCategory(t.category) === cleanCategory(category) && t.teamName === tn
-                                    );
-                                    return !!(info && info.isRegistered === true);
-                                };
-
-                                const firstPlayDayPre = (() => {
-                                    let firstDayKey = null;
-                                    events.forEach((ev) => {
-                                        const evDay = extractDayKeyFromWhen(ev.when);
-                                        if (!evDay) return;
-                                        if (firstDayKey == null || evDay < firstDayKey) {
-                                            firstDayKey = evDay;
-                                        }
-                                    });
-                                    return firstDayKey;
-                                })();
-
-                                const isFirstPlayDayPre = firstPlayDayPre != null && groupPlayDay === firstPlayDayPre;
-
-                                const uniqueSourceLocationsPre = new Map();
-                                const updateUniqueSourcePre = (loc, endTs) => {
-                                    if (!loc) return;
-                                    if (this.isSamePlaceForTransfer(loc, destination)) return;
-                                    const existing = uniqueSourceLocationsPre.get(loc);
-                                    if (!existing || (endTs != null && endTs > (existing.endTs ?? -Infinity))) {
-                                        uniqueSourceLocationsPre.set(loc, { location: loc, endTs });
-                                    }
-                                };
-
-                                if (isFirstPlayDayPre) {
-                                    (this.ctx.matchesBufferRef?.current || []).forEach((m) => {
-                                        if (cleanCategory(m.category) !== cleanCategory(category)) return;
-                                        let dayKey = null;
-                                        if (m.scheduledTime) {
-                                            const mm = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(m.scheduledTime);
-                                            if (mm) {
-                                                const d = String(mm[1]).padStart(2, '0');
-                                                const mo = String(mm[2]).padStart(2, '0');
-                                                const y = mm[3];
-                                                dayKey = `${y}-${mo}-${d}`;
-                                            }
-                                        }
-                                        if (!dayKey && m.scheduledTs != null) {
-                                            const dt = new Date(m.scheduledTs);
-                                            dayKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-                                        }
-                                        if (!dayKey || dayKey !== groupPlayDay) return;
-                                        const endTs = m.scheduledEndTs != null
-                                            ? m.scheduledEndTs
-                                            : (m.scheduledTs != null ? m.scheduledTs : null);
-                                        [m.home, m.away].forEach((tn) => {
-                                            if (!tn) return;
-                                            if (tn === teamName) return;
-                                            if (!isRealRegisteredTeamPre(tn)) return;
-                                            if (!teamBelongsToCharPre(tn)) return;
-                                            updateUniqueSourcePre(m.hallName || null, endTs);
-                                        });
-                                    });
-                                    (this.ctx.cateringBufferRef?.current || []).forEach((c) => {
-                                        if (cleanCategory(c.category) !== cleanCategory(category)) return;
-                                        if (c.isSuperstructure === true) return;
-                                        const dayKey = c.dayKey || null;
-                                        if (!dayKey || dayKey !== groupPlayDay) return;
-                                        const tn = c.teamName;
-                                        if (!tn) return;
-                                        if (tn === teamName) return;
-                                        if (!isRealRegisteredTeamPre(tn)) return;
-                                        if (!teamBelongsToCharPre(tn)) return;
-                                        const endTs = c.slotToTs != null ? c.slotToTs : (c.ts != null ? c.ts : null);
-                                        updateUniqueSourcePre(c.placeName || null, endTs);
-                                    });
-                                } else {
-                                    (this.ctx.teamsArrivalBufferRef?.current || []).forEach((t) => {
-                                        if (cleanCategory(t.category) !== cleanCategory(category)) return;
-                                        if (!t.teamName) return;
-                                        if (t.teamName === teamName) return;
-                                        if (!t.accommodationName || t.accommodationName.trim() === '') return;
-                                        if (!teamBelongsToCharPre(t.teamName)) return;
-                                        updateUniqueSourcePre(t.accommodationName.trim(), null);
-                                    });
-                                }
-
-                                if (uniqueSourceLocationsPre.size === 0) return;
-
-                                const destinationArrivalStr =
-                                    formatFullFromTs(destEvent.startTs) || destEvent.when;
-                                const dayRefTs = destEvent.startTs != null
-                                    ? destEvent.startTs
-                                    : midnightFromWhen(destEvent.when);
-                                const departureTs = timestampOnDay(dayRefTs, 0, 0);
-                                const departureStr = formatFullFromTs(departureTs) || '00:00';
-
-                                Array.from(uniqueSourceLocationsPre.values())
-                                    .sort((a, b) => {
-                                        if (a.endTs != null && b.endTs != null) return a.endTs - b.endTs;
-                                        return String(a.location).localeCompare(String(b.location), 'sk');
-                                    })
-                                    .forEach((info) => {
-                                        if (this.isSamePlaceForTransfer(info.location, destination)) return;
-
-                                        let whenStr;
-                                        if (departureStr && destinationArrivalStr) {
-                                            whenStr = `${departureStr} – ${destinationArrivalStr}`;
-                                        } else if (destinationArrivalStr) {
-                                            whenStr = destinationArrivalStr;
-                                        } else {
-                                            whenStr = destEvent.when;
-                                        }
-                                        enriched.push({
-                                            ts: destEvent.ts - 1,
-                                            when: whenStr,
-                                            type: 'transfer',
-                                            text: `Presun z ${info.location} do ${destination}`,
-                                            location: null,
-                                            isTransfer: true,
-                                        });
-                                    });
-                            });
                         }
                     }
 
