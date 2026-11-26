@@ -353,6 +353,48 @@ const findCategoryFromBox = (element, rootElement) => {
 };
 
 // ------------------------------------------------------------
+// 8) Kontext z boxu VYŠŠIE v štruktúre – pre detail zápasu
+// Keď aktuálny box (napr. TeamMembersList so súpiskou) nemá
+// kategóriu, hľadáme v predchádzajúcich súrodencoch predkov
+// (napr. box s info o zápase, ktorý je nad súpiskami).
+// ------------------------------------------------------------
+const findCategoryFromUpperBox = (element, rootElement) => {
+    let current = element;
+    let safety = 0;
+    while (current && current !== rootElement && safety < 15) {
+        // Prejdi predchádzajúcich súrodencov aktuálneho elementu
+        let sibling = current.previousElementSibling;
+        let siblingSafety = 0;
+        while (sibling && siblingSafety < 20) {
+            // Skús nájsť kategóriu v tomto súrodencovi (boxe)
+            const cls = sibling.className || "";
+            if (typeof cls === "string" && /rounded-(xl|lg)/.test(cls)) {
+                // Hlavička .bg-gray-50
+                const header = sibling.querySelector(".bg-gray-50");
+                if (header) {
+                    const found = textContainsKnownCategory(header.textContent);
+                    if (found) return found;
+                }
+                // Akýkoľvek nadpis
+                const heading = sibling.querySelector("h1, h2, h3, h4");
+                if (heading) {
+                    const found = textContainsKnownCategory(heading.textContent);
+                    if (found) return found;
+                }
+                // Celý text boxu
+                const found = textContainsKnownCategory(sibling.textContent);
+                if (found) return found;
+            }
+            sibling = sibling.previousElementSibling;
+            siblingSafety++;
+        }
+        current = current.parentNode;
+        safety++;
+    }
+    return null;
+};
+
+// ------------------------------------------------------------
 // Zlúčená funkcia: nájde kontextovú kategóriu pre element
 // ------------------------------------------------------------
 const findCategoryContextForElement = (element, rootElement, teamNameText) => {
@@ -376,10 +418,14 @@ const findCategoryContextForElement = (element, rootElement, teamNameText) => {
     cat = findCategoryFromGradientBox(element, rootElement);
     if (cat) return cat;
 
+    // 🔥 NOVÉ: box vyššie v štruktúre (detail zápasu – súpisky)
+    cat = findCategoryFromUpperBox(element, rootElement);
+    if (cat) return cat;
+
     cat = findCategoryFromBox(element, rootElement);
     if (cat) return cat;
 
-    // 🔥 NOVÉ: fallback cez window.matchesData (matches.js)
+    // fallback cez window.matchesData
     cat = findCategoryFromMatchesData(teamNameText, element);
     if (cat) return cat;
 
