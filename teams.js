@@ -433,7 +433,7 @@ const debugMatches = async () => {
 
 setTimeout(() => {
     debugMatches();
-}, 2000);
+}, 5000);
 
 window.debugMatches = debugMatches;
 
@@ -475,7 +475,7 @@ const debugMatchEvents = async () => {
 
 setTimeout(() => {
     debugMatchEvents();
-}, 2000);
+}, 5000);
 
 window.debugMatchEvents = debugMatchEvents;
 
@@ -2923,7 +2923,7 @@ const TeamsOverviewApp = (props) => {
         
         const timeoutId = setTimeout(() => {
             setIsLoadingRoster(false);
-        }, 2000);
+        }, 5000);
         
         window.__rosterTimeoutId = timeoutId;
     };
@@ -2996,7 +2996,7 @@ const TeamsOverviewApp = (props) => {
                 window.__eventsLoadingTimeout = setTimeout(() => {
                     setIsLoadingEvents(false);
                     window.__eventsLoadingTimeout = null;
-                }, 2000);
+                }, 5000);
                 
                 loadTeamRoster(selectedOcc.teamName, categoryName);
                 
@@ -3168,7 +3168,7 @@ const TeamsOverviewApp = (props) => {
                     window.__eventsLoadingTimeout = setTimeout(() => {
                         setIsLoadingEvents(false);
                         window.__eventsLoadingTimeout = null;
-                    }, 2000);
+                    }, 5000);
                     
                     setSelectedTeamDetails({
                         teamName: selectedTeamName,
@@ -3314,7 +3314,7 @@ const TeamsOverviewApp = (props) => {
                         window.__eventsLoadingTimeout = setTimeout(() => {
                             setIsLoadingEvents(false);
                             window.__eventsLoadingTimeout = null;
-                        }, 2000);
+                        }, 5000);
                         
                         setSelectedTeamDetails({
                             teamName: selectedTeamName,
@@ -3391,7 +3391,7 @@ const TeamsOverviewApp = (props) => {
             clearTimeout(timer);
             timer = setTimeout(() => {
                 setUiNotification(null);
-            }, 2000);
+            }, 5000);
         });
         return () => {
             unsubscribe();
@@ -3461,7 +3461,7 @@ const TeamsOverviewApp = (props) => {
             window.__eventsLoadingTimeout = setTimeout(() => {
                 setIsLoadingEvents(false);
                 window.__eventsLoadingTimeout = null;
-            }, 2000);
+            }, 5000);
         }
     };
 
@@ -3564,7 +3564,7 @@ const TeamsOverviewApp = (props) => {
         window.__eventsLoadingTimeout = setTimeout(() => {
             setIsLoadingEvents(false);
             window.__eventsLoadingTimeout = null;
-        }, 2000);
+        }, 5000);
     };
         
     const renderTeamRoster = () => {
