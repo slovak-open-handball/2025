@@ -433,7 +433,7 @@ const debugMatches = async () => {
 
 setTimeout(() => {
     debugMatches();
-}, 3000);
+}, 2000);
 
 window.debugMatches = debugMatches;
 
@@ -475,7 +475,7 @@ const debugMatchEvents = async () => {
 
 setTimeout(() => {
     debugMatchEvents();
-}, 4000);
+}, 2000);
 
 window.debugMatchEvents = debugMatchEvents;
 
@@ -2424,26 +2424,6 @@ const TeamsOverviewApp = (props) => {
     }, []);
 
     useEffect(() => {
-        if (!isLoadingEvents) return;
-
-        const categoryFromUrl = getCategoryFromUrl();
-        const hasCategoryInUrl = !!categoryFromUrl;
-        const isAnyButtonSelected = hasCategoryInUrl && 
-                                    selectedTeamDetails &&
-                                    selectedTeamDetails.category !== null &&
-                                    selectedTeamDetails.category !== undefined;
-
-        // Ak TeamEventsList nemá byť vykreslený, vypneme loading
-        if (!isAnyButtonSelected || !(isCateringVisible || isMatchesVisible)) {
-            const timer = setTimeout(() => {
-                setIsLoadingEvents(false);
-            }, 300);
-            return () => clearTimeout(timer);
-        }
-    }, [isLoadingEvents, selectedTeamDetails, isCateringVisible, isMatchesVisible]);
-
-    // 🔥 NOVÉ: Sleduj zmeny v kolekcii 'matches' a pri dokončení zápasu vynúť refresh
-    useEffect(() => {
         if (!window.db) return;
         
         const matchesRef = collection(window.db, 'matches');
@@ -2938,7 +2918,7 @@ const TeamsOverviewApp = (props) => {
         
         const timeoutId = setTimeout(() => {
             setIsLoadingRoster(false);
-        }, 10000);
+        }, 2000);
         
         window.__rosterTimeoutId = timeoutId;
     };
@@ -3382,7 +3362,7 @@ const TeamsOverviewApp = (props) => {
             clearTimeout(timer);
             timer = setTimeout(() => {
                 setUiNotification(null);
-            }, 5000);
+            }, 2000);
         });
         return () => {
             unsubscribe();
@@ -3454,7 +3434,7 @@ const TeamsOverviewApp = (props) => {
             window.__eventsLoadingTimeout = setTimeout(() => {
                 setIsLoadingEvents(false);
                 window.__eventsLoadingTimeout = null;
-            }, 8000);
+            }, 2000);
         }
     };
 
@@ -3557,7 +3537,7 @@ const TeamsOverviewApp = (props) => {
         window.__eventsLoadingTimeout = setTimeout(() => {
             setIsLoadingEvents(false);
             window.__eventsLoadingTimeout = null;
-        }, 8000);
+        }, 2000);
     };
         
     const renderTeamRoster = () => {
