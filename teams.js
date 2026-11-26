@@ -3002,6 +3002,8 @@ const TeamsOverviewApp = (props) => {
                 if (categoryIdToNameMap[categoryName]) {
                     categoryName = categoryIdToNameMap[categoryName];
                 }
+
+                setIsLoadingEvents(true);                
                 loadTeamRoster(selectedOcc.teamName, categoryName);
                 
                 // 🔥 NOVÉ: Detail tímu je nastavený, môžeme vypnúť URL loading
