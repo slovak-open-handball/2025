@@ -3302,6 +3302,8 @@ const TeamsOverviewApp = (props) => {
                                 selectedTeamName = exactMatch.teamName;
                             }
                         }
+
+                        setIsLoadingEvents(true);
                         
                         setSelectedTeamDetails({
                             teamName: selectedTeamName,
