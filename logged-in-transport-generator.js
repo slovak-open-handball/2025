@@ -2152,15 +2152,14 @@ class TransportGenerator {
                                     if (userTeamDays.has(dayKey)) return;
                                 
                                     // ─────────────────────────────────────────────────────────────
-                                    // NOVÉ: Zdrojová skupina user tímu (napr. "U12 D 1A" → "skupina A")
+                                    // Zdrojová skupina user tímu
                                     // ─────────────────────────────────────────────────────────────
                                     const userTeamSourceGroupName = userTeamGroupName
                                         ? String(userTeamGroupName).trim()
                                         : (userTeamGroupChar ? `skupina ${userTeamGroupChar}` : null);
                                 
                                     // ─────────────────────────────────────────────────────────────
-                                    // NOVÉ: Zisti, či superstructure tím je "pokračovaním" iného SS tímu.
-                                    // Ak áno, negeneruj preň ranné presuny.
+                                    // Pomocná funkcia – je SS tím pokračovaním?
                                     // ─────────────────────────────────────────────────────────────
                                     const isContinuationSS = (ssTeam) => {
                                         if (!ssTeam || !ssTeam.teamName) return false;
@@ -2174,8 +2173,7 @@ class TransportGenerator {
                                     };
                                 
                                     // ─────────────────────────────────────────────────────────────
-                                    // NOVÉ: Zozbieraj jedinečné ubytovne VŠETKÝCH tímov v zdrojovej skupine user tímu.
-                                    // Tím bez ubytovania sa považuje za miesto zrazu.
+                                    // Jedinečné ubytovne zdrojovej skupiny (bez ubytovania → miesto zrazu)
                                     // ─────────────────────────────────────────────────────────────
                                     const meetingPointName = meetingPointStop ? meetingPointStop.name : 'Internátna';
                                     const uniqueAccommodationsInSourceGroup = new Map();
@@ -2210,10 +2208,7 @@ class TransportGenerator {
                                     });
                                 
                                     // ─────────────────────────────────────────────────────────────
-                                    // NOVÉ: Pre každý superstructure tím, ktorý NIE JE pokračovaním,
-                                    // vygeneruj presun z každej ubytovne zdrojovej skupiny na miesto
-                                    // jeho prvej udalosti v daný deň.
-                                    // Toto sa deje BEZ OHĽADU na to, či user tím má v daný deň udalosť.
+                                    // Generovanie pre SS tímy – vždy, bez ohľadu na user tím
                                     // ─────────────────────────────────────────────────────────────
                                     if (uniqueAccommodationsInSourceGroup.size > 0) {
                                         const ssTeamsInSourceGroup = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
@@ -2285,9 +2280,8 @@ class TransportGenerator {
                                     }
                                 
                                     // ─────────────────────────────────────────────────────────────
-                                    // AŽ TERAZ kontrola pre user tím: ak user tím nemá v daný deň
-                                    // žiadnu udalosť, preskoč len generovanie presunov pre user tím
-                                    // (Prípad A / Prípad B nižšie).
+                                    // Ak user tím nemá v daný deň žiadnu udalosť → koniec pre tento deň
+                                    // (SS presuny už boli vygenerované vyššie)
                                     // ─────────────────────────────────────────────────────────────
                                     const userTeamHasAnyEventOnDay = events.some((ev) => {
                                         const evDay = extractDayKeyFromWhen(ev.when);
@@ -2300,7 +2294,172 @@ class TransportGenerator {
                                         return evDay === dayKey && ev.location;
                                     });
                                     if (userTeamHasEventOnDay) return;
-                                }
+                                
+                                    // ─────────────────────────────────────────────────────────────
+                                    // Prípad A / Prípad B – pôvodná logika pre user tím
+                                    // ─────────────────────────────────────────────────────────────
+                                    const teamsByAccommodationInGroup = new Map();
+                                    if (userTeamGroupName) {
+                                        (this.ctx.teamsArrivalBufferRef?.current || []).forEach((t) => {
+                                            if (cleanCategory(t.category) !== cleanCategory(category)) return;
+                                            if (!t.teamName) return;
+                                            const otherGroupName = t.groupName ? String(t.groupName).trim() : null;
+                                            if (!otherGroupName || otherGroupName !== String(userTeamGroupName).trim()) return;
+                                            const accName = t.accommodationName && String(t.accommodationName).trim() !== ''
+                                                ? String(t.accommodationName).trim()
+                                                : null;
+                                            if (!accName) return;
+                                            const key = normalizePlaceName(accName);
+                                            if (!key) return;
+                                            if (!teamsByAccommodationInGroup.has(key)) {
+                                                teamsByAccommodationInGroup.set(key, { location: accName, teams: new Set() });
+                                            }
+                                            teamsByAccommodationInGroup.get(key).teams.add(String(t.teamName).trim());
+                                        });
+                                    }
+                                
+                                    const userTeamAccommodationKey = accommodationName && String(accommodationName).trim() !== ''
+                                        ? normalizePlaceName(accommodationName.trim())
+                                        : null;
+                                    const userTeamAccommodationEntry = userTeamAccommodationKey
+                                        ? teamsByAccommodationInGroup.get(userTeamAccommodationKey)
+                                        : null;
+                                    const userTeamAccommodationTeamCount = userTeamAccommodationEntry
+                                        ? userTeamAccommodationEntry.teams.size
+                                        : 0;
+                                
+                                    const userTeamInSmallAccommodation =
+                                        userTeamAccommodationKey != null &&
+                                        userTeamAccommodationTeamCount < MIN_TEAMS_FOR_SS_TRANSFER;
+                                
+                                    // ── Prípad A ────────────────────────────────────────────────
+                                    if (userTeamInSmallAccommodation || !userTeamAccommodationKey) {
+                                        const hasAccommodation = accommodationName && accommodationName.trim() !== '';
+                                        const fromLocationName = hasAccommodation
+                                            ? accommodationName.trim()
+                                            : (meetingPointStop ? meetingPointStop.name : null);
+                                        const fromLabel = hasAccommodation
+                                            ? `ubytovanie ${accommodationName.trim()}`
+                                            : (meetingPointStop ? `miesto zrazu ${meetingPointStop.name}` : null);
+                                
+                                        if (!fromLocationName) return;
+                                
+                                        placesMap.forEach((info, destinationLocation) => {
+                                            if (!destinationLocation) return;
+                                            if (this.isSamePlaceForTransfer(fromLocationName, destinationLocation)) return;
+                                
+                                            const arrivalTs = info.firstEventTs;
+                                            if (arrivalTs == null || !isFinite(arrivalTs)) return;
+                                
+                                            const arrivalStr = formatFullFromTs(arrivalTs) || info.firstEvent.when || '—';
+                                            const departureTs = timestampOnDay(arrivalTs, 0, 0);
+                                            const departureStr = formatFullFromTs(departureTs) || '00:00';
+                                
+                                            if (departureTs != null && arrivalTs != null && departureTs >= arrivalTs) return;
+                                
+                                            let whenStr;
+                                            if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                            else if (arrivalStr) whenStr = arrivalStr;
+                                            else whenStr = info.firstEvent.when || '—';
+                                
+                                            enriched.push({
+                                                ts: info.firstEventTs - 1,
+                                                when: whenStr,
+                                                type: 'transfer',
+                                                text: `Presun z ${fromLabel} do ${destinationLocation}`,
+                                                location: null,
+                                                isTransfer: true,
+                                            });
+                                        });
+                                        return;
+                                    }
+                                
+                                    // ── Prípad B ────────────────────────────────────────────────
+                                    const allAccommodationsInGroupMap = new Map();
+                                    (this.ctx.teamsArrivalBufferRef?.current || []).forEach((t) => {
+                                        if (cleanCategory(t.category) !== cleanCategory(category)) return;
+                                        if (!t.teamName) return;
+                                        const otherGroupName = t.groupName ? String(t.groupName).trim() : null;
+                                        if (!otherGroupName || otherGroupName !== String(userTeamGroupName).trim()) return;
+                                        const accName = t.accommodationName && String(t.accommodationName).trim() !== ''
+                                            ? String(t.accommodationName).trim()
+                                            : null;
+                                        if (!accName) return;
+                                        const key = normalizePlaceName(accName);
+                                        if (!key) return;
+                                        if (!allAccommodationsInGroupMap.has(key)) {
+                                            allAccommodationsInGroupMap.set(key, { location: accName });
+                                        }
+                                    });
+                                    const allAccommodationsInGroup = [...allAccommodationsInGroupMap.values()].map(
+                                        (entry) => entry.location
+                                    );
+                                
+                                    if (allAccommodationsInGroup.length === 0) return;
+                                
+                                    const ssTeamsInGroup = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
+                                        if (cleanCategory(t.category) !== cleanCategory(category)) return false;
+                                        if (!t.teamName) return false;
+                                        if (t.isSuperstructure !== true) return false;
+                                        if (isSpiderTeamName(t.teamName)) return false;
+                                        const otherGroupName = t.groupName ? String(t.groupName).trim() : null;
+                                        if (!otherGroupName || otherGroupName !== String(userTeamGroupName).trim()) return false;
+                                        return true;
+                                    });
+                                
+                                    if (ssTeamsInGroup.length === 0) return;
+                                
+                                    ssTeamsInGroup.forEach((ssTeam) => {
+                                        const ssTeamName = String(ssTeam.teamName).trim();
+                                        const ssTeamEvents = grouped[cleanCategory(category)]?.[ssTeamName] || [];
+                                
+                                        const ssFirstEventOnDay = ssTeamEvents
+                                            .filter((ev) => {
+                                                const evDay = extractDayKeyFromWhen(ev.when);
+                                                return evDay === dayKey && ev.location;
+                                            })
+                                            .sort((a, b) => {
+                                                const ta = a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY);
+                                                const tb = b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY);
+                                                if (ta !== tb) return ta - tb;
+                                                return String(a.text).localeCompare(String(b.text), 'sk');
+                                            })[0];
+                                
+                                        if (!ssFirstEventOnDay || !ssFirstEventOnDay.location) return;
+                                
+                                        const destination = ssFirstEventOnDay.location;
+                                        const arrivalTs = ssFirstEventOnDay.startTs != null
+                                            ? ssFirstEventOnDay.startTs
+                                            : (ssFirstEventOnDay.ts != null && isFinite(ssFirstEventOnDay.ts)
+                                                ? ssFirstEventOnDay.ts
+                                                : null);
+                                
+                                        const arrivalStr = formatFullFromTs(arrivalTs) || ssFirstEventOnDay.when || '—';
+                                        const departureTs = timestampOnDay(arrivalTs, 0, 0);
+                                        const departureStr = formatFullFromTs(departureTs) || '00:00';
+                                
+                                        if (departureTs != null && arrivalTs != null && departureTs >= arrivalTs) return;
+                                
+                                        allAccommodationsInGroup.forEach((accName) => {
+                                            if (!accName) return;
+                                            if (this.isSamePlaceForTransfer(accName, destination)) return;
+                                
+                                            let whenStr;
+                                            if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
+                                            else if (arrivalStr) whenStr = arrivalStr;
+                                            else whenStr = ssFirstEventOnDay.when || '—';
+                                
+                                            enriched.push({
+                                                ts: (arrivalTs != null ? arrivalTs : ssFirstEventOnDay.ts) - 1,
+                                                when: whenStr,
+                                                type: 'transfer',
+                                                text: `Presun z ${accName} do ${destination}`,
+                                                location: null,
+                                                isTransfer: true,
+                                            });
+                                        });
+                                    });
+                                });
                             }
                         }
                     }
