@@ -2343,6 +2343,19 @@ const TeamsOverviewApp = (props) => {
     const [teamEventsFilter, setTeamEventsFilter] = useState(null);
     const [isLoadingEvents, setIsLoadingEvents] = useState(false);
 
+    // 🔥 NOVÉ: Stav pre priamu navigáciu z URL na detail tímu
+    const [isUrlDetailLoading, setIsUrlDetailLoading] = useState(() => {
+        // Ak URL obsahuje category aj team, budeme priamo zobrazovať detail
+        const hash = window.location.hash;
+        if (!hash || hash === '#') return false;
+        try {
+            const params = new URLSearchParams(hash.substring(1));
+            return !!(params.get('category') || params.get('team'));
+        } catch (e) {
+            return false;
+        }
+    });
+
     const [isRostersVisible, setIsRostersVisible] = useState(
         window.pagesVisibility && 
         window.pagesVisibility['rosters'] && 
@@ -2984,6 +2997,76 @@ const TeamsOverviewApp = (props) => {
             setRosterTeamName('');
             setRosterCategoryName('');
             setMembersStats({});
+        }
+    }, [selectedTeamDetails, categoryIdToNameMap]);
+
+  useEffect(() => {
+        const categoryFromUrl = getCategoryFromUrl();
+        const hasCategoryInUrl = !!categoryFromUrl;
+        
+        if (selectedTeamDetails && selectedTeamDetails.occurrences && selectedTeamDetails.occurrences.length > 0 && hasCategoryInUrl) {
+            let selectedOcc = null;
+            
+            if (selectedTeamDetails.category && selectedTeamDetails.teamName) {
+                selectedOcc = selectedTeamDetails.occurrences.find(
+                    occ => occ.category === selectedTeamDetails.category && 
+                           occ.teamName === selectedTeamDetails.teamName
+                );
+            }
+            
+            if (!selectedOcc) {
+                const { teamName: teamNameFromUrl } = parseUrlHash();
+                if (categoryFromUrl && teamNameFromUrl) {
+                    selectedOcc = selectedTeamDetails.occurrences.find(
+                        occ => occ.category === categoryFromUrl && 
+                               occ.teamName === teamNameFromUrl
+                    );
+                }
+            }
+            
+            if (!selectedOcc && categoryFromUrl) {
+                selectedOcc = selectedTeamDetails.occurrences.find(
+                    occ => occ.category === categoryFromUrl
+                );
+            }
+            
+            if (!selectedOcc && selectedTeamDetails.occurrences.length > 0) {
+                selectedOcc = selectedTeamDetails.occurrences[0];
+                setSelectedTeamDetails(prev => ({
+                    ...prev,
+                    teamName: selectedOcc.teamName,
+                    category: selectedOcc.category
+                }));
+            }
+            
+            if (selectedOcc) {
+                let categoryName = selectedOcc.category;
+                if (categoryIdToNameMap[categoryName]) {
+                    categoryName = categoryIdToNameMap[categoryName];
+                }
+                loadTeamRoster(selectedOcc.teamName, categoryName);
+                
+                // 🔥 NOVÉ: Detail tímu je nastavený, môžeme vypnúť URL loading
+                setIsUrlDetailLoading(false);
+            }
+        } else {
+            if (rosterUnsubscribe) {
+                try {
+                    rosterUnsubscribe();
+                } catch (e) {}
+                setRosterUnsubscribe(null);
+            }
+            setTeamRoster([]);
+            setIsLoadingRoster(false);
+            setRosterTeamName('');
+            setRosterCategoryName('');
+            setMembersStats({});
+            
+            // 🔥 NOVÉ: Ak URL neobsahuje detail tímu, vypneme URL loading
+            // (aby sa zobrazila tabuľka všetkých tímov)
+            if (!selectedTeamDetails) {
+                setIsUrlDetailLoading(false);
+            }
         }
     }, [selectedTeamDetails, categoryIdToNameMap]);
 
