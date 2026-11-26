@@ -2318,7 +2318,12 @@ const renderTeamDetails = () => {
             teamName: selectedTeamDetails.teamName,
             categoryName: selectedTeamDetails.category || categoryFromUrl || '',
             categoryId: categoryId,
-            filter: teamEventsFilter
+            filter: teamEventsFilter,
+            refreshKey: matchesRefreshKey,
+            isMatchesVisible: isMatchesVisible,
+            isCateringVisible: isCateringVisible,
+            isLoadingEvents: isLoadingEvents,
+            setIsLoadingEvents: setIsLoadingEvents
         }) : null,
         renderTeamRoster()
     );
@@ -3148,6 +3153,14 @@ const TeamsOverviewApp = (props) => {
                     }
 
                     setIsLoadingEvents(true);
+
+                    if (window.__eventsLoadingTimeout) {
+                        clearTimeout(window.__eventsLoadingTimeout);
+                    }
+                    window.__eventsLoadingTimeout = setTimeout(() => {
+                        setIsLoadingEvents(false);
+                        window.__eventsLoadingTimeout = null;
+                    }, 2000);
                     
                     setSelectedTeamDetails({
                         teamName: selectedTeamName,
@@ -3286,6 +3299,14 @@ const TeamsOverviewApp = (props) => {
                         }
 
                         setIsLoadingEvents(true);
+
+                        if (window.__eventsLoadingTimeout) {
+                            clearTimeout(window.__eventsLoadingTimeout);
+                        }
+                        window.__eventsLoadingTimeout = setTimeout(() => {
+                            setIsLoadingEvents(false);
+                            window.__eventsLoadingTimeout = null;
+                        }, 2000);
                         
                         setSelectedTeamDetails({
                             teamName: selectedTeamName,
@@ -3426,8 +3447,6 @@ const TeamsOverviewApp = (props) => {
             });
             updateUrlHash(normalizedTeamName, currentCategoryName);
             
-            // 🔥 FALLBACK: Ak sa TeamEventsList nevykreslí (napr. chýba kategória),
-            // po 8s vypneme loading, aby nezostal spinner.
             if (window.__eventsLoadingTimeout) {
                 clearTimeout(window.__eventsLoadingTimeout);
             }
