@@ -1753,7 +1753,7 @@ const renderGroupedCategories = () => {
                     'div',
                     { className: 'mb-8' },
                     React.createElement('h4', { 
-                        className: 'text-xl font-semibold mb-4 text-gray-700'
+                        className: 'text-xl font-semibold mb-4 text-gray-700 text-center'
                     }, 'Základné skupiny'),
                     React.createElement(
                         'div',
@@ -1813,7 +1813,7 @@ const renderGroupedCategories = () => {
                     'div',
                     null,
                     React.createElement('h4', { 
-                        className: 'text-xl font-semibold mb-4 text-gray-700'
+                        className: 'text-xl font-semibold mb-4 text-gray-700 text-center'
                     }, 'Nadstavbové skupiny'),
                     React.createElement(
                         'div',
@@ -2007,7 +2007,7 @@ const renderSingleCategoryView = () => {
                     React.Fragment,
                     null,
                     React.createElement('h3', { 
-                        className: 'text-2xl font-semibold mb-4 text-gray-800 whitespace-nowrap'
+                        className: 'text-2xl font-semibold mb-4 text-gray-800 whitespace-nowrap text-center'
                     }, 'Základné skupiny'),
                     React.createElement(
                         'div',
@@ -2071,7 +2071,7 @@ const renderSingleCategoryView = () => {
                     React.Fragment,
                     null,
                     React.createElement('h3', { 
-                        className: 'text-2xl font-semibold mb-4 text-gray-800 whitespace-nowrap'
+                        className: 'text-2xl font-semibold mb-4 text-gray-800 whitespace-nowrap text-center'
                     }, 'Nadstavbové skupiny'),
                     React.createElement(
                         'div',
