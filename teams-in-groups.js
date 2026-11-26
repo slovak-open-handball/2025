@@ -1761,7 +1761,8 @@ const renderGroupedCategories = () => {
                             className: 'flex flex-wrap gap-6 pb-4 zoom-groups-container',
                             style: { 
                                 overflow: 'visible',
-                                alignItems: 'stretch'
+                                alignItems: 'stretch',
+                                justifyContent: 'center'
                             }
                         },
                         sortedBasicGroups.map((group, groupIndex) => {
@@ -1820,7 +1821,8 @@ const renderGroupedCategories = () => {
                             className: 'flex flex-wrap gap-6 pb-4 zoom-groups-container',
                             style: { 
                                 overflow: 'visible',
-                                alignItems: 'stretch'
+                                alignItems: 'stretch',
+                                justifyContent: 'center'
                             }
                         },
                         sortedSuperstructureGroups.map((group, groupIndex) => {
@@ -2013,7 +2015,8 @@ const renderSingleCategoryView = () => {
                             className: 'flex flex-wrap mb-8 pb-4 zoom-groups-container',
                             style: { 
                                 gap: '1.5rem',
-                                alignItems: 'stretch'
+                                alignItems: 'stretch',
+                                justifyContent: 'center'
                             }
                         },
                         sortedBasicGroups.map((group, groupIndex) => {
@@ -2076,7 +2079,8 @@ const renderSingleCategoryView = () => {
                             className: 'flex flex-wrap pb-4 zoom-groups-container',
                             style: { 
                                 gap: '1.5rem',
-                                alignItems: 'stretch'
+                                alignItems: 'stretch',
+                                justifyContent: 'center'
                             }
                         },
                         sortedSuperstructureGroups.map((group, groupIndex) => {
@@ -2176,6 +2180,7 @@ const renderSingleCategoryView = () => {
                 
                 .zoom-groups-container {
                     align-items: stretch !important;
+                    justify-content: center !important;
                     width: 100% !important;
                 }
             
