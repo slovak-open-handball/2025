@@ -3,6 +3,7 @@
 // Načíta všetky tímy z kolekcie 'users' a vypíše ich do konzoly
 // ako klikateľné odkazy: teams#category=<KATEGÓRIA>&team=<TÍM>
 // + Nastaví každý výskyt názvu tímu na stránke ako klikateľný odkaz
+//   (vzhľad zostáva pôvodný – žiadna modrá, žiadne podčiarknutie)
 // Čaká na inicializáciu window.db (z authentication.js)
 // ============================================================
 
@@ -86,6 +87,7 @@ let allTeamsFlat = [];
 
 // ------------------------------------------------------------
 // Nastaví všetky výskyty názvov tímov v DOM ako klikateľné odkazy
+// Vzhľad zostáva PÔVODNÝ (žiadna modrá, žiadne podčiarknutie)
 // ------------------------------------------------------------
 const makeTeamNamesClickable = () => {
     if (!allTeamsFlat.length) return;
@@ -120,11 +122,10 @@ const makeTeamNamesClickable = () => {
         NodeFilter.SHOW_TEXT,
         {
             acceptNode: (node) => {
-                // Preskočíme prázdne texty
                 if (!node.nodeValue || !node.nodeValue.trim()) {
                     return NodeFilter.FILTER_REJECT;
                 }
-                // Preskočíme texty, ktoré už sú v <a>, <script>, <style>, <textarea>
+                // Preskočíme texty, ktoré už sú v <a>, <script>, <style>, <textarea>, <input>
                 let parent = node.parentNode;
                 while (parent && parent !== rootElement) {
                     const tag = parent.nodeName?.toUpperCase();
@@ -133,7 +134,7 @@ const makeTeamNamesClickable = () => {
                     }
                     parent = parent.parentNode;
                 }
-                // Preskočíme texty, ktoré už boli spracované
+                // Preskočíme už spracované uzly
                 if (node.parentNode && node.parentNode.dataset && node.parentNode.dataset.teamLinkified === "1") {
                     return NodeFilter.FILTER_REJECT;
                 }
@@ -150,7 +151,6 @@ const makeTeamNamesClickable = () => {
     textNodes.forEach((textNode) => {
         const text = textNode.nodeValue;
         if (!teamNameRegex.test(text)) {
-            // reset regex lastIndex
             teamNameRegex.lastIndex = 0;
             return;
         }
@@ -183,7 +183,6 @@ const makeTeamNamesClickable = () => {
             parts.push({ type: "text", value: text.slice(lastIndex) });
         }
 
-        // Ak sa nič nenašlo, nič nemeniť
         if (parts.length <= 1) return;
 
         // Nahradíme textový uzol fragmentom s odkazmi
@@ -193,12 +192,17 @@ const makeTeamNamesClickable = () => {
                 const a = document.createElement("a");
                 a.href = part.url;
                 a.textContent = part.value;
-                a.style.color = "#2563eb";
-                a.style.textDecoration = "underline";
+
+                // 🔥 ZACHOVANIE PÔVODNÉHO VZHĽADU:
+                // - farba sa dedí z rodiča (žiadna modrá)
+                // - žiadne podčiarknutie
+                // - žiadna zmena fontu ani kurzora
+                a.style.color = "inherit";
+                a.style.textDecoration = "none";
+                a.style.font = "inherit";
                 a.style.cursor = "pointer";
+
                 a.dataset.teamLinkified = "1";
-                // Voliteľne: ak chceme, aby sa odkaz otvoril v tej istej karte
-                // (predvolené správanie <a>)
                 fragment.appendChild(a);
             } else {
                 fragment.appendChild(document.createTextNode(part.value));
@@ -244,7 +248,6 @@ export const loadAllTeamsFromUsers = async () => {
             return [];
         }
 
-        // Štruktúra: { kategória: [ { teamName, uid, email, groupName, order } ] }
         const teamsByCategory = {};
         let totalTeams = 0;
         let totalUsers = 0;
@@ -283,9 +286,6 @@ export const loadAllTeamsFromUsers = async () => {
             });
         });
 
-        // ------------------------------------------------------------
-        // Výpis do konzoly – zoskupené podľa kategórií
-        // ------------------------------------------------------------
         console.log("");
         console.log("============================================================");
         console.log(`✅ NAČÍTANÝCH ${totalTeams} TÍMOV od ${totalUsers} POUŽÍVATEĽOV`);
@@ -302,7 +302,6 @@ export const loadAllTeamsFromUsers = async () => {
             console.log(`📁 KATEGÓRIA: ${categoryName} (${teams.length} tímov)`);
             console.log("------------------------------------------------------------");
 
-            // Zoradíme tímy: najprv podľa skupiny, potom podľa poradia, potom podľa názvu
             const sortedTeams = [...teams].sort((a, b) => {
                 const ga = a.groupName || "zzz";
                 const gb = b.groupName || "zzz";
@@ -320,16 +319,12 @@ export const loadAllTeamsFromUsers = async () => {
                 const order = team.order != null ? `${team.order}.` : "–";
                 const url = buildTeamUrl(categoryName, team.teamName);
 
-                // Vypíšeme text + klikateľný odkaz
                 console.log(
                     `   ${String(index + 1).padStart(3, " ")}. ${group} ${order} ${team.teamName}\n       🔗 ${url}`
                 );
             });
         });
 
-        // ------------------------------------------------------------
-        // Plochý zoznam všetkých tímov s URL (pre ľahké kopírovanie)
-        // ------------------------------------------------------------
         console.log("");
         console.log("============================================================");
         console.log("📋 PLOCHÝ ZOZNAM VŠETKÝCH TÍMOV S ODKAZMI");
@@ -350,9 +345,6 @@ export const loadAllTeamsFromUsers = async () => {
 
         console.table(flatList);
 
-        // ------------------------------------------------------------
-        // EXTRA: HTML zoznam klikateľných odkazov (pre vloženie do stránky)
-        // ------------------------------------------------------------
         console.log("");
         console.log("============================================================");
         console.log("🔗 HTML ZOZNAM KLIKATEĽNÝCH ODKAZOV (skopíruj do stránky)");
@@ -387,7 +379,7 @@ export const loadAllTeamsFromUsers = async () => {
         });
 
         // ------------------------------------------------------------
-        // Spustíme linkifikáciu DOM (aj s oneskorením, aby React stihol vykresliť)
+        // Spustíme linkifikáciu DOM
         // ------------------------------------------------------------
         const runLinkification = () => {
             try {
@@ -397,9 +389,7 @@ export const loadAllTeamsFromUsers = async () => {
             }
         };
 
-        // Okamžite
         runLinkification();
-        // A ešte niekoľkokrát s oneskorením (React render je async)
         setTimeout(runLinkification, 500);
         setTimeout(runLinkification, 1500);
         setTimeout(runLinkification, 3000);
@@ -407,7 +397,6 @@ export const loadAllTeamsFromUsers = async () => {
         // Sledujeme zmeny v DOM (React prekresľuje) – linkifikácia sa spustí pri zmene
         if (window.MutationObserver) {
             const observer = new MutationObserver(() => {
-                // Debounce, aby sme nespúšťali príliš často
                 clearTimeout(window.__teamLinkifyTimer);
                 window.__teamLinkifyTimer = setTimeout(runLinkification, 300);
             });
@@ -420,9 +409,6 @@ export const loadAllTeamsFromUsers = async () => {
             window.__teamLinkifyObserver = observer;
         }
 
-        // ------------------------------------------------------------
-        // Vrátime aj štruktúrované dáta (pre ďalšie použitie)
-        // ------------------------------------------------------------
         return {
             teamsByCategory,
             flatList,
@@ -436,7 +422,7 @@ export const loadAllTeamsFromUsers = async () => {
 };
 
 // ------------------------------------------------------------
-// Automatické spustenie pri načítaní modulu (voliteľné)
+// Automatické spustenie pri načítaní modulu
 // ------------------------------------------------------------
 if (typeof window !== "undefined") {
     window.loadAllTeamsFromUsers = loadAllTeamsFromUsers;
