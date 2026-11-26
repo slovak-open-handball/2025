@@ -2213,9 +2213,35 @@ class TransportGenerator {
                                         return false;
                                     };
 
+                                    // ── DEBUG: výpis všetkých tímov v kategórii a ich zaradenie ──
+                                    console.log(
+                                        `%c[TRANSPORT][SS-ACCOM-DEBUG] Deň ${dayKey}, user tím "${teamName}" (skupina "${userTeamGroupName}", písmeno ${userTeamGroupChar}):`,
+                                        'font-weight: bold; color: #7c3aed;'
+                                    );
+                                    const allTeamsInCategoryForAccom = (this.ctx.teamsArrivalBufferRef?.current || [])
+                                        .filter((t) => cleanCategory(t.category) === cleanCategory(category) && t.teamName);
+
+                                    allTeamsInCategoryForAccom.forEach((t) => {
+                                        const tn = String(t.teamName).trim();
+                                        const gName = t.groupName ? String(t.groupName).trim() : '(bez groupName)';
+                                        const gChar = t.groupName ? getGroupLastChar(t.groupName) : null;
+                                        const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
+                                        const nameChar = nameCharMatch ? nameCharMatch[1].toUpperCase() : null;
+                                        const accName = t.accommodationName && String(t.accommodationName).trim() !== ''
+                                            ? String(t.accommodationName).trim()
+                                            : '(bez ubytovania)';
+                                        const belongs = teamBelongsToSourceGroup(t);
+                                        console.log(
+                                            `%c  • tím="${tn}" | groupName="${gName}" | gChar=${gChar || '—'} | nameChar=${nameChar || '—'} | ubytovanie="${accName}" | isSuperstructure=${t.isSuperstructure === true} | isRegistered=${t.isRegistered === true} | PATRÍ=${belongs}`,
+                                            belongs ? 'color:#16a34a' : 'color:#b91c1c'
+                                        );
+                                    });
+                                    console.log('[TRANSPORT][SS-ACCOM-DEBUG] ─────────────────────────────');
+
                                     (this.ctx.teamsArrivalBufferRef?.current || []).forEach((t) => {
                                         if (!teamBelongsToSourceGroup(t)) return;
 
+                                        const tn = String(t.teamName).trim();
                                         const accName = t.accommodationName && String(t.accommodationName).trim() !== ''
                                             ? String(t.accommodationName).trim()
                                             : null;
@@ -2228,6 +2254,10 @@ class TransportGenerator {
                                                     location: accName,
                                                     label: `ubytovanie ${accName}`,
                                                 });
+                                                console.log(
+                                                    `%c[TRANSPORT][SS-ACCOM-DEBUG] + pridaná ubytovňa "${accName}" (tím "${tn}")`,
+                                                    'color:#16a34a;'
+                                                );
                                             }
                                         } else {
                                             // Tím nemá ubytovanie → považuje sa za miesto zrazu
@@ -2238,81 +2268,18 @@ class TransportGenerator {
                                                     location: meetingPointName,
                                                     label: `miesto zrazu ${meetingPointName}`,
                                                 });
+                                                console.log(
+                                                    `%c[TRANSPORT][SS-ACCOM-DEBUG] + pridané miesto zrazu "${meetingPointName}" (tím "${tn}" bez ubytovania)`,
+                                                    'color:#ea580c;'
+                                                );
                                             }
                                         }
                                     });
-                                
-                                    // ─────────────────────────────────────────────────────────────
-                                    // Generovanie pre SS tímy – len keď user tím nemá udalosť
-                                    // ─────────────────────────────────────────────────────────────
-                                    if (uniqueAccommodationsInSourceGroup.size > 0) {
-                                        const ssTeamsInSourceGroup = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
-                                            if (cleanCategory(t.category) !== cleanCategory(category)) return false;
-                                            if (!t.teamName) return false;
-                                            if (t.isSuperstructure !== true) return false;
-                                            if (isSpiderTeamName(t.teamName)) return false;
-                                            if (isContinuationSS(t)) return false;
-                                            const otherGroupName = t.groupName ? String(t.groupName).trim() : null;
-                                            if (otherGroupName && userTeamSourceGroupName && otherGroupName === String(userTeamSourceGroupName).trim()) {
-                                                return true;
-                                            }
-                                            const tn = String(t.teamName).trim();
-                                            const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
-                                            const nameChar = nameCharMatch ? nameCharMatch[1].toUpperCase() : null;
-                                            return nameChar != null && nameChar === userTeamGroupChar;
-                                        });
-                                
-                                        ssTeamsInSourceGroup.forEach((ssTeam) => {
-                                            const ssTeamName = String(ssTeam.teamName).trim();
-                                            const ssTeamEvents = grouped[cleanCategory(category)]?.[ssTeamName] || [];
-                                
-                                            const ssFirstEventOnDay = ssTeamEvents
-                                                .filter((ev) => {
-                                                    const evDay = extractDayKeyFromWhen(ev.when);
-                                                    return evDay === dayKey && ev.location;
-                                                })
-                                                .sort((a, b) => {
-                                                    const ta = a.startTs != null ? a.startTs : (a.ts != null ? a.ts : Number.POSITIVE_INFINITY);
-                                                    const tb = b.startTs != null ? b.startTs : (b.ts != null ? b.ts : Number.POSITIVE_INFINITY);
-                                                    if (ta !== tb) return ta - tb;
-                                                    return String(a.text).localeCompare(String(b.text), 'sk');
-                                                })[0];
-                                
-                                            if (!ssFirstEventOnDay || !ssFirstEventOnDay.location) return;
-                                
-                                            const destination = ssFirstEventOnDay.location;
-                                            const arrivalTs = ssFirstEventOnDay.startTs != null
-                                                ? ssFirstEventOnDay.startTs
-                                                : (ssFirstEventOnDay.ts != null && isFinite(ssFirstEventOnDay.ts)
-                                                    ? ssFirstEventOnDay.ts
-                                                    : null);
-                                
-                                            const arrivalStr = formatFullFromTs(arrivalTs) || ssFirstEventOnDay.when || '—';
-                                            const departureTs = timestampOnDay(arrivalTs, 0, 0);
-                                            const departureStr = formatFullFromTs(departureTs) || '00:00';
-                                
-                                            if (departureTs != null && arrivalTs != null && departureTs >= arrivalTs) return;
-                                
-                                            uniqueAccommodationsInSourceGroup.forEach((info) => {
-                                                if (!info.location) return;
-                                                if (this.isSamePlaceForTransfer(info.location, destination)) return;
-                                
-                                                let whenStr;
-                                                if (departureStr && arrivalStr) whenStr = `${departureStr} – ${arrivalStr}`;
-                                                else if (arrivalStr) whenStr = arrivalStr;
-                                                else whenStr = ssFirstEventOnDay.when || '—';
-                                
-                                                enriched.push({
-                                                    ts: (arrivalTs != null ? arrivalTs : ssFirstEventOnDay.ts) - 1,
-                                                    when: whenStr,
-                                                    type: 'transfer',
-                                                    text: `Presun z ${info.label} do ${destination}`,
-                                                    location: null,
-                                                    isTransfer: true,
-                                                });
-                                            });
-                                        });
-                                    }
+
+                                    console.log(
+                                        `%c[TRANSPORT][SS-ACCOM-DEBUG] Celkovo jedinečných zdrojov: ${uniqueAccommodationsInSourceGroup.size} → ${[...uniqueAccommodationsInSourceGroup.values()].map(v => v.location).join(', ')}`,
+                                        'font-weight: bold; color: #7c3aed;'
+                                    );
                                 
                                     // ─────────────────────────────────────────────────────────────
                                     // Ak user tím nemá v daný deň udalosť s miestom, koniec pre tento deň
