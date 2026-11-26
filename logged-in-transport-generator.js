@@ -1428,6 +1428,28 @@ class TransportGenerator {
 
                     const enriched = [];
 
+                    const ssInfo = superstructureInfoByTeam[category] && superstructureInfoByTeam[category][teamName];
+
+                    const teamGroupName = (() => {
+                        if (ssInfo && ssInfo.groupName) return ssInfo.groupName;
+                        const g = getGroupForSuperstructureTeam(category, teamName);
+                        if (g) return g;
+                        if (ssInfo && ssInfo.lastChar) return `skupina ${ssInfo.lastChar}`;
+                        return null;
+                    })();
+
+                    const isSuperstructureTeam = (() => {
+                        if (ssInfo && ssInfo.isSuperstructure) return true;
+                        const inUsers = (this.ctx.teamsArrivalBufferRef?.current || []).some(
+                            (t) => cleanCategory(t.category) === cleanCategory(category)
+                                && t.teamName === teamName
+                                && t.isRegistered === true
+                        );
+                        if (!inUsers) return true;
+                        if (/\d[A-ZÁ-Ž]\s*$/.test(String(teamName).trim())) return true;
+                        return false;
+                    })();
+
                     // ─────────────────────────────────────────────────────────────
                     // NOVÉ: Pre SS tím – vygeneruj ranné presuny z ubytovní zdrojovej skupiny
                     // na miesto prvej udalosti tohto SS tímu (len ak user tím v ten deň nemá udalosť)
@@ -1553,28 +1575,6 @@ class TransportGenerator {
                             }
                         }
                     }
-
-                    const ssInfo = superstructureInfoByTeam[category] && superstructureInfoByTeam[category][teamName];
-
-                    const teamGroupName = (() => {
-                        if (ssInfo && ssInfo.groupName) return ssInfo.groupName;
-                        const g = getGroupForSuperstructureTeam(category, teamName);
-                        if (g) return g;
-                        if (ssInfo && ssInfo.lastChar) return `skupina ${ssInfo.lastChar}`;
-                        return null;
-                    })();
-
-                    const isSuperstructureTeam = (() => {
-                        if (ssInfo && ssInfo.isSuperstructure) return true;
-                        const inUsers = (this.ctx.teamsArrivalBufferRef?.current || []).some(
-                            (t) => cleanCategory(t.category) === cleanCategory(category)
-                                && t.teamName === teamName
-                                && t.isRegistered === true
-                        );
-                        if (!inUsers) return true;
-                        if (/\d[A-ZÁ-Ž]\s*$/.test(String(teamName).trim())) return true;
-                        return false;
-                    })();
 
                     if (isSuperstructureTeam && teamGroupName) {
                         const groupCharForLog = getGroupLastChar(teamGroupName);
