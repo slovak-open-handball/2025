@@ -2300,6 +2300,7 @@ class TransportGenerator {
                                         return evDay === dayKey && ev.location;
                                     });
                                     if (userTeamHasEventOnDay) return;
+                                }
                             }
                         }
                     }
