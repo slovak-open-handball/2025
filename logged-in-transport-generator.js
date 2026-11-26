@@ -2152,6 +2152,16 @@ class TransportGenerator {
                                     if (userTeamDays.has(dayKey)) return;
                                 
                                     // ─────────────────────────────────────────────────────────────
+                                    // NOVÉ: Ak user tím má v daný deň AKÚKOĽVEK udalosť,
+                                    // ranné presuny pre SS tímy sa NEGENERUJÚ.
+                                    // ─────────────────────────────────────────────────────────────
+                                    const userTeamHasAnyEventOnDay = events.some((ev) => {
+                                        const evDay = extractDayKeyFromWhen(ev.when);
+                                        return evDay === dayKey;
+                                    });
+                                    if (userTeamHasAnyEventOnDay) return;
+                                
+                                    // ─────────────────────────────────────────────────────────────
                                     // Zdrojová skupina user tímu
                                     // ─────────────────────────────────────────────────────────────
                                     const userTeamSourceGroupName = userTeamGroupName
@@ -2208,7 +2218,7 @@ class TransportGenerator {
                                     });
                                 
                                     // ─────────────────────────────────────────────────────────────
-                                    // Generovanie pre SS tímy – vždy, bez ohľadu na user tím
+                                    // Generovanie pre SS tímy – len keď user tím nemá udalosť
                                     // ─────────────────────────────────────────────────────────────
                                     if (uniqueAccommodationsInSourceGroup.size > 0) {
                                         const ssTeamsInSourceGroup = (this.ctx.teamsArrivalBufferRef?.current || []).filter((t) => {
@@ -2280,15 +2290,9 @@ class TransportGenerator {
                                     }
                                 
                                     // ─────────────────────────────────────────────────────────────
-                                    // Ak user tím nemá v daný deň žiadnu udalosť → koniec pre tento deň
+                                    // Ak user tím nemá v daný deň udalosť s miestom, koniec pre tento deň
                                     // (SS presuny už boli vygenerované vyššie)
                                     // ─────────────────────────────────────────────────────────────
-                                    const userTeamHasAnyEventOnDay = events.some((ev) => {
-                                        const evDay = extractDayKeyFromWhen(ev.when);
-                                        return evDay === dayKey;
-                                    });
-                                    if (!userTeamHasAnyEventOnDay) return;
-                                
                                     const userTeamHasEventOnDay = events.some((ev) => {
                                         const evDay = extractDayKeyFromWhen(ev.when);
                                         return evDay === dayKey && ev.location;
