@@ -1454,7 +1454,7 @@ class TransportGenerator {
                     // NOVÉ: Pre SS tím – vygeneruj ranné presuny z ubytovní zdrojovej skupiny
                     // na miesto prvej udalosti tohto SS tímu (len ak user tím v ten deň nemá udalosť)
                     // ─────────────────────────────────────────────────────────────
-                    if (isSuperstructureTeam) {
+                    if (isSuperstructureTeam && !isSpiderTeamName(teamName)) {
                         const ssGroupChar = (() => {
                             const tn = String(teamName).trim();
                             const nameCharMatch = /\d([A-ZÁ-Ž])\s*$/.exec(tn);
