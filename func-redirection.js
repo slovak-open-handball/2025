@@ -6,8 +6,10 @@
 //   s korektnou kategóriou podľa kontextu:
 //     - teams.js: nadpis kategórie v boxe
 //     - matches.js: riadok tabuľky zápasov (kategória v inom stĺpci)
-//     - matches.js detail: box s info o zápase (kategória v hlavičke)
-//     - matches.js detail: boxy súpisiek (kategória z boxu s info)
+//     - matches.js detail: gradient box + boxy súpisiek
+//     - tables.js: skupinová tabuľka (kategória v hlavičke skupiny)
+//     - tables.js: riadok zápasu (kategória z hlavičky skupiny / URL / filtra)
+//     - tables.js: playoff boxy (kategória z URL / aktívneho tlačidla filtra)
 //   Vzhľad zostáva PÔVODNÝ (žiadna modrá, žiadne podčiarknutie)
 // Čaká na inicializáciu window.db (z authentication.js)
 // ============================================================
@@ -90,18 +92,15 @@ let teamNameToCategoriesMap = new Map();
 let knownCategoryNames = [];
 
 // ------------------------------------------------------------
-// Pomocné funkcie na rozpoznanie kategórie v texte
+// Rozpoznanie kategórie v texte
 // ------------------------------------------------------------
 const textContainsKnownCategory = (text) => {
     if (!text) return null;
     const trimmed = String(text).trim();
     if (!trimmed) return null;
 
-    // Presná zhoda
     if (knownCategoryNames.includes(trimmed)) return trimmed;
 
-    // Obsahuje niektorú kategóriu (napr. "Kategória: U12 CH")
-    // Zoradíme od najdlhšej po najkratšiu, aby sme našli najšpecifickejšiu
     const sorted = [...knownCategoryNames].sort((a, b) => b.length - a.length);
     for (const cat of sorted) {
         if (trimmed.includes(cat)) return cat;
@@ -110,7 +109,8 @@ const textContainsKnownCategory = (text) => {
 };
 
 // ------------------------------------------------------------
-// 1) Kontext z nadpisu (h1–h4) v predkoch – pre teams.js
+// 1) Kontext z nadpisu (h1–h4) v predkoch – pre teams.js,
+//    skupinové tabuľky (h3 v hlavičke skupiny) a pod.
 // ------------------------------------------------------------
 const findCategoryFromHeadings = (element, rootElement) => {
     let current = element;
@@ -120,7 +120,6 @@ const findCategoryFromHeadings = (element, rootElement) => {
             const found = textContainsKnownCategory(current.textContent);
             if (found) return found;
         }
-        // Skús nájsť nadpis v potomkoch tohto elementu (napr. box má <h3>)
         if (current.querySelector) {
             const heading = current.querySelector("h1, h2, h3, h4");
             if (heading) {
@@ -134,15 +133,15 @@ const findCategoryFromHeadings = (element, rootElement) => {
 };
 
 // ------------------------------------------------------------
-// 2) Kontext z riadku tabuľky <tr> – pre zoznam zápasov
+// 2) Kontext z riadku tabuľky <tr> – pre matches.js zoznam zápasov
 // Hľadá v bunkách <td>/<th> toho istého riadku text, ktorý
-// zodpovedá niektorej kategórii.
+// zodpovedá niektorej kategórii. (V tables.js kategória v riadku
+// nie je, takže to vráti null a pokračuje sa ďalej.)
 // ------------------------------------------------------------
 const findCategoryFromTableRow = (element, rootElement) => {
     let current = element;
     while (current && current !== rootElement) {
         if (current.nodeName?.toUpperCase() === "TR") {
-            // Prejdi bunky v riadku
             const cells = current.querySelectorAll("td, th");
             for (const cell of cells) {
                 const found = textContainsKnownCategory(cell.textContent);
@@ -156,36 +155,50 @@ const findCategoryFromTableRow = (element, rootElement) => {
 };
 
 // ------------------------------------------------------------
-// 3) Kontext z najbližšieho "boxu" (rounded + shadow)
-// – pre detail zápasu (box s info o zápase, boxy súpisiek)
-// Hľadá nadpis kategórie v hlavičke boxu (prvý <h1>–<h4> alebo
-// element s class obsahujúcou 'bg-gray-50').
+// 3) Kontext z hlavičky skupinovej tabuľky v tables.js
+// Hľadá element s triedou 'px-6 py-4 border-b' (hlavička skupiny)
+// v najbližšom boxe 'rounded-xl shadow-lg' a v ňom h3 s názvom
+// kategórie v tvare "KATEGÓRIA - SKUPINA".
 // ------------------------------------------------------------
-const findCategoryFromBox = (element, rootElement) => {
+const findCategoryFromGroupTableHeader = (element, rootElement) => {
     let current = element;
     while (current && current !== rootElement) {
         const cls = current.className || "";
-        // Box rozpoznáme podľa kombinácie rounded + shadow/border
         if (
             typeof cls === "string" &&
             /rounded-(xl|lg)/.test(cls) &&
             /(shadow|border)/.test(cls)
         ) {
-            // Najprv skús hlavičku boxu (bg-gray-50)
-            const header = current.querySelector(".bg-gray-50");
+            // Hlavička skupiny má 'px-6 py-4 border-b' + farebné pozadie
+            const header = current.querySelector(".px-6.py-4.border-b");
             if (header) {
-                const found = textContainsKnownCategory(header.textContent);
-                if (found) return found;
+                const h3 = header.querySelector("h3");
+                if (h3) {
+                    const text = (h3.textContent || "").trim();
+                    // Formát: "KATEGÓRIA - SKUPINA" → skúsime celý text aj
+                    // jednotlivé časti
+                    const direct = textContainsKnownCategory(text);
+                    if (direct) return direct;
+                    // Skús rozdeliť podľa " - "
+                    const parts = text.split(/\s+-\s+/);
+                    for (const part of parts) {
+                        const found = textContainsKnownCategory(part);
+                        if (found) return found;
+                    }
+                }
             }
-            // Potom akýkoľvek nadpis v boxe
+            // Skús aj akýkoľvek nadpis v boxe
             const heading = current.querySelector("h1, h2, h3, h4");
             if (heading) {
-                const found = textContainsKnownCategory(heading.textContent);
-                if (found) return found;
+                const text = (heading.textContent || "").trim();
+                const direct = textContainsKnownCategory(text);
+                if (direct) return direct;
+                const parts = text.split(/\s+-\s+/);
+                for (const part of parts) {
+                    const found = textContainsKnownCategory(part);
+                    if (found) return found;
+                }
             }
-            // Potom celý text boxu (napr. badge s kategóriou)
-            const found = textContainsKnownCategory(current.textContent);
-            if (found) return found;
             return null;
         }
         current = current.parentNode;
@@ -194,8 +207,70 @@ const findCategoryFromBox = (element, rootElement) => {
 };
 
 // ------------------------------------------------------------
-// 4) Kontext z najbližšieho elementu s triedou 'bg-gradient-to-r'
-// – pre box s info o zápase v detaile (obsahuje badge s kategóriou)
+// 4) Kontext z URL hash filtra (tables.js)
+// Hash formát: #category=<slug>&group=<slug>&view=<slug>
+// ------------------------------------------------------------
+const decodeFromURL = (text) => {
+    if (!text) return '';
+    try {
+        return decodeURIComponent(text).replace(/-/g, ' ');
+    } catch (e) {
+        return text.replace(/-/g, ' ');
+    }
+};
+
+const findCategoryFromUrlHash = () => {
+    try {
+        const hash = window.location.hash;
+        if (!hash || hash === '#') return null;
+        const params = new URLSearchParams(hash.substring(1));
+        const category = params.get('category');
+        if (category) {
+            const decoded = decodeFromURL(category);
+            const found = textContainsKnownCategory(decoded);
+            if (found) return found;
+            // Skús aj priamo (bez dekódovania)
+            const found2 = textContainsKnownCategory(category);
+            if (found2) return found2;
+            return decoded;
+        }
+    } catch (e) {}
+    return null;
+};
+
+// ------------------------------------------------------------
+// 5) Kontext z aktívneho tlačidla filtra kategórií (tables.js)
+// Aktívne tlačidlo má triedy 'text-white shadow-md' a inline
+// backgroundColor. Nájde ho v najbližšom spoločnom rodičovi
+// (kontajner filtrov 'mb-6 space-y-3').
+// ------------------------------------------------------------
+const findCategoryFromActiveFilterButton = () => {
+    try {
+        // Nájdi kontajner filtrov
+        const filterContainer = document.querySelector('.mb-6.space-y-3');
+        if (!filterContainer) return null;
+        // Nájdi aktívne tlačidlo (text-white + shadow-md)
+        const buttons = filterContainer.querySelectorAll('button');
+        for (const btn of buttons) {
+            const cls = btn.className || '';
+            if (
+                typeof cls === 'string' &&
+                cls.includes('text-white') &&
+                cls.includes('shadow-md')
+            ) {
+                const text = (btn.textContent || '').trim();
+                // Preskoč tlačidlo "Playoff" a "Všetky kategórie"
+                if (text === 'Všetky kategórie' || text.includes('Playoff')) continue;
+                const found = textContainsKnownCategory(text);
+                if (found) return found;
+            }
+        }
+    } catch (e) {}
+    return null;
+};
+
+// ------------------------------------------------------------
+// 6) Kontext z gradient boxu – detail zápasu (matches.js)
 // ------------------------------------------------------------
 const findCategoryFromGradientBox = (element, rootElement) => {
     let current = element;
@@ -211,25 +286,68 @@ const findCategoryFromGradientBox = (element, rootElement) => {
 };
 
 // ------------------------------------------------------------
+// 7) Kontext z boxu (rounded + shadow/border) – fallback
+// ------------------------------------------------------------
+const findCategoryFromBox = (element, rootElement) => {
+    let current = element;
+    while (current && current !== rootElement) {
+        const cls = current.className || "";
+        if (
+            typeof cls === "string" &&
+            /rounded-(xl|lg)/.test(cls) &&
+            /(shadow|border)/.test(cls)
+        ) {
+            const header = current.querySelector(".bg-gray-50");
+            if (header) {
+                const found = textContainsKnownCategory(header.textContent);
+                if (found) return found;
+            }
+            const heading = current.querySelector("h1, h2, h3, h4");
+            if (heading) {
+                const found = textContainsKnownCategory(heading.textContent);
+                if (found) return found;
+            }
+            const found = textContainsKnownCategory(current.textContent);
+            if (found) return found;
+            return null;
+        }
+        current = current.parentNode;
+    }
+    return null;
+};
+
+// ------------------------------------------------------------
 // Zlúčená funkcia: nájde kontextovú kategóriu pre element
-// Skúša viac stratégií v poradí podľa špecifickosti.
+// Poradie stratégií podľa špecifickosti:
+//   1. Nadpisy (teams.js, hlavičky skupín)
+//   2. Riadok tabuľky (matches.js zoznam zápasov)
+//   3. Hlavička skupinovej tabuľky (tables.js)
+//   4. URL hash filter (tables.js)
+//   5. Aktívne tlačidlo filtra (tables.js – playoff boxy)
+//   6. Gradient box (matches.js detail)
+//   7. Box (rounded + shadow) – fallback
 // ------------------------------------------------------------
 const findCategoryContextForElement = (element, rootElement) => {
     if (!element) return null;
 
-    // 1) Nadpisy (teams.js aj detaily)
     let cat = findCategoryFromHeadings(element, rootElement);
     if (cat) return cat;
 
-    // 2) Riadok tabuľky (zoznam zápasov)
     cat = findCategoryFromTableRow(element, rootElement);
     if (cat) return cat;
 
-    // 3) Box s info o zápase (gradient)
+    cat = findCategoryFromGroupTableHeader(element, rootElement);
+    if (cat) return cat;
+
+    cat = findCategoryFromUrlHash();
+    if (cat) return cat;
+
+    cat = findCategoryFromActiveFilterButton();
+    if (cat) return cat;
+
     cat = findCategoryFromGradientBox(element, rootElement);
     if (cat) return cat;
 
-    // 4) Box (rounded + shadow/border)
     cat = findCategoryFromBox(element, rootElement);
     if (cat) return cat;
 
@@ -237,7 +355,7 @@ const findCategoryContextForElement = (element, rootElement) => {
 };
 
 // ------------------------------------------------------------
-// Pre daný tím a kontextovú kategóriu vráti URL
+// URL pre tím podľa kontextu
 // ------------------------------------------------------------
 const getTeamUrlForContext = (teamName, contextCategory) => {
     if (contextCategory) {
@@ -310,7 +428,6 @@ const makeTeamNamesClickable = () => {
         }
         teamNameRegex.lastIndex = 0;
 
-        // Kontextová kategória pre tento textový uzol
         const contextCategory = findCategoryContextForElement(textNode.parentNode, rootElement);
 
         const parts = [];
@@ -558,6 +675,12 @@ export const loadAllTeamsFromUsers = async () => {
             });
             window.__teamLinkifyObserver = observer;
         }
+
+        // Sledujeme aj zmeny hash (prepínanie filtra v tables.js)
+        window.addEventListener('hashchange', () => {
+            clearTimeout(window.__teamLinkifyHashTimer);
+            window.__teamLinkifyHashTimer = setTimeout(runLinkification, 200);
+        });
 
         return {
             teamsByCategory,
