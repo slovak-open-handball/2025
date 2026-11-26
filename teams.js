@@ -3699,19 +3699,23 @@ const TeamsOverviewApp = (props) => {
         );
     };
 
-    if (isUrlDetailLoading && !selectedTeamDetails) {
+    // 🔥 NOVÉ: Ak URL obsahuje detail tímu, ale ešte nemáme načítané dáta,
+    // zobrazíme loading namiesto tabuľky všetkých tímov
+    const { teamName: teamNameFromUrl, categoryName: categoryNameFromUrl } = parseUrlHash();
+    const hasUrlDetail = !!(teamNameFromUrl || categoryNameFromUrl);
+    const isWaitingForUrlDetail = hasUrlDetail && !selectedTeamDetails && (allTeams.length === 0 || Object.keys(categoryIdToNameMap).length === 0);
+
+    if (isWaitingForUrlDetail) {
         return React.createElement(
             'div',
-            { className: 'w-full' },
+            { className: 'flex items-center justify-center min-h-screen' },
             React.createElement(
                 'div',
-                { className: 'bg-white rounded-xl shadow-xl p-6' },
-                React.createElement(
-                    'div',
-                    { className: 'text-center text-gray-500 py-8' },
-                    React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto' }),
-                    React.createElement('p', { className: 'text-sm mt-3' }, 'Načítavam detail tímu...')
-                )
+                { className: 'text-center text-gray-500' },
+                React.createElement('div', { 
+                    className: 'animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto' 
+                }),
+                React.createElement('p', { className: 'text-sm mt-3' }, 'Načítavam detail tímu...')
             )
         );
     }
