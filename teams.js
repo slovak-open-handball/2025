@@ -3137,7 +3137,7 @@ const TeamsOverviewApp = (props) => {
                         }));
                 }
         
-                if (teamOccurrences.length > 0) {
+                if (teamOccurrences.length > 0) {                    
                     const baseTeamName = removeSuffix(teamNameFromUrl);
                     const allOccurrences = allTeams
                         .filter(team => {
@@ -3164,6 +3164,8 @@ const TeamsOverviewApp = (props) => {
                             selectedTeamName = exactMatch.teamName;
                         }
                     }
+
+                    setIsLoadingEvents(true);
                     
                     setSelectedTeamDetails({
                         teamName: selectedTeamName,
