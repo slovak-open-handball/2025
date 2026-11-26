@@ -3,7 +3,11 @@
 // Načíta všetky tímy z kolekcie 'users' a vypíše ich do konzoly
 // ako klikateľné odkazy: teams#category=<KATEGÓRIA>&team=<TÍM>
 // + Nastaví každý výskyt názvu tímu na stránke ako klikateľný odkaz
-//   s korektnou kategóriou podľa kontextu (nadpisu kategórie)
+//   s korektnou kategóriou podľa kontextu:
+//     - teams.js: nadpis kategórie v boxe
+//     - matches.js: riadok tabuľky zápasov (kategória v inom stĺpci)
+//     - matches.js detail: box s info o zápase (kategória v hlavičke)
+//     - matches.js detail: boxy súpisiek (kategória z boxu s info)
 //   Vzhľad zostáva PÔVODNÝ (žiadna modrá, žiadne podčiarknutie)
 // Čaká na inicializáciu window.db (z authentication.js)
 // ============================================================
@@ -57,7 +61,7 @@ const waitForDb = (timeoutMs = 15000, intervalMs = 200) => {
 };
 
 // ------------------------------------------------------------
-// Pomocná funkcia: slugify pre URL
+// slugify pre URL
 // ------------------------------------------------------------
 const slugify = (text) => {
     if (!text) return "";
@@ -70,7 +74,7 @@ const slugify = (text) => {
 };
 
 // ------------------------------------------------------------
-// Vytvorenie URL odkazu pre tím
+// URL odkazu pre tím
 // ------------------------------------------------------------
 const buildTeamUrl = (categoryName, teamName) => {
     const categorySlug = slugify(categoryName);
@@ -81,94 +85,181 @@ const buildTeamUrl = (categoryName, teamName) => {
 // ------------------------------------------------------------
 // Globálne dáta
 // ------------------------------------------------------------
-// Plochý zoznam všetkých tímov: [{ teamName, categoryName, url }, ...]
 let allTeamsFlat = [];
-
-// Mapa: názov tímu -> množina kategórií, v ktorých sa vyskytuje
 let teamNameToCategoriesMap = new Map();
-
-// Zoznam všetkých známych názvov kategórií (pre rozpoznanie nadpisu)
 let knownCategoryNames = [];
 
 // ------------------------------------------------------------
-// Zistí, pod akou kategóriou sa daný element nachádza.
-// Prejde rodičov smerom nahor a hľadá najbližší nadpis (h1–h4)
-// alebo element, ktorého text presne zodpovedá niektorej kategórii.
+// Pomocné funkcie na rozpoznanie kategórie v texte
 // ------------------------------------------------------------
-const findCategoryContextForElement = (element, rootElement) => {
+const textContainsKnownCategory = (text) => {
+    if (!text) return null;
+    const trimmed = String(text).trim();
+    if (!trimmed) return null;
+
+    // Presná zhoda
+    if (knownCategoryNames.includes(trimmed)) return trimmed;
+
+    // Obsahuje niektorú kategóriu (napr. "Kategória: U12 CH")
+    // Zoradíme od najdlhšej po najkratšiu, aby sme našli najšpecifickejšiu
+    const sorted = [...knownCategoryNames].sort((a, b) => b.length - a.length);
+    for (const cat of sorted) {
+        if (trimmed.includes(cat)) return cat;
+    }
+    return null;
+};
+
+// ------------------------------------------------------------
+// 1) Kontext z nadpisu (h1–h4) v predkoch – pre teams.js
+// ------------------------------------------------------------
+const findCategoryFromHeadings = (element, rootElement) => {
     let current = element;
     while (current && current !== rootElement) {
-        // 1) Skús nájsť nadpis (h1–h4) v rámci tohto elementu alebo jeho potomkoch
+        const tag = current.nodeName?.toUpperCase();
+        if (tag === "H1" || tag === "H2" || tag === "H3" || tag === "H4") {
+            const found = textContainsKnownCategory(current.textContent);
+            if (found) return found;
+        }
+        // Skús nájsť nadpis v potomkoch tohto elementu (napr. box má <h3>)
         if (current.querySelector) {
             const heading = current.querySelector("h1, h2, h3, h4");
             if (heading) {
-                const headingText = (heading.textContent || "").trim();
-                // Presná zhoda s niektorou kategóriou
-                if (headingText && knownCategoryNames.includes(headingText)) {
-                    return headingText;
-                }
-                // Skúsime aj či nadpis obsahuje názov kategórie (napr. "Kategória: U12 CH")
-                for (const catName of knownCategoryNames) {
-                    if (headingText.includes(catName)) {
-                        return catName;
-                    }
-                }
+                const found = textContainsKnownCategory(heading.textContent);
+                if (found) return found;
             }
         }
-
-        // 2) Skús priamy text aktuálneho elementu (napr. <h3>U12 CH</h3>)
-        if (current.childNodes && current.childNodes.length > 0) {
-            // overíme, či element sám nie je nadpis s textom kategórie
-            const tag = current.nodeName?.toUpperCase();
-            if (tag === "H1" || tag === "H2" || tag === "H3" || tag === "H4") {
-                const text = (current.textContent || "").trim();
-                if (knownCategoryNames.includes(text)) {
-                    return text;
-                }
-                for (const catName of knownCategoryNames) {
-                    if (text.includes(catName)) {
-                        return catName;
-                    }
-                }
-            }
-        }
-
         current = current.parentNode;
     }
     return null;
 };
 
 // ------------------------------------------------------------
-// Pre daný tím a kontextovú kategóriu vráti URL.
-// Ak tím v danej kategórii neexistuje, vráti fallback URL
-// (prvú kategóriu, v ktorej sa tím nachádza).
+// 2) Kontext z riadku tabuľky <tr> – pre zoznam zápasov
+// Hľadá v bunkách <td>/<th> toho istého riadku text, ktorý
+// zodpovedá niektorej kategórii.
+// ------------------------------------------------------------
+const findCategoryFromTableRow = (element, rootElement) => {
+    let current = element;
+    while (current && current !== rootElement) {
+        if (current.nodeName?.toUpperCase() === "TR") {
+            // Prejdi bunky v riadku
+            const cells = current.querySelectorAll("td, th");
+            for (const cell of cells) {
+                const found = textContainsKnownCategory(cell.textContent);
+                if (found) return found;
+            }
+            return null;
+        }
+        current = current.parentNode;
+    }
+    return null;
+};
+
+// ------------------------------------------------------------
+// 3) Kontext z najbližšieho "boxu" (rounded + shadow)
+// – pre detail zápasu (box s info o zápase, boxy súpisiek)
+// Hľadá nadpis kategórie v hlavičke boxu (prvý <h1>–<h4> alebo
+// element s class obsahujúcou 'bg-gray-50').
+// ------------------------------------------------------------
+const findCategoryFromBox = (element, rootElement) => {
+    let current = element;
+    while (current && current !== rootElement) {
+        const cls = current.className || "";
+        // Box rozpoznáme podľa kombinácie rounded + shadow/border
+        if (
+            typeof cls === "string" &&
+            /rounded-(xl|lg)/.test(cls) &&
+            /(shadow|border)/.test(cls)
+        ) {
+            // Najprv skús hlavičku boxu (bg-gray-50)
+            const header = current.querySelector(".bg-gray-50");
+            if (header) {
+                const found = textContainsKnownCategory(header.textContent);
+                if (found) return found;
+            }
+            // Potom akýkoľvek nadpis v boxe
+            const heading = current.querySelector("h1, h2, h3, h4");
+            if (heading) {
+                const found = textContainsKnownCategory(heading.textContent);
+                if (found) return found;
+            }
+            // Potom celý text boxu (napr. badge s kategóriou)
+            const found = textContainsKnownCategory(current.textContent);
+            if (found) return found;
+            return null;
+        }
+        current = current.parentNode;
+    }
+    return null;
+};
+
+// ------------------------------------------------------------
+// 4) Kontext z najbližšieho elementu s triedou 'bg-gradient-to-r'
+// – pre box s info o zápase v detaile (obsahuje badge s kategóriou)
+// ------------------------------------------------------------
+const findCategoryFromGradientBox = (element, rootElement) => {
+    let current = element;
+    while (current && current !== rootElement) {
+        const cls = current.className || "";
+        if (typeof cls === "string" && /bg-gradient-to-r/.test(cls)) {
+            const found = textContainsKnownCategory(current.textContent);
+            if (found) return found;
+        }
+        current = current.parentNode;
+    }
+    return null;
+};
+
+// ------------------------------------------------------------
+// Zlúčená funkcia: nájde kontextovú kategóriu pre element
+// Skúša viac stratégií v poradí podľa špecifickosti.
+// ------------------------------------------------------------
+const findCategoryContextForElement = (element, rootElement) => {
+    if (!element) return null;
+
+    // 1) Nadpisy (teams.js aj detaily)
+    let cat = findCategoryFromHeadings(element, rootElement);
+    if (cat) return cat;
+
+    // 2) Riadok tabuľky (zoznam zápasov)
+    cat = findCategoryFromTableRow(element, rootElement);
+    if (cat) return cat;
+
+    // 3) Box s info o zápase (gradient)
+    cat = findCategoryFromGradientBox(element, rootElement);
+    if (cat) return cat;
+
+    // 4) Box (rounded + shadow/border)
+    cat = findCategoryFromBox(element, rootElement);
+    if (cat) return cat;
+
+    return null;
+};
+
+// ------------------------------------------------------------
+// Pre daný tím a kontextovú kategóriu vráti URL
 // ------------------------------------------------------------
 const getTeamUrlForContext = (teamName, contextCategory) => {
-    // Ak máme kontextovú kategóriu a tím v nej existuje, použijeme ju
     if (contextCategory) {
         const categoriesForTeam = teamNameToCategoriesMap.get(teamName);
         if (categoriesForTeam && categoriesForTeam.has(contextCategory)) {
             return buildTeamUrl(contextCategory, teamName);
         }
     }
-    // Fallback: prvá kategória, v ktorej sa tím nachádza
     const categoriesForTeam = teamNameToCategoriesMap.get(teamName);
     if (categoriesForTeam && categoriesForTeam.size > 0) {
         const firstCat = categoriesForTeam.values().next().value;
         return buildTeamUrl(firstCat, teamName);
     }
-    // Posledný fallback – prázdna kategória (nemalo by nastať)
     return buildTeamUrl("", teamName);
 };
 
 // ------------------------------------------------------------
-// Nastaví všetky výskyty názvov tímov v DOM ako klikateľné odkazy
-// s korektnou kategóriou podľa kontextu
+// Linkifikácia DOM
 // ------------------------------------------------------------
 const makeTeamNamesClickable = () => {
     if (!allTeamsFlat.length) return;
 
-    // Zoradíme tímy od najdlhšieho názvu po najkratší
     const teamsSorted = [...allTeamsFlat].sort(
         (a, b) => b.teamName.length - a.teamName.length
     );
@@ -219,7 +310,7 @@ const makeTeamNamesClickable = () => {
         }
         teamNameRegex.lastIndex = 0;
 
-        // 🔥 ZISTÍME KONTEXTOVÚ KATEGÓRIU pre tento textový uzol
+        // Kontextová kategória pre tento textový uzol
         const contextCategory = findCategoryContextForElement(textNode.parentNode, rootElement);
 
         const parts = [];
@@ -234,7 +325,6 @@ const makeTeamNamesClickable = () => {
                 parts.push({ type: "text", value: text.slice(lastIndex, matchIndex) });
             }
 
-            // 🔥 URL podľa kontextu (kategória nadpisu)
             const url = getTeamUrlForContext(matchedName, contextCategory);
             parts.push({ type: "link", value: matchedName, url });
 
@@ -397,6 +487,25 @@ export const loadAllTeamsFromUsers = async () => {
         });
 
         console.table(flatList);
+
+        console.log("");
+        console.log("============================================================");
+        console.log("🔗 HTML ZOZNAM KLIKATEĽNÝCH ODKAZOV (skopíruj do stránky)");
+        console.log("============================================================");
+
+        let htmlOutput = "";
+        sortedCategories.forEach((categoryName) => {
+            htmlOutput += `\n<h3>${categoryName}</h3>\n<ul>\n`;
+            const sortedTeams = [...teamsByCategory[categoryName]].sort((a, b) =>
+                a.teamName.localeCompare(b.teamName, "sk")
+            );
+            sortedTeams.forEach((team) => {
+                const url = buildTeamUrl(categoryName, team.teamName);
+                htmlOutput += `  <li><a href="${url}">${team.teamName}</a></li>\n`;
+            });
+            htmlOutput += `</ul>\n`;
+        });
+        console.log(htmlOutput);
 
         // ------------------------------------------------------------
         // Príprava máp pre linkifikáciu
