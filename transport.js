@@ -1223,13 +1223,9 @@ const tryPrintPerTeamTimeline = () => {
     let enrichedList = applyImpliedWalkingTimesFromEvents(listWithRealTransfers);
 
     // ═══════════════════════════════════════════════════════════════════
-    // FINÁLNY FILTER – FAIL-SAFE verzia
-    // Nezávisí od firstEventPlaceByDay. Pre tím s ubytovaním:
-    //   1) zahoď každý transfer, ktorý nezačína na mieste ubytovania
-    //      A ZÁROVEŇ nekončí na mieste ubytovania (nesúvisí s ubytovaním)
-    //   2) zahoď každý transfer, ktorý začína na ubytovaní o 0:00 a končí
-    //      inde ako na mieste prvej udalosti dňa (to sú tie "príchodové"
-    //      transfery #14, #15, #16)
+    // FINÁLNY FILTER – pre tím s ubytovaním:
+    // Transfer sa ZOBRAZÍ len vtedy, ak ZAČÍNA na mieste ubytovania.
+    // Kde končí, nie je predmetom tohto filtra.
     // ═══════════════════════════════════════════════════════════════════
     if (teamHasAccommodation && accomNormForFilter) {
       const beforeCount = enrichedList.filter((e) => e.kind === 'transfer').length;
@@ -1242,74 +1238,15 @@ const tryPrintPerTeamTimeline = () => {
         const firstFromNorm = legs.length > 0
           ? normPlaceName(legs[0]?.fromName || '')
           : normPlaceName(ev.fromName || '');
-        const lastToNorm = legs.length > 0
-          ? normPlaceName(legs[legs.length - 1]?.toName || '')
-          : normPlaceName(ev.toName || '');
 
-        // ⬅️ Pravidlo 2: musí sa aspoň jeden koniec dotýkať ubytovania
         const startsAtAccom = firstFromNorm === accomNormForFilter;
-        const endsAtAccom = lastToNorm === accomNormForFilter;
 
-        if (!startsAtAccom && !endsAtAccom) {
-          console.log(`  ❌ [DROP] transfer nesúvisí s ubytovaním: "${firstFromNorm}" → "${lastToNorm}"`);
+        if (!startsAtAccom) {
+          console.log(`  ❌ [DROP] nezačína na ubytovaní: from="${firstFromNorm}" (ubytovanie="${accomNormForFilter}")`);
           return false;
         }
 
-        // ⬅️ Pravidlo 3: ak transfer začína o 0:00 a nezačína na ubytovaní → zahoď
-        // (toto sú príchodové transfery #14, #15, #16 – začínajú o 0:00 z iného miesta)
-        let startTsForCheck = null;
-        for (const leg of legs) {
-          if (leg.startTs != null && isFinite(leg.startTs)) {
-            startTsForCheck = startTsForCheck == null
-              ? leg.startTs
-              : Math.min(startTsForCheck, leg.startTs);
-          }
-        }
-        if (startTsForCheck == null && ev.ts != null && isFinite(ev.ts)) startTsForCheck = ev.ts;
-        if (startTsForCheck == null && ev.startTs != null && isFinite(ev.startTs)) startTsForCheck = ev.startTs;
-
-        if (startTsForCheck != null && isFinite(startTsForCheck)) {
-          const d = new Date(startTsForCheck);
-          if (d.getHours() === 0 && d.getMinutes() === 0 && !startsAtAccom) {
-            console.log(`  ❌ [DROP] transfer začína o 0:00 mimo ubytovania: "${firstFromNorm}" → "${lastToNorm}"`);
-            return false;
-          }
-        }
-
-        // ⬅️ Pravidlo 4 (fail-safe): zahoď transfer, ktorý končí na ubytovaní,
-        // ale nezačína na ubytovaní a nezačína ani na mieste poslednej udalosti dňa.
-        if (endsAtAccom && !startsAtAccom) {
-          const dk = getTransferDayKey(ev);
-          if (dk) {
-            // Zisti poslednú udalosť (match/catering) v ten deň PRED transferom
-            let lastEventBeforeTransfer = null;
-            for (const e of list) {
-              if (e.kind !== 'match' && e.kind !== 'catering') continue;
-              const eDk = getEventDayKey(e);
-              if (eDk !== dk) continue;
-              const eTs = getEventSortTs(e);
-              if (!isFinite(eTs) || eTs >= startTsForCheck) continue;
-              const ePlace = getEventPlaceLabel(e);
-              if (!ePlace) continue;
-              if (!lastEventBeforeTransfer || eTs > lastEventBeforeTransfer.ts) {
-                lastEventBeforeTransfer = { ts: eTs, place: ePlace };
-              }
-            }
-            // Ak existuje posledná udalosť pred transferom a NIE JE na mieste,
-            // odkiaľ transfer začína → zahoď (tím mal byť inde)
-            if (lastEventBeforeTransfer) {
-              const lastPlaceNorm = normPlaceName(lastEventBeforeTransfer.place);
-              if (firstFromNorm !== lastPlaceNorm) {
-                console.log(`  ❌ [DROP] transfer končí na ubytovaní, ale nezačína na poslednej udalosti dňa (posledná="${lastEventBeforeTransfer.place}", transfer from="${firstFromNorm}")`);
-                return false;
-              }
-            } else {
-              // Žiadna udalosť pred transferom v ten deň → zahoď
-              console.log(`  ❌ [DROP] transfer končí na ubytovaní, ale v deň ${dk} nie je žiadna udalosť pred ním`);
-              return false;
-            }
-          }
-        }
+        console.log(`  ✅ [KEEP] začína na ubytovaní: from="${firstFromNorm}"`);
         return true;
       });
 
