@@ -991,49 +991,70 @@ const tryPrintPerTeamTimeline = () => {
 
     // Pre každú udalosť: ak má legLabels (transfer), rozbalíme na samostatné riadky.
     // ─── NOVÉ: pre transfery doplníme do riadku aj dátum, ak tam ešte nie je ───
+    // ─── NOVÉ: pre transfer NIKDY nevypisujeme hlavičku (label), iba jednotlivé legy ───
     const rows = [];
     for (const ev of enrichedList) {
-      if (ev.kind === 'transfer' && Array.isArray(ev.legLabels) && ev.legLabels.length > 0) {
-        // Zistíme dátum transferu: primárne z ev.dayKey, inak z ev.ts
-        let transferDayLabel = '';
-        if (ev.dayKey) {
-          const parts = String(ev.dayKey).split('-');
-          if (parts.length === 3) {
-            transferDayLabel = `${parts[2]}. ${parts[1]}. ${parts[0]}`;
-          }
-        }
-        if (!transferDayLabel && ev.ts != null && isFinite(ev.ts)) {
-          transferDayLabel = formatDateDDMMYYYY(ev.ts) || '';
-        }
-        // ─── NOVÉ: fallback z legs (každý leg má startTs/endTs, ak má reálne časy) ───
-        if (!transferDayLabel && Array.isArray(ev.legs)) {
-          for (const leg of ev.legs) {
-            if (leg.startTs != null && isFinite(leg.startTs)) {
-              transferDayLabel = formatDateDDMMYYYY(leg.startTs) || '';
-              if (transferDayLabel) break;
-            }
-            if (leg.endTs != null && isFinite(leg.endTs)) {
-              transferDayLabel = formatDateDDMMYYYY(leg.endTs) || '';
-              if (transferDayLabel) break;
-            }
-          }
+      if (ev.kind === 'transfer') {
+        // ─── Pre transfer: vždy iba legy, nikdy nie hlavičku ───
+        const legs = Array.isArray(ev.legs) ? ev.legs : [];
+
+        // Zostav legLabels, ak chýbajú (napr. transfer bez legLabels)
+        let legLines = Array.isArray(ev.legLabels) && ev.legLabels.length > 0
+          ? ev.legLabels
+          : null;
+
+        if (!legLines && legs.length > 0) {
+          // Fallback: vygeneruj legLabels z legs
+          legLines = legs.map((l) => {
+            const timeLabel =
+              l.startTs != null && l.endTs != null
+                ? `${formatTimeOnly(l.startTs)} – ${formatTimeOnly(l.endTs)}`
+                : (l.isWalking ? 'PEŠI' : 'nepriradený');
+            const dateLabel = formatDateDDMMYYYY(l.startTs) || '';
+            const legTypeLabel = l.isWalking ? 'PEŠI' : (l.busName || 'PRESUN');
+            return `🚌 ${legTypeLabel} ${dateLabel ? dateLabel + ' ' : ''}${timeLabel} | ${l.fromName} → ${l.toName} | ${ev.category || '-'}`;
+          });
         }
 
-        for (const legLine of ev.legLabels) {
-          // Ak legLine už obsahuje dátum (napr. "🚌 Bus 2 25. 12. 2026 11:15 – 11:30 | ..."),
-          // nepridávame ho znova.
-          const hasDateInLine = /\d{1,2}\.\s*\d{1,2}\.\s*\d{4}/.test(String(legLine));
-          if (hasDateInLine || !transferDayLabel) {
-            rows.push(legLine);
-          } else {
-            // Vložíme dátum za ikonu/typ (za prvú medzeru po "🚌")
-            // Formát: "🚌 <TYP> | <dátum> <zvyšok>"
-            // Alebo jednoduchšie: prefix pred celý riadok
-            rows.push(`📅 ${transferDayLabel} | ${legLine}`);
+        if (legLines && legLines.length > 0) {
+          // Zistíme dátum transferu (pre prípad, že leg nemá dátum)
+          let transferDayLabel = '';
+          if (ev.dayKey) {
+            const parts = String(ev.dayKey).split('-');
+            if (parts.length === 3) {
+              transferDayLabel = `${parts[2]}. ${parts[1]}. ${parts[0]}`;
+            }
           }
+          if (!transferDayLabel && ev.ts != null && isFinite(ev.ts)) {
+            transferDayLabel = formatDateDDMMYYYY(ev.ts) || '';
+          }
+          if (!transferDayLabel && legs.length > 0) {
+            for (const leg of legs) {
+              if (leg.startTs != null && isFinite(leg.startTs)) {
+                transferDayLabel = formatDateDDMMYYYY(leg.startTs) || '';
+                if (transferDayLabel) break;
+              }
+              if (leg.endTs != null && isFinite(leg.endTs)) {
+                transferDayLabel = formatDateDDMMYYYY(leg.endTs) || '';
+                if (transferDayLabel) break;
+              }
+            }
+          }
+
+          for (const legLine of legLines) {
+            const hasDateInLine = /\d{1,2}\.\s*\d{1,2}\.\s*\d{4}/.test(String(legLine));
+            if (hasDateInLine || !transferDayLabel) {
+              rows.push(legLine);
+            } else {
+              rows.push(`📅 ${transferDayLabel} | ${legLine}`);
+            }
+          }
+        } else {
+          // ─── Krajný fallback: transfer bez legs aj bez legLabels → aspoň label ───
+          rows.push(ev.label || '(presun bez detailov)');
         }
       } else {
-        // ─── NOVÉ: pre eventy bez legLabels (napr. peší presun bez časov)
+        // ─── Pre eventy bez legLabels (napr. zápas, stravovanie) ───
         let evDayLabel = '';
         if (ev.dayKey) {
           const parts = String(ev.dayKey).split('-');
@@ -1044,7 +1065,6 @@ const tryPrintPerTeamTimeline = () => {
         if (!evDayLabel && ev.ts != null && isFinite(ev.ts)) {
           evDayLabel = formatDateDDMMYYYY(ev.ts) || '';
         }
-        // ─── NOVÉ: fallback z legs ───
         if (!evDayLabel && Array.isArray(ev.legs)) {
           for (const leg of ev.legs) {
             if (leg.startTs != null && isFinite(leg.startTs)) {
