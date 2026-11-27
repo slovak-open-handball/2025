@@ -269,8 +269,16 @@ const updateLoginButton = (isLoggedIn) => {
             loginButton.textContent = 'Prihlásenie';
             loginButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
             loginButton.style.backgroundColor = '';
-        }        
-        loginLink.style.display = 'inline-block';
+        }
+        const pagesContainer = document.getElementById('public-pages-buttons');
+        const hasVisiblePages = pagesContainer &&
+            pagesContainer.style.display !== 'none' &&
+            pagesContainer.querySelectorAll('a').length > 0;
+        if (hasVisiblePages) {
+            loginLink.style.display = 'none';
+        } else {
+            loginLink.style.display = 'inline-block';
+        }
     }
 };
 const getRoleColor = (role) => {
