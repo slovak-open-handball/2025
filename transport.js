@@ -990,8 +990,9 @@ const tryPrintPerTeamTimeline = () => {
     
     if (!teamAccommodationName) teamAccommodationName = 'bez ubytovania';
     
-    const teamHasAccommodation =
-      teamAccommodationName && teamAccommodationName !== 'bez ubytovania';
+    const teamHasAccommodation = teamAccommodationName && teamAccommodationName !== 'bez ubytovania';
+
+    console.log(`🏠 [ACCOM] ${team} (${cat}) → "${teamAccommodationName}" (hasAccommodation=${teamHasAccommodation})`);
     
     const normPlaceName = (s) => normalizePlaceName(String(s || ''));
     const accomNormForFilter = teamHasAccommodation ? normPlaceName(teamAccommodationName) : null;
