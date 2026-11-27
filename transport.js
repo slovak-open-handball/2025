@@ -2188,6 +2188,194 @@ const useCateringConsoleLog = (
 };
 
 /* ------------------------------------------------------------------ */
+/* Finálny filter transferov (DROP-1/2/3) – spoločný pre UI aj konzolu */
+/* ------------------------------------------------------------------ */
+const applyFinalTransferFilter = (transferEvents, teamName, categoryName) => {
+  if (!Array.isArray(transferEvents) || transferEvents.length === 0) return transferEvents;
+
+  const norm = (s) => normalizePlaceName(String(s || ''));
+
+  // 1) Zisti ubytovanie tímu
+  const cat = cleanCategory(categoryName || '');
+  const team = String(teamName || '').trim();
+
+  let accommodationName = '';
+  if (team) {
+    // presný kľúč
+    accommodationName =
+      __transportPerTeamBuffer.accommodationByKey.get(`${cat}|${team}`) || '';
+
+    // fallback: prehľadaj všetky kľúče s normalizovaným porovnaním
+    if (!accommodationName) {
+      const stripCategorySuffix = (s) => {
+        let out = String(s || '').trim();
+        out = out.replace(/\s*\([^()]*\)\s*$/g, '').trim();
+        if (cat) out = out.split(cat).join(' ').replace(/\s+/g, ' ').trim();
+        return out.toLowerCase();
+      };
+      const teamNorm = stripCategorySuffix(team);
+      for (const [key, accom] of __transportPerTeamBuffer.accommodationByKey.entries()) {
+        if (!accom || accom === 'bez ubytovania') continue;
+        const [keyCat, ...keyTeamParts] = String(key).split('|');
+        const keyTeamRaw = keyTeamParts.join('|').trim();
+        if (stripCategorySuffix(keyTeamRaw) !== teamNorm) continue;
+        if (keyCat && cleanCategory(keyCat) !== cat) continue;
+        accommodationName = accom;
+        break;
+      }
+    }
+  }
+
+  if (!accommodationName) accommodationName = 'bez ubytovania';
+  const hasAccommodation = accommodationName !== 'bez ubytovania';
+  const accomNorm = hasAccommodation ? norm(accommodationName) : null;
+
+  // 2) Zisti prvú udalosť dňa (match/catering) pre každý deň
+  const firstEventPlaceByDay = new Map();
+  const allEvents = [
+    ...(__transportPerTeamBuffer.matches || []),
+    ...(__transportPerTeamBuffer.catering || []),
+  ].filter((ev) => {
+    const evCat = cleanCategory(ev.category || '');
+    if (cat && evCat !== cat) return false;
+    const rawTeam = String(ev.teamName || '').trim();
+    const mappedTeam = __transportPerTeamBuffer.resolvedNames?.[rawTeam] || rawTeam;
+    if (team && mappedTeam !== team) return false;
+    return true;
+  });
+
+  const getEventPlaceLabel = (ev) => {
+    if (!ev) return null;
+    if (ev.kind === 'match') {
+      const parts = String(ev.label || '').split('|').map((s) => s.trim());
+      return parts[1] || null;
+    }
+    if (ev.kind === 'catering') {
+      const parts = String(ev.label || '').split('|').map((s) => s.trim());
+      return parts[2] || null;
+    }
+    return null;
+  };
+
+  const getEventDayKey = (ev) => {
+    if (!ev) return '';
+    if (ev.ts != null && isFinite(ev.ts)) {
+      const d = new Date(ev.ts);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    if (ev.dayKey) return String(ev.dayKey);
+    if (ev.label) {
+      const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(ev.label));
+      if (m) return `${m[3]}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`;
+    }
+    return '';
+  };
+
+  const getEventSortTs = (ev) => {
+    if (!ev) return Number.POSITIVE_INFINITY;
+    if (ev.ts != null && isFinite(ev.ts)) return ev.ts;
+    return Number.POSITIVE_INFINITY;
+  };
+
+  for (const ev of allEvents) {
+    const dk = getEventDayKey(ev);
+    if (!dk) continue;
+    const place = getEventPlaceLabel(ev);
+    if (!place) continue;
+    const sortTs = getEventSortTs(ev);
+    const prev = firstEventPlaceByDay.get(dk);
+    if (!prev || sortTs < prev.ts) {
+      firstEventPlaceByDay.set(dk, { ts: sortTs, place });
+    }
+  }
+
+  // 3) Deň transferu
+  const getTransferDayKey = (ev) => {
+    const legs = Array.isArray(ev.legs) ? ev.legs : [];
+    let startTs = null;
+    let endTs = null;
+    for (const leg of legs) {
+      const s = leg.startTs != null && isFinite(leg.startTs)
+        ? leg.startTs
+        : (leg.startTime ? parseTimeToTs(leg.startTime, ev.dayKey) : null);
+      const e = leg.endTs != null && isFinite(leg.endTs)
+        ? leg.endTs
+        : (leg.endTime ? parseTimeToTs(leg.endTime, ev.dayKey) : null);
+      if (s != null) startTs = startTs == null ? s : Math.min(startTs, s);
+      if (e != null) endTs = endTs == null ? e : Math.max(endTs, e);
+    }
+    if (startTs == null && ev.ts != null && isFinite(ev.ts)) startTs = ev.ts;
+    if (endTs == null && ev.endTs != null && isFinite(ev.endTs)) endTs = ev.endTs;
+
+    let tsForDay = startTs;
+    if (tsForDay != null && isFinite(tsForDay)) {
+      const d = new Date(tsForDay);
+      if (d.getHours() === 0 && d.getMinutes() === 0 && endTs != null && endTs > tsForDay) {
+        tsForDay = endTs;
+      }
+    }
+    if (tsForDay == null || !isFinite(tsForDay)) return ev.dayKey || '';
+    const d = new Date(tsForDay);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  const parseTimeToTs = (timeStr, dayKey) => {
+    if (!timeStr || !dayKey) return null;
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(timeStr).trim());
+    if (!m) return null;
+    const dp = String(dayKey).split('-');
+    if (dp.length !== 3) return null;
+    return new Date(Number(dp[0]), Number(dp[1]) - 1, Number(dp[2]), Number(m[1]), Number(m[2]), 0, 0).getTime();
+  };
+
+  // 4) Aplikuj filter
+  if (!hasAccommodation || !accomNorm) {
+    // tím bez ubytovania → nechaj všetko (pôvodná logika)
+    return transferEvents;
+  }
+
+  return transferEvents.filter((ev) => {
+    const legs = Array.isArray(ev.legs) ? ev.legs : [];
+    const firstFromNorm = legs.length > 0
+      ? norm(legs[0]?.fromName || '')
+      : norm(ev.fromName || '');
+    const lastToNorm = legs.length > 0
+      ? norm(legs[legs.length - 1]?.toName || '')
+      : norm(ev.toName || '');
+
+    // DROP-1: musí začínať na ubytovaní
+    if (firstFromNorm !== accomNorm) {
+      console.log(`  ❌ [DROP-1] ${firstFromNorm} → ${lastToNorm} (ubytovanie="${accomNorm}")`);
+      return false;
+    }
+
+    // DROP-2: musí končiť na prvej udalosti dňa
+    const dk = getTransferDayKey(ev);
+    const firstEvent = dk ? firstEventPlaceByDay.get(dk) : null;
+    if (!firstEvent) {
+      console.log(`  ❌ [DROP-2] deň "${dk}" bez prvej udalosti`);
+      return false;
+    }
+    const firstEventPlaceNorm = norm(firstEvent.place);
+
+    // DROP-3: ak ubytovanie == prvá udalosť dňa → žiadny transfer
+    if (firstEventPlaceNorm === accomNorm) {
+      console.log(`  ❌ [DROP-3] ubytovanie == prvá udalosť dňa`);
+      return false;
+    }
+
+    // DROP-2b: musí končiť na prvej udalosti dňa
+    if (lastToNorm !== firstEventPlaceNorm) {
+      console.log(`  ❌ [DROP-2b] nekončí na prvej udalosti dňa (to="${lastToNorm}", prvá="${firstEventPlaceNorm}")`);
+      return false;
+    }
+
+    console.log(`  ✅ [KEEP] ${firstFromNorm} → ${lastToNorm} (deň=${dk})`);
+    return true;
+  });
+};
+
+/* ------------------------------------------------------------------ */
 /* Hlavná komponenta                                                  */
 /* ------------------------------------------------------------------ */
 
@@ -4024,7 +4212,7 @@ const TransportApp = ({ userProfileData }) => {
     if (!hasAny) return;
 
     // 1) Transfery z UI (už prefiltrované podľa zvolených filtrov)
-    const transferEvents = (timelineEvents || []).map((ev) => ({
+    const rawTransferEvents = (timelineEvents || []).map((ev) => ({
       kind: 'transfer',
       teamName: String(ev.teamName || '').trim(),
       category: String(ev.category || '').trim(),
@@ -4035,6 +4223,34 @@ const TransportApp = ({ userProfileData }) => {
       legs: ev.legs || [],
       _fromUi: true,
     }));
+    
+    // ⬇️ NOVÉ: finálny filter podľa tímu (DROP-1/2/3)
+    let transferEvents = rawTransferEvents;
+    if (teamFilterName) {
+      // aplikuj filter len pre konkrétny tím (ak je vybraný)
+      console.log(`🔍 [UI FILTER] ${teamFilterName} (${teamFilterCategory || '-'})`);
+      transferEvents = applyFinalTransferFilter(
+        rawTransferEvents,
+        teamFilterName,
+        teamFilterCategory || catFilter || ''
+      );
+    } else {
+      // ak nie je vybraný tím, zoskup podľa tímov a filtruj každý zvlášť
+      const byTeamMap = new Map();
+      for (const ev of rawTransferEvents) {
+        const rawTeam = String(ev.teamName || '').trim();
+        if (!rawTeam) continue;
+        const mappedTeam = __transportPerTeamBuffer.resolvedNames?.[rawTeam] || rawTeam;
+        const evCat = cleanCategory(ev.category || '');
+        const k = `${evCat}|${mappedTeam}`;
+        if (!byTeamMap.has(k)) byTeamMap.set(k, { team: mappedTeam, cat: evCat, events: [] });
+        byTeamMap.get(k).events.push(ev);
+      }
+      transferEvents = [];
+      for (const { team, cat, events } of byTeamMap.values()) {
+        transferEvents.push(...applyFinalTransferFilter(events, team, cat));
+      }
+    }
 
     // 2) Zápasy a stravovanie z globálneho buffra
     //    Aby rešpektovali filtre (deň / kategória / tím), aplikujeme ich tu.
