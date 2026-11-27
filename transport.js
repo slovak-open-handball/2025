@@ -4147,62 +4147,27 @@ const TransportApp = ({ userProfileData }) => {
       });
     });
 
-    // ─── ROVNAKÁ LOGIKA FILTROVANIA AKO V tryPrintPerTeamTimeline ───
-    // Ak je tím ubytovaný a v deň má viac presunov pred prvou udalosťou (zápas/stravovanie),
-    // zobrazí sa iba logický presun z ubytovania na miesto prvej udalosti.
-    const groupedUi = new Map();
+    // ─── FINÁLNY FILTER (DROP-1/2/3) – rovnaký ako v konzole ───
+    // Zoskup transfery podľa tímu a aplikuj applyFinalTransferFilter na každý tím zvlášť.
+    // Tým sa zabezpečí, že UI aj konzola používajú IDENTICKÚ logiku.
+    const transfersByTeamUi = new Map();
     for (const ev of rawEvents) {
-      const key = `${cleanCategory(ev.category)}|${String(ev.teamName).trim()}|${ev.dayKey || ''}`;
-      if (!groupedUi.has(key)) groupedUi.set(key, []);
-      groupedUi.get(key).push(ev);
+      const rawTeam = String(ev.teamName || '').trim();
+      if (!rawTeam) continue;
+      const evCat = cleanCategory(ev.category || '');
+      const k = `${evCat}|${rawTeam}`;
+      if (!transfersByTeamUi.has(k)) {
+        transfersByTeamUi.set(k, { team: rawTeam, cat: evCat, events: [] });
+      }
+      transfersByTeamUi.get(k).events.push(ev);
     }
 
     const filteredUiEvents = [];
-    for (const [key, events] of groupedUi.entries()) {
-      const [cat, team, dk] = key.split('|');
-
-      const firstEvent = pickFirstEventOfDayForTeamUi(cat, team, dk);
-      const firstEventPlace = firstEvent ? getPlaceNameFromEventLabelUi(firstEvent) : null;
-
-      const accomKey = `${cat}|${team}`;
-      const accommodationName =
-        __transportPerTeamBuffer.accommodationByKey.get(accomKey) || null;
-      const hasAccommodation =
-        accommodationName && accommodationName !== 'bez ubytovania';
-
-      if (!firstEvent && !hasAccommodation) {
-        filteredUiEvents.push(...events);
-        continue;
-      }
-
-      const firstEventTs = firstEvent?.ts ?? Number.POSITIVE_INFINITY;
-
-      const beforeFirst = [];
-      const afterFirst = [];
-      for (const ev of events) {
-        if (ev.sortTs < firstEventTs) beforeFirst.push(ev);
-        else afterFirst.push(ev);
-      }
-
-      if (beforeFirst.length <= 1) {
-        filteredUiEvents.push(...events);
-        continue;
-      }
-
-      const matching = beforeFirst.filter((ev) =>
-        isTransferRelevantForFirstEventUi(
-          ev.legs,
-          hasAccommodation ? accommodationName : null,
-          firstEventPlace
-        )
-      );
-
-      if (matching.length > 0) {
-        matching.sort((a, b) => a.sortTs - b.sortTs);
-        filteredUiEvents.push(matching[0], ...afterFirst);
-      } else {
-        filteredUiEvents.push(...events);
-      }
+    for (const { team, cat, events } of transfersByTeamUi.values()) {
+      // applyFinalTransferFilter očakáva eventy s `legs[].fromName/toName`
+      // a `dayKey` / `startTs` – čo rawEvents majú.
+      const kept = applyFinalTransferFilter(events, team, cat);
+      filteredUiEvents.push(...kept);
     }
     // ─── koniec filtra ───
 
