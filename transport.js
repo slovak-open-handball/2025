@@ -1223,53 +1223,85 @@ const tryPrintPerTeamTimeline = () => {
     let enrichedList = applyImpliedWalkingTimesFromEvents(listWithRealTransfers);
 
     // ═══════════════════════════════════════════════════════════════════
-    // FINÁLNY FILTER – pre tím s ubytovaním:
-    //   1) ak prvá udalosť dňa je na mieste ubytovania → zahoď VŠETKY
-    //      transfery v ten deň (vrátane walking a implied walking)
-    //   2) inak zahoď transfer, ktorý nezačína ani nekončí na ubytovaní
+    // FINÁLNY FILTER – FAIL-SAFE verzia
+    // Nezávisí od firstEventPlaceByDay. Pre tím s ubytovaním:
+    //   1) zahoď každý transfer, ktorý nezačína na mieste ubytovania
+    //      A ZÁROVEŇ nekončí na mieste ubytovania (nesúvisí s ubytovaním)
+    //   2) zahoď každý transfer, ktorý začína na ubytovaní o 0:00 a končí
+    //      inde ako na mieste prvej udalosti dňa (to sú tie "príchodové"
+    //      transfery #14, #15, #16)
     // ═══════════════════════════════════════════════════════════════════
     if (teamHasAccommodation && accomNormForFilter) {
       const beforeCount = enrichedList.filter((e) => e.kind === 'transfer').length;
-      console.groupCollapsed(`🔍 [FINAL FILTER] ${team} (${cat}) – accomNorm="${accomNormForFilter}" – transferov pred=${beforeCount}`);
-      enrichedList.forEach((ev, idx) => {
-        if (ev.kind !== 'transfer') return;
-        const dk = getTransferDayKey(ev);
-        const legs = ev.legs || [];
-        const firstFrom = legs[0]?.fromName || ev.fromName || '';
-        const lastTo = legs[legs.length - 1]?.toName || ev.toName || '';
-        const firstEvent = dk ? firstEventPlaceByDay.get(dk) : null;
-        const lastEvent = dk ? lastEventPlaceByDay.get(dk) : null;
-        const blocked = isTransferBlockedByFirstEventAtAccommodation(ev, accomNormForFilter);
-        console.log(
-          `  [${idx}] dk="${dk}" from="${firstFrom}" to="${lastTo}"`,
-          `firstEventOfDay=${firstEvent ? `"${firstEvent.place}"` : 'NONE'}`,
-          `lastEventOfDay=${lastEvent ? `"${lastEvent.place}"` : 'NONE'}`,
-          `→ BLOCKED=${blocked}`
-        );
-      });
-      console.groupEnd();
+      console.log(`🔍 [FINAL FILTER] ${team} (${cat}) – accomNorm="${accomNormForFilter}" – transferov pred=${beforeCount}`);
 
       enrichedList = enrichedList.filter((ev) => {
         if (ev.kind !== 'transfer') return true;
 
-        // ⬅️ Pravidlo 1: prvá udalosť dňa na mieste ubytovania → zahoď VŠETKY transfery v ten deň
-        if (isTransferBlockedByFirstEventAtAccommodation(ev, accomNormForFilter)) {
+        const legs = Array.isArray(ev.legs) ? ev.legs : [];
+        const firstFromNorm = legs.length > 0
+          ? normPlaceName(legs[0]?.fromName || '')
+          : normPlaceName(ev.fromName || '');
+        const lastToNorm = legs.length > 0
+          ? normPlaceName(legs[legs.length - 1]?.toName || '')
+          : normPlaceName(ev.toName || '');
+
+        // ⬅️ Pravidlo 2: musí sa aspoň jeden koniec dotýkať ubytovania
+        const startsAtAccom = firstFromNorm === accomNormForFilter;
+        const endsAtAccom = lastToNorm === accomNormForFilter;
+
+        if (!startsAtAccom && !endsAtAccom) {
+          console.log(`  ❌ [DROP] transfer nesúvisí s ubytovaním: "${firstFromNorm}" → "${lastToNorm}"`);
           return false;
         }
 
-        // ⬅️ Pravidlo 2: transfer musí začínať ALEBO končiť na ubytovaní
-        const legs = Array.isArray(ev.legs) ? ev.legs : [];
-        if (legs.length === 0) {
-          const fromNorm = normPlaceName(ev.fromName || '');
-          const toNorm = normPlaceName(ev.toName || '');
-          if (!fromNorm && !toNorm) return true;
-          return fromNorm === accomNormForFilter || toNorm === accomNormForFilter;
+        // ⬅️ Pravidlo 3: ak transfer začína o 0:00 a nezačína na ubytovaní → zahoď
+        // (toto sú príchodové transfery #14, #15, #16 – začínajú o 0:00 z iného miesta)
+        let startTsForCheck = null;
+        for (const leg of legs) {
+          if (leg.startTs != null && isFinite(leg.startTs)) {
+            startTsForCheck = startTsForCheck == null
+              ? leg.startTs
+              : Math.min(startTsForCheck, leg.startTs);
+          }
+        }
+        if (startTsForCheck == null && ev.ts != null && isFinite(ev.ts)) startTsForCheck = ev.ts;
+        if (startTsForCheck == null && ev.startTs != null && isFinite(ev.startTs)) startTsForCheck = ev.startTs;
+
+        if (startTsForCheck != null && isFinite(startTsForCheck)) {
+          const d = new Date(startTsForCheck);
+          if (d.getHours() === 0 && d.getMinutes() === 0 && !startsAtAccom) {
+            console.log(`  ❌ [DROP] transfer začína o 0:00 mimo ubytovania: "${firstFromNorm}" → "${lastToNorm}"`);
+            return false;
+          }
         }
 
-        const firstFromNorm = normPlaceName(legs[0]?.fromName || '');
-        const lastToNorm = normPlaceName(legs[legs.length - 1]?.toName || '');
+        // ⬅️ Pravidlo 4 (fail-safe): zahoď transfer, ktorý končí na ubytovaní,
+        // ale nezačína na ubytovaní a v ten deň je prvý event na ubytovaní.
+        // (Toto pokrýva prípad, keď firstEventPlaceByDay zlyhá.)
+        if (endsAtAccom && !startsAtAccom) {
+          const dk = getTransferDayKey(ev);
+          if (dk) {
+            // Zisti, či v ten deň existuje zápas/stravovanie, ktoré začína skôr
+            // ako transfer a je na ubytovaní.
+            const anchorsSameDay = list.filter((e) => {
+              if (e.kind !== 'match' && e.kind !== 'catering') return false;
+              const eDk = getEventDayKey(e);
+              if (eDk !== dk) return false;
+              const ePlace = getEventPlaceLabel(e);
+              if (!ePlace) return false;
+              if (normPlaceName(ePlace) !== accomNormForFilter) return false;
+              const eTs = getEventSortTs(e);
+              return eTs < startTsForCheck;
+            });
+            if (anchorsSameDay.length > 0) {
+              console.log(`  ❌ [DROP] v deň ${dk} je prvý event na ubytovaní, transfer končí na ubytovaní z iného miesta: "${firstFromNorm}" → "${lastToNorm}"`);
+              return false;
+            }
+          }
+        }
 
-        return firstFromNorm === accomNormForFilter || lastToNorm === accomNormForFilter;
+        return true;
       });
 
       const afterCount = enrichedList.filter((e) => e.kind === 'transfer').length;
