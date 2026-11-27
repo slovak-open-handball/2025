@@ -907,49 +907,6 @@ const tryPrintPerTeamTimeline = () => {
     // ktoré by inak prešli nezmenené a zobrazili sa v UI aj v konzole). ───
     const normPlaceName = (s) => normalizePlaceName(String(s || ''));
     const accomNormForFilter = teamHasAccommodation ? normPlaceName(teamAccommodationName) : null;
-    
-    // ─── NOVÉ: Zisti, či pre daný tím a deň existuje aspoň jeden reálny transfer,
-    // ktorý začína o 0:00 na mieste ubytovania. Ak NIE, žiadny transfer pre ten deň
-    // sa nesmie zobraziť (ani v UI, ani v konzole). ───
-    const daysWithMidnightStartFromAccommodation = new Set();
-    if (teamHasAccommodation && accomNormForFilter) {
-      for (const ev of list) {
-        if (ev.kind !== 'transfer') continue;
-        const legs = Array.isArray(ev.legs) ? ev.legs : [];
-        if (legs.length === 0) continue;
-
-        // ⬅️ NOVÉ: berieme do úvahy iba REÁLNE transfery (majú reálne časy z DB),
-        // nie implied walking transfery doplnené neskôr.
-        const hasRealTimes =
-          legs.some((l) => l.startTs != null && l.endTs != null && l.endTs > l.startTs) ||
-          (ev.ts != null && isFinite(ev.ts));
-        if (!hasRealTimes) continue;
-
-        const firstFrom = normPlaceName(legs[0]?.fromName);
-        if (firstFrom !== accomNormForFilter) continue;
-
-        // Zisti deň transferu
-        let evDayKey = ev.dayKey || '';
-        if (!evDayKey) {
-          const ts = ev.ts ?? legs[0]?.startTs ?? null;
-          if (ts != null && isFinite(ts)) {
-            const d = new Date(ts);
-            evDayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-          }
-        }
-        if (!evDayKey) continue;
-
-        // Zisti, či transfer začína o 0:00
-        let startTs = legs[0]?.startTs;
-        if (startTs == null && ev.ts != null && isFinite(ev.ts)) startTs = ev.ts;
-        if (startTs == null) continue;
-
-        const d = new Date(startTs);
-        if (d.getHours() === 0 && d.getMinutes() === 0) {
-          daysWithMidnightStartFromAccommodation.add(evDayKey);
-        }
-      }
-    }
 
     const listFiltered = list.filter((ev) => {
       if (ev.kind !== 'transfer') return true;
@@ -958,29 +915,15 @@ const tryPrintPerTeamTimeline = () => {
       const legs = Array.isArray(ev.legs) ? ev.legs : [];
       if (legs.length === 0) return true;
 
-      // Zisti deň transferu
-      let evDayKey = ev.dayKey || '';
-      if (!evDayKey) {
-        const ts = ev.ts ?? legs[0]?.startTs ?? null;
-        if (ts != null && isFinite(ts)) {
-          const d = new Date(ts);
-          evDayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        }
-      }
-
-      // ─── NOVÉ: Ak pre tento deň neexistuje žiadny transfer začínajúci o 0:00
-      // na mieste ubytovania, tento transfer sa nesmie zobraziť. ───
-      if (evDayKey && !daysWithMidnightStartFromAccommodation.has(evDayKey)) {
-        return false;
-      }
-
       const firstFrom = normPlaceName(legs[0]?.fromName);
 
-      // ⬅️ NOVÉ: Pre tím s ubytovaním NIKDY nezobrazuj transfer, ktorý začína o 0:00
-      // a nezačína na mieste ubytovania – bez ohľadu na to, či má reálne časy
-      // alebo ide o implied walking transfer.
+      // Zisti čas začiatku transferu
       let startTsForCheck = legs[0]?.startTs;
       if (startTsForCheck == null && ev.ts != null && isFinite(ev.ts)) startTsForCheck = ev.ts;
+
+      // ─── NOVÉ: Pre tím s ubytovaním NIKDY nezobrazuj transfer, ktorý začína o 0:00
+      // a nezačína na mieste ubytovania – bez ohľadu na to, či má reálne časy
+      // alebo ide o implied walking transfer. ───
       if (startTsForCheck != null && isFinite(startTsForCheck)) {
         const d = new Date(startTsForCheck);
         if (d.getHours() === 0 && d.getMinutes() === 0) {
