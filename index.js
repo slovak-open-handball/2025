@@ -13,6 +13,20 @@ const TOOLTIP_HEIGHT = 320;
 const PREVIEW_SCALE = 0.25;
 const PREVIEW_VIEWPORT_WIDTH = 1920;
 const PREVIEW_VIEWPORT_HEIGHT = 1080;
+const PREVIEW_HIDE_CSS = `
+    #header-placeholder,
+    #header-placeholder > header,
+    header#main-header,
+    header.site-header,
+    .site-header,
+    #main-header {
+        display: none !important;
+    }
+    body {
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+    }
+`;
 const EXCLUDED_PAGES_FROM_HIDING = ['category-creation'];
 const PAGE_BUTTON_DEFINITIONS = [
     { id: 'teams-in-groups', label: 'Skupiny', href: 'teams-in-groups' },
@@ -236,6 +250,15 @@ const showPagePreviewTooltip = (anchor, href) => {
         iframe.style.height = `${PREVIEW_VIEWPORT_HEIGHT}px`;
         iframe.addEventListener('load', () => {
             loader.remove();
+            try {
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                if (doc) {
+                    const style = doc.createElement('style');
+                    style.textContent = PREVIEW_HIDE_CSS;
+                    doc.head.appendChild(style);
+                }
+            } catch (e) {
+            }
         });
         wrap.appendChild(iframe);
         document.body.appendChild(tooltip);
