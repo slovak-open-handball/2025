@@ -1027,14 +1027,23 @@ const tryPrintPerTeamTimeline = () => {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
 
-    // ─── Pomocná funkcia: má sa transfer v tento deň zablokovať? ───
     const isTransferBlockedByFirstEventAtAccommodation = (ev, accomNorm) => {
       if (!accomNorm) return false;
       const dk = getTransferDayKey(ev);
-      if (!dk) return false;
+      if (!dk) {
+        console.log(`   🚫 [BLOCK-CHECK] dk="" → neblokujem`);
+        return false;
+      }
       const firstEvent = firstEventPlaceByDay.get(dk);
-      if (!firstEvent) return false;
-      return normPlaceName(firstEvent.place) === accomNorm;
+      if (!firstEvent) {
+        console.log(`   🚫 [BLOCK-CHECK] dk="${dk}" firstEvent=NONE → NEBLOKUJEM (toto je príčina!)`);
+        return false;
+      }
+      const match = normPlaceName(firstEvent.place) === accomNorm;
+      console.log(
+        `   🚫 [BLOCK-CHECK] dk="${dk}" firstEvent.place="${firstEvent.place}" (norm="${normPlaceName(firstEvent.place)}") vs accomNorm="${accomNorm}" → ${match ? 'BLOKUJEM' : 'NEBLOKUJEM'}`
+      );
+      return match;
     };
 
     const listFiltered = !mappingDone
@@ -1160,34 +1169,47 @@ const tryPrintPerTeamTimeline = () => {
     let enrichedList = applyImpliedWalkingTimesFromEvents(listWithRealTransfers);
 
     // ═══════════════════════════════════════════════════════════════════
-    // FINÁLNY FILTER – používa PÔVODNÝ deň transferu (pred enrich),
-    // aby ho enrich (prepísanie ts/dayKey) neobišiel.
+    // FINÁLNY FILTER – po všetkých enrich krokoch ešte raz
     // ═══════════════════════════════════════════════════════════════════
     if (teamHasAccommodation && accomNormForFilter) {
+      // ─── DEBUG: vypíš čo máme pre tento tím ───
+      console.groupCollapsed(`🔍 [DEBUG FILTER] ${team} (${cat}) – accomNorm="${accomNormForFilter}"`);
+      console.log('firstEventPlaceByDay:', Array.from(firstEventPlaceByDay.entries()));
+      console.log('enrichedList transfers:');
+      enrichedList.forEach((ev, idx) => {
+        if (ev.kind !== 'transfer') return;
+        const legs = Array.isArray(ev.legs) ? ev.legs : [];
+        const firstFrom = legs[0]?.fromName || ev.fromName || null;
+        const dk = getTransferDayKey(ev);
+        const firstEvent = dk ? firstEventPlaceByDay.get(dk) : null;
+        const blocked = isTransferBlockedByFirstEventAtAccommodation(ev, accomNormForFilter);
+        console.log(
+          `  [${idx}] dayKey="${dk}" from="${firstFrom}" (norm="${normPlaceName(firstFrom)}")`,
+          `| firstEventOfDay=${firstEvent ? `"${firstEvent.place}" (norm="${normPlaceName(firstEvent.place)}") ts=${new Date(firstEvent.ts).toLocaleString('sk')}` : 'NONE'}`,
+          `| BLOCKED=${blocked}`,
+          `| legs=${legs.length}`,
+          `| ev.ts=${ev.ts != null && isFinite(ev.ts) ? new Date(ev.ts).toLocaleString('sk') : ev.ts}`
+        );
+        if (legs.length > 0) {
+          legs.forEach((l, li) => {
+            console.log(
+              `       leg[${li}]: "${l.fromName}" → "${l.toName}"`,
+              `startTs=${l.startTs != null && isFinite(l.startTs) ? new Date(l.startTs).toLocaleString('sk') : l.startTs}`,
+              `endTs=${l.endTs != null && isFinite(l.endTs) ? new Date(l.endTs).toLocaleString('sk') : l.endTs}`
+            );
+          });
+        }
+      });
+      console.groupEnd();
+
       enrichedList = enrichedList.filter((ev) => {
         if (ev.kind !== 'transfer') return true;
-
-        // ⬅️ Použi pôvodný deň a pôvodné "from" (z WeakMap)
-        const dk = originalTransferDayKey.get(ev) || '';
-        const fromNorm = originalTransferFrom.get(ev) || '';
-
-        // 1) Ak prvá udalosť dňa je na ubytovaní → zablokuj VŠETKY transfery v ten deň
-        if (dk) {
-          const firstEvent = firstEventPlaceByDay.get(dk);
-          if (firstEvent && normPlaceName(firstEvent.place) === accomNormForFilter) {
-            return false;
-          }
-        }
-
-        // 2) Transfer, ktorý nezačína na ubytovaní a nie je to "z ubytovania" → zahoď
-        //    (tím s ubytovaním má zobrazovať len transfery začínajúce na ubytovaní)
-        if (fromNorm && fromNorm !== accomNormForFilter) {
-          // výnimka: ak ide z ubytovania preč (from === accom) – to necháme
-          return false;
-        }
-
-        return true;
+        return !isTransferBlockedByFirstEventAtAccommodation(ev, accomNormForFilter);
       });
+
+      // ─── DEBUG: čo zostalo po filtri ───
+      const remainingTransfers = enrichedList.filter((ev) => ev.kind === 'transfer');
+      console.log(`🔍 [DEBUG FILTER] ${team} (${cat}) – po filtri zostáva ${remainingTransfers.length} transferov`);
     }
     // ─── koniec doplnenia ───
     
