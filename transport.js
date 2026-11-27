@@ -1049,10 +1049,9 @@ const tryPrintPerTeamTimeline = () => {
               rows.push(`📅 ${transferDayLabel} | ${legLine}`);
             }
           }
-        } else {
-          // ─── Krajný fallback: transfer bez legs aj bez legLabels → aspoň label ───
-          rows.push(ev.label || '(presun bez detailov)');
         }
+        // ─── NOVÉ: ak transfer nemá legs ani legLines, NEVYPISUJEME NIČ ───
+        // (hlavičku s celkovou trasou nikdy nezobrazujeme)
       } else {
         // ─── Pre eventy bez legLabels (napr. zápas, stravovanie) ───
         let evDayLabel = '';
