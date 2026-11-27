@@ -8,8 +8,11 @@ let tooltipHideTimeout = null;
 let tooltipShowTimeout = null;
 let activeTooltip = null;
 const TOOLTIP_DELAY_MS = 450;
-const TOOLTIP_WIDTH = 480;
-const TOOLTIP_HEIGHT = 320;
+const TOOLTIP_WIDTH = 480;      // vizuálna šírka tooltipu
+const TOOLTIP_HEIGHT = 320;     // vizuálna výška tooltipu
+const PREVIEW_SCALE = 0.25;     // zmenšenie náhľadu na 25 %
+const PREVIEW_VIEWPORT_WIDTH = 1920;  // "virtuálna" šírka stránky v iframe
+const PREVIEW_VIEWPORT_HEIGHT = 1080; // "virtuálna" výška stránky v iframe
 const EXCLUDED_PAGES_FROM_HIDING = ['category-creation'];
 const PAGE_BUTTON_DEFINITIONS = [
     { id: 'teams-in-groups', label: 'Skupiny', href: 'teams-in-groups' },
@@ -109,12 +112,25 @@ const ensureTooltipStyles = () => {
             transform: translateY(0);
             pointer-events: auto;
         }
-        .page-preview-tooltip iframe {
+        .page-preview-tooltip .tooltip-preview-wrap {
+            position: relative;
             width: 100%;
             height: 100%;
+            overflow: hidden;
+            background: #f8fafc;
+        }
+        .page-preview-tooltip iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: ${PREVIEW_VIEWPORT_WIDTH}px;
+            height: ${PREVIEW_VIEWPORT_HEIGHT}px;
             border: 0;
             display: block;
             background: #f8fafc;
+            transform: scale(${PREVIEW_SCALE});
+            transform-origin: top left;
+            pointer-events: none;
         }
         .page-preview-tooltip .tooltip-loader {
             position: absolute;
@@ -125,11 +141,11 @@ const ensureTooltipStyles = () => {
             color: #64748b;
             font-size: 13px;
             background: #f8fafc;
+            z-index: 2;
         }
     `;
     document.head.appendChild(style);
 };
-
 const destroyTooltip = () => {
     if (tooltipShowTimeout) {
         clearTimeout(tooltipShowTimeout);
@@ -200,12 +216,10 @@ const showPagePreviewTooltip = (anchor, href) => {
         clearTimeout(tooltipShowTimeout);
         tooltipShowTimeout = null;
     }
-    // Ak už tooltip pre tento href existuje, len ho ukáž
     if (activeTooltip && activeTooltip.dataset.href === href) {
         activeTooltip.classList.add('visible');
         return;
     }
-    // Ak existuje tooltip pre iný href, zničíme ho
     if (activeTooltip) {
         activeTooltip.remove();
         activeTooltip = null;
@@ -215,20 +229,27 @@ const showPagePreviewTooltip = (anchor, href) => {
         tooltip.className = 'page-preview-tooltip';
         tooltip.dataset.href = href;
 
+        const wrap = document.createElement('div');
+        wrap.className = 'tooltip-preview-wrap';
+        tooltip.appendChild(wrap);
+
         const loader = document.createElement('div');
         loader.className = 'tooltip-loader';
         loader.textContent = 'Načítavam náhľad…';
-        tooltip.appendChild(loader);
+        wrap.appendChild(loader);
 
         const iframe = document.createElement('iframe');
         iframe.loading = 'lazy';
         iframe.referrerPolicy = 'no-referrer';
         iframe.title = `Náhľad stránky ${href}`;
         iframe.src = href;
+        // Vnútorná veľkosť iframe bude 1920x1080, CSS ho zmenší na 25 %
+        iframe.style.width = `${PREVIEW_VIEWPORT_WIDTH}px`;
+        iframe.style.height = `${PREVIEW_VIEWPORT_HEIGHT}px`;
         iframe.addEventListener('load', () => {
             loader.remove();
         });
-        tooltip.appendChild(iframe);
+        wrap.appendChild(iframe);
 
         document.body.appendChild(tooltip);
         activeTooltip = tooltip;
