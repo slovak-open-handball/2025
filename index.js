@@ -1,15 +1,10 @@
 import { doc, onSnapshot, getDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
 window.registrationDates = null;
 let timerId = null;
 let countdownIntervalId = null; 
 let hasCategories = false;
 let anyPagePublic = false;
-
-// Stránky, ktoré sa NEPOČÍTAJÚ do pravidla skrývania info o registrácii
 const EXCLUDED_PAGES_FROM_HIDING = ['category-creation'];
-
-// Rovnaké poradie a labely ako v header.html / PagesSettings
 const PAGE_BUTTON_DEFINITIONS = [
     { id: 'teams-in-groups', label: 'Skupiny', href: 'teams-in-groups' },
     { id: 'matches',         label: 'Zápasy',  href: 'matches' },
@@ -20,7 +15,6 @@ const PAGE_BUTTON_DEFINITIONS = [
     { id: 'statistics',      label: 'Štatistiky', href: 'statistics' },
     { id: 'map',             label: 'Mapa',    href: 'map' },
 ];
-
 const formatDate = (timestamp) => {
     if (!timestamp) return 'Neurčený dátum';
     const date = timestamp.toDate();
@@ -31,7 +25,6 @@ const formatDate = (timestamp) => {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `dňa&nbsp;${day}.&nbsp;${month}.&nbsp;${year}&nbsp;o&nbsp;${hours}:${minutes}&nbsp;hod.`;
 };
-
 const formatTournamentDate = (timestamp) => {
     if (!timestamp) return '—';
     const date = timestamp.toDate();
@@ -40,31 +33,22 @@ const formatTournamentDate = (timestamp) => {
     const year = date.getFullYear();
     return `${day}. ${month}. ${year}`;
 };
-
 const isReallyLoggedIn = () => {
     if (!window.globalUserProfileData) return false;    
     if (window.isAnonymousUser === true) return false;    
     if (window.globalUserProfileData.role === 'anonymous') return false;    
     return true;
 };
-
 const logAllDatesFromData = (data, sourceLabel) => {
-    console.log(`=== Dátumy z ${sourceLabel} ===`);
     if (!data) {
-        console.log('Žiadne dáta.');
         return;
     }
     Object.entries(data).forEach(([key, value]) => {
         if (value && typeof value.toDate === 'function') {
             const d = value.toDate();
-            console.log(`${key}: ${d.toLocaleString('sk-SK')} (raw: ${d.toISOString()})`);
-        } else {
-            console.log(`${key}: ${JSON.stringify(value)}`);
         }
     });
-    console.log('=== Koniec výpisu ===');
 };
-
 const renderTournamentDates = (dates) => {
     const heading =
         document.getElementById('tournament-title') ||
@@ -72,9 +56,7 @@ const renderTournamentDates = (dates) => {
         Array.from(document.querySelectorAll('h1, h2')).find(el =>
             el.textContent.trim().toLowerCase().includes('slovak open handball')
         );
-
     if (!heading) return;
-
     let container = document.getElementById('tournament-dates-display');
     if (!container) {
         container = document.createElement('div');
@@ -82,30 +64,22 @@ const renderTournamentDates = (dates) => {
         container.className = 'text-gray-700 text-base md:text-lg mt-2 mb-3 font-medium';
         heading.insertAdjacentElement('afterend', container);
     }
-
     if (!dates || !dates.tournamentStart || !dates.tournamentEnd) {
         container.innerHTML = '';
         return;
     }
-
     const start = formatTournamentDate(dates.tournamentStart);
     const end = formatTournamentDate(dates.tournamentEnd);
-
     container.innerHTML = `
         <p>${start} &ndash; ${end}</p>
     `;
 };
-
-// NOVÉ: vykreslí tlačidlá s odkazmi na verejné stránky
 const renderPublicPageButtons = (pagesSnapshot) => {
-    // Zistíme, kde tlačidlá umiestniť – skúsime #public-pages-buttons, inak ich vložíme
-    // za #registration-status-message alebo za nadpis turnaja
     let container = document.getElementById('public-pages-buttons');
     if (!container) {
         container = document.createElement('div');
         container.id = 'public-pages-buttons';
         container.className = 'flex flex-wrap gap-3 my-4 justify-center';
-
         const messageElement = document.getElementById('registration-status-message');
         const heading =
             document.getElementById('tournament-title') ||
@@ -113,7 +87,6 @@ const renderPublicPageButtons = (pagesSnapshot) => {
             Array.from(document.querySelectorAll('h1, h2')).find(el =>
                 el.textContent.trim().toLowerCase().includes('slovak open handball')
             );
-
         if (messageElement && messageElement.parentNode) {
             messageElement.insertAdjacentElement('afterend', container);
         } else if (heading) {
@@ -124,19 +97,14 @@ const renderPublicPageButtons = (pagesSnapshot) => {
                 heading.insertAdjacentElement('afterend', container);
             }
         } else {
-            // fallback – na koniec body
             document.body.appendChild(container);
         }
     }
-
-    // Zostavíme mapu viditeľnosti z kolekcie pages
     const visibility = {};
     pagesSnapshot.forEach((pageDoc) => {
         const data = pageDoc.data();
         visibility[pageDoc.id] = data && data.visible === true;
     });
-
-    // Rovnaké pravidlá ako v header.js (tables, teams, statistics závisia od iných)
     const isPageVisible = (pageId) => {
         if (pageId === 'tables') {
             return visibility['matches'] === true;
@@ -149,18 +117,14 @@ const renderPublicPageButtons = (pagesSnapshot) => {
         }
         return visibility[pageId] === true;
     };
-
-    // Vyčistíme kontajner
     container.innerHTML = '';
-
     const visiblePages = PAGE_BUTTON_DEFINITIONS.filter(def => isPageVisible(def.id));
-
     if (visiblePages.length === 0) {
         container.style.display = 'none';
+        applyLoginButtonVisibility();
         return;
     }
     container.style.display = 'flex';
-
     visiblePages.forEach(def => {
         const a = document.createElement('a');
         a.href = def.href;
@@ -168,12 +132,11 @@ const renderPublicPageButtons = (pagesSnapshot) => {
         a.className = 'inline-block px-5 py-2 rounded-lg bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition-colors duration-200';
         container.appendChild(a);
     });
+    applyLoginButtonVisibility();
 };
-
 const applyRegistrationVisibility = () => {
     const messageElement = document.getElementById('registration-status-message');
     if (!messageElement) return;
-
     if (anyPagePublic) {
         messageElement.classList.add('hidden');
         messageElement.innerHTML = '';
@@ -185,13 +148,11 @@ const applyRegistrationVisibility = () => {
         messageElement.classList.remove('hidden');
     }
 };
-
 const updateRegistrationStatusText = (dates) => {
     const messageElement = document.getElementById('registration-status-message');
     if (!messageElement) {
         return;
     }
-
     if (anyPagePublic) {
         messageElement.classList.add('hidden');
         messageElement.innerHTML = '';
@@ -201,9 +162,7 @@ const updateRegistrationStatusText = (dates) => {
         }
         return;
     }
-
     messageElement.classList.remove('hidden');
-
     if (!hasCategories) {
         messageElement.innerHTML = `
             <p class="text-red-600 font-semibold">Nie je možné sa zaregistrovať na turnaj Slovak Open Handball, pretože v systéme nie sú definované žiadne kategórie.</p>
@@ -274,6 +233,22 @@ const toggleRegistrationButton = (isVisible, reason = '') => {
     const buttonWrapper = document.getElementById('tournament-registration-button-wrapper');
     if (buttonWrapper) {
         buttonWrapper.style.display = isVisible ? 'inline-block' : 'none';
+    }
+};
+const applyLoginButtonVisibility = () => {
+    const loginLink = document.getElementById('login-button-wrapper');
+    if (!loginLink) return;
+    const container = document.getElementById('public-pages-buttons');
+    const hasVisibleButtons = container && container.style.display !== 'none' &&
+        container.querySelectorAll('a').length > 0;
+    if (hasVisibleButtons) {
+        loginLink.style.display = 'none';
+    } else {
+        if (typeof updateLoginButton === 'function') {
+            updateLoginButton(isReallyLoggedIn());
+        } else {
+            loginLink.style.display = 'inline-block';
+        }
     }
 };
 const updateLoginButton = (isLoggedIn) => {
@@ -355,7 +330,6 @@ const setupRegistrationDataListener = () => {
                 renderTournamentDates(window.registrationDates);
             } else {
                 window.registrationDates = null;
-                console.log('Dokument settings/registration neexistuje.');
                 renderTournamentDates(null);
             }
             updateRegistrationStatusAndButtons();
@@ -365,8 +339,6 @@ const setupRegistrationDataListener = () => {
             renderTournamentDates(null);
             updateRegistrationStatusAndButtons();
         });
-
-        // Sledovanie kolekcie "pages" – skrytie info o registrácii + render tlačidiel
         const pagesRef = collection(window.db, "pages");
         onSnapshot(pagesRef, (snapshot) => {
             let anyPublic = false;
@@ -378,20 +350,14 @@ const setupRegistrationDataListener = () => {
                 }
             });
             anyPagePublic = anyPublic;
-            console.log(`[pages] aspoň jedna (iná ako category-creation) verejná stránka: ${anyPagePublic}`);
-
-            // NOVÉ: vykreslíme tlačidlá s odkazmi na verejné stránky
             renderPublicPageButtons(snapshot);
-
             updateRegistrationStatusAndButtons();
         }, (error) => {
             console.error('Chyba pri načítaní kolekcie pages:', error);
             anyPagePublic = false;
-            // Aj pri chybe skúsime vyčistiť tlačidlá
             renderPublicPageButtons({ forEach: () => {} });
             updateRegistrationStatusAndButtons();
         });
-
     } catch (error) {
         console.error('Chyba v setupRegistrationDataListener:', error);
     }
