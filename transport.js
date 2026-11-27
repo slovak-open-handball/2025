@@ -992,7 +992,6 @@ const tryPrintPerTeamTimeline = () => {
     }
 
     // ─── Zisti miesto PRVEJ udalosti (zápas/stravovanie) pre každý deň ───
-    // Robustnejšia verzia: berie deň z ev.ts ALEBO z ev.dayKey.
     const firstEventPlaceByDay = new Map();
     if (teamHasAccommodation && accomNormForFilter) {
       const anchors = list.filter((ev) => ev.kind === 'match' || ev.kind === 'catering');
@@ -1007,15 +1006,31 @@ const tryPrintPerTeamTimeline = () => {
             evTsForSort = ev.ts;
           }
         }
+
+        // ⬅️ AK ev.ts je POSITIVE_INFINITY alebo neplatný, skúsime label
+        if (!dk && ev.label) {
+          const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/.exec(String(ev.label));
+          if (m) {
+            dk = `${m[3]}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`;
+            // ⬅️ DÔLEŽITÉ: ak ev.ts je POSITIVE_INFINITY, použi timestamp z labelu
+            if (!isFinite(evTsForSort) || evTsForSort === Number.POSITIVE_INFINITY) {
+              const labelTs = new Date(
+                Number(m[3]),
+                Number(m[2]) - 1,
+                Number(m[1]),
+                m[4] != null ? Number(m[4]) : 0,
+                m[5] != null ? Number(m[5]) : 0,
+                0, 0
+              ).getTime();
+              if (isFinite(labelTs)) evTsForSort = labelTs;
+            }
+          }
+        }
+
         if (!dk && ev.dayKey) {
           dk = String(ev.dayKey);
         }
-        if (!dk && ev.label) {
-          const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(ev.label));
-          if (m) {
-            dk = `${m[3]}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`;
-          }
-        }
+
         if (!dk) continue;
 
         const place = (() => {
@@ -1032,14 +1047,16 @@ const tryPrintPerTeamTimeline = () => {
         if (!place) continue;
 
         const prev = firstEventPlaceByDay.get(dk);
-        if (!prev || evTsForSort < prev.ts) {
+        // ⬅️ Ak prev.ts je tiež POSITIVE_INFINITY, porovnávame s evTsForSort
+        // (a ak obe sú POSITIVE_INFINITY, necháme prvý)
+        if (!prev || (isFinite(evTsForSort) && (!isFinite(prev.ts) || evTsForSort < prev.ts))) {
           firstEventPlaceByDay.set(dk, { ts: evTsForSort, place });
         }
       }
 
       console.log(
         `🔍 [FIRST EVENT BY DAY] ${team} (${cat}) –`,
-        Array.from(firstEventPlaceByDay.entries()).map(([k, v]) => `${k} → "${v.place}"`)
+        Array.from(firstEventPlaceByDay.entries()).map(([k, v]) => `${k} → "${v.place}" (ts=${isFinite(v.ts) ? new Date(v.ts).toLocaleString('sk') : v.ts})`)
       );
     }
 
