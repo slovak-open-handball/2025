@@ -4,6 +4,12 @@ let timerId = null;
 let countdownIntervalId = null; 
 let hasCategories = false;
 let anyPagePublic = false;
+let tooltipHideTimeout = null;
+let tooltipShowTimeout = null;
+let activeTooltip = null;
+const TOOLTIP_DELAY_MS = 450;
+const TOOLTIP_WIDTH = 480;
+const TOOLTIP_HEIGHT = 320;
 const EXCLUDED_PAGES_FROM_HIDING = ['category-creation'];
 const PAGE_BUTTON_DEFINITIONS = [
     { id: 'teams-in-groups', label: 'Skupiny', href: 'teams-in-groups' },
@@ -74,6 +80,169 @@ const renderTournamentDates = (dates) => {
         <p>${start} &ndash; ${end}</p>
     `;
 };
+
+/* ============================================================
+   TOOLTIP S IFRAME NÁHĽADOM
+   ============================================================ */
+const ensureTooltipStyles = () => {
+    if (document.getElementById('page-preview-tooltip-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'page-preview-tooltip-styles';
+    style.textContent = `
+        .page-preview-tooltip {
+            position: fixed;
+            z-index: 9999;
+            width: ${TOOLTIP_WIDTH}px;
+            height: ${TOOLTIP_HEIGHT}px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(6px);
+            transition: opacity .15s ease, transform .15s ease;
+            pointer-events: none;
+        }
+        .page-preview-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .page-preview-tooltip iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+            background: #f8fafc;
+        }
+        .page-preview-tooltip .tooltip-loader {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 13px;
+            background: #f8fafc;
+        }
+    `;
+    document.head.appendChild(style);
+};
+
+const destroyTooltip = () => {
+    if (tooltipShowTimeout) {
+        clearTimeout(tooltipShowTimeout);
+        tooltipShowTimeout = null;
+    }
+    if (tooltipHideTimeout) {
+        clearTimeout(tooltipHideTimeout);
+        tooltipHideTimeout = null;
+    }
+    if (activeTooltip) {
+        activeTooltip.classList.remove('visible');
+        const tip = activeTooltip;
+        setTimeout(() => {
+            if (tip && tip.parentNode && !tip.classList.contains('visible')) {
+                tip.remove();
+            }
+        }, 160);
+        activeTooltip = null;
+    }
+};
+
+const hidePagePreviewTooltip = () => {
+    if (tooltipShowTimeout) {
+        clearTimeout(tooltipShowTimeout);
+        tooltipShowTimeout = null;
+    }
+    if (tooltipHideTimeout) {
+        clearTimeout(tooltipHideTimeout);
+    }
+    tooltipHideTimeout = setTimeout(() => {
+        if (activeTooltip) {
+            activeTooltip.classList.remove('visible');
+            const tip = activeTooltip;
+            setTimeout(() => {
+                if (tip && tip.parentNode && !tip.classList.contains('visible')) {
+                    tip.remove();
+                }
+            }, 160);
+            activeTooltip = null;
+        }
+    }, 120);
+};
+
+const positionTooltip = (tooltip, anchorRect) => {
+    const margin = 10;
+    let left = anchorRect.left + anchorRect.width / 2 - TOOLTIP_WIDTH / 2;
+    let top = anchorRect.bottom + margin;
+
+    if (left < margin) left = margin;
+    if (left + TOOLTIP_WIDTH > window.innerWidth - margin) {
+        left = window.innerWidth - TOOLTIP_WIDTH - margin;
+    }
+    if (top + TOOLTIP_HEIGHT > window.innerHeight - margin) {
+        top = anchorRect.top - TOOLTIP_HEIGHT - margin;
+        if (top < margin) top = margin;
+    }
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+};
+
+const showPagePreviewTooltip = (anchor, href) => {
+    ensureTooltipStyles();
+    if (tooltipHideTimeout) {
+        clearTimeout(tooltipHideTimeout);
+        tooltipHideTimeout = null;
+    }
+    if (tooltipShowTimeout) {
+        clearTimeout(tooltipShowTimeout);
+        tooltipShowTimeout = null;
+    }
+    // Ak už tooltip pre tento href existuje, len ho ukáž
+    if (activeTooltip && activeTooltip.dataset.href === href) {
+        activeTooltip.classList.add('visible');
+        return;
+    }
+    // Ak existuje tooltip pre iný href, zničíme ho
+    if (activeTooltip) {
+        activeTooltip.remove();
+        activeTooltip = null;
+    }
+    tooltipShowTimeout = setTimeout(() => {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'page-preview-tooltip';
+        tooltip.dataset.href = href;
+
+        const loader = document.createElement('div');
+        loader.className = 'tooltip-loader';
+        loader.textContent = 'Načítavam náhľad…';
+        tooltip.appendChild(loader);
+
+        const iframe = document.createElement('iframe');
+        iframe.loading = 'lazy';
+        iframe.referrerPolicy = 'no-referrer';
+        iframe.title = `Náhľad stránky ${href}`;
+        iframe.src = href;
+        iframe.addEventListener('load', () => {
+            loader.remove();
+        });
+        tooltip.appendChild(iframe);
+
+        document.body.appendChild(tooltip);
+        activeTooltip = tooltip;
+
+        const rect = anchor.getBoundingClientRect();
+        positionTooltip(tooltip, rect);
+
+        requestAnimationFrame(() => tooltip.classList.add('visible'));
+    }, TOOLTIP_DELAY_MS);
+};
+
+/* ============================================================
+   RENDER TLAČIDIEL STRÁNOK (s tooltipom)
+   ============================================================ */
 const renderPublicPageButtons = (pagesSnapshot) => {
     let container = document.getElementById('public-pages-buttons');
     if (!container) {
@@ -130,6 +299,24 @@ const renderPublicPageButtons = (pagesSnapshot) => {
         a.href = def.href;
         a.textContent = def.label;
         a.className = 'inline-block px-5 py-2 rounded-lg bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition-colors duration-200';
+        a.dataset.pageHref = def.href;
+
+        a.addEventListener('mouseenter', () => {
+            showPagePreviewTooltip(a, def.href);
+        });
+        a.addEventListener('mouseleave', () => {
+            hidePagePreviewTooltip();
+        });
+        a.addEventListener('focus', () => {
+            showPagePreviewTooltip(a, def.href);
+        });
+        a.addEventListener('blur', () => {
+            hidePagePreviewTooltip();
+        });
+        a.addEventListener('click', () => {
+            destroyTooltip();
+        });
+
         container.appendChild(a);
     });
     applyLoginButtonVisibility();
@@ -389,4 +576,16 @@ const updateRegistrationStatusAndButtons = () => {
 };
 window.addEventListener('globalDataUpdated', () => {
     setupRegistrationDataListener();
+});
+
+/* Skryť tooltip pri scrolli alebo resize */
+window.addEventListener('scroll', () => {
+    if (activeTooltip) {
+        destroyTooltip();
+    }
+}, { passive: true });
+window.addEventListener('resize', () => {
+    if (activeTooltip) {
+        destroyTooltip();
+    }
 });
