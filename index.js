@@ -82,10 +82,7 @@ const renderTournamentDates = (dates) => {
     const end = formatTournamentDate(dates.tournamentEnd);
 
     container.innerHTML = `
-        <p>
-            <span class="font-semibold">Termín turnaja:</span>
-            ${start} &ndash; ${end}
-        </p>
+        <p>${start} &ndash; ${end}</p>
     `;
 };
 
