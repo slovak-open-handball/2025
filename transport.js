@@ -1169,47 +1169,44 @@ const tryPrintPerTeamTimeline = () => {
     let enrichedList = applyImpliedWalkingTimesFromEvents(listWithRealTransfers);
 
     // ═══════════════════════════════════════════════════════════════════
-    // FINÁLNY FILTER – po všetkých enrich krokoch ešte raz
+    // FINÁLNY FILTER – pre tím s ubytovaním:
+    //   1) zahoď transfer, ak prvá udalosť dňa je na mieste ubytovania
+    //   2) zahoď transfer, ktorý nezačína ani nekončí na mieste ubytovania
+    //      (tím s ubytovaním má zobrazovať len transfery súvisiace s ubytovaním)
     // ═══════════════════════════════════════════════════════════════════
     if (teamHasAccommodation && accomNormForFilter) {
-      // ─── DEBUG: vypíš čo máme pre tento tím ───
-      console.groupCollapsed(`🔍 [DEBUG FILTER] ${team} (${cat}) – accomNorm="${accomNormForFilter}"`);
-      console.log('firstEventPlaceByDay:', Array.from(firstEventPlaceByDay.entries()));
-      console.log('enrichedList transfers:');
-      enrichedList.forEach((ev, idx) => {
-        if (ev.kind !== 'transfer') return;
-        const legs = Array.isArray(ev.legs) ? ev.legs : [];
-        const firstFrom = legs[0]?.fromName || ev.fromName || null;
-        const dk = getTransferDayKey(ev);
-        const firstEvent = dk ? firstEventPlaceByDay.get(dk) : null;
-        const blocked = isTransferBlockedByFirstEventAtAccommodation(ev, accomNormForFilter);
-        console.log(
-          `  [${idx}] dayKey="${dk}" from="${firstFrom}" (norm="${normPlaceName(firstFrom)}")`,
-          `| firstEventOfDay=${firstEvent ? `"${firstEvent.place}" (norm="${normPlaceName(firstEvent.place)}") ts=${new Date(firstEvent.ts).toLocaleString('sk')}` : 'NONE'}`,
-          `| BLOCKED=${blocked}`,
-          `| legs=${legs.length}`,
-          `| ev.ts=${ev.ts != null && isFinite(ev.ts) ? new Date(ev.ts).toLocaleString('sk') : ev.ts}`
-        );
-        if (legs.length > 0) {
-          legs.forEach((l, li) => {
-            console.log(
-              `       leg[${li}]: "${l.fromName}" → "${l.toName}"`,
-              `startTs=${l.startTs != null && isFinite(l.startTs) ? new Date(l.startTs).toLocaleString('sk') : l.startTs}`,
-              `endTs=${l.endTs != null && isFinite(l.endTs) ? new Date(l.endTs).toLocaleString('sk') : l.endTs}`
-            );
-          });
-        }
-      });
-      console.groupEnd();
+      const beforeCount = enrichedList.filter((e) => e.kind === 'transfer').length;
 
       enrichedList = enrichedList.filter((ev) => {
         if (ev.kind !== 'transfer') return true;
-        return !isTransferBlockedByFirstEventAtAccommodation(ev, accomNormForFilter);
+
+        // ⬅️ Pravidlo 1: prvá udalosť dňa na mieste ubytovania → zablokuj VŠETKY transfery v ten deň
+        if (isTransferBlockedByFirstEventAtAccommodation(ev, accomNormForFilter)) {
+          return false;
+        }
+
+        // ⬅️ Pravidlo 2: transfer musí začínať ALEBO končiť na mieste ubytovania
+        const legs = Array.isArray(ev.legs) ? ev.legs : [];
+        if (legs.length === 0) {
+          // walking transfer bez legs – over cez fromName/toName
+          const fromNorm = normPlaceName(ev.fromName || '');
+          const toNorm = normPlaceName(ev.toName || '');
+          if (!fromNorm && !toNorm) return true; // nevieme → nechaj
+          return fromNorm === accomNormForFilter || toNorm === accomNormForFilter;
+        }
+
+        const firstFromNorm = normPlaceName(legs[0]?.fromName || '');
+        const lastToNorm = normPlaceName(legs[legs.length - 1]?.toName || '');
+
+        // Musí sa aspoň jeden koniec transferu dotýkať miesta ubytovania
+        return firstFromNorm === accomNormForFilter || lastToNorm === accomNormForFilter;
       });
 
-      // ─── DEBUG: čo zostalo po filtri ───
-      const remainingTransfers = enrichedList.filter((ev) => ev.kind === 'transfer');
-      console.log(`🔍 [DEBUG FILTER] ${team} (${cat}) – po filtri zostáva ${remainingTransfers.length} transferov`);
+      const afterCount = enrichedList.filter((e) => e.kind === 'transfer').length;
+      console.log(
+        `🔍 [FINAL FILTER] ${team} (${cat}) – transfery: pred=${beforeCount}, po=${afterCount}, ` +
+        `accomNorm="${accomNormForFilter}"`
+      );
     }
     // ─── koniec doplnenia ───
     
