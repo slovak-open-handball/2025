@@ -1105,6 +1105,49 @@ const tryPrintPerTeamTimeline = () => {
           return firstFrom === accomNorm;
         });
 
+    // ═══════════════════════════════════════════════════════════════════
+    // Zapamätaj si PÔVODNÝ deň každého transferu PRED enrich
+    // (applyImpliedWalkingTimesFromEvents môže prepísať ts/dayKey)
+    // ═══════════════════════════════════════════════════════════════════
+    const originalTransferDayKey = new WeakMap();
+    const originalTransferFrom = new WeakMap();
+    for (const ev of listFiltered) {
+      if (ev.kind !== 'transfer') continue;
+      const legs = Array.isArray(ev.legs) ? ev.legs : [];
+      let startTs = null;
+      for (const leg of legs) {
+        if (leg.startTs != null && isFinite(leg.startTs)) {
+          startTs = startTs == null ? leg.startTs : Math.min(startTs, leg.startTs);
+        }
+      }
+      if (startTs == null && ev.ts != null && isFinite(ev.ts)) startTs = ev.ts;
+      if (startTs == null && ev.startTs != null && isFinite(ev.startTs)) startTs = ev.startTs;
+
+      let dk = '';
+      if (startTs != null && isFinite(startTs)) {
+        const d = new Date(startTs);
+        // ⬅️ ak začína o 0:00, ber deň z endTs (transfer patrí dňu, kedy končí)
+        let tsForDay = startTs;
+        let endTs = null;
+        for (const leg of legs) {
+          if (leg.endTs != null && isFinite(leg.endTs)) {
+            endTs = endTs == null ? leg.endTs : Math.max(endTs, leg.endTs);
+          }
+        }
+        if (endTs == null && ev.endTs != null && isFinite(ev.endTs)) endTs = ev.endTs;
+        if (d.getHours() === 0 && d.getMinutes() === 0 && endTs != null && endTs > startTs) {
+          tsForDay = endTs;
+        }
+        const dd = new Date(tsForDay);
+        dk = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
+      } else if (ev.dayKey) {
+        dk = ev.dayKey;
+      }
+
+      originalTransferDayKey.set(ev, dk);
+      originalTransferFrom.set(ev, normPlaceName(legs[0]?.fromName));
+    }
+
     const listWithRealTransfers = listFiltered.map((ev) => {
       if (ev.kind !== 'transfer') return ev;
       const hasRealTimes =
@@ -1117,12 +1160,33 @@ const tryPrintPerTeamTimeline = () => {
     let enrichedList = applyImpliedWalkingTimesFromEvents(listWithRealTransfers);
 
     // ═══════════════════════════════════════════════════════════════════
-    // FINÁLNY FILTER – po všetkých enrich krokoch ešte raz
+    // FINÁLNY FILTER – používa PÔVODNÝ deň transferu (pred enrich),
+    // aby ho enrich (prepísanie ts/dayKey) neobišiel.
     // ═══════════════════════════════════════════════════════════════════
     if (teamHasAccommodation && accomNormForFilter) {
       enrichedList = enrichedList.filter((ev) => {
         if (ev.kind !== 'transfer') return true;
-        return !isTransferBlockedByFirstEventAtAccommodation(ev, accomNormForFilter);
+
+        // ⬅️ Použi pôvodný deň a pôvodné "from" (z WeakMap)
+        const dk = originalTransferDayKey.get(ev) || '';
+        const fromNorm = originalTransferFrom.get(ev) || '';
+
+        // 1) Ak prvá udalosť dňa je na ubytovaní → zablokuj VŠETKY transfery v ten deň
+        if (dk) {
+          const firstEvent = firstEventPlaceByDay.get(dk);
+          if (firstEvent && normPlaceName(firstEvent.place) === accomNormForFilter) {
+            return false;
+          }
+        }
+
+        // 2) Transfer, ktorý nezačína na ubytovaní a nie je to "z ubytovania" → zahoď
+        //    (tím s ubytovaním má zobrazovať len transfery začínajúce na ubytovaní)
+        if (fromNorm && fromNorm !== accomNormForFilter) {
+          // výnimka: ak ide z ubytovania preč (from === accom) – to necháme
+          return false;
+        }
+
+        return true;
       });
     }
     // ─── koniec doplnenia ───
