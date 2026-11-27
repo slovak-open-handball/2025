@@ -1,9 +1,10 @@
-import { doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, onSnapshot, getDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 window.registrationDates = null;
 let timerId = null;
 let countdownIntervalId = null; 
 let hasCategories = false;
+let anyPagePublic = false; // NOVÉ: príznak, či je aspoň jedna stránka verejná
 
 const formatDate = (timestamp) => {
     if (!timestamp) return 'Neurčený dátum';
@@ -16,7 +17,6 @@ const formatDate = (timestamp) => {
     return `dňa&nbsp;${day}.&nbsp;${month}.&nbsp;${year}&nbsp;o&nbsp;${hours}:${minutes}&nbsp;hod.`;
 };
 
-// Nová funkcia: formát bez "dňa" a "hod." pre hlavičku turnaja
 const formatTournamentDate = (timestamp) => {
     if (!timestamp) return '—';
     const date = timestamp.toDate();
@@ -33,7 +33,6 @@ const isReallyLoggedIn = () => {
     return true;
 };
 
-// Pomocná funkcia na výpis všetkých dátumov z dát dokumentu
 const logAllDatesFromData = (data, sourceLabel) => {
     console.log(`=== Dátumy z ${sourceLabel} ===`);
     if (!data) {
@@ -51,10 +50,7 @@ const logAllDatesFromData = (data, sourceLabel) => {
     console.log('=== Koniec výpisu ===');
 };
 
-// NOVÉ: vykreslí dátumy začiatku a konca turnaja pod nadpis
 const renderTournamentDates = (dates) => {
-    // Nájdeme nadpis turnaja – skúsime viacero možných selektorov
-    // (prispôsobte podľa vašej HTML štruktúry, ak treba)
     const heading =
         document.getElementById('tournament-title') ||
         document.querySelector('h1.tournament-title') ||
@@ -64,7 +60,6 @@ const renderTournamentDates = (dates) => {
 
     if (!heading) return;
 
-    // Kontajner vložíme hneď za nadpis
     let container = document.getElementById('tournament-dates-display');
     if (!container) {
         container = document.createElement('div');
@@ -86,11 +81,43 @@ const renderTournamentDates = (dates) => {
     `;
 };
 
+// NOVÉ: pomocná funkcia na skrytie/zobrazenie info o registrácii
+const applyRegistrationVisibility = () => {
+    const messageElement = document.getElementById('registration-status-message');
+    if (!messageElement) return;
+
+    if (anyPagePublic) {
+        // Ak je aspoň jedna stránka verejná → skryjeme info aj odpočet
+        messageElement.classList.add('hidden');
+        messageElement.innerHTML = '';
+        if (countdownIntervalId) {
+            clearInterval(countdownIntervalId);
+            countdownIntervalId = null;
+        }
+    } else {
+        messageElement.classList.remove('hidden');
+    }
+};
+
 const updateRegistrationStatusText = (dates) => {
     const messageElement = document.getElementById('registration-status-message');
     if (!messageElement) {
         return;
     }
+
+    // Ak je aspoň jedna stránka verejná, info o registrácii sa vôbec nezobrazí
+    if (anyPagePublic) {
+        messageElement.classList.add('hidden');
+        messageElement.innerHTML = '';
+        if (countdownIntervalId) {
+            clearInterval(countdownIntervalId);
+            countdownIntervalId = null;
+        }
+        return;
+    }
+
+    messageElement.classList.remove('hidden');
+
     if (!hasCategories) {
         messageElement.innerHTML = `
             <p class="text-red-600 font-semibold">Nie je možné sa zaregistrovať na turnaj Slovak Open Handball, pretože v systéme nie sú definované žiadne kategórie.</p>
@@ -239,7 +266,6 @@ const setupRegistrationDataListener = () => {
             if (docSnap.exists()) {
                 window.registrationDates = docSnap.data();
                 logAllDatesFromData(window.registrationDates, 'settings/registration');
-                // NOVÉ: vykreslíme dátumy turnaja pod nadpis
                 renderTournamentDates(window.registrationDates);
             } else {
                 window.registrationDates = null;
@@ -251,6 +277,25 @@ const setupRegistrationDataListener = () => {
             window.registrationDates = null;
             console.error('Chyba pri načítaní settings/registration:', error);
             renderTournamentDates(null);
+            updateRegistrationStatusAndButtons();
+        });
+
+        // NOVÉ: sledovanie kolekcie "pages" – ak je aspoň jedna verejná, skryjeme info o registrácii
+        const pagesRef = collection(window.db, "pages");
+        onSnapshot(pagesRef, (snapshot) => {
+            let anyPublic = false;
+            snapshot.forEach((pageDoc) => {
+                const data = pageDoc.data();
+                if (data && data.visible === true) {
+                    anyPublic = true;
+                }
+            });
+            anyPagePublic = anyPublic;
+            console.log(`[pages] aspoň jedna verejná stránka: ${anyPagePublic}`);
+            updateRegistrationStatusAndButtons();
+        }, (error) => {
+            console.error('Chyba pri načítaní kolekcie pages:', error);
+            anyPagePublic = false;
             updateRegistrationStatusAndButtons();
         });
 
@@ -267,6 +312,9 @@ const updateRegistrationStatusAndButtons = () => {
     if (isLoggedIn) {
         toggleLoggedInMessage(true, window.globalUserProfileData);
         toggleRegistrationButton(false);
+        // Prihlásený používateľ: info o registrácii sa nezobrazuje (pôvodné správanie)
+        const messageElement = document.getElementById('registration-status-message');
+        if (messageElement) messageElement.classList.add('hidden');
     } else {
         toggleLoggedInMessage(false);
         updateRegistrationStatusText(window.registrationDates);
