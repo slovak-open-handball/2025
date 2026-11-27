@@ -915,13 +915,25 @@ const tryPrintPerTeamTimeline = () => {
       const legs = Array.isArray(ev.legs) ? ev.legs : [];
       if (legs.length === 0) return true;
 
+      // ─── Zisti najskorší startTs zo všetkých legov (nie iba z prvého) ───
+      let startTsForCheck = null;
+      for (const leg of legs) {
+        if (leg.startTs != null && isFinite(leg.startTs)) {
+          startTsForCheck = startTsForCheck == null
+            ? leg.startTs
+            : Math.min(startTsForCheck, leg.startTs);
+        }
+      }
+      if (startTsForCheck == null && ev.ts != null && isFinite(ev.ts)) {
+        startTsForCheck = ev.ts;
+      }
+      if (startTsForCheck == null && ev.startTs != null && isFinite(ev.startTs)) {
+        startTsForCheck = ev.startTs;
+      }
+
       const firstFrom = normPlaceName(legs[0]?.fromName);
 
-      // Zisti čas začiatku transferu
-      let startTsForCheck = legs[0]?.startTs;
-      if (startTsForCheck == null && ev.ts != null && isFinite(ev.ts)) startTsForCheck = ev.ts;
-
-      // ─── NOVÉ: Pre tím s ubytovaním NIKDY nezobrazuj transfer, ktorý začína o 0:00
+      // ─── Pre tím s ubytovaním NIKDY nezobrazuj transfer, ktorý začína o 0:00
       // a nezačína na mieste ubytovania – bez ohľadu na to, či má reálne časy
       // alebo ide o implied walking transfer. ───
       if (startTsForCheck != null && isFinite(startTsForCheck)) {
