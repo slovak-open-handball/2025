@@ -1223,9 +1223,10 @@ const tryPrintPerTeamTimeline = () => {
     let enrichedList = applyImpliedWalkingTimesFromEvents(listWithRealTransfers);
 
     // ═══════════════════════════════════════════════════════════════════
-    // FINÁLNY FILTER – pre tím s ubytovaním:
-    // Transfer sa ZOBRAZÍ len vtedy, ak ZAČÍNA na mieste ubytovania.
-    // Kde končí, nie je predmetom tohto filtra.
+    // FINÁLNY FILTER – pre tím s ubytovaním musia platiť OBE podmienky:
+    //   1) transfer ZAČÍNA na mieste ubytovania
+    //   2) transfer KONČÍ na mieste PRVEJ udalosti dňa
+    // Ak čo i len jedna neplatí → transfer sa nezobrazí.
     // ═══════════════════════════════════════════════════════════════════
     if (teamHasAccommodation && accomNormForFilter) {
       const beforeCount = enrichedList.filter((e) => e.kind === 'transfer').length;
@@ -1238,15 +1239,31 @@ const tryPrintPerTeamTimeline = () => {
         const firstFromNorm = legs.length > 0
           ? normPlaceName(legs[0]?.fromName || '')
           : normPlaceName(ev.fromName || '');
+        const lastToNorm = legs.length > 0
+          ? normPlaceName(legs[legs.length - 1]?.toName || '')
+          : normPlaceName(ev.toName || '');
 
+        // ─── Podmienka 1: transfer musí ZAČÍNAŤ na mieste ubytovania ───
         const startsAtAccom = firstFromNorm === accomNormForFilter;
-
         if (!startsAtAccom) {
-          console.log(`  ❌ [DROP] nezačína na ubytovaní: from="${firstFromNorm}" (ubytovanie="${accomNormForFilter}")`);
+          console.log(`  ❌ [DROP-1] nezačína na ubytovaní: from="${firstFromNorm}" (ubytovanie="${accomNormForFilter}")`);
           return false;
         }
 
-        console.log(`  ✅ [KEEP] začína na ubytovaní: from="${firstFromNorm}"`);
+        // ─── Podmienka 2: transfer musí KONČIŤ na mieste PRVEJ udalosti dňa ───
+        const dk = getTransferDayKey(ev);
+        const firstEvent = dk ? firstEventPlaceByDay.get(dk) : null;
+        if (!firstEvent) {
+          console.log(`  ❌ [DROP-2] pre deň "${dk}" nepoznáme prvú udalosť (firstEvent=NONE)`);
+          return false;
+        }
+        const firstEventPlaceNorm = normPlaceName(firstEvent.place);
+        if (lastToNorm !== firstEventPlaceNorm) {
+          console.log(`  ❌ [DROP-2] nekončí na prvej udalosti dňa: to="${lastToNorm}" (prvá udalosť="${firstEventPlaceNorm}")`);
+          return false;
+        }
+
+        console.log(`  ✅ [KEEP] from="${firstFromNorm}" to="${lastToNorm}" (dk=${dk}, prvá udalosť="${firstEventPlaceNorm}")`);
         return true;
       });
 
