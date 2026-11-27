@@ -2364,6 +2364,11 @@ const applyFinalTransferFilter = (transferEvents, teamName, categoryName) => {
       return false;
     }
 
+    if (lastToNorm === accomNorm) {
+      console.log(`  ✅ [KEEP-END] koncový transfer dňa ${firstFromNorm} → ${lastToNorm}`);
+      return true;
+    }
+
     // DROP-2b: musí končiť na prvej udalosti dňa
     if (lastToNorm !== firstEventPlaceNorm) {
       console.log(`  ❌ [DROP-2b] nekončí na prvej udalosti dňa (to="${lastToNorm}", prvá="${firstEventPlaceNorm}")`);
