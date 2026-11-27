@@ -484,6 +484,8 @@ const tryPrintPerTeamTimeline = () => {
     !__transportPerTeamBuffer.transfersReady
   ) return;
 
+  const mappingDone = isMappingReady();
+
   const all = [
     ...__transportPerTeamBuffer.matches,
     ...__transportPerTeamBuffer.catering,
@@ -970,67 +972,70 @@ const tryPrintPerTeamTimeline = () => {
       }
     }
 
-    const listFiltered = list.filter((ev) => {
-      if (ev.kind !== 'transfer') return true;
-      if (!teamHasAccommodation) return true; // bez ubytovania – necháme pôvodnú logiku
+    // ─── Ak mapovanie ešte nie je hotové, transfery vôbec nezobrazuj ───
+    const listFiltered = !mappingDone
+      ? list.filter((ev) => ev.kind !== 'transfer')
+      : list.filter((ev) => {
+          if (ev.kind !== 'transfer') return true;
+          if (!teamHasAccommodation) return true; // bez ubytovania – necháme pôvodnú logiku
 
-      const legs = Array.isArray(ev.legs) ? ev.legs : [];
-      if (legs.length === 0) return true;
+          const legs = Array.isArray(ev.legs) ? ev.legs : [];
+          if (legs.length === 0) return true;
 
-      // ─── Zisti najskorší startTs zo všetkých legov (nie iba z prvého) ───
-      let startTsForCheck = null;
-      for (const leg of legs) {
-        if (leg.startTs != null && isFinite(leg.startTs)) {
-          startTsForCheck = startTsForCheck == null
-            ? leg.startTs
-            : Math.min(startTsForCheck, leg.startTs);
-        }
-      }
-      if (startTsForCheck == null && ev.ts != null && isFinite(ev.ts)) {
-        startTsForCheck = ev.ts;
-      }
-      if (startTsForCheck == null && ev.startTs != null && isFinite(ev.startTs)) {
-        startTsForCheck = ev.startTs;
-      }
+          // ─── Zisti najskorší startTs zo všetkých legov ───
+          let startTsForCheck = null;
+          for (const leg of legs) {
+            if (leg.startTs != null && isFinite(leg.startTs)) {
+              startTsForCheck = startTsForCheck == null
+                ? leg.startTs
+                : Math.min(startTsForCheck, leg.startTs);
+            }
+          }
+          if (startTsForCheck == null && ev.ts != null && isFinite(ev.ts)) {
+            startTsForCheck = ev.ts;
+          }
+          if (startTsForCheck == null && ev.startTs != null && isFinite(ev.startTs)) {
+            startTsForCheck = ev.startTs;
+          }
 
-      // ─── Zisti deň transferu ───
-      let evDayKey = ev.dayKey || '';
-      if (!evDayKey && startTsForCheck != null && isFinite(startTsForCheck)) {
-        const d = new Date(startTsForCheck);
-        evDayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      }
+          // ─── Zisti deň transferu ───
+          let evDayKey = ev.dayKey || '';
+          if (!evDayKey && startTsForCheck != null && isFinite(startTsForCheck)) {
+            const d = new Date(startTsForCheck);
+            evDayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          }
 
-      // ─── NOVÉ: Ak prvá udalosť dňa je na mieste ubytovania,
-      // žiadny transfer v ten deň sa nesmie zobraziť. ───
-      if (evDayKey && accomNormForFilter) {
-        const firstEvent = firstEventPlaceByDay.get(evDayKey);
-        if (firstEvent && normPlaceName(firstEvent.place) === accomNormForFilter) {
-          return false;
-        }
-      }
+          // ─── Ak prvá udalosť dňa je na mieste ubytovania,
+          // žiadny transfer v ten deň sa nesmie zobraziť. ───
+          if (evDayKey && accomNormForFilter) {
+            const firstEvent = firstEventPlaceByDay.get(evDayKey);
+            if (firstEvent && normPlaceName(firstEvent.place) === accomNormForFilter) {
+              return false;
+            }
+          }
 
-      const firstFrom = normPlaceName(legs[0]?.fromName);
+          const firstFrom = normPlaceName(legs[0]?.fromName);
 
-      // ─── Pre tím s ubytovaním NIKDY nezobrazuj transfer, ktorý začína o 0:00
-      // a nezačína na mieste ubytovania ───
-      if (startTsForCheck != null && isFinite(startTsForCheck)) {
-        const d = new Date(startTsForCheck);
-        if (d.getHours() === 0 && d.getMinutes() === 0) {
-          if (firstFrom !== accomNormForFilter) return false;
-        }
-      }
+          // ─── Pre tím s ubytovaním NIKDY nezobrazuj transfer, ktorý začína o 0:00
+          // a nezačína na mieste ubytovania ───
+          if (startTsForCheck != null && isFinite(startTsForCheck)) {
+            const d = new Date(startTsForCheck);
+            if (d.getHours() === 0 && d.getMinutes() === 0) {
+              if (firstFrom !== accomNormForFilter) return false;
+            }
+          }
 
-      if (!firstFrom) return true;
+          if (!firstFrom) return true;
 
-      const hasRealTimes =
-        legs.some((l) => l.startTs != null && l.endTs != null) ||
-        (ev.ts != null && isFinite(ev.ts));
+          const hasRealTimes =
+            legs.some((l) => l.startTs != null && l.endTs != null) ||
+            (ev.ts != null && isFinite(ev.ts));
 
-      if (!hasRealTimes) return true; // walking bez časov → necháme applyImpliedWalkingTimesFromEvents
+          if (!hasRealTimes) return true; // walking bez časov → necháme applyImpliedWalkingTimesFromEvents
 
-      // Reálny transfer → musí začínať na mieste ubytovania
-      return firstFrom === accomNormForFilter;
-    });
+          // Reálny transfer → musí začínať na mieste ubytovania
+          return firstFrom === accomNormForFilter;
+        });
     
     const listWithRealTransfers = listFiltered.map((ev) => {
       if (ev.kind !== 'transfer') return ev;
@@ -2965,6 +2970,13 @@ const TransportApp = ({ userProfileData }) => {
       setTrackerResolvedNames(nextMap);
       setMatchesVersion((v) => v + 1);
     }
+
+    // ─── NOVÉ: Po dokončení mapovania označ mapovanie ako hotové ───
+    // Tým sa zabezpečí, že isMappingReady() vráti true a tryPrintPerTeamTimeline
+    // vykreslí transfery až s aplikovaným filtrom.
+    window.__transportMappingSeen = true;
+    __transportPerTeamBuffer.lastPrintedSignature = '';
+    tryPrintPerTeamTimeline();
   };
 
   useEffect(() => {
