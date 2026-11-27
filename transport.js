@@ -917,10 +917,17 @@ const tryPrintPerTeamTimeline = () => {
         if (ev.kind !== 'transfer') continue;
         const legs = Array.isArray(ev.legs) ? ev.legs : [];
         if (legs.length === 0) continue;
-    
+
+        // ⬅️ NOVÉ: berieme do úvahy iba REÁLNE transfery (majú reálne časy z DB),
+        // nie implied walking transfery doplnené neskôr.
+        const hasRealTimes =
+          legs.some((l) => l.startTs != null && l.endTs != null && l.endTs > l.startTs) ||
+          (ev.ts != null && isFinite(ev.ts));
+        if (!hasRealTimes) continue;
+
         const firstFrom = normPlaceName(legs[0]?.fromName);
         if (firstFrom !== accomNormForFilter) continue;
-    
+
         // Zisti deň transferu
         let evDayKey = ev.dayKey || '';
         if (!evDayKey) {
@@ -931,26 +938,26 @@ const tryPrintPerTeamTimeline = () => {
           }
         }
         if (!evDayKey) continue;
-    
+
         // Zisti, či transfer začína o 0:00
         let startTs = legs[0]?.startTs;
         if (startTs == null && ev.ts != null && isFinite(ev.ts)) startTs = ev.ts;
         if (startTs == null) continue;
-    
+
         const d = new Date(startTs);
         if (d.getHours() === 0 && d.getMinutes() === 0) {
           daysWithMidnightStartFromAccommodation.add(evDayKey);
         }
       }
     }
-    
+
     const listFiltered = list.filter((ev) => {
       if (ev.kind !== 'transfer') return true;
       if (!teamHasAccommodation) return true; // bez ubytovania – necháme pôvodnú logiku
-    
+
       const legs = Array.isArray(ev.legs) ? ev.legs : [];
       if (legs.length === 0) return true;
-    
+
       // Zisti deň transferu
       let evDayKey = ev.dayKey || '';
       if (!evDayKey) {
@@ -968,18 +975,31 @@ const tryPrintPerTeamTimeline = () => {
       }
 
       const firstFrom = normPlaceName(legs[0]?.fromName);
+
+      // ⬅️ NOVÉ: Pre tím s ubytovaním NIKDY nezobrazuj transfer, ktorý začína o 0:00
+      // a nezačína na mieste ubytovania – bez ohľadu na to, či má reálne časy
+      // alebo ide o implied walking transfer.
+      let startTsForCheck = legs[0]?.startTs;
+      if (startTsForCheck == null && ev.ts != null && isFinite(ev.ts)) startTsForCheck = ev.ts;
+      if (startTsForCheck != null && isFinite(startTsForCheck)) {
+        const d = new Date(startTsForCheck);
+        if (d.getHours() === 0 && d.getMinutes() === 0) {
+          if (firstFrom !== accomNormForFilter) return false;
+        }
+      }
+
       if (!firstFrom) return true;
-    
+
       const hasRealTimes =
         legs.some((l) => l.startTs != null && l.endTs != null) ||
         (ev.ts != null && isFinite(ev.ts));
-    
+
       if (!hasRealTimes) return true; // walking bez časov → necháme applyImpliedWalkingTimesFromEvents
 
       // Reálny transfer → musí začínať na mieste ubytovania
       return firstFrom === accomNormForFilter;
     });
-
+    
     const listWithRealTransfers = listFiltered.map((ev) => {
       if (ev.kind !== 'transfer') return ev;
       const hasRealTimes =
