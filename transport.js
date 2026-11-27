@@ -463,15 +463,6 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
     }
   }
 
-  if (sampleEv.teamName === 'ŠŠK pri SLŠ Prešov') {
-    console.log('🚫 excludedTransferIndexes:', [...excludedTransferIndexes]);
-    console.log('📋 sorted (label + kind + dayKey + ts):', sorted.map((e, i) => ({
-      i, kind: e.kind, dayKey: e.dayKey, ts: e.ts,
-      from: e.legs?.[0]?.fromName, to: e.legs?.[e.legs.length-1]?.toName,
-      label: e.label?.slice(0, 80),
-    })));
-  }
-
   return sorted
   .map((ev, origIdx) => {
     const assigned = assignments.get(origIdx);
@@ -523,20 +514,6 @@ const tryPrintPerTeamTimeline = () => {
 
   // Zoradenie udalostí v rámci tímu chronologicky
   const output = {};
-  
-  console.log('🔍 Všetky transfery v buffery pre tím ŠŠK:', 
-    __transportPerTeamBuffer.transfers.filter(t => 
-      String(t.teamName||'').includes('ŠŠK') || String(t.teamName||'').includes('Prešov')
-    ).map(t => ({
-      key: t.key, teamName: t.teamName, category: t.category, 
-      dayKey: t.dayKey, ts: t.ts, 
-      from: t.legs?.[0]?.fromName, to: t.legs?.[t.legs.length-1]?.toName
-    }))
-  );
-
-  console.log('🔍 byTeam keys obsahujúce ŠŠK:', 
-    [...byTeam.keys()].filter(k => k.includes('ŠŠK') || k.includes('Prešov'))
-  );
   
   for (const key of teamsSorted) {
     const [cat, team] = key.split('|');
@@ -917,19 +894,6 @@ const tryPrintPerTeamTimeline = () => {
         return (KIND_PRIORITY[a.kind] ?? 9) - (KIND_PRIORITY[b.kind] ?? 9);
       });
     };
-
-    if (team === 'ŠŠK pri SLŠ Prešov' && cat === 'U12 D') {
-      console.log('🔍 DEBUG list (pred applyImpliedWalking):', list.map(e => ({
-        kind: e.kind,
-        ts: e.ts,
-        dayKey: e.dayKey,
-        teamName: e.teamName,
-        category: e.category,
-        from: e.legs?.[0]?.fromName,
-        to: e.legs?.[e.legs.length-1]?.toName,
-        hasRealTimes: (Array.isArray(e.legs) && e.legs.some(l => l.startTs != null && l.endTs != null)) || (e.ts != null && isFinite(e.ts)),
-      })));
-    }
     
     // ─── Zisti ubytovanie tímu (rovnaká logika ako v applyImpliedWalkingTimesFromEvents) ───
     const teamAccomKey = `${cat}|${team}`;
@@ -943,21 +907,73 @@ const tryPrintPerTeamTimeline = () => {
     // ktoré by inak prešli nezmenené a zobrazili sa v UI aj v konzole). ───
     const normPlaceName = (s) => normalizePlaceName(String(s || ''));
     const accomNormForFilter = teamHasAccommodation ? normPlaceName(teamAccommodationName) : null;
-
+    
+    // ─── NOVÉ: Zisti, či pre daný tím a deň existuje aspoň jeden reálny transfer,
+    // ktorý začína o 0:00 na mieste ubytovania. Ak NIE, žiadny transfer pre ten deň
+    // sa nesmie zobraziť (ani v UI, ani v konzole). ───
+    const daysWithMidnightStartFromAccommodation = new Set();
+    if (teamHasAccommodation && accomNormForFilter) {
+      for (const ev of list) {
+        if (ev.kind !== 'transfer') continue;
+        const legs = Array.isArray(ev.legs) ? ev.legs : [];
+        if (legs.length === 0) continue;
+    
+        const firstFrom = normPlaceName(legs[0]?.fromName);
+        if (firstFrom !== accomNormForFilter) continue;
+    
+        // Zisti deň transferu
+        let evDayKey = ev.dayKey || '';
+        if (!evDayKey) {
+          const ts = ev.ts ?? legs[0]?.startTs ?? null;
+          if (ts != null && isFinite(ts)) {
+            const d = new Date(ts);
+            evDayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          }
+        }
+        if (!evDayKey) continue;
+    
+        // Zisti, či transfer začína o 0:00
+        let startTs = legs[0]?.startTs;
+        if (startTs == null && ev.ts != null && isFinite(ev.ts)) startTs = ev.ts;
+        if (startTs == null) continue;
+    
+        const d = new Date(startTs);
+        if (d.getHours() === 0 && d.getMinutes() === 0) {
+          daysWithMidnightStartFromAccommodation.add(evDayKey);
+        }
+      }
+    }
+    
     const listFiltered = list.filter((ev) => {
       if (ev.kind !== 'transfer') return true;
       if (!teamHasAccommodation) return true; // bez ubytovania – necháme pôvodnú logiku
-
+    
       const legs = Array.isArray(ev.legs) ? ev.legs : [];
       if (legs.length === 0) return true;
+    
+      // Zisti deň transferu
+      let evDayKey = ev.dayKey || '';
+      if (!evDayKey) {
+        const ts = ev.ts ?? legs[0]?.startTs ?? null;
+        if (ts != null && isFinite(ts)) {
+          const d = new Date(ts);
+          evDayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+      }
+
+      // ─── NOVÉ: Ak pre tento deň neexistuje žiadny transfer začínajúci o 0:00
+      // na mieste ubytovania, tento transfer sa nesmie zobraziť. ───
+      if (evDayKey && !daysWithMidnightStartFromAccommodation.has(evDayKey)) {
+        return false;
+      }
 
       const firstFrom = normPlaceName(legs[0]?.fromName);
       if (!firstFrom) return true;
-
+    
       const hasRealTimes =
         legs.some((l) => l.startTs != null && l.endTs != null) ||
         (ev.ts != null && isFinite(ev.ts));
-
+    
       if (!hasRealTimes) return true; // walking bez časov → necháme applyImpliedWalkingTimesFromEvents
 
       // Reálny transfer → musí začínať na mieste ubytovania
@@ -978,16 +994,6 @@ const tryPrintPerTeamTimeline = () => {
     
     // kľúč výstupu = "TÍM (KATEGÓRIA)"
     const displayKey = cat ? `${team} (${cat})` : team;
-
-    if (team === 'ŠŠK pri SLŠ Prešov' && cat === 'U12 D') {
-      console.log('🔍 enrichedList pre tím:', enrichedList.map(e => ({
-        kind: e.kind,
-        ts: e.ts,
-        dayKey: e.dayKey,
-        label: e.label,
-        legs: (e.legs||[]).map(l => ({from: l.fromName, to: l.toName, isWalking: l.isWalking, startTs: l.startTs, endTs: l.endTs})),
-      })));
-    }
 
     // Pre každú udalosť: ak má legLabels (transfer), rozbalíme na samostatné riadky.
     // ─── NOVÉ: pre transfery doplníme do riadku aj dátum, ak tam ešte nie je ───
