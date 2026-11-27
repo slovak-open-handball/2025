@@ -16,6 +16,16 @@ const formatDate = (timestamp) => {
     return `dňa&nbsp;${day}.&nbsp;${month}.&nbsp;${year}&nbsp;o&nbsp;${hours}:${minutes}&nbsp;hod.`;
 };
 
+// Nová funkcia: formát bez "dňa" a "hod." pre hlavičku turnaja
+const formatTournamentDate = (timestamp) => {
+    if (!timestamp) return '—';
+    const date = timestamp.toDate();
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}. ${month}. ${year}`;
+};
+
 const isReallyLoggedIn = () => {
     if (!window.globalUserProfileData) return false;    
     if (window.isAnonymousUser === true) return false;    
@@ -31,7 +41,6 @@ const logAllDatesFromData = (data, sourceLabel) => {
         return;
     }
     Object.entries(data).forEach(([key, value]) => {
-        // Firebase Timestamp má metódu toDate()
         if (value && typeof value.toDate === 'function') {
             const d = value.toDate();
             console.log(`${key}: ${d.toLocaleString('sk-SK')} (raw: ${d.toISOString()})`);
@@ -40,6 +49,44 @@ const logAllDatesFromData = (data, sourceLabel) => {
         }
     });
     console.log('=== Koniec výpisu ===');
+};
+
+// NOVÉ: vykreslí dátumy začiatku a konca turnaja pod nadpis
+const renderTournamentDates = (dates) => {
+    // Nájdeme nadpis turnaja – skúsime viacero možných selektorov
+    // (prispôsobte podľa vašej HTML štruktúry, ak treba)
+    const heading =
+        document.getElementById('tournament-title') ||
+        document.querySelector('h1.tournament-title') ||
+        Array.from(document.querySelectorAll('h1, h2')).find(el =>
+            el.textContent.trim().toLowerCase().includes('slovak open handball')
+        );
+
+    if (!heading) return;
+
+    // Kontajner vložíme hneď za nadpis
+    let container = document.getElementById('tournament-dates-display');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'tournament-dates-display';
+        container.className = 'text-gray-700 text-base md:text-lg mt-2 mb-3 font-medium';
+        heading.insertAdjacentElement('afterend', container);
+    }
+
+    if (!dates || !dates.tournamentStart || !dates.tournamentEnd) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const start = formatTournamentDate(dates.tournamentStart);
+    const end = formatTournamentDate(dates.tournamentEnd);
+
+    container.innerHTML = `
+        <p>
+            <span class="font-semibold">Termín turnaja:</span>
+            ${start} &ndash; ${end}
+        </p>
+    `;
 };
 
 const updateRegistrationStatusText = (dates) => {
@@ -194,16 +241,19 @@ const setupRegistrationDataListener = () => {
         onSnapshot(registrationDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 window.registrationDates = docSnap.data();
-                // Vypíš všetky dátumy z dokumentu registration
                 logAllDatesFromData(window.registrationDates, 'settings/registration');
+                // NOVÉ: vykreslíme dátumy turnaja pod nadpis
+                renderTournamentDates(window.registrationDates);
             } else {
                 window.registrationDates = null;
                 console.log('Dokument settings/registration neexistuje.');
+                renderTournamentDates(null);
             }
             updateRegistrationStatusAndButtons();
         }, (error) => {
             window.registrationDates = null;
             console.error('Chyba pri načítaní settings/registration:', error);
+            renderTournamentDates(null);
             updateRegistrationStatusAndButtons();
         });
 
