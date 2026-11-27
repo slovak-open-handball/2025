@@ -144,7 +144,7 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
     const arrivalTs = window.__transportPerTeamBuffer?.arrivalTimestamp;
 
     if (firstDay && dk) return dk === firstDay;
-  
+
     if (arrivalTs && dk) {
       return dk === getDayKeyFromTs(arrivalTs);
     }
@@ -235,12 +235,99 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
   const accomKey = `${cleanCategory(sampleEv.category || '')}|${String(sampleEv.teamName || '').trim()}`;
   const accommodationName = __transportPerTeamBuffer.accommodationByKey.get(accomKey) || 'bez ubytovania';
   const isWithoutAccommodation = !accommodationName || accommodationName === 'bez ubytovania';
+  const hasAccommodation = !isWithoutAccommodation;
 
   const usedWalkingIndexes = new Set();
   const excludedTransferIndexes = new Set();
   const assignments = new Map();
 
-  // ─── NOVÉ: Pre tímy bez ubytovania použijeme presun začínajúci o 0:00 na mieste zrazu ───
+  // ═══════════════════════════════════════════════════════════════════
+  // Pre tímy S UBYTOVANÍM – zobraz iba presun začínajúci o 0:00
+  // na mieste ubytovania tímu (a končiaci na mieste prvej udalosti dňa).
+  // ═══════════════════════════════════════════════════════════════════
+  if (hasAccommodation) {
+    const timedByDay = new Map();
+    sorted.forEach((ev, idx) => {
+      if (isWalkingTransferWithoutTime(ev)) return;
+      const range = getEventStartEndTs(ev);
+      if (!range || range.startTs == null || range.endTs == null) return;
+      const dk = getEffectiveDayKey(ev) || getDayKeyFromTs(range.startTs);
+      if (!dk) return;
+      if (!timedByDay.has(dk)) timedByDay.set(dk, []);
+      timedByDay.get(dk).push({ ev, idx, range, places: getEventPlaces(ev) });
+    });
+
+    timedByDay.forEach((dayTimed, dk) => {
+      dayTimed.sort((a, b) => a.range.startTs - b.range.startTs || a.range.endTs - b.range.endTs);
+      const firstItem = dayTimed[0];
+      const lastItem = dayTimed[dayTimed.length - 1];
+
+      if (firstItem) {
+        const firstPlace = normPlace(firstItem.places.from || firstItem.places.to);
+        const accomNorm = normPlace(accommodationName);
+
+        // ─── Hľadáme walking transfer, ktorý:
+        //     1) začína na mieste ubytovania tímu
+        //     2) končí na mieste prvej udalosti dňa
+        // ─── Ak taký neexistuje, preskočíme (nezobrazujeme iné presuny) ───
+        const startWalkIdx = sorted.findIndex((cand, k) => {
+          if (usedWalkingIndexes.has(k) || !isWalkingTransferWithoutTime(cand)) return false;
+          const candDk = getEffectiveDayKey(cand);
+          if (candDk && candDk !== dk) return false;
+          const { from: wFrom, to: wTo } = getEventPlaces(cand);
+          const nFrom = normPlace(wFrom);
+          const nTo = normPlace(wTo);
+          if (!nFrom || !nTo || nFrom === nTo) return false;
+          // ─── musí začínať na mieste ubytovania ───
+          if (nFrom !== accomNorm) return false;
+          // ─── musí končiť na mieste prvej udalosti dňa ───
+          return nTo === firstPlace;
+        });
+
+        if (startWalkIdx !== -1) {
+          const endTs = firstItem.range.startTs;
+          const dObj = new Date(endTs);
+          // ─── VŽDY začínaj o 0:00 (polnoc) ───
+          const startTs = new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 0, 0, 0, 0).getTime();
+          if (endTs > startTs) {
+            usedWalkingIndexes.add(startWalkIdx);
+            assignments.set(startWalkIdx, { startTs, endTs, dayKey: dk });
+          }
+        }
+      }
+
+      if (lastItem) {
+        const lastPlace = normPlace(lastItem.places.to || lastItem.places.from);
+        const accomNorm = normPlace(accommodationName);
+
+        // ─── Pre koniec dňa: presun z posledného miesta dňa na ubytovanie ───
+        const endWalkIdx = sorted.findIndex((cand, k) => {
+          if (usedWalkingIndexes.has(k) || !isWalkingTransferWithoutTime(cand)) return false;
+          const candDk = getEffectiveDayKey(cand);
+          if (candDk && candDk !== dk) return false;
+          const { from: wFrom, to: wTo } = getEventPlaces(cand);
+          const nFrom = normPlace(wFrom);
+          const nTo = normPlace(wTo);
+          if (!nFrom || !nTo || nFrom === nTo) return false;
+          // ─── musí začínať na mieste poslednej udalosti dňa ───
+          // ─── a končiť na mieste ubytovania ───
+          return nFrom === lastPlace && nTo === accomNorm;
+        });
+
+        if (endWalkIdx !== -1) {
+          const startTs = lastItem.range.endTs;
+          const dObj = new Date(startTs);
+          const endOfDayTs = new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 23, 59, 0, 0).getTime();
+          if (endOfDayTs > startTs) {
+            usedWalkingIndexes.add(endWalkIdx);
+            assignments.set(endWalkIdx, { startTs, endTs: endOfDayTs, dayKey: dk });
+          }
+        }
+      }
+    });
+  }
+
+  // ─── Pre tímy BEZ ubytovania (pôvodná logika) ───
   if (isWithoutAccommodation) {
     const timedByDay = new Map();
     sorted.forEach((ev, idx) => {
@@ -260,25 +347,20 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
 
       if (firstItem) {
         const firstPlace = normPlace(firstItem.places.from || firstItem.places.to);
-        // ─── NOVÉ: Pre tím bez ubytovania VŽDY použijeme presun začínajúci o 0:00 ───
         const startWalkIdx = sorted.findIndex((cand, k) => {
           if (usedWalkingIndexes.has(k) || !isWalkingTransferWithoutTime(cand)) return false;
           const candDk = getEffectiveDayKey(cand);
-          // deň musí sedieť (alebo byť prázdny)
           if (candDk && candDk !== dk) return false;
           const { from: wFrom, to: wTo } = getEventPlaces(cand);
           const nFrom = normPlace(wFrom);
           const nTo = normPlace(wTo);
-          // musí ísť z nejakého miesta na miesto prvej udalosti
           if (!nFrom || !nTo || nFrom === nTo) return false;
-          // ─── NOVÉ: cieľ musí byť miesto prvej udalosti dňa ───
           return nTo === firstPlace;
         });
 
         if (startWalkIdx !== -1) {
           const endTs = firstItem.range.startTs;
           const dObj = new Date(endTs);
-          // ─── NOVÉ: VŽDY začínaj o 0:00 (polnoc) ───
           const startTs = new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 0, 0, 0, 0).getTime();
           if (endTs > startTs) {
             usedWalkingIndexes.add(startWalkIdx);
@@ -299,7 +381,7 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
           if (!nFrom || !nTo || nFrom === nTo) return false;
           return nFrom === lastPlace && Boolean(nTo);
         });
-      
+
         if (endWalkIdx !== -1) {
           const startTs = lastItem.range.endTs;
           const dObj = new Date(startTs);
@@ -313,8 +395,6 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
     });
   }
 
-  // ... zvyšok kódu zostáva rovnaký (for cykly pre ostatné prípady) ...
-  
   for (let i = 0; i < sorted.length; i++) {
     const first = sorted[i];
     if (isWalkingTransferWithoutTime(first)) continue;
@@ -360,6 +440,7 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
       const walkIdx = sorted.findIndex((cand, k) => {
         if (usedWalkingIndexes.has(k)) return false;
         if (!isWalkingTransferWithoutTime(cand)) return false;
+        // ⬅️ NEKONTROLUJEME deň — presun môže preklenúť polnoc
         const { from: wFrom, to: wTo } = getEventPlaces(cand);
         const nFrom = normPlace(wFrom);
         const nTo = normPlace(wTo);
