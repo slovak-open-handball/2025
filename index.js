@@ -1,18 +1,18 @@
 import { doc, onSnapshot, getDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 window.registrationDates = null;
 let timerId = null;
-let countdownIntervalId = null; 
+let countdownIntervalId = null;
 let hasCategories = false;
 let anyPagePublic = false;
 let tooltipHideTimeout = null;
 let tooltipShowTimeout = null;
 let activeTooltip = null;
 const TOOLTIP_DELAY_MS = 450;
-const TOOLTIP_WIDTH = 480;      // vizuálna šírka tooltipu
-const TOOLTIP_HEIGHT = 320;     // vizuálna výška tooltipu
-const PREVIEW_SCALE = 0.25;     // zmenšenie náhľadu na 25 %
-const PREVIEW_VIEWPORT_WIDTH = 1920;  // "virtuálna" šírka stránky v iframe
-const PREVIEW_VIEWPORT_HEIGHT = 1080; // "virtuálna" výška stránky v iframe
+const TOOLTIP_WIDTH = 480;
+const TOOLTIP_HEIGHT = 320;
+const PREVIEW_SCALE = 0.25;
+const PREVIEW_VIEWPORT_WIDTH = 1920;
+const PREVIEW_VIEWPORT_HEIGHT = 1080;
 const EXCLUDED_PAGES_FROM_HIDING = ['category-creation'];
 const PAGE_BUTTON_DEFINITIONS = [
     { id: 'teams-in-groups', label: 'Skupiny', href: 'teams-in-groups' },
@@ -43,9 +43,9 @@ const formatTournamentDate = (timestamp) => {
     return `${day}. ${month}. ${year}`;
 };
 const isReallyLoggedIn = () => {
-    if (!window.globalUserProfileData) return false;    
-    if (window.isAnonymousUser === true) return false;    
-    if (window.globalUserProfileData.role === 'anonymous') return false;    
+    if (!window.globalUserProfileData) return false;
+    if (window.isAnonymousUser === true) return false;
+    if (window.globalUserProfileData.role === 'anonymous') return false;
     return true;
 };
 const logAllDatesFromData = (data, sourceLabel) => {
@@ -83,10 +83,6 @@ const renderTournamentDates = (dates) => {
         <p>${start} &ndash; ${end}</p>
     `;
 };
-
-/* ============================================================
-   TOOLTIP S IFRAME NÁHĽADOM
-   ============================================================ */
 const ensureTooltipStyles = () => {
     if (document.getElementById('page-preview-tooltip-styles')) return;
     const style = document.createElement('style');
@@ -166,7 +162,6 @@ const destroyTooltip = () => {
         activeTooltip = null;
     }
 };
-
 const hidePagePreviewTooltip = () => {
     if (tooltipShowTimeout) {
         clearTimeout(tooltipShowTimeout);
@@ -188,12 +183,10 @@ const hidePagePreviewTooltip = () => {
         }
     }, 120);
 };
-
 const positionTooltip = (tooltip, anchorRect) => {
     const margin = 10;
     let left = anchorRect.left + anchorRect.width / 2 - TOOLTIP_WIDTH / 2;
     let top = anchorRect.bottom + margin;
-
     if (left < margin) left = margin;
     if (left + TOOLTIP_WIDTH > window.innerWidth - margin) {
         left = window.innerWidth - TOOLTIP_WIDTH - margin;
@@ -205,7 +198,6 @@ const positionTooltip = (tooltip, anchorRect) => {
     tooltip.style.left = `${left}px`;
     tooltip.style.top = `${top}px`;
 };
-
 const showPagePreviewTooltip = (anchor, href) => {
     ensureTooltipStyles();
     if (tooltipHideTimeout) {
@@ -228,42 +220,31 @@ const showPagePreviewTooltip = (anchor, href) => {
         const tooltip = document.createElement('div');
         tooltip.className = 'page-preview-tooltip';
         tooltip.dataset.href = href;
-
         const wrap = document.createElement('div');
         wrap.className = 'tooltip-preview-wrap';
         tooltip.appendChild(wrap);
-
         const loader = document.createElement('div');
         loader.className = 'tooltip-loader';
         loader.textContent = 'Načítavam náhľad…';
         wrap.appendChild(loader);
-
         const iframe = document.createElement('iframe');
         iframe.loading = 'lazy';
         iframe.referrerPolicy = 'no-referrer';
         iframe.title = `Náhľad stránky ${href}`;
         iframe.src = href;
-        // Vnútorná veľkosť iframe bude 1920x1080, CSS ho zmenší na 25 %
         iframe.style.width = `${PREVIEW_VIEWPORT_WIDTH}px`;
         iframe.style.height = `${PREVIEW_VIEWPORT_HEIGHT}px`;
         iframe.addEventListener('load', () => {
             loader.remove();
         });
         wrap.appendChild(iframe);
-
         document.body.appendChild(tooltip);
         activeTooltip = tooltip;
-
         const rect = anchor.getBoundingClientRect();
         positionTooltip(tooltip, rect);
-
         requestAnimationFrame(() => tooltip.classList.add('visible'));
     }, TOOLTIP_DELAY_MS);
 };
-
-/* ============================================================
-   RENDER TLAČIDIEL STRÁNOK (s tooltipom)
-   ============================================================ */
 const renderPublicPageButtons = (pagesSnapshot) => {
     let container = document.getElementById('public-pages-buttons');
     if (!container) {
@@ -321,7 +302,6 @@ const renderPublicPageButtons = (pagesSnapshot) => {
         a.textContent = def.label;
         a.className = 'inline-block px-5 py-2 rounded-lg bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition-colors duration-200';
         a.dataset.pageHref = def.href;
-
         a.addEventListener('mouseenter', () => {
             showPagePreviewTooltip(a, def.href);
         });
@@ -337,7 +317,6 @@ const renderPublicPageButtons = (pagesSnapshot) => {
         a.addEventListener('click', () => {
             destroyTooltip();
         });
-
         container.appendChild(a);
     });
     applyLoginButtonVisibility();
@@ -463,12 +442,12 @@ const updateLoginButton = (isLoggedIn) => {
     const loginLink = document.getElementById('login-button-wrapper');
     const loginButton = document.getElementById('login-button');
     if (loginLink && loginButton) {
-        loginLink.style.display = 'none';        
+        loginLink.style.display = 'none';
         if (isLoggedIn) {
             loginLink.href = 'logged-in-my-data';
             loginButton.textContent = 'Moja zóna';
             const userRole = window.globalUserProfileData ? window.globalUserProfileData.role : null;
-            const roleColor = getRoleColor(userRole);            
+            const roleColor = getRoleColor(userRole);
             loginButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
             loginButton.style.backgroundColor = roleColor;
             loginButton.style.borderColor = roleColor;
@@ -493,15 +472,15 @@ const getRoleColor = (role) => {
     const defaultColor = '#4299E1';
     switch (role) {
         case 'admin':
-            return '#47b3ff'; 
+            return '#47b3ff';
         case 'hall':
-            return '#b06835'; 
+            return '#b06835';
         case 'club':
-            return '#9333EA'; 
+            return '#9333EA';
         case 'volunteer':
             return '#FFAC1C';
         default:
-            return defaultColor; 
+            return defaultColor;
     }
 };
 const toggleLoggedInMessage = (isLoggedIn, userProfileData) => {
@@ -531,11 +510,11 @@ const setupRegistrationDataListener = () => {
                 const categories = docSnap.data();
                 hasCategories = Object.keys(categories).length > 0;
             } else {
-                hasCategories = false; 
+                hasCategories = false;
             }
             updateRegistrationStatusAndButtons();
         }, (error) => {
-            hasCategories = false; 
+            hasCategories = false;
             updateRegistrationStatusAndButtons();
         });
         const registrationDocRef = doc(window.db, "settings", "registration");
@@ -598,8 +577,6 @@ const updateRegistrationStatusAndButtons = () => {
 window.addEventListener('globalDataUpdated', () => {
     setupRegistrationDataListener();
 });
-
-/* Skryť tooltip pri scrolli alebo resize */
 window.addEventListener('scroll', () => {
     if (activeTooltip) {
         destroyTooltip();
