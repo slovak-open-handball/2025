@@ -4,7 +4,7 @@ window.registrationDates = null;
 let timerId = null;
 let countdownIntervalId = null; 
 let hasCategories = false;
-let anyPagePublic = false; // NOVÉ: príznak, či je aspoň jedna stránka verejná
+let anyPagePublic = false;
 
 const formatDate = (timestamp) => {
     if (!timestamp) return 'Neurčený dátum';
@@ -34,20 +34,14 @@ const isReallyLoggedIn = () => {
 };
 
 const logAllDatesFromData = (data, sourceLabel) => {
-    console.log(`=== Dátumy z ${sourceLabel} ===`);
     if (!data) {
-        console.log('Žiadne dáta.');
         return;
     }
     Object.entries(data).forEach(([key, value]) => {
         if (value && typeof value.toDate === 'function') {
             const d = value.toDate();
-            console.log(`${key}: ${d.toLocaleString('sk-SK')} (raw: ${d.toISOString()})`);
-        } else {
-            console.log(`${key}: ${JSON.stringify(value)}`);
         }
     });
-    console.log('=== Koniec výpisu ===');
 };
 
 const renderTournamentDates = (dates) => {
@@ -80,14 +74,10 @@ const renderTournamentDates = (dates) => {
         <p>${start} &ndash; ${end}</p>
     `;
 };
-
-// NOVÉ: pomocná funkcia na skrytie/zobrazenie info o registrácii
 const applyRegistrationVisibility = () => {
     const messageElement = document.getElementById('registration-status-message');
     if (!messageElement) return;
-
     if (anyPagePublic) {
-        // Ak je aspoň jedna stránka verejná → skryjeme info aj odpočet
         messageElement.classList.add('hidden');
         messageElement.innerHTML = '';
         if (countdownIntervalId) {
@@ -98,14 +88,11 @@ const applyRegistrationVisibility = () => {
         messageElement.classList.remove('hidden');
     }
 };
-
 const updateRegistrationStatusText = (dates) => {
     const messageElement = document.getElementById('registration-status-message');
     if (!messageElement) {
         return;
     }
-
-    // Ak je aspoň jedna stránka verejná, info o registrácii sa vôbec nezobrazí
     if (anyPagePublic) {
         messageElement.classList.add('hidden');
         messageElement.innerHTML = '';
@@ -115,9 +102,7 @@ const updateRegistrationStatusText = (dates) => {
         }
         return;
     }
-
     messageElement.classList.remove('hidden');
-
     if (!hasCategories) {
         messageElement.innerHTML = `
             <p class="text-red-600 font-semibold">Nie je možné sa zaregistrovať na turnaj Slovak Open Handball, pretože v systéme nie sú definované žiadne kategórie.</p>
@@ -243,6 +228,7 @@ const toggleLoggedInMessage = (isLoggedIn, userProfileData) => {
         }
     }
 };
+const EXCLUDED_PAGES_FROM_HIDING = ['category-creation'];
 const setupRegistrationDataListener = () => {
     try {
         if (!window.db) {
@@ -269,7 +255,6 @@ const setupRegistrationDataListener = () => {
                 renderTournamentDates(window.registrationDates);
             } else {
                 window.registrationDates = null;
-                console.log('Dokument settings/registration neexistuje.');
                 renderTournamentDates(null);
             }
             updateRegistrationStatusAndButtons();
@@ -279,19 +264,17 @@ const setupRegistrationDataListener = () => {
             renderTournamentDates(null);
             updateRegistrationStatusAndButtons();
         });
-
-        // NOVÉ: sledovanie kolekcie "pages" – ak je aspoň jedna verejná, skryjeme info o registrácii
         const pagesRef = collection(window.db, "pages");
         onSnapshot(pagesRef, (snapshot) => {
             let anyPublic = false;
             snapshot.forEach((pageDoc) => {
+                if (EXCLUDED_PAGES_FROM_HIDING.includes(pageDoc.id)) return;
                 const data = pageDoc.data();
                 if (data && data.visible === true) {
                     anyPublic = true;
                 }
             });
             anyPagePublic = anyPublic;
-            console.log(`[pages] aspoň jedna verejná stránka: ${anyPagePublic}`);
             updateRegistrationStatusAndButtons();
         }, (error) => {
             console.error('Chyba pri načítaní kolekcie pages:', error);
@@ -312,7 +295,6 @@ const updateRegistrationStatusAndButtons = () => {
     if (isLoggedIn) {
         toggleLoggedInMessage(true, window.globalUserProfileData);
         toggleRegistrationButton(false);
-        // Prihlásený používateľ: info o registrácii sa nezobrazuje (pôvodné správanie)
         const messageElement = document.getElementById('registration-status-message');
         if (messageElement) messageElement.classList.add('hidden');
     } else {
