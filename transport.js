@@ -972,15 +972,37 @@ const tryPrintPerTeamTimeline = () => {
       }
     }
 
-    // ─── Ak mapovanie ešte nie je hotové, transfery vôbec nezobrazuj ───
     const listFiltered = !mappingDone
       ? list.filter((ev) => ev.kind !== 'transfer')
       : list.filter((ev) => {
           if (ev.kind !== 'transfer') return true;
-          if (!teamHasAccommodation) return true; // bez ubytovania – necháme pôvodnú logiku
 
           const legs = Array.isArray(ev.legs) ? ev.legs : [];
           if (legs.length === 0) return true;
+
+          // ─── Zisti ubytovanie pre TENTO transfer (viacero fallbackov) ───
+          const rawName = String(ev.teamName || '').trim();
+          const rawCat = cleanCategory(ev.category || cat);
+          let accomName = '';
+
+          if (rawName) {
+            accomName = __transportPerTeamBuffer.accommodationByKey.get(`${rawCat}|${rawName}`) || '';
+          }
+          if (!accomName && rawName) {
+            const mapped = __transportPerTeamBuffer.resolvedNames?.[rawName];
+            if (mapped) {
+              accomName = __transportPerTeamBuffer.accommodationByKey.get(`${rawCat}|${mapped}`) || '';
+            }
+          }
+          if (!accomName) {
+            accomName = __transportPerTeamBuffer.accommodationByKey.get(`${rawCat}|${team}`) || '';
+          }
+
+          const accomNorm = accomName && accomName !== 'bez ubytovania'
+            ? normPlaceName(accomName)
+            : null;
+
+          if (!accomNorm) return true; // bez ubytovania → necháme pôvodnú logiku
 
           // ─── Zisti najskorší startTs zo všetkých legov ───
           let startTsForCheck = null;
@@ -1007,9 +1029,9 @@ const tryPrintPerTeamTimeline = () => {
 
           // ─── Ak prvá udalosť dňa je na mieste ubytovania,
           // žiadny transfer v ten deň sa nesmie zobraziť. ───
-          if (evDayKey && accomNormForFilter) {
+          if (evDayKey) {
             const firstEvent = firstEventPlaceByDay.get(evDayKey);
-            if (firstEvent && normPlaceName(firstEvent.place) === accomNormForFilter) {
+            if (firstEvent && normPlaceName(firstEvent.place) === accomNorm) {
               return false;
             }
           }
@@ -1021,7 +1043,7 @@ const tryPrintPerTeamTimeline = () => {
           if (startTsForCheck != null && isFinite(startTsForCheck)) {
             const d = new Date(startTsForCheck);
             if (d.getHours() === 0 && d.getMinutes() === 0) {
-              if (firstFrom !== accomNormForFilter) return false;
+              if (firstFrom !== accomNorm) return false;
             }
           }
 
@@ -1034,7 +1056,7 @@ const tryPrintPerTeamTimeline = () => {
           if (!hasRealTimes) return true; // walking bez časov → necháme applyImpliedWalkingTimesFromEvents
 
           // Reálny transfer → musí začínať na mieste ubytovania
-          return firstFrom === accomNormForFilter;
+          return firstFrom === accomNorm;
         });
     
     const listWithRealTransfers = listFiltered.map((ev) => {
