@@ -4210,8 +4210,24 @@ const TransportApp = ({ userProfileData }) => {
       (__transportPerTeamBuffer.matches && __transportPerTeamBuffer.matches.length > 0) ||
       (__transportPerTeamBuffer.catering && __transportPerTeamBuffer.catering.length > 0);
     if (!hasAny) return;
-
-    // 1) Transfery z UI (už prefiltrované podľa zvolených filtrov)
+  
+    // ⬇️ NAJPRV filtre
+    const dayFilter = selectedDayKey || null;
+    const catFilter = selectedCategory ? cleanCategory(selectedCategory) : null;
+  
+    let teamFilterName = null;
+    let teamFilterCategory = null;
+    if (selectedTeam) {
+      const sepIdx = selectedTeam.indexOf('|');
+      if (sepIdx >= 0) {
+        teamFilterCategory = cleanCategory(selectedTeam.slice(0, sepIdx));
+        teamFilterName = selectedTeam.slice(sepIdx + 1).trim();
+      } else {
+        teamFilterName = selectedTeam.trim();
+      }
+    }
+  
+    // ⬇️ POTOM transferEvents s filtrom
     const rawTransferEvents = (timelineEvents || []).map((ev) => ({
       kind: 'transfer',
       teamName: String(ev.teamName || '').trim(),
@@ -4223,19 +4239,18 @@ const TransportApp = ({ userProfileData }) => {
       legs: ev.legs || [],
       _fromUi: true,
     }));
-    
-    // ⬇️ NOVÉ: finálny filter podľa tímu (DROP-1/2/3)
-    let transferEvents = rawTransferEvents;
+  
+    // ⬇️ APLIKUJ finálny filter
+    let transferEvents;
     if (teamFilterName) {
-      // aplikuj filter len pre konkrétny tím (ak je vybraný)
-      console.log(`🔍 [UI FILTER] ${teamFilterName} (${teamFilterCategory || '-'})`);
+      // konkrétny tím
       transferEvents = applyFinalTransferFilter(
         rawTransferEvents,
         teamFilterName,
         teamFilterCategory || catFilter || ''
       );
     } else {
-      // ak nie je vybraný tím, zoskup podľa tímov a filtruj každý zvlášť
+      // všetky tímy — zoskup podľa tímu a filtruj každý zvlášť
       const byTeamMap = new Map();
       for (const ev of rawTransferEvents) {
         const rawTeam = String(ev.teamName || '').trim();
@@ -4251,24 +4266,8 @@ const TransportApp = ({ userProfileData }) => {
         transferEvents.push(...applyFinalTransferFilter(events, team, cat));
       }
     }
-
-    // 2) Zápasy a stravovanie z globálneho buffra
-    //    Aby rešpektovali filtre (deň / kategória / tím), aplikujeme ich tu.
-    const dayFilter = selectedDayKey || null;
-    const catFilter = selectedCategory ? cleanCategory(selectedCategory) : null;
-
-    let teamFilterName = null;
-    let teamFilterCategory = null;
-    if (selectedTeam) {
-      const sepIdx = selectedTeam.indexOf('|');
-      if (sepIdx >= 0) {
-        teamFilterCategory = cleanCategory(selectedTeam.slice(0, sepIdx));
-        teamFilterName = selectedTeam.slice(sepIdx + 1).trim();
-      } else {
-        teamFilterName = selectedTeam.trim();
-      }
-    }
-
+  
+    // ⬇️ POTOM zápasy a stravovanie
     const matchesFilter = (ev) => {
       if (catFilter && cleanCategory(ev.category || '') !== catFilter) return false;
       if (teamFilterName && String(ev.teamName || '').trim() !== teamFilterName) return false;
@@ -4281,15 +4280,15 @@ const TransportApp = ({ userProfileData }) => {
       }
       return true;
     };
-
+  
     const matchEvents = (__transportPerTeamBuffer.matches || [])
       .filter(matchesFilter)
       .map((ev) => ({ ...ev, _fromBuffer: true }));
-
+  
     const cateringEvents = (__transportPerTeamBuffer.catering || [])
       .filter(matchesFilter)
       .map((ev) => ({ ...ev, _fromBuffer: true }));
-
+  
     const all = [...matchEvents, ...cateringEvents, ...transferEvents];
 
     // 3) Zoskupenie podľa KATEGÓRIA|TÍM
