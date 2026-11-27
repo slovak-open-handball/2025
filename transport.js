@@ -956,14 +956,33 @@ const tryPrintPerTeamTimeline = () => {
     // 5) NOVÉ: fallback – skús hľadať podľa mapovaného názvu tímu naprieč VŠETKÝMI kľúčmi
     //    (tím môže byť v accommodationByKey uložený pod surovým menom, ktoré neobsahuje kategóriu)
     if (!teamAccommodationName) {
-      const teamNorm = String(team).trim().toLowerCase();
+      const stripCategorySuffix = (s) => {
+        let out = String(s || '').trim();
+        // odstráň " (U12 D)" alebo "(U12 D)" na konci
+        out = out.replace(/\s*\([^()]*\)\s*$/g, '').trim();
+        // odstráň kategóriu kdekoľvek (napr. "ŠKP Topoľčany U12 D" → "ŠKP Topoľčany")
+        const catNorm = cleanCategory(cat);
+        if (catNorm) {
+          out = out.split(catNorm).join(' ').replace(/\s+/g, ' ').trim();
+        }
+        return out.toLowerCase();
+      };
+    
+      const teamNorm = stripCategorySuffix(team);
+      const catNorm = cleanCategory(cat);
+    
       for (const [key, accom] of __transportPerTeamBuffer.accommodationByKey.entries()) {
         if (!accom || accom === 'bez ubytovania') continue;
+    
         const [keyCat, ...keyTeamParts] = String(key).split('|');
-        const keyTeam = keyTeamParts.join('|').trim().toLowerCase();
-        if (keyTeam !== teamNorm) continue;
+        const keyTeamRaw = keyTeamParts.join('|').trim();
+        const keyTeamNorm = stripCategorySuffix(keyTeamRaw);
+    
+        if (keyTeamNorm !== teamNorm) continue;
+    
         // kategória musí sedieť (ak je v kľúči uvedená)
-        if (keyCat && cleanCategory(keyCat) !== cleanCategory(cat)) continue;
+        if (keyCat && cleanCategory(keyCat) !== catNorm) continue;
+    
         teamAccommodationName = accom;
         break;
       }
