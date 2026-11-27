@@ -931,9 +931,40 @@ const tryPrintPerTeamTimeline = () => {
       })));
     }
     
-    // ⬅️ ZMENA: reálne transfery z DB necháme tak ako sú (majú časy aj miesta),
-    // applyImpliedWalkingTimesFromEvents aplikujeme len na tie, ktoré naozaj nemajú časy.
-    const listWithRealTransfers = list.map((ev) => {
+    // ─── Zisti ubytovanie tímu (rovnaká logika ako v applyImpliedWalkingTimesFromEvents) ───
+    const teamAccomKey = `${cat}|${team}`;
+    const teamAccommodationName =
+      __transportPerTeamBuffer.accommodationByKey.get(teamAccomKey) || 'bez ubytovania';
+    const teamHasAccommodation =
+      teamAccommodationName && teamAccommodationName !== 'bez ubytovania';
+
+    // ─── NOVÉ: Pre tím S UBYTOVANÍM odfiltruj reálne transfery, ktoré nezačínajú
+    // na mieste ubytovania (týka sa najmä transferov s reálnymi časmi z DB,
+    // ktoré by inak prešli nezmenené a zobrazili sa v UI aj v konzole). ───
+    const normPlaceName = (s) => normalizePlaceName(String(s || ''));
+    const accomNormForFilter = teamHasAccommodation ? normPlaceName(teamAccommodationName) : null;
+
+    const listFiltered = list.filter((ev) => {
+      if (ev.kind !== 'transfer') return true;
+      if (!teamHasAccommodation) return true; // bez ubytovania – necháme pôvodnú logiku
+
+      const legs = Array.isArray(ev.legs) ? ev.legs : [];
+      if (legs.length === 0) return true;
+
+      const firstFrom = normPlaceName(legs[0]?.fromName);
+      if (!firstFrom) return true;
+
+      const hasRealTimes =
+        legs.some((l) => l.startTs != null && l.endTs != null) ||
+        (ev.ts != null && isFinite(ev.ts));
+
+      if (!hasRealTimes) return true; // walking bez časov → necháme applyImpliedWalkingTimesFromEvents
+
+      // Reálny transfer → musí začínať na mieste ubytovania
+      return firstFrom === accomNormForFilter;
+    });
+
+    const listWithRealTransfers = listFiltered.map((ev) => {
       if (ev.kind !== 'transfer') return ev;
       const hasRealTimes =
         (Array.isArray(ev.legs) && ev.legs.some((l) => l.startTs != null && l.endTs != null)) ||
@@ -942,10 +973,6 @@ const tryPrintPerTeamTimeline = () => {
       return ev;
     });
 
-    // ⬅️ ZMENA: enrichTransfersWithImpliedWalking už NEVOLÁME — spôsoboval,
-    // že sa reálne transfery zahadzovali podľa zhody miesta medzi kotvami.
-    // Namiesto toho všetky reálne transfery pridáme priamo do zoznamu
-    // a applyImpliedWalkingTimesFromEvents sa postará len o pešie presuny bez časov.
     const enrichedList = applyImpliedWalkingTimesFromEvents(listWithRealTransfers);
     // ─── koniec doplnenia ───
     
