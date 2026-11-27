@@ -902,7 +902,7 @@ const tryPrintPerTeamTimeline = () => {
     const teamAccomKey = `${cat}|${team}`;
     let teamAccommodationName =
       __transportPerTeamBuffer.accommodationByKey.get(teamAccomKey) || '';
-
+    
     // 2) fallback: surové názvy tímov z transferov v tomto zozname
     if (!teamAccommodationName) {
       for (const ev of list) {
@@ -917,7 +917,7 @@ const tryPrintPerTeamTimeline = () => {
         }
       }
     }
-
+    
     // 3) fallback: skús aj mapovanie cez resolvedNames
     if (!teamAccommodationName) {
       const resolved = __transportPerTeamBuffer.resolvedNames || {};
@@ -931,7 +931,7 @@ const tryPrintPerTeamTimeline = () => {
         }
       }
     }
-
+    
     // 4) fallback: skús aj surové meno tímu z match/catering eventov (cez resolvedNames)
     if (!teamAccommodationName) {
       const resolved = __transportPerTeamBuffer.resolvedNames || {};
@@ -952,61 +952,43 @@ const tryPrintPerTeamTimeline = () => {
         }
       }
     }
-
+    
+    // 5) NOVÉ: fallback – skús hľadať podľa mapovaného názvu tímu naprieč VŠETKÝMI kľúčmi
+    //    (tím môže byť v accommodationByKey uložený pod surovým menom, ktoré neobsahuje kategóriu)
+    if (!teamAccommodationName) {
+      const teamNorm = String(team).trim().toLowerCase();
+      for (const [key, accom] of __transportPerTeamBuffer.accommodationByKey.entries()) {
+        if (!accom || accom === 'bez ubytovania') continue;
+        const [keyCat, ...keyTeamParts] = String(key).split('|');
+        const keyTeam = keyTeamParts.join('|').trim().toLowerCase();
+        if (keyTeam !== teamNorm) continue;
+        // kategória musí sedieť (ak je v kľúči uvedená)
+        if (keyCat && cleanCategory(keyCat) !== cleanCategory(cat)) continue;
+        teamAccommodationName = accom;
+        break;
+      }
+    }
+    
     if (!teamAccommodationName) teamAccommodationName = 'bez ubytovania';
-
+    
     const teamHasAccommodation =
       teamAccommodationName && teamAccommodationName !== 'bez ubytovania';
-
+    
     const normPlaceName = (s) => normalizePlaceName(String(s || ''));
     const accomNormForFilter = teamHasAccommodation ? normPlaceName(teamAccommodationName) : null;
-
-    // ═══════════════════════════════════════════════════════════════════
-    // DEBUG: vypíš všetky eventy v `list` s ich miestom a dňom
-    // ═══════════════════════════════════════════════════════════════════
-    if (teamHasAccommodation && accomNormForFilter) {
-      console.groupCollapsed(`🔍 [EVENTS DEBUG] ${team} (${cat}) – accomNorm="${accomNormForFilter}" – list=${list.length}`);
-      list.forEach((ev, i) => {
-        const place = (() => {
-          if (ev.kind === 'match') {
-            const parts = String(ev.label || '').split('|').map((s) => s.trim());
-            return parts[1] || null;
-          }
-          if (ev.kind === 'catering') {
-            const parts = String(ev.label || '').split('|').map((s) => s.trim());
-            return parts[2] || null;
-          }
-          if (ev.kind === 'transfer') {
-            const legs = ev.legs || [];
-            if (legs.length === 0) return ev.fromName || null;
-            return `${legs[0]?.fromName} → ${legs[legs.length - 1]?.toName}`;
-          }
-          return null;
-        })();
-        const tsStr = ev.ts != null && isFinite(ev.ts) ? new Date(ev.ts).toLocaleString('sk') : String(ev.ts);
-        console.log(
-          `  [${i}] kind=${ev.kind} dayKey="${ev.dayKey || ''}" ts=${tsStr} place="${place}" label="${String(ev.label || '').slice(0, 80)}"`
-        );
-      });
-      console.groupEnd();
-    }
-
-    // ─── Zisti miesto PRVEJ udalosti (zápas/stravovanie) pre každý deň ───
+    
     // ═══════════════════════════════════════════════════════════════════
     // Pomocná: zisti deň z eventu (ts / label / dayKey)
     // ═══════════════════════════════════════════════════════════════════
     const getEventDayKey = (ev) => {
       if (!ev) return '';
-      // 1) z ts
       if (ev.ts != null && isFinite(ev.ts)) {
         const d = new Date(ev.ts);
         if (!isNaN(d.getTime())) {
           return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
       }
-      // 2) z dayKey
       if (ev.dayKey) return String(ev.dayKey);
-      // 3) z labelu
       if (ev.label) {
         const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(String(ev.label));
         if (m) {
@@ -1015,14 +997,13 @@ const tryPrintPerTeamTimeline = () => {
       }
       return '';
     };
-
+    
     // ═══════════════════════════════════════════════════════════════════
     // Pomocná: zisti timestamp eventu (pre porovnanie, ktorý je prvý)
     // ═══════════════════════════════════════════════════════════════════
     const getEventSortTs = (ev) => {
       if (!ev) return Number.POSITIVE_INFINITY;
       if (ev.ts != null && isFinite(ev.ts)) return ev.ts;
-      // z labelu
       if (ev.label) {
         const m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/.exec(String(ev.label));
         if (m) {
@@ -1039,7 +1020,7 @@ const tryPrintPerTeamTimeline = () => {
       }
       return Number.POSITIVE_INFINITY;
     };
-
+    
     // ═══════════════════════════════════════════════════════════════════
     // Pomocná: vytiahni miesto z eventu (match/catering)
     // ═══════════════════════════════════════════════════════════════════
@@ -1055,14 +1036,14 @@ const tryPrintPerTeamTimeline = () => {
       }
       return null;
     };
-
+    
     // ═══════════════════════════════════════════════════════════════════
     // Naplň firstEventPlaceByDay a lastEventPlaceByDay
-    // (robustne – aj keď ev.ts je POSITIVE_INFINITY)
+    // (naplníme VŽDY, nielen keď má tím ubytovanie – filter nižšie to potrebuje)
     // ═══════════════════════════════════════════════════════════════════
     const firstEventPlaceByDay = new Map();
     const lastEventPlaceByDay = new Map();
-    if (teamHasAccommodation && accomNormForFilter) {
+    {
       const anchors = list.filter((ev) => ev.kind === 'match' || ev.kind === 'catering');
       for (const ev of anchors) {
         const dk = getEventDayKey(ev);
@@ -1070,8 +1051,7 @@ const tryPrintPerTeamTimeline = () => {
         const place = getEventPlaceLabel(ev);
         if (!place) continue;
         const sortTs = getEventSortTs(ev);
-
-        // FIRST
+    
         const prevFirst = firstEventPlaceByDay.get(dk);
         if (!prevFirst) {
           firstEventPlaceByDay.set(dk, { ts: sortTs, place });
@@ -1082,8 +1062,7 @@ const tryPrintPerTeamTimeline = () => {
             firstEventPlaceByDay.set(dk, { ts: sortTs, place });
           }
         }
-
-        // LAST
+    
         const prevLast = lastEventPlaceByDay.get(dk);
         if (!prevLast) {
           lastEventPlaceByDay.set(dk, { ts: sortTs, place });
@@ -1095,17 +1074,8 @@ const tryPrintPerTeamTimeline = () => {
           }
         }
       }
-
-      console.log(
-        `🔍 [FIRST EVENT BY DAY] ${team} (${cat}) –`,
-        Array.from(firstEventPlaceByDay.entries()).map(([k, v]) => `${k} → "${v.place}"`)
-      );
-      console.log(
-        `🔍 [LAST EVENT BY DAY] ${team} (${cat}) –`,
-        Array.from(lastEventPlaceByDay.entries()).map(([k, v]) => `${k} → "${v.place}"`)
-      );
     }
-
+    
     // ═══════════════════════════════════════════════════════════════════
     // Pomocná: deň transferu (robustne)
     // ═══════════════════════════════════════════════════════════════════
@@ -1124,7 +1094,7 @@ const tryPrintPerTeamTimeline = () => {
       if (startTs == null && ev.ts != null && isFinite(ev.ts)) startTs = ev.ts;
       if (startTs == null && ev.startTs != null && isFinite(ev.startTs)) startTs = ev.startTs;
       if (endTs == null && ev.endTs != null && isFinite(ev.endTs)) endTs = ev.endTs;
-
+    
       let tsForDay = startTs;
       if (tsForDay != null && isFinite(tsForDay)) {
         const d = new Date(tsForDay);
@@ -1139,10 +1109,9 @@ const tryPrintPerTeamTimeline = () => {
       if (isNaN(d.getTime())) return ev.dayKey || '';
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
-
+    
     // ═══════════════════════════════════════════════════════════════════
     // Pomocná: má sa transfer zablokovať?
-    // (prvá udalosť dňa na mieste ubytovania → áno)
     // ═══════════════════════════════════════════════════════════════════
     const isTransferBlockedByFirstEventAtAccommodation = (ev, accomNorm) => {
       if (!accomNorm) return false;
@@ -1152,7 +1121,7 @@ const tryPrintPerTeamTimeline = () => {
       if (!firstEvent) return false;
       return normPlaceName(firstEvent.place) === accomNorm;
     };
-
+    
     // ═══════════════════════════════════════════════════════════════════
     // listFiltered – predbežný filter (ponechaj pôvodnú logiku)
     // ═══════════════════════════════════════════════════════════════════
@@ -1162,11 +1131,11 @@ const tryPrintPerTeamTimeline = () => {
           if (ev.kind !== 'transfer') return true;
           const accomNorm = accomNormForFilter;
           if (!accomNorm) return true;
-
+    
           if (isTransferBlockedByFirstEventAtAccommodation(ev, accomNorm)) {
             return false;
           }
-
+    
           const legs = Array.isArray(ev.legs) ? ev.legs : [];
           if (legs.length === 0) {
             const isWalking = ev.isWalking === true;
@@ -1175,7 +1144,7 @@ const tryPrintPerTeamTimeline = () => {
             if (!hasRealTimes) return true;
             return true;
           }
-
+    
           let startTsForCheck = null;
           for (const leg of legs) {
             if (leg.startTs != null && isFinite(leg.startTs)) {
@@ -1190,27 +1159,27 @@ const tryPrintPerTeamTimeline = () => {
           if (startTsForCheck == null && ev.startTs != null && isFinite(ev.startTs)) {
             startTsForCheck = ev.startTs;
           }
-
+    
           const firstFrom = normPlaceName(legs[0]?.fromName);
-
+    
           if (startTsForCheck != null && isFinite(startTsForCheck)) {
             const d = new Date(startTsForCheck);
             if (d.getHours() === 0 && d.getMinutes() === 0) {
               if (firstFrom !== accomNorm) return false;
             }
           }
-
+    
           if (!firstFrom) return true;
-
+    
           const hasRealTimes =
             legs.some((l) => l.startTs != null && l.endTs != null) ||
             (ev.ts != null && isFinite(ev.ts));
-
+    
           if (!hasRealTimes) return true;
-
+    
           return firstFrom === accomNorm;
         });
-
+    
     const listWithRealTransfers = listFiltered.map((ev) => {
       if (ev.kind !== 'transfer') return ev;
       const hasRealTimes =
@@ -1219,22 +1188,22 @@ const tryPrintPerTeamTimeline = () => {
       if (!hasRealTimes) return ev;
       return ev;
     });
-
+    
     let enrichedList = applyImpliedWalkingTimesFromEvents(listWithRealTransfers);
-
+    
     // ═══════════════════════════════════════════════════════════════════
-    // FINÁLNY FILTER – pre tím s ubytovaním musia platiť OBE podmienky:
+    // FINÁLNY FILTER – aplikuj VŽDY keď má tím ubytovanie:
     //   1) transfer ZAČÍNA na mieste ubytovania
     //   2) transfer KONČÍ na mieste PRVEJ udalosti dňa
-    // Ak čo i len jedna neplatí → transfer sa nezobrazí.
+    //   3) ak sa miesto ubytovania == miesto prvej udalosti dňa → transfer sa NEZOBRAZÍ
     // ═══════════════════════════════════════════════════════════════════
     if (teamHasAccommodation && accomNormForFilter) {
       const beforeCount = enrichedList.filter((e) => e.kind === 'transfer').length;
       console.log(`🔍 [FINAL FILTER] ${team} (${cat}) – accomNorm="${accomNormForFilter}" – transferov pred=${beforeCount}`);
-
+    
       enrichedList = enrichedList.filter((ev) => {
         if (ev.kind !== 'transfer') return true;
-
+    
         const legs = Array.isArray(ev.legs) ? ev.legs : [];
         const firstFromNorm = legs.length > 0
           ? normPlaceName(legs[0]?.fromName || '')
@@ -1242,14 +1211,14 @@ const tryPrintPerTeamTimeline = () => {
         const lastToNorm = legs.length > 0
           ? normPlaceName(legs[legs.length - 1]?.toName || '')
           : normPlaceName(ev.toName || '');
-
+    
         // ─── Podmienka 1: transfer musí ZAČÍNAŤ na mieste ubytovania ───
         const startsAtAccom = firstFromNorm === accomNormForFilter;
         if (!startsAtAccom) {
           console.log(`  ❌ [DROP-1] nezačína na ubytovaní: from="${firstFromNorm}" (ubytovanie="${accomNormForFilter}")`);
           return false;
         }
-
+    
         // ─── Podmienka 2: transfer musí KONČIŤ na mieste PRVEJ udalosti dňa ───
         const dk = getTransferDayKey(ev);
         const firstEvent = dk ? firstEventPlaceByDay.get(dk) : null;
@@ -1258,15 +1227,22 @@ const tryPrintPerTeamTimeline = () => {
           return false;
         }
         const firstEventPlaceNorm = normPlaceName(firstEvent.place);
+    
+        // ─── NOVÉ: ak ubytovanie == prvá udalosť dňa → žiadny transfer nechceme ───
+        if (firstEventPlaceNorm === accomNormForFilter) {
+          console.log(`  ❌ [DROP-3] ubytovanie == prvá udalosť dňa ("${firstEventPlaceNorm}") → transfer sa nezobrazí`);
+          return false;
+        }
+    
         if (lastToNorm !== firstEventPlaceNorm) {
           console.log(`  ❌ [DROP-2] nekončí na prvej udalosti dňa: to="${lastToNorm}" (prvá udalosť="${firstEventPlaceNorm}")`);
           return false;
         }
-
+    
         console.log(`  ✅ [KEEP] from="${firstFromNorm}" to="${lastToNorm}" (dk=${dk}, prvá udalosť="${firstEventPlaceNorm}")`);
         return true;
       });
-
+    
       const afterCount = enrichedList.filter((e) => e.kind === 'transfer').length;
       console.log(`🔍 [FINAL FILTER] ${team} (${cat}) – transferov po=${afterCount}`);
     }
