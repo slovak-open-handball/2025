@@ -143,10 +143,8 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
     const firstDay = window.__transportPerTeamBuffer?.firstTournamentDayKey;
     const arrivalTs = window.__transportPerTeamBuffer?.arrivalTimestamp;
 
-    // Ak je známy prvý deň turnaja, porovnávame s ním
     if (firstDay && dk) return dk === firstDay;
   
-    // Fallback: ak nie je firstDay, ale je arrivalTimestamp, berieme deň príchodu
     if (arrivalTs && dk) {
       return dk === getDayKeyFromTs(arrivalTs);
     }
@@ -242,7 +240,7 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
   const excludedTransferIndexes = new Set();
   const assignments = new Map();
 
-  // Pre tímy bez ubytovania: presun na miesto prvej udalosti dňa a po poslednej udalosti dňa
+  // ─── NOVÉ: Pre tímy bez ubytovania použijeme presun začínajúci o 0:00 na mieste zrazu ───
   if (isWithoutAccommodation) {
     const timedByDay = new Map();
     sorted.forEach((ev, idx) => {
@@ -262,25 +260,26 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
 
       if (firstItem) {
         const firstPlace = normPlace(firstItem.places.from || firstItem.places.to);
+        // ─── NOVÉ: Pre tím bez ubytovania VŽDY použijeme presun začínajúci o 0:00 ───
         const startWalkIdx = sorted.findIndex((cand, k) => {
           if (usedWalkingIndexes.has(k) || !isWalkingTransferWithoutTime(cand)) return false;
           const candDk = getEffectiveDayKey(cand);
+          // deň musí sedieť (alebo byť prázdny)
           if (candDk && candDk !== dk) return false;
           const { from: wFrom, to: wTo } = getEventPlaces(cand);
           const nFrom = normPlace(wFrom);
           const nTo = normPlace(wTo);
-          // ─── NOVÉ: ak nemení miesto, nemá zmysel ───
+          // musí ísť z nejakého miesta na miesto prvej udalosti
           if (!nFrom || !nTo || nFrom === nTo) return false;
-          return Boolean(nFrom) && nTo === firstPlace;
+          // ─── NOVÉ: cieľ musí byť miesto prvej udalosti dňa ───
+          return nTo === firstPlace;
         });
 
         if (startWalkIdx !== -1) {
           const endTs = firstItem.range.startTs;
-          const arrivalStartTs = getArrivalStartTsForDay(dk, endTs);
           const dObj = new Date(endTs);
-          const startTs = arrivalStartTs != null && arrivalStartTs < endTs
-            ? arrivalStartTs
-            : new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 0, 0, 0, 0).getTime();
+          // ─── NOVÉ: VŽDY začínaj o 0:00 (polnoc) ───
+          const startTs = new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 0, 0, 0, 0).getTime();
           if (endTs > startTs) {
             usedWalkingIndexes.add(startWalkIdx);
             assignments.set(startWalkIdx, { startTs, endTs, dayKey: dk });
@@ -297,18 +296,10 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
           const { from: wFrom, to: wTo } = getEventPlaces(cand);
           const nFrom = normPlace(wFrom);
           const nTo = normPlace(wTo);
-          // ─── NOVÉ: ak nemení miesto, nemá zmysel ───
           if (!nFrom || !nTo || nFrom === nTo) return false;
           return nFrom === lastPlace && Boolean(nTo);
         });
       
-        // ─── NOVÉ: end-of-day walking pridáme LEN ak nie je v ten deň už žiadna
-        // neskoršia udalosť na mieste, kam by mal presun viesť (t.j. tím sa naozaj
-        // niekam presúva po skončení poslednej udalosti). Ak posledná udalosť dňa
-        // je zároveň poslednou udalosťou pobytu (napr. večera na ubytovaní a tím
-        // nemá kam ísť), end-of-day walking je zbytočný.
-        // ⬅️ ZMENA: NEKONTROLUJEME, či existuje budúca udalosť na cieľovom mieste.
-        // Všetky pešie presuny bez časov dostanú časový interval, aby sa zobrazili.
         if (endWalkIdx !== -1) {
           const startTs = lastItem.range.endTs;
           const dObj = new Date(startTs);
@@ -322,6 +313,8 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
     });
   }
 
+  // ... zvyšok kódu zostáva rovnaký (for cykly pre ostatné prípady) ...
+  
   for (let i = 0; i < sorted.length; i++) {
     const first = sorted[i];
     if (isWalkingTransferWithoutTime(first)) continue;
@@ -367,14 +360,10 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
       const walkIdx = sorted.findIndex((cand, k) => {
         if (usedWalkingIndexes.has(k)) return false;
         if (!isWalkingTransferWithoutTime(cand)) return false;
-        const candDayKey = getEffectiveDayKey(cand);
-        // ⬅️ ZMENA: NEKONTROLUJEME deň — presun môže preklenúť polnoc
-        // if (gapDayKey && candDayKey && candDayKey !== gapDayKey) return false;
         const { from: wFrom, to: wTo } = getEventPlaces(cand);
         const nFrom = normPlace(wFrom);
         const nTo = normPlace(wTo);
         if (!nFrom || !nTo || nFrom === nTo) return false;
-        // ⬅️ ZMENA: NEKONTROLUJEME zhodu miesta s kotvami — stačí, že transfer existuje
         return true;
       });
 
