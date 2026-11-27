@@ -23,6 +23,25 @@ const isReallyLoggedIn = () => {
     return true;
 };
 
+// Pomocná funkcia na výpis všetkých dátumov z dát dokumentu
+const logAllDatesFromData = (data, sourceLabel) => {
+    console.log(`=== Dátumy z ${sourceLabel} ===`);
+    if (!data) {
+        console.log('Žiadne dáta.');
+        return;
+    }
+    Object.entries(data).forEach(([key, value]) => {
+        // Firebase Timestamp má metódu toDate()
+        if (value && typeof value.toDate === 'function') {
+            const d = value.toDate();
+            console.log(`${key}: ${d.toLocaleString('sk-SK')} (raw: ${d.toISOString()})`);
+        } else {
+            console.log(`${key}: ${JSON.stringify(value)}`);
+        }
+    });
+    console.log('=== Koniec výpisu ===');
+};
+
 const updateRegistrationStatusText = (dates) => {
     const messageElement = document.getElementById('registration-status-message');
     if (!messageElement) {
@@ -175,16 +194,21 @@ const setupRegistrationDataListener = () => {
         onSnapshot(registrationDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 window.registrationDates = docSnap.data();
+                // Vypíš všetky dátumy z dokumentu registration
+                logAllDatesFromData(window.registrationDates, 'settings/registration');
             } else {
                 window.registrationDates = null;
+                console.log('Dokument settings/registration neexistuje.');
             }
             updateRegistrationStatusAndButtons();
         }, (error) => {
             window.registrationDates = null;
+            console.error('Chyba pri načítaní settings/registration:', error);
             updateRegistrationStatusAndButtons();
         });
 
     } catch (error) {
+        console.error('Chyba v setupRegistrationDataListener:', error);
     }
 };
 const updateRegistrationStatusAndButtons = () => {
