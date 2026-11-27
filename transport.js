@@ -895,10 +895,44 @@ const tryPrintPerTeamTimeline = () => {
       });
     };
     
-    // ─── Zisti ubytovanie tímu (rovnaká logika ako v applyImpliedWalkingTimesFromEvents) ───
+    // ─── Zisti ubytovanie tímu – skús VIACERO kľúčov ───
+    // 1) presný kľúč cat|team (namapovaný názov)
     const teamAccomKey = `${cat}|${team}`;
-    const teamAccommodationName =
-      __transportPerTeamBuffer.accommodationByKey.get(teamAccomKey) || 'bez ubytovania';
+    let teamAccommodationName =
+      __transportPerTeamBuffer.accommodationByKey.get(teamAccomKey) || '';
+
+    // 2) fallback: surové názvy tímov z transferov v tomto zozname
+    //    (tie sú v accommodationByKey pod surovým kľúčom)
+    if (!teamAccommodationName) {
+      for (const ev of list) {
+        if (ev.kind !== 'transfer') continue;
+        const rawName = String(ev.teamName || '').trim();
+        if (!rawName) continue;
+        const rawKey = `${cleanCategory(ev.category || cat)}|${rawName}`;
+        const accom = __transportPerTeamBuffer.accommodationByKey.get(rawKey);
+        if (accom && accom !== 'bez ubytovania') {
+          teamAccommodationName = accom;
+          break;
+        }
+      }
+    }
+
+    // 3) fallback: skús aj mapovanie cez resolvedNames
+    if (!teamAccommodationName) {
+      const resolved = __transportPerTeamBuffer.resolvedNames || {};
+      for (const [rawName, mappedName] of Object.entries(resolved)) {
+        if (String(mappedName).trim() !== String(team).trim()) continue;
+        const rawKey = `${cat}|${rawName}`;
+        const accom = __transportPerTeamBuffer.accommodationByKey.get(rawKey);
+        if (accom && accom !== 'bez ubytovania') {
+          teamAccommodationName = accom;
+          break;
+        }
+      }
+    }
+
+    if (!teamAccommodationName) teamAccommodationName = 'bez ubytovania';
+
     const teamHasAccommodation =
       teamAccommodationName && teamAccommodationName !== 'bez ubytovania';
 
