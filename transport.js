@@ -2195,7 +2195,6 @@ const applyFinalTransferFilter = (transferEvents, teamName, categoryName) => {
 
   const norm = (s) => normalizePlaceName(String(s || ''));
 
-  // ⬅️ parseTimeToTs presunutá HORE (pred použitím v getTransferDayKey)
   const parseTimeToTs = (timeStr, dayKey) => {
     if (!timeStr || !dayKey) return null;
     const m = /^(\d{1,2}):(\d{2})$/.exec(String(timeStr).trim());
@@ -2217,7 +2216,6 @@ const applyFinalTransferFilter = (transferEvents, teamName, categoryName) => {
     accommodationName =
       __transportPerTeamBuffer.accommodationByKey.get(`${cat}|${team}`) || '';
 
-    // fallback: prehľadaj všetky kľúče s normalizovaným porovnaním
     if (!accommodationName) {
       const stripCategorySuffix = (s) => {
         let out = String(s || '').trim();
@@ -2298,13 +2296,11 @@ const applyFinalTransferFilter = (transferEvents, teamName, categoryName) => {
     if (!place) continue;
     const sortTs = getEventSortTs(ev);
 
-    // FIRST
     const prevFirst = firstEventPlaceByDay.get(dk);
     if (!prevFirst || sortTs < prevFirst.ts) {
       firstEventPlaceByDay.set(dk, { ts: sortTs, place });
     }
 
-    // LAST
     const prevLast = lastEventPlaceByDay.get(dk);
     if (!prevLast || sortTs > prevLast.ts) {
       lastEventPlaceByDay.set(dk, { ts: sortTs, place });
@@ -2358,57 +2354,83 @@ const applyFinalTransferFilter = (transferEvents, teamName, categoryName) => {
     const startsAtAccom = firstFromNorm === accomNorm;
     const endsAtAccom = lastToNorm === accomNorm;
     const dk = getTransferDayKey(ev);
+    const firstEvent = dk ? firstEventPlaceByDay.get(dk) : null;
+    const lastEvent = dk ? lastEventPlaceByDay.get(dk) : null;
+    const firstEventPlaceNorm = firstEvent ? norm(firstEvent.place) : null;
+    const lastEventPlaceNorm = lastEvent ? norm(lastEvent.place) : null;
 
-    // ─── Prípad A: KONCOVÝ transfer dňa ───
-    // Začína na poslednej udalosti dňa, končí na ubytovaní.
-    // (Nezačína na ubytovaní, takže DROP-1 by ho inak zahodil.)
+    // ─── Prípad A: KONCOVÝ transfer dňa (posledná udalosť → ubytovanie) ───
     if (!startsAtAccom && endsAtAccom) {
-      const lastEvent = dk ? lastEventPlaceByDay.get(dk) : null;
       if (!lastEvent) {
         console.log(`  ❌ [DROP-END-1] deň "${dk}" bez poslednej udalosti`);
         return false;
       }
-      if (norm(lastEvent.place) !== firstFromNorm) {
-        console.log(`  ❌ [DROP-END-2] nezačína na poslednej udalosti dňa (from="${firstFromNorm}", posledná="${norm(lastEvent.place)}")`);
+      // Ak posledná udalosť je na ubytovaní, transfer z poslednej udalosti na ubytovanie je zbytočný
+      if (lastEventPlaceNorm === accomNorm) {
+        console.log(`  ❌ [DROP-END-3] posledná udalosť == ubytovanie → transfer zbytočný`);
         return false;
       }
-      // Ak by posledná udalosť bola na ubytovaní, transfer by bol zbytočný
-      if (norm(lastEvent.place) === accomNorm) {
-        console.log(`  ❌ [DROP-END-3] posledná udalosť == ubytovanie → transfer zbytočný`);
+      if (firstFromNorm !== lastEventPlaceNorm) {
+        console.log(`  ❌ [DROP-END-2] nezačína na poslednej udalosti dňa (from="${firstFromNorm}", posledná="${lastEventPlaceNorm}")`);
         return false;
       }
       console.log(`  ✅ [KEEP-END] ${firstFromNorm} → ${lastToNorm} (deň=${dk})`);
       return true;
     }
 
-    // ─── Prípad B: transfer NEZAČÍNA na ubytovaní → DROP-1 ───
-    if (!startsAtAccom) {
-      console.log(`  ❌ [DROP-1] nezačína na ubytovaní: from="${firstFromNorm}" (ubytovanie="${accomNorm}")`);
+    // ─── Prípad B: ŠTARTOVACÍ transfer dňa (ubytovanie → prvá udalosť) ───
+    if (startsAtAccom && !endsAtAccom) {
+      if (!firstEvent) {
+        console.log(`  ❌ [DROP-2] deň "${dk}" bez prvej udalosti`);
+        return false;
+      }
+      // ⬇️⬇️⬇️ KĽÚČOVÁ ZMENA ⬇️⬇️⬇️
+      // Ak ubytovanie == prvá udalosť dňa, štartovací transfer je zbytočný,
+      // ALE iba tento konkrétny transfer — nie všetky transfery dňa!
+      if (firstEventPlaceNorm === accomNorm) {
+        console.log(`  ❌ [DROP-3] ubytovanie == prvá udalosť dňa → tento štartovací transfer je zbytočný`);
+        return false;
+      }
+      if (lastToNorm !== firstEventPlaceNorm) {
+        console.log(`  ❌ [DROP-2b] nekončí na prvej udalosti dňa (to="${lastToNorm}", prvá="${firstEventPlaceNorm}")`);
+        return false;
+      }
+      console.log(`  ✅ [KEEP-START] ${firstFromNorm} → ${lastToNorm} (deň=${dk})`);
+      return true;
+    }
+
+    // ─── Prípad C: Transfer začína AJ končí na ubytovaní (zbytočný) ───
+    if (startsAtAccom && endsAtAccom) {
+      // Iba ak je to skutočne A → A (rovnaké miesto)
+      if (firstFromNorm === lastToNorm) {
+        console.log(`  ❌ [DROP-A-A] transfer z ubytovania na ubytovanie`);
+        return false;
+      }
+    }
+
+    // ─── Prípad D: Ostatné transfery (medzi udalosťami dňa) ───
+    // Tieto NEZAHAĎUJEME — môžu byť relevantné (napr. zápas → stravovanie → zápas).
+    // Overíme len, či aspoň jeden koniec transferu sedí s nejakou udalosťou dňa
+    // alebo s ubytovaním.
+    const relevantPlaces = new Set();
+    if (accomNorm) relevantPlaces.add(accomNorm);
+    if (firstEventPlaceNorm) relevantPlaces.add(firstEventPlaceNorm);
+    if (lastEventPlaceNorm) relevantPlaces.add(lastEventPlaceNorm);
+
+    // Pridaj aj miesta všetkých udalostí dňa
+    for (const evt of allEvents) {
+      if (getEventDayKey(evt) !== dk) continue;
+      const p = getEventPlaceLabel(evt);
+      if (p) relevantPlaces.add(norm(p));
+    }
+
+    const touchesRelevant = relevantPlaces.has(firstFromNorm) || relevantPlaces.has(lastToNorm);
+    if (!touchesRelevant) {
+      console.log(`  ❌ [DROP-IRRELEVANT] transfer nesúvisí so žiadnou udalosťou dňa (from="${firstFromNorm}", to="${lastToNorm}")`);
       return false;
     }
 
-    // ─── Prípad C: ŠTARTOVACÍ transfer dňa ───
-    // Musí končiť na prvej udalosti dňa.
-    const firstEvent = dk ? firstEventPlaceByDay.get(dk) : null;
-    if (!firstEvent) {
-      console.log(`  ❌ [DROP-2] deň "${dk}" bez prvej udalosti`);
-      return false;
-    }
-    const firstEventPlaceNorm = norm(firstEvent.place);
-
-    // Ak ubytovanie == prvá udalosť dňa → žiadny štartovací transfer
-    if (firstEventPlaceNorm === accomNorm) {
-      console.log(`  ❌ [DROP-3] ubytovanie == prvá udalosť dňa ("${firstEventPlaceNorm}")`);
-      return false;
-    }
-
-    // Musí končiť na prvej udalosti dňa
-    if (lastToNorm !== firstEventPlaceNorm) {
-      console.log(`  ❌ [DROP-2b] nekončí na prvej udalosti dňa (to="${lastToNorm}", prvá="${firstEventPlaceNorm}")`);
-      return false;
-    }
-
-    console.log(`  ✅ [KEEP] ${firstFromNorm} → ${lastToNorm} (deň=${dk})`);
+    console.log(`  ✅ [KEEP-MID] ${firstFromNorm} → ${lastToNorm} (deň=${dk})`);
     return true;
   });
 };
