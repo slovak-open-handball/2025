@@ -1244,9 +1244,23 @@ const tryPrintPerTeamTimeline = () => {
     
         // ─── Podmienka 1 ───
         const startsAtAccom = firstFromNorm === accomNormForFilter;
-        if (!startsAtAccom) {
-          console.log(`  ❌ [DROP-1] nezačína na ubytovaní`);
-          return false;
+        const endsAtAccom = lastToNorm === accomNormForFilter;
+
+        // Koncový transfer (posledná udalosť → ubytovanie)
+        if (!startsAtAccom && endsAtAccom) {
+          const lastEvent = dk ? lastEventPlaceByDay.get(dk) : null;
+          if (!lastEvent) return false;
+          if (normPlaceName(lastEvent.place) === accomNormForFilter) return false;
+          if (firstFromNorm !== normPlaceName(lastEvent.place)) return false;
+          return true;
+        }
+
+        // Štartovací transfer (ubytovanie → prvá udalosť)
+        if (startsAtAccom && !endsAtAccom) {
+          if (!firstEvent) return false;
+          if (firstEventPlaceNorm === accomNormForFilter) return false; // zbytočný iba tento
+          if (lastToNorm !== firstEventPlaceNorm) return false;
+          return true;
         }
     
         // ─── Podmienka 2 ───
