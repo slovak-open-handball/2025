@@ -1220,7 +1220,7 @@ const tryPrintPerTeamTimeline = () => {
     if (teamHasAccommodation && accomNormForFilter) {
       const beforeCount = enrichedList.filter((e) => e.kind === 'transfer').length;
       console.log(`🔍 [FINAL FILTER] ${team} (${cat}) – accomNorm="${accomNormForFilter}" – transferov pred=${beforeCount}`);
-    
+
       enrichedList = enrichedList.filter((ev) => {
         if (ev.kind !== 'transfer') return true;
     
@@ -1231,35 +1231,42 @@ const tryPrintPerTeamTimeline = () => {
         const lastToNorm = legs.length > 0
           ? normPlaceName(legs[legs.length - 1]?.toName || '')
           : normPlaceName(ev.toName || '');
-    
-        // ─── Podmienka 1: transfer musí ZAČÍNAŤ na mieste ubytovania ───
-        const startsAtAccom = firstFromNorm === accomNormForFilter;
-        if (!startsAtAccom) {
-          console.log(`  ❌ [DROP-1] nezačína na ubytovaní: from="${firstFromNorm}" (ubytovanie="${accomNormForFilter}")`);
-          return false;
-        }
-    
-        // ─── Podmienka 2: transfer musí KONČIŤ na mieste PRVEJ udalosti dňa ───
+
         const dk = getTransferDayKey(ev);
         const firstEvent = dk ? firstEventPlaceByDay.get(dk) : null;
-        if (!firstEvent) {
-          console.log(`  ❌ [DROP-2] pre deň "${dk}" nepoznáme prvú udalosť (firstEvent=NONE)`);
+        const firstEventPlaceNorm = firstEvent ? normPlaceName(firstEvent.place) : null;
+
+        // ⬇️⬇️⬇️ DEBUG LOG – ukáže VŠETKO, čo filter vidí ⬇️⬇️⬇️
+        console.log(
+          `  🔎 [CHECK] transfer: from="${firstFromNorm}" to="${lastToNorm}" ` +
+          `dk="${dk}" firstEventPlace="${firstEventPlaceNorm}" accom="${accomNormForFilter}"`
+        );
+    
+        // ─── Podmienka 1 ───
+        const startsAtAccom = firstFromNorm === accomNormForFilter;
+        if (!startsAtAccom) {
+          console.log(`  ❌ [DROP-1] nezačína na ubytovaní`);
           return false;
         }
-        const firstEventPlaceNorm = normPlaceName(firstEvent.place);
     
-        // ─── NOVÉ: ak ubytovanie == prvá udalosť dňa → žiadny transfer nechceme ───
+        // ─── Podmienka 2 ───
+        if (!firstEvent) {
+          console.log(`  ❌ [DROP-2] pre deň "${dk}" nepoznáme prvú udalosť`);
+          return false;
+        }
+    
+        // ─── Podmienka 3 ───
         if (firstEventPlaceNorm === accomNormForFilter) {
-          console.log(`  ❌ [DROP-3] ubytovanie == prvá udalosť dňa ("${firstEventPlaceNorm}") → transfer sa nezobrazí`);
+          console.log(`  ❌ [DROP-3] ubytovanie == prvá udalosť dňa → transfer sa nezobrazí`);
           return false;
         }
     
         if (lastToNorm !== firstEventPlaceNorm) {
-          console.log(`  ❌ [DROP-2] nekončí na prvej udalosti dňa: to="${lastToNorm}" (prvá udalosť="${firstEventPlaceNorm}")`);
+          console.log(`  ❌ [DROP-2b] nekončí na prvej udalosti dňa`);
           return false;
         }
     
-        console.log(`  ✅ [KEEP] from="${firstFromNorm}" to="${lastToNorm}" (dk=${dk}, prvá udalosť="${firstEventPlaceNorm}")`);
+        console.log(`  ✅ [KEEP]`);
         return true;
       });
     
