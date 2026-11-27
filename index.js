@@ -19,7 +19,6 @@ const PAGE_BUTTON_DEFINITIONS = [
     { id: 'transport',       label: 'Doprava', href: 'transport' },
     { id: 'statistics',      label: 'Štatistiky', href: 'statistics' },
     { id: 'map',             label: 'Mapa',    href: 'map' },
-    { id: 'rosters',         label: 'Súpisky', href: 'rosters' },
 ];
 
 const formatDate = (timestamp) => {
