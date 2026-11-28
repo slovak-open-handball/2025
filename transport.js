@@ -491,6 +491,82 @@ const tryPrintPerTeamTimeline = () => {
     const [cat, team] = key.split('|');
     const KIND_PRIORITY = { match: 0, transfer: 1, catering: 2 };
 
+    // ⬅️ NOVÉ: Zisti ubytovanie tímu pre tento kľúč
+    const accommodationForTeam = __transportPerTeamBuffer.accommodationByKey.get(key) || 'bez ubytovania';
+    const hasAccommodation = accommodationForTeam && accommodationForTeam !== 'bez ubytovania';
+
+    // ⬅️ NOVÉ: Zisti miesto prvej udalosti dňa pre každý deň (pre prípad bez ubytovania)
+    const firstPlaceByDayKey = new Map();
+    const allTeamEvents = byTeam.get(key) || [];
+    for (const ev of allTeamEvents) {
+      if (ev.kind === 'transfer') continue;
+      if (ev.ts == null || !isFinite(ev.ts)) continue;
+      const d = new Date(ev.ts);
+      const dk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const place = (() => {
+        const parts = String(ev.label || '').split('|').map((s) => s.trim());
+        if (ev.kind === 'match') return parts[1] || null;
+        if (ev.kind === 'catering') return parts[2] || null;
+        return null;
+      })();
+      if (!place) continue;
+      if (!firstPlaceByDayKey.has(dk)) firstPlaceByDayKey.set(dk, { ts: ev.ts, place });
+      else {
+        const cur = firstPlaceByDayKey.get(dk);
+        if (ev.ts < cur.ts) firstPlaceByDayKey.set(dk, { ts: ev.ts, place });
+      }
+    }
+
+    // ⬅️ NOVÉ: Vyfiltruj reálne transfery, ktoré nezačínajú na ubytovaní (ak tím ubytovanie má)
+    // alebo na mieste zrazu (ak nemá). Syntetické walking transfery bez časov necháme —
+    // tie rieši applyImpliedWalkingTimesFromEvents.
+    const filteredEvents = allTeamEvents.filter((ev) => {
+      if (ev.kind !== 'transfer') return true;
+
+      // Syntetické walking transfery bez časov → necháme (rieši applyImpliedWalkingTimesFromEvents)
+      const hasRealTimes =
+        (Array.isArray(ev.legs) && ev.legs.some((l) => l.startTs != null && l.endTs != null)) ||
+        (ev.ts != null && isFinite(ev.ts));
+      if (!hasRealTimes) return true;
+
+      const legs = ev.legs || [];
+      if (legs.length === 0) return true;
+      const transferFrom = legs[0]?.fromName;
+      const transferTo = legs[legs.length - 1]?.toName;
+      if (!transferFrom || !transferTo) return true;
+
+      const nFrom = normalizePlaceName(transferFrom);
+      const nTo = normalizePlaceName(transferTo);
+
+      if (hasAccommodation) {
+        const nAccom = normalizePlaceName(accommodationForTeam);
+        // Ak tím má ubytovanie: transfer MUSÍ začínať na ubytovaní alebo končiť na ubytovaní
+        // (príchod/odchod z ubytovania). Inak je to cudzí transfer → vynechať.
+        const startsAtAccom = nFrom === nAccom;
+        const endsAtAccom = nTo === nAccom;
+        if (!startsAtAccom && !endsAtAccom) {
+          return false;
+        }
+        return true;
+      } else {
+        // Tím nemá ubytovanie: transfer musí začínať na mieste zrazu (miesto prvej udalosti dňa)
+        // alebo končiť na mieste poslednej udalosti dňa.
+        const dk = ev.dayKey || (() => {
+          const ts = ev.ts ?? legs[0]?.startTs ?? legs[legs.length - 1]?.endTs;
+          if (ts == null || !isFinite(ts)) return null;
+          const d = new Date(ts);
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        })();
+        if (!dk) return true;
+        const firstOfDay = firstPlaceByDayKey.get(dk);
+        if (!firstOfDay) return true;
+        const nFirstPlace = normalizePlaceName(firstOfDay.place);
+        // Povoliť transfer, ak sa aspoň jeden koniec zhoduje s miestom prvej udalosti dňa
+        if (nFrom === nFirstPlace || nTo === nFirstPlace) return true;
+        return false;
+      }
+    });
+
     const list = byTeam.get(key).slice().sort((a, b) => {
       if (a.ts !== b.ts) return a.ts - b.ts;
       // pri rovnakom čase: zápas → transfer → stravovanie
