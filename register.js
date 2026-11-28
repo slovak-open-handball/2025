@@ -1212,7 +1212,7 @@ function App() {
         if (authInstance && authInstance.currentUser) {
             await signOut(authInstance);
         }
-        window.location.href = 'login.html';
+        window.location.href = 'login';
       }, 20000);
   
     } catch (globalError) {
