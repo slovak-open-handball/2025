@@ -443,7 +443,7 @@ function App() {
             await auth.signOut();
         }
         window.isRegisteringAdmin = false; // Reset global flag after redirect
-        window.location.href = 'login.html';
+        window.location.href = 'login';
       }, 20000); // 20-sekundové oneskorenie
 
     } catch (e) {
