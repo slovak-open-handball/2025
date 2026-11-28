@@ -495,9 +495,6 @@ const tryPrintPerTeamTimeline = () => {
     const hasAccommodation = accommodationForTeam && accommodationForTeam !== 'bez ubytovania';
     const nAccom = hasAccommodation ? normalizePlaceName(accommodationForTeam) : '';
 
-    // ⬅️ NOVÉ: filter platí LEN pre posledný deň turnaja
-    const lastTournamentDayKey = __transportPerTeamBuffer.lastTournamentDayKey || null;
-
     // Zoznam všetkých miest, kde tím reálne bol (miesta zápasov, stravovania) + ubytovanie
     const allTeamEvents = byTeam.get(key) || [];
     const teamPlaces = new Set();
@@ -518,6 +515,15 @@ const tryPrintPerTeamTimeline = () => {
       const d = new Date(ts);
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
+
+    // ⬅️ NOVÉ: Posledný deň odvoď z udalostí tímu (najväčší dayKey spomedzi
+    // match/catering/transferov). Nepotrebujeme settings/registration.
+    let lastTournamentDayKey = null;
+    for (const ev of allTeamEvents) {
+      const dk = getEventDayKey(ev);
+      if (!dk) continue;
+      if (!lastTournamentDayKey || dk > lastTournamentDayKey) lastTournamentDayKey = dk;
+    }
 
     const filteredEvents = allTeamEvents.filter((ev) => {
       if (ev.kind !== 'transfer') return true;
@@ -561,7 +567,7 @@ const tryPrintPerTeamTimeline = () => {
       if (aP !== bP) return aP - bP;
       return String(a.sortKey || '').localeCompare(String(b.sortKey || ''), 'sk');
     });
-
+    
     const enrichTransfersWithImpliedWalking = (events) => {
       if (!Array.isArray(events) || events.length < 2) return events;
     
