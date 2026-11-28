@@ -364,17 +364,36 @@ const applyImpliedWalkingTimesFromEvents = (events) => {
       const secondIsMismatchedTransfer =
         second.kind === 'transfer' && secondFrom && secondFrom !== firstPlace;
 
+      // ⬅️ NOVÉ: Pre tím S ubytovaním musí walking transfer začínať na ubytovaní.
+      // Ak tím ubytovanie nemá, musí začínať na mieste predchádzajúcej kotvy
+      // (t.j. miesto zrazu / posledná udalosť). Cieľ musí vždy zodpovedať
+      // miestu nasledujúcej kotvy, aby presun nedopadol na nesprávne miesto.
+      const accommodationNorm = isWithoutAccommodation
+        ? ''
+        : normPlace(accommodationName);
+
       const walkIdx = sorted.findIndex((cand, k) => {
         if (usedWalkingIndexes.has(k)) return false;
         if (!isWalkingTransferWithoutTime(cand)) return false;
-        const candDayKey = getEffectiveDayKey(cand);
-        // ⬅️ ZMENA: NEKONTROLUJEME deň — presun môže preklenúť polnoc
-        // if (gapDayKey && candDayKey && candDayKey !== gapDayKey) return false;
+
         const { from: wFrom, to: wTo } = getEventPlaces(cand);
         const nFrom = normPlace(wFrom);
         const nTo = normPlace(wTo);
         if (!nFrom || !nTo || nFrom === nTo) return false;
-        // ⬅️ ZMENA: NEKONTROLUJEME zhodu miesta s kotvami — stačí, že transfer existuje
+
+        // Cieľ walking transferu musí byť miesto nasledujúcej kotvy
+        if (nTo !== secondPlace) return false;
+
+        // Štart walking transferu:
+        if (!isWithoutAccommodation) {
+          // Tím má ubytovanie → presun musí začínať na ubytovaní
+          if (!accommodationNorm || nFrom !== accommodationNorm) return false;
+        } else {
+          // Tím nemá ubytovanie → presun začína na mieste zrazu
+          // (miesto predchádzajúcej kotvy)
+          if (nFrom !== firstPlace) return false;
+        }
+
         return true;
       });
 
